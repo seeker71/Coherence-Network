@@ -184,20 +184,23 @@ See `api/tests/test_agent.py` — all must pass.
 
 ### Diagnostic test (Telegram flow)
 
-Verifies the full inbound path (webhook → record_webhook → diagnostics) without a real bot. Required for “Telegram flow complete” in this spec.
+Verifies the full inbound path (webhook → record_webhook → [optional: parse_command → send_reply → record_send]) and diagnostics contract without a real bot. Required for “Telegram flow complete” in this spec.
 
 **Steps**
 
-1. (Optional) `GET /api/agent/telegram/diagnostics` and record `len(webhook_events)`.
-2. `POST /api/agent/telegram/webhook` with body = a Telegram Update that includes `message` (e.g. a command like `/status`).
-3. `GET /api/agent/telegram/diagnostics`.
+1. Call `telegram_diagnostics.clear()` (isolation).
+2. `GET /api/agent/telegram/diagnostics` and record `len(webhook_events)` (optional baseline).
+3. `POST /api/agent/telegram/webhook` with body = a Telegram Update that includes `message` with a command (e.g. `"text": "/status"`).
+4. Assert webhook returns 200 and `{"ok": true}`.
+5. `GET /api/agent/telegram/diagnostics`.
 
 **Assertions**
 
 - Response has keys: `config`, `webhook_events`, `send_results`.
 - `config` has `has_token`, `token_prefix`, `chat_ids`, `allowed_user_ids`.
-- `webhook_events` was updated: either `len(webhook_events)` increased vs step 1, or (if no prior call) `len(webhook_events) >= 1`.
-- The latest entry in `webhook_events` has an `update` that matches the payload sent (e.g. same `update_id`, and `message.text` when present).
+- `webhook_events` was updated: `len(webhook_events)` increased by at least 1 (or ≥1 if cleared).
+- The entry for the sent update is present: find event where `update.update_id == 90001` (or payload's `update_id`); assert `update.message.text == "/status"`.
+- (Optional) When the command is handled and reply path runs, `send_results` has at least one new entry; when token is unset, `record_send` is still called with `ok: false`, so this assertion can verify the full path to send_reply.
 
 **Example webhook payload (Telegram Update with message)**
 
@@ -214,7 +217,7 @@ Verifies the full inbound path (webhook → record_webhook → diagnostics) with
 }
 ```
 
-Test name in code: `test_telegram_flow_diagnostic`.
+- **Test name in code:** `test_telegram_flow_diagnostic` (in `api/tests/test_agent.py`).
 
 ## See also
 

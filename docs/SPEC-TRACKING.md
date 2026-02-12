@@ -37,6 +37,7 @@ cd web && npm run build      # 7 routes
 | 020 | test_projects.py |
 | 022, 025 | test_import_stack.py |
 | 024 | test_projects.py |
+| 027 (auto-update) | test_update_spec_coverage.py |
 
 ## Last Updated
 

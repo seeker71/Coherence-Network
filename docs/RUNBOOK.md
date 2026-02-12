@@ -60,7 +60,7 @@ When the pipeline is stuck or the agent runner died:
 **Monitor: "agent_runner and PM processes not seen"**
 
 - **Check logs:** `tail -50 api/logs/agent_runner.log`, `tail -50 api/logs/project_manager.log`, `tail -30 api/logs/monitor.log`. If monitor wrote `api/logs/restart_requested.json` (e.g. stale_version), the watchdog would have restarted the pipeline if it was running; otherwise restart manually.
-- **Restart pipeline:** `cd api && ./scripts/run_overnight_pipeline.sh` (starts API if needed, then agent_runner + monitor + PM). Optional: `rm api/logs/restart_requested.json` before starting for a clean run.
+- **Restart pipeline:** From repo root: `cd api && ./scripts/run_overnight_pipeline.sh` (starts API if needed, then agent_runner + monitor + PM). Ensure API is up first: `curl -s http://localhost:8000/api/health`; if not, start API in another terminal: `cd api && uvicorn app.main:app --reload --port 8000`. Optional: `rm api/logs/restart_requested.json` before starting for a clean run.
 
 **Unblock needs_decision:**
 

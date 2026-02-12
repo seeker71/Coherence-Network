@@ -24,6 +24,7 @@ jobs:
       - name: Run API tests
         run: |
           cd api && pytest -v
+        # Includes spec 027 contract tests: tests/test_update_spec_coverage.py
 
       - name: Update spec coverage (post-test, non-blocking)
         continue-on-error: true

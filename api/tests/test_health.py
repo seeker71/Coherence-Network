@@ -83,6 +83,31 @@ async def test_docs_returns_200(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_landing_complete_spec_007(client: AsyncClient):
+    """Spec 007: Landing complete — health 200, root discovery, /docs reachable.
+
+    Contract (spec 007 Verification): Landing is complete when:
+    1. GET /api/health returns 200
+    2. GET / returns 200 with name, version, docs, health
+    3. GET /docs returns 200
+    Tests define the contract; do not modify tests to make implementation pass.
+    """
+    # 1. Health
+    r_health = await client.get("/api/health")
+    assert r_health.status_code == 200, "GET /api/health must return 200 for landing complete"
+    # 2. Root discovery
+    r_root = await client.get("/")
+    assert r_root.status_code == 200, "GET / must return 200 for landing complete"
+    root = r_root.json()
+    assert "name" in root and "version" in root, "root must include name, version"
+    assert root.get("docs") == "/docs", "root docs must be /docs"
+    assert root.get("health") == "/api/health", "root health must be /api/health"
+    # 3. /docs reachability
+    r_docs = await client.get("/docs", follow_redirects=True)
+    assert r_docs.status_code == 200, "GET /docs must return 200 for landing complete"
+
+
+@pytest.mark.asyncio
 async def test_ready_returns_200(client: AsyncClient):
     """GET /api/ready returns 200 (readiness probe)."""
     response = await client.get("/api/ready")

@@ -202,7 +202,7 @@ async def test_post_task_direction_too_long_returns_422(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_post_task_direction_whitespace_only_returns_422(client: AsyncClient):
-    """POST with direction whitespace-only returns 422 (spec 010: strip then min_length; whitespace-only becomes empty)."""
+    """POST with direction whitespace-only returns 422 (spec 010: strip then min_length; whitespace-only becomes empty). Contract: 422, detail list of {loc, msg, type}, at least one error for direction."""
     response = await client.post(
         "/api/agent/tasks",
         json={"direction": "   \t\n  ", "task_type": "impl"},
@@ -211,6 +211,9 @@ async def test_post_task_direction_whitespace_only_returns_422(client: AsyncClie
     data = response.json()
     assert "detail" in data
     assert isinstance(data["detail"], list)
+    for item in data["detail"]:
+        assert "loc" in item and "msg" in item and "type" in item
+    assert any("direction" in (item.get("loc") or []) for item in data["detail"])
 
 
 @pytest.mark.asyncio
@@ -1769,6 +1772,72 @@ async def test_get_tasks_limit_one_returns_at_most_one(client: AsyncClient):
     data = response.json()
     assert len(data["tasks"]) <= 1
     assert data["total"] == 2
+
+
+# --- Spec 011: Pagination (limit/offset, default page size 20) ---
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_offset_zero_limit_five_returns_first_five_newest_first(client: AsyncClient):
+    """GET /api/agent/tasks?offset=0&limit=5 returns first 5 tasks (newest first). Spec 011."""
+    for i in range(10):
+        await client.post("/api/agent/tasks", json={"direction": f"Task {i}", "task_type": "impl"})
+    response = await client.get("/api/agent/tasks?offset=0&limit=5")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["tasks"]) == 5
+    assert data["total"] == 10
+    # Newest first: created_at descending
+    created = [t["created_at"] for t in data["tasks"]]
+    assert created == sorted(created, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_offset_five_limit_five_returns_next_five(client: AsyncClient):
+    """GET /api/agent/tasks?offset=5&limit=5 returns next 5 tasks. Spec 011."""
+    for i in range(10):
+        await client.post("/api/agent/tasks", json={"direction": f"Task {i}", "task_type": "impl"})
+    first = await client.get("/api/agent/tasks?offset=0&limit=10")
+    assert first.status_code == 200
+    all_ids = [t["id"] for t in first.json()["tasks"]]
+    response = await client.get("/api/agent/tasks?offset=5&limit=5")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["tasks"]) == 5
+    assert data["total"] == 10
+    page2_ids = [t["id"] for t in data["tasks"]]
+    assert page2_ids == all_ids[5:10]
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_total_unchanged_by_limit_offset(client: AsyncClient):
+    """total is the same regardless of limit/offset (total matching count). Spec 011."""
+    for i in range(7):
+        await client.post("/api/agent/tasks", json={"direction": f"Task {i}", "task_type": "impl"})
+    r1 = await client.get("/api/agent/tasks?limit=2&offset=0")
+    r2 = await client.get("/api/agent/tasks?limit=3&offset=2")
+    r3 = await client.get("/api/agent/tasks?limit=10&offset=0")
+    assert r1.status_code == 200 and r2.status_code == 200 and r3.status_code == 200
+    assert r1.json()["total"] == 7
+    assert r2.json()["total"] == 7
+    assert r3.json()["total"] == 7
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_no_params_uses_default_limit_twenty_offset_zero(client: AsyncClient):
+    """GET /api/agent/tasks with no params uses default limit=20, offset=0. Spec 011."""
+    for i in range(5):
+        await client.post("/api/agent/tasks", json={"direction": f"Task {i}", "task_type": "impl"})
+    response = await client.get("/api/agent/tasks")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["tasks"]) == 5
+    assert data["total"] == 5
+    # Default limit=20 means we get up to 20; with 5 tasks we get 5
+    response_explicit = await client.get("/api/agent/tasks?limit=20&offset=0")
+    assert response_explicit.status_code == 200
+    assert response_explicit.json()["tasks"] == data["tasks"]
+    assert response_explicit.json()["total"] == data["total"]
 
 
 @pytest.mark.asyncio
