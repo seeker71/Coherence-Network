@@ -1,6 +1,13 @@
 """Tests for project manager orchestrator pipeline — spec 005.
 These tests define the contract for the orchestrator behavior.
 No mocks: real file I/O, real load_backlog, load_state, save_state, refresh_backlog.
+
+Spec 005 Verification (PM complete):
+- Dry-run: project_manager.py --dry-run exits 0; output reflects current state and what would be done (no HTTP).
+- Once with API: --once completes one tick; exit 0 and no unhandled exception; state advances or remains consistent.
+- State consistency: After any run, state file is valid JSON with backlog_index, phase, etc.
+
+Spec 005 E2E smoke: A test runs the PM in a mode (e.g. subprocess --dry-run or --once with API) and asserts no crash and consistent state. CI runs this test.
 """
 import json
 import logging
@@ -8,6 +15,8 @@ import os
 import subprocess
 import sys
 import tempfile
+
+import pytest
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(_api_dir)
@@ -268,8 +277,42 @@ def test_state_file_persistence():
             pm.STATE_FILE = orig_state
 
 
+def test_e2e_spec_005_smoke_dry_run_and_state():
+    """E2E smoke test (spec 005): run PM --dry-run in subprocess; assert exit 0, no crash, consistent state.
+    CI runs this test. Optionally --once with API is covered by test_e2e_project_manager_once_exits_zero_and_state_valid_when_api_available."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. Smoke item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        result = subprocess.run(
+            [sys.executable, script_path, "--dry-run", "--backlog", backlog_path, "--state-file", state_path],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"spec 005: --dry-run must exit 0. stderr: {result.stderr!r} stdout: {result.stdout!r}"
+    out = (result.stdout or "") + (result.stderr or "")
+    assert "phase" in out or "Would create" in out or "DRY-RUN" in out, "Dry-run must log deterministic preview"
+    # State file: after dry-run we don't write; ensure load_state/save_state round-trip works (in-process)
+    with tempfile.TemporaryDirectory() as d2:
+        sp = os.path.join(d2, "project_manager_state.json")
+        orig = pm.STATE_FILE
+        pm.STATE_FILE = sp
+        try:
+            s = pm.load_state()
+            pm.save_state(s)
+            with open(sp, encoding="utf-8") as f:
+                data = json.load(f)
+            assert "backlog_index" in data and "phase" in data and data["phase"] in ("spec", "impl", "test", "review")
+        finally:
+            pm.STATE_FILE = orig
+
+
 def test_e2e_project_manager_dry_run_exits_zero():
-    """E2E smoke test (spec 005): run project_manager --dry-run in subprocess; assert exit 0, no crash."""
+    """E2E smoke test (spec 005): run project_manager --dry-run in subprocess; assert exit 0, no crash, deterministic preview."""
     with tempfile.TemporaryDirectory() as d:
         backlog_path = os.path.join(d, "005-backlog.md")
         with open(backlog_path, "w", encoding="utf-8") as f:
@@ -291,6 +334,44 @@ def test_e2e_project_manager_dry_run_exits_zero():
             timeout=30,
         )
     assert result.returncode == 0, f"stderr: {result.stderr!r} stdout: {result.stdout!r}"
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "phase" in combined or "Would create" in combined or "backlog" in combined or "DRY-RUN" in combined, (
+        "Dry-run must log deterministic preview (phase / Would create / backlog / DRY-RUN)"
+    )
+
+
+def test_pm_complete_dry_run_exits_zero_and_logs_deterministic_preview():
+    """Spec 005 verification: --dry-run must exit 0 and log deterministic preview (backlog index, phase, next item)."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. First work item\n2. Second item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        result = subprocess.run(
+            [
+                sys.executable,
+                script_path,
+                "--dry-run",
+                "--verbose",
+                "--backlog", backlog_path,
+                "--state-file", state_path,
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"PM --dry-run must exit 0. stderr: {result.stderr!r} stdout: {result.stdout!r}"
+    out = (result.stdout or "") + (result.stderr or "")
+    # Deterministic preview: backlog index (e.g. "item 0" or "index=0"), phase, and next item or "Would create"
+    assert "phase" in out, "Dry-run output must include current phase"
+    assert "Would create" in out or "State:" in out, "Dry-run must show what would be done or current state"
+    # With --verbose we get "State: item N, phase=P" or "Would create P task: ..."
+    has_index = "item 0" in out or "index=" in out or "State:" in out
+    has_phase_val = any(p in out for p in ("spec", "impl", "test", "review"))
+    assert has_index or "Would create" in out, "Output must reflect backlog index or next action"
+    assert has_phase_val, "Output must include phase value (spec|impl|test|review)"
 
 
 def test_e2e_project_manager_state_file_valid_after_run():
@@ -309,3 +390,76 @@ def test_e2e_project_manager_state_file_valid_after_run():
             assert data["phase"] in ("spec", "impl", "test", "review")
         finally:
             pm.STATE_FILE = orig_state
+
+
+def test_spec_005_pm_complete_verification_contract():
+    """Spec 005 PM complete contract: --dry-run exits 0; logs deterministic preview (backlog index, phase, next item); state file valid JSON with expected keys."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. Contract item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        result = subprocess.run(
+            [sys.executable, script_path, "--dry-run", "--backlog", backlog_path, "--state-file", state_path],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"Spec 005: --dry-run must exit 0. stderr: {result.stderr!r} stdout: {result.stdout!r}"
+    out = (result.stdout or "") + (result.stderr or "")
+    assert "phase" in out, "Dry-run must log deterministic preview: phase"
+    assert "Would create" in out or "State:" in out or "DRY-RUN" in out, "Dry-run must show what would be done or state"
+    has_index_or_action = "item" in out or "index" in out or "State:" in out or "Would create" in out
+    assert has_index_or_action, "Output must reflect backlog index or next action"
+    # State consistency: in-process round-trip yields valid JSON with expected keys
+    with tempfile.TemporaryDirectory() as d2:
+        sp = os.path.join(d2, "project_manager_state.json")
+        orig = pm.STATE_FILE
+        pm.STATE_FILE = sp
+        try:
+            s = pm.load_state()
+            pm.save_state(s)
+            with open(sp, encoding="utf-8") as f:
+                data = json.load(f)
+            assert "backlog_index" in data and "phase" in data
+            assert data["phase"] in ("spec", "impl", "test", "review")
+        finally:
+            pm.STATE_FILE = orig
+
+
+def test_e2e_project_manager_once_exits_zero_and_state_valid_when_api_available():
+    """E2E smoke (spec 005): with API available, run --once; assert exit 0 and state file valid. Skip if API down."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. Smoke item for --once test\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        cmd = [
+            sys.executable,
+            script_path,
+            "--once",
+            "--backlog", backlog_path,
+            "--state-file", state_path,
+        ]
+        result = subprocess.run(
+            cmd,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or "") + (result.stdout or "")
+            if "not reachable" in err or "API" in err.lower():
+                pytest.skip("API not available; --once requires running API")
+            pytest.fail(f"project_manager --once failed: {err!r}")
+        assert result.returncode == 0, "PM --once must exit 0 when API is available"
+        assert os.path.isfile(state_path), "State file must exist after --once run"
+        with open(state_path, encoding="utf-8") as f:
+            data = json.load(f)
+        assert "backlog_index" in data, "State must contain backlog_index (spec 005)"
+        assert "phase" in data, "State must contain phase (spec 005)"
+        assert data["phase"] in ("spec", "impl", "test", "review"), "phase must be one of spec|impl|test|review"

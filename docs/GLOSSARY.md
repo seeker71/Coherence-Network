@@ -10,5 +10,5 @@
 | **needs_decision** | Task status when human input is required (e.g. after tests fail, or scope question). Pipeline pauses until `/reply`. |
 | **Agent runner** | Script that polls for pending tasks, runs the command (Claude Code), PATCHes progress. |
 | **Project manager** | Orchestrator: loads backlog, creates tasks in phase order (spec→impl→test→review), validates before advancing. |
-| **Holdout tests** | Tests excluded from agent context; CI runs them to prevent "return true" hacks. |
+| **Holdout tests** | Tests excluded from agent context (e.g. `api/tests/holdout/`); CI runs them to prevent "return true" hacks. |
 | **Spec-driven** | Workflow: spec defines requirements → tests written → implementation makes tests pass. |

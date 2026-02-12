@@ -251,3 +251,82 @@ def test_status_after_script_has_specs_implemented_and_test_count():
     finally:
         status_path.write_text(before_status)
         spec_coverage_path.write_text(before_coverage)
+
+
+# --- Contract tests: SPEC-COVERAGE must accurately reflect specs 007, 008, 034, 038 and new specs ---
+
+def test_spec_coverage_includes_specs_007_008_034_038():
+    """Contract: SPEC-COVERAGE.md has a row for specs 007, 008, 034, and 038 (and other new specs)."""
+    spec_coverage_path = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
+    if not spec_coverage_path.exists():
+        pytest.skip("SPEC-COVERAGE.md not in repo")
+    content = spec_coverage_path.read_text()
+    existing = _existing_spec_ids(content)
+    assert "007" in existing, "SPEC-COVERAGE must list spec 007 (Sprint 0 Landing)"
+    assert "008" in existing, "SPEC-COVERAGE must list spec 008 (Sprint 1 Graph)"
+    assert "034" in existing, "SPEC-COVERAGE must list spec 034 (Ops Runbook)"
+    assert "038" in existing, "SPEC-COVERAGE must list spec 038 (POST empty direction 422)"
+
+
+def test_spec_007_coverage_references_existing_tests():
+    """Contract: Spec 007 section references test_root_returns_landing_info and test_docs_returns_200; those tests exist."""
+    spec_coverage_path = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
+    test_health_path = _api_dir / "tests" / "test_health.py"
+    if not spec_coverage_path.exists() or not test_health_path.exists():
+        pytest.skip("SPEC-COVERAGE.md or test_health.py not in repo")
+    coverage_content = spec_coverage_path.read_text()
+    health_content = test_health_path.read_text()
+    assert "007" in coverage_content and "Sprint 0" in coverage_content
+    assert "test_root_returns_landing_info" in coverage_content, "SPEC-COVERAGE 007 must reference test_root_returns_landing_info"
+    assert "test_docs_returns_200" in coverage_content, "SPEC-COVERAGE 007 must reference test_docs_returns_200"
+    assert "def test_root_returns_landing_info" in health_content, "test_health.py must define test_root_returns_landing_info"
+    assert "def test_docs_returns_200" in health_content, "test_health.py must define test_docs_returns_200"
+
+
+def test_spec_008_coverage_references_implementation_and_tests():
+    """Contract: Spec 008 section references 019, projects/graph tests; those test modules and functions exist."""
+    spec_coverage_path = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
+    test_projects_path = _api_dir / "tests" / "test_projects.py"
+    test_graph_path = _api_dir / "tests" / "test_graph_store.py"
+    if not spec_coverage_path.exists() or not test_projects_path.exists() or not test_graph_path.exists():
+        pytest.skip("SPEC-COVERAGE.md or test_projects/test_graph_store not in repo")
+    coverage_content = spec_coverage_path.read_text()
+    projects_content = test_projects_path.read_text()
+    graph_content = test_graph_path.read_text()
+    assert "008" in coverage_content and "Sprint 1" in coverage_content
+    assert "019" in coverage_content or "test_projects" in coverage_content or "test_graph" in coverage_content
+    assert "test_get_project_returns_200_when_exists" in projects_content
+    assert "test_get_project_returns_404_when_missing" in projects_content
+    assert "test_search_returns_matching_results" in projects_content
+    assert "def test_search" in graph_content or "test_get_project_missing" in graph_content
+
+
+def test_spec_034_runbook_exists_with_required_sections():
+    """Contract (spec 034): docs/RUNBOOK.md exists and contains Log Locations, API Restart, Pipeline Recovery, and one of (Autonomous Pipeline, Pipeline Effectiveness, Key Endpoints)."""
+    runbook_path = _api_dir.parent / "docs" / "RUNBOOK.md"
+    if not runbook_path.exists():
+        pytest.fail("docs/RUNBOOK.md must exist (spec 034)")
+    content = runbook_path.read_text()
+    required = ["Log Locations", "API Restart", "Pipeline Recovery"]
+    for heading in required:
+        assert heading in content, f"RUNBOOK.md must contain section '{heading}' (spec 034)"
+    optional = ["Autonomous Pipeline", "Pipeline Effectiveness", "Key Endpoints"]
+    found = sum(1 for h in optional if h in content)
+    assert found >= 1, f"RUNBOOK.md must contain at least one of {optional} (spec 034)"
+
+
+def test_spec_038_coverage_references_existing_test():
+    """Contract: Spec 038 section in SPEC-COVERAGE references test_post_task_empty_direction_returns_422; that test exists."""
+    spec_coverage_path = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
+    test_agent_path = _api_dir / "tests" / "test_agent.py"
+    if not spec_coverage_path.exists() or not test_agent_path.exists():
+        pytest.skip("SPEC-COVERAGE.md or test_agent.py not in repo")
+    coverage_content = spec_coverage_path.read_text()
+    agent_content = test_agent_path.read_text()
+    assert "038" in coverage_content and "empty direction" in coverage_content.lower()
+    assert "test_post_task_empty_direction_returns_422" in coverage_content, (
+        "SPEC-COVERAGE 038 must reference test_post_task_empty_direction_returns_422"
+    )
+    assert "def test_post_task_empty_direction_returns_422" in agent_content or "async def test_post_task_empty_direction_returns_422" in agent_content, (
+        "test_agent.py must define test_post_task_empty_direction_returns_422 (spec 038)"
+    )

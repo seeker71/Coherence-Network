@@ -758,17 +758,21 @@ def main():
         print(f"  Log: {LOG_FILE}\n")
 
     # Dry-run: no HTTP calls; log preview and exit 0 (spec 005 verification).
+    # Must print deterministic preview to stdout so E2E smoke tests can assert without --verbose.
     if args.dry_run:
         backlog = load_backlog()
         state = load_state()
         idx = state["backlog_index"]
         phase = state["phase"]
         log.info("DRY-RUN: backlog=%d items, index=%d, phase=%s", len(backlog), idx, phase)
+        # Deterministic preview to stdout: State: item N, phase=P (and next action if any)
+        print(f"State: item {idx}, phase={phase}")
         if backlog and idx < len(backlog):
             log.info("DRY-RUN: would create %s task for: %s", phase, backlog[idx][:60])
             print(f"Would create {phase} task: {backlog[idx][:80]}...")
         else:
             log.info("DRY-RUN: backlog empty or complete")
+            print("DRY-RUN: backlog empty or complete")
         return
 
     with httpx.Client(timeout=15.0) as client:

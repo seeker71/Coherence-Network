@@ -13,20 +13,28 @@ Spec 001 acceptance tests (all must pass). Requirement → Test mapping:
   - Response fields (status, version, timestamp) are strings → test_health_response_value_types
   - Full API contract (200, exact keys, status ok, semver, ISO8601 UTC) → test_health_api_contract
 
-Run 001-only tests: pytest tests/test_health.py -v -k 'health'
+Verification: Every spec 001 requirement has exactly one corresponding test; no requirement is untested.
+
+Spec 007 (landing/docs): Requirement → Test mapping:
+  - GET /docs returns 200 (OpenAPI UI reachable) → test_docs_returns_200
+
+Run 001-only tests: cd api && pytest tests/test_health.py -v -k 'health'
+Run docs contract test: cd api && pytest tests/test_health.py::test_docs_returns_200 -v
 """
 
 import re
 from datetime import datetime
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client():
+    """ASGI client for testing (spec 001, 007, 009, 014)."""
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -47,7 +55,7 @@ async def test_root_returns_landing_info(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_docs_returns_200(client: AsyncClient):
     """GET /docs returns 200 (OpenAPI UI reachable, spec 007)."""
-    response = await client.get("/docs")
+    response = await client.get("/docs", follow_redirects=True)
     assert response.status_code == 200
 
 
@@ -108,7 +116,9 @@ async def test_health_response_schema(client: AsyncClient):
     response = await client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
-    assert set(data.keys()) == {"status", "version", "timestamp"}
+    required = {"status", "version", "timestamp"}
+    assert set(data.keys()) == required, "response must have exactly status, version, timestamp"
+    assert len(data) == 3, "response must have no extra top-level keys"
 
 
 @pytest.mark.asyncio

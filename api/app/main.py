@@ -37,6 +37,7 @@ app = FastAPI(
     title="Coherence Network API",
     version="0.1.0",
     description="Open Source Contribution Intelligence",
+    docs_url="/docs",  # spec 007: GET /docs returns 200 (OpenAPI UI reachable)
 )
 
 _cors_origins = os.environ.get("ALLOWED_ORIGINS", "*")

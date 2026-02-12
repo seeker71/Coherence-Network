@@ -112,7 +112,7 @@ def get_aggregates() -> dict[str, Any]:
             v["avg_duration"] = round(sum(ds) / len(ds), 1) if ds else 0
 
         return {
-            "success_rate": {"completed": completed, "failed": failed, "total": total, "rate": round(rate, 2)},
+            "success_rate": {"completed": completed, "failed": failed, "total": total, "rate": float(round(rate, 2))},
             "execution_time": {"p50_seconds": p50_seconds, "p95_seconds": p95_seconds},
             "by_task_type": by_task_type,
             "by_model": by_model,

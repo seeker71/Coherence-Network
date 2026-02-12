@@ -173,6 +173,7 @@
 
 ## 6. See Also
 
+- [META-QUESTIONS.md](META-QUESTIONS.md) — Validate setup, monitoring, effectiveness; catch config drift
 - [PIPELINE-EFFICIENCY-PLAN.md](PIPELINE-EFFICIENCY-PLAN.md) — Measurement and improvement
 - [PLAN.md](PLAN.md) — Product vision and roadmap
 - [AGENT-DEBUGGING.md](AGENT-DEBUGGING.md) — Debugging the pipeline

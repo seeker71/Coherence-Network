@@ -25,6 +25,7 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/AGENT-DEBUGGING.md` — Add tasks, run pipeline, debug failures
 - `docs/PIPELINE-ATTENTION.md` — What needs attention, fixes, effectiveness checklist
 - `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
+- `docs/META-QUESTIONS.md` — Questions to validate setup, monitoring, effectiveness; catch misconfigurations
 - `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
 - `docs/DEPLOY.md` — Deploy checklist
 - `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)

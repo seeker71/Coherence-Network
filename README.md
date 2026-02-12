@@ -11,7 +11,7 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 ## Tech Stack (MVP)
 
 - **API**: FastAPI (Python) — speed to value
-- **Web**: Next.js 15 + shadcn/ui
+- **Web**: Next.js 15 + shadcn/ui (planned — `web/` when added; see [specs/012-web-skeleton.md](specs/012-web-skeleton.md))
 - **Graph**: Neo4j (dependency graph)
 - **Relational**: PostgreSQL (users, events, billing)
 - **Data**: deps.dev API, Libraries.io, GitHub API
@@ -23,7 +23,7 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 cd api && uvicorn app.main:app --reload --port 8000
 ```
 
-Web app: not yet available — see [specs/012-web-skeleton.md](specs/012-web-skeleton.md) when `web/` is added. See [SETUP.md](docs/SETUP.md).
+Web app: not yet available — see [specs/012-web-skeleton.md](specs/012-web-skeleton.md) when `web/` is added. Docker / docker compose: not yet in repo; use the API-only path above. See [SETUP.md](docs/SETUP.md).
 
 ## Development Workflow
 

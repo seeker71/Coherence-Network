@@ -1,5 +1,8 @@
 """Tests for agent orchestration API — spec 002."""
 
+import json
+from datetime import datetime, timezone
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -992,6 +995,58 @@ async def test_get_metrics_026_persist_on_patch_failed(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_get_metrics_026_empty_store_returns_zeroed_contract(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """GET /api/agent/metrics with no metrics returns exact zeroed structure (spec 026 Phase 1 contract)."""
+    metrics_file = tmp_path / "metrics.jsonl"
+    metrics_file.write_text("")
+    monkeypatch.setattr("app.services.metrics_service.METRICS_FILE", str(metrics_file))
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success_rate"]["completed"] == 0
+    assert data["success_rate"]["failed"] == 0
+    assert data["success_rate"]["total"] == 0
+    assert data["success_rate"]["rate"] == 0.0
+    assert data["execution_time"]["p50_seconds"] == 0
+    assert data["execution_time"]["p95_seconds"] == 0
+    assert data["by_task_type"] == {}
+    assert data["by_model"] == {}
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_record_in_jsonl_on_patch_completed(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """When a task is PATCHed to completed, a record appears in the metrics store (JSONL). Spec 026 Phase 1."""
+    metrics_file = tmp_path / "metrics.jsonl"
+    monkeypatch.setattr("app.services.metrics_service.METRICS_FILE", str(metrics_file))
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "JSONL persist test", "task_type": "impl"},
+    )
+    assert create.status_code == 201
+    task_id = create.json()["id"]
+    patch = await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={"status": "completed", "output": "Done"},
+    )
+    assert patch.status_code == 200
+    content = metrics_file.read_text()
+    lines = [ln.strip() for ln in content.split("\n") if ln.strip()]
+    assert len(lines) == 1, "metrics store must contain exactly one record after PATCH completed"
+    record = json.loads(lines[0])
+    for key in ("task_id", "task_type", "model", "duration_seconds", "status", "created_at"):
+        assert key in record, f"TaskMetricRecord must include {key}"
+    assert record["task_id"] == task_id
+    assert record["status"] == "completed"
+    assert record["task_type"] == "impl"
+    assert isinstance(record["duration_seconds"], (int, float))
+    assert isinstance(record["created_at"], str)
+
+
+@pytest.mark.asyncio
 async def test_pipeline_status_returns_200(client: AsyncClient):
     """GET /api/agent/pipeline-status returns running, pending, recent_completed, attention (spec 027)."""
     response = await client.get("/api/agent/pipeline-status")
@@ -1021,6 +1076,188 @@ async def test_pipeline_status_response_shape_defines_contract(client: AsyncClie
     for key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
         assert key in att, f"pipeline-status.attention must include {key}"
     assert "running_by_phase" in data
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_stuck_when_pending_long_wait(client: AsyncClient):
+    """When pending tasks, no running, longest wait > 10 min: attention.stuck true and 'stuck' in flags (spec 032)."""
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Stuck test", "task_type": "impl"},
+    )
+    assert create.status_code == 201
+    task = (await client.get(f"/api/agent/tasks/{create.json()['id']}")).json()
+    created_str = task["created_at"]
+    created = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+    now_utc = created + timedelta(minutes=11)
+
+    def get_status_with_time():
+        return agent_service.get_pipeline_status(now_utc=now_utc)
+
+    with patch.object(agent_service, "get_pipeline_status", get_status_with_time):
+        response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["stuck"] is True
+    assert "stuck" in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_repeated_failures_when_last_three_failed(client: AsyncClient):
+    """When three most recently completed tasks are all failed: repeated_failures true and in flags (spec 032)."""
+    ids = []
+    for i in range(3):
+        create = await client.post(
+            "/api/agent/tasks",
+            json={"direction": f"Fail {i}", "task_type": "impl"},
+        )
+        assert create.status_code == 201
+        ids.append(create.json()["id"])
+    for task_id in ids:
+        patch_resp = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "failed", "output": "failed"},
+        )
+        assert patch_resp.status_code == 200
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["repeated_failures"] is True
+    assert "repeated_failures" in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_stuck_false_when_no_pending(client: AsyncClient):
+    """When there are no pending tasks: attention.stuck is false and 'stuck' not in flags (spec 032 contract)."""
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["stuck"] is False
+    assert "stuck" not in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_stuck_false_when_running_exists(client: AsyncClient):
+    """When there is a running task: attention.stuck is false even if pending exist with long wait (spec 032 contract)."""
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+
+    create_pending = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Pending", "task_type": "impl"},
+    )
+    assert create_pending.status_code == 201
+    pending_id = create_pending.json()["id"]
+    create_running = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Running", "task_type": "impl"},
+    )
+    assert create_running.status_code == 201
+    await client.patch(
+        f"/api/agent/tasks/{create_running.json()['id']}",
+        json={"status": "running"},
+    )
+    task = (await client.get(f"/api/agent/tasks/{pending_id}")).json()
+    created = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
+    now_utc = created + timedelta(minutes=11)
+
+    def get_status_with_time():
+        return agent_service.get_pipeline_status(now_utc=now_utc)
+
+    with patch.object(agent_service, "get_pipeline_status", get_status_with_time):
+        response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["stuck"] is False
+    assert "stuck" not in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_stuck_false_when_wait_under_threshold(client: AsyncClient):
+    """When pending tasks but longest wait <= 10 min: attention.stuck is false (spec 032 contract)."""
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Under threshold", "task_type": "impl"},
+    )
+    assert create.status_code == 201
+    task = (await client.get(f"/api/agent/tasks/{create.json()['id']}")).json()
+    created = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
+    now_utc = created + timedelta(minutes=5)
+
+    def get_status_with_time():
+        return agent_service.get_pipeline_status(now_utc=now_utc)
+
+    with patch.object(agent_service, "get_pipeline_status", get_status_with_time):
+        response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["stuck"] is False
+    assert "stuck" not in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_repeated_failures_false_when_fewer_than_three_completed(client: AsyncClient):
+    """When fewer than 3 completed tasks: attention.repeated_failures is false (spec 032 contract)."""
+    for i in range(2):
+        create = await client.post(
+            "/api/agent/tasks",
+            json={"direction": f"Fail {i}", "task_type": "impl"},
+        )
+        assert create.status_code == 201
+        await client.patch(
+            f"/api/agent/tasks/{create.json()['id']}",
+            json={"status": "failed", "output": "x"},
+        )
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["repeated_failures"] is False
+    assert "repeated_failures" not in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_repeated_failures_false_when_last_not_all_failed(client: AsyncClient):
+    """When the three most recently completed are not all failed: attention.repeated_failures is false (spec 032 contract)."""
+    ids = []
+    for i in range(3):
+        create = await client.post(
+            "/api/agent/tasks",
+            json={"direction": f"Task {i}", "task_type": "impl"},
+        )
+        assert create.status_code == 201
+        ids.append(create.json()["id"])
+    await client.patch(f"/api/agent/tasks/{ids[0]}", json={"status": "failed", "output": "x"})
+    await client.patch(f"/api/agent/tasks/{ids[1]}", json={"status": "failed", "output": "x"})
+    await client.patch(f"/api/agent/tasks/{ids[2]}", json={"status": "completed", "output": "ok"})
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["repeated_failures"] is False
+    assert "repeated_failures" not in att["flags"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_attention_low_success_rate_false_when_metrics_missing(client: AsyncClient):
+    """When metrics are missing or empty: attention.low_success_rate is false, no exception (spec 032)."""
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    att = data["attention"]
+    assert att["low_success_rate"] is False
+    assert "low_success_rate" not in att["flags"]
 
 
 @pytest.mark.asyncio
@@ -1057,6 +1294,64 @@ async def test_effectiveness_endpoint_returns_200(client: AsyncClient):
     assert "progress" in data
     assert "goal_proximity" in data
     assert "top_issues_by_priority" in data
+
+
+@pytest.mark.asyncio
+async def test_effectiveness_response_includes_heal_resolved_count(client: AsyncClient):
+    """GET /api/agent/effectiveness includes heal_resolved_count (spec 007 meta-pipeline item 5)."""
+    response = await client.get("/api/agent/effectiveness")
+    assert response.status_code == 200
+    data = response.json()
+    assert "heal_resolved_count" in data, "effectiveness must expose heal_resolved_count"
+    assert isinstance(data["heal_resolved_count"], int), "heal_resolved_count must be an integer"
+    assert data["heal_resolved_count"] >= 0, "heal_resolved_count must be >= 0"
+
+
+@pytest.mark.asyncio
+async def test_heal_task_creation_stores_monitor_context(client: AsyncClient):
+    """Heal task creation stores context.monitor_condition and monitor_issue_id (which heal addressed which issue)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={
+            "direction": "Fix no_task_running",
+            "task_type": "heal",
+            "context": {
+                "executor": "claude",
+                "monitor_condition": "no_task_running",
+                "monitor_issue_id": "issue-abc123",
+            },
+        },
+    )
+    assert response.status_code == 201
+    task_id = response.json()["id"]
+    get_resp = await client.get(f"/api/agent/tasks/{task_id}")
+    assert get_resp.status_code == 200
+    task = get_resp.json()
+    assert task.get("context") is not None
+    assert task["context"].get("monitor_condition") == "no_task_running"
+    assert task["context"].get("monitor_issue_id") == "issue-abc123"
+
+
+@pytest.mark.asyncio
+async def test_heal_resolved_count_counts_only_resolutions_with_heal_task_id(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """heal_resolved_count is the count of resolution records (7d window) that have heal_task_id (spec 007 item 5)."""
+    resolutions_file = tmp_path / "monitor_resolutions.jsonl"
+    now = datetime.now(timezone.utc).isoformat()
+    # One resolution attributed to a heal task, one without
+    resolutions_file.write_text(
+        json.dumps({"condition": "no_task_running", "resolved_at": now, "heal_task_id": "task_abc"}) + "\n"
+        + json.dumps({"condition": "api_unreachable", "resolved_at": now}) + "\n"
+    )
+    monkeypatch.setattr(
+        "app.services.effectiveness_service.RESOLUTIONS_FILE",
+        str(resolutions_file),
+    )
+    response = await client.get("/api/agent/effectiveness")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["heal_resolved_count"] == 1, "only resolutions with heal_task_id count toward heal_resolved_count"
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 004 CI Pipeline | ✓ | ✓ | ✓ | GitHub Actions for pytest |
 | 005 Project Manager | ✓ | ✓ | ✓ | Complete |
 | 007 Sprint 0 Landing | ✓ | ✓ | ✓ | Root, /docs, health |
+| 007 Meta-Pipeline Backlog | — | ✓ | — | Backlog doc; not impl spec |
 | 008 Sprint 1 Graph | ✓ | ✓ | ✓ | Via 019; `--target 5000` closes gap |
 | 019 GraphStore Abstraction | ✓ | ✓ | ✓ | In-memory, indexer, projects API |
 | 009 API Error Handling | ✓ | ✓ | ✓ | Complete |
@@ -34,9 +35,21 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 006 Overnight Backlog | ? | ? | ? | Pending |
 | 015 Placeholder | ? | ? | ? | Pending |
 | 026 Pipeline Observability And Auto Review | ? | ? | ? | Pending |
+| 026 Phase 1 Task Metrics | ? | ✓ | ? | Persist metrics, GET /api/agent/metrics |
 | 027 Fully Automated Pipeline | ✓ | ✓ | ✓ | Auto-update, metrics, attention |
+| 027 Auto Update Framework | ✓ | ✓ | ✓ | update_spec_coverage.py, CI step |
 | 028 Parallel By Phase Pipeline | ✓ | ✓ | ✓ | workers=5, meta-ratio, atomic state |
 | 029 GitHub API Integration | ? | ✓ | ? | P0 for coherence; spec only |
+| 030 Pipeline Full Automation | ? | ✓ | ? | Auto-commit, meta tasks; pending |
+| 030 Spec Coverage Update | ✓ | ✓ | — | Doc-only; this spec |
+| 031 Setup Troubleshooting Venv | ? | ✓ | — | SETUP.md; pending |
+| 032 Attention Heuristics Pipeline Status | ✓ | ✓ | ✓ | pipeline-status attention flags |
+| 033 README Quick Start Qualify | ? | ✓ | — | Doc-only; pending |
+| 034 Ops Runbook | ✓ | ✓ | ✓ | RUNBOOK.md; sections present |
+| 035 Glossary | ✓ | ✓ | ✓ | docs/GLOSSARY.md; required terms; test_glossary |
+| 036 Check Pipeline Hierarchical View | ? | ✓ | ? | check_pipeline.py Goal→PM→Tasks→Artifacts; pending |
+| 037 POST invalid task_type 422 | ✓ | ✓ | ✓ | test_post_task_invalid_task_type_returns_422 |
+| 038 POST empty direction 422 | ✓ | ✓ | ✓ | test_post_task_empty_direction_returns_422 |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -119,8 +132,13 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 |-------------|----------------|------|
 | Root returns name, version, docs, health | `main.py` root handler | `test_root_returns_landing_info` |
 | GET /docs reachable | FastAPI built-in | `test_docs_returns_200` |
+| Landing verifiable via automated tests | `api/tests/test_health.py` | (above) |
 
 **Files:** `api/app/main.py`, `api/tests/test_health.py`
+
+**Contract (spec 007):** Root returns 200 with `name`, `version`, `docs` (`/docs`), `health` (`/api/health`). GET /docs returns 200.
+
+**Note:** `specs/007-meta-pipeline-backlog.md` is a separate backlog document (meta-pipeline improvement items); it is not an implementation spec and has no test mapping.
 
 ---
 
@@ -128,10 +146,114 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
-| GraphStore, indexer, project/search API | spec 019 (InMemoryGraphStore, indexer, projects router) | test_projects, test_graph_store |
-| Index ≥ 5K packages | `scripts/index_npm.py` | Manual run |
+| GraphStore, Project nodes, dependency edges | spec 019 `adapters/graph_store.py`, `InMemoryGraphStore` | `test_graph_store.py`: `test_get_project_missing_returns_none`, `test_search` |
+| Indexer (deps.dev + npm), index ≥ 5K | `indexer_service.py`, `scripts/index_npm.py` | Manual: `index_npm.py --target 5000` |
+| GET /api/projects/{ecosystem}/{name} | `routers/projects.py` | `test_get_project_returns_200_when_exists`, `test_get_project_returns_404_when_missing`, `test_get_project_pypi_returns_200_when_exists` |
+| GET /api/search?q= | `routers/projects.py` | `test_search_returns_matching_results`, `test_search_empty_query_returns_empty` |
+
+**Files:** `api/app/adapters/graph_store.py`, `api/app/routers/projects.py`, `api/app/services/indexer_service.py`, `api/scripts/index_npm.py`, `api/app/models/project.py`, `api/tests/test_projects.py`, `api/tests/test_graph_store.py`
 
 **Status:** API + indexer via 019; 5K via `index_npm.py --target 5000`. PyPI via spec 024.
+
+---
+
+## Spec 037: POST invalid task_type 422
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| POST /api/agent/tasks with invalid task_type returns 422 | `models/agent.py` TaskType enum, `routers/agent.py` | `test_post_task_invalid_task_type_returns_422` |
+| 422 response has detail array; item references task_type (loc/msg/type) | FastAPI/Pydantic validation | (above); test_api_error_handling.py test_spec_009_422_* |
+
+**Files:** `api/app/models/agent.py`, `api/app/routers/agent.py`, `api/tests/test_agent.py`, `api/tests/test_api_error_handling.py`
+
+**Contract (spec 037):** POST with `task_type` not in `{ spec, test, impl, review, heal }` returns 422; detail is array of validation items (spec 009). See also spec 009 (422 schema), spec 010 (task_type enum).
+
+---
+
+## Spec 038: POST empty direction 422
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| POST /api/agent/tasks with empty direction returns 422 | `models/agent.py` Field(min_length=1), `routers/agent.py` | `test_post_task_empty_direction_returns_422` |
+| 422 response has detail array; item references direction (loc/msg/type) | FastAPI/Pydantic validation | (above); test_api_error_handling.py test_spec_009_422_* |
+
+**Files:** `api/app/models/agent.py`, `api/app/routers/agent.py`, `api/tests/test_agent.py`, `api/tests/test_api_error_handling.py`
+
+**Contract (spec 038):** POST with `direction: ""` (and valid task_type) returns 422; detail is array of validation items (spec 009). See also spec 009 (422 schema), spec 010 (direction min_length).
+
+---
+
+## Spec 034: Ops Runbook
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| docs/RUNBOOK.md exists, canonical ops runbook | `docs/RUNBOOK.md` | `test_runbook_md_exists`, `test_runbook_has_all_required_sections` |
+| Log Locations section | RUNBOOK.md table of log paths | (above) |
+| API Restart section | RUNBOOK.md uvicorn, pkill, port | (above) |
+| Pipeline Recovery section | RUNBOOK.md effectiveness, restart, needs_decision | (above) |
+| Autonomous Pipeline / Pipeline Effectiveness / Key Endpoints | RUNBOOK.md sections | (above) |
+| Indexing (index_npm, index_pypi), check_pipeline, tests/cleanup | RUNBOOK.md | (above) |
+
+**Files:** `docs/RUNBOOK.md`
+
+**Contract (spec 034):** RUNBOOK.md exists; contains headings for Log Locations, API Restart, Pipeline Recovery, and at least one of (Autonomous Pipeline, Pipeline Effectiveness, Key Endpoints).
+
+---
+
+## Spec 035: Glossary
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| docs/GLOSSARY.md exists, canonical glossary | `docs/GLOSSARY.md` | `test_glossary_md_exists` |
+| Table format (Term \| Definition) | GLOSSARY.md table | `test_glossary_has_table_format` |
+| Required terms: Backlog, Coherence, Pipeline, Task type, Direction, needs_decision, Agent runner, Project manager, Holdout tests, Spec-driven | GLOSSARY.md definitions | `test_glossary_defines_all_required_terms`, `test_glossary_definitions_non_empty` |
+| Coherence score range 0.0–1.0 | GLOSSARY.md Coherence definition | `test_glossary_coherence_score_range` |
+| Task type values: spec, test, impl, review, heal | GLOSSARY.md Task type definition | `test_glossary_task_type_values` |
+
+**Files:** `docs/GLOSSARY.md`, `api/tests/test_glossary.py`
+
+**Contract (spec 035):** GLOSSARY.md exists; table with Term/Definition; defines all required terms with non-trivial definitions; Coherence mentions 0.0–1.0; Task type mentions allowed values.
+
+---
+
+## Spec 036: Check Pipeline Hierarchical View
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| check_pipeline.py hierarchical view (Goal → PM → Tasks → Artifacts) | `api/scripts/check_pipeline.py` | Pending |
+| --hierarchical / --flat, --json with hierarchical structure | Script flags, JSON output | Pending |
+| status-report / effectiveness fallback for Goal section | Script reads status-report or GET /api/agent/effectiveness | Pending |
+
+**Files:** `api/scripts/check_pipeline.py`
+
+**Status:** Spec defined; implementation pending. When implemented, add tests and update this section.
+
+---
+
+## Spec 027: Auto Update Framework
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| Script runs after pytest, updates SPEC-COVERAGE when tests pass | `api/scripts/update_spec_coverage.py` | `test_update_spec_coverage_dry_run` (test_agent, test_update_spec_coverage) |
+| Additive rows only; STATUS update (test count / specs list) | `update_spec_coverage.py` | Script tests in test_update_spec_coverage.py |
+| --dry-run, idempotent, CI step after pytest (continue-on-error) | Script, `.github/workflows/test.yml` | `test_update_spec_coverage_dry_run`, `test_ci_runs_update_spec_coverage_after_pytest` |
+
+**Files:** `api/scripts/update_spec_coverage.py`, `docs/SPEC-COVERAGE.md`, `docs/STATUS.md`, `.github/workflows/test.yml`, `api/tests/test_update_spec_coverage.py`
+
+---
+
+## Spec 032: Attention Heuristics Pipeline Status
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/agent/pipeline-status returns attention object (stuck, repeated_failures, low_success_rate, flags) | `routers/agent.py`, pipeline-status handler; attention from task store + metrics | `test_pipeline_status_returns_200`, `test_pipeline_status_response_shape_defines_contract` |
+| Stuck: pending, no running, wait > threshold | Attention logic (e.g. agent_service or pipeline_status) | (above) |
+| Repeated failures: last N completed all failed | Attention logic | (above) |
+| Low success rate: windowed rate < threshold when sample ≥ min | metrics_service.get_aggregates() | (above) |
+
+**Files:** `api/app/routers/agent.py`, `api/app/services/agent_service.py` (or pipeline-status/attention module), `api/tests/test_agent.py`
+
+**Note:** Configurable thresholds (env) and check_pipeline.py --attention are spec'd but optional; when implemented, add to this section.
 
 ---
 
@@ -142,6 +264,8 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 404/400/422/500 consistent schema | `main.py` exception handler, `models/error.py` ErrorDetail, routers `responses=` | `test_get_task_by_id_404_when_missing`, `test_post_task_*_422`, `test_patch_*_422`, `test_unhandled_exception_returns_500` |
 | 422 validation (FastAPI default) | No override; Pydantic produces detail array | `test_post_task_invalid_task_type_returns_422`, `test_post_task_empty_direction_returns_422` |
 | 404 consistency (detail string only) | HTTPException(detail=str); ErrorDetail in OpenAPI | 404 tests assert `body == {"detail": "..."}` and `list(body.keys()) == ["detail"]` |
+
+**Files:** `api/app/main.py`, `api/app/models/error.py`, `api/tests/test_api_error_handling.py`, `api/tests/test_agent.py`, `api/tests/test_health.py`
 
 ---
 

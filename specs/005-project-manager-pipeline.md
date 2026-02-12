@@ -15,7 +15,7 @@ Implement a project manager orchestrator that automates the full spec-driven cyc
 - [x] State persists across restarts (backlog index, current phase, iteration)
 - [x] Uses local models for spec/test/impl/review; HEAL only for CI fixes when needed
 - [x] **PM complete**: Running the project manager with `--dry-run` exits 0 and logs deterministic preview (backlog index, phase, next item). Running with `--once` and API available completes one cycle without unhandled exception; state advances or remains consistent.
-- [ ] **E2E smoke test**: A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess `--dry-run` exit 0, or `--once` with live API) and asserts no crash and consistent state. Test lives in `api/tests/` and is run by CI.
+- [x] **E2E smoke test**: A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess `--dry-run` exit 0, or `--once` with live API) and asserts no crash and consistent state. Test lives in `api/tests/` and is run by CI.
 
 ## Verification (PM complete)
 
@@ -78,7 +78,7 @@ Orchestrator state (file: `api/logs/project_manager_state.json`):
 - [x] If pytest fails after review, creates impl task with fix direction
 - [x] When needs_decision task exists, orchestrator does not create new tasks
 - [x] Run `python api/scripts/project_manager.py --dry-run`: exits 0, no HTTP calls, logs preview
-- [ ] **E2E smoke test**: A test in `api/tests/` runs `project_manager.py --dry-run` (subprocess or equivalent) and asserts exit code 0 and no unhandled exception; CI runs this test. Optionally, with API available, a smoke test runs `--once` and asserts state file is valid and process exits 0.
+- [x] **E2E smoke test**: A test in `api/tests/` runs `project_manager.py --dry-run` (subprocess or equivalent) and asserts exit code 0 and no unhandled exception; CI runs this test. Optionally, with API available, a smoke test runs `--once` and asserts state file is valid and process exits 0.
 
 See `api/tests/test_project_manager.py` and `api/tests/test_project_manager_pipeline.py` — all tests must pass.
 

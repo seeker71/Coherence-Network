@@ -2,10 +2,13 @@
 """Pipeline visibility: what's running, pending (how long), completed (duration), models, prompts.
 
 Usage:
-  .venv/bin/python scripts/check_pipeline.py [--task-id ID] [--log] [--json]
+  .venv/bin/python scripts/check_pipeline.py [--task-id ID] [--log] [--json] [--attention] [--hierarchical | --flat]
   --task-id ID  Show full log for task (prompt + response)
   --log         Include last 20 lines of running task's log if available
   --json        Output pipeline-status as JSON (for scripting)
+  --attention  Print attention flags (stuck, repeated_failures, low_success_rate) in human-readable form
+  --hierarchical  Explicitly use hierarchical view (Goal → PM → Tasks → Artifacts). Default for human-readable.
+  --flat       Legacy flat output (sections not strictly layered).
 """
 
 import argparse
@@ -89,12 +92,96 @@ def _get_pipeline_process_args():
     return out
 
 
+def _fetch_status_report() -> dict | None:
+    """GET /api/agent/status-report. Returns None on error or unreachable."""
+    try:
+        r = httpx.get(f"{BASE}/api/agent/status-report", timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_effectiveness() -> dict | None:
+    """GET /api/agent/effectiveness. Returns None on error or unreachable."""
+    try:
+        r = httpx.get(f"{BASE}/api/agent/effectiveness", timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+
+def _build_hierarchical_from_data(data: dict, effectiveness: dict | None, proc: dict) -> dict:
+    """Build hierarchical dict (layer_0_goal … layer_3_attention) from pipeline-status + effectiveness when status-report is missing."""
+    pm = data.get("project_manager") or {}
+    running = data.get("running") or []
+    pending = data.get("pending") or []
+    completed = data.get("recent_completed") or []
+    att = data.get("attention") or {}
+
+    # Layer 0: Goal (from effectiveness fallback)
+    layer0 = {"status": "unknown", "summary": "Report not yet generated"}
+    if effectiveness:
+        gp = effectiveness.get("goal_proximity", 0)
+        t = effectiveness.get("throughput", {})
+        sr = effectiveness.get("success_rate", 0)
+        layer0 = {
+            "status": "ok" if gp >= 0.5 else "needs_attention",
+            "goal_proximity": gp,
+            "summary": f"goal_proximity={gp}, {t.get('completed_7d', 0)} tasks (7d), {int((sr or 0) * 100)}% success",
+        }
+
+    # Layer 1: Orchestration (from PM state + process detection)
+    rw = proc.get("runner_workers")
+    pp = proc.get("pm_parallel")
+    pm_seen = pm is not None and (pm.get("backlog_index") is not None or pm.get("phase") is not None)
+    runner_seen = rw is not None
+    layer1 = {
+        "status": "ok" if (runner_seen or pm_seen) else "needs_attention",
+        "project_manager": pm,
+        "runner_workers": rw,
+        "pm_parallel": pp,
+        "summary": f"PM item={pm.get('backlog_index', '?')} phase={pm.get('phase', '?')}; runner_workers={rw}; pm_parallel={pp}",
+    }
+
+    # Layer 2: Execution (Tasks)
+    layer2 = {
+        "status": "ok",
+        "running": running,
+        "pending": pending,
+        "recent_completed": completed,
+        "summary": f"running={len(running)}, pending={len(pending)}, recent_completed={len(completed)}",
+    }
+
+    # Layer 3: Attention (from pipeline-status attention)
+    flags = (att.get("flags") or []) if isinstance(att, dict) else []
+    layer3 = {
+        "status": "ok" if not flags else "needs_attention",
+        "flags": flags,
+        "summary": "No issues" if not flags else f"Attention: {', '.join(flags)}",
+    }
+
+    return {
+        "layer_0_goal": layer0,
+        "layer_1_orchestration": layer1,
+        "layer_2_execution": layer2,
+        "layer_3_attention": layer3,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description="Pipeline visibility")
     ap.add_argument("--task-id", help="Show full log for task")
     ap.add_argument("--log", action="store_true", help="Include log preview for running task")
     ap.add_argument("--json", action="store_true", help="Output pipeline-status as JSON")
+    ap.add_argument("--attention", action="store_true", help="Print attention flags (stuck, repeated_failures, low_success_rate)")
+    ap.add_argument("--hierarchical", action="store_true", help="Use hierarchical view (Goal → PM → Tasks → Artifacts). Default for human-readable.")
+    ap.add_argument("--flat", action="store_true", help="Legacy flat output (sections not strictly layered).")
     args = ap.parse_args()
+    use_hierarchical = not args.flat
 
     if args.task_id:
         try:
@@ -153,93 +240,216 @@ def main():
         sys.exit(1)
 
     if args.json:
-        print(json.dumps(data, indent=2))
+        if use_hierarchical:
+            status_report = _fetch_status_report()
+            effectiveness = _fetch_effectiveness()
+            proc = _get_pipeline_process_args()
+            if status_report and status_report.get("layer_0_goal") and status_report.get("layer_0_goal").get("summary") != "Report not yet generated by monitor":
+                hierarchical = {
+                    "layer_0_goal": status_report.get("layer_0_goal", {}),
+                    "layer_1_orchestration": status_report.get("layer_1_orchestration", {}),
+                    "layer_2_execution": status_report.get("layer_2_execution", {}),
+                    "layer_3_attention": status_report.get("layer_3_attention", {}),
+                }
+            else:
+                hierarchical = _build_hierarchical_from_data(data, effectiveness, proc)
+            out = {**data, "hierarchical": hierarchical}
+            print(json.dumps(out, indent=2))
+        else:
+            print(json.dumps(data, indent=2))
         return
 
-    print("Pipeline Status")
-    print("=" * 60)
+    if args.attention:
+        att = data.get("attention") or {}
+        flags = att.get("flags") or []
+        if flags:
+            print("Attention:", ", ".join(flags))
+        else:
+            print("Attention: —")
+        print()
 
-    # Running
-    running = data.get("running") or []
-    if running:
-        t = running[0]
-        print(f"RUNNING: {t['id']} ({t['task_type']}) | model: {t['model']}")
-        print(f"  Duration: {_fmt_seconds(t.get('running_seconds'))}")
-        print(f"  Direction: {(t.get('direction') or '')[:70]}...")
-        # Live tail from streamed log (agent_runner writes incrementally)
-        tail = t.get("live_tail") or _read_log_tail(t["id"], 25)
-        if tail:
-            print(f"  Live output (last {len(tail)} lines):")
-            for line in tail[-18:]:
-                print(f"    {line[:90]}")
-    else:
-        print("RUNNING: —")
+    if use_hierarchical:
+        # Hierarchical view: Goal → PM/Orchestration → Tasks → Artifacts
+        status_report = _fetch_status_report()
+        effectiveness = _fetch_effectiveness()
+        proc = _get_pipeline_process_args()
+        running = data.get("running") or []
+        pending = data.get("pending") or []
+        completed = data.get("recent_completed") or []
+        pm = data.get("project_manager")
 
-    # Pending
-    pending = data.get("pending") or []
-    print(f"\nPENDING: {len(pending)} tasks")
-    for t in pending[:8]:
-        wait = _fmt_seconds(t.get("wait_seconds"))
-        print(f"  • {t['id']} ({t['task_type']}) | wait: {wait} | {(t.get('direction') or '')[:50]}...")
+        # Layer 0: Goal
+        layer0 = None
+        if status_report and status_report.get("layer_0_goal"):
+            l0 = status_report["layer_0_goal"]
+            if l0.get("summary") and "not yet generated" not in (l0.get("summary") or "").lower():
+                layer0 = l0
+        if not layer0 and effectiveness:
+            gp = effectiveness.get("goal_proximity", 0)
+            t = effectiveness.get("throughput", {})
+            sr = effectiveness.get("success_rate", 0)
+            layer0 = {
+                "status": "ok" if gp >= 0.5 else "needs_attention",
+                "goal_proximity": gp,
+                "summary": f"goal_proximity={gp}, {t.get('completed_7d', 0)} tasks (7d), {int((sr or 0) * 100)}% success",
+            }
+        print("Pipeline Status (hierarchical)")
+        print("=" * 60)
+        print("Goal (Layer 0)")
+        if layer0:
+            print(f"  status: {layer0.get('status', '?')}")
+            print(f"  {layer0.get('summary', '')}")
+            if layer0.get("goal_proximity") is not None:
+                print(f"  goal_proximity: {layer0['goal_proximity']}")
+        else:
+            print("  (report not yet generated)")
 
-    # Recent completed
-    completed = data.get("recent_completed") or []
-    print(f"\nRECENT COMPLETED: {len(completed)}")
-    for t in completed[:5]:
-        dur = _fmt_seconds(t.get("duration_seconds"))
-        out_len = t.get("output_len", 0)
-        print(f"  • {t['id']} ({t['task_type']}) | duration: {dur} | output: {out_len} chars")
-
-    # PM state
-    pm = data.get("project_manager")
-    if pm:
-        print(f"\nPROJECT MANAGER: item {pm.get('backlog_index', '?')}, phase={pm.get('phase', '?')}")
-        if pm.get("current_task_id"):
-            print(f"  Waiting on: {pm['current_task_id']}")
-        if pm.get("blocked"):
-            print("  (blocked by needs_decision)")
-
-    # Pipeline processes (for phase coverage: want PM --parallel, agent_runner --workers 5)
-    proc = _get_pipeline_process_args()
-    rw = proc.get("runner_workers")
-    pp = proc.get("pm_parallel")
-    parts = []
-    if rw is not None:
-        parts.append(f"agent_runner workers={rw}" + (" (ok)" if rw >= 5 else " (need 5)"))
-    else:
-        parts.append("agent_runner not seen")
-    if pp is not None:
-        parts.append(f"PM parallel={str(pp).lower()}" + (" (ok)" if pp else " (need --parallel)"))
-    else:
-        parts.append("PM not seen")
-    print(f"\nPROCESSES: {', '.join(parts)}")
-
-    # Latest LLM request/response
-    req = data.get("latest_request")
-    resp = data.get("latest_response")
-    if req or resp:
-        print("\n--- Latest LLM activity ---")
-        if req:
-            d = (req.get("direction") or "")[:120]
-            print(f"REQUEST ({req.get('task_id', '')} [{req.get('status', '')}]): {d}{'...' if len(req.get('direction') or '') > 120 else ''}")
-            cmd = (req.get("prompt_preview") or "")[:400]
-            if cmd:
-                print(f"  Cmd: {cmd}{'...' if len(req.get('prompt_preview') or '') > 400 else ''}")
-        if resp:
-            prev = (resp.get("output_preview") or "").strip()
-            print(f"RESPONSE ({resp.get('task_id', '')} [{resp.get('status', '')}], {resp.get('output_len', 0)} chars):")
-            if prev:
-                for line in prev.split("\n")[:10]:
-                    print(f"  {line[:85]}")
-                if len(prev) > 800:
-                    print("  ... [truncated]")
+        # Layer 1: PM / Orchestration
+        layer1 = None
+        if status_report and status_report.get("layer_1_orchestration") and (status_report["layer_1_orchestration"].get("summary") or status_report["layer_1_orchestration"].get("status") != "unknown"):
+            layer1 = status_report["layer_1_orchestration"]
+        if not layer1:
+            rw = proc.get("runner_workers")
+            pp = proc.get("pm_parallel")
+            parts = []
+            if rw is not None:
+                parts.append(f"agent_runner workers={rw}" + (" (ok)" if rw >= 5 else " (need 5)"))
             else:
-                print("  (empty)")
-        print("---")
+                parts.append("agent_runner not seen")
+            if pp is not None:
+                parts.append(f"PM parallel={str(pp).lower()}" + (" (ok)" if pp else " (need --parallel)"))
+            else:
+                parts.append("PM not seen")
+            layer1 = {"summary": "; ".join(parts)}
+            if pm:
+                layer1["summary"] = f"item {pm.get('backlog_index', '?')}, phase={pm.get('phase', '?')}; " + layer1["summary"]
+        print("\nPM / Orchestration (Layer 1)")
+        print(f"  {layer1.get('summary', '')}")
+        if pm:
+            print(f"  PROJECT MANAGER: item {pm.get('backlog_index', '?')}, phase={pm.get('phase', '?')}")
+            if pm.get("current_task_id"):
+                print(f"  Waiting on: {pm['current_task_id']}")
+            if pm.get("blocked"):
+                print("  (blocked by needs_decision)")
+
+        # Layer 2: Tasks
+        print("\nTasks (Layer 2)")
+        if running:
+            t = running[0]
+            print(f"  RUNNING: {t['id']} ({t['task_type']}) | model: {t['model']} | duration: {_fmt_seconds(t.get('running_seconds'))}")
+            print(f"    Direction: {(t.get('direction') or '')[:70]}...")
+            tail = t.get("live_tail") or _read_log_tail(t["id"], 25)
+            if tail and args.log:
+                for line in tail[-18:]:
+                    print(f"    {line[:90]}")
+        else:
+            print("  RUNNING: —")
+        print(f"  PENDING: {len(pending)} tasks")
+        for t in pending[:8]:
+            wait = _fmt_seconds(t.get("wait_seconds"))
+            print(f"    • {t['id']} ({t['task_type']}) | wait: {wait} | {(t.get('direction') or '')[:50]}...")
+        print(f"  RECENT COMPLETED: {len(completed)}")
+        for t in completed[:5]:
+            dur = _fmt_seconds(t.get("duration_seconds"))
+            print(f"    • {t['id']} ({t['task_type']}) | duration: {dur}")
+
+        # Layer 3: Artifacts (recent completed with output size / preview)
+        print("\nArtifacts (Layer 3)")
+        if completed:
+            for t in completed[:5]:
+                out_len = t.get("output_len", 0)
+                prev = (t.get("output_preview") or "").strip()
+                line = f"  • {t['id']} | output: {out_len} chars"
+                if prev:
+                    line += f" | preview: {(prev.split(chr(10))[0])[:60]}..."
+                print(line)
+        else:
+            print("  (no recent completed tasks)")
+
+    else:
+        # Legacy flat output
+        print("Pipeline Status")
+        print("=" * 60)
+
+        running = data.get("running") or []
+        if running:
+            t = running[0]
+            print(f"RUNNING: {t['id']} ({t['task_type']}) | model: {t['model']}")
+            print(f"  Duration: {_fmt_seconds(t.get('running_seconds'))}")
+            print(f"  Direction: {(t.get('direction') or '')[:70]}...")
+            tail = t.get("live_tail") or _read_log_tail(t["id"], 25)
+            if tail:
+                print(f"  Live output (last {len(tail)} lines):")
+                for line in tail[-18:]:
+                    print(f"    {line[:90]}")
+        else:
+            print("RUNNING: —")
+
+        pending = data.get("pending") or []
+        print(f"\nPENDING: {len(pending)} tasks")
+        for t in pending[:8]:
+            wait = _fmt_seconds(t.get("wait_seconds"))
+            print(f"  • {t['id']} ({t['task_type']}) | wait: {wait} | {(t.get('direction') or '')[:50]}...")
+
+        completed = data.get("recent_completed") or []
+        print(f"\nRECENT COMPLETED: {len(completed)}")
+        for t in completed[:5]:
+            dur = _fmt_seconds(t.get("duration_seconds"))
+            out_len = t.get("output_len", 0)
+            print(f"  • {t['id']} ({t['task_type']}) | duration: {dur} | output: {out_len} chars")
+
+        pm = data.get("project_manager")
+        if pm:
+            print(f"\nPROJECT MANAGER: item {pm.get('backlog_index', '?')}, phase={pm.get('phase', '?')}")
+            if pm.get("current_task_id"):
+                print(f"  Waiting on: {pm['current_task_id']}")
+            if pm.get("blocked"):
+                print("  (blocked by needs_decision)")
+
+        proc = _get_pipeline_process_args()
+        rw = proc.get("runner_workers")
+        pp = proc.get("pm_parallel")
+        parts = []
+        if rw is not None:
+            parts.append(f"agent_runner workers={rw}" + (" (ok)" if rw >= 5 else " (need 5)"))
+        else:
+            parts.append("agent_runner not seen")
+        if pp is not None:
+            parts.append(f"PM parallel={str(pp).lower()}" + (" (ok)" if pp else " (need --parallel)"))
+        else:
+            parts.append("PM not seen")
+        print(f"\nPROCESSES: {', '.join(parts)}")
+
+        req = data.get("latest_request")
+        resp = data.get("latest_response")
+        if req or resp:
+            print("\n--- Latest LLM activity ---")
+            if req:
+                d = (req.get("direction") or "")[:120]
+                print(f"REQUEST ({req.get('task_id', '')} [{req.get('status', '')}]): {d}{'...' if len(req.get('direction') or '') > 120 else ''}")
+                cmd = (req.get("prompt_preview") or "")[:400]
+                if cmd:
+                    print(f"  Cmd: {cmd}{'...' if len(req.get('prompt_preview') or '') > 400 else ''}")
+            if resp:
+                prev = (resp.get("output_preview") or "").strip()
+                print(f"RESPONSE ({resp.get('task_id', '')} [{resp.get('status', '')}], {resp.get('output_len', 0)} chars):")
+                if prev:
+                    for line in prev.split("\n")[:10]:
+                        print(f"  {line[:85]}")
+                    if len(prev) > 800:
+                        print("  ... [truncated]")
+                else:
+                    print("  (empty)")
+            print("---")
 
     print()
     print("Full task log: .venv/bin/python scripts/check_pipeline.py --task-id TASK_ID")
-    print("Ollama request count: check Ollama/GIN logs (each POST /v1/messages = 1 turn)")
+    # Request count hint: Cursor uses its own usage; Claude+local uses model provider logs
+    executor = os.environ.get("AGENT_EXECUTOR_DEFAULT", "claude")
+    if executor == "cursor":
+        print("Request count: Cursor tracks usage in app; model provider logs for Claude/Ollama path")
+    else:
+        print("Request count: check model provider logs (Ollama/GIN: each POST /v1/messages = 1 turn)")
 
 
 if __name__ == "__main__":

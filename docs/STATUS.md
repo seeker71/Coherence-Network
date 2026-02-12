@@ -65,4 +65,5 @@
 ## Next Priority Tasks
 
 1. **Implement spec 029 (GitHub API integration)** — P0; Contributor/Org nodes, index_github.py; critical for real coherence.
-2. Pipfile / poetry.lock import (future)
+2. **Full automation (meta-pipeline):** specs/007-meta-pipeline-backlog items 1–5 — PLAN progress metric, heal→resolution, META-QUESTIONS check, backlog alignment, heal effectiveness. Interleaved at 20% via run_overnight_pipeline.
+3. Pipfile / poetry.lock import (future)

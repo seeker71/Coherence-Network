@@ -111,7 +111,7 @@ def run_one_task(
         env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
         env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
         env.setdefault("ANTHROPIC_API_KEY", "")
-    # Suppress Claude Code requests to unsupported Ollama endpoints (GitHub #13949)
+    # Suppress Claude Code requests to unsupported local-model endpoints (GitHub #13949)
     env.setdefault("DISABLE_TELEMETRY", "1")
     env.setdefault("DISABLE_ERROR_REPORTING", "1")
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
@@ -174,8 +174,19 @@ def run_one_task(
 
         output = "".join(output_lines)
         returncode = process.returncode if process.returncode is not None else -9
-        status = "completed" if returncode == 0 else "failed"
         duration_sec = round(time.monotonic() - start_time, 1)
+
+        # Zero/short output on exit 0 is suspicious: likely capture failure or silent crash
+        MIN_OUTPUT_CHARS = 10
+        output_stripped = (output or "").strip()
+        if returncode == 0 and len(output_stripped) < MIN_OUTPUT_CHARS:
+            status = "failed"
+            output = (
+                output
+                + f"\n[Pipeline] Marked failed: completed with {len(output_stripped)} chars output (expected >{MIN_OUTPUT_CHARS}). Possible capture failure or silent crash."
+            )
+        else:
+            status = "completed" if returncode == 0 else "failed"
 
         with open(out_file, "a", encoding="utf-8") as f:
             f.write(f"\n# duration_seconds={duration_sec} exit={returncode} status={status}\n")

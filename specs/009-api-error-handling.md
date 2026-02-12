@@ -107,7 +107,7 @@ ValidationErrorDetail:
 - Unhandled exception returns 500 with `{ "detail": "Internal server error" }`.
 - 404 responses have no extra top-level keys (only `detail`).
 
-See `api/tests/test_agent.py` and `api/tests/test_health.py` (where 009-related tests may live); all must pass.
+**Contract tests:** `api/tests/test_api_error_handling.py` — defines 422 validation shape, 404 consistency (only `detail` key), and error schema for 400/404/500. Additional 009-related tests in `api/tests/test_agent.py` and `api/tests/test_health.py`; all must pass.
 
 ## Verification (iteration 2)
 

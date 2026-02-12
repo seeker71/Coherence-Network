@@ -41,6 +41,14 @@ Landing is complete when all of the following hold:
 
 **Response 200** — HTML (FastAPI Swagger UI). No JSON contract; only reachability is required. The test asserts `status_code == 200`.
 
+#### Acceptance test: GET /docs returns 200 (OpenAPI UI reachable)
+
+- **Requirement:** Add (or keep) a test that `GET /docs` returns HTTP 200 so the OpenAPI UI is reachable when the API runs.
+- **Test name:** `test_docs_returns_200`
+- **Test file:** `api/tests/test_health.py`
+- **Assertion:** `response = client.get("/docs"); assert response.status_code == 200`
+- **Out of scope:** No assertion on response body (HTML); status code only.
+
 ## Files to Create/Modify
 
 - `api/app/main.py` — root response with version, docs URL, health URL (already done)

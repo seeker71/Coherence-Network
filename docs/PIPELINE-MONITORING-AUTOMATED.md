@@ -86,6 +86,8 @@ Response shape:
 | `low_phase_coverage` | medium | Pending exist but &lt;2 running — ensure parallel mode, workers 5 |
 | `repeated_failures` | high | 3+ consecutive failed (same phase) |
 | `low_success_rate` | medium | 7d success rate < 80% (10+ tasks) |
+| `runner_pm_not_seen` | high | PROCESSES: agent_runner not seen, PM not seen — pipeline processes down |
+| `output_empty` | high | Completed task has 0 chars output (capture failure or silent crash) |
 | `orphan_running` | medium | Single running task > 2h |
 | `needs_decision` | medium | PM blocked on human decision |
 | `api_unreachable` | high | pipeline-status request fails |
@@ -96,6 +98,7 @@ Response shape:
 | Issue | Fallback Action |
 |-------|-----------------|
 | `stale_version` | Write restart_requested.json → watchdog restarts pipeline |
+| `runner_pm_not_seen` | Write restart_requested.json → watchdog restarts pipeline |
 | `orphan_running` | PATCH task to failed (unblock pipeline) |
 | `no_task_running` | Create heal task (when auto-fix also enabled) |
 | `repeated_failures` | Create heal task (when auto-fix also enabled) |

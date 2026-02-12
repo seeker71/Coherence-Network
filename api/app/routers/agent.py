@@ -44,6 +44,13 @@ def _task_to_item(task: dict) -> dict:
     }
 
 
+def _task_to_attention_item(task: dict) -> dict:
+    """Like _task_to_item but includes output (spec 003: GET /attention)."""
+    out = _task_to_item(task)
+    out["output"] = task.get("output")
+    return out
+
+
 def _task_to_full(task: dict) -> dict:
     """Convert stored task to full response."""
     return {
@@ -90,10 +97,10 @@ async def list_tasks(
 
 @router.get("/agent/tasks/attention")
 async def get_attention_tasks(limit: int = Query(20, ge=1, le=100)) -> dict:
-    """List tasks with status needs_decision or failed only."""
+    """List tasks with status needs_decision or failed only (spec 003: includes output, decision_prompt)."""
     items, total = agent_service.get_attention_tasks(limit=limit)
     return {
-        "tasks": [_task_to_item(t) for t in items],
+        "tasks": [_task_to_attention_item(t) for t in items],
         "total": total,
     }
 
@@ -172,22 +179,26 @@ async def update_task(
 
             created = task.get("created_at")
             updated = task.get("updated_at")
-            if created is not None and updated is not None:
-                if hasattr(created, "timestamp"):
-                    duration_seconds = (updated - created).total_seconds()
+            end_ts = updated if updated is not None else datetime.now(timezone.utc)
+            if created is not None:
+                if hasattr(created, "timestamp") and hasattr(end_ts, "timestamp"):
+                    duration_seconds = (end_ts - created).total_seconds()
                 else:
                     created_dt = created if isinstance(created, datetime) else datetime.fromisoformat(str(created).replace("Z", "+00:00"))
-                    updated_dt = updated if isinstance(updated, datetime) else datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+                    updated_dt = end_ts if isinstance(end_ts, datetime) else datetime.fromisoformat(str(end_ts).replace("Z", "+00:00"))
                     duration_seconds = (updated_dt - created_dt).total_seconds()
-                task_type_str = task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"])
-                status_str = task["status"].value if hasattr(task["status"], "value") else str(task["status"])
-                record_task(
-                    task_id=task_id,
-                    task_type=task_type_str,
-                    model=task.get("model", "unknown"),
-                    duration_seconds=round(duration_seconds, 1),
-                    status=status_str,
-                )
+                duration_seconds = max(0.0, duration_seconds)
+            else:
+                duration_seconds = 0.0
+            task_type_str = task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"])
+            status_str = task["status"].value if hasattr(task["status"], "value") else str(task["status"])
+            record_task(
+                task_id=task_id,
+                task_type=task_type_str,
+                model=task.get("model", "unknown"),
+                duration_seconds=round(duration_seconds, 1),
+                status=status_str,
+            )
         except ImportError:
             pass
     return AgentTask(**_task_to_full(task))
@@ -365,14 +376,45 @@ async def get_effectiveness() -> dict:
         }
 
 
+def _merge_meta_questions_into_report(report: dict, logs_dir: str) -> dict:
+    """If report lacks meta_questions but api/logs/meta_questions.json exists, merge it (surface unanswered/failed)."""
+    if "meta_questions" in report:
+        return report
+    mq_path = os.path.join(logs_dir, "meta_questions.json")
+    if not os.path.isfile(mq_path):
+        return report
+    try:
+        with open(mq_path, encoding="utf-8") as f:
+            mq = json.load(f)
+    except Exception:
+        return report
+    summary = mq.get("summary") or {}
+    unanswered = summary.get("unanswered") or []
+    failed = summary.get("failed") or []
+    mq_status = "ok" if not unanswered and not failed else "needs_attention"
+    report["meta_questions"] = {
+        "status": mq_status,
+        "last_run": mq.get("run_at"),
+        "unanswered": unanswered,
+        "failed": failed,
+    }
+    if mq_status == "needs_attention":
+        report.setdefault("overall", {})
+        report["overall"].setdefault("needs_attention", [])
+        if "meta_questions" not in report["overall"]["needs_attention"]:
+            report["overall"]["needs_attention"] = report["overall"]["needs_attention"] + ["meta_questions"]
+        report["overall"]["status"] = "needs_attention"
+    return report
+
+
 @router.get("/agent/status-report")
 async def get_status_report() -> dict:
     """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
-    Machine and human readable. Written by monitor each check."""
+    Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
     path = os.path.join(logs_dir, "pipeline_status_report.json")
     if not os.path.isfile(path):
-        return {
+        out = {
             "generated_at": None,
             "overall": {"status": "unknown", "going_well": [], "needs_attention": []},
             "layer_0_goal": {"status": "unknown", "summary": "Report not yet generated by monitor"},
@@ -380,9 +422,11 @@ async def get_status_report() -> dict:
             "layer_2_execution": {"status": "unknown", "summary": ""},
             "layer_3_attention": {"status": "unknown", "summary": ""},
         }
+        return _merge_meta_questions_into_report(out, logs_dir)
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            report = json.load(f)
+        return _merge_meta_questions_into_report(report, logs_dir)
     except Exception:
         return {"generated_at": None, "overall": {"status": "unknown"}, "error": "Could not read report"}
 

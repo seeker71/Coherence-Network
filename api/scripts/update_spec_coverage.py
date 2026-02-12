@@ -151,17 +151,19 @@ def _update_status_sections(
     impl_block = _format_specs_implemented(implemented)
     pend_block = _format_specs_pending(pending)
 
+    # Match section content until next ## (allow \n\n or \n before next heading)
+    _until_next_h2 = r"(?=\n+\s*## )"
     out = status_content
     # Replace ## Specs Implemented ... until next ##
     out = re.sub(
-        r"(## Specs Implemented\n)(.*?)(?=\n## )",
+        r"(## Specs Implemented\n)(.*?)" + _until_next_h2,
         lambda m: m.group(1) + impl_block + "\n\n",
         out,
         flags=re.DOTALL,
     )
     # Replace ## Specs Pending Implementation ... until next ##
     out = re.sub(
-        r"(## Specs Pending Implementation\n)(.*?)(?=\n## )",
+        r"(## Specs Pending Implementation\n)(.*?)" + _until_next_h2,
         lambda m: m.group(1) + pend_block + "\n\n",
         out,
         flags=re.DOTALL,
@@ -169,7 +171,7 @@ def _update_status_sections(
     if test_count is not None:
         # Replace ## Test Count ... until next ## (one or more bullet lines)
         out = re.sub(
-            r"(## Test Count\n\n)((?:- .*\n?)+?)(?=\n## )",
+            r"(## Test Count\n\n)((?:- .*\n?)+?)" + _until_next_h2,
             lambda m: m.group(1) + f"- {test_count} tests (CI runs full suite)\n",
             out,
             count=1,

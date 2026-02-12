@@ -21,6 +21,46 @@ Quick reference for common operational tasks.
 | `api/logs/pipeline_status_report.txt` | Same report in human-readable text |
 | `api/logs/pipeline_version.json` | Git SHA at pipeline start (version check) |
 | `api/logs/graph_store.json` | Project graph (spec 019; persisted after index) |
+| `api/logs/fatal_issues.json` | Fatal pipeline issues (unrecoverable; check via GET /api/agent/fatal-issues or report_fatal.py) |
+
+Application log files (e.g. agent_runner.log, project_manager.log) use rotation: 5 MiB per file, 3 backups (spec 013). Task logs (`task_*.log`) are ephemeral; cleanup via find or `cleanup_temp.py`.
+
+## API Restart
+
+Stop and start the API (port 8000). Process cleanup when needed:
+
+```bash
+# Stop any uvicorn process on app.main
+pkill -f "uvicorn app.main"
+
+# Start API (from api/)
+cd api && uvicorn app.main:app --reload --port 8000
+```
+
+Optional: run API with Telegram webhook support:
+
+```bash
+cd api && ./scripts/start_with_telegram.sh
+```
+
+## Pipeline Recovery
+
+When the pipeline is stuck or the agent runner died:
+
+1. **Effectiveness check:** `cd api && ./scripts/ensure_effective_pipeline.sh`
+2. **Restart API** if health/metrics/monitor-issues fail: `pkill -f uvicorn; cd api && uvicorn app.main:app --reload --port 8000`
+3. **Restart overnight pipeline:** `cd api && ./scripts/run_overnight_pipeline.sh`
+4. **Or restart components separately:**
+   ```bash
+   cd api
+   .venv/bin/python scripts/agent_runner.py --interval 10 -v &
+   .venv/bin/python scripts/project_manager.py --interval 15 --hours 8 -v
+   ```
+
+**Unblock needs_decision:**
+
+- Telegram: `/reply {task_id} yes` (or your decision)
+- API: `curl -X PATCH http://localhost:8000/api/agent/tasks/{id} -H "Content-Type: application/json" -d '{"decision":"yes"}'`
 
 ## Index npm packages
 
@@ -42,18 +82,6 @@ cd api && .venv/bin/python scripts/index_pypi.py --target 100
 
 Uses same graph_store.json as npm; projects coexist.
 
-## API Restart
-
-```bash
-# If running via uvicorn directly
-pkill -f "uvicorn app.main"
-cd api && uvicorn app.main:app --reload --port 8000
-
-# If running via start_with_telegram
-# Stop the script (Ctrl+C), then restart
-./scripts/start_with_telegram.sh
-```
-
 ## Autonomous Pipeline (Max Autonomy)
 
 One command, no interaction. Starts API + pipeline, restarts on failure. Reports fatal issues only.
@@ -67,7 +95,7 @@ cd api && ./scripts/run_autonomous.sh
 - **Auto-push** (PIPELINE_AUTO_PUSH=0 by default): Set to 1 to run `git push` after commit. Use with caution.
 - needs_decision timeout: 24h (auto-skip blocked tasks)
 - Fatal issues: `api/logs/fatal_issues.json` or `GET /api/agent/fatal-issues`
-- Check fatal only when unrecoverable: `python scripts/report_fatal.py`
+- Check fatal only when unrecoverable: `cd api && .venv/bin/python scripts/report_fatal.py`
 
 ## Pipeline Effectiveness Check
 
@@ -78,28 +106,6 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 ```
 
 This checks: API reachable, metrics endpoint, monitor-issues endpoint, effectiveness endpoint, version tracking, monitor/runner processes. Reports effectiveness summary (throughput, success rate, issues, goal proximity) and required actions if anything needs attention.
-
-## Pipeline Recovery
-
-**Pipeline stuck or agent runner died:**
-
-1. Run effectiveness check: `./scripts/ensure_effective_pipeline.sh`
-2. Restart API if metrics/monitor-issues 404: `pkill -f uvicorn; cd api && uvicorn app.main:app --reload --port 8000`
-3. Restart overnight pipeline:
-   ```bash
-   cd api && ./scripts/run_overnight_pipeline.sh
-   ```
-4. Or restart components separately:
-   ```bash
-   cd api
-   .venv/bin/python scripts/agent_runner.py --interval 10 -v &
-   .venv/bin/python scripts/project_manager.py --interval 15 --hours 8 -v
-   ```
-
-**Blocked on needs_decision:**
-
-- Telegram: `/reply {task_id} yes` (or your decision)
-- API: `curl -X PATCH http://localhost:8000/api/agent/tasks/{id} -d '{"decision":"yes"}'`
 
 ## Check Pipeline Status
 
@@ -121,6 +127,7 @@ Shows: running task, pending count, recent completed, latest LLM activity.
 | `GET /api/health` | Liveness |
 | `GET /api/ready` | Readiness (k8s) |
 | `GET /api/version` | API version |
+| `GET /api/agent/tasks` | List tasks |
 | `GET /api/agent/tasks/count` | Task counts (total, by_status) |
 | `GET /api/agent/pipeline-status` | Pipeline visibility (running, pending, running_by_phase) |
 | `GET /api/agent/metrics` | Task metrics (success rate, duration) |

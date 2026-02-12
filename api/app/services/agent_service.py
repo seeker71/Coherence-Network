@@ -323,6 +323,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
             "model": t.get("model"),
             "direction": (t.get("direction") or "")[:100],
             "created_at": _ts(created),
+            "updated_at": _ts(updated),
             "wait_seconds": _seconds_ago(created) if st_val == "pending" else None,
             "running_seconds": _seconds_ago(started) if st_val == "running" and started else None,
             "duration_seconds": _duration(started, updated) if st_val in ("completed", "failed") and started and updated else None,
@@ -334,7 +335,11 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
         else:
             completed.append(item)
 
-    completed.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    # Most recently completed first (by completion order / updated_at per spec 032)
+    completed.sort(
+        key=lambda x: x.get("updated_at") or x.get("created_at", ""),
+        reverse=True,
+    )
 
     # Latest request/response for visibility into actual LLM activity
     latest_request = None
@@ -366,32 +371,54 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
                 "output_len": len(out),
             }
 
-    # Attention flags (spec 027)
+    # Attention flags (spec 027, 032: stuck, repeated_failures, low_success_rate)
+    def _status_val(task: dict) -> str:
+        """Normalize task status to string (handles TaskStatus enum or string)."""
+        s = (task or {}).get("status", "")
+        if hasattr(s, "value"):
+            return getattr(s, "value", str(s))
+        return str(s) if s else ""
+
     attention_flags = []
     stuck = False
     if pending and not running:
         wait_secs = [p.get("wait_seconds") for p in pending if p.get("wait_seconds") is not None]
-        if wait_secs and max(wait_secs) > 600:  # 10 min
+        if wait_secs and max(wait_secs) > 600:  # 10 min (spec 032)
             stuck = True
             attention_flags.append("stuck")
     repeated_failures = False
     if len(completed) >= 3:
         last_three = completed[:3]
-        if all(str((_store.get(c["id"]) or {}).get("status", "")) == "failed" for c in last_three):
+        if all(_status_val(_store.get(c["id"]) or {}) == "failed" for c in last_three):
             repeated_failures = True
             attention_flags.append("repeated_failures")
+    output_empty = False
+    for c in completed[:5]:
+        t = _store.get(c["id"]) or {}
+        if len(t.get("output") or "") == 0 and _status_val(t) == "completed":
+            output_empty = True
+            attention_flags.append("output_empty")
+            break
+    executor_fail = False
+    for c in completed[:5]:
+        t = _store.get(c["id"]) or {}
+        if len(t.get("output") or "") == 0 and _status_val(t) == "failed":
+            executor_fail = True
+            attention_flags.append("executor_fail")
+            break
     low_success_rate = False
     try:
         from app.services.metrics_service import get_aggregates
 
         agg = get_aggregates()
-        sr = agg.get("success_rate", {})
-        total = sr.get("total", 0)
-        rate = sr.get("rate", 0.0)
+        sr = agg.get("success_rate", {}) or {}
+        total = sr.get("total", 0) or 0
+        rate = float(sr.get("rate", 0) or 0)
         if total >= 10 and rate < 0.8:
             low_success_rate = True
             attention_flags.append("low_success_rate")
-    except ImportError:
+    except Exception:
+        # Spec 032: when metrics unavailable, low_success_rate remains false; do not raise
         pass
 
     # Phase coverage: count running+pending by task_type (spec 028)
@@ -415,6 +442,8 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
         "attention": {
             "stuck": stuck,
             "repeated_failures": repeated_failures,
+            "output_empty": output_empty,
+            "executor_fail": executor_fail,
             "low_success_rate": low_success_rate,
             "flags": attention_flags,
         },

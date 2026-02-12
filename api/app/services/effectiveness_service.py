@@ -2,14 +2,47 @@
 
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(_api_dir)
 LOG_DIR = os.path.join(_api_dir, "logs")
 ISSUES_FILE = os.path.join(LOG_DIR, "monitor_issues.json")
 RESOLUTIONS_FILE = os.path.join(LOG_DIR, "monitor_resolutions.jsonl")
+STATE_FILES = [
+    os.path.join(LOG_DIR, "project_manager_state_overnight.json"),
+    os.path.join(LOG_DIR, "project_manager_state.json"),
+]
+BACKLOG_FILE = os.path.join(PROJECT_ROOT, "specs", "006-overnight-backlog.md")
 WINDOW_DAYS = 7
+
+
+def _plan_progress() -> dict[str, Any]:
+    """Derive plan progress from PM state and backlog. Returns {index, total, pct}."""
+    index = 0
+    state_file = None
+    for p in STATE_FILES:
+        if os.path.isfile(p):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    s = json.load(f)
+                idx = s.get("backlog_index")
+                if idx is not None:
+                    index = int(idx)
+                    state_file = p
+                    break
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+    total = 0
+    if os.path.isfile(BACKLOG_FILE):
+        with open(BACKLOG_FILE, encoding="utf-8") as f:
+            for line in f:
+                if re.match(r"^\d+\.\s+.+$", line.strip()) and not line.strip().startswith("#"):
+                    total += 1
+    pct = round(100 * index / total, 1) if total else 0
+    return {"index": index, "total": total, "pct": pct, "state_file": (state_file or "").split("/")[-1]}
 
 
 def get_effectiveness() -> dict[str, Any]:
@@ -35,6 +68,7 @@ def get_effectiveness() -> dict[str, Any]:
             pass
 
     resolved_7d = 0
+    heal_resolved_count = 0
     if os.path.isfile(RESOLUTIONS_FILE):
         cutoff = datetime.now(timezone.utc) - timedelta(days=WINDOW_DAYS)
         try:
@@ -48,6 +82,8 @@ def get_effectiveness() -> dict[str, Any]:
                         ts = datetime.fromisoformat(rec.get("resolved_at", "").replace("Z", "+00:00"))
                         if ts >= cutoff:
                             resolved_7d += 1
+                            if rec.get("heal_task_id"):
+                                heal_resolved_count += 1
                     except (ValueError, KeyError, json.JSONDecodeError):
                         continue
         except Exception:
@@ -72,12 +108,16 @@ def get_effectiveness() -> dict[str, Any]:
     issue_penalty = max(0, 1 - (issues_open * 0.15))  # -15% per open issue
     goal_proximity = round(min(1.0, rate * (0.5 + 0.5 * throughput_factor) * issue_penalty), 2)
 
+    plan_progress = _plan_progress()
+
     return {
         "throughput": {"completed_7d": completed, "tasks_per_day": throughput_per_day},
         "success_rate": rate,
         "issues": {"open": issues_open, "resolved_7d": resolved_7d},
         "progress": progress,
+        "plan_progress": plan_progress,
         "goal_proximity": goal_proximity,
+        "heal_resolved_count": heal_resolved_count,
         "top_issues_by_priority": [
             {"condition": i.get("condition"), "severity": i.get("severity"), "message": (i.get("message") or "")[:80]}
             for i in (issues or [])[:5]

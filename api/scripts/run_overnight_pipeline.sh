@@ -21,6 +21,11 @@ cd "$API_DIR"
 export PIPELINE_META_BACKLOG="${PIPELINE_META_BACKLOG:-${PROJECT_ROOT}/specs/007-meta-pipeline-backlog.md}"
 export PIPELINE_META_RATIO="${PIPELINE_META_RATIO:-0.2}"
 
+# Full automation: auto-fix (create heal tasks) and auto-recover (restart on stale/hung) default on for overnight.
+# Set to 0 in .env to disable.
+export PIPELINE_AUTO_FIX_ENABLED="${PIPELINE_AUTO_FIX_ENABLED:-1}"
+export PIPELINE_AUTO_RECOVER="${PIPELINE_AUTO_RECOVER:-1}"
+
 PYTHON="${API_DIR}/.venv/bin/python"
 [ -x "$PYTHON" ] || PYTHON="python3"
 BASE="${AGENT_API_BASE:-http://localhost:8000}"
@@ -72,10 +77,8 @@ echo "  Agent runner PID: $RUNNER_PID"
 
 # 3b. Start monitor (version check, phase coverage, issues, fallback recovery)
 MONITOR_INTERVAL="${PIPELINE_MONITOR_INTERVAL:-60}"
-AUTOFIX=""
-[ -n "$PIPELINE_AUTO_FIX_ENABLED" ] && [ "$PIPELINE_AUTO_FIX_ENABLED" = "1" ] && AUTOFIX="--auto-fix"
-AUTORECOV=""
-[ -n "$PIPELINE_AUTO_RECOVER" ] && [ "$PIPELINE_AUTO_RECOVER" = "1" ] && AUTORECOV="--auto-recover"
+AUTOFIX=""; [ "$PIPELINE_AUTO_FIX_ENABLED" = "1" ] && AUTOFIX="--auto-fix"
+AUTORECOV=""; [ "$PIPELINE_AUTO_RECOVER" = "1" ] && AUTORECOV="--auto-recover"
 echo "Starting pipeline monitor (interval=${MONITOR_INTERVAL}s)..."
 $PYTHON scripts/monitor_pipeline.py --interval "$MONITOR_INTERVAL" $AUTOFIX $AUTORECOV >> logs/monitor.log 2>&1 &
 MONITOR_PID=$!
