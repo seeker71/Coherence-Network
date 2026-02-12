@@ -1,4 +1,9 @@
-"""Tests for project and search API — spec 008, 019."""
+"""Tests for project and search API — spec 008, 019.
+
+Spec 008 contract (tests define the contract):
+  - GET /api/projects/{eco}/{name} 200: exactly name, ecosystem, version, description, dependency_count → test_get_project_response_shape_defines_contract_spec_008
+  - GET /api/search?q= 200: exactly results (array), total (int); each result name, ecosystem, description → test_search_response_shape_defines_contract_spec_008
+"""
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -42,6 +47,33 @@ async def test_get_project_returns_200_when_exists(client: AsyncClient, graph_st
     assert data["ecosystem"] == "npm"
     assert data["version"] == "18.2.0"
     assert "React" in data["description"]
+
+
+@pytest.mark.asyncio
+async def test_get_project_response_shape_defines_contract_spec_008(
+    client: AsyncClient, graph_store
+):
+    """Spec 008: GET /api/projects/{eco}/{name} 200 response has exactly name, ecosystem, version, description, dependency_count; correct types."""
+    graph_store.upsert_project(
+        Project(
+            name="react",
+            ecosystem="npm",
+            version="18.2.0",
+            description="React library",
+            dependency_count=2,
+        )
+    )
+    response = await client.get("/api/projects/npm/react")
+    assert response.status_code == 200
+    data = response.json()
+    required = {"name", "ecosystem", "version", "description", "dependency_count"}
+    assert set(data.keys()) == required, "project response must have exactly name, ecosystem, version, description, dependency_count"
+    assert len(data) == 5, "project response must have no extra top-level keys"
+    assert isinstance(data["name"], str)
+    assert isinstance(data["ecosystem"], str)
+    assert isinstance(data["version"], str)
+    assert isinstance(data["description"], str)
+    assert isinstance(data["dependency_count"], int)
 
 
 @pytest.mark.asyncio
@@ -112,6 +144,33 @@ async def test_search_returns_matching_results(client: AsyncClient, graph_store)
     names = [r["name"] for r in data["results"]]
     assert "react" in names
     assert "react-dom" in names
+
+
+@pytest.mark.asyncio
+async def test_search_response_shape_defines_contract_spec_008(
+    client: AsyncClient, graph_store
+):
+    """Spec 008: GET /api/search?q= 200 response has exactly results (array) and total (int); each result has name, ecosystem, description."""
+    graph_store.upsert_project(
+        Project(
+            name="react",
+            ecosystem="npm",
+            version="1",
+            description="React library",
+            dependency_count=0,
+        )
+    )
+    response = await client.get("/api/search?q=react")
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == {"results", "total"}, "search response must have exactly results and total"
+    assert len(data) == 2
+    assert isinstance(data["results"], list)
+    assert isinstance(data["total"], int)
+    for item in data["results"]:
+        assert "name" in item and isinstance(item["name"], str)
+        assert "ecosystem" in item and isinstance(item["ecosystem"], str)
+        assert "description" in item and isinstance(item["description"], str)
 
 
 @pytest.mark.asyncio

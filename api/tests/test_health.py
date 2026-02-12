@@ -16,6 +16,8 @@ Spec 001 acceptance tests (all must pass). Requirement → Test mapping:
 Verification: Every spec 001 requirement has exactly one corresponding test; no requirement is untested.
 
 Spec 007 (landing/docs): Requirement → Test mapping:
+  - Root returns name, version, docs, health → test_root_returns_landing_info
+  - Root API contract (200, exact keys, types, docs/health values) → test_root_landing_api_contract_spec_007
   - GET /docs returns 200 (OpenAPI UI reachable) → test_docs_returns_200
 
 Run 001-only tests: cd api && pytest tests/test_health.py -v -k 'health'
@@ -53,10 +55,29 @@ async def test_root_returns_landing_info(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_docs_returns_200(client: AsyncClient):
-    """GET /docs returns 200 (OpenAPI UI reachable, spec 007)."""
-    response = await client.get("/docs", follow_redirects=True)
+async def test_root_landing_api_contract_spec_007(client: AsyncClient):
+    """Spec 007 root API contract: GET / returns 200 with exactly name, version, docs, health; correct types and values."""
+    response = await client.get("/")
     assert response.status_code == 200
+    data = response.json()
+    required = {"name", "version", "docs", "health"}
+    assert set(data.keys()) == required, "root response must have exactly name, version, docs, health"
+    assert len(data) == 4, "root response must have no extra top-level keys"
+    assert isinstance(data["name"], str) and len(data["name"]) > 0, "name must be non-empty string"
+    assert isinstance(data["version"], str) and len(data["version"]) > 0, "version must be non-empty string"
+    assert data["docs"] == "/docs", "docs must be /docs"
+    assert data["health"] == "/api/health", "health must be /api/health"
+
+
+@pytest.mark.asyncio
+async def test_docs_returns_200(client: AsyncClient):
+    """GET /docs returns 200 (OpenAPI UI reachable, spec 007).
+
+    Contract: GET /docs returns HTTP 200 so the OpenAPI UI is reachable.
+    Assertion: response.status_code == 200 (no body assertion per spec).
+    """
+    response = await client.get("/docs", follow_redirects=True)
+    assert response.status_code == 200, "GET /docs must return 200 (OpenAPI UI reachable)"
 
 
 @pytest.mark.asyncio

@@ -112,8 +112,8 @@ Path parameter `{id}` must not match fixed segments: `/attention` and `/count` a
 
 ### `GET /api/agent/tasks/{id}/log`
 
-**Response 200** — `{ "task_id": "...", "log": "..." | null, "command": "...", "output": "..." }`. Log is null when file not yet created.
-**Response 404** — Task not found
+**Response 200** — `{ "task_id": "...", "log": "...", "command": "...", "output": "..." }` when the task log file exists.
+**Response 404** — Task not found (non-existent task id), or task exists but log file is missing on disk. Body: `{ "detail": "Task not found" }` for unknown task id; `{ "detail": "Task log not found" }` when task exists but log file is missing.
 
 ### `PATCH /api/agent/tasks/{id}`
 
@@ -266,7 +266,7 @@ See `api/tests/test_agent.py`. All must pass.
 - test_pipeline_status_returns_200
 - test_monitor_issues_returns_200
 - test_task_log_returns_command_and_output
-- test_task_log_returns_null_when_file_missing
+- test_task_log_404_when_log_file_missing
 - test_list_items_omit_command_and_output
 - test_root_returns_200
 - test_agent_runner_polls_and_executes_one_task (smoke)
@@ -290,6 +290,7 @@ See `api/tests/test_agent.py`. All must pass.
 - test_fixed_path_count_not_matched_as_task_id
 - test_task_id_path_resolves_to_task
 - test_task_log_404_when_task_missing
+- test_task_log_404_when_log_file_missing
 - test_patch_progress_pct_negative_returns_422
 - test_patch_progress_pct_over_100_returns_422
 - test_patch_progress_pct_boundary_0_and_100_succeed
@@ -332,7 +333,7 @@ The following edge cases must be covered by tests in `api/tests/test_agent.py`:
 | **Task id resolution** | GET /api/agent/tasks/{real_task_id} returns that task | 200, id and direction match |
 | **Count empty store** | GET /api/agent/tasks/count when no tasks | 200, total: 0, by_status: {} |
 | **Log 404** | GET /api/agent/tasks/{id}/log with non-existent task id | 404, detail "Task not found" |
-| **Log file missing** | GET /api/agent/tasks/{id}/log when task exists but log file not created | 200, log: null |
+| **Log file missing** | GET /api/agent/tasks/{id}/log when task exists but log file missing on disk | 404, detail "Task log not found" |
 | **Log output when set** | GET /api/agent/tasks/{id}/log when task has output | 200, output in response |
 | **Attention limit** | GET /api/agent/tasks/attention?limit=0 or limit=101 | 422 |
 | **Route invalid task_type** | GET /api/agent/route?task_type=invalid | 422 |

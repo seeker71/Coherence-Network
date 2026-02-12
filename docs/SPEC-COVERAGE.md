@@ -50,6 +50,8 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 036 Check Pipeline Hierarchical View | ? | ✓ | ? | check_pipeline.py Goal→PM→Tasks→Artifacts; pending |
 | 037 POST invalid task_type 422 | ✓ | ✓ | ✓ | test_post_task_invalid_task_type_returns_422 |
 | 038 POST empty direction 422 | ✓ | ✓ | ✓ | test_post_task_empty_direction_returns_422 |
+| 039 Pipeline Status Empty State 200 | ✓ | ✓ | ✓ | test_pipeline_status_returns_200_when_no_running_task_empty_state |
+| 040 PM load_backlog Malformed Test | ✓ | ✓ | ✓ | test_load_backlog_malformed_missing_numbers; mixed numbered/unnumbered lines |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -131,12 +133,13 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
 | Root returns name, version, docs, health | `main.py` root handler | `test_root_returns_landing_info` |
+| Root API contract (200, exact keys, types, docs/health values) | `main.py` root handler | `test_root_landing_api_contract_spec_007` |
 | GET /docs reachable | FastAPI built-in | `test_docs_returns_200` |
 | Landing verifiable via automated tests | `api/tests/test_health.py` | (above) |
 
 **Files:** `api/app/main.py`, `api/tests/test_health.py`
 
-**Contract (spec 007):** Root returns 200 with `name`, `version`, `docs` (`/docs`), `health` (`/api/health`). GET /docs returns 200.
+**Contract (spec 007):** GET / returns 200 with exactly `name`, `version`, `docs`, `health` (no extra keys); `name` and `version` are non-empty strings; `docs` is `/docs`; `health` is `/api/health`. GET /docs returns 200. Tests define the contract; do not modify tests to make implementation pass.
 
 **Note:** `specs/007-meta-pipeline-backlog.md` is a separate backlog document (meta-pipeline improvement items); it is not an implementation spec and has no test mapping.
 
@@ -148,12 +151,28 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 |-------------|----------------|------|
 | GraphStore, Project nodes, dependency edges | spec 019 `adapters/graph_store.py`, `InMemoryGraphStore` | `test_graph_store.py`: `test_get_project_missing_returns_none`, `test_search` |
 | Indexer (deps.dev + npm), index ≥ 5K | `indexer_service.py`, `scripts/index_npm.py` | Manual: `index_npm.py --target 5000` |
-| GET /api/projects/{ecosystem}/{name} | `routers/projects.py` | `test_get_project_returns_200_when_exists`, `test_get_project_returns_404_when_missing`, `test_get_project_pypi_returns_200_when_exists` |
-| GET /api/search?q= | `routers/projects.py` | `test_search_returns_matching_results`, `test_search_empty_query_returns_empty` |
+| GET /api/projects/{ecosystem}/{name} | `routers/projects.py` | `test_get_project_returns_200_when_exists`, `test_get_project_response_shape_defines_contract_spec_008`, `test_get_project_returns_404_when_missing`, `test_get_project_pypi_returns_200_when_exists` |
+| GET /api/search?q= | `routers/projects.py` | `test_search_returns_matching_results`, `test_search_response_shape_defines_contract_spec_008`, `test_search_empty_query_returns_empty` |
 
 **Files:** `api/app/adapters/graph_store.py`, `api/app/routers/projects.py`, `api/app/services/indexer_service.py`, `api/scripts/index_npm.py`, `api/app/models/project.py`, `api/tests/test_projects.py`, `api/tests/test_graph_store.py`
 
+**Contract (spec 008):** GET /api/projects/{eco}/{name} 200: exactly `name`, `ecosystem`, `version`, `description`, `dependency_count` (no extra keys); types string/string/string/string/int. GET /api/search?q= 200: exactly `results` (array) and `total` (int); each result has `name`, `ecosystem`, `description`. Tests define the contract; do not modify tests to make implementation pass.
+
 **Status:** API + indexer via 019; 5K via `index_npm.py --target 5000`. PyPI via spec 024.
+
+---
+
+## Spec 039: Pipeline Status Empty State 200
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/agent/pipeline-status returns 200 in empty state (no running task) | `routers/agent.py`, `agent_service.get_pipeline_status` | `test_pipeline_status_returns_200_when_no_running_task_empty_state` |
+| Response includes running, pending, recent_completed, attention, running_by_phase | pipeline-status handler | (above); `test_pipeline_status_response_shape_defines_contract` |
+| running is empty list when no running task | agent_service | (above) |
+
+**Files:** `api/app/routers/agent.py`, `api/app/services/agent_service.py`, `api/tests/test_agent.py`
+
+**Contract (spec 039):** With no running task (empty or only pending/completed), GET /api/agent/pipeline-status returns 200; body includes required keys; `running` is [].
 
 ---
 
@@ -183,18 +202,32 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 040: Project Manager load_backlog Malformed File Test
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| Test with backlog file containing both numbered and unnumbered lines | `api/tests/test_project_manager.py` | `test_load_backlog_malformed_missing_numbers` |
+| load_backlog returns only parsed items from numbered lines (order preserved); unnumbered lines skipped | `project_manager.load_backlog`, `_parse_backlog_file` | (above): asserts `["First item", "Second item"]` |
+| No mocks; real file I/O and real load_backlog | test uses tmp_path, pm.BACKLOG_FILE | (above) |
+
+**Files:** `api/tests/test_project_manager.py`, `api/scripts/project_manager.py`
+
+**Contract (spec 040):** Lines matching `^\d+\.\s+(.+)$` are included; other lines ignored. Test uses mixed content (e.g. "1. First item", "Unnumbered line", "2. Second item") and expects only the two numbered items. See also spec 005 (project manager).
+
+---
+
 ## Spec 034: Ops Runbook
 
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
 | docs/RUNBOOK.md exists, canonical ops runbook | `docs/RUNBOOK.md` | `test_runbook_md_exists`, `test_runbook_has_all_required_sections` |
-| Log Locations section | RUNBOOK.md table of log paths | (above) |
-| API Restart section | RUNBOOK.md uvicorn, pkill, port | (above) |
-| Pipeline Recovery section | RUNBOOK.md effectiveness, restart, needs_decision | (above) |
-| Autonomous Pipeline / Pipeline Effectiveness / Key Endpoints | RUNBOOK.md sections | (above) |
-| Indexing (index_npm, index_pypi), check_pipeline, tests/cleanup | RUNBOOK.md | (above) |
+| Log Locations section | RUNBOOK.md table (Path, Purpose) | `test_runbook_has_log_locations_section`, `test_runbook_log_locations_has_table` |
+| API Restart section | RUNBOOK.md uvicorn, pkill, port | `test_runbook_has_api_restart_section`, `test_runbook_api_restart_documents_uvicorn_pkill_port` |
+| Pipeline Recovery section | RUNBOOK.md effectiveness, restart, needs_decision | `test_runbook_has_pipeline_recovery_section`, `test_runbook_pipeline_recovery_documents_effectiveness_restart_needs_decision` |
+| Autonomous Pipeline / Pipeline Effectiveness / Key Endpoints | RUNBOOK.md sections | `test_runbook_has_one_of_autonomous_effectiveness_key_endpoints` |
+| Indexing (index_npm, index_pypi), check_pipeline, tests/cleanup | RUNBOOK.md | `test_runbook_documents_indexing`, `test_runbook_documents_check_pipeline`, `test_runbook_documents_tests_and_cleanup` |
 
-**Files:** `docs/RUNBOOK.md`
+**Files:** `docs/RUNBOOK.md`, `api/tests/test_runbook.py`
 
 **Contract (spec 034):** RUNBOOK.md exists; contains headings for Log Locations, API Restart, Pipeline Recovery, and at least one of (Autonomous Pipeline, Pipeline Effectiveness, Key Endpoints).
 

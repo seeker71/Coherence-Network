@@ -19,9 +19,14 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 ## Quick Start
 
 ```bash
-# API
+# API only
 cd api && uvicorn app.main:app --reload --port 8000
+
+# Full automation (API + pipeline + watchdog; restarts on stale/API down)
+cd api && ./scripts/run_overnight_pipeline.sh
 ```
+
+`run_overnight_pipeline.sh` uses the watchdog by default: starts the API if needed, restarts on stale_version and api_unreachable, auto-commits progress. Pass `--no-watchdog` to run once without restarts.
 
 Web app: not yet available — see [specs/012-web-skeleton.md](specs/012-web-skeleton.md) when `web/` is added. Docker / docker compose: not yet in repo; use the API-only path above. See [SETUP.md](docs/SETUP.md).
 

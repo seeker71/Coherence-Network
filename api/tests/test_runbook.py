@@ -93,3 +93,26 @@ def test_runbook_has_all_required_sections():
     content = _runbook_content()
     for heading in REQUIRED_HEADINGS:
         assert heading in content, f"RUNBOOK.md must contain section '{heading}' (spec 034)"
+
+
+def test_runbook_documents_indexing():
+    """RUNBOOK.md must document index_npm.py and index_pypi.py usage (spec 034, 008, 024)."""
+    content = _runbook_content()
+    assert "index_npm" in content, "RUNBOOK.md must document index_npm.py"
+    assert "index_pypi" in content, "RUNBOOK.md must document index_pypi.py"
+
+
+def test_runbook_documents_check_pipeline():
+    """RUNBOOK.md must document check_pipeline.py and --json for scripting (spec 034)."""
+    content = _runbook_content()
+    assert "check_pipeline" in content, "RUNBOOK.md must document check_pipeline.py"
+    assert "--json" in content, "RUNBOOK.md must document --json for scripting"
+
+
+def test_runbook_documents_tests_and_cleanup():
+    """RUNBOOK.md must document how to run tests and cleanup of old task logs (spec 034)."""
+    content = _runbook_content()
+    assert "pytest" in content, "RUNBOOK.md must document how to run tests"
+    assert "task" in content.lower() and ("cleanup" in content.lower() or "delete" in content.lower() or "find" in content), (
+        "RUNBOOK.md must document cleanup of old task logs (e.g. find task_*.log or cleanup script)"
+    )

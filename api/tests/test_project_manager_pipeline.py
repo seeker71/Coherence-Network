@@ -2,12 +2,20 @@
 These tests define the contract for the orchestrator behavior.
 No mocks: real file I/O, real load_backlog, load_state, save_state, refresh_backlog.
 
-Spec 005 Verification (PM complete):
-- Dry-run: project_manager.py --dry-run exits 0; output reflects current state and what would be done (no HTTP).
-- Once with API: --once completes one tick; exit 0 and no unhandled exception; state advances or remains consistent.
-- State consistency: After any run, state file is valid JSON with backlog_index, phase, etc.
+Contract (specs/005-project-manager-pipeline.md):
 
-Spec 005 E2E smoke: A test runs the PM in a mode (e.g. subprocess --dry-run or --once with API) and asserts no crash and consistent state. CI runs this test.
+  PM complete (Verification):
+  1. Dry-run: python api/scripts/project_manager.py --dry-run must exit 0; output reflects
+     current state and what would be done (no HTTP calls).
+  2. Once with API: With API running and backlog present, --once completes one tick
+     (create task or poll/advance); exit 0 and no unhandled exception.
+  3. State consistency: After any run, api/logs/project_manager_state.json is valid JSON
+     and contains expected keys (backlog_index, phase, etc.).
+
+  E2E smoke test:
+  A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess
+  --dry-run exit 0, or --once with live API) and asserts no crash and consistent state. Test
+  lives in api/tests/ and is run by CI. Canonical test: test_e2e_smoke_spec_005.
 """
 import json
 import logging
@@ -277,6 +285,41 @@ def test_state_file_persistence():
             pm.STATE_FILE = orig_state
 
 
+def test_e2e_smoke_spec_005():
+    """E2E smoke test (spec 005): run project_manager in a mode that verifies end-to-end behavior.
+    Subprocess --dry-run: exit 0, no crash, deterministic preview. Asserts consistent state (round-trip).
+    CI runs this test. Spec: specs/005-project-manager-pipeline.md."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. E2E smoke item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        result = subprocess.run(
+            [sys.executable, script_path, "--dry-run", "--backlog", backlog_path, "--state-file", state_path],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"spec 005 E2E smoke: --dry-run must exit 0. stderr: {result.stderr!r} stdout: {result.stdout!r}"
+    out = (result.stdout or "") + (result.stderr or "")
+    assert "phase" in out or "Would create" in out or "DRY-RUN" in out, "Dry-run must log deterministic preview"
+    # State consistency: load_state/save_state round-trip yields valid JSON with expected keys
+    with tempfile.TemporaryDirectory() as d2:
+        sp = os.path.join(d2, "project_manager_state.json")
+        orig = pm.STATE_FILE
+        pm.STATE_FILE = sp
+        try:
+            s = pm.load_state()
+            pm.save_state(s)
+            with open(sp, encoding="utf-8") as f:
+                data = json.load(f)
+            assert "backlog_index" in data and "phase" in data and data["phase"] in ("spec", "impl", "test", "review")
+        finally:
+            pm.STATE_FILE = orig
+
+
 def test_e2e_spec_005_smoke_dry_run_and_state():
     """E2E smoke test (spec 005): run PM --dry-run in subprocess; assert exit 0, no crash, consistent state.
     CI runs this test. Optionally --once with API is covered by test_e2e_project_manager_once_exits_zero_and_state_valid_when_api_available."""
@@ -427,6 +470,25 @@ def test_spec_005_pm_complete_verification_contract():
             assert data["phase"] in ("spec", "impl", "test", "review")
         finally:
             pm.STATE_FILE = orig
+
+
+def test_e2e_smoke_no_unhandled_exception():
+    """E2E smoke (spec 005): --dry-run subprocess must exit 0 with no unhandled exception (no traceback in stderr)."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. Smoke item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        result = subprocess.run(
+            [sys.executable, script_path, "--dry-run", "--backlog", backlog_path, "--state-file", state_path],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"E2E smoke: exit 0 required. stderr: {result.stderr!r}"
+    assert "Traceback" not in (result.stderr or ""), "E2E smoke: no unhandled exception (no traceback in stderr)"
 
 
 def test_e2e_project_manager_once_exits_zero_and_state_valid_when_api_available():

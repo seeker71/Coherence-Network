@@ -18,6 +18,15 @@ Keep framework docs in sync with the codebase: when tests pass, a script updates
 
 Not applicable — script is CLI-only.
 
+## Script contract (CLI)
+
+- **Invocation:** `python scripts/update_spec_coverage.py [--dry-run] [--tests-passed]` (run from `api/`).
+- **`--dry-run`:** Preview SPEC-COVERAGE and STATUS changes; do not write files; exit 0.
+- **`--tests-passed`:** Allow writes when not in CI. Omit locally → script no-ops and prints "Skipping (tests not confirmed passed). Use --tests-passed or run in CI."
+- **CI:** When `CI=true` (e.g. GitHub Actions), script performs writes without `--tests-passed` (pytest is assumed to have run in the previous step).
+- **Test count:** From env `TEST_COUNT` or from `pytest --co -q` when updating STATUS.
+- **Paths:** Script resolves `docs/` and `specs/` relative to repo root (parent of `api/`).
+
 ## Data Model (if applicable)
 
 Not applicable — script edits Markdown files under `docs/`.
@@ -28,8 +37,9 @@ Not applicable — script edits Markdown files under `docs/`.
 - `docs/SPEC-COVERAGE.md` — updated by script (additive rows; optional mark-tested logic if specified).
 - `docs/STATUS.md` — updated by script (test count and/or specs list) when required.
 - `.github/workflows/test.yml` — ensure a step runs the script after "Run API tests" when pytest succeeds; step is non-blocking (e.g. `continue-on-error: true`).
+- `api/tests/test_update_spec_coverage.py` — tests for dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI step, additive rows.
 
-## CI Wiring
+## CI integration
 
 The workflow must run the script only after pytest succeeds, and must not fail the job if the script fails. Implemented in `.github/workflows/test.yml`:
 
@@ -46,7 +56,7 @@ The workflow must run the script only after pytest succeeds, and must not fail t
 
 - GitHub Actions sets `CI=true`; the script performs writes without `--tests-passed`.
 - Order: pytest step first; script step second. If pytest fails, the job fails and the script step is not run.
-- Script is run from `api/` so paths to `docs/` and `specs/` resolve via repo root (`_root`).
+- Script is run from `api/` so paths to `docs/` and `specs/` resolve via repo root.
 
 ## Acceptance Tests
 
@@ -55,7 +65,13 @@ The workflow must run the script only after pytest succeeds, and must not fail t
 - CI workflow includes "run script after pytest"; script step has `continue-on-error: true` so CI does not fail on script failure.
 - STATUS update: "Test count" and "Specs Implemented" / "Specs Pending" in STATUS.md reflect script output and SPEC-COVERAGE.
 
-Tests: `api/tests/test_update_spec_coverage.py` (dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI workflow step, additive rows). `api/tests/test_agent.py` also has `test_update_spec_coverage_dry_run`.
+**Test files:** `api/tests/test_update_spec_coverage.py` (dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI workflow step, additive rows). `api/tests/test_agent.py` also has `test_update_spec_coverage_dry_run`.
+
+## Verification
+
+- **Dry-run (no writes):** `cd api && python scripts/update_spec_coverage.py --dry-run --tests-passed`
+- **Full run (after tests pass):** `cd api && python scripts/update_spec_coverage.py --tests-passed`
+- **CI:** Push to main/master or open PR; after "Run API tests" passes, "Update spec coverage" step runs (failure does not fail the job).
 
 ## Out of Scope
 

@@ -23,7 +23,7 @@ import dateutil.parser
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(_api_dir)
 sys.path.insert(0, _api_dir)
-os.chdir(PROJECT_ROOT)
+# Do not chdir at import time — tests import this module; chdir only in main() when run as script
 
 try:
     from dotenv import load_dotenv
@@ -712,6 +712,7 @@ def run(
 
 def main():
     global BACKLOG_FILE, STATE_FILE
+    os.chdir(PROJECT_ROOT)  # Only when run as script (spec 005: dry-run/once use repo root)
     ap = argparse.ArgumentParser(description="Project Manager: spec→impl→test→review pipeline")
     ap.add_argument("--interval", type=int, default=15, help="Seconds between polls")
     ap.add_argument("--hours", type=float, default=0, help="Run for N hours (0 = indefinitely)")
@@ -765,8 +766,8 @@ def main():
         idx = state["backlog_index"]
         phase = state["phase"]
         log.info("DRY-RUN: backlog=%d items, index=%d, phase=%s", len(backlog), idx, phase)
-        # Deterministic preview to stdout: State: item N, phase=P (and next action if any)
-        print(f"State: item {idx}, phase={phase}")
+        # Deterministic preview: backlog index, phase, next item (spec 005 PM complete)
+        print(f"DRY-RUN: backlog index={idx}, phase={phase}")
         if backlog and idx < len(backlog):
             log.info("DRY-RUN: would create %s task for: %s", phase, backlog[idx][:60])
             print(f"Would create {phase} task: {backlog[idx][:80]}...")
@@ -775,13 +776,18 @@ def main():
             print("DRY-RUN: backlog empty or complete")
         return
 
-    with httpx.Client(timeout=15.0) as client:
+    # Short timeout so we fail fast when API is down (avoids "Connection stalled" / long waits in CI)
+    with httpx.Client(timeout=5.0) as client:
         try:
             r = client.get(f"{BASE}/api/health")
             if r.status_code != 200:
                 log.error("API not reachable at %s (status=%s)", BASE, r.status_code)
                 print(f"API not reachable at {BASE} — start the API first")
                 sys.exit(1)
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
+            log.error("API check failed: %s", e)
+            print(f"API not reachable: {e}")
+            sys.exit(1)
         except Exception as e:
             log.error("API check failed: %s", e)
             print(f"API not reachable: {e}")

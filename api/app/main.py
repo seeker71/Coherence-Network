@@ -4,6 +4,7 @@ import logging
 import os
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
 
 try:
@@ -37,7 +38,8 @@ app = FastAPI(
     title="Coherence Network API",
     version="0.1.0",
     description="Open Source Contribution Intelligence",
-    docs_url="/docs",  # spec 007: GET /docs returns 200 (OpenAPI UI reachable)
+    docs_url=None,  # we serve /docs ourselves so GET /docs returns 200 (spec 007)
+    openapi_url="/openapi.json",
 )
 
 _cors_origins = os.environ.get("ALLOWED_ORIGINS", "*")
@@ -52,6 +54,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Spec 007: GET /docs returns 200 (OpenAPI UI reachable) — serve at /docs and /docs/
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui_docs():
+    resp = get_swagger_ui_html(openapi_url="/openapi.json", title=f"{app.title} - Swagger UI")
+    resp.status_code = 200  # spec 007: GET /docs returns 200
+    return resp
+
+
+@app.get("/docs/", include_in_schema=False)
+async def swagger_ui_docs_slash():
+    resp = get_swagger_ui_html(openapi_url="/openapi.json", title=f"{app.title} - Swagger UI")
+    resp.status_code = 200
+    return resp
+
 
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])

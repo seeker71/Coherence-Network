@@ -12,27 +12,59 @@
 | **3** | Import Stack: package-lock.json + requirements.txt → risk analysis | ✓ Complete (022, 025) |
 
 ## Specs Implemented
+- 001 Health
+- 002 Agent Orchestration
+- 003 Decision Loop
+- 004 CI Pipeline
+- 005 Project Manager
+- 007 Sprint 0 Landing
+- 008 Sprint 1 Graph
+- 019 GraphStore Abstraction
+- 009 API Error Handling
+- 010 Request Validation
+- 011 Pagination
+- 012 Web Skeleton
+- 013 Logging Audit
+- 014 Deploy Readiness
+- 016 Holdout Tests
+- 017 Web CI
+- 018 Coherence Algorithm Spec
+- 020 Sprint 2 Coherence API
+- 021 Web Project Search UI
+- 022 Sprint 3 Import Stack
+- 023 Web Import Stack UI
+- 024 PyPI Indexing
+- 025 requirements.txt Import
+- PLAN Month 1 (Graph, indexer)
+- 027 Fully Automated Pipeline
+- 027 Auto Update Framework
+- 028 Parallel By Phase Pipeline
+- 030 Spec Coverage Update
+- 032 Attention Heuristics Pipeline Status
+- 034 Ops Runbook
+- 035 Glossary
+- 037 POST invalid task_type 422
+- 038 POST empty direction 422
 
-- 001 Health, 002 Agent API, 003 Decision Loop, 004 CI
-- 005 Project Manager, 007 Sprint 0 Landing
-- 009 Error Handling, 010 Request Validation, 011 Pagination
-- 012 Web Skeleton (Next.js 15 + shadcn in web/)
-- 013 Logging Audit (RUNBOOK, no-secrets, format consistency)
-- 014 Deploy Readiness (DEPLOY.md, CORS from env, health probes)
-- 016 Holdout Tests (pattern)
-- 017 Web CI (web build in test.yml)
-- 018 Coherence Algorithm Spec (COHERENCE-ALGORITHM-SKETCH expanded)
-- 019 GraphStore Abstraction (in-memory, indexer, projects API)
-- 020 Sprint 2 Coherence API (GET /coherence; downstream_impact + dependency_health from real data)
-- 021 Web Project Search UI (/search, /project/[eco]/[name])
-- 022 Sprint 3 Import Stack (POST /api/import/stack; package-lock.json → risk analysis)
-- 023 Web Import Stack UI (/import with file upload and results)
-- 024 PyPI Indexing (index_pypi.py; deps.dev + PyPI JSON API)
-- 025 requirements.txt Import (POST /api/import/stack accepts .txt; pypi ecosystem)
+
+
+
 
 ## Specs Pending Implementation
+- 006 Overnight Backlog
+- 015 Placeholder
+- 026 Pipeline Observability And Auto Review
+- 026 Phase 1 Task Metrics
+- 029 GitHub API Integration
+- 030 Pipeline Full Automation
+- 031 Setup Troubleshooting Venv
+- 033 README Quick Start Qualify
+- 036 Check Pipeline Hierarchical View
+- 039 Pipeline Status Empty State 200
 
-- None
+
+
+
 
 ## Key Endpoints
 
@@ -52,15 +84,7 @@
 
 ## Test Count
 
-- 74 tests (73 non-holdout; PM validation excludes holdout)
-- CI runs full suite
-
-## Strategic gaps (Feb 2026)
-
-- **Data confidence:** Coherence API now returns `components_with_data` (0–8); only 2 components are real today. Web/consumers should show "preliminary" or "based on N of 8 signals" when appropriate.
-- **Contributor/Organization:** Not in GraphStore or any spec. Required for real coherence for contributor_diversity, activity_cadence, community_responsiveness, security_posture.
-- **GitHub API:** No spec. High priority for next sprint to populate contributor and activity data.
-- **Funding layer:** No specs yet (Month 4); PostgreSQL/users not spec'd.
+- 74 tests (CI runs full suite)
 
 ## Next Priority Tasks
 

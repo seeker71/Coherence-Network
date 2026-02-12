@@ -2,12 +2,16 @@
 # Run the full overnight pipeline: project manager + agent runner.
 # Stops overnight_orchestrator first (it conflicts with project manager).
 #
-# Prereq: API must be running (./scripts/start_with_telegram.sh in another terminal)
+# By default, uses the watchdog for full automation (restarts on stale_version, api_unreachable).
+# Pass --no-watchdog to run once without watchdog.
 #
-# Usage: ./scripts/run_overnight_pipeline.sh [--hours 8] [--backlog PATH] [--cursor]
-#   --hours 8   Run for 8 hours (default)
-#   --backlog   Backlog file (default: specs/006-overnight-backlog.md)
-#   --cursor    Use Cursor CLI (agent) instead of Claude Code for tasks
+# Prereq: API must be running, or use watchdog (starts API if down).
+#
+# Usage: ./scripts/run_overnight_pipeline.sh [--hours 8] [--backlog PATH] [--cursor] [--no-watchdog]
+#   --hours 8      Run for 8 hours (default)
+#   --backlog      Backlog file (default: specs/006-overnight-backlog.md)
+#   --cursor       Use Cursor CLI (agent) instead of Claude Code for tasks
+#   --no-watchdog  Run without watchdog (no auto-restart; use when invoked by watchdog)
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,14 +21,31 @@ cd "$API_DIR"
 
 [ -f .env ] && set -a && source .env && set +a
 
+# Default: use watchdog for full automation (restarts on stale, api_unreachable). Pass --no-watchdog to skip.
+USE_WATCHDOG=1
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--no-watchdog" ]; then
+    USE_WATCHDOG=0
+  else
+    ARGS+=("$arg")
+  fi
+done
+if [ "$USE_WATCHDOG" = "1" ]; then
+  echo "Full automation: using watchdog (auto-restart on stale_version, api_unreachable)"
+  exec "$SCRIPT_DIR/run_overnight_pipeline_watchdog.sh" "${ARGS[@]}"
+fi
+
 # Meta-pipeline: interleave 20% meta items (EXECUTION-PLAN). Set PIPELINE_META_RATIO=0 to disable.
 export PIPELINE_META_BACKLOG="${PIPELINE_META_BACKLOG:-${PROJECT_ROOT}/specs/007-meta-pipeline-backlog.md}"
 export PIPELINE_META_RATIO="${PIPELINE_META_RATIO:-0.2}"
 
-# Full automation: auto-fix (create heal tasks) and auto-recover (restart on stale/hung) default on for overnight.
+# Full automation: auto-fix, auto-recover, auto-commit default on for overnight.
 # Set to 0 in .env to disable.
 export PIPELINE_AUTO_FIX_ENABLED="${PIPELINE_AUTO_FIX_ENABLED:-1}"
 export PIPELINE_AUTO_RECOVER="${PIPELINE_AUTO_RECOVER:-1}"
+export PIPELINE_AUTO_COMMIT="${PIPELINE_AUTO_COMMIT:-1}"
+export PIPELINE_AUTO_PUSH="${PIPELINE_AUTO_PUSH:-0}"
 
 PYTHON="${API_DIR}/.venv/bin/python"
 [ -x "$PYTHON" ] || PYTHON="python3"
@@ -32,7 +53,7 @@ BASE="${AGENT_API_BASE:-http://localhost:8000}"
 HOURS=8
 BACKLOG="${PROJECT_ROOT}/specs/006-overnight-backlog.md"
 CURSOR_ARG=""
-for arg in "$@"; do
+for arg in "${ARGS[@]}"; do
   case "$arg" in
     --hours=*) HOURS="${arg#--hours=}" ;;
     --backlog=*) BACKLOG="${arg#--backlog=}" ;;
@@ -109,6 +130,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 echo "Starting project manager (hours=$HOURS, backlog=$BACKLOG)..."
+echo "  Auto-commit: ${PIPELINE_AUTO_COMMIT:-0} | Auto-push: ${PIPELINE_AUTO_PUSH:-0}"
 echo "  Pipeline status every 60s. Press Ctrl+C to stop"
 echo ""
 echo "--- Pipeline Status $(date '+%Y-%m-%d %H:%M:%S') ---"

@@ -49,7 +49,7 @@ When the pipeline is stuck or the agent runner died:
 
 1. **Effectiveness check:** `cd api && ./scripts/ensure_effective_pipeline.sh`
 2. **Restart API** if health/metrics/monitor-issues fail: `pkill -f uvicorn; cd api && uvicorn app.main:app --reload --port 8000`
-3. **Restart overnight pipeline:** `cd api && ./scripts/run_overnight_pipeline.sh`
+3. **Restart overnight pipeline:** `cd api && ./scripts/run_overnight_pipeline.sh` (uses watchdog by default for auto-restart on stale_version, api_unreachable; pass `--no-watchdog` to run once)
 4. **Or restart components separately:**
    ```bash
    cd api
@@ -61,6 +61,16 @@ When the pipeline is stuck or the agent runner died:
 
 - Telegram: `/reply {task_id} yes` (or your decision)
 - API: `curl -X PATCH http://localhost:8000/api/agent/tasks/{id} -H "Content-Type: application/json" -d '{"decision":"yes"}'`
+
+## Connection stalled / API unreachable
+
+If scripts or tests fail with **Connection stalled**, **ReadTimeout**, or **ConnectError** (e.g. when API is not running):
+
+1. **Start the API:** `cd api && uvicorn app.main:app --reload --port 8000`
+2. **Verify:** `curl -s http://localhost:8000/api/health` should return 200.
+3. **CI/tests:** Project manager and agent runner do an upfront health check and exit quickly when API is unreachable; ensure API is started before running `--once` or pipeline tests. See docs/GLOSSARY.md (Connection stalled).
+
+**Auto-recovery:** With PIPELINE_AUTO_RECOVER=1, the monitor writes `restart_requested.json` on api_unreachable. The watchdog (run_overnight_pipeline_watchdog.sh) restarts the API when it sees this. For full automation including API restart, use `run_autonomous.sh`.
 
 ## Index npm packages
 
@@ -82,9 +92,22 @@ cd api && .venv/bin/python scripts/index_pypi.py --target 100
 
 Uses same graph_store.json as npm; projects coexist.
 
+## Full Automation (Single Command)
+
+One command: API + pipeline + watchdog. Restarts on stale_version and api_unreachable.
+
+```bash
+cd api && ./scripts/run_overnight_pipeline.sh
+```
+
+- Starts API if not running
+- Watchdog restarts pipeline on stale code or API down
+- Auto-commit, auto-fix, auto-recover
+- Pass `--no-watchdog` to run once without restarts
+
 ## Autonomous Pipeline (Max Autonomy)
 
-One command, no interaction. Starts API + pipeline, restarts on failure. Reports fatal issues only.
+Same as above but with a top-level monitor loop and needs_decision timeout:
 
 ```bash
 cd api && ./scripts/run_autonomous.sh

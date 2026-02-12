@@ -53,8 +53,12 @@ def test_update_spec_coverage_dry_run():
         assert status_md.read_text() == before_status
 
 
+# Contract (spec 027): exact message when omitting --tests-passed locally
+SKIP_MESSAGE = "Skipping (tests not confirmed passed). Use --tests-passed or run in CI."
+
+
 def test_dry_run_without_tests_passed_no_op():
-    """Without --tests-passed and not in CI, script no-ops and exits 0."""
+    """Without --tests-passed and not in CI, script no-ops, prints skip message, exits 0 (spec 027)."""
     spec_coverage = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
     if not spec_coverage.exists():
         pytest.skip("SPEC-COVERAGE.md not in repo")
@@ -70,7 +74,7 @@ def test_dry_run_without_tests_passed_no_op():
         timeout=30,
     )
     assert result.returncode == 0
-    assert "Skipping" in result.stdout or "no changes" in result.stdout.lower() or "No new" in result.stdout
+    assert SKIP_MESSAGE in result.stdout, f"Contract: script must print skip message; got: {result.stdout!r}"
     assert spec_coverage.read_text() == before
 
 
@@ -125,6 +129,22 @@ def test_format_specs_implemented():
     assert "- 001 Health" in out
     assert "- 002 Agent API" in out
     assert _format_specs_implemented([]) == "- None"
+
+
+def test_script_without_tests_passed_or_ci_prints_exact_skip_message():
+    """Contract (spec 027): without --tests-passed and not in CI, script prints exact skip message."""
+    env = os.environ.copy()
+    env.pop("CI", None)
+    result = subprocess.run(
+        [sys.executable, str(_scripts_dir / "update_spec_coverage.py")],
+        cwd=str(_api_dir),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0
+    assert SKIP_MESSAGE in result.stdout, f"Contract: script must print '{SKIP_MESSAGE}'; got: {result.stdout!r}"
 
 
 def test_format_specs_pending():

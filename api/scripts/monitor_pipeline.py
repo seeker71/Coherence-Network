@@ -30,7 +30,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -149,7 +149,7 @@ def _request_restart(reason: str, log: logging.Logger) -> None:
     log.info("Restart requested: %s", reason)
 
 
-def _runner_log_has_recent_errors() -> tuple[bool, str]:
+def _runner_log_has_recent_errors() -> Tuple[bool, str]:
     """Check agent_runner.log for ERROR or 'API not reachable' in last 100 lines. Returns (has_errors, sample_message)."""
     path = os.path.join(LOG_DIR, "agent_runner.log")
     if not os.path.isfile(path):
@@ -223,7 +223,7 @@ def _get_pipeline_process_args() -> dict:
 
 
 def _record_resolution(
-    condition: str, log: logging.Logger, heal_task_id: str | None = None
+    condition: str, log: logging.Logger, heal_task_id: Optional[str] = None
 ) -> None:
     """Append resolution event for effectiveness measurement. Optionally attribute to heal task."""
     os.makedirs(LOG_DIR, exist_ok=True)
@@ -498,7 +498,11 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         r = client.get(f"{BASE}/api/agent/pipeline-status", timeout=10)
     except Exception as e:
         log.warning("API unreachable: %s", e)
-        _add_issue(data, "api_unreachable", "high", f"API unreachable: {e}", "Restart API; check AGENT_API_BASE")
+        action = "Restart API; check AGENT_API_BASE. Use run_autonomous.sh for auto API restart."
+        if auto_recover:
+            _request_restart("api_unreachable", log)
+            action = "Restart requested (PIPELINE_AUTO_RECOVER=1). run_autonomous.sh will restart API; watchdog restarts pipeline."
+        _add_issue(data, "api_unreachable", "high", f"API unreachable: {e}", action)
         data["resolved_since_last"] = []
         _save_issues(data)
         proc = _get_pipeline_process_args()
@@ -765,7 +769,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                     timeout=10,
                 )
                 if resp.status_code == 201:
-                    action = f"Created heal task {resp.json().get('id', '?')}. " + action
+                    heal_task_id = resp.json().get("id")
+                    action = f"Created heal task {heal_task_id}. " + action
                     log.info("Auto-fix: created heal task for low_success_rate")
             except Exception as e:
                 log.warning("Auto-fix heal task failed: %s", e)
@@ -774,6 +779,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             "7d success rate < 80%",
             action,
         )
+        if heal_task_id:
+            data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Orphan running: single running task for > 2h — fallback: PATCH to failed when auto_recover
     for r in running:
@@ -823,6 +830,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     has_runner_errors, sample = _runner_log_has_recent_errors()
     if has_runner_errors:
         action = "Check AGENT_API_BASE; ensure API is running; verify runner and API use same base URL. tail -f api/logs/agent_runner.log"
+        heal_task_id = None
         if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
             try:
                 resp = client.post(
@@ -830,17 +838,20 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                     json={
                         "direction": "Monitor detected ERROR/API unreachable in agent_runner.log. Check AGENT_API_BASE matches API URL; restart runner if needed. See docs/AGENT-DEBUGGING.md.",
                         "task_type": "heal",
-                        "context": {"executor": "cursor"},
+                        "context": {"executor": "cursor", "monitor_condition": "runner_log_errors"},
                     },
                     timeout=10,
                 )
                 if resp.status_code == 201:
-                    action = f"Created heal task. " + action
+                    heal_task_id = resp.json().get("id")
+                    action = f"Created heal task {heal_task_id}. " + action
                     log.info("Auto-fix: created heal task for runner_log_errors")
             except Exception as e:
                 log.warning("Auto-fix heal task failed: %s", e)
         msg = f"Recent ERROR in agent_runner.log: {(sample[:77] + '...') if len(sample) > 80 else sample}"
         _add_issue(data, "runner_log_errors", "medium", msg, action)
+        if heal_task_id:
+            data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Track resolved issues for effectiveness measurement; attribute to heal when we have heal_task_id
     current_conditions = {i["condition"] for i in data["issues"]}

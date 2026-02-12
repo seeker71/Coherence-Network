@@ -30,6 +30,18 @@ class AgentTaskCreate(BaseModel):
     task_type: TaskType
     context: Optional[Dict[str, Any]] = None
 
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def task_type_must_be_enum(cls, v: object) -> TaskType:
+        """Reject invalid task_type so POST returns 422 with detail array (spec 037, 009)."""
+        if isinstance(v, TaskType):
+            return v
+        if isinstance(v, str) and v in (e.value for e in TaskType):
+            return TaskType(v)
+        raise ValueError(
+            f"task_type must be one of {[e.value for e in TaskType]}; got {v!r}"
+        )
+
     @field_validator("direction", mode="before")
     @classmethod
     def direction_strip(cls, v: object) -> object:

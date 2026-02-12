@@ -102,3 +102,14 @@ def test_glossary_task_type_values():
     required_values = ["spec", "test", "impl", "review", "heal"]
     for val in required_values:
         assert val in content, f"Task type definition must mention allowed value {val!r}"
+
+
+def test_glossary_core_terms_from_backlog_item():
+    """Contract: GLOSSARY.md must define core terms from backlog item (coherence, task_type, pipeline, backlog)."""
+    content = _glossary_content().lower()
+    # Backlog item: "terms (coherence, task_type, pipeline, backlog, etc.)"
+    core_terms = ["coherence", "task_type", "pipeline", "backlog"]
+    for term in core_terms:
+        assert term in content or term.replace("_", " ") in content, (
+            f"GLOSSARY.md must define term from backlog: {term!r}"
+        )

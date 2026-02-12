@@ -1,6 +1,7 @@
 """Tests for agent orchestration API — spec 002."""
 
 import json
+import os
 from datetime import datetime, timezone
 
 import pytest
@@ -10,10 +11,25 @@ from app.main import app
 from app.services import agent_service
 
 
+def _api_logs_dir() -> str:
+    """api/logs path (must match router's log_path for task logs)."""
+    api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(api_dir, "logs")
+
+
+def _ensure_task_log_file(task_id: str, content: str = "") -> None:
+    """Create api/logs/task_{task_id}.log so GET /api/agent/tasks/{id}/log returns 200."""
+    logs_dir = _api_logs_dir()
+    os.makedirs(logs_dir, exist_ok=True)
+    path = os.path.join(logs_dir, f"task_{task_id}.log")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
 @pytest.fixture
 async def client():
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="http://test", timeout=5.0) as ac:
         yield ac
 
 
@@ -144,7 +160,7 @@ async def test_get_task_by_id_404_when_missing(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_post_task_invalid_task_type_returns_422(client: AsyncClient):
-    """POST /api/agent/tasks with invalid task_type returns 422 with detail array of validation items (spec 009)."""
+    """POST /api/agent/tasks with invalid task_type returns 422 (contract: status 422, detail list of {loc, msg, type}, error for task_type)."""
     response = await client.post(
         "/api/agent/tasks",
         json={"direction": "Do something", "task_type": "invalid"},
@@ -155,6 +171,8 @@ async def test_post_task_invalid_task_type_returns_422(client: AsyncClient):
     assert isinstance(data["detail"], list)
     for item in data["detail"]:
         assert "loc" in item and "msg" in item and "type" in item
+    # Contract: at least one validation error refers to task_type
+    assert any("task_type" in (item.get("loc") or []) for item in data["detail"])
 
 
 @pytest.mark.asyncio
@@ -520,6 +538,26 @@ async def test_task_log_404_when_task_missing(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_task_log_404_when_log_file_missing(client: AsyncClient):
+    """GET /api/agent/tasks/{id}/log returns 404 when log file missing (spec 002).
+
+    Contract: task exists in store but api/logs/task_{id}.log does not exist
+    → status 404, body exactly { "detail": "Task log not found" }, no other keys.
+    """
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Task without log file", "task_type": "impl"},
+    )
+    assert create.status_code == 201, "setup: task must be created"
+    task_id = create.json()["id"]
+    response = await client.get(f"/api/agent/tasks/{task_id}/log")
+    assert response.status_code == 404
+    body = response.json()
+    assert body == {"detail": "Task log not found"}
+    assert list(body.keys()) == ["detail"]
+
+
+@pytest.mark.asyncio
 async def test_list_items_omit_command_and_output(client: AsyncClient):
     """GET /api/agent/tasks list items omit command and output (spec 002 data model)."""
     await client.post(
@@ -617,11 +655,17 @@ async def test_get_task_by_id_includes_output_when_set(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_spec_tasks_route_to_local(client: AsyncClient):
-    """spec task_type routes to local model."""
+    """GET /api/agent/route?task_type=spec returns 200; spec task_type routed to local tier per routing table (002)."""
     response = await client.get("/api/agent/route?task_type=spec")
     assert response.status_code == 200
     data = response.json()
-    assert "ollama" in data["model"].lower() or "glm" in data["model"].lower() or "qwen" in data["model"].lower()
+    assert data["task_type"] == "spec"
+    # Model indicates local (ollama/glm/qwen) and/or tier is local (spec 043, 002)
+    model_lower = data["model"].lower()
+    assert (
+        "ollama" in model_lower or "glm" in model_lower or "qwen" in model_lower
+    ), "spec must route to local model"
+    assert data.get("tier") == "local", "spec task_type must be tier local per 002"
 
 
 @pytest.mark.asyncio
@@ -1066,6 +1110,24 @@ async def test_pipeline_status_returns_200(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_pipeline_status_returns_200_when_no_running_task_empty_state(client: AsyncClient):
+    """GET /api/agent/pipeline-status returns 200 when no running task (empty state); scripts/monitors can rely on it (spec 039).
+    Contract: status 200, body has running, pending, recent_completed, attention, running_by_phase; running is empty list; attention has stuck, repeated_failures, low_success_rate, flags; running_by_phase has keys spec, impl, test, review."""
+    agent_service.clear_store()
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase"):
+        assert key in data, f"pipeline-status must include {key}"
+    assert isinstance(data["running"], list), "running must be a list"
+    assert data["running"] == [], "running must be empty when no running task"
+    att = data["attention"]
+    for key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
+        assert key in att, f"attention must include {key}"
+    assert set(data["running_by_phase"].keys()) == {"spec", "impl", "test", "review"}, "running_by_phase must have phase keys (spec 002)"
+
+
+@pytest.mark.asyncio
 async def test_pipeline_status_response_shape_defines_contract(client: AsyncClient):
     """GET /api/agent/pipeline-status: running, pending, recent_completed, attention (stuck, repeated_failures, low_success_rate, flags), project_manager, running_by_phase (spec 002 contract)."""
     response = await client.get("/api/agent/pipeline-status")
@@ -1354,6 +1416,84 @@ async def test_heal_resolved_count_counts_only_resolutions_with_heal_task_id(
     assert data["heal_resolved_count"] == 1, "only resolutions with heal_task_id count toward heal_resolved_count"
 
 
+# --- Heal task effectiveness tracking contract (spec 007 meta-pipeline item 5) ---
+# - Which heal addressed which issue: heal task stores context.monitor_condition and context.monitor_issue_id;
+#   monitor_issues.json issues may include heal_task_id when a heal was created for that issue.
+# - When condition clears: resolution is recorded with optional heal_task_id (attribute to heal).
+# - heal_resolved_count: count of resolution records in 7d window that have heal_task_id; exposed in GET /api/agent/effectiveness.
+# - Resolution record: condition, resolved_at (ISO8601); optional heal_task_id. Records without valid resolved_at are skipped.
+
+
+@pytest.mark.asyncio
+async def test_heal_resolved_count_excludes_resolutions_older_than_7d(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """heal_resolved_count only counts resolution records within the 7d window; older records are excluded."""
+    from datetime import timedelta
+
+    resolutions_file = tmp_path / "monitor_resolutions.jsonl"
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(days=8)).isoformat()
+    # One resolution 8 days ago with heal_task_id; should not count
+    resolutions_file.write_text(
+        json.dumps({"condition": "no_task_running", "resolved_at": old, "heal_task_id": "task_old"}) + "\n"
+    )
+    monkeypatch.setattr(
+        "app.services.effectiveness_service.RESOLUTIONS_FILE",
+        str(resolutions_file),
+    )
+    response = await client.get("/api/agent/effectiveness")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["heal_resolved_count"] == 0, "resolutions older than 7d must not count toward heal_resolved_count"
+
+
+@pytest.mark.asyncio
+async def test_resolution_record_without_resolved_at_skipped_for_heal_resolved_count(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """Resolution records without valid resolved_at are skipped; only valid records in 7d window with heal_task_id count."""
+    resolutions_file = tmp_path / "monitor_resolutions.jsonl"
+    now = datetime.now(timezone.utc).isoformat()
+    resolutions_file.write_text(
+        json.dumps({"condition": "no_task_running", "resolved_at": now, "heal_task_id": "task_ok"}) + "\n"
+        + json.dumps({"condition": "other", "heal_task_id": "task_no_ts"}) + "\n"
+    )
+    monkeypatch.setattr(
+        "app.services.effectiveness_service.RESOLUTIONS_FILE",
+        str(resolutions_file),
+    )
+    response = await client.get("/api/agent/effectiveness")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["heal_resolved_count"] == 1, "only records with valid resolved_at in 7d window count"
+
+
+@pytest.mark.asyncio
+async def test_monitor_issues_issue_may_include_heal_task_id(client: AsyncClient):
+    """GET /api/agent/monitor-issues returns issues; each issue may include heal_task_id (which heal addressed which issue)."""
+    logs_dir = _api_logs_dir()
+    path = os.path.join(logs_dir, "monitor_issues.json")
+    os.makedirs(logs_dir, exist_ok=True)
+    payload = {
+        "last_check": "2026-02-12T12:00:00Z",
+        "issues": [
+            {"condition": "no_task_running", "message": "No task", "heal_task_id": "task_heal_123"},
+        ],
+    }
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        response = await client.get("/api/agent/monitor-issues")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["issues"]) == 1
+        assert data["issues"][0].get("heal_task_id") == "task_heal_123", "issue must expose heal_task_id when present"
+    finally:
+        if os.path.isfile(path):
+            os.remove(path)
+
+
 @pytest.mark.asyncio
 async def test_status_report_returns_200(client: AsyncClient):
     """GET /api/agent/status-report returns hierarchical status (layer_0_goal through layer_3_attention)."""
@@ -1370,6 +1510,142 @@ async def test_status_report_returns_200(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_status_report_includes_meta_questions_when_file_exists(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """When api/logs/meta_questions.json exists, GET /api/agent/status-report includes meta_questions (unanswered/failed). Spec 007 meta-pipeline item 3."""
+    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    report_path = tmp_path / "pipeline_status_report.json"
+    report_path.write_text(
+        json.dumps({
+            "generated_at": "2026-02-12T12:00:00Z",
+            "overall": {"status": "ok", "going_well": [], "needs_attention": []},
+            "layer_0_goal": {"status": "ok", "summary": "OK"},
+            "layer_1_orchestration": {"status": "ok", "summary": "OK"},
+            "layer_2_execution": {"status": "ok", "summary": "OK"},
+            "layer_3_attention": {"status": "ok", "summary": "OK"},
+        })
+    )
+    mq_path = tmp_path / "meta_questions.json"
+    mq_path.write_text(
+        json.dumps({
+            "run_at": "2026-02-12T12:00:00Z",
+            "answers": [],
+            "summary": {"unanswered": ["q5", "q6"], "failed": ["q4"]},
+        })
+    )
+    response = await client.get("/api/agent/status-report")
+    assert response.status_code == 200
+    data = response.json()
+    assert "meta_questions" in data
+    assert data["meta_questions"]["status"] == "needs_attention"
+    assert data["meta_questions"]["unanswered"] == ["q5", "q6"]
+    assert data["meta_questions"]["failed"] == ["q4"]
+    assert "meta_questions" in data["overall"]["needs_attention"]
+
+
+def test_run_meta_questions_checklist_structure():
+    """run_meta_questions.run_checklist returns run_at, answers, summary (unanswered, failed). Spec 007 item 3."""
+    import sys
+    cwd = os.getcwd()
+    try:
+        scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import run_meta_questions
+        result = run_meta_questions.run_checklist(base_url="http://localhost:9999")
+        assert "run_at" in result
+        assert "answers" in result
+        assert "summary" in result
+        assert "unanswered" in result["summary"]
+        assert "failed" in result["summary"]
+        assert isinstance(result["answers"], list)
+        assert len(result["answers"]) >= 1
+    finally:
+        os.chdir(cwd)
+
+
+def test_run_meta_questions_main_writes_meta_questions_json(tmp_path, monkeypatch):
+    """run_meta_questions.main() writes meta_questions.json with run_at, answers, summary (unanswered, failed). Spec 007 item 3."""
+    import sys
+    scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import run_meta_questions
+    monkeypatch.setattr(run_meta_questions, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(run_meta_questions, "META_QUESTIONS_FILE", str(tmp_path / "meta_questions.json"))
+    run_meta_questions.main()
+    mq_path = tmp_path / "meta_questions.json"
+    assert mq_path.exists(), "meta_questions.json must be written to api/logs (or overridden path)"
+    data = json.loads(mq_path.read_text())
+    assert "run_at" in data
+    assert "answers" in data
+    assert "summary" in data
+    assert "unanswered" in data["summary"]
+    assert "failed" in data["summary"]
+
+
+@pytest.mark.asyncio
+async def test_status_report_meta_questions_ok_when_no_unanswered_failed(
+    client: AsyncClient, tmp_path, monkeypatch
+):
+    """When meta_questions.json has empty unanswered and failed, status-report has meta_questions.status ok and not in needs_attention. Spec 007 item 3."""
+    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    report_path = tmp_path / "pipeline_status_report.json"
+    report_path.write_text(
+        json.dumps({
+            "generated_at": "2026-02-12T12:00:00Z",
+            "overall": {"status": "ok", "going_well": [], "needs_attention": []},
+            "layer_0_goal": {"status": "ok", "summary": "OK"},
+            "layer_1_orchestration": {"status": "ok", "summary": "OK"},
+            "layer_2_execution": {"status": "ok", "summary": "OK"},
+            "layer_3_attention": {"status": "ok", "summary": "OK"},
+        })
+    )
+    mq_path = tmp_path / "meta_questions.json"
+    mq_path.write_text(
+        json.dumps({
+            "run_at": "2026-02-12T12:00:00Z",
+            "answers": [],
+            "summary": {"unanswered": [], "failed": []},
+        })
+    )
+    response = await client.get("/api/agent/status-report")
+    assert response.status_code == 200
+    data = response.json()
+    assert "meta_questions" in data
+    assert data["meta_questions"]["status"] == "ok"
+    assert "meta_questions" not in data["overall"]["needs_attention"]
+
+
+def test_monitor_run_meta_questions_if_due_runs_script_when_never_run(tmp_path, monkeypatch):
+    """Monitor runs meta-questions checklist when last run file is missing (periodic check). Spec 007 item 3."""
+    import sys
+    import logging
+    import subprocess
+    scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import monitor_pipeline
+    last_run_file = tmp_path / "meta_questions_last_run.json"
+    assert not last_run_file.exists()
+    monkeypatch.setattr(monitor_pipeline, "META_QUESTIONS_LAST_RUN_FILE", str(last_run_file))
+    mock_run = []
+
+    def fake_run(cmd, *args, **kwargs):
+        mock_run.append(cmd)
+        return type("R", (), {"returncode": 0})()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    log = logging.getLogger("test")
+    monitor_pipeline._run_meta_questions_if_due(log)
+    assert len(mock_run) == 1, "monitor must run meta-questions script when due"
+    cmd = mock_run[0]
+    assert any("run_meta_questions" in str(p) for p in cmd), "must invoke run_meta_questions script"
+    assert "--once" in cmd, "script must be run with --once"
+
+
+@pytest.mark.asyncio
 async def test_task_log_returns_command_and_output(client: AsyncClient):
     """GET /api/agent/tasks/{id}/log returns task_id, command, output."""
     create = await client.post(
@@ -1377,6 +1653,7 @@ async def test_task_log_returns_command_and_output(client: AsyncClient):
         json={"direction": "Log test", "task_type": "impl", "context": {"executor": "claude"}},
     )
     task_id = create.json()["id"]
+    _ensure_task_log_file(task_id, "prompt and streamed output\n")
     response = await client.get(f"/api/agent/tasks/{task_id}/log")
     assert response.status_code == 200
     data = response.json()
@@ -1393,6 +1670,7 @@ async def test_task_log_response_shape_defines_contract(client: AsyncClient):
         json={"direction": "Log shape", "task_type": "impl"},
     )
     task_id = create.json()["id"]
+    _ensure_task_log_file(task_id)
     response = await client.get(f"/api/agent/tasks/{task_id}/log")
     assert response.status_code == 200
     data = response.json()
@@ -1400,23 +1678,6 @@ async def test_task_log_response_shape_defines_contract(client: AsyncClient):
     for key in required:
         assert key in data, f"Task log response must include {key}"
     assert data["log"] is None or isinstance(data["log"], str)
-
-
-@pytest.mark.asyncio
-async def test_task_log_returns_null_when_file_missing(client: AsyncClient):
-    """GET /api/agent/tasks/{id}/log returns 200 with log null when log file not yet created."""
-    create = await client.post(
-        "/api/agent/tasks",
-        json={"direction": "Task without log file", "task_type": "impl"},
-    )
-    task_id = create.json()["id"]
-    # Log file not created until agent runs; expect 200 with log: null
-    response = await client.get(f"/api/agent/tasks/{task_id}/log")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["task_id"] == task_id
-    assert data.get("log") is None
-    assert "command" in data
 
 
 @pytest.mark.asyncio
@@ -1431,6 +1692,7 @@ async def test_task_log_returns_output_from_task_when_set(client: AsyncClient):
         f"/api/agent/tasks/{task_id}",
         json={"status": "completed", "output": "Build succeeded."},
     )
+    _ensure_task_log_file(task_id)
     response = await client.get(f"/api/agent/tasks/{task_id}/log")
     assert response.status_code == 200
     data = response.json()

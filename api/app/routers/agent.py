@@ -71,7 +71,11 @@ def _task_to_full(task: dict) -> dict:
     }
 
 
-@router.post("/agent/tasks", status_code=201)
+@router.post(
+    "/agent/tasks",
+    status_code=201,
+    responses={422: {"description": "Invalid task_type, empty direction, or validation error (detail: list of {loc, msg, type})"}},
+)
 async def create_task(data: AgentTaskCreate) -> AgentTask:
     """Submit a task and get routed model + command."""
     task = agent_service.create_task(data)
@@ -372,8 +376,14 @@ async def get_effectiveness() -> dict:
             "issues": {"open": 0, "resolved_7d": 0},
             "progress": {},
             "goal_proximity": 0.0,
+            "heal_resolved_count": 0,
             "top_issues_by_priority": [],
         }
+
+
+def _agent_logs_dir() -> str:
+    """Logs directory for status-report and meta_questions; overridable in tests."""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
 
 
 def _merge_meta_questions_into_report(report: dict, logs_dir: str) -> dict:
@@ -411,7 +421,7 @@ def _merge_meta_questions_into_report(report: dict, logs_dir: str) -> dict:
 async def get_status_report() -> dict:
     """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
     Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    logs_dir = _agent_logs_dir()
     path = os.path.join(logs_dir, "pipeline_status_report.json")
     if not os.path.isfile(path):
         out = {
@@ -428,7 +438,8 @@ async def get_status_report() -> dict:
             report = json.load(f)
         return _merge_meta_questions_into_report(report, logs_dir)
     except Exception:
-        return {"generated_at": None, "overall": {"status": "unknown"}, "error": "Could not read report"}
+        out = {"generated_at": None, "overall": {"status": "unknown", "going_well": [], "needs_attention": []}, "error": "Could not read report"}
+        return _merge_meta_questions_into_report(out, logs_dir)
 
 
 @router.get("/agent/pipeline-status")
@@ -472,7 +483,7 @@ async def get_pipeline_status() -> dict:
 
 @router.get(
     "/agent/tasks/{task_id}/log",
-    responses={404: {"description": "Task not found", "model": ErrorDetail}},
+    responses={404: {"description": "Task not found or task log not found", "model": ErrorDetail}},
 )
 async def get_task_log(task_id: str) -> dict:
     """Full task log (prompt, command, output). File is streamed during execution, complete on finish."""
@@ -481,7 +492,7 @@ async def get_task_log(task_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Task not found")
     log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", f"task_{task_id}.log")
     if not os.path.isfile(log_path):
-        return {"task_id": task_id, "log": None, "command": task.get("command"), "output": task.get("output")}
+        raise HTTPException(status_code=404, detail="Task log not found")
     with open(log_path, encoding="utf-8") as f:
         log_content = f.read()
     return {"task_id": task_id, "log": log_content, "command": task.get("command"), "output": task.get("output")}

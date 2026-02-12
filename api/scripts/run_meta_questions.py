@@ -71,7 +71,9 @@ def _check_q3(base_url: str) -> tuple[str, str]:
     """Goal proximity improving: need effectiveness API; compare to previous run or threshold."""
     try:
         import httpx
-        r = httpx.get(f"{base_url}/api/agent/effectiveness", timeout=5)
+        # Short connect timeout so unreachable API (e.g. test with localhost:9999) fails fast
+        timeout = httpx.Timeout(2.0, 5.0)  # connect 2s, read 5s
+        r = httpx.get(f"{base_url}/api/agent/effectiveness", timeout=timeout)
         if r.status_code != 200:
             return "unanswered", f"Effectiveness API returned {r.status_code}"
         eff = r.json()
