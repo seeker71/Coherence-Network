@@ -98,6 +98,7 @@ TaskMetric:
 
 ## See Also
 
+- [026-phase-1-task-metrics.md](026-phase-1-task-metrics.md) — Expanded Phase 1 spec: persist task metrics; GET /api/agent/metrics
 - [docs/AGENT-DEBUGGING.md](../docs/AGENT-DEBUGGING.md) — Pipeline troubleshooting
 - [docs/SPEC-COVERAGE.md](../docs/SPEC-COVERAGE.md) — Spec→impl mapping
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — Pipeline phases

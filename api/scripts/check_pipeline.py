@@ -11,10 +11,12 @@ Usage:
 import argparse
 import json
 import os
+import subprocess
 import sys
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
+PROJECT_ROOT = os.path.dirname(_api_dir)
 
 try:
     from dotenv import load_dotenv
@@ -50,6 +52,41 @@ def _fmt_seconds(s):
         return f"{m}m{s}s"
     h, m = divmod(m, 60)
     return f"{h}h{m}m"
+
+
+def _get_pipeline_process_args():
+    """Return {runner_workers: int|None, pm_parallel: bool|None} from ps."""
+    out = {"runner_workers": None, "pm_parallel": None}
+    try:
+        r = subprocess.run(
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=PROJECT_ROOT,
+        )
+        if r.returncode != 0:
+            return out
+        for line in (r.stdout or "").strip().splitlines():
+            if "agent_runner" in line and "python" in line:
+                parts = line.split()
+                for i, p in enumerate(parts):
+                    if p in ("--workers", "-w") and i + 1 < len(parts):
+                        try:
+                            out["runner_workers"] = int(parts[i + 1])
+                        except ValueError:
+                            pass
+                        break
+                if out["runner_workers"] is None:
+                    out["runner_workers"] = 1
+                break
+        for line in (r.stdout or "").strip().splitlines():
+            if "project_manager" in line and "python" in line:
+                out["pm_parallel"] = " --parallel " in (" " + line) or line.rstrip().endswith(" --parallel")
+                break
+    except Exception:
+        pass
+    return out
 
 
 def main():
@@ -161,6 +198,21 @@ def main():
             print(f"  Waiting on: {pm['current_task_id']}")
         if pm.get("blocked"):
             print("  (blocked by needs_decision)")
+
+    # Pipeline processes (for phase coverage: want PM --parallel, agent_runner --workers 5)
+    proc = _get_pipeline_process_args()
+    rw = proc.get("runner_workers")
+    pp = proc.get("pm_parallel")
+    parts = []
+    if rw is not None:
+        parts.append(f"agent_runner workers={rw}" + (" (ok)" if rw >= 5 else " (need 5)"))
+    else:
+        parts.append("agent_runner not seen")
+    if pp is not None:
+        parts.append(f"PM parallel={str(pp).lower()}" + (" (ok)" if pp else " (need --parallel)"))
+    else:
+        parts.append("PM not seen")
+    print(f"\nPROCESSES: {', '.join(parts)}")
 
     # Latest LLM request/response
     req = data.get("latest_request")

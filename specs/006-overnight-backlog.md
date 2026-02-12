@@ -3,9 +3,9 @@
 Work items ordered for overnight runs. Smaller, achievable tasks first.
 Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.md`
 
-**Progress:** Phase 1–3 largely done. Phase 4–5 and "Next Hours" below remain.
+**Progress:** Phase 1–3 done. Phase 6–7 (product-critical + polish) remain. Deduplicated Feb 2026.
 
-**Backlog alignment (Feb 2026):** Spec numbers in Phase 4 were planned before implementation. Actual specs: 015 → merged into 018; 017 = Web CI (not agent-runner-resilience); 018 = Coherence algorithm (not rate-limiting). See docs/SPEC-COVERAGE.md for current spec→impl mapping. Duplicate items (e.g. 43/87 run_backlog_item) can be skipped.
+**Backlog alignment (Feb 2026):** Phase 6 prioritizes GitHub API + Contributor/Org (P0 for coherence). Meta-pipeline interleaved at 20% via PIPELINE_META_BACKLOG, PIPELINE_META_RATIO.
 
 ## Phase 1: Specs & Docs (items 1–15) — DONE
 1. specs/001-health-check.md — Verify all health items complete; add any missing tests
@@ -68,48 +68,25 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 54. Add env validation at startup: warn if TELEGRAM_BOT_TOKEN missing but webhook enabled
 55. Add readiness probe route /api/ready (or extend health) for k8s/deploy
 
-## Phase 4: Specs for Future Work (items 56–70)
-56. Write spec 012-web-skeleton: Next.js 15 app with / and /api-health check page
-57. Write spec 013-logging-audit: structured logging, log levels, rotation
-58. Write spec 014-deploy-readiness: env validation, health/ready, Dockerfile skeleton
-59. Write spec 015-coherence-algorithm — DONE as spec 018; see specs/015-placeholder.md
-60. Expand specs/008-sprint-1-graph-foundation.md: add deps.dev API contract section
-61. Add spec 016-holdout-tests: pattern, directory, CI exclusion, purpose — DONE
-62. Add spec 017 — DONE (Web CI; agent-runner resilience not a separate spec)
-63. Add spec 018 — DONE (Coherence algorithm; rate-limiting not yet spec'd)
-64. Update docs/concepts/OSS-CONCEPT-MAPPING.md with concrete node/edge examples
-65. Add docs/concepts/COHERENCE-ALGORITHM-SKETCH.md from PLAN.md formula
-66. Review and cross-link all specs: add "See also" where relevant
-67. Add acceptance criteria checklist to specs/TEMPLATE.md
-68. Create specs/009-api-error-handling.md (if not created in item 7)
-69. Create specs/010-request-validation.md (if not created in item 8)
-70. Create specs/011-pagination.md (if not created in item 9)
+## Phase 6: Product-Critical (GitHub, Contributors) — PRIORITY
+56. Implement spec 029-github-api-integration: GitHub API client, Contributor/Org nodes, index_github.py
+57. Add Contributor and Organization to GraphStore; wire contributor_diversity, activity_cadence in coherence API
 
-## Phase 5: Polish & Cleanup (items 71–85)
-
-## Next Hours (new items 86–100)
-86. Implement spec 012: create web/ Next.js app with / and /api-health
-87. Add api/scripts/run_backlog_item.py --index N to run single backlog item
-88. Run ruff on api/ and fix auto-fixable issues
-89. Add CHANGELOG.md with placeholder structure
-90. Write spec 013-logging-audit: structured logging, levels, rotation
-91. Write spec 014-deploy-readiness: Dockerfile skeleton, env validation
-92. Add --max-items N to project_manager for testing
-93. Expand docs/concepts/OSS-CONCEPT-MAPPING.md with concrete examples
-94. Add "See also" cross-links to specs
-95. Update AGENTS.md with conventions from recent work
-71. Run ruff or black on api/ and fix any auto-fixable issues
-72. Ensure all Python files have consistent docstring style (Google or NumPy)
-73. Add .cursorignore or .gitignore entries for logs, __pycache__, .venv
-74. Verify .env.example documents all required and optional env vars
-75. Add Makefile or justfile with targets: test, run, lint, setup
-76. Consolidate duplicate logic between project_manager and overnight_orchestrator if any
-77. Add CHANGELOG.md with placeholder structure for future releases
-78. Review agent runner log rotation: ensure logs don't grow unbounded
-79. Add cleanup of old task logs (e.g. keep last 7 days) to cleanup_temp or new script
-80. Document max backlog size and performance implications in project_manager
-81. Add --max-items N to project_manager for testing (process only first N)
-82. Verify all scripts in api/scripts/ have shebang and executable bit
-83. Add smoke test script: curl health, pipeline-status, create minimal task
-84. Update AGENTS.md with any new conventions from this session
-85. Final pass: run full pytest, fix any flaky or failing tests
+## Phase 7: Remaining Specs & Polish (deduplicated)
+58. Expand specs/008-sprint-1-graph-foundation.md: add deps.dev API contract section
+59. Update docs/concepts/OSS-CONCEPT-MAPPING.md with concrete node/edge examples
+60. Add docs/concepts/COHERENCE-ALGORITHM-SKETCH.md from PLAN.md formula
+61. Review and cross-link all specs: add "See also" where relevant
+62. Add acceptance criteria checklist to specs/TEMPLATE.md
+63. Add api/scripts/run_backlog_item.py --index N to run single backlog item
+64. Run ruff on api/ and fix auto-fixable issues
+65. Add CHANGELOG.md with placeholder structure
+66. Add Makefile or justfile with targets: test, run, lint, setup
+67. Verify .env.example documents all required and optional env vars
+68. Review agent runner log rotation: ensure logs don't grow unbounded
+69. Add cleanup of old task logs (e.g. keep last 7 days) to cleanup_temp or new script
+70. Document max backlog size and performance implications in project_manager
+71. Verify all scripts in api/scripts/ have shebang and executable bit
+72. Add smoke test script: curl health, pipeline-status, create minimal task
+73. Consolidate duplicate logic between project_manager and overnight_orchestrator if any
+74. Expand docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md per recent work

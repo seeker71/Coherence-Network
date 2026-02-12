@@ -57,6 +57,24 @@ def _setup_logging(verbose: bool = False) -> logging.Logger:
     return log
 
 
+def _try_commit(task_id: str, task_type: str, log: logging.Logger) -> None:
+    """Run commit_progress.py when PIPELINE_AUTO_COMMIT=1. Non-blocking; logs on failure."""
+    import subprocess
+
+    project_root = os.path.dirname(_api_dir)
+    script = os.path.join(_api_dir, "scripts", "commit_progress.py")
+    push = os.environ.get("PIPELINE_AUTO_PUSH") == "1"
+    cmd = [sys.executable, script, "--task-id", task_id, "--task-type", task_type]
+    if push:
+        cmd.append("--push")
+    try:
+        r = subprocess.run(cmd, cwd=project_root, capture_output=True, text=True, timeout=60)
+        if r.returncode != 0 and r.stderr:
+            log.warning("commit_progress failed: %s", r.stderr[:200])
+    except Exception as e:
+        log.warning("commit_progress error: %s", e)
+
+
 def _uses_anthropic_cloud(command: str) -> bool:
     """True if command uses Anthropic cloud (e.g. HEAL with claude-3-5-haiku), not Ollama."""
     if "ollama/" in command:
@@ -166,15 +184,14 @@ def run_one_task(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
         )
-        try:
-            from app.services.metrics_service import record_task
-
-            record_task(task_id, task_type, model, duration_sec, status)
-        except ImportError:
-            pass
         log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
+
+        # Auto-commit progress (spec 030) when PIPELINE_AUTO_COMMIT=1
+        if status == "completed" and task_type != "heal" and os.environ.get("PIPELINE_AUTO_COMMIT") == "1":
+            _try_commit(task_id, task_type, log)
+
         return True
     except Exception as e:
         duration_sec = round(time.monotonic() - start_time, 1)  # start_time set before try
@@ -184,12 +201,6 @@ def run_one_task(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": "failed", "output": str(e)},
         )
-        try:
-            from app.services.metrics_service import record_task
-
-            record_task(task_id, task_type, model, duration_sec, "failed")
-        except ImportError:
-            pass
         log.exception("task=%s error: %s", task_id, e)
         return True
 

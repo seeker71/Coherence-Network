@@ -81,5 +81,4 @@ async def root():
         "version": app.version,
         "docs": "/docs",
         "health": "/api/health",
-        "message": "Coherence Network API",
     }

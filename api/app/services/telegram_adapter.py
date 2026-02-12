@@ -49,6 +49,8 @@ def is_user_allowed(user_id: int) -> bool:
 
 async def send_alert(message: str, parse_mode: str = "Markdown") -> bool:
     """Send message to configured chat IDs. Returns True if sent, False if not configured."""
+    from app.services import telegram_diagnostics
+
     token = _get_token()
     chat_ids = _get_chat_ids()
     if not token or not chat_ids:
@@ -66,9 +68,13 @@ async def send_alert(message: str, parse_mode: str = "Markdown") -> bool:
                         "parse_mode": parse_mode,
                     },
                 )
-                if r.status_code != 200:
+                if r.status_code == 200:
+                    telegram_diagnostics.record_send(chat_id.strip(), True, 200, r.text)
+                else:
+                    telegram_diagnostics.record_send(chat_id.strip(), False, r.status_code, r.text)
                     ok = False
-            except Exception:
+            except Exception as e:
+                telegram_diagnostics.record_send(chat_id.strip(), False, None, str(e))
                 ok = False
     return ok
 

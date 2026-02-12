@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskType(str, Enum):
@@ -24,11 +24,19 @@ class TaskStatus(str, Enum):
 
 
 class AgentTaskCreate(BaseModel):
-    """Request body for creating a task."""
+    """Request body for creating a task. direction: strip leading/trailing whitespace before length check (spec 010)."""
 
     direction: str = Field(..., min_length=1, max_length=5000)
     task_type: TaskType
     context: Optional[Dict[str, Any]] = None
+
+    @field_validator("direction", mode="before")
+    @classmethod
+    def direction_strip(cls, v: object) -> object:
+        """Strip leading/trailing whitespace before length validation; whitespace-only becomes empty → 422 (spec 010)."""
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
 
 class AgentTaskUpdate(BaseModel):
@@ -40,6 +48,16 @@ class AgentTaskUpdate(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running
+
+    @field_validator("progress_pct")
+    @classmethod
+    def progress_pct_int_only(cls, v: object) -> Optional[int]:
+        """Reject string or other non-int (spec 002: PATCH invalid progress_pct type → 422)."""
+        if v is None:
+            return None
+        if not isinstance(v, int):
+            raise ValueError("progress_pct must be an integer")
+        return v
 
 
 class AgentTask(BaseModel):

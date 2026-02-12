@@ -46,3 +46,9 @@ def get_webhook_events() -> list:
 
 def get_send_results() -> list:
     return list(_send_results)
+
+
+def clear() -> None:
+    """Clear webhook_events and send_results. For test isolation (spec 003 diagnostic test)."""
+    _webhook_events.clear()
+    _send_results.clear()

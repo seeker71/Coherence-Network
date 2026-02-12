@@ -1,7 +1,9 @@
 """Agent orchestration API routes."""
 
+import json
 import logging
 import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 
@@ -19,6 +21,7 @@ from app.models.agent import (
     TaskStatus,
     TaskType,
 )
+from app.models.error import ErrorDetail
 from app.services import agent_service
 
 router = APIRouter()
@@ -101,7 +104,10 @@ async def get_task_count() -> dict:
     return agent_service.get_task_count()
 
 
-@router.get("/agent/tasks/{task_id}")
+@router.get(
+    "/agent/tasks/{task_id}",
+    responses={404: {"description": "Task not found", "model": ErrorDetail}},
+)
 async def get_task(task_id: str) -> AgentTask:
     """Get task by id."""
     task = agent_service.get_task(task_id)
@@ -121,7 +127,13 @@ def _format_alert(task: dict) -> str:
     return msg
 
 
-@router.patch("/agent/tasks/{task_id}")
+@router.patch(
+    "/agent/tasks/{task_id}",
+    responses={
+        400: {"description": "At least one field required", "model": ErrorDetail},
+        404: {"description": "Task not found", "model": ErrorDetail},
+    },
+)
 async def update_task(
     task_id: str,
     data: AgentTaskUpdate,
@@ -154,6 +166,30 @@ async def update_task(
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)
+    if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
+        try:
+            from app.services.metrics_service import record_task
+
+            created = task.get("created_at")
+            updated = task.get("updated_at")
+            if created is not None and updated is not None:
+                if hasattr(created, "timestamp"):
+                    duration_seconds = (updated - created).total_seconds()
+                else:
+                    created_dt = created if isinstance(created, datetime) else datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                    updated_dt = updated if isinstance(updated, datetime) else datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+                    duration_seconds = (updated_dt - created_dt).total_seconds()
+                task_type_str = task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"])
+                status_str = task["status"].value if hasattr(task["status"], "value") else str(task["status"])
+                record_task(
+                    task_id=task_id,
+                    task_type=task_type_str,
+                    model=task.get("model", "unknown"),
+                    duration_seconds=round(duration_seconds, 1),
+                    status=status_str,
+                )
+        except ImportError:
+            pass
     return AgentTask(**_task_to_full(task))
 
 
@@ -180,8 +216,12 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
     text = msg.get("text", "").strip()
     user_id = (msg.get("from") or {}).get("id")
     logger.info("Telegram webhook: user_id=%s chat_id=%s text=%r", user_id, chat_id, text[:50])
-    if user_id is not None and not telegram_adapter.is_user_allowed(user_id):
-        logger.warning("Telegram webhook: user %s not allowed (check TELEGRAM_ALLOWED_USER_IDS)", user_id)
+    # When TELEGRAM_ALLOWED_USER_IDS is set, require a known user (reject missing from / unauthenticated)
+    if not telegram_adapter.is_user_allowed(user_id):
+        if user_id is None:
+            logger.warning("Telegram webhook: message has no 'from' (reject when TELEGRAM_ALLOWED_USER_IDS set)")
+        else:
+            logger.warning("Telegram webhook: user %s not allowed (check TELEGRAM_ALLOWED_USER_IDS)", user_id)
         return {"ok": True}
     cmd, arg = telegram_adapter.parse_command(text)
     reply = ""
@@ -261,9 +301,38 @@ async def get_usage() -> dict:
     return agent_service.get_usage_summary()
 
 
+@router.get("/agent/fatal-issues")
+async def get_fatal_issues() -> dict:
+    """Unrecoverable failures. Check when autonomous; no user interaction needed until fatal."""
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    path = os.path.join(logs_dir, "fatal_issues.json")
+    if not os.path.isfile(path):
+        return {"fatal": False}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return {"fatal": True, **data}
+    except Exception:
+        return {"fatal": False}
+
+
+@router.get("/agent/monitor-issues")
+async def get_monitor_issues() -> dict:
+    """Monitor issues from automated pipeline check. Checkable; use to react and improve. Spec 027."""
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    path = os.path.join(logs_dir, "monitor_issues.json")
+    if not os.path.isfile(path):
+        return {"issues": [], "last_check": None}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"issues": [], "last_check": None}
+
+
 @router.get("/agent/metrics")
 async def get_metrics() -> dict:
-    """Task metrics: success rate, execution time, by task_type, by model. Spec 027."""
+    """Task metrics: success rate, execution time, by task_type, by model. Spec 026 Phase 1."""
     try:
         from app.services.metrics_service import get_aggregates
 
@@ -275,6 +344,47 @@ async def get_metrics() -> dict:
             "by_task_type": {},
             "by_model": {},
         }
+
+
+@router.get("/agent/effectiveness")
+async def get_effectiveness() -> dict:
+    """Pipeline effectiveness: throughput, success rate, issue tracking, progress, goal proximity.
+    Use to measure and improve the pipeline, agents, and progress toward overall goal."""
+    try:
+        from app.services.effectiveness_service import get_effectiveness as _get
+
+        return _get()
+    except ImportError:
+        return {
+            "throughput": {"completed_7d": 0, "tasks_per_day": 0},
+            "success_rate": 0.0,
+            "issues": {"open": 0, "resolved_7d": 0},
+            "progress": {},
+            "goal_proximity": 0.0,
+            "top_issues_by_priority": [],
+        }
+
+
+@router.get("/agent/status-report")
+async def get_status_report() -> dict:
+    """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
+    Machine and human readable. Written by monitor each check."""
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    path = os.path.join(logs_dir, "pipeline_status_report.json")
+    if not os.path.isfile(path):
+        return {
+            "generated_at": None,
+            "overall": {"status": "unknown", "going_well": [], "needs_attention": []},
+            "layer_0_goal": {"status": "unknown", "summary": "Report not yet generated by monitor"},
+            "layer_1_orchestration": {"status": "unknown", "summary": ""},
+            "layer_2_execution": {"status": "unknown", "summary": ""},
+            "layer_3_attention": {"status": "unknown", "summary": ""},
+        }
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"generated_at": None, "overall": {"status": "unknown"}, "error": "Could not read report"}
 
 
 @router.get("/agent/pipeline-status")
@@ -308,7 +418,7 @@ async def get_pipeline_status() -> dict:
             try:
                 with open(log_path, encoding="utf-8") as f:
                     lines = f.readlines()
-                status["running"][0]["live_tail"] = [ln.rstrip() for ln in lines[-25:] if ln.strip()]
+                status["running"][0]["live_tail"] = [ln.rstrip() for ln in lines[-20:] if ln.strip()]
             except Exception:
                 status["running"][0]["live_tail"] = None
         else:
@@ -316,7 +426,10 @@ async def get_pipeline_status() -> dict:
     return status
 
 
-@router.get("/agent/tasks/{task_id}/log")
+@router.get(
+    "/agent/tasks/{task_id}/log",
+    responses={404: {"description": "Task not found", "model": ErrorDetail}},
+)
 async def get_task_log(task_id: str) -> dict:
     """Full task log (prompt, command, output). File is streamed during execution, complete on finish."""
     task = agent_service.get_task(task_id)
@@ -364,10 +477,13 @@ async def telegram_diagnostics() -> dict:
 
 
 @router.post("/agent/telegram/test-send")
-async def telegram_test_send(text: str = "Test from diagnostics") -> dict:
+async def telegram_test_send(
+    text: Optional[str] = Query(None, description="Optional message text"),
+) -> dict:
     """Send a test message to TELEGRAM_CHAT_IDS. Returns raw Telegram API response for debugging."""
     import httpx
 
+    message_text = text or "Test from diagnostics"
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_ids = [s.strip() for s in (os.environ.get("TELEGRAM_CHAT_IDS") or "").split(",") if s.strip()]
     if not token or not chat_ids:
@@ -377,7 +493,7 @@ async def telegram_test_send(text: str = "Test from diagnostics") -> dict:
     async with httpx.AsyncClient(timeout=10.0) as client:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         for cid in chat_ids[:3]:
-            r = await client.post(url, json={"chat_id": cid, "text": text})
+            r = await client.post(url, json={"chat_id": cid, "text": message_text})
             results.append({
                 "chat_id": cid,
                 "status_code": r.status_code,

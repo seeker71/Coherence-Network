@@ -17,6 +17,10 @@ cd "$API_DIR"
 
 [ -f .env ] && set -a && source .env && set +a
 
+# Meta-pipeline: interleave 20% meta items (EXECUTION-PLAN). Set PIPELINE_META_RATIO=0 to disable.
+export PIPELINE_META_BACKLOG="${PIPELINE_META_BACKLOG:-${PROJECT_ROOT}/specs/007-meta-pipeline-backlog.md}"
+export PIPELINE_META_RATIO="${PIPELINE_META_RATIO:-0.2}"
+
 PYTHON="${API_DIR}/.venv/bin/python"
 [ -x "$PYTHON" ] || PYTHON="python3"
 BASE="${AGENT_API_BASE:-http://localhost:8000}"
@@ -42,7 +46,13 @@ if pkill -f "overnight_orchestrator" 2>/dev/null; then
   sleep 1
 fi
 
-# 2. Check API
+# 2. Write pipeline version (for monitor to detect stale code, restart if needed)
+mkdir -p logs 2>/dev/null || true
+GIT_SHA=""
+[ -d "$PROJECT_ROOT/.git" ] && GIT_SHA=$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null) || true
+echo "{\"git_sha\": \"${GIT_SHA:-unknown}\", \"started_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > logs/pipeline_version.json
+
+# 3. Check API
 if ! curl -s --max-time 5 "${BASE}/api/health" >/dev/null 2>&1; then
   echo "API not reachable at ${BASE}. Start it first:"
   echo "  ./scripts/start_with_telegram.sh"
@@ -53,11 +63,23 @@ if curl -s --max-time 5 -o /dev/null -w "%{http_code}" "${BASE}/api/agent/pipeli
   echo "WARNING: pipeline-status returns 404. Restart API for full visibility: ./scripts/start_with_telegram.sh"
 fi
 
-# 3. Start agent runner in background
-echo "Starting agent runner..."
-$PYTHON scripts/agent_runner.py --interval 10 --verbose >> logs/agent_runner.log 2>&1 &
+# 3. Start agent runner in background (workers=5: spec, impl, test, review + buffer)
+WORKERS="${AGENT_RUNNER_WORKERS:-5}"
+echo "Starting agent runner (workers=$WORKERS)..."
+$PYTHON scripts/agent_runner.py --interval 10 --workers "$WORKERS" --verbose >> logs/agent_runner.log 2>&1 &
 RUNNER_PID=$!
 echo "  Agent runner PID: $RUNNER_PID"
+
+# 3b. Start monitor (version check, phase coverage, issues, fallback recovery)
+MONITOR_INTERVAL="${PIPELINE_MONITOR_INTERVAL:-60}"
+AUTOFIX=""
+[ -n "$PIPELINE_AUTO_FIX_ENABLED" ] && [ "$PIPELINE_AUTO_FIX_ENABLED" = "1" ] && AUTOFIX="--auto-fix"
+AUTORECOV=""
+[ -n "$PIPELINE_AUTO_RECOVER" ] && [ "$PIPELINE_AUTO_RECOVER" = "1" ] && AUTORECOV="--auto-recover"
+echo "Starting pipeline monitor (interval=${MONITOR_INTERVAL}s)..."
+$PYTHON scripts/monitor_pipeline.py --interval "$MONITOR_INTERVAL" $AUTOFIX $AUTORECOV >> logs/monitor.log 2>&1 &
+MONITOR_PID=$!
+echo "  Monitor PID: $MONITOR_PID"
 
 # 4. Start pipeline status loop in background (prints every 60s)
 status_loop() {
@@ -72,11 +94,12 @@ status_loop() {
 status_loop &
 STATUS_PID=$!
 
-# 5. Start project manager (foreground; Ctrl+C stops both)
+# 5. Start project manager (foreground; Ctrl+C stops all)
 cleanup() {
   echo ""
   echo "Stopping..."
   kill $STATUS_PID 2>/dev/null || true
+  kill $MONITOR_PID 2>/dev/null || true
   kill $RUNNER_PID 2>/dev/null || true
   exit 0
 }
@@ -88,5 +111,7 @@ echo ""
 echo "--- Pipeline Status $(date '+%Y-%m-%d %H:%M:%S') ---"
 $PYTHON scripts/check_pipeline.py 2>/dev/null || echo "  (API unreachable)"
 echo ""
-$PYTHON scripts/project_manager.py --interval 15 --hours "$HOURS" --verbose \
-  --backlog "$BACKLOG" --state-file api/logs/project_manager_state_overnight.json --reset $CURSOR_ARG
+PM_ARGS="--interval 15 --hours $HOURS --verbose --backlog $BACKLOG --state-file api/logs/project_manager_state_overnight.json --reset $CURSOR_ARG"
+# Parallel mode: spec/impl/test/review in flight, 2+ specs buffered (spec 028). Default on.
+[ "${PIPELINE_PARALLEL:-1}" = "1" ] && PM_ARGS="$PM_ARGS --parallel"
+$PYTHON scripts/project_manager.py $PM_ARGS

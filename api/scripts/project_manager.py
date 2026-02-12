@@ -39,6 +39,7 @@ LOG_FILE = os.path.join(LOG_DIR, "project_manager.log")
 BACKLOG_FILE = os.path.join(PROJECT_ROOT, "specs", "005-backlog.md")
 STATE_FILE = os.path.join(LOG_DIR, "project_manager_state.json")
 MAX_ITERATIONS = 5
+NEEDS_DECISION_TIMEOUT_HOURS = float(os.environ.get("PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS", "0"))
 
 PHASES = ["spec", "impl", "test", "review"]
 TASK_TYPE_BY_PHASE = {"spec": "spec", "impl": "impl", "test": "test", "review": "review"}
@@ -59,18 +60,47 @@ def _setup_logging(verbose: bool = False) -> logging.Logger:
     return log
 
 
-def load_backlog() -> list[str]:
-    """Parse specs/005-backlog.md for work items (numbered lines)."""
+def _parse_backlog_file(path: str) -> list[str]:
+    """Parse backlog file for numbered work items."""
     items = []
-    if not os.path.isfile(BACKLOG_FILE):
+    if not path or not os.path.isfile(path):
         return items
-    with open(BACKLOG_FILE, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             m = re.match(r"^\d+\.\s+(.+)$", line)
             if m and not line.startswith("#"):
                 items.append(m.group(1).strip())
     return items
+
+
+def load_backlog() -> list[str]:
+    """Parse backlog for work items. If META_BACKLOG and META_RATIO set, interleave product + meta (spec 028, EXECUTION-PLAN)."""
+    product = _parse_backlog_file(BACKLOG_FILE)
+    meta_file = os.environ.get("PIPELINE_META_BACKLOG")
+    meta_ratio = float(os.environ.get("PIPELINE_META_RATIO", "0") or "0")
+    if not meta_file or meta_ratio <= 0:
+        return product
+    meta = _parse_backlog_file(meta_file)
+    if not meta:
+        return product
+    # Interleave: every 1/meta_ratio-th slot from meta (e.g. 0.2 → every 5th)
+    n = max(1, int(1.0 / meta_ratio))
+    combined = []
+    pi, mi = 0, 0
+    i = 0
+    while pi < len(product) or mi < len(meta):
+        if i % n == 0 and mi < len(meta):
+            combined.append(meta[mi])
+            mi += 1
+        elif pi < len(product):
+            combined.append(product[pi])
+            pi += 1
+        elif mi < len(meta):
+            combined.append(meta[mi])
+            mi += 1
+        i += 1
+    return combined
 
 
 # Candidates for backlog refresh (from PLAN.md and specs/)
@@ -121,8 +151,21 @@ def load_state() -> dict:
 
 
 def save_state(state: dict) -> None:
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
+    """Write state atomically (temp file + replace) to avoid corruption on concurrent access."""
+    d = os.path.dirname(STATE_FILE)
+    if d and not os.path.isdir(d):
+        os.makedirs(d, exist_ok=True)
+    tmp = STATE_FILE + ".tmp." + str(os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+        os.replace(tmp, STATE_FILE)
+    finally:
+        if os.path.isfile(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
 
 
 def run_pytest() -> Tuple[bool, str]:
@@ -184,6 +227,208 @@ def _task_payload(direction: str, task_type: str, use_cursor: bool = False) -> d
     return payload
 
 
+def _load_parallel_state() -> dict:
+    """Load state for parallel mode: in_flight, item_phase, next_backlog_idx."""
+    default = {"in_flight": [], "item_phase": {}, "next_backlog_idx": 0, "completed_items": 0, "blocked": False}
+    if os.path.isfile(STATE_FILE):
+        try:
+            with open(STATE_FILE, encoding="utf-8") as f:
+                loaded = json.load(f)
+                default.update(loaded)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return default
+
+
+def run_parallel(
+    interval: int,
+    hours: float,
+    once: bool,
+    log: logging.Logger,
+    verbose: bool = False,
+    max_items: int = 0,
+    use_cursor: bool = False,
+) -> None:
+    """Parallel mode: maintain tasks in spec/impl/test/review simultaneously. Spec 028."""
+    deadline = time.time() + hours * 3600 if hours else None
+
+    with httpx.Client(timeout=30.0) as client:
+        while True:
+            backlog = load_backlog()
+            if not backlog:
+                refresh_backlog(log)
+                backlog = load_backlog()
+                if not backlog:
+                    log.warning("Backlog empty")
+                    return
+
+            if deadline and time.time() >= deadline:
+                log.info("Reached time limit")
+                break
+
+            if max_items > 0:
+                state = _load_parallel_state()
+                if state.get("completed_items", 0) >= max_items:
+                    log.info("Reached --max-items=%d", max_items)
+                    break
+
+            # Check needs_decision
+            r = client.get(f"{BASE}/api/agent/tasks", params={"status": "needs_decision", "limit": 1})
+            if r.status_code == 200 and (r.json().get("total") or 0) > 0:
+                state = _load_parallel_state()
+                state["blocked"] = True
+                state.setdefault("blocked_at", time.time())
+                save_state(state)
+                if NEEDS_DECISION_TIMEOUT_HOURS > 0:
+                    blocked_since = state.get("blocked_at", time.time())
+                    if time.time() - blocked_since > NEEDS_DECISION_TIMEOUT_HOURS * 3600:
+                        tasks = r.json().get("tasks") or []
+                        if tasks:
+                            nd_task_id = tasks[0].get("id")
+                            client.patch(
+                                f"{BASE}/api/agent/tasks/{nd_task_id}",
+                                json={"status": "failed", "output": "Auto-skip: needs_decision timeout"},
+                            )
+                            state["blocked"] = False
+                            state.pop("blocked_at", None)
+                            save_state(state)
+                            log.warning("needs_decision timeout: auto-skipped %s", nd_task_id)
+                else:
+                    log.info("Blocked: needs_decision")
+                    if once:
+                        break
+                    time.sleep(interval)
+                    continue
+
+            state = _load_parallel_state()
+            state["blocked"] = False
+            in_flight = state.get("in_flight") or []
+            item_phase = state.get("item_phase") or {}
+            next_idx = state.get("next_backlog_idx", 0)
+
+            # Poll in-flight tasks
+            still_flying = []
+            for ent in in_flight:
+                tid = ent.get("task_id")
+                if not tid:
+                    continue
+                r = client.get(f"{BASE}/api/agent/tasks/{tid}")
+                if r.status_code != 200:
+                    still_flying.append(ent)
+                    continue
+                t = r.json()
+                status = t.get("status", "")
+                if status in ("pending", "running"):
+                    still_flying.append(ent)
+                    continue
+
+                # Task finished
+                idx = ent["item_idx"]
+                phase = ent["phase"]
+                iteration = ent.get("iteration", 1)
+                output = t.get("output") or ""
+
+                if status == "needs_decision":
+                    state["blocked"] = True
+                    save_state(state)
+                    if once:
+                        break
+                    time.sleep(interval)
+                    continue
+
+                if status == "failed":
+                    if phase == "impl" and iteration < MAX_ITERATIONS:
+                        dir = build_direction("impl", backlog[idx], iteration + 1, output[:300])
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                        if resp.status_code == 201:
+                            still_flying.append({
+                                "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
+                                "iteration": iteration + 1,
+                            })
+                            log.info("retry impl iteration %d item %d", iteration + 1, idx)
+                    elif phase == "review" or iteration >= MAX_ITERATIONS:
+                        next_idx = max(next_idx, idx + 1)
+                        state["next_backlog_idx"] = next_idx
+                        state["completed_items"] = state.get("completed_items", 0) + 1
+                        log.info("item %d failed max iterations, advance", idx)
+                    else:
+                        dir = build_direction("impl", backlog[idx], iteration + 1, output[:300])
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                        if resp.status_code == 201:
+                            still_flying.append({
+                                "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
+                                "iteration": iteration + 1,
+                            })
+                    save_state({**state, "in_flight": still_flying})
+                    continue
+
+                # status == completed
+                if phase == "spec":
+                    dir = build_direction("impl", backlog[idx], 1)
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                    if resp.status_code == 201:
+                        still_flying.append({"item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"), "iteration": 1})
+                        log.info("item %d spec done, impl created", idx)
+                elif phase == "impl":
+                    dir = build_direction("test", backlog[idx], 1)
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "test", use_cursor))
+                    if resp.status_code == 201:
+                        still_flying.append({"item_idx": idx, "phase": "test", "task_id": resp.json().get("id"), "iteration": 1})
+                        log.info("item %d impl done, test created", idx)
+                elif phase == "test":
+                    dir = build_direction("review", backlog[idx], 1)
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "review", use_cursor))
+                    if resp.status_code == 201:
+                        still_flying.append({"item_idx": idx, "phase": "review", "task_id": resp.json().get("id"), "iteration": 1})
+                        log.info("item %d test done, review created", idx)
+                elif phase == "review":
+                    pytest_ok, _ = run_pytest()
+                    review_ok = review_indicates_pass(output)
+                    if pytest_ok and review_ok:
+                        next_idx = max(next_idx, idx + 1)
+                        state["next_backlog_idx"] = next_idx
+                        state["completed_items"] = state.get("completed_items", 0) + 1
+                        log.info("item %d passed, next_backlog_idx=%d", idx, next_idx)
+                        refresh_backlog(log)
+                    else:
+                        if iteration >= MAX_ITERATIONS:
+                            next_idx = max(next_idx, idx + 1)
+                            state["next_backlog_idx"] = next_idx
+                            state["completed_items"] = state.get("completed_items", 0) + 1
+                        else:
+                            dir = build_direction("impl", backlog[idx], iteration + 1, f"pytest={'fail' if not pytest_ok else 'ok'} review={'fail' if not review_ok else 'ok'}")
+                            resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                            if resp.status_code == 201:
+                                still_flying.append({
+                                    "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
+                                    "iteration": iteration + 1,
+                                })
+
+            state["in_flight"] = still_flying
+
+            # Fill slots: create spec tasks for next backlog items (buffer 2+ specs)
+            phases_in_flight = {e["phase"] for e in still_flying}
+            spec_count = sum(1 for e in still_flying if e["phase"] == "spec")
+            while next_idx < len(backlog) and spec_count < 2:  # buffer at least 2 specs
+                item = backlog[next_idx]
+                dir = build_direction("spec", item, 1)
+                resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "spec", use_cursor))
+                if resp.status_code != 201:
+                    break
+                still_flying.append({"item_idx": next_idx, "phase": "spec", "task_id": resp.json().get("id"), "iteration": 1})
+                log.info("created spec for item %d (buffer)", next_idx)
+                next_idx += 1
+                spec_count += 1
+
+            state["in_flight"] = still_flying
+            state["next_backlog_idx"] = next_idx
+            save_state(state)
+
+            if once:
+                break
+            time.sleep(interval)
+
+
 def run(
     interval: int,
     hours: float,
@@ -224,14 +469,36 @@ def run(
             r = client.get(f"{BASE}/api/agent/tasks", params={"status": "needs_decision", "limit": 1})
             if r.status_code == 200 and (r.json().get("total") or 0) > 0:
                 state["blocked"] = True
+                state.setdefault("blocked_at", time.time())
                 save_state(state)
-                log.info("Blocked: task needs_decision; waiting for human /reply")
-                if once:
-                    break
-                time.sleep(interval)
-                continue
+                # Timeout: auto-skip to unblock (autonomy)
+                if NEEDS_DECISION_TIMEOUT_HOURS > 0:
+                    blocked_since = state.get("blocked_at", time.time())
+                    if time.time() - blocked_since > NEEDS_DECISION_TIMEOUT_HOURS * 3600:
+                        tasks = r.json().get("tasks") or []
+                        if tasks:
+                            nd_task_id = tasks[0].get("id")
+                            client.patch(
+                                f"{BASE}/api/agent/tasks/{nd_task_id}",
+                                json={"status": "failed", "output": "Auto-skip: needs_decision timeout (PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS)"},
+                            )
+                            idx = state["backlog_index"]
+                            state["backlog_index"] = idx + 1
+                            state["phase"] = "spec"
+                            state["iteration"] = 1
+                            state["current_task_id"] = None
+                            state["blocked"] = False
+                            state.pop("blocked_at", None)
+                            log.warning("needs_decision timeout: auto-skipped task %s, advanced to item %d", nd_task_id, idx + 1)
+                else:
+                    log.info("Blocked: task needs_decision; waiting for human /reply")
+                    if once:
+                        break
+                    time.sleep(interval)
+                    continue
 
             state["blocked"] = False
+            state.pop("blocked_at", None)
 
             # If we're waiting on a task, poll it
             if task_id:
@@ -278,6 +545,7 @@ def run(
 
                     if status == "needs_decision":
                         state["blocked"] = True
+                        state.setdefault("blocked_at", time.time())
                         save_state(state)
                         log.info("Task %s needs_decision; pausing", task_id)
                         if once:
@@ -464,6 +732,7 @@ def main():
         action="store_true",
         help="Use Claude Code CLI instead of Cursor (overrides AGENT_EXECUTOR_DEFAULT)",
     )
+    ap.add_argument("--parallel", action="store_true", help="Parallel mode: spec/impl/test/review in flight; buffer 2+ specs (spec 028)")
     args = ap.parse_args()
 
     if args.backlog:
@@ -482,24 +751,13 @@ def main():
         "cursor" if use_cursor else "claude",
     )
 
-    with httpx.Client(timeout=15.0) as client:
-        try:
-            r = client.get(f"{BASE}/api/health")
-            if r.status_code != 200:
-                log.error("API not reachable at %s (status=%s)", BASE, r.status_code)
-                print(f"API not reachable at {BASE} — start the API first")
-                sys.exit(1)
-        except Exception as e:
-            log.error("API check failed: %s", e)
-            print(f"API not reachable: {e}")
-            sys.exit(1)
-
     if args.verbose:
         s = load_state()
         print(f"Project Manager | API: {BASE} | backlog: {BACKLOG_FILE}")
         print(f"  State: item {s['backlog_index']}, phase={s['phase']}, blocked={s.get('blocked', False)}")
         print(f"  Log: {LOG_FILE}\n")
 
+    # Dry-run: no HTTP calls; log preview and exit 0 (spec 005 verification).
     if args.dry_run:
         backlog = load_backlog()
         state = load_state()
@@ -513,9 +771,22 @@ def main():
             log.info("DRY-RUN: backlog empty or complete")
         return
 
+    with httpx.Client(timeout=15.0) as client:
+        try:
+            r = client.get(f"{BASE}/api/health")
+            if r.status_code != 200:
+                log.error("API not reachable at %s (status=%s)", BASE, r.status_code)
+                print(f"API not reachable at {BASE} — start the API first")
+                sys.exit(1)
+        except Exception as e:
+            log.error("API check failed: %s", e)
+            print(f"API not reachable: {e}")
+            sys.exit(1)
+
     # Cursor by default when AGENT_EXECUTOR_DEFAULT=cursor; --claude overrides
     use_cursor = (args.cursor or os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower() == "cursor") and not args.claude
-    run(
+    runner = run_parallel if args.parallel else run
+    runner(
         interval=args.interval,
         hours=args.hours,
         once=args.once,

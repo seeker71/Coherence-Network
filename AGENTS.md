@@ -23,6 +23,8 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/PLAN.md` — Consolidated vision and roadmap
 - `docs/MODEL-ROUTING.md` — AI model cost optimization
 - `docs/AGENT-DEBUGGING.md` — Add tasks, run pipeline, debug failures
+- `docs/PIPELINE-ATTENTION.md` — What needs attention, fixes, effectiveness checklist
+- `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
 - `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
 - `docs/DEPLOY.md` — Deploy checklist
 - `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
@@ -52,8 +54,17 @@ cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next
 cd api && .venv/bin/python scripts/run_backlog_item.py --index 5  # run single item
 cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
 
-# Overnight pipeline (API must be running)
+# Autonomous pipeline (one command, no interaction; fatal issues only)
+cd api && ./scripts/run_autonomous.sh
+
+# Or manual: overnight pipeline (API must be running)
 cd api && ./scripts/run_overnight_pipeline.sh
+
+# Check what needs attention (run before or during pipeline)
+cd api && ./scripts/ensure_effective_pipeline.sh
+
+# With auto-restart on stale version (use watchdog)
+PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 ```
 
 ## Conventions
@@ -87,6 +98,23 @@ curl http://localhost:8000/api/agent/tasks
 **Get routing for a task type (no persistence):**
 ```bash
 curl "http://localhost:8000/api/agent/route?task_type=impl"
+```
+
+**Check monitor issues (automated pipeline health):**
+```bash
+curl http://localhost:8000/api/agent/monitor-issues
+```
+If `issues` non-empty, follow `suggested_action` per issue (sorted by priority). See `docs/PIPELINE-MONITORING-AUTOMATED.md`.
+
+**Measure pipeline effectiveness (throughput, issues, goal proximity):**
+```bash
+curl http://localhost:8000/api/agent/effectiveness
+```
+
+**Hierarchical status report (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention):**
+```bash
+curl http://localhost:8000/api/agent/status-report
+# Or read: api/logs/pipeline_status_report.txt (human) or .json (machine)
 ```
 
 **Update status when Claude Code finishes:**

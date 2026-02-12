@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.adapters.graph_store import GraphStore
 from app.models.coherence import CoherenceResponse
+from app.models.error import ErrorDetail
 from app.models.project import Project
 from app.services.coherence_service import compute_coherence
 
@@ -15,7 +16,11 @@ def get_graph_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
 
 
-@router.get("/projects/{ecosystem}/{name}", response_model=Project)
+@router.get(
+    "/projects/{ecosystem}/{name}",
+    response_model=Project,
+    responses={404: {"description": "Project not found", "model": ErrorDetail}},
+)
 async def get_project(
     ecosystem: str,
     name: str,
@@ -31,6 +36,7 @@ async def get_project(
 @router.get(
     "/projects/{ecosystem}/{name}/coherence",
     response_model=CoherenceResponse,
+    responses={404: {"description": "Project not found", "model": ErrorDetail}},
 )
 async def get_project_coherence(
     ecosystem: str,

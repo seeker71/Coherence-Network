@@ -394,9 +394,18 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     except ImportError:
         pass
 
+    # Phase coverage: count running+pending by task_type (spec 028)
+    by_phase = {"spec": 0, "impl": 0, "test": 0, "review": 0}
+    for item in running + pending:
+        tt = item.get("task_type")
+        tt_str = tt.value if hasattr(tt, "value") else str(tt) if tt is not None else None
+        if tt_str in by_phase:
+            by_phase[tt_str] = by_phase.get(tt_str, 0) + 1
+
     return {
-        "running": running[:1],
+        "running": running[:10],
         "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
+        "running_by_phase": by_phase,
         "recent_completed": [
             {**c, "output_len": len((_store.get(c["id"]) or {}).get("output") or "")}
             for c in completed[:10]

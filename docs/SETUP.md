@@ -31,16 +31,28 @@ cd api
 pytest -v
 ```
 
-Use `.venv/bin/pytest` if `pytest` is not on PATH. Scripts in `api/scripts/` should use `.venv/bin/python` for consistency.
+Use `.venv/bin/pytest` if `pytest` is not on PATH.
+
+## Scripts and venv
+
+For all `api/scripts/*` invocations, use the venv Python explicitly so scripts run reliably from any working directory:
+
+- **From repo root:** `api/.venv/bin/python api/scripts/script_name.py`
+- **From `api/`:** `.venv/bin/python scripts/script_name.py`
+- **Windows (from repo root):** `api\.venv\Scripts\python.exe api\scripts\script_name.py`
+- **Windows (from `api\`):** `.venv\Scripts\python.exe scripts\script_name.py`
+
+Same pattern for pytest: `api/.venv/bin/pytest` or `.venv/bin/pytest` when in `api/`.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `ModuleNotFoundError` when running scripts | Run from `api/` directory; use `api/.venv/bin/python scripts/foo.py` |
-| `pytest: command not found` | Use `api/.venv/bin/pytest` or `python -m pytest` |
-| API won't start (port in use) | Use `--port 8001` or kill process on 8000 |
-| Import errors in tests | Ensure `cd api` first; venv has `pip install -e ".[dev]"` |
+| `ModuleNotFoundError` or import errors when running scripts | Run from `api/` or use full venv path: `api/.venv/bin/python api/scripts/foo.py` (see **Scripts and venv** above). Ensure `pip install -e ".[dev]"` was run in that venv. |
+| `pytest: command not found` | Use `api/.venv/bin/pytest` or, from `api/`, `.venv/bin/pytest`; or `api/.venv/bin/python -m pytest`. |
+| API won't start (port in use) | Use a different port: `uvicorn app.main:app --reload --port 8001`. Or find and kill the process using port 8000. |
+| Venv activation vs path | You can either activate the venv (`source .venv/bin/activate` in `api/`) and then run `python`/`pytest`, or skip activation and always use the full path (`api/.venv/bin/python`, `api/.venv/bin/pytest`) so the correct interpreter is used from any directory. |
+| Import errors in tests | Run from `api/`; use `api/.venv/bin/pytest` or ensure venv is activated and has `pip install -e ".[dev]"`. |
 
 ## Web (Placeholder)
 

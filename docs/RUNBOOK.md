@@ -13,6 +13,12 @@ Quick reference for common operational tasks.
 | `api/logs/overnight_orchestrator.log` | Overnight pipeline orchestrator |
 | `api/logs/project_manager_state.json` | PM state (backlog index, phase) |
 | `api/logs/project_manager_state_overnight.json` | Overnight pipeline state |
+| `api/logs/monitor_issues.json` | Monitor issues (check via GET /api/agent/monitor-issues) |
+| `api/logs/monitor_resolutions.jsonl` | Resolution events for effectiveness measurement |
+| `api/logs/monitor.log` | Monitor script log (hierarchical STATUS lines each check) |
+| `api/logs/pipeline_status_report.json` | Hierarchical status (machine readable): Layer 0–3, going_well, needs_attention |
+| `api/logs/pipeline_status_report.txt` | Same report in human-readable text |
+| `api/logs/pipeline_version.json` | Git SHA at pipeline start (version check) |
 | `api/logs/graph_store.json` | Project graph (spec 019; persisted after index) |
 
 ## Index npm packages
@@ -47,16 +53,42 @@ cd api && uvicorn app.main:app --reload --port 8000
 ./scripts/start_with_telegram.sh
 ```
 
+## Autonomous Pipeline (Max Autonomy)
+
+One command, no interaction. Starts API + pipeline, restarts on failure. Reports fatal issues only.
+
+```bash
+cd api && ./scripts/run_autonomous.sh
+```
+
+- Auto-fix and auto-recover enabled
+- **Auto-commit** (PIPELINE_AUTO_COMMIT=1): After each completed spec/impl/test/review task, runs `git add -A && git commit` with message `[pipeline] {type} {id}: ...`. Set PIPELINE_AUTO_COMMIT=0 to disable.
+- **Auto-push** (PIPELINE_AUTO_PUSH=0 by default): Set to 1 to run `git push` after commit. Use with caution.
+- needs_decision timeout: 24h (auto-skip blocked tasks)
+- Fatal issues: `api/logs/fatal_issues.json` or `GET /api/agent/fatal-issues`
+- Check fatal only when unrecoverable: `python scripts/report_fatal.py`
+
+## Pipeline Effectiveness Check
+
+**Before or during pipeline runs, verify everything is working:**
+
+```bash
+cd api && ./scripts/ensure_effective_pipeline.sh
+```
+
+This checks: API reachable, metrics endpoint, monitor-issues endpoint, effectiveness endpoint, version tracking, monitor/runner processes. Reports effectiveness summary (throughput, success rate, issues, goal proximity) and required actions if anything needs attention.
+
 ## Pipeline Recovery
 
 **Pipeline stuck or agent runner died:**
 
-1. Check API: `curl -s http://localhost:8000/api/health`
-2. Restart overnight pipeline:
+1. Run effectiveness check: `./scripts/ensure_effective_pipeline.sh`
+2. Restart API if metrics/monitor-issues 404: `pkill -f uvicorn; cd api && uvicorn app.main:app --reload --port 8000`
+3. Restart overnight pipeline:
    ```bash
    cd api && ./scripts/run_overnight_pipeline.sh
    ```
-3. Or restart components separately:
+4. Or restart components separately:
    ```bash
    cd api
    .venv/bin/python scripts/agent_runner.py --interval 10 -v &
@@ -89,7 +121,9 @@ Shows: running task, pending count, recent completed, latest LLM activity.
 | `GET /api/ready` | Readiness (k8s) |
 | `GET /api/version` | API version |
 | `GET /api/agent/tasks/count` | Task counts (total, by_status) |
-| `GET /api/agent/pipeline-status` | Pipeline visibility |
+| `GET /api/agent/pipeline-status` | Pipeline visibility (running, pending, running_by_phase) |
+| `GET /api/agent/metrics` | Task metrics (success rate, duration) |
+| `GET /api/agent/monitor-issues` | Monitor issues (check/react/improve) |
 
 ## Run Tests
 

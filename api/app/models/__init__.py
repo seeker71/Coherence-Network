@@ -7,6 +7,7 @@ from app.models.agent import (
     AgentTaskUpdate,
     RouteResponse,
 )
+from app.models.error import ErrorDetail
 from app.models.project import Project, ProjectSummary
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "AgentTaskCreate",
     "AgentTaskList",
     "AgentTaskUpdate",
+    "ErrorDetail",
     "Project",
     "ProjectSummary",
     "RouteResponse",

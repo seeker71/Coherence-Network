@@ -2,15 +2,15 @@
 These tests define the contract for the orchestrator behavior.
 No mocks: real file I/O, real load_backlog, load_state, save_state, refresh_backlog.
 """
+import json
 import logging
 import os
+import subprocess
+import sys
 import tempfile
 
-
-# Import project_manager module logic
-import sys
-
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(_api_dir)
 sys.path.insert(0, _api_dir)
 
 # Load backlog logic
@@ -264,5 +264,48 @@ def test_state_file_persistence():
             assert default_state["iteration"] == 1
             assert default_state["blocked"] is False
 
+        finally:
+            pm.STATE_FILE = orig_state
+
+
+def test_e2e_project_manager_dry_run_exits_zero():
+    """E2E smoke test (spec 005): run project_manager --dry-run in subprocess; assert exit 0, no crash."""
+    with tempfile.TemporaryDirectory() as d:
+        backlog_path = os.path.join(d, "005-backlog.md")
+        with open(backlog_path, "w", encoding="utf-8") as f:
+            f.write("# Backlog\n1. E2E smoke item\n")
+        state_path = os.path.join(d, "project_manager_state.json")
+        script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+        cmd = [
+            sys.executable,
+            script_path,
+            "--dry-run",
+            "--backlog", backlog_path,
+            "--state-file", state_path,
+        ]
+        result = subprocess.run(
+            cmd,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    assert result.returncode == 0, f"stderr: {result.stderr!r} stdout: {result.stdout!r}"
+
+
+def test_e2e_project_manager_state_file_valid_after_run():
+    """E2E smoke: state file written by PM is valid JSON with expected keys (spec 005 verification)."""
+    with tempfile.TemporaryDirectory() as d:
+        state_path = os.path.join(d, "project_manager_state.json")
+        orig_state = pm.STATE_FILE
+        pm.STATE_FILE = state_path
+        try:
+            state = pm.load_state()
+            pm.save_state(state)
+            with open(state_path, encoding="utf-8") as f:
+                data = json.load(f)
+            assert "backlog_index" in data
+            assert "phase" in data
+            assert data["phase"] in ("spec", "impl", "test", "review")
         finally:
             pm.STATE_FILE = orig_state

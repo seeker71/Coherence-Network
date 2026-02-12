@@ -1,4 +1,23 @@
-"""Tests for health endpoint — spec 001."""
+"""Tests for health endpoint — spec 001.
+
+These tests define the API contract for GET /api/health (spec 001).
+Do not modify tests to make implementation pass; fix the implementation instead.
+
+Spec 001 acceptance tests (all must pass). Requirement → Test mapping:
+  - GET /api/health returns 200 → test_health_returns_200
+  - Response is valid JSON (Content-Type application/json; body parses as JSON) → test_health_response_is_valid_json
+  - Response includes required fields (status, version, timestamp); status is "ok"; basic ISO8601 → test_health_returns_valid_json
+  - timestamp is ISO8601 UTC (parseable; Z or +00:00) → test_health_timestamp_iso8601_utc
+  - Response has exactly the required keys (no extra top-level keys) → test_health_response_schema
+  - version is semantic-version format (^\\d+\\.\\d+\\.\\d+) → test_health_version_semver
+  - Response fields (status, version, timestamp) are strings → test_health_response_value_types
+  - Full API contract (200, exact keys, status ok, semver, ISO8601 UTC) → test_health_api_contract
+
+Run 001-only tests: pytest tests/test_health.py -v -k 'health'
+"""
+
+import re
+from datetime import datetime
 
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -60,8 +79,19 @@ async def test_cors_allows_origins(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_health_response_is_valid_json(client: AsyncClient):
+    """Response is valid JSON (Content-Type application/json; body parses as JSON). — spec 001"""
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+    ct = response.headers.get("content-type", "")
+    assert "application/json" in ct
+    data = response.json()  # must not raise
+    assert isinstance(data, dict)
+
+
+@pytest.mark.asyncio
 async def test_health_returns_valid_json(client: AsyncClient):
-    """Response includes status, version, timestamp (ISO8601)."""
+    """Response includes required fields (status, version, timestamp; basic ISO8601). — spec 001"""
     response = await client.get("/api/health")
     data = response.json()
     assert data["status"] == "ok"
@@ -74,11 +104,60 @@ async def test_health_returns_valid_json(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_health_response_schema(client: AsyncClient):
-    """Response has exactly the required keys (spec 001)."""
+    """Response has exactly the required keys (no extra top-level keys). — spec 001"""
     response = await client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
     assert set(data.keys()) == {"status", "version", "timestamp"}
+
+
+@pytest.mark.asyncio
+async def test_health_timestamp_iso8601_utc(client: AsyncClient):
+    """timestamp is ISO8601 UTC (parseable; Z or +00:00). — spec 001"""
+    response = await client.get("/api/health")
+    data = response.json()
+    ts = data["timestamp"]
+    assert ts.endswith("Z") or ts.endswith("+00:00"), "timestamp must end with Z or +00:00"
+    # Parse as ISO8601; normalize Z to +00:00 for fromisoformat
+    normalized = ts.replace("Z", "+00:00")
+    dt = datetime.fromisoformat(normalized)
+    assert dt.tzinfo is not None, "timestamp must be UTC (Z or +00:00)"
+
+
+@pytest.mark.asyncio
+async def test_health_version_semver(client: AsyncClient):
+    """version is semantic-version format (version matches ^\\d+\\.\\d+\\.\\d+). — spec 001"""
+    response = await client.get("/api/health")
+    data = response.json()
+    version = data["version"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"version must match exactly MAJOR.MINOR.PATCH: {version}"
+
+
+@pytest.mark.asyncio
+async def test_health_response_value_types(client: AsyncClient):
+    """Response fields are strings per spec 001: status, version, timestamp."""
+    response = await client.get("/api/health")
+    data = response.json()
+    assert isinstance(data["status"], str), "status must be string"
+    assert isinstance(data["version"], str), "version must be string"
+    assert isinstance(data["timestamp"], str), "timestamp must be string"
+
+
+@pytest.mark.asyncio
+async def test_health_api_contract(client: AsyncClient):
+    """Full API contract for GET /api/health (spec 001): 200, exact keys, status ok, semver, ISO8601 UTC."""
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+    assert response.headers.get("content-type", "").startswith("application/json")
+    data = response.json()
+    assert set(data.keys()) == {"status", "version", "timestamp"}
+    assert data["status"] == "ok"
+    assert re.fullmatch(r"\d+\.\d+\.\d+", data["version"]), f"version must match MAJOR.MINOR.PATCH: {data['version']}"
+    ts = data["timestamp"]
+    assert ts.endswith("Z") or ts.endswith("+00:00"), "timestamp must end with Z or +00:00"
+    normalized = ts.replace("Z", "+00:00")
+    dt = datetime.fromisoformat(normalized)
+    assert dt.tzinfo is not None, "timestamp must be ISO8601 UTC (Z or +00:00)"
 
 
 @pytest.mark.asyncio

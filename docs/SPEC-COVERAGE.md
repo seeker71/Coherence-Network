@@ -35,6 +35,8 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 015 Placeholder | ? | ? | ? | Pending |
 | 026 Pipeline Observability And Auto Review | ? | ? | ? | Pending |
 | 027 Fully Automated Pipeline | ✓ | ✓ | ✓ | Auto-update, metrics, attention |
+| 028 Parallel By Phase Pipeline | ✓ | ✓ | ✓ | workers=5, meta-ratio, atomic state |
+| 029 GitHub API Integration | ? | ✓ | ? | P0 for coherence; spec only |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -67,7 +69,11 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
 | GET /api/health returns 200 | `routers/health.py` | `test_health_returns_200` |
-| Response: status, version, timestamp (ISO8601) | `routers/health.py` | `test_health_returns_valid_json` |
+| Response is valid JSON (Content-Type application/json; body parses as JSON) | `routers/health.py` | `test_health_response_is_valid_json` |
+| Response includes required fields (status, version, timestamp; basic ISO8601) | `routers/health.py` | `test_health_returns_valid_json` |
+| timestamp is ISO8601 UTC (parseable; Z or +00:00) | `routers/health.py` | `test_health_timestamp_iso8601_utc` |
+| Response has exactly the required keys (no extra top-level keys) | `routers/health.py` | `test_health_response_schema` |
+| version is semantic-version format (^\d+\.\d+\.\d+) | `routers/health.py` | `test_health_version_semver` |
 
 **Files:** `api/app/main.py`, `api/app/routers/health.py`, `api/tests/test_health.py`
 

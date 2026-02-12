@@ -64,5 +64,5 @@
 
 ## Next Priority Tasks
 
-1. **GitHub API integration spec** — repos, contributors, PRs, issues; critical for coherence beyond stubs.
+1. **Implement spec 029 (GitHub API integration)** — P0; Contributor/Org nodes, index_github.py; critical for real coherence.
 2. Pipfile / poetry.lock import (future)
