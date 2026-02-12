@@ -25,6 +25,7 @@ alwaysApply: true
 
 - Only modify files listed in the spec/issue
 - Do not refactor adjacent code or add features not in spec
+- **Avoid creating new documents and files** unless the spec/issue explicitly requires them or they are absolutely needed (e.g. a new spec for a new feature). Prefer editing existing files and integrating content into PLAN.md, CLAUDE.md, or existing specs.
 
 ## Principles (from Living Codex)
 

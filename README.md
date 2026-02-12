@@ -1,5 +1,7 @@
 # Coherence Network
 
+[![Test](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml)
+
 A platform that maps the open source ecosystem as an intelligence graph, computes project health (coherence) scores, and enables fair funding flows from enterprises to maintainers.
 
 ## Vision

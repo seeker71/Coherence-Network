@@ -25,6 +25,10 @@
 |-------|-------|---------|
 | Qwen3-Coder 30B | Ollama local | Spec draft, tests, simple impl, first-pass review |
 | Qwen 2.5 Coder 7B | Ollama local | Fast autocomplete, boilerplate |
+| Granite 3.3 | Ollama local | General purpose (IBM), ~5GB |
+| Nemotron 3 Nano 30B | Ollama local | Coding, ~24GB |
+
+**Mac M4 Ultra (32GB+ memory):** Use `OLLAMA_MODEL=qwen3-coder:30b` or `deepseek-coder` for best coding. Can run 70B models (e.g. `llama3.3:70b`). Set in `api/.env`.
 
 ### Tier 1: OpenRouter Free — ~15% of work
 

@@ -4,19 +4,24 @@ Configure once the multi-agent framework is decided. This doc lists what to set 
 
 ## Priority Order
 
-### 1. Ollama (Local) — No key needed
+### 1. Ollama + Claude Code (Local) — No key needed
 
+One-command setup:
 ```bash
-# Mac
+cd api && ./scripts/setup_ollama_claude.sh
+```
+Pulls qwen3-coder:30b (or set OLLAMA_MODEL=granite3.3:latest for existing models), installs Claude Code, configures .env.
+
+Manual:
+```bash
 brew install ollama
 ollama serve
 ollama pull qwen3-coder:30b
-ollama pull qwen2.5-coder:7b
-
-# Windows: install from ollama.com
+curl -fsSL https://claude.ai/install.sh | bash
+# Configure: ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=""
 ```
 
-Runs at `http://localhost:11434`. OpenAI-compatible API.
+Test: `python scripts/test_agent_run.py --run --model granite3.3:latest "Your direction"`
 
 ### 2. OpenRouter — Free tier
 
@@ -51,7 +56,52 @@ Free models: `openrouter/free` or specific free model IDs. No per-token cost.
 
 If you have Pro, API is at `https://ollama.com/api`. Check Ollama docs for auth (likely API key in account settings).
 
-### 6. Perplexity (Optional, limited)
+### 6. Telegram (Alerts + Webhook)
+
+**Create the bot:**
+1. In Telegram, search for @BotFather
+2. Send `/newbot`, follow prompts (name + username ending in `bot`)
+3. Copy the token (e.g. `123456789:ABCdef...`)
+
+**Get your chat ID:**
+1. Search for @userinfobot in Telegram
+2. Send any message; it replies with your numeric user ID
+3. For alerts, use this same ID as chat ID (for direct messages to you)
+
+**Add to `api/.env`:**
+```
+TELEGRAM_BOT_TOKEN=123456789:ABCdef...
+TELEGRAM_CHAT_IDS=123456789
+TELEGRAM_ALLOWED_USER_IDS=123456789
+```
+
+**Setup checklist:**
+1. Create bot: Telegram → @BotFather → `/newbot` → copy token
+2. Get chat ID: Telegram → @userinfobot → send any message → copy your ID
+3. Edit `api/.env` — add your values:
+   ```
+   TELEGRAM_BOT_TOKEN=123456789:ABCdefGHI...
+   TELEGRAM_CHAT_IDS=123456789
+   TELEGRAM_ALLOWED_USER_IDS=123456789
+   ```
+4. Install deps: `cd api && pip install -e ".[dev]"` (or `pip install httpx python-dotenv`)
+5. Test: `cd api && python scripts/test_telegram.py`
+6. (Optional) Test API flow: start API (`uvicorn app.main:app --port 8000`), then `python scripts/test_telegram.py --api`
+
+**Webhook (for /status, /tasks, /direction from Telegram):**
+
+One-command start (recommended):
+```bash
+cd api && ./scripts/start_with_telegram.sh
+```
+Starts API + cloudflared + sets webhook. Ctrl+C stops all.
+
+Manual steps:
+1. `brew install cloudflared`
+2. `cd api && ./scripts/start_with_telegram.sh` — or start API and tunnel separately, then `./scripts/setup_telegram_webhook.sh https://YOUR-URL.trycloudflare.com`
+3. Message @Coherence_Network_bot: `/status`, `/tasks`, or type a direction
+
+### 7. Perplexity (Optional, limited)
 
 1. perplexity.ai → Settings → API
 2. Add credits if needed

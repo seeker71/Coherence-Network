@@ -37,7 +37,7 @@ Web app will be added in a follow-up spec. Structure: Next.js 16 + shadcn/ui.
 
 ## Environment
 
-Copy `api/.env.example` to `api/.env` and fill in keys when configuring the multi-agent framework. For local development, API runs without external keys.
+Copy `api/.env.example` to `api/.env` and fill in keys. For Telegram alerts and webhook, see [API-KEYS-SETUP.md](API-KEYS-SETUP.md) §6. Test with: `cd api && pip install python-dotenv && python scripts/test_telegram.py`
 
 ## Cursor
 

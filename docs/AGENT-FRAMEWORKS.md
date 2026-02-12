@@ -2,6 +2,8 @@
 
 When the multi-agent framework is set up and API keys are configured, evaluate these for autonomous agent work. **Cursor remains the primary manual interface** unless a framework offers a clearly better way to interact with the project.
 
+> **See [AGENT-FRAMEWORKS-RESEARCH.md](AGENT-FRAMEWORKS-RESEARCH.md)** for detailed research on Agent Zero, OpenClaw, SKILL.md standard, what to borrow, and gap analysis.
+
 ## Candidates to Evaluate
 
 ### OpenClaw

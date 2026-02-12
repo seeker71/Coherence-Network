@@ -48,12 +48,16 @@ Coherence maps the open source ecosystem as an intelligence graph. This repo use
 
 ## Decision Gates
 
-Escalate to human (`needs-decision`) for:
-- New dependencies
-- Schema changes
-- Coherence algorithm changes
-- Auth/infra changes
-- Security-sensitive changes
+Escalate to human (create issue labeled `needs-decision`) for:
+- Adding any new pip/npm dependency
+- Changing Neo4j node labels or relationship types
+- Modifying the coherence score formula or weights
+- Adding a new API resource (not just a new endpoint on existing resource)
+- Any change to authentication or authorization
+- Any change to deployment configuration
+- Estimated token cost for a task exceeds $50
+- 3+ iterations without progress on same task
+- Two agents disagree on the correct approach
 
 ## Interface
 
