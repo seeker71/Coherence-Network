@@ -89,4 +89,4 @@ echo "--- Pipeline Status $(date '+%Y-%m-%d %H:%M:%S') ---"
 $PYTHON scripts/check_pipeline.py 2>/dev/null || echo "  (API unreachable)"
 echo ""
 $PYTHON scripts/project_manager.py --interval 15 --hours "$HOURS" --verbose \
-  --backlog "$BACKLOG" --state-file logs/project_manager_state_overnight.json --reset $CURSOR_ARG
+  --backlog "$BACKLOG" --state-file api/logs/project_manager_state_overnight.json --reset $CURSOR_ARG
