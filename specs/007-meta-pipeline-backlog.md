@@ -9,7 +9,7 @@ Work that improves the pipeline itself. Runs through the same spec→impl→test
 ### Full Automation (Prioritized)
 
 1. **Progress toward PLAN metric:** Add to GET /api/agent/effectiveness: `plan_progress` with Phase 6/7 completion (from PM state or backlog) so we measure progress toward PLAN.md goals → spec [045-effectiveness-plan-progress-phase-6-7.md](045-effectiveness-plan-progress-phase-6-7.md)
-2. **Heal completion → issue resolution:** When a heal task completes and its related monitor condition clears on next check, ensure monitor records resolution; optionally auto-resolve the issue in monitor_issues.json
+2. **Heal completion → issue resolution:** When a heal task completes and its related monitor condition clears on next check, ensure monitor records resolution; optionally auto-resolve the issue in monitor_issues.json → spec [047-heal-completion-issue-resolution.md](047-heal-completion-issue-resolution.md)
 3. **Meta-questions periodic check:** Add script or monitor extension that runs META-QUESTIONS checklist periodically; log answers to api/logs/meta_questions.json; surface "unanswered" or "failed" in status-report
 4. **Backlog alignment check:** Add monitor rule or effectiveness field: verify backlog items (from 006) map to PLAN phases; flag if Phase 6/7 items not being worked
 5. **Heal task effectiveness tracking:** Record which heal task addressed which issue; when condition clears, attribute to heal; add to metrics "heal_resolved_count"

@@ -856,9 +856,17 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked (from 006, PLAN phases)
+    # Also: effectiveness 404 means API has stale routes — request restart so watchdog restarts API
     try:
         er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
-        if er.status_code == 200:
+        if er.status_code == 404 and auto_recover and os.environ.get("PIPELINE_AUTO_RECOVER") == "1":
+            _request_restart("effectiveness_404", log)
+            _add_issue(
+                data, "effectiveness_404", "high",
+                "GET /api/agent/effectiveness returned 404 — API has stale routes (restart to load current code).",
+                "Restart requested. Watchdog will restart API.",
+            )
+        elif er.status_code == 200:
             effectiveness = er.json()
             pp = (effectiveness.get("plan_progress") or {})
             alignment = pp.get("backlog_alignment") or {}
@@ -897,7 +905,9 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if effectiveness is None:
         try:
             er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
-            if er.status_code == 200:
+            if er.status_code == 404 and auto_recover and os.environ.get("PIPELINE_AUTO_RECOVER") == "1":
+                _request_restart("effectiveness_404", log)
+            elif er.status_code == 200:
                 effectiveness = er.json()
         except Exception:
             pass

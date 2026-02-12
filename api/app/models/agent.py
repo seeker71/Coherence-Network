@@ -61,7 +61,7 @@ class AgentTaskUpdate(BaseModel):
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running
 
-    @field_validator("progress_pct")
+    @field_validator("progress_pct", mode="before")
     @classmethod
     def progress_pct_int_only(cls, v: object) -> Optional[int]:
         """Reject string or other non-int (spec 002: PATCH invalid progress_pct type → 422)."""

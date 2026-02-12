@@ -59,8 +59,8 @@ while true; do
       cat "$RESTART_FILE" 2>/dev/null || true
       REASON=$($PYTHON -c "import json; d=json.load(open('$RESTART_FILE')); print(d.get('reason',''))" 2>/dev/null || true)
       rm -f "$RESTART_FILE"
-      # When api_unreachable, try to restart API before pipeline (enables full automation without run_autonomous)
-      if [ "$REASON" = "api_unreachable" ]; then
+      # When api_unreachable or effectiveness_404, restart API (stale routes need fresh API process)
+      if [ "$REASON" = "api_unreachable" ] || [ "$REASON" = "effectiveness_404" ]; then
         echo "API unreachable — attempting API restart..."
         pkill -f "uvicorn app.main" 2>/dev/null || true
         sleep 2
