@@ -1,41 +1,34 @@
-"""GraphStore abstraction + in-memory backend — spec 019, 029.
-
-Adds:
-- Contributor and Organization nodes
-- edges: CONTRIBUTES_TO, MAINTAINS, MEMBER_OF
-- helper queries used by coherence_service (spec 029)
-"""
+"""GraphStore abstraction + in-memory backend — spec 019."""
 
 from __future__ import annotations
 
 import json
 import os
-from typing import Optional, Protocol
+from typing import Optional, Protocol, List
 
 from pydantic import BaseModel
 
 from app.models.project import Project, ProjectSummary
 
 
-def _key(ecosystem: str, name: str) -> tuple[str, str]:
-    return (ecosystem.lower(), name.lower())
-
-
 class Contributor(BaseModel):
-    """Contributor node — spec 029."""
-    id: str  # github:login or npm:username
-    source: str  # github | npm
+    id: str
+    source: str
     login: str
     name: Optional[str] = None
     avatar_url: Optional[str] = None
-    contributions_count: int = 0
+    contributions_count: int
+    last_contribution_date: Optional[str] = None
 
 
 class Organization(BaseModel):
-    """Organization node — spec 029."""
     id: str
     login: str
-    type: str  # Organization, User
+    type: str
+
+
+def _key(ecosystem: str, name: str) -> tuple[str, str]:
+    return (ecosystem.lower(), name.lower())
 
 
 class GraphStore(Protocol):
@@ -62,39 +55,31 @@ class GraphStore(Protocol):
         """Count projects that depend on this one (reverse edges). For coherence downstream_impact."""
         ...
 
-    # --- GitHub / identity graph (spec 029) ---
+    def get_contributor(self, id: str) -> Optional[Contributor]:
+        ...
 
     def upsert_contributor(self, contributor: Contributor) -> None:
         ...
 
-    def upsert_organization(self, organization: Organization) -> None:
+    def get_organization(self, id: str) -> Optional[Organization]:
         ...
 
-    def add_contributes_to(self, contributor_id: str, project_eco: str, project_name: str) -> None:
+    def upsert_organization(self, org: Organization) -> None:
         ...
 
-    def add_maintains(self, contributor_id: str, project_eco: str, project_name: str) -> None:
+    def add_contributes_to(self, contributor_id: str, ecosystem: str, name: str) -> None:
+        ...
+
+    def add_maintains(self, contributor_id: str, ecosystem: str, name: str) -> None:
         ...
 
     def add_member_of(self, contributor_id: str, org_id: str) -> None:
         ...
 
-    def contributors_for_project(self, project_eco: str, project_name: str) -> list[Contributor]:
+    def get_project_contributors(self, ecosystem: str, name: str) -> list[Contributor]:
         ...
 
-    def recent_activity_count(self, project_eco: str, project_name: str, window_days: int = 30) -> int:
-        ...
-
-    def set_project_github_repo(self, project_eco: str, project_name: str, owner: str, repo: str) -> None:
-        ...
-
-    def get_project_github_repo(self, project_eco: str, project_name: str) -> tuple[str, str] | None:
-        ...
-
-    def set_project_recent_commits(self, project_eco: str, project_name: str, window_days: int, count: int) -> None:
-        ...
-
-    def iter_projects(self) -> list[Project]:
+    def get_contributor_organization(self, contributor_id: str) -> Optional[Organization]:
         ...
 
 
@@ -104,19 +89,12 @@ class InMemoryGraphStore:
     def __init__(self, persist_path: Optional[str] = None) -> None:
         self._projects: dict[tuple[str, str], Project] = {}
         self._edges: list[tuple[tuple[str, str], tuple[str, str]]] = []
-        self._persist_path = persist_path
-
-        # Spec 029: identity nodes + typed edges
         self._contributors: dict[str, Contributor] = {}
-        self._orgs: dict[str, Organization] = {}
-        self._typed_edges: set[tuple[str, str, str]] = set()  # (type, from_id, to_id)
-
-        # Project -> GitHub repo mapping (owner, repo)
-        self._project_github: dict[tuple[str, str], tuple[str, str]] = {}
-
-        # Project recent activity counts (by window_days)
-        self._project_recent_commits: dict[tuple[str, str, int], int] = {}
-
+        self._organizations: dict[str, Organization] = {}
+        self._contributes_to: list[tuple[str, tuple[str, str]]] = []
+        self._maintains: list[tuple[str, tuple[str, str]]] = []
+        self._member_of: list[tuple[str, str]] = []
+        self._persist_path = persist_path
         if persist_path and os.path.isfile(persist_path):
             self._load()
 
@@ -134,45 +112,23 @@ class InMemoryGraphStore:
                     self._edges.append(
                         ((e[0][0], e[0][1]), (e[1][0], e[1][1]))
                     )
-
-            # --- spec 029 data ---
             for c in data.get("contributors", []):
-                try:
-                    cc = Contributor(**c)
-                    self._contributors[cc.id] = cc
-                except Exception:
-                    pass
+                contrib = Contributor(**c)
+                self._contributors[contrib.id] = contrib
             for o in data.get("organizations", []):
-                try:
-                    oo = Organization(**o)
-                    self._orgs[oo.id] = oo
-                except Exception:
-                    pass
-            for te in data.get("typed_edges", []):
-                if isinstance(te, list) and len(te) >= 3:
-                    t, a, b = te[0], te[1], te[2]
-                    if isinstance(t, str) and isinstance(a, str) and isinstance(b, str):
-                        self._typed_edges.add((t, a, b))
-
-            for k, v in (data.get("project_github") or {}).items():
-                if isinstance(k, str) and isinstance(v, list) and len(v) >= 2:
-                    parts = k.split("|", 1)
-                    if len(parts) == 2 and isinstance(v[0], str) and isinstance(v[1], str):
-                        self._project_github[(parts[0], parts[1])] = (v[0], v[1])
-
-            for k, v in (data.get("project_recent_commits") or {}).items():
-                if isinstance(k, str) and isinstance(v, int):
-                    parts = k.split("|")
-                    if len(parts) == 3:
-                        eco, name, win = parts[0], parts[1], parts[2]
-                        try:
-                            win_i = int(win)
-                        except ValueError:
-                            continue
-                        self._project_recent_commits[(eco, name, win_i)] = v
-
+                org = Organization(**o)
+                self._organizations[org.id] = org
+            for e in data.get("contributes_to", []):
+                if len(e) == 2 and isinstance(e[0], str) and len(e[1]) == 2:
+                    self._contributes_to.append((e[0], _key(e[1][0], e[1][1])))
+            for e in data.get("maintains", []):
+                if len(e) == 2 and isinstance(e[0], str) and len(e[1]) == 2:
+                    self._maintains.append((e[0], _key(e[1][0], e[1][1])))
+            for e in data.get("member_of", []):
+                if len(e) == 2 and isinstance(e[0], str) and isinstance(e[1], str):
+                    self._member_of.append((e[0], e[1]))
             self._recompute_dependency_counts()
-        except (json.JSONDecodeError, IOError, KeyError):
+        except (json.JSONDecodeError, IOError, KeyError, ValueError):
             pass
 
     def _recompute_dependency_counts(self) -> None:
@@ -192,23 +148,16 @@ class InMemoryGraphStore:
             "projects": [p.model_dump() for p in self._projects.values()],
             "edges": [[list(from_k), list(to_k)] for from_k, to_k in self._edges],
             "contributors": [c.model_dump() for c in self._contributors.values()],
-            "organizations": [o.model_dump() for o in self._orgs.values()],
-            "typed_edges": [list(t) for t in sorted(self._typed_edges)],
-            "project_github": {
-                f"{k[0]}|{k[1]}": [v[0], v[1]] for k, v in self._project_github.items()
-            },
-            "project_recent_commits": {
-                f"{k[0]}|{k[1]}|{k[2]}": v for k, v in self._project_recent_commits.items()
-            },
+            "organizations": [o.model_dump() for o in self._organizations.values()],
+            "contributes_to": [[c_id, list(p_k)] for c_id, p_k in self._contributes_to],
+            "maintains": [[c_id, list(p_k)] for c_id, p_k in self._maintains],
+            "member_of": [[c, o] for c, o in self._member_of],
         }
         with open(self._persist_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=0)
 
     def get_project(self, ecosystem: str, name: str) -> Optional[Project]:
         return self._projects.get(_key(ecosystem, name))
-
-    def iter_projects(self) -> list[Project]:
-        return list(self._projects.values())
 
     def search(self, query: str, limit: int = 20) -> list[ProjectSummary]:
         q = query.lower().strip()
@@ -251,50 +200,47 @@ class InMemoryGraphStore:
         k = _key(ecosystem, name)
         return sum(1 for _from, _to in self._edges if _to == k)
 
-    # --- spec 029: identity nodes + edges ---
+    def get_contributor(self, id: str) -> Optional[Contributor]:
+        return self._contributors.get(id)
 
     def upsert_contributor(self, contributor: Contributor) -> None:
         self._contributors[contributor.id] = contributor
 
-    def upsert_organization(self, organization: Organization) -> None:
-        self._orgs[organization.id] = organization
+    def get_organization(self, id: str) -> Optional[Organization]:
+        return self._organizations.get(id)
 
-    def _project_node_id(self, eco: str, name: str) -> str:
-        k = _key(eco, name)
-        return f"project:{k[0]}:{k[1]}"
+    def upsert_organization(self, org: Organization) -> None:
+        self._organizations[org.id] = org
 
-    def add_contributes_to(self, contributor_id: str, project_eco: str, project_name: str) -> None:
-        to_id = self._project_node_id(project_eco, project_name)
-        self._typed_edges.add(("CONTRIBUTES_TO", contributor_id, to_id))
+    def add_contributes_to(self, contributor_id: str, ecosystem: str, name: str) -> None:
+        p_k = _key(ecosystem, name)
+        edge = (contributor_id, p_k)
+        if edge not in self._contributes_to:
+            self._contributes_to.append(edge)
 
-    def add_maintains(self, contributor_id: str, project_eco: str, project_name: str) -> None:
-        to_id = self._project_node_id(project_eco, project_name)
-        self._typed_edges.add(("MAINTAINS", contributor_id, to_id))
+    def add_maintains(self, contributor_id: str, ecosystem: str, name: str) -> None:
+        p_k = _key(ecosystem, name)
+        edge = (contributor_id, p_k)
+        if edge not in self._maintains:
+            self._maintains.append(edge)
 
     def add_member_of(self, contributor_id: str, org_id: str) -> None:
-        self._typed_edges.add(("MEMBER_OF", contributor_id, org_id))
+        edge = (contributor_id, org_id)
+        if edge not in self._member_of:
+            self._member_of.append(edge)
 
-    def contributors_for_project(self, project_eco: str, project_name: str) -> list[Contributor]:
-        to_id = self._project_node_id(project_eco, project_name)
-        out: list[Contributor] = []
-        for t, from_id, to in self._typed_edges:
-            if t == "CONTRIBUTES_TO" and to == to_id:
-                c = self._contributors.get(from_id)
-                if c:
-                    out.append(c)
-        out.sort(key=lambda x: x.contributions_count, reverse=True)
+    def get_project_contributors(self, ecosystem: str, name: str) -> list[Contributor]:
+        p_k = _key(ecosystem, name)
+        out = []
+        for c_id, proj_k in self._contributes_to:
+            if proj_k == p_k:
+                contrib = self._contributors.get(c_id)
+                if contrib:
+                    out.append(contrib)
         return out
 
-    def set_project_github_repo(self, project_eco: str, project_name: str, owner: str, repo: str) -> None:
-        self._project_github[_key(project_eco, project_name)] = (owner, repo)
-
-    def get_project_github_repo(self, project_eco: str, project_name: str) -> tuple[str, str] | None:
-        return self._project_github.get(_key(project_eco, project_name))
-
-    def set_project_recent_commits(self, project_eco: str, project_name: str, window_days: int, count: int) -> None:
-        k = _key(project_eco, project_name)
-        self._project_recent_commits[(k[0], k[1], int(window_days))] = int(count)
-
-    def recent_activity_count(self, project_eco: str, project_name: str, window_days: int = 30) -> int:
-        k = _key(project_eco, project_name)
-        return int(self._project_recent_commits.get((k[0], k[1], int(window_days)), 0))
+    def get_contributor_organization(self, contributor_id: str) -> Optional[Organization]:
+        for c_id, o_id in self._member_of:
+            if c_id == contributor_id:
+                return self._organizations.get(o_id)
+        return None

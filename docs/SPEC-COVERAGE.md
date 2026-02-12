@@ -56,6 +56,9 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 042 PM --reset Clears State Test | ✓ | ✓ | ✓ | test_reset_clears_state_and_starts_from_index_zero |
 | 043 Agent spec→local Route Test | ✓ | ✓ | ✓ | test_spec_tasks_route_to_local (GET /route?task_type=spec, tier local) |
 | 044 Agent test→local Route Test | ✓ | ✓ | ✓ | test_test_tasks_route_to_local (GET /route?task_type=test, local model) |
+| 045 Effectiveness Plan Progress Phase 6  | ? | ? | ? | Pending |
+| 046 Agent Debugging Pipeline Stuck Task Hang | ? | ? | ? | Pending |
+| 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

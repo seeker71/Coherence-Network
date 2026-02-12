@@ -45,6 +45,16 @@
 - 035 Glossary
 - 037 POST invalid task_type 422
 - 038 POST empty direction 422
+- 039 Pipeline Status Empty State 200
+- 040 PM load_backlog Malformed Test
+- 041 PM --state-file Flag Test
+- 042 PM --reset Clears State Test
+- 043 Agent spec→local Route Test
+- 044 Agent test→local Route Test
+
+
+
+
 
 
 
@@ -60,7 +70,13 @@
 - 031 Setup Troubleshooting Venv
 - 033 README Quick Start Qualify
 - 036 Check Pipeline Hierarchical View
-- 039 Pipeline Status Empty State 200
+- 045 Effectiveness Plan Progress Phase 6
+- 046 Agent Debugging Pipeline Stuck Task Hang
+- 047 Heal Completion Issue Resolutio
+
+
+
+
 
 
 
