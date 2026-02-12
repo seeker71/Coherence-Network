@@ -2,23 +2,32 @@
 
 ## Purpose
 
-Create minimal Next.js 15 app with landing page and API health check for Sprint 0 "landing live". Per docs/PLAN.md: Next.js 15 + shadcn/ui.
+Deliver a minimal Next.js 15 app with a root route (`/`) and an `/api-health` check page so the Coherence web front is runnable and can verify backend connectivity. Supports Sprint 0 "landing live" (docs/PLAN.md). Stack: Next.js 15 + shadcn/ui.
 
 ## Requirements
 
-- [x] Next.js 15 app in `web/` directory
-- [x] Page `/` shows project name and link to API docs
-- [x] Page `/api-health` fetches GET /api/health from API and displays status
-- [x] shadcn/ui installed (minimal components: Button)
-- [x] API base URL configurable (NEXT_PUBLIC_API_URL)
+- [ ] Next.js 15 app in `web/` directory
+- [ ] Page `/` (root) renders without error; shows project name and link to API docs
+- [ ] Page `/api-health` exists and displays API health status (fetches backend health endpoint)
+- [ ] shadcn/ui installed with minimal components (e.g. Button)
+- [ ] API base URL configurable via `NEXT_PUBLIC_API_URL`
 
-## API Contract
+## API Contract (consumed by web)
 
-N/A — web app consumes existing API.
+Web consumes the existing API health endpoint (see [001-health-check.md](001-health-check.md)).
+
+### `GET /api/health` (backend)
+
+**Response 200**
+```json
+{ "status": "ok" }
+```
+
+The `/api-health` page MUST call this URL (from `NEXT_PUBLIC_API_URL`) and display status or an error message if unreachable.
 
 ## Data Model
 
-N/A.
+N/A (frontend only; no new persisted entities).
 
 ## Files to Create/Modify
 

@@ -149,6 +149,19 @@ Stop and create `needs-decision` issue for: new pip/npm dependency; Neo4j label/
 
 ---
 
+## 5a. Execution Integration
+
+The [EXECUTION-PLAN](EXECUTION-PLAN.md) integrates product delivery, pipeline efficiency, community/research, and self-improvement into one loop:
+
+- **Meta-pipeline:** Backlog items that improve the pipeline itself (metrics, monitoring, auto-fix)
+- **Auto-update:** Framework docs (SPEC-COVERAGE, STATUS) update when features pass tests
+- **Monitor:** Tracks progress, detects issues, enables auto-fix when conditions are met
+- **Research & prioritization:** [COMMUNITY-RESEARCH-PRIORITIES](COMMUNITY-RESEARCH-PRIORITIES.md) — questions to ask, what to research, how to prioritize, forum and traction
+
+See [PIPELINE-EFFICIENCY-PLAN](PIPELINE-EFFICIENCY-PLAN.md) for metrics and improvement details.
+
+---
+
 ## 5b. Current Status (Feb 2026)
 
 | Area | Status |

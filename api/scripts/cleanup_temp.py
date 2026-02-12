@@ -22,6 +22,7 @@ _root = os.path.dirname(_api_dir)
 TEMP_PATTERNS = [
     os.path.join(_api_dir, "test_agent_e2e.txt"),
     os.path.join(_api_dir, "test_e2e_*.txt"),
+    os.path.join(_api_dir, "e2e_cursor_*.txt"),
     os.path.join(_root, "test_claude_ok.txt"),
 ]
 TASK_LOG_PATTERN = os.path.join(_api_dir, "logs", "task_*.log")

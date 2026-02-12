@@ -110,3 +110,16 @@ HEAL tasks route to Claude by default. Set `ANTHROPIC_API_KEY` for Claude models
 5. **Cursor** — Already primary IDE
 
 See [API-KEYS-SETUP.md](API-KEYS-SETUP.md) for configuration.
+
+---
+
+## Cursor CLI (Alternative Executor)
+
+Use **Cursor CLI** (`agent` command) instead of Claude Code for headless, scriptable runs. Pass `context: {"executor": "cursor"}` when creating tasks, or run project manager with `--cursor`.
+
+| Task Type | Cursor Model |
+|-----------|--------------|
+| spec, impl, test | composer-1 |
+| review, heal | claude-4-opus |
+
+See [CURSOR-CLI.md](CURSOR-CLI.md) for setup and usage.

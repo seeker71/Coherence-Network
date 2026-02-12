@@ -18,6 +18,7 @@ import re
 import subprocess
 import sys
 import time
+import dateutil.parser
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(_api_dir)
@@ -145,11 +146,17 @@ def review_indicates_pass(output: str) -> bool:
     if not output:
         return False
     lower = output.lower()
-    if "fail" in lower:
+    # More robust checking - looking for explicit pass/fail signals
+    if "fail" in lower and not ("not fail" in lower or "no fail" in lower):
         return False
     if "no pass" in lower or "not pass" in lower:
         return False
-    return "pass" in lower
+    # Looking for explicit pass indicators
+    pass_indicators = ["pass", "complete", "ok", "success"]
+    for indicator in pass_indicators:
+        if indicator in lower:
+            return True
+    return False
 
 
 def build_direction(phase: str, item: str, iteration: int, last_output: str = "") -> str:
@@ -158,12 +165,23 @@ def build_direction(phase: str, item: str, iteration: int, last_output: str = ""
     if phase == "impl":
         if iteration > 1:
             return f"Fix the issues (iteration {iteration}): {item}. Review feedback or test failures: {last_output[:300]}"
-        return f"Implement per spec: {item}. Modify only files listed in the spec."
+        return f"Implement per spec: {item}. Modify only files listed in the spec. Do not add features not in the spec."
     if phase == "test":
         return f"Write and run tests for: {item}. Ensure tests define the contract. Do not modify tests to make impl pass."
     if phase == "review":
         return f"Review the implementation for: {item}. Check spec compliance, security, correctness. Output: pass/fail and issues."
     return item
+
+
+def _task_payload(direction: str, task_type: str, use_cursor: bool = False) -> dict:
+    """Build POST body for /api/agent/tasks. use_cursor=True passes context.executor=cursor."""
+    # Default to cursor when AGENT_EXECUTOR_DEFAULT=cursor (env)
+    default_cursor = os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower() == "cursor"
+    use_cursor = use_cursor or default_cursor
+    payload = {"direction": direction, "task_type": task_type}
+    if use_cursor:
+        payload["context"] = {"executor": "cursor"}
+    return payload
 
 
 def run(
@@ -173,6 +191,7 @@ def run(
     log: logging.Logger,
     verbose: bool = False,
     max_items: int = 0,
+    use_cursor: bool = False,
 ) -> None:
     deadline = time.time() + hours * 3600 if hours else None
     items_completed_this_run = 0
@@ -229,6 +248,23 @@ def run(
                 else:
                     t = r.json()
                     status = t.get("status", "")
+                    # Check if task has timed out (running for more than 3600 seconds)
+                    created_at = t.get("created_at")
+                    if status == "running" and created_at:
+                        try:
+                            created_time = dateutil.parser.isoparse(created_at)
+                            import datetime
+                            current_time = datetime.datetime.now(datetime.timezone.utc)
+                            elapsed_seconds = (current_time - created_time).total_seconds()
+                            log.debug("Task %s has been running for %d seconds", task_id, elapsed_seconds)
+                            if elapsed_seconds > 3600:  # 1 hour timeout
+                                log.warning("Task %s has timed out after %d seconds", task_id, elapsed_seconds)
+                                # Mark as failed to trigger retry logic
+                                status = "failed"
+                        except Exception as e:
+                            log.warning("Could not parse task timing: %s", e)
+                            # In case of parsing error, treat as normal running task
+
                     if status == "pending" or status == "running":
                         log.debug("waiting for task %s status=%s", task_id, status)
                         if once:
@@ -267,7 +303,10 @@ def run(
                             else:
                                 state["phase"] = "impl"
                                 dir = build_direction("impl", backlog[idx], iteration + 1, output)
-                                resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "impl"})
+                                resp = client.post(
+                                    f"{BASE}/api/agent/tasks",
+                                    json=_task_payload(dir, "impl", use_cursor),
+                                )
                                 if resp.status_code == 201:
                                     state["current_task_id"] = resp.json().get("id")
                                     log.info("retry impl iteration %d task=%s", iteration + 1, state["current_task_id"])
@@ -275,7 +314,10 @@ def run(
                             state["phase"] = "impl"
                             state["iteration"] = iteration + 1
                             dir = build_direction("impl", backlog[idx], iteration + 1, output)
-                            resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "impl"})
+                            resp = client.post(
+                                f"{BASE}/api/agent/tasks",
+                                json=_task_payload(dir, "impl", use_cursor),
+                            )
                             if resp.status_code == 201:
                                 state["current_task_id"] = resp.json().get("id")
                                 log.info("phase %s failed, retry impl task=%s", phase, state["current_task_id"])
@@ -289,21 +331,30 @@ def run(
                     if phase == "spec":
                         state["phase"] = "impl"
                         dir = build_direction("impl", backlog[idx], 1)
-                        resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "impl"})
+                        resp = client.post(
+                            f"{BASE}/api/agent/tasks",
+                            json=_task_payload(dir, "impl", use_cursor),
+                        )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
                             log.info("spec done, created impl task=%s", state["current_task_id"])
                     elif phase == "impl":
                         state["phase"] = "test"
                         dir = build_direction("test", backlog[idx], 1)
-                        resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "test"})
+                        resp = client.post(
+                            f"{BASE}/api/agent/tasks",
+                            json=_task_payload(dir, "test", use_cursor),
+                        )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
                             log.info("impl done, created test task=%s", state["current_task_id"])
                     elif phase == "test":
                         state["phase"] = "review"
                         dir = build_direction("review", backlog[idx], 1)
-                        resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "review"})
+                        resp = client.post(
+                            f"{BASE}/api/agent/tasks",
+                            json=_task_payload(dir, "review", use_cursor),
+                        )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
                             log.info("test done, created review task=%s", state["current_task_id"])
@@ -338,7 +389,10 @@ def run(
                             else:
                                 fail_reason = f"pytest={'fail' if not pytest_ok else 'ok'} review={'fail' if not review_ok else 'ok'}"
                                 dir = build_direction("impl", backlog[idx], state["iteration"], fail_reason)
-                                resp = client.post(f"{BASE}/api/agent/tasks", json={"direction": dir, "task_type": "impl"})
+                                resp = client.post(
+                                    f"{BASE}/api/agent/tasks",
+                                    json=_task_payload(dir, "impl", use_cursor),
+                                )
                                 if resp.status_code == 201:
                                     state["current_task_id"] = resp.json().get("id")
                                     log.info("validation failed, retry impl task=%s", state["current_task_id"])
@@ -370,7 +424,7 @@ def run(
 
             resp = client.post(
                 f"{BASE}/api/agent/tasks",
-                json={"direction": direction, "task_type": task_type},
+                json=_task_payload(direction, task_type, use_cursor),
             )
             if resp.status_code == 201:
                 t = resp.json()
@@ -400,6 +454,16 @@ def main():
     ap.add_argument("--reset", action="store_true", help="Reset state before starting (fresh run)")
     ap.add_argument("--dry-run", action="store_true", help="Log what would be done, no HTTP calls, exit after one cycle")
     ap.add_argument("--max-items", type=int, default=0, help="Stop after completing N backlog items (0 = no limit)")
+    ap.add_argument(
+        "--cursor",
+        action="store_true",
+        help="Use Cursor CLI (agent) for all tasks. Also set via AGENT_EXECUTOR_DEFAULT=cursor",
+    )
+    ap.add_argument(
+        "--claude",
+        action="store_true",
+        help="Use Claude Code CLI instead of Cursor (overrides AGENT_EXECUTOR_DEFAULT)",
+    )
     args = ap.parse_args()
 
     if args.backlog:
@@ -410,7 +474,13 @@ def main():
         os.remove(STATE_FILE)
 
     log = _setup_logging(verbose=args.verbose)
-    log.info("Project Manager started API=%s backlog=%s", BASE, BACKLOG_FILE)
+    use_cursor = (args.cursor or os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower() == "cursor") and not args.claude
+    log.info(
+        "Project Manager started API=%s backlog=%s executor=%s",
+        BASE,
+        BACKLOG_FILE,
+        "cursor" if use_cursor else "claude",
+    )
 
     with httpx.Client(timeout=15.0) as client:
         try:
@@ -443,6 +513,8 @@ def main():
             log.info("DRY-RUN: backlog empty or complete")
         return
 
+    # Cursor by default when AGENT_EXECUTOR_DEFAULT=cursor; --claude overrides
+    use_cursor = (args.cursor or os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower() == "cursor") and not args.claude
     run(
         interval=args.interval,
         hours=args.hours,
@@ -450,6 +522,7 @@ def main():
         log=log,
         verbose=args.verbose,
         max_items=args.max_items,
+        use_cursor=use_cursor,
     )
 
 

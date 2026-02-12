@@ -31,6 +31,10 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 025 requirements.txt Import | ✓ | ✓ | ✓ | POST accepts .txt; pypi lookup; tests pass |
 | PLAN Month 1 (Graph, indexer) | ✓ | — | — | MVP done via 019 |
 
+| 006 Overnight Backlog | ? | ? | ? | Pending |
+| 015 Placeholder | ? | ? | ? | Pending |
+| 026 Pipeline Observability And Auto Review | ? | ? | ? | Pending |
+| 027 Fully Automated Pipeline | ✓ | ✓ | ✓ | Auto-update, metrics, attention |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

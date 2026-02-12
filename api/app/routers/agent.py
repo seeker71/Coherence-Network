@@ -261,6 +261,22 @@ async def get_usage() -> dict:
     return agent_service.get_usage_summary()
 
 
+@router.get("/agent/metrics")
+async def get_metrics() -> dict:
+    """Task metrics: success rate, execution time, by task_type, by model. Spec 027."""
+    try:
+        from app.services.metrics_service import get_aggregates
+
+        return get_aggregates()
+    except ImportError:
+        return {
+            "success_rate": {"completed": 0, "failed": 0, "total": 0, "rate": 0.0},
+            "execution_time": {"p50_seconds": 0, "p95_seconds": 0},
+            "by_task_type": {},
+            "by_model": {},
+        }
+
+
 @router.get("/agent/pipeline-status")
 async def get_pipeline_status() -> dict:
     """Pipeline visibility: running task, pending with wait times, recent completed with duration.
@@ -315,9 +331,12 @@ async def get_task_log(task_id: str) -> dict:
 
 
 @router.get("/agent/route", response_model=RouteResponse)
-async def route(task_type: TaskType = Query(...)) -> RouteResponse:
-    """Get routing for a task type (no persistence)."""
-    return RouteResponse(**agent_service.get_route(task_type))
+async def route(
+    task_type: TaskType = Query(...),
+    executor: Optional[str] = Query("claude", description="Executor: claude (default) or cursor"),
+) -> RouteResponse:
+    """Get routing for a task type (no persistence). Use executor=cursor for Cursor CLI."""
+    return RouteResponse(**agent_service.get_route(task_type, executor=executor or "claude"))
 
 
 @router.get("/agent/telegram/diagnostics")

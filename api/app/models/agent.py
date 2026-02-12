@@ -91,3 +91,4 @@ class RouteResponse(BaseModel):
     model: str
     command_template: str
     tier: str
+    executor: Optional[str] = None  # "claude" or "cursor"

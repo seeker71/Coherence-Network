@@ -28,6 +28,7 @@ async def test_post_task_returns_201_with_routed_model_and_command(client: Async
         json={
             "direction": "Add GET /api/projects endpoint",
             "task_type": "impl",
+            "context": {"executor": "claude"},
         },
     )
     assert response.status_code == 201
@@ -118,7 +119,7 @@ async def test_get_task_by_id_returns_full_task(client: AsyncClient):
     """GET /api/agent/tasks/{id} returns task with command."""
     create = await client.post(
         "/api/agent/tasks",
-        json={"direction": "Fix bug", "task_type": "heal"},
+        json={"direction": "Fix bug", "task_type": "heal", "context": {"executor": "claude"}},
     )
     task_id = create.json()["id"]
     response = await client.get(f"/api/agent/tasks/{task_id}")
@@ -220,10 +221,10 @@ async def test_review_tasks_route_to_local(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_impl_tasks_route_to_local(client: AsyncClient):
-    """impl task_type routes to local (Ollama) model."""
+    """impl task_type routes to local (Ollama) model when executor=claude."""
     response = await client.post(
         "/api/agent/tasks",
-        json={"direction": "Implement feature", "task_type": "impl"},
+        json={"direction": "Implement feature", "task_type": "impl", "context": {"executor": "claude"}},
     )
     data = response.json()
     assert any(x in data["model"] for x in ("qwen3-coder", "glm-4.7-flash", "ollama"))
@@ -231,13 +232,31 @@ async def test_impl_tasks_route_to_local(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_heal_tasks_route_to_claude(client: AsyncClient):
-    """heal task_type routes to Claude (subscription) model."""
+    """heal task_type routes to Claude (subscription) model when executor=claude."""
     response = await client.post(
         "/api/agent/tasks",
-        json={"direction": "Fix failing CI", "task_type": "heal"},
+        json={"direction": "Fix failing CI", "task_type": "heal", "context": {"executor": "claude"}},
     )
     data = response.json()
     assert "claude" in data["model"].lower()
+
+
+@pytest.mark.asyncio
+async def test_cursor_executor_routes_to_cursor_cli(client: AsyncClient):
+    """context.executor=cursor uses Cursor CLI (agent command)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={
+            "direction": "Implement feature",
+            "task_type": "impl",
+            "context": {"executor": "cursor"},
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "cursor" in data["model"].lower()
+    assert data["command"].strip().startswith("agent ")
+    assert "composer-1" in data["command"] or "claude-4-opus" in data["command"] or "auto" in data["command"]
 
 
 # --- Spec 003: Agent-Telegram Decision Loop ---
@@ -338,14 +357,37 @@ async def test_usage_endpoint_returns_200(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_metrics_endpoint_returns_200(client: AsyncClient):
+    """GET /api/agent/metrics returns aggregates (spec 027)."""
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert "success_rate" in data
+    assert "execution_time" in data
+    assert "by_task_type" in data
+    assert "by_model" in data
+    sr = data["success_rate"]
+    assert "completed" in sr
+    assert "failed" in sr
+    assert "total" in sr
+    assert "rate" in sr
+
+
+@pytest.mark.asyncio
 async def test_pipeline_status_returns_200(client: AsyncClient):
-    """GET /api/agent/pipeline-status returns running, pending, recent_completed."""
+    """GET /api/agent/pipeline-status returns running, pending, recent_completed, attention (spec 027)."""
     response = await client.get("/api/agent/pipeline-status")
     assert response.status_code == 200
     data = response.json()
     assert "running" in data
     assert "pending" in data
     assert "recent_completed" in data
+    assert "attention" in data
+    att = data["attention"]
+    assert "stuck" in att
+    assert "repeated_failures" in att
+    assert "low_success_rate" in att
+    assert "flags" in att
 
 
 @pytest.mark.asyncio
@@ -353,7 +395,7 @@ async def test_task_log_returns_command_and_output(client: AsyncClient):
     """GET /api/agent/tasks/{id}/log returns task_id, command, output."""
     create = await client.post(
         "/api/agent/tasks",
-        json={"direction": "Log test", "task_type": "impl"},
+        json={"direction": "Log test", "task_type": "impl", "context": {"executor": "claude"}},
     )
     task_id = create.json()["id"]
     response = await client.get(f"/api/agent/tasks/{task_id}/log")
@@ -388,6 +430,25 @@ async def test_root_returns_200(client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert "message" in data
+
+
+def test_update_spec_coverage_dry_run():
+    """update_spec_coverage.py --dry-run exits 0 and does not modify files (spec 027)."""
+    import os
+    import subprocess
+    import sys
+
+    script = os.path.join(os.path.dirname(__file__), "..", "scripts", "update_spec_coverage.py")
+    assert os.path.isfile(script), "update_spec_coverage.py must exist per spec 027"
+    result = subprocess.run(
+        [sys.executable, script, "--dry-run"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        cwd=os.path.dirname(os.path.dirname(script)),
+    )
+    assert result.returncode == 0
+    assert "ModuleNotFoundError" not in (result.stderr or "")
 
 
 def test_agent_runner_polls_and_executes_one_task():

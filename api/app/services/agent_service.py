@@ -13,6 +13,11 @@ _OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "glm-4.7-flash:latest")  # Local 
 _OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "glm-5:cloud")  # Cloud fallback
 _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "claude-3-5-haiku-20241022")  # Claude fallback
 
+# Cursor CLI models (when context.executor == "cursor") — see docs/CURSOR-CLI.md
+# auto avoids per-model usage limits; composer-1/gemini-3-flash for speed
+_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "auto")
+_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
+
 # Routing: local first; use model_override in context for cloud/claude
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (f"ollama/{_OLLAMA_MODEL}", "local"),
@@ -37,12 +42,27 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
 _COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
 _COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
 
+# Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
+_CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {
+    TaskType.SPEC: _CURSOR_MODEL_DEFAULT,
+    TaskType.TEST: _CURSOR_MODEL_DEFAULT,
+    TaskType.IMPL: _CURSOR_MODEL_DEFAULT,
+    TaskType.REVIEW: _CURSOR_MODEL_REVIEW,
+    TaskType.HEAL: _CURSOR_MODEL_REVIEW,
+}
+
 
 def _command_template(task_type: TaskType) -> str:
     agent = AGENT_BY_TASK_TYPE.get(task_type)
     if agent:
         return _COMMAND_LOCAL_AGENT.replace("{{agent}}", agent)
     return _COMMAND_HEAL
+
+
+def _cursor_command_template(task_type: TaskType) -> str:
+    """Cursor CLI: agent "{{direction}}" --model X. Escapes direction for shell."""
+    model = _CURSOR_MODEL_BY_TYPE[task_type]
+    return f'agent "{{{{direction}}}}" --model {model}'
 
 
 COMMAND_TEMPLATES: dict[TaskType, str] = {
@@ -65,15 +85,30 @@ def _generate_id() -> str:
     return f"task_{secrets.token_hex(8)}"
 
 
-def _build_command(direction: str, task_type: TaskType) -> str:
-    template = COMMAND_TEMPLATES[task_type]
-    return template.replace("{{direction}}", direction.replace('"', '\\"'))
+def _build_command(
+    direction: str, task_type: TaskType, executor: str = "claude"
+) -> str:
+    """Build command for task. executor: 'claude' (default) or 'cursor'."""
+    if executor == "cursor":
+        template = _cursor_command_template(task_type)
+    else:
+        template = COMMAND_TEMPLATES[task_type]
+    # Escape direction for shell (double-quoted string)
+    escaped = direction.replace("\\", "\\\\").replace('"', '\\"')
+    return template.replace("{{direction}}", escaped)
 
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     task_id = _generate_id()
+    ctx = data.context if isinstance(data.context, dict) else {}
+    executor = (ctx.get("executor") or os.environ.get("AGENT_EXECUTOR_DEFAULT", "claude")).lower()
+    if executor not in ("claude", "cursor"):
+        executor = "claude"
     model, tier = ROUTING[data.task_type]
+    if executor == "cursor":
+        model = f"cursor/{_CURSOR_MODEL_BY_TYPE[data.task_type]}"
+        tier = "cursor"
     # Smoke test: context.command_override runs raw bash, bypassing Claude
     command = (
         (data.context or {}).get("command_override")
@@ -81,9 +116,8 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         else None
     )
     if not command:
-        command = _build_command(data.direction, data.task_type)
+        command = _build_command(data.direction, data.task_type, executor=executor)
         # Model override for testing (e.g. glm-4.7:cloud for better tool use)
-        ctx = data.context if isinstance(data.context, dict) else {}
         if ctx.get("model_override"):
             override = ctx["model_override"]
             command = re.sub(r"--model\s+\S+", f"--model {override}", command)
@@ -208,15 +242,21 @@ def get_review_summary() -> dict[str, Any]:
     return {"by_status": by_status, "needs_attention": needs, "total": len(items)}
 
 
-def get_route(task_type: TaskType) -> dict[str, Any]:
-    """Return routing info for a task type (no persistence)."""
-    model, tier = ROUTING[task_type]
-    template = COMMAND_TEMPLATES[task_type]
+def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
+    """Return routing info for a task type (no persistence). executor: 'claude' or 'cursor'."""
+    if executor == "cursor":
+        model = f"cursor/{_CURSOR_MODEL_BY_TYPE[task_type]}"
+        template = _cursor_command_template(task_type)
+        tier = "cursor"
+    else:
+        model, tier = ROUTING[task_type]
+        template = COMMAND_TEMPLATES[task_type]
     return {
         "task_type": task_type.value,
         "model": model,
         "command_template": template,
         "tier": tier,
+        "executor": executor,
     }
 
 
@@ -326,6 +366,34 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
                 "output_len": len(out),
             }
 
+    # Attention flags (spec 027)
+    attention_flags = []
+    stuck = False
+    if pending and not running:
+        wait_secs = [p.get("wait_seconds") for p in pending if p.get("wait_seconds") is not None]
+        if wait_secs and max(wait_secs) > 600:  # 10 min
+            stuck = True
+            attention_flags.append("stuck")
+    repeated_failures = False
+    if len(completed) >= 3:
+        last_three = completed[:3]
+        if all(str((_store.get(c["id"]) or {}).get("status", "")) == "failed" for c in last_three):
+            repeated_failures = True
+            attention_flags.append("repeated_failures")
+    low_success_rate = False
+    try:
+        from app.services.metrics_service import get_aggregates
+
+        agg = get_aggregates()
+        sr = agg.get("success_rate", {})
+        total = sr.get("total", 0)
+        rate = sr.get("rate", 0.0)
+        if total >= 10 and rate < 0.8:
+            low_success_rate = True
+            attention_flags.append("low_success_rate")
+    except ImportError:
+        pass
+
     return {
         "running": running[:1],
         "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
@@ -335,6 +403,12 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
         ],
         "latest_request": latest_request,
         "latest_response": latest_response,
+        "attention": {
+            "stuck": stuck,
+            "repeated_failures": repeated_failures,
+            "low_success_rate": low_success_rate,
+            "flags": attention_flags,
+        },
     }
 
 

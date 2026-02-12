@@ -40,6 +40,9 @@ Spec → Test → Implement → CI → Review → Merge
 ## Documentation
 
 - [Status](docs/STATUS.md) — implementation status, sprint progress
+- [Execution Plan](docs/EXECUTION-PLAN.md) — integrated goal, meta-pipeline, auto-update, monitor
+- [Pipeline Efficiency](docs/PIPELINE-EFFICIENCY-PLAN.md) — metrics, auto-debug, improvement
+- [Community, Research & Priorities](docs/COMMUNITY-RESEARCH-PRIORITIES.md) — questions, research, prioritization, public forum
 - [Consolidated Plan](docs/PLAN.md) — vision, architecture, roadmap
 - [Model Routing](docs/MODEL-ROUTING.md) — AI cost optimization
 - [API Keys Setup](docs/API-KEYS-SETUP.md) — subscription configuration

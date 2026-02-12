@@ -2,10 +2,10 @@
 """Agent runner: polls pending tasks, runs commands, PATCHes status.
 
 Usage:
-  python scripts/agent_runner.py [--interval 10] [--once] [--verbose]
+  python scripts/agent_runner.py [--interval 10] [--once] [--verbose] [--workers N]
 
-Requires API running. Runs one task at a time. When task reaches needs_decision,
-runner stops for that task; user replies via /reply. MVP: no auto-resume.
+Requires API running. With Cursor executor, --workers N runs up to N tasks in parallel.
+When task reaches needs_decision, runner stops for that task; user replies via /reply.
 
 Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 """
@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -63,11 +64,26 @@ def _uses_anthropic_cloud(command: str) -> bool:
     return "claude-3-5" in command or "claude-4" in command
 
 
-def run_one_task(client: httpx.Client, task_id: str, command: str, log: logging.Logger, verbose: bool = False) -> bool:
+def _uses_cursor_cli(command: str) -> bool:
+    """True if command uses Cursor CLI (agent '...'). Cursor uses its own auth."""
+    return command.strip().startswith("agent ")
+
+
+def run_one_task(
+    client: httpx.Client,
+    task_id: str,
+    command: str,
+    log: logging.Logger,
+    verbose: bool = False,
+    task_type: str = "impl",
+    model: str = "unknown",
+) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
-    use_anthropic = _uses_anthropic_cloud(command)
-    if use_anthropic:
+    if _uses_cursor_cli(command):
+        # Cursor CLI uses Cursor app auth; do not override ANTHROPIC_* or OLLAMA
+        log.info("task=%s using Cursor CLI", task_id)
+    elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -88,6 +104,7 @@ def run_one_task(client: httpx.Client, task_id: str, command: str, log: logging.
         log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
         return True
 
+    start_time = time.monotonic()
     log.info("task=%s starting command=%s", task_id, command[:120])
     if verbose:
         print(f"Running: {command[:80]}...")
@@ -140,34 +157,57 @@ def run_one_task(client: httpx.Client, task_id: str, command: str, log: logging.
         output = "".join(output_lines)
         returncode = process.returncode if process.returncode is not None else -9
         status = "completed" if returncode == 0 else "failed"
+        duration_sec = round(time.monotonic() - start_time, 1)
 
         with open(out_file, "a", encoding="utf-8") as f:
-            f.write(f"\n# exit={returncode} status={status}\n")
+            f.write(f"\n# duration_seconds={duration_sec} exit={returncode} status={status}\n")
 
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
         )
-        log.info("task=%s %s exit=%s output_len=%d out_file=%s", task_id, status, returncode, len(output), out_file)
+        try:
+            from app.services.metrics_service import record_task
+
+            record_task(task_id, task_type, model, duration_sec, status)
+        except ImportError:
+            pass
+        log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
         return True
     except Exception as e:
+        duration_sec = round(time.monotonic() - start_time, 1)  # start_time set before try
         with open(out_file, "a", encoding="utf-8") as f:
-            f.write(f"\n# exit=-1 status=failed error={e}\n")
+            f.write(f"\n# duration_seconds={duration_sec} exit=-1 status=failed error={e}\n")
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": "failed", "output": str(e)},
         )
+        try:
+            from app.services.metrics_service import record_task
+
+            record_task(task_id, task_type, model, duration_sec, "failed")
+        except ImportError:
+            pass
         log.exception("task=%s error: %s", task_id, e)
         return True
 
 
-def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10, log: logging.Logger = None, verbose: bool = False) -> None:
-    """Poll for pending tasks and run one at a time."""
+def poll_and_run(
+    client: httpx.Client,
+    once: bool = False,
+    interval: int = 10,
+    workers: int = 1,
+    log: logging.Logger = None,
+    verbose: bool = False,
+) -> None:
+    """Poll for pending tasks and run up to workers in parallel (Cursor supports multiple concurrent agent invocations)."""
     log = log or logging.getLogger("agent_runner")
     while True:
-        r = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks", log, params={"status": "pending", "limit": 1})
+        r = _http_with_retry(
+            client, "GET", f"{BASE}/api/agent/tasks", log, params={"status": "pending", "limit": workers}
+        )
         if r is None:
             if once:
                 break
@@ -189,24 +229,48 @@ def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10, l
             time.sleep(interval)
             continue
 
-        task = tasks[0]
-        task_id = task["id"]
-        # List doesn't include command; fetch full task
-        r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
-        if r2 is None or r2.status_code != 200:
-            print(f"GET task {task_id} failed: {r2.status_code}")
-            continue
-        full = r2.json()
-        command = full.get("command")
-        if not command:
-            # Skip malformed
-            client.patch(
-                f"{BASE}/api/agent/tasks/{task_id}",
-                json={"status": "failed", "output": "No command"},
-            )
+        # Fetch full task (including command) for each
+        to_run: list[tuple[str, str, str, str]] = []
+        for task in tasks:
+            task_id = task["id"]
+            r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
+            if r2 is None or r2.status_code != 200:
+                log.warning("GET task %s failed: %s", task_id, r2.status_code if r2 else "None")
+                continue
+            full = r2.json()
+            command = full.get("command")
+            if not command:
+                client.patch(
+                    f"{BASE}/api/agent/tasks/{task_id}",
+                    json={"status": "failed", "output": "No command"},
+                )
+                continue
+            task_type = str(full.get("task_type", "impl"))
+            model = str(full.get("model", "unknown"))
+            to_run.append((task_id, command, task_type, model))
+
+        if not to_run:
+            if once:
+                break
+            time.sleep(interval)
             continue
 
-        run_one_task(client, task_id, command, log=log, verbose=verbose)
+        if workers == 1:
+            tid, cmd, tt, m = to_run[0]
+            run_one_task(client, tid, cmd, log=log, verbose=verbose, task_type=tt, model=m)
+        else:
+            with ThreadPoolExecutor(max_workers=len(to_run)) as ex:
+                futures = {
+                    ex.submit(run_one_task, client, tid, cmd, log, verbose, tt, m): (tid, cmd)
+                    for tid, cmd, tt, m in to_run
+                }
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        tid, _ = futures[future]
+                        log.exception("task=%s worker error: %s", tid, e)
+
         if once:
             break
 
@@ -246,10 +310,18 @@ def main():
     ap.add_argument("--interval", type=int, default=10, help="Poll interval (seconds)")
     ap.add_argument("--once", action="store_true", help="Run one task and exit")
     ap.add_argument("--verbose", "-v", action="store_true", help="Print progress to stdout")
+    ap.add_argument(
+        "--workers",
+        "-w",
+        type=int,
+        default=1,
+        help="Max parallel tasks (default 1). With Cursor executor, use 2+ to run multiple tasks concurrently.",
+    )
     args = ap.parse_args()
 
+    workers = max(1, args.workers)
     log = _setup_logging(verbose=args.verbose)
-    log.info("Agent runner started API=%s interval=%s timeout=%ds", BASE, args.interval, TASK_TIMEOUT)
+    log.info("Agent runner started API=%s interval=%s timeout=%ds workers=%d", BASE, args.interval, TASK_TIMEOUT, workers)
 
     with httpx.Client(timeout=float(HTTP_TIMEOUT)) as client:
         if not _check_api(client):
@@ -258,11 +330,13 @@ def main():
             print(msg)
             sys.exit(1)
         if args.verbose:
-            print(f"Agent runner | API: {BASE} | interval: {args.interval}s | timeout: {TASK_TIMEOUT}s")
+            print(f"Agent runner | API: {BASE} | interval: {args.interval}s | workers: {workers}")
             print(f"  Log: {LOG_FILE}")
             print("  Polling for pending tasks...\n")
 
-        poll_and_run(client, once=args.once, interval=args.interval, log=log, verbose=args.verbose)
+        poll_and_run(
+            client, once=args.once, interval=args.interval, workers=workers, log=log, verbose=args.verbose
+        )
 
 
 if __name__ == "__main__":

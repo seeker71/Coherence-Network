@@ -73,6 +73,15 @@ async def test_health_returns_valid_json(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_health_response_schema(client: AsyncClient):
+    """Response has exactly the required keys (spec 001)."""
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == {"status", "version", "timestamp"}
+
+
+@pytest.mark.asyncio
 async def test_unhandled_exception_returns_500(client: AsyncClient):
     """Unhandled exceptions return 500 with generic message (spec 009)."""
     response = await client.get("/api/_test_500")

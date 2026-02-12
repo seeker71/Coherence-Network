@@ -4,9 +4,10 @@
 #
 # Prereq: API must be running (./scripts/start_with_telegram.sh in another terminal)
 #
-# Usage: ./scripts/run_overnight_pipeline.sh [--hours 8] [--backlog PATH]
+# Usage: ./scripts/run_overnight_pipeline.sh [--hours 8] [--backlog PATH] [--cursor]
 #   --hours 8   Run for 8 hours (default)
 #   --backlog   Backlog file (default: specs/006-overnight-backlog.md)
+#   --cursor    Use Cursor CLI (agent) instead of Claude Code for tasks
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,12 +22,19 @@ PYTHON="${API_DIR}/.venv/bin/python"
 BASE="${AGENT_API_BASE:-http://localhost:8000}"
 HOURS=8
 BACKLOG="${PROJECT_ROOT}/specs/006-overnight-backlog.md"
+CURSOR_ARG=""
 for arg in "$@"; do
   case "$arg" in
     --hours=*) HOURS="${arg#--hours=}" ;;
     --backlog=*) BACKLOG="${arg#--backlog=}" ;;
+    --cursor) CURSOR_ARG="--cursor" ;;
+    --claude) CURSOR_ARG="--claude" ;;
   esac
 done
+# Use cursor when AGENT_EXECUTOR_DEFAULT=cursor (from .env) unless --claude passed
+if [ -z "$CURSOR_ARG" ] && [ "${AGENT_EXECUTOR_DEFAULT:-}" = "cursor" ]; then
+  CURSOR_ARG="--cursor"
+fi
 
 # 1. Stop overnight_orchestrator (conflicts with project manager)
 if pkill -f "overnight_orchestrator" 2>/dev/null; then
@@ -81,4 +89,4 @@ echo "--- Pipeline Status $(date '+%Y-%m-%d %H:%M:%S') ---"
 $PYTHON scripts/check_pipeline.py 2>/dev/null || echo "  (API unreachable)"
 echo ""
 $PYTHON scripts/project_manager.py --interval 15 --hours "$HOURS" --verbose \
-  --backlog "$BACKLOG" --state-file logs/project_manager_state_overnight.json --reset
+  --backlog "$BACKLOG" --state-file logs/project_manager_state_overnight.json --reset $CURSOR_ARG
