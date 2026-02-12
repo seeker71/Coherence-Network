@@ -167,7 +167,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Run META-QUESTIONS checklist; log to api/logs/meta_questions.json")
     ap.add_argument("--once", action="store_true", help="Run once and exit (default)")
     ap.add_argument("--base", default=None, help="API base URL (default: http://localhost:8000)")
-    args = ap.parse_args()
+    args, _ = ap.parse_known_args()  # parse_known_args avoids failing when invoked from pytest
     base_url = args.base or os.environ.get("AGENT_API_BASE", "http://localhost:8000")
     os.makedirs(LOG_DIR, exist_ok=True)
     result = run_checklist(base_url)

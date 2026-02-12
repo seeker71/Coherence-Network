@@ -118,6 +118,11 @@ try:
   i=d.get('issues',{})
   print('  Issues: open=', i.get('open',0), ', resolved_7d=', i.get('resolved_7d',0))
   print('  Goal proximity:', d.get('goal_proximity',0))
+  pp=d.get('plan_progress') or {}
+  if pp:
+    p6=pp.get('phase_6') or {}
+    p7=pp.get('phase_7') or {}
+    print('  Plan progress: Phase 6', p6.get('completed',0), '/', p6.get('total',0), ', Phase 7', p7.get('completed',0), '/', p7.get('total',0))
   top=d.get('top_issues_by_priority',[])[:3]
   if top:
     print('  Top issues:', [x.get('condition') for x in top])
