@@ -117,6 +117,8 @@ Covered by `api/tests/test_agent.py` (see spec 002). Relevant cases:
 - `test_post_task_invalid_task_type_returns_422`
 - `test_post_task_empty_direction_returns_422`
 - `test_post_task_direction_too_long_returns_422`
+- `test_post_task_direction_whitespace_only_returns_422`
+- `test_post_task_direction_stripped_stored`
 - `test_post_task_missing_direction_returns_422`
 - `test_post_task_direction_null_returns_422`
 - `test_post_task_missing_task_type_returns_422`

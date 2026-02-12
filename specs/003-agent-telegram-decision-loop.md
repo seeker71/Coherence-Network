@@ -70,6 +70,28 @@ Tasks in response include `progress_pct`, `current_step`, `decision`, `decision_
 
 Returns tasks with status `needs_decision` or `failed` only.
 
+### `GET /api/agent/telegram/diagnostics`
+
+**Response 200**
+```json
+{
+  "config": {
+    "has_token": true,
+    "token_prefix": "12345678...",
+    "chat_ids": ["12345"],
+    "allowed_user_ids": ["12345"]
+  },
+  "webhook_events": [{ "ts": 1640000000.0, "update": { "update_id": 90001, "message": { ... } } }],
+  "send_results": [{ "ts": 1640000000.0, "chat_id": "12345", "ok": true, "status_code": 200, "response_text": "..." }]
+}
+```
+
+- `config`: masked Telegram config (no full token).
+- `webhook_events`: last N incoming webhook payloads (append on each `POST /api/agent/telegram/webhook`).
+- `send_results`: last N send_reply/send_alert attempts (append on each send).
+
+Used by the diagnostic test to verify the full Telegram inbound path without a real bot.
+
 ## Data Model (extensions)
 
 ```yaml
@@ -145,8 +167,9 @@ Flow is complete when every item in the checklist below is implemented and the *
 
 - `api/app/models/agent.py` — add progress_pct, current_step, decision_prompt, decision
 - `api/app/services/agent_service.py` — add get_attention_tasks, update_task extended fields, apply_decision
-- `api/app/routers/agent.py` — add GET /attention, extend PATCH handler, add /reply and /attention to webhook
-- `api/app/services/telegram_adapter.py` — parse_command handles "reply"
+- `api/app/routers/agent.py` — add GET /attention, GET /telegram/diagnostics, extend PATCH handler, add /reply and /attention to webhook
+- `api/app/services/telegram_adapter.py` — parse_command handles "reply"; send_reply/send_alert call telegram_diagnostics.record_send
+- `api/app/services/telegram_diagnostics.py` — record_webhook, record_send, get_webhook_events, get_send_results, clear (for test isolation)
 - `api/scripts/agent_runner.py` — new: poll, run, PATCH loop
 
 ## Acceptance Tests

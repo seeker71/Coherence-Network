@@ -92,6 +92,9 @@ Response shape:
 | `needs_decision` | medium | PM blocked on human decision |
 | `api_unreachable` | high | pipeline-status request fails |
 | `metrics_unavailable` | low | GET /api/agent/metrics returns 404 |
+| `phase_6_7_not_worked` | medium | Backlog (006) has not reached Phase 6 — Phase 6/7 product-critical items not being worked; verify backlog maps to PLAN phases |
+
+**Backlog alignment (spec 007):** GET /api/agent/effectiveness returns `plan_progress.backlog_alignment` with `phase_6_7_status` and `phase_6_7_not_worked`. The monitor flags when Phase 6/7 items are not being worked so progress toward PLAN.md goals is visible.
 
 ## Fallback Recovery (PIPELINE_AUTO_RECOVER=1)
 

@@ -551,6 +551,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     pending = status.get("pending") or []
     pm = status.get("project_manager") or {}
     proc = _get_pipeline_process_args()
+    effectiveness = None  # filled by backlog-alignment fetch or report fetch below
 
     # Runner and PM not seen: pipeline processes down — critical
     if not proc.get("runner_seen") and not proc.get("pm_seen"):
@@ -858,8 +859,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     try:
         er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
         if er.status_code == 200:
-            eff = er.json()
-            pp = (eff.get("plan_progress") or {})
+            effectiveness = er.json()
+            pp = (effectiveness.get("plan_progress") or {})
             alignment = pp.get("backlog_alignment") or {}
             if alignment.get("phase_6_7_not_worked"):
                 idx = pp.get("index", "?")
@@ -892,14 +893,14 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     # Run meta-questions checklist periodically (throttled to once per META_QUESTIONS_INTERVAL_SEC)
     _run_meta_questions_if_due(log)
 
-    # Fetch effectiveness and write hierarchical report (machine + human readable)
-    effectiveness = None
-    try:
-        er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
-        if er.status_code == 200:
-            effectiveness = er.json()
-    except Exception:
-        pass
+    # Fetch effectiveness for report if not already from backlog-alignment check
+    if effectiveness is None:
+        try:
+            er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
+            if er.status_code == 200:
+                effectiveness = er.json()
+        except Exception:
+            pass
     proc = _get_pipeline_process_args()
     report = _build_hierarchical_report(data, status, effectiveness, proc, now)
     _write_hierarchical_report(report, log)

@@ -45,7 +45,7 @@ def _spec_id_from_path(path: str) -> Optional[str]:
 def _spec_title_from_path(path: str) -> str:
     """Derive title from 027-fully-automated-pipeline -> Fully Automated Pipeline."""
     base = os.path.basename(path)
-    name = base[:-3] if base.endswith(".md") else base
+    name = base[:-4] if base.endswith(".md") else base
     m = re.match(r"^\d{3}-(.+)$", name)
     if m:
         return m.group(1).replace("-", " ").title()

@@ -60,12 +60,16 @@ The workflow must run the script only after pytest succeeds, and must not fail t
 
 ## Acceptance Tests
 
+Tests define the contract; do not modify tests to make implementation pass. Fix the implementation instead.
+
 - `update_spec_coverage.py --dry-run` exits 0 and prints preview; does not modify files.
 - With a new spec in `specs/` and no row in SPEC-COVERAGE, script (no dry-run) adds one row; idempotent on second run.
 - CI workflow includes "run script after pytest"; script step has `continue-on-error: true` so CI does not fail on script failure.
 - STATUS update: "Test count" and "Specs Implemented" / "Specs Pending" in STATUS.md reflect script output and SPEC-COVERAGE.
 
 **Test files:** `api/tests/test_update_spec_coverage.py` (dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI workflow step, additive rows). `api/tests/test_agent.py` also has `test_update_spec_coverage_dry_run`.
+
+**Contract (spec 027):** The tests in `test_update_spec_coverage.py` define the contract. Key behaviors: `--dry-run --tests-passed` exits 0, prints a preview (e.g. "(Dry run" or "Would add" or "No new specs"), and does not modify SPEC-COVERAGE or STATUS; without `--tests-passed` and not in CI, script prints exactly "Skipping (tests not confirmed passed). Use --tests-passed or run in CI." and exits 0; CI workflow has "Run API tests" before "Update spec coverage" and the update step has `continue-on-error: true`; after a run, every spec id from `specs/*.md` has a row in SPEC-COVERAGE (additive); STATUS.md contains "## Specs Implemented", "## Test Count", and a test count number; second run with no changes leaves files unchanged. Do not modify tests to make implementation pass.
 
 ## Verification
 

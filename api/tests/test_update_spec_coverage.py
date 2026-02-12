@@ -1,4 +1,8 @@
-"""Tests for update_spec_coverage.py — spec 027 auto-update framework."""
+"""Tests for update_spec_coverage.py — spec 027 auto-update framework.
+
+These tests define the contract. Do not modify tests to make implementation pass;
+fix the implementation instead.
+"""
 
 import os
 import re
@@ -273,7 +277,34 @@ def test_status_after_script_has_specs_implemented_and_test_count():
         spec_coverage_path.write_text(before_coverage)
 
 
-# --- Contract tests: SPEC-COVERAGE must accurately reflect specs 007, 008, 034, 038 and new specs ---
+# --- Contract tests: SPEC-COVERAGE must accurately reflect specs 001, 007, 008, 034, 038 and new specs ---
+
+# Spec 001 (Health): all 8 requirement tests must exist in test_health.py (spec 001 verification checklist).
+SPEC_001_HEALTH_TESTS = [
+    "test_health_returns_200",
+    "test_health_response_is_valid_json",
+    "test_health_returns_valid_json",
+    "test_health_timestamp_iso8601_utc",
+    "test_health_response_schema",
+    "test_health_version_semver",
+    "test_health_response_value_types",
+    "test_health_api_contract",
+]
+
+
+def test_spec_001_coverage_references_existing_tests():
+    """Contract: Spec 001 section references all 8 health tests; those tests exist in test_health.py (spec 001 verification)."""
+    spec_coverage_path = _api_dir.parent / "docs" / "SPEC-COVERAGE.md"
+    test_health_path = _api_dir / "tests" / "test_health.py"
+    if not spec_coverage_path.exists() or not test_health_path.exists():
+        pytest.skip("SPEC-COVERAGE.md or test_health.py not in repo")
+    coverage_content = spec_coverage_path.read_text()
+    health_content = test_health_path.read_text()
+    assert "001" in coverage_content and "Health" in coverage_content
+    for test_name in SPEC_001_HEALTH_TESTS:
+        assert test_name in coverage_content, f"SPEC-COVERAGE 001 must reference {test_name}"
+        assert f"def {test_name}" in health_content, f"test_health.py must define {test_name} (spec 001)"
+
 
 def test_spec_coverage_includes_specs_007_008_034_038():
     """Contract: SPEC-COVERAGE.md has a row for specs 007, 008, 034, and 038 (and other new specs)."""

@@ -19,9 +19,11 @@ Spec 007 (landing/docs): Requirement → Test mapping:
   - Root returns name, version, docs, health → test_root_returns_landing_info
   - Root API contract (200, exact keys, types, docs/health values) → test_root_landing_api_contract_spec_007
   - GET /docs returns 200 (OpenAPI UI reachable) → test_docs_returns_200
+  - Landing complete (health 200 + root discovery + /docs 200) → test_landing_complete_spec_007
 
 Run 001-only tests: cd api && pytest tests/test_health.py -v -k 'health'
-Run docs contract test: cd api && pytest tests/test_health.py::test_docs_returns_200 -v
+Run spec 007 landing tests: cd api && pytest tests/test_health.py -v -k 'root or docs or landing'
+Run docs reachability: cd api && pytest tests/test_health.py::test_docs_returns_200 -v
 """
 
 import re

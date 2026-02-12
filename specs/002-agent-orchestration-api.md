@@ -280,6 +280,9 @@ See `api/tests/test_agent.py`. All must pass.
 - test_metrics_endpoint_returns_200
 - test_pipeline_status_returns_200
 - test_monitor_issues_returns_200
+- test_fatal_issues_returns_200
+- test_effectiveness_endpoint_returns_200
+- test_status_report_returns_200
 - test_task_log_returns_command_and_output
 - test_task_log_404_when_log_file_missing
 - test_list_items_omit_command_and_output

@@ -201,6 +201,31 @@ async def test_post_task_direction_too_long_returns_422(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_post_task_direction_whitespace_only_returns_422(client: AsyncClient):
+    """POST with direction whitespace-only returns 422 (spec 010: strip then min_length; whitespace-only becomes empty)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "   \t\n  ", "task_type": "impl"},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "detail" in data
+    assert isinstance(data["detail"], list)
+
+
+@pytest.mark.asyncio
+async def test_post_task_direction_stripped_stored(client: AsyncClient):
+    """POST with leading/trailing whitespace: direction is stored stripped (spec 010 Pydantic refinement)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "  add GET /api/projects  ", "task_type": "impl"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["direction"] == "add GET /api/projects"
+
+
+@pytest.mark.asyncio
 async def test_post_task_missing_direction_returns_422(client: AsyncClient):
     """POST /api/agent/tasks without direction (body missing key or null) returns 422 (spec 002 edge-case)."""
     r = await client.post(
@@ -1371,6 +1396,25 @@ async def test_effectiveness_response_includes_heal_resolved_count(client: Async
     assert "heal_resolved_count" in data, "effectiveness must expose heal_resolved_count"
     assert isinstance(data["heal_resolved_count"], int), "heal_resolved_count must be an integer"
     assert data["heal_resolved_count"] >= 0, "heal_resolved_count must be >= 0"
+
+
+@pytest.mark.asyncio
+async def test_effectiveness_plan_progress_includes_phase_6_and_phase_7(client: AsyncClient):
+    """GET /api/agent/effectiveness returns plan_progress with phase_6 and phase_7 (spec 045)."""
+    response = await client.get("/api/agent/effectiveness")
+    assert response.status_code == 200
+    data = response.json()
+    assert "plan_progress" in data
+    pp = data["plan_progress"]
+    assert "phase_6" in pp, "plan_progress must include phase_6"
+    assert "phase_7" in pp, "plan_progress must include phase_7"
+    assert isinstance(pp["phase_6"].get("completed"), int)
+    assert isinstance(pp["phase_6"].get("total"), int)
+    assert isinstance(pp["phase_7"].get("completed"), int)
+    assert isinstance(pp["phase_7"].get("total"), int)
+    assert pp["phase_6"]["total"] == 2, "Phase 6 total is 2 (items 56–57 per 006)"
+    assert pp["phase_7"]["total"] == 17, "Phase 7 total is 17 (items 58–74 per 006)"
+
 
 
 @pytest.mark.asyncio
