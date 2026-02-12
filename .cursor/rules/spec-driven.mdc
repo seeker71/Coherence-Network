@@ -1,0 +1,33 @@
+---
+description: Spec-driven development workflow for Coherence Network
+globs:
+alwaysApply: true
+---
+## Spec-First
+
+- Every feature starts with a spec in `specs/`
+- Specs define requirements, API contracts, and files to modify
+- Implement ONLY what the spec says; no scope creep
+
+## Test Contract
+
+- Tests are written before or with implementation
+- Tests define the contract; do NOT modify tests to make implementation pass
+- If tests fail, fix the implementation. If a test seems wrong, create `needs-decision` issue.
+
+## File Scope
+
+- Only modify files listed in the spec/issue
+- Do not refactor adjacent code or add features not in spec
+
+## Principles (from Living Codex)
+
+- Everything is a Node (data as nodes/edges where applicable)
+- Adapters over features — external I/O stays thin
+- Tiny deltas — minimal, git-like changes
+- No mocks — prefer real data and algorithms
+
+## Interface
+
+- Cursor is the primary manual development interface
+- Chat (Grok, OpenAI) for copy/paste when stuck on hard issues
