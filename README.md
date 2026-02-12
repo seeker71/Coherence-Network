@@ -42,6 +42,16 @@ Spec → Test → Implement → CI → Review → Merge
 - [Model Routing](docs/MODEL-ROUTING.md) — AI cost optimization
 - [API Keys Setup](docs/API-KEYS-SETUP.md) — subscription configuration
 - [Agent Frameworks](docs/AGENT-FRAMEWORKS.md) — OpenClaw, Agent Zero, future autonomy
+- [Reference Repos](docs/REFERENCE-REPOS.md) — links to Crypo-Coin & Living-Codex (source material)
+
+## Reference Material
+
+`references/` contains symlinks to the two source repos used to create this project:
+
+- **crypo-coin** → [references/crypo-coin](references/crypo-coin) — plans, specs, agent architecture
+- **living-codex** → [references/living-codex](references/living-codex) — implementation patterns, node architecture
+
+Use them for context; implement in Coherence-Network.
 
 ## License
 

@@ -16,6 +16,7 @@ Spec → Test → Implement → CI → Review → Merge
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
+- `docs/REFERENCE-REPOS.md` — Reference repos (crypo-coin, living-codex); read-only context
 - `docs/PLAN.md` — Consolidated vision and roadmap
 - `docs/MODEL-ROUTING.md` — AI model cost optimization
 - `specs/TEMPLATE.md` — Spec format

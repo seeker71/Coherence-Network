@@ -3,6 +3,12 @@ description: Spec-driven development workflow for Coherence Network
 globs:
 alwaysApply: true
 ---
+## Project Scope
+
+**Current project:** Coherence-Network. All implementations belong here (api/, web/, specs/).
+
+**references/**: Symlinks to Crypo-Coin-Coherency-Network and Living-Codex-CSharp. Use for context, patterns, and ideas. Do NOT edit them as part of Coherence-Network work. See docs/REFERENCE-REPOS.md.
+
 ## Spec-First
 
 - Every feature starts with a spec in `specs/`
