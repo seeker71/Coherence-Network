@@ -30,6 +30,11 @@ Close the loop on autonomous operation: auto-commit progress so work persists to
 - `docs/RUNBOOK.md` — add auto-commit section
 - `docs/PIPELINE-ATTENTION.md` — add auto-commit env vars
 
+## Additional Automation (run_autonomous)
+
+- **API restart on metrics 404:** When API is up but GET /api/agent/metrics returns 404, autonomous loop restarts API to load new routes.
+- **Pipeline restart when runner hung:** When no_task_running for 10+ min, monitor writes restart_requested; watchdog restarts pipeline.
+
 ## Out of Scope
 
 - Auto-push in CI (separate concern; spec 027 covers CI).

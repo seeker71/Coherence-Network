@@ -74,6 +74,8 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | timestamp is ISO8601 UTC (parseable; Z or +00:00) | `routers/health.py` | `test_health_timestamp_iso8601_utc` |
 | Response has exactly the required keys (no extra top-level keys) | `routers/health.py` | `test_health_response_schema` |
 | version is semantic-version format (^\d+\.\d+\.\d+) | `routers/health.py` | `test_health_version_semver` |
+| All response fields (status, version, timestamp) are strings | `routers/health.py` | `test_health_response_value_types` |
+| Full API contract (200, exact keys, status ok, semver, ISO8601 UTC) | `routers/health.py` | `test_health_api_contract` |
 
 **Files:** `api/app/main.py`, `api/app/routers/health.py`, `api/tests/test_health.py`
 
@@ -137,7 +139,9 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
-| 404/400/422/500 consistent schema | `main.py` exception handler, routers | `test_get_task_by_id_404`, `test_post_task_*_422`, `test_patch_*_422`, `test_unhandled_exception_returns_500` |
+| 404/400/422/500 consistent schema | `main.py` exception handler, `models/error.py` ErrorDetail, routers `responses=` | `test_get_task_by_id_404_when_missing`, `test_post_task_*_422`, `test_patch_*_422`, `test_unhandled_exception_returns_500` |
+| 422 validation (FastAPI default) | No override; Pydantic produces detail array | `test_post_task_invalid_task_type_returns_422`, `test_post_task_empty_direction_returns_422` |
+| 404 consistency (detail string only) | HTTPException(detail=str); ErrorDetail in OpenAPI | 404 tests assert `body == {"detail": "..."}` and `list(body.keys()) == ["detail"]` |
 
 ---
 

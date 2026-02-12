@@ -21,12 +21,9 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 ```bash
 # API
 cd api && uvicorn app.main:app --reload --port 8000
-
-# Web (optional)
-cd web && npm run dev
 ```
 
-Visit http://localhost:3000 for the web app. See [SETUP.md](docs/SETUP.md).
+Web app: not yet available — see [specs/012-web-skeleton.md](specs/012-web-skeleton.md) when `web/` is added. See [SETUP.md](docs/SETUP.md).
 
 ## Development Workflow
 

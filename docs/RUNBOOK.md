@@ -15,6 +15,7 @@ Quick reference for common operational tasks.
 | `api/logs/project_manager_state_overnight.json` | Overnight pipeline state |
 | `api/logs/monitor_issues.json` | Monitor issues (check via GET /api/agent/monitor-issues) |
 | `api/logs/monitor_resolutions.jsonl` | Resolution events for effectiveness measurement |
+| `api/logs/commit_progress.log` | Auto-commit log (when PIPELINE_AUTO_COMMIT=1) |
 | `api/logs/monitor.log` | Monitor script log (hierarchical STATUS lines each check) |
 | `api/logs/pipeline_status_report.json` | Hierarchical status (machine readable): Layer 0–3, going_well, needs_attention |
 | `api/logs/pipeline_status_report.txt` | Same report in human-readable text |

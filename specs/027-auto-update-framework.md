@@ -2,17 +2,17 @@
 
 ## Purpose
 
-Keep framework docs in sync with the codebase: when tests pass, a script updates `docs/SPEC-COVERAGE.md` and `docs/STATUS.md` so spec→implementation→test mapping and status snapshots stay current without manual edits. This spec defines implementing `update_spec_coverage.py` and wiring it into CI.
+Keep framework docs in sync with the codebase: when tests pass, a script updates `docs/SPEC-COVERAGE.md` and `docs/STATUS.md` so spec→implementation→test mapping and status snapshots stay current without manual edits. This spec defines the script `update_spec_coverage.py` and its CI integration.
 
 ## Requirements
 
-- [ ] Script `api/scripts/update_spec_coverage.py` runs after pytest and updates SPEC-COVERAGE when all tests pass.
-- [ ] SPEC-COVERAGE update: additive only — add missing spec rows from `specs/*.md`; never remove rows or change existing Present/Spec'd/Tested marks unless explicitly specified (e.g. optional "mark tested when pytest passes").
-- [ ] STATUS update: script updates at least one of (a) Test count in `docs/STATUS.md` from pytest output or env, or (b) "Specs Implemented" / "Specs Pending" derived from SPEC-COVERAGE; format and sections as in current STATUS.md.
-- [ ] Script is idempotent: repeated run with no new specs or test changes leaves files unchanged.
-- [ ] Script accepts `--dry-run`: preview changes without writing; exit 0.
-- [ ] CI job runs the script after the "Run API tests" step when pytest succeeds; script failure does not fail the CI job (e.g. `continue-on-error: true`).
-- [ ] Script only writes when tests have passed: in CI, run only after pytest step; locally, either run after pytest or accept a flag (e.g. `--tests-passed`) and no-op if not set.
+- [x] Script `api/scripts/update_spec_coverage.py` runs after pytest and updates SPEC-COVERAGE when all tests pass.
+- [x] SPEC-COVERAGE update: additive only — add missing spec rows from `specs/*.md`; never remove rows or change existing Present/Spec'd/Tested marks unless explicitly specified (e.g. optional "mark tested when pytest passes").
+- [x] STATUS update: script updates at least one of (a) Test count in `docs/STATUS.md` from pytest output or env, or (b) "Specs Implemented" / "Specs Pending" derived from SPEC-COVERAGE; format and sections as in current STATUS.md.
+- [x] Script is idempotent: repeated run with no new specs or test changes leaves files unchanged.
+- [x] Script accepts `--dry-run`: preview changes without writing; exit 0.
+- [x] CI job runs the script after the "Run API tests" step when pytest succeeds; script failure does not fail the CI job (e.g. `continue-on-error: true`).
+- [x] Script only writes when tests have passed: in CI, run only after pytest step (GitHub Actions sets `CI=true`); locally, pass `--tests-passed` or script no-ops.
 
 ## API Contract (if applicable)
 
@@ -31,7 +31,7 @@ Not applicable — script edits Markdown files under `docs/`.
 
 ## CI Wiring
 
-The workflow must run the script only after pytest succeeds, and must not fail the job if the script fails:
+The workflow must run the script only after pytest succeeds, and must not fail the job if the script fails. Implemented in `.github/workflows/test.yml`:
 
 ```yaml
 - name: Run API tests
@@ -44,23 +44,24 @@ The workflow must run the script only after pytest succeeds, and must not fail t
     cd api && python scripts/update_spec_coverage.py
 ```
 
-- Script sees `CI=true` in GitHub Actions and performs writes; no `--tests-passed` needed in CI.
+- GitHub Actions sets `CI=true`; the script performs writes without `--tests-passed`.
 - Order: pytest step first; script step second. If pytest fails, the job fails and the script step is not run.
+- Script is run from `api/` so paths to `docs/` and `specs/` resolve via repo root (`_root`).
 
 ## Acceptance Tests
 
 - `update_spec_coverage.py --dry-run` exits 0 and prints preview; does not modify files.
 - With a new spec in `specs/` and no row in SPEC-COVERAGE, script (no dry-run) adds one row; idempotent on second run.
-- CI workflow includes "run script after pytest"; script step has `continue-on-error` or equivalent so CI does not fail on script failure.
-- If STATUS update is implemented: "Test count" or "Specs Implemented" in STATUS.md reflects script output or SPEC-COVERAGE.
+- CI workflow includes "run script after pytest"; script step has `continue-on-error: true` so CI does not fail on script failure.
+- STATUS update: "Test count" and "Specs Implemented" / "Specs Pending" in STATUS.md reflect script output and SPEC-COVERAGE.
 
-See `api/tests/test_agent.py` — `test_update_spec_coverage_dry_run`; optionally add `api/tests/test_update_spec_coverage.py` for STATUS update and idempotency tests.
+Tests: `api/tests/test_update_spec_coverage.py` (dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI workflow step, additive rows). `api/tests/test_agent.py` also has `test_update_spec_coverage_dry_run`.
 
 ## Out of Scope
 
 - Changing SPEC-COVERAGE existing marks (✓/?) based on pytest results (optional future; not required for this spec).
 - Web or API endpoints for coverage/status; docs-only.
-- Cost/token tracking, metrics persistence, monitor attention (see 027-fully-automated-pipeline).
+- Cost/token tracking, metrics persistence, monitor attention (see [027-fully-automated-pipeline](027-fully-automated-pipeline.md)).
 - Auto-commit and push of updated docs from CI (runner updates workspace only).
 
 ## Decision Gates (if any)
@@ -70,7 +71,7 @@ See `api/tests/test_agent.py` — `test_update_spec_coverage_dry_run`; optionall
 
 ## See also
 
-- [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — Phase 1 auto-update, metrics, attention.
-- [004 CI Pipeline](004-ci-pipeline.md) — GitHub Actions.
-- [007 Meta-pipeline backlog](007-meta-pipeline-backlog.md) — Pipeline improvement work.
+- [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — Broader pipeline automation (Phase 1 includes this script).
+- [004 CI Pipeline](004-ci-pipeline.md) — GitHub Actions workflow.
+- [030 Spec Coverage Update](030-spec-coverage-update.md) — Human-triggered SPEC-COVERAGE edits (does not change this script).
 - [docs/EXECUTION-PLAN.md](../docs/EXECUTION-PLAN.md) — SPEC-COVERAGE and STATUS auto-update.

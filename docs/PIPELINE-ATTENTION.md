@@ -35,7 +35,8 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 **With `run_autonomous.sh` (one command, no interaction):**
 - Start API and pipeline
 - Restart API when down (up to 5 attempts)
-- Restart pipeline when it exits or stale version
+- Restart pipeline when it exits, stale version, or runner hung (no task 10+ min)
+- Restart API when metrics 404 (load new routes after code change)
 - Auto-skip needs_decision after 24h timeout
 - Create heal tasks (no_task_running, low_phase_coverage, repeated_failures, low_success_rate), PATCH orphans
 - **Auto-commit** progress after each completed task (PIPELINE_AUTO_COMMIT=1); optional auto-push (PIPELINE_AUTO_PUSH=1)

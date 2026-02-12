@@ -766,6 +766,39 @@ async def test_attention_lists_only_needs_decision_and_failed(client: AsyncClien
 
 
 @pytest.mark.asyncio
+async def test_attention_response_shape_defines_contract(client: AsyncClient):
+    """GET /api/agent/tasks/attention response: tasks (list), total (int); each task has id, direction, status, optional output, decision_prompt (spec 003 contract)."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Need decision", "task_type": "impl"},
+    )
+    task_id = create.json()["id"]
+    await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={
+            "status": "needs_decision",
+            "output": "Tests failed. Proceed?",
+            "decision_prompt": "Reply yes to fix, no to skip",
+        },
+    )
+    r = await client.get("/api/agent/tasks/attention")
+    assert r.status_code == 200
+    data = r.json()
+    assert "tasks" in data
+    assert "total" in data
+    assert isinstance(data["tasks"], list)
+    assert isinstance(data["total"], int)
+    assert data["total"] >= 1
+    task = next(t for t in data["tasks"] if t["id"] == task_id)
+    assert "id" in task
+    assert "direction" in task
+    assert "status" in task
+    assert task["status"] == "needs_decision"
+    assert task.get("output") == "Tests failed. Proceed?"
+    assert task.get("decision_prompt") == "Reply yes to fix, no to skip"
+
+
+@pytest.mark.asyncio
 async def test_task_count_returns_200(client: AsyncClient):
     """GET /api/agent/tasks/count returns total and by_status."""
     response = await client.get("/api/agent/tasks/count")
@@ -846,6 +879,116 @@ async def test_metrics_response_shape_defines_contract(client: AsyncClient):
         assert key in data, f"Metrics response must include {key}"
     for key in ("completed", "failed", "total", "rate"):
         assert key in data["success_rate"], f"success_rate must include {key}"
+
+
+# --- Spec 026 Phase 1: Persist task metrics; GET /api/agent/metrics ---
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_returns_200_and_structure(client: AsyncClient):
+    """GET /api/agent/metrics returns 200 with success_rate, execution_time (p50/p95), by_task_type, by_model (spec 026 Phase 1)."""
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert "success_rate" in data
+    assert "execution_time" in data
+    assert "by_task_type" in data
+    assert "by_model" in data
+    sr = data["success_rate"]
+    assert "completed" in sr and "failed" in sr and "total" in sr and "rate" in sr
+    et = data["execution_time"]
+    assert "p50_seconds" in et and "p95_seconds" in et
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_response_shape_defines_contract(client: AsyncClient):
+    """GET /api/agent/metrics response shape: success_rate (completed, failed, total, rate), execution_time (p50_seconds, p95_seconds), by_task_type (count, completed, failed, success_rate), by_model (count, avg_duration). Spec 026 Phase 1."""
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    # Top-level
+    for key in ("success_rate", "execution_time", "by_task_type", "by_model"):
+        assert key in data, f"Metrics response must include {key}"
+    # success_rate
+    for key in ("completed", "failed", "total", "rate"):
+        assert key in data["success_rate"], f"success_rate must include {key}"
+    assert isinstance(data["success_rate"]["completed"], int)
+    assert isinstance(data["success_rate"]["failed"], int)
+    assert isinstance(data["success_rate"]["total"], int)
+    assert isinstance(data["success_rate"]["rate"], (int, float))
+    # execution_time
+    assert "p50_seconds" in data["execution_time"] and "p95_seconds" in data["execution_time"]
+    assert isinstance(data["execution_time"]["p50_seconds"], (int, float))
+    assert isinstance(data["execution_time"]["p95_seconds"], (int, float))
+    # by_task_type: each value has count, completed, failed, success_rate
+    assert isinstance(data["by_task_type"], dict)
+    for entry in data["by_task_type"].values():
+        for k in ("count", "completed", "failed", "success_rate"):
+            assert k in entry, f"by_task_type entry must include {k}"
+    # by_model: each value has count, avg_duration
+    assert isinstance(data["by_model"], dict)
+    for entry in data["by_model"].values():
+        assert "count" in entry and "avg_duration" in entry, "by_model entry must include count, avg_duration"
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_zeroed_when_no_metrics(client: AsyncClient):
+    """GET /api/agent/metrics when no metrics (total=0): rate=0.0, by_task_type={}, by_model={}, p50/p95=0. Spec 026 Phase 1."""
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    if data["success_rate"]["total"] == 0:
+        assert data["success_rate"]["rate"] == 0.0
+        assert data["by_task_type"] == {}
+        assert data["by_model"] == {}
+        assert data["execution_time"]["p50_seconds"] == 0
+        assert data["execution_time"]["p95_seconds"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_persist_on_patch_completed(client: AsyncClient):
+    """When a task is PATCHed to completed, a metric record is persisted and GET /api/agent/metrics reflects it. Spec 026 Phase 1."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Metrics persist test", "task_type": "impl"},
+    )
+    assert create.status_code == 201
+    task_id = create.json()["id"]
+    patch = await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={"status": "completed", "output": "Done"},
+    )
+    assert patch.status_code == 200
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success_rate"]["total"] >= 1
+    # Entry shapes when data exists
+    for entry in data["by_task_type"].values():
+        assert "count" in entry and "completed" in entry and "failed" in entry and "success_rate" in entry
+    for entry in data["by_model"].values():
+        assert "count" in entry and "avg_duration" in entry
+
+
+@pytest.mark.asyncio
+async def test_get_metrics_026_persist_on_patch_failed(client: AsyncClient):
+    """When a task is PATCHed to failed, a metric record is persisted and GET /api/agent/metrics reflects it. Spec 026 Phase 1."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Metrics failed test", "task_type": "spec"},
+    )
+    assert create.status_code == 201
+    task_id = create.json()["id"]
+    patch = await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={"status": "failed", "output": "Error"},
+    )
+    assert patch.status_code == 200
+    response = await client.get("/api/agent/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success_rate"]["total"] >= 1
+    assert data["success_rate"]["failed"] >= 1
 
 
 @pytest.mark.asyncio

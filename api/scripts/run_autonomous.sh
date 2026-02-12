@@ -31,6 +31,7 @@ export PIPELINE_AUTO_PUSH="${PIPELINE_AUTO_PUSH:-0}"
 export PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS="${PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS:-24}"
 
 _api_alive() { curl -s --max-time 5 "${BASE}/api/health" >/dev/null 2>&1; }
+_metrics_ok() { curl -s --max-time 5 -o /dev/null -w "%{http_code}" "${BASE}/api/agent/metrics" 2>/dev/null | grep -q 200; }
 _write_fatal() {
   local reason="$1"
   local detail="${2:-}"
@@ -82,7 +83,7 @@ MAX_WATCHDOG_RESTARTS=10
 while true; do
   sleep 120
 
-  # Check API
+  # Check API (and metrics route: if health OK but metrics 404, restart to load new routes)
   if ! _api_alive; then
     echo "[$(date '+%H:%M:%S')] API down, restarting..."
     pkill -f "uvicorn app.main" 2>/dev/null || true
@@ -103,6 +104,19 @@ while true; do
         exit 1
       fi
     fi
+  elif ! _metrics_ok; then
+    echo "[$(date '+%H:%M:%S')] API up but metrics 404, restarting to load routes..."
+    pkill -f "uvicorn app.main" 2>/dev/null || true
+    sleep 2
+    API_PID=$(_start_api)
+    for i in $(seq 1 20); do
+      sleep 1
+      if _api_alive && _metrics_ok; then
+        echo "  API restarted with new routes."
+        API_RESTART_COUNT=0
+        break
+      fi
+    done
   fi
 
   # Check watchdog (pipeline)

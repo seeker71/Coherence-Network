@@ -425,6 +425,10 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     max_wait = max(wait_secs) if wait_secs else 0
     if pending and not running and max_wait >= NO_RUNNING_THRESHOLD_SEC:
         action = NO_TASK_RUNNING_ACTION
+        # Runner likely hung: request pipeline restart when stuck 10+ min (auto_recover)
+        if max_wait >= STUCK_THRESHOLD_SEC and auto_recover and os.environ.get("PIPELINE_AUTO_RECOVER") == "1":
+            _request_restart("no_task_running_stuck", log)
+            action = "Restart requested (runner likely hung). " + action
         if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
             try:
                 resp = client.post(
