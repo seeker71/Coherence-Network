@@ -76,6 +76,7 @@ See `api/tests/test_health.py`. The following tests define the contract for this
 2. Each requirement maps to a test in the table above.
 3. Implementation: `api/app/routers/health.py` exposes GET /health with `HealthResponse` (extra="forbid"), returning status, version, timestamp.
 4. Router is mounted at `/api` in `api/app/main.py` so endpoint is GET /api/health.
+5. Contract test `test_spec_001_coverage_references_existing_tests` in `api/tests/test_update_spec_coverage.py` enforces that all 8 tests exist in `test_health.py` and are referenced in `docs/SPEC-COVERAGE.md`.
 
 ## Out of Scope
 

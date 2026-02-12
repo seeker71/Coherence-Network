@@ -124,6 +124,8 @@ Flow is complete when every item in the checklist below is implemented and the *
 - [x] **Outbound — alerts:** On PATCH task to `needs_decision` or `failed`, if Telegram configured, alert is sent via `send_alert` (e.g. background_tasks) to TELEGRAM_CHAT_IDS; message includes `decision_prompt` when set.
 - [x] **Diagnostics endpoint:** `GET /api/agent/telegram/diagnostics` returns `config`, `webhook_events`, `send_results`; webhook_events and send_results are appended on each webhook/send.
 
+**Telegram flow is complete** when all checklist items above are implemented and `test_telegram_flow_diagnostic` (see Acceptance Tests) passes.
+
 **Inbound (webhook → reply) — sequence**
 
 1. Telegram sends Update to `POST /api/agent/telegram/webhook`.

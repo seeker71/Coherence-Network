@@ -1853,6 +1853,82 @@ async def test_monitor_issues_empty_when_no_file(client: AsyncClient):
     assert data["last_check"] is None or isinstance(data["last_check"], (str, type(None)))
 
 
+@pytest.mark.asyncio
+async def test_fatal_issues_returns_200_and_fatal_false_when_no_file(client: AsyncClient, monkeypatch):
+    """GET /api/agent/fatal-issues when fatal_issues.json missing returns 200, { fatal: false } (spec 002 edge-case)."""
+    import os.path as os_path
+    original_isfile = os_path.isfile
+
+    def isfile(path):
+        if "fatal_issues.json" in str(path):
+            return False
+        return original_isfile(path)
+
+    monkeypatch.setattr(os_path, "isfile", isfile)
+    response = await client.get("/api/agent/fatal-issues")
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("fatal") is False
+
+
+@pytest.mark.asyncio
+async def test_fatal_issues_returns_fatal_true_when_file_has_content(client: AsyncClient):
+    """GET /api/agent/fatal-issues when file present and valid returns 200, { fatal: true, ...payload } (spec 002 edge-case)."""
+    logs_dir = _api_logs_dir()
+    os.makedirs(logs_dir, exist_ok=True)
+    path = os.path.join(logs_dir, "fatal_issues.json")
+    payload = {"message": "Unrecoverable failure", "ts": "2026-02-12T12:00:00Z"}
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        response = await client.get("/api/agent/fatal-issues")
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("fatal") is True
+        assert data.get("message") == "Unrecoverable failure"
+    finally:
+        if os.path.isfile(path):
+            os.remove(path)
+
+
+@pytest.mark.asyncio
+async def test_effectiveness_returns_200_and_fallback_structure_when_service_unavailable(client: AsyncClient, monkeypatch):
+    """GET /api/agent/effectiveness when effectiveness service unavailable returns 200 with fallback structure (spec 002 edge-case)."""
+    import sys
+    effectiveness_mod = "app.services.effectiveness_service"
+    saved = sys.modules.get(effectiveness_mod)
+
+    class FakeModule:
+        def __getattr__(self, name):
+            raise ImportError("effectiveness service unavailable")
+
+    monkeypatch.setitem(sys.modules, effectiveness_mod, FakeModule())
+    try:
+        response = await client.get("/api/agent/effectiveness")
+        assert response.status_code == 200
+        data = response.json()
+        for key in ("throughput", "success_rate", "issues", "progress", "goal_proximity", "heal_resolved_count", "top_issues_by_priority"):
+            assert key in data, f"Fallback must include {key}"
+        assert data["heal_resolved_count"] == 0
+        assert data["success_rate"] == 0.0
+    finally:
+        if saved is not None:
+            sys.modules[effectiveness_mod] = saved
+        elif effectiveness_mod in sys.modules:
+            del sys.modules[effectiveness_mod]
+
+
+@pytest.mark.asyncio
+async def test_status_report_returns_200_with_unknown_when_no_report_file(client: AsyncClient, tmp_path, monkeypatch):
+    """GET /api/agent/status-report when pipeline_status_report.json missing returns 200, generated_at: null, overall.status: unknown (spec 002 edge-case)."""
+    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    response = await client.get("/api/agent/status-report")
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("generated_at") is None
+    assert data.get("overall", {}).get("status") == "unknown"
+
+
 # --- Telegram API (spec 002 contract) ---
 
 
