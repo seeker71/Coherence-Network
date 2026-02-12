@@ -170,9 +170,21 @@ or
 
 **Response 200** — `{ "issues": [...], "last_check": "..." | null }`
 
+### `GET /api/agent/fatal-issues`
+
+**Response 200** — When `api/logs/fatal_issues.json` is missing: `{ "fatal": false }`. When present and valid: `{ "fatal": true, ... }` (payload from file). On read error: `{ "fatal": false }`.
+
 ### `GET /api/agent/metrics`
 
 **Response 200** — `{ "success_rate": {...}, "execution_time": {...}, "by_task_type": {...}, "by_model": {...} }`
+
+### `GET /api/agent/effectiveness`
+
+**Response 200** — `{ "throughput": {...}, "success_rate": float, "issues": {...}, "progress": {...}, "goal_proximity": float, "heal_resolved_count": int, "top_issues_by_priority": [...] }`. When effectiveness service is unavailable: same keys with zeroed/empty fallback values.
+
+### `GET /api/agent/status-report`
+
+**Response 200** — Hierarchical report: `{ "generated_at": "..." | null, "overall": { "status", "going_well", "needs_attention" }, "layer_0_goal", "layer_1_orchestration", "layer_2_execution", "layer_3_attention" }`. When `api/logs/pipeline_status_report.json` is missing: `generated_at: null`, `overall.status: "unknown"`. When `api/logs/meta_questions.json` exists, report includes `meta_questions`: `{ "status", "last_run", "unanswered", "failed" }`.
 
 ### `GET /api/agent/pipeline-status`
 
@@ -311,6 +323,10 @@ See `api/tests/test_agent.py`. All must pass.
 - test_get_tasks_limit_one_returns_at_most_one
 - test_monitor_issues_empty_when_no_file
 - test_telegram_test_send_accepts_optional_text_param
+- test_fatal_issues_returns_200_and_fatal_false_when_no_file
+- test_fatal_issues_returns_fatal_true_when_file_has_content
+- test_effectiveness_returns_200_and_fallback_structure_when_service_unavailable
+- test_status_report_returns_200_with_unknown_when_no_report_file
 
 **Verification:** `cd api && pytest tests/test_agent.py -v` — all tests must pass; do not change tests to make implementation pass.
 
@@ -353,6 +369,10 @@ The following edge cases must be covered by tests in `api/tests/test_agent.py`:
 | **Telegram webhook no message** | POST webhook with update containing no `message` or `edited_message` | 200, `ok: true` |
 | **Telegram test-send text param** | POST /api/agent/telegram/test-send?text=... | 200, ok and results or error |
 | **Monitor-issues no file** | GET /api/agent/monitor-issues when monitor_issues.json missing | 200, issues: [], last_check: null |
+| **Fatal-issues no file** | GET /api/agent/fatal-issues when fatal_issues.json missing | 200, { "fatal": false } |
+| **Fatal-issues file exists** | GET /api/agent/fatal-issues when file present and valid | 200, { "fatal": true, ...payload } |
+| **Effectiveness fallback** | GET /api/agent/effectiveness when effectiveness service unavailable | 200, fallback structure (throughput, success_rate, issues, progress, goal_proximity, heal_resolved_count, top_issues_by_priority) with zeroed/empty values |
+| **Status-report no file** | GET /api/agent/status-report when pipeline_status_report.json missing | 200, generated_at: null, overall.status: "unknown" |
 
 ## Telegram Integration (OpenClaw-style)
 

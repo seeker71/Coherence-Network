@@ -57,6 +57,17 @@ When the pipeline is stuck or the agent runner died:
    .venv/bin/python scripts/project_manager.py --interval 15 --hours 8 -v
    ```
 
+**Monitor: "agent_runner and PM processes not seen"**
+
+- **Check logs:** `tail -50 api/logs/agent_runner.log`, `tail -50 api/logs/project_manager.log`, `tail -30 api/logs/monitor.log`. If monitor wrote `api/logs/restart_requested.json` (e.g. stale_version), the watchdog would have restarted the pipeline if it was running; otherwise restart manually.
+- **Restart pipeline:** `cd api && ./scripts/run_overnight_pipeline.sh` (starts API if needed, then agent_runner + monitor + PM). Optional: `rm api/logs/restart_requested.json` before starting for a clean run.
+5. **Or restart components separately (alternative):**
+   ```bash
+   cd api
+   .venv/bin/python scripts/agent_runner.py --interval 10 -v &
+   .venv/bin/python scripts/project_manager.py --interval 15 --hours 8 -v
+   ```
+
 **Unblock needs_decision:**
 
 - Telegram: `/reply {task_id} yes` (or your decision)
@@ -171,3 +182,9 @@ find api/logs -name 'task_*.log' -mtime +7 -delete
 ```
 
 Or use `api/scripts/cleanup_temp.py` if it supports log cleanup.
+
+## See also
+
+- [AGENTS.md](../AGENTS.md) — Commands, agent API, pipeline scripts
+- [PIPELINE-MONITORING-AUTOMATED.md](PIPELINE-MONITORING-AUTOMATED.md) — Monitor rules, auto-recovery, thresholds
+- [013 Logging Audit](../specs/013-logging-audit.md) — Log rotation; RUNBOOK log list stays in sync

@@ -18,9 +18,16 @@ STATE_FILES = [
 BACKLOG_FILE = os.path.join(PROJECT_ROOT, "specs", "006-overnight-backlog.md")
 WINDOW_DAYS = 7
 
+# Phase boundaries per specs/006-overnight-backlog.md (0-based backlog index)
+# Phase 6: Product-Critical = items 56–57 (0-based 55–56). Phase 7: Remaining = items 58–74 (0-based 57–73).
+PHASE_6_START_IDX = 55
+PHASE_6_TOTAL = 2
+PHASE_7_START_IDX = 57
+PHASE_7_TOTAL = 17
+
 
 def _plan_progress() -> dict[str, Any]:
-    """Derive plan progress from PM state and backlog. Returns {index, total, pct}."""
+    """Derive plan progress from PM state and backlog. Returns {index, total, pct, phase_6, phase_7, backlog_alignment}."""
     index = 0
     state_file = None
     for p in STATE_FILES:
@@ -42,7 +49,41 @@ def _plan_progress() -> dict[str, Any]:
                 if re.match(r"^\d+\.\s+.+$", line.strip()) and not line.strip().startswith("#"):
                     total += 1
     pct = round(100 * index / total, 1) if total else 0
-    return {"index": index, "total": total, "pct": pct, "state_file": (state_file or "").split("/")[-1]}
+    out: dict[str, Any] = {
+        "index": index,
+        "total": total,
+        "pct": pct,
+        "state_file": (state_file or "").split("/")[-1],
+    }
+    # Phase 6/7 completion (spec 045): completed = number of phase items already passed (index past that item)
+    phase_6_completed = max(0, min(PHASE_6_TOTAL, index - PHASE_6_START_IDX))
+    phase_7_completed = max(0, min(PHASE_7_TOTAL, index - PHASE_7_START_IDX))
+    out["phase_6"] = {
+        "completed": phase_6_completed,
+        "total": PHASE_6_TOTAL,
+        "pct": round(100 * phase_6_completed / PHASE_6_TOTAL, 1) if PHASE_6_TOTAL else 0,
+    }
+    out["phase_7"] = {
+        "completed": phase_7_completed,
+        "total": PHASE_7_TOTAL,
+        "pct": round(100 * phase_7_completed / PHASE_7_TOTAL, 1) if PHASE_7_TOTAL else 0,
+    }
+    # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked
+    if index < PHASE_6_START_IDX:
+        phase_6_7_status = "not_reached"
+        phase_6_7_not_worked = True
+    elif phase_6_completed >= PHASE_6_TOTAL and phase_7_completed >= PHASE_7_TOTAL:
+        phase_6_7_status = "complete"
+        phase_6_7_not_worked = False
+    else:
+        phase_6_7_status = "in_progress"
+        phase_6_7_not_worked = False
+    out["backlog_alignment"] = {
+        "phases_from_backlog": True,
+        "phase_6_7_status": phase_6_7_status,
+        "phase_6_7_not_worked": phase_6_7_not_worked,
+    }
+    return out
 
 
 def get_effectiveness() -> dict[str, Any]:

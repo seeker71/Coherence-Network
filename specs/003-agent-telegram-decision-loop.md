@@ -14,7 +14,8 @@ Extends spec 002 (Agent Orchestration API).
 - [x] PATCH /api/agent/tasks/{id}: accept `progress_pct`, `current_step`, `decision` in request body
 - [x] Agent runner script: polls pending tasks, runs command, PATCHes progress, blocks on needs_decision until decision present, then continues or stops
 - [x] Telegram alert for needs_decision includes `decision_prompt` (what to decide) when provided
-- [x] Diagnostic test: POST webhook with a command, then GET diagnostics; assert webhook_events updated and response has config, webhook_events, send_results (verifies full Telegram path without real bot)
+- [x] **Telegram flow complete:** Inbound (webhook → record_webhook → parse_command → send_reply → record_send) and diagnostics endpoint implemented; verified by diagnostic test (see Acceptance Tests).
+- [x] **Diagnostic test:** `test_telegram_flow_diagnostic` in `api/tests/test_agent.py`: POST webhook with a command, GET diagnostics; assert `config`, `webhook_events`, `send_results` present and `webhook_events` updated (and optionally that `send_results` was appended when reply path is exercised). Uses `telegram_diagnostics.clear()` for isolation. No real bot required.
 
 ## API Contract
 

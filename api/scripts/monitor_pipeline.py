@@ -18,6 +18,7 @@ Detection rules:
   - api_unreachable: pipeline-status fails
   - runner_log_errors: ERROR or "API not reachable" in agent_runner.log (last 2h)
   - orphan_running: running task > 2h (likely stale)
+  - phase_6_7_not_worked: backlog has not reached Phase 6 (006); Phase 6/7 product-critical items not being worked
 
 Fallback: when PIPELINE_AUTO_RECOVER=1, write restart_requested (stale_version), PATCH orphan to failed, create heal tasks.
 """
@@ -852,6 +853,29 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         _add_issue(data, "runner_log_errors", "medium", msg, action)
         if heal_task_id:
             data["issues"][-1]["heal_task_id"] = heal_task_id
+
+    # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked (from 006, PLAN phases)
+    try:
+        er = client.get(f"{BASE}/api/agent/effectiveness", timeout=5)
+        if er.status_code == 200:
+            eff = er.json()
+            pp = (eff.get("plan_progress") or {})
+            alignment = pp.get("backlog_alignment") or {}
+            if alignment.get("phase_6_7_not_worked"):
+                idx = pp.get("index", "?")
+                total = pp.get("total", "?")
+                action = (
+                    "Backlog (006) has not reached Phase 6 (Product-Critical). "
+                    "Prioritize advancing to item 56+ so Phase 6/7 (GitHub API, Contributor/Org, polish) get worked. "
+                    "See specs/006-overnight-backlog.md and docs/PLAN.md."
+                )
+                _add_issue(
+                    data, "phase_6_7_not_worked", "medium",
+                    f"Phase 6/7 items not being worked (backlog index {idx}/{total}); product-critical work pending.",
+                    action,
+                )
+    except Exception:
+        pass
 
     # Track resolved issues for effectiveness measurement; attribute to heal when we have heal_task_id
     current_conditions = {i["condition"] for i in data["issues"]}
