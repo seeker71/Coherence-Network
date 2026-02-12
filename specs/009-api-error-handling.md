@@ -92,11 +92,11 @@ ValidationErrorDetail:
 ## Files to Create/Modify
 
 - `api/app/main.py` — exception handler for unhandled exceptions (return 500 with generic message)
-- `api/app/routers/agent.py` — all HTTPException use `detail` string; 404 message "Task not found"
-- `api/app/routers/projects.py` — 404 use `detail` string; message "Project not found"
+- `api/app/models/error.py` — `ErrorDetail` schema (detail: string) for OpenAPI 400/404/500
+- `api/app/routers/agent.py` — all HTTPException use `detail` string; 404 "Task not found"; `responses` for 400/404
+- `api/app/routers/projects.py` — 404 use `detail` string "Project not found"; `responses` for 404
 - `api/app/routers/import_stack.py` — 400/422 use `detail` string or FastAPI default
 - `api/tests/test_agent.py` — tests: 404 format, 422 on invalid task_type, 422 on empty direction
-- (Optional) shared schema in `api/app/models/` if we later expose error schema in OpenAPI
 
 ## Acceptance Tests
 
@@ -108,6 +108,12 @@ ValidationErrorDetail:
 - 404 responses have no extra top-level keys (only `detail`).
 
 See `api/tests/test_agent.py` and `api/tests/test_health.py` (where 009-related tests may live); all must pass.
+
+## Verification (iteration 2)
+
+- **422 validation**: Do not override FastAPI’s validation exception handler. Pydantic failures produce `detail` as an array of `{ loc, msg, type }`; no custom handler.
+- **404 consistency**: Every 404 response has exactly one top-level key `detail` (string). No extra keys. Message is resource-specific: "Task not found", "Project not found".
+- **Error schema**: 400, 404, 500 use `ErrorDetail` (single field `detail: string`). OpenAPI documents this via `responses` on routes and optional `api/app/models/error.py`.
 
 ## Out of Scope
 
