@@ -1892,6 +1892,24 @@ async def test_fatal_issues_returns_fatal_true_when_file_has_content(client: Asy
 
 
 @pytest.mark.asyncio
+async def test_fatal_issues_returns_fatal_false_on_read_error(client: AsyncClient):
+    """GET /api/agent/fatal-issues when file exists but read/parse fails returns 200, { fatal: false } (spec 002)."""
+    logs_dir = _api_logs_dir()
+    os.makedirs(logs_dir, exist_ok=True)
+    path = os.path.join(logs_dir, "fatal_issues.json")
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("not valid json {{{")
+        response = await client.get("/api/agent/fatal-issues")
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("fatal") is False
+    finally:
+        if os.path.isfile(path):
+            os.remove(path)
+
+
+@pytest.mark.asyncio
 async def test_effectiveness_returns_200_and_fallback_structure_when_service_unavailable(client: AsyncClient, monkeypatch):
     """GET /api/agent/effectiveness when effectiveness service unavailable returns 200 with fallback structure (spec 002 edge-case)."""
     import sys
