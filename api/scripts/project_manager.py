@@ -757,6 +757,7 @@ def main():
         print(f"Project Manager | API: {BASE} | backlog: {BACKLOG_FILE}")
         print(f"  State: item {s['backlog_index']}, phase={s['phase']}, blocked={s.get('blocked', False)}")
         print(f"  Log: {LOG_FILE}\n")
+        sys.stdout.flush()
 
     # Dry-run: no HTTP calls; log preview and exit 0 (spec 005 verification).
     # Must print deterministic preview to stdout so E2E smoke tests can assert without --verbose.
@@ -774,6 +775,8 @@ def main():
         else:
             log.info("DRY-RUN: backlog empty or complete")
             print("DRY-RUN: backlog empty or complete")
+        sys.stdout.flush()
+        sys.stderr.flush()
         return
 
     # Short timeout so we fail fast when API is down (avoids "Connection stalled" / long waits in CI)

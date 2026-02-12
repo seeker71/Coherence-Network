@@ -550,6 +550,10 @@ async def test_task_log_404_when_log_file_missing(client: AsyncClient):
     )
     assert create.status_code == 201, "setup: task must be created"
     task_id = create.json()["id"]
+    # Ensure log file does not exist (same path as router uses)
+    log_path = os.path.join(_api_logs_dir(), f"task_{task_id}.log")
+    if os.path.isfile(log_path):
+        os.remove(log_path)
     response = await client.get(f"/api/agent/tasks/{task_id}/log")
     assert response.status_code == 404
     body = response.json()

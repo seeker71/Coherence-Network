@@ -71,9 +71,12 @@ def test_backlog_flag_uses_alternate_file(tmp_path):
     # Use resolved absolute path so subprocess finds the file regardless of cwd
     backlog_arg = str(alt_backlog.resolve())
     state_arg = str(state_path.resolve())
+    # Isolate from PIPELINE_META_BACKLOG so load_backlog() returns only the alternate file
+    env = {**os.environ, "PIPELINE_META_BACKLOG": "", "PIPELINE_META_RATIO": "0"}
     result = subprocess.run(
         [sys.executable, script_path, "--dry-run", "--backlog", backlog_arg, "--state-file", state_arg],
         cwd=PROJECT_ROOT,
+        env=env,
         capture_output=True,
         text=True,
         timeout=30,
