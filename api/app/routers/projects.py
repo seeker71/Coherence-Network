@@ -60,3 +60,15 @@ async def search(
     """Search projects by name or description."""
     results = store.search(q, limit=min(limit, 100))
     return {"results": results, "total": len(results)}
+
+
+@router.get("/")
+async def root():
+    """Return API info."""
+    return {
+        "name": "Coherence Network API",
+        "version": "0.1.0",
+        "docs": "/docs",
+        "health": "/api/health",
+        "message": "Welcome to Coherence Network API"
+    }

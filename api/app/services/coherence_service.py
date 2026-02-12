@@ -79,7 +79,7 @@ def compute_coherence(store: GraphStoreWithDependents, project: Project) -> dict
                         active += 1
                 except ValueError:
                     pass
-        components["activity_cadence"] = active / len(contributors)
+        components["activity_cadence"] = active / len(contributors) if contributors else 0.0
     else:
         components["contributor_diversity"] = 0.5
         components["activity_cadence"] = 0.5
