@@ -184,7 +184,7 @@ See `api/tests/test_agent.py` — all must pass.
 
 ### Diagnostic test (Telegram flow)
 
-Verifies the full inbound path (webhook → record_webhook → [optional: parse_command → send_reply → record_send]) and diagnostics contract without a real bot. Required for “Telegram flow complete” in this spec.
+Verifies the full inbound path (webhook → record_webhook → [optional: parse_command → send_reply → record_send]) and diagnostics contract without a real bot. Required for “Telegram flow complete” in this spec. Use `telegram_diagnostics.clear()` at test start for isolation.
 
 **Steps**
 
