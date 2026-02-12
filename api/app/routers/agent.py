@@ -445,8 +445,17 @@ async def get_status_report() -> dict:
 @router.get("/agent/pipeline-status")
 async def get_pipeline_status() -> dict:
     """Pipeline visibility: running task, pending with wait times, recent completed with duration.
-    Includes project manager state when available. For running tasks, includes live_tail (last 20 lines of streamed log)."""
+    Includes project manager state when available. For running tasks, includes live_tail (last 20 lines of streamed log).
+    Returns 200 in empty state (no running task) per spec 039; body always includes running, pending, recent_completed, attention, running_by_phase."""
     status = agent_service.get_pipeline_status()
+    # Guarantee contract keys for empty state (spec 039): scripts/monitors rely on 200 with full shape
+    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase"):
+        if key not in status:
+            status[key] = [] if key in ("running", "pending", "recent_completed") else ({} if key == "attention" else {"spec": 0, "impl": 0, "test": 0, "review": 0})
+    if "attention" in status and isinstance(status["attention"], dict):
+        for att_key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
+            if att_key not in status["attention"]:
+                status["attention"][att_key] = False if att_key != "flags" else []
     # Add PM state from file if present (prefer overnight state when running overnight)
     import json
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")

@@ -11,9 +11,9 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 003 Decision Loop | ✓ | ✓ | ✓ | Agent runner: smoke test only (see shortcuts) |
 | 004 CI Pipeline | ✓ | ✓ | ✓ | GitHub Actions for pytest |
 | 005 Project Manager | ✓ | ✓ | ✓ | Complete |
-| 007 Sprint 0 Landing | ✓ | ✓ | ✓ | Root, /docs, health |
-| 007 Meta-Pipeline Backlog | — | ✓ | — | Backlog doc; not impl spec |
-| 008 Sprint 1 Graph | ✓ | ✓ | ✓ | Via 019; `--target 5000` closes gap |
+| 007 Sprint 0 Landing | ✓ | ✓ | ✓ | Root, /docs, health (007-sprint-0-landing.md) |
+| 007 Meta-Pipeline Backlog | — | ✓ | — | Backlog doc (007-meta-pipeline-backlog.md); not impl spec |
+| 008 Sprint 1 Graph | ✓ | ✓ | ✓ | Via 019; `--target 5000` closes gap; GET projects/search |
 | 019 GraphStore Abstraction | ✓ | ✓ | ✓ | In-memory, indexer, projects API |
 | 009 API Error Handling | ✓ | ✓ | ✓ | Complete |
 | 010 Request Validation | ✓ | ✓ | ✓ | Complete |
@@ -52,6 +52,10 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 038 POST empty direction 422 | ✓ | ✓ | ✓ | test_post_task_empty_direction_returns_422 |
 | 039 Pipeline Status Empty State 200 | ✓ | ✓ | ✓ | test_pipeline_status_returns_200_when_no_running_task_empty_state |
 | 040 PM load_backlog Malformed Test | ✓ | ✓ | ✓ | test_load_backlog_malformed_missing_numbers; mixed numbered/unnumbered lines |
+| 041 PM --state-file Flag Test | ✓ | ✓ | ✓ | test_state_file_flag_uses_alternate_path, test_project_manager_state_file_flag_uses_alternate_state_path |
+| 042 PM --reset Clears State Test | ✓ | ✓ | ✓ | test_reset_clears_state_and_starts_from_index_zero |
+| 043 Agent spec→local Route Test | ✓ | ✓ | ✓ | test_spec_tasks_route_to_local (GET /route?task_type=spec, tier local) |
+| 044 Agent test→local Route Test | ✓ | ✓ | ✓ | test_test_tasks_route_to_local (GET /route?task_type=test, local model) |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -141,7 +145,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 **Contract (spec 007):** GET / returns 200 with exactly `name`, `version`, `docs`, `health` (no extra keys); `name` and `version` are non-empty strings; `docs` is `/docs`; `health` is `/api/health`. GET /docs returns 200. Tests define the contract; do not modify tests to make implementation pass.
 
-**Note:** `specs/007-meta-pipeline-backlog.md` is a separate backlog document (meta-pipeline improvement items); it is not an implementation spec and has no test mapping.
+**Note:** Spec 007 has two docs: `007-sprint-0-landing.md` (this section) and `007-meta-pipeline-backlog.md` (backlog of pipeline improvements; not an implementation spec, no test mapping).
 
 ---
 
@@ -213,6 +217,58 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 **Files:** `api/tests/test_project_manager.py`, `api/scripts/project_manager.py`
 
 **Contract (spec 040):** Lines matching `^\d+\.\s+(.+)$` are included; other lines ignored. Test uses mixed content (e.g. "1. First item", "Unnumbered line", "2. Second item") and expects only the two numbered items. See also spec 005 (project manager).
+
+---
+
+## Spec 041: Project Manager --state-file Flag Test
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| --state-file uses alternate path for state (read/write) | `project_manager.py` STATE_FILE, load_state/save_state | `test_state_file_flag_uses_alternate_path` (in-process), `test_project_manager_state_file_flag_uses_alternate_state_path` (subprocess --state-file + --dry-run) |
+| No mocks; real file I/O | tmp_path, STATE_FILE override or CLI --state-file | (above) |
+
+**Files:** `api/scripts/project_manager.py`, `api/tests/test_project_manager.py`
+
+**Contract (spec 041):** When script is run with `--state-file <path>` (or STATE_FILE set to that path), state is read from and/or written to that path. Subprocess test pre-populates alternate state, runs --dry-run, asserts stdout reflects that state (backlog index, phase, next item).
+
+---
+
+## Spec 042: Project Manager --reset Clears State Test
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| --reset clears state and run starts from index 0 | `project_manager.py` --reset handling, state file removal or reset to defaults | `test_reset_clears_state_and_starts_from_index_zero` |
+| Test uses --state-file to tmp path so default state not touched | subprocess with --reset --dry-run --state-file <tmp> --backlog <tmp> | (above): pre-populate state with backlog_index=5, assert post-run backlog_index=0, phase=spec |
+
+**Files:** `api/scripts/project_manager.py`, `api/tests/test_project_manager.py`
+
+**Contract (spec 042):** With --reset and --state-file <path>, existing state at that path is cleared; run proceeds from beginning (backlog_index 0, phase "spec"). Either state file is removed or file contains defaults.
+
+---
+
+## Spec 043: Agent Service spec→local Route Test
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/agent/route?task_type=spec returns 200, model local, tier local | `agent_service.get_route`, ROUTING[TaskType.SPEC], `routers/agent.py` | `test_spec_tasks_route_to_local` |
+| Model indicates local (ollama/glm/qwen); tier is "local" | ROUTING in agent_service.py | (above) |
+
+**Files:** `api/app/services/agent_service.py`, `api/app/routers/agent.py`, `api/app/models/agent.py` (RouteResponse with tier), `api/tests/test_agent.py`
+
+**Contract (spec 043):** GET /api/agent/route?task_type=spec returns 200; body has task_type, model, command_template, tier, executor; model string indicates local (ollama/glm/qwen); tier is "local" per routing table (002).
+
+---
+
+## Spec 044: Agent Service test→local Route Test
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/agent/route?task_type=test returns 200, model local | `agent_service.get_route`, ROUTING[TaskType.TEST], `routers/agent.py` | `test_test_tasks_route_to_local` |
+| Model indicates local (ollama/glm/qwen) | ROUTING in agent_service.py | (above) |
+
+**Files:** `api/app/services/agent_service.py`, `api/app/routers/agent.py`, `api/tests/test_agent.py`
+
+**Contract (spec 044):** GET /api/agent/route?task_type=test returns 200; body has model indicating local (ollama/glm/qwen). See also spec 043 (spec→local), spec 002 (routing table).
 
 ---
 

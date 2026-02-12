@@ -37,14 +37,18 @@ Provide a simple health endpoint so we can verify the API is running and validat
 - `version`: string, semantic version (e.g. `0.1.0`); MUST match pattern `\d+\.\d+\.\d+` (MAJOR.MINOR.PATCH)
 - `timestamp`: string, ISO8601 UTC (e.g. `YYYY-MM-DDTHH:MM:SSZ` or equivalent with `+00:00`)
 
+**Response 5xx**
+
+Not defined by this spec. Unhandled server errors are covered by [009-api-error-handling.md](009-api-error-handling.md).
+
 ## Data Model
 
-None — stateless endpoint.
+None — stateless endpoint. Response shape is defined by the API contract above; implementation uses a Pydantic model with `extra="forbid"` to enforce exact keys.
 
 ## Files to Create/Modify
 
 - `api/app/main.py` — FastAPI app, mount health router
-- `api/app/routers/health.py` — route handler for GET /api/health
+- `api/app/routers/health.py` — route handler for GET /api/health; Pydantic response model with status, version, timestamp
 - `api/tests/test_health.py` — acceptance tests for this spec (file also contains tests for 007, 009, 014)
 
 ## Acceptance Tests
@@ -62,9 +66,16 @@ See `api/tests/test_health.py`. The following tests define the contract for this
 | Response fields (status, version, timestamp) are strings | `test_health_response_value_types` |
 | Full API contract (200, exact keys, status ok, semver, ISO8601 UTC) | `test_health_api_contract` |
 
-**Verification:** Every requirement above has exactly one corresponding test (or is covered by the full-contract test). No requirement is untested. Tests for root, /docs, /api/ready, CORS, and 500 handling live in the same file but belong to specs 007, 009, 014.
+**Verification:** Every requirement above has exactly one corresponding test (or is covered by the full-contract test). No requirement is untested. All listed tests exist in `api/tests/test_health.py`. Tests for root, /docs, /api/ready, CORS, and 500 handling live in the same file but belong to specs 007, 009, 014.
 
 **Run 001-only tests:** `cd api && pytest tests/test_health.py -v -k 'health'`
+
+**Verification checklist (all health items complete):**
+
+1. All 8 requirements are checked [x].
+2. Each requirement maps to a test in the table above.
+3. Implementation: `api/app/routers/health.py` exposes GET /health with `HealthResponse` (extra="forbid"), returning status, version, timestamp.
+4. Router is mounted at `/api` in `api/app/main.py` so endpoint is GET /api/health.
 
 ## Out of Scope
 
@@ -81,3 +92,4 @@ None.
 
 - [014-deploy-readiness.md](014-deploy-readiness.md) — health probes for deploy
 - [007-sprint-0-landing.md](007-sprint-0-landing.md) — root includes health URL
+- [009-api-error-handling.md](009-api-error-handling.md) — 500 and error shapes

@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+from typing import Optional
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -92,7 +93,7 @@ def _get_pipeline_process_args():
     return out
 
 
-def _fetch_status_report() -> dict | None:
+def _fetch_status_report() -> Optional[dict]:
     """GET /api/agent/status-report. Returns None on error or unreachable."""
     try:
         r = httpx.get(f"{BASE}/api/agent/status-report", timeout=10)
@@ -103,7 +104,7 @@ def _fetch_status_report() -> dict | None:
     return None
 
 
-def _fetch_effectiveness() -> dict | None:
+def _fetch_effectiveness() -> Optional[dict]:
     """GET /api/agent/effectiveness. Returns None on error or unreachable."""
     try:
         r = httpx.get(f"{BASE}/api/agent/effectiveness", timeout=10)
@@ -114,7 +115,7 @@ def _fetch_effectiveness() -> dict | None:
     return None
 
 
-def _build_hierarchical_from_data(data: dict, effectiveness: dict | None, proc: dict) -> dict:
+def _build_hierarchical_from_data(data: dict, effectiveness: Optional[dict], proc: dict) -> dict:
     """Build hierarchical dict (layer_0_goal … layer_3_attention) from pipeline-status + effectiveness when status-report is missing."""
     pm = data.get("project_manager") or {}
     running = data.get("running") or []

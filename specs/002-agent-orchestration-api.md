@@ -18,7 +18,10 @@ Provide an API that Cursor (or any client) can call to submit agent tasks, get m
 - [x] GET /api/agent/route — Route-only: given task_type (and optional executor), return model + command template (no persistence)
 - [x] GET /api/agent/usage — Per-model usage and routing summary
 - [x] GET /api/agent/monitor-issues — Monitor issues from automated pipeline check (spec 027)
+- [x] GET /api/agent/fatal-issues — Unrecoverable failures; { "fatal": false } or { "fatal": true, ... } (autonomous pipeline)
 - [x] GET /api/agent/metrics — Task metrics: success rate, execution time, by task_type, by model (spec 027)
+- [x] GET /api/agent/effectiveness — Pipeline effectiveness: throughput, success rate, issues, progress, goal_proximity, heal_resolved_count
+- [x] GET /api/agent/status-report — Hierarchical status (Layer 0 Goal → 3 Attention); meta_questions when file present
 - [x] GET /api/agent/pipeline-status — Pipeline visibility: running, pending, recent_completed, attention, project_manager, live_tail
 - [x] POST /api/agent/telegram/webhook — Receive Telegram updates; commands: /status, /tasks, /task, /reply, /attention, /usage, /direction
 - [x] GET /api/agent/telegram/diagnostics — Diagnostics: webhook events, send results, config (masked)
