@@ -6,12 +6,12 @@ Provide an API that Cursor (or any client) can call to submit agent tasks, get m
 
 ## Requirements
 
-- [ ] POST /api/agent/tasks — Submit task, returns task_id + routed model + suggested command
-- [ ] GET /api/agent/tasks — List tasks with optional status/type filters
-- [ ] GET /api/agent/tasks/{id} — Get task by id
-- [ ] PATCH /api/agent/tasks/{id} — Update task status (running, completed, failed, needs_decision)
-- [ ] GET /api/agent/route — Route-only: given task_type, return model + command template (no persistence)
-- [ ] Tasks stored in memory for MVP; structure supports future PostgreSQL migration
+- [x] POST /api/agent/tasks — Submit task, returns task_id + routed model + suggested command
+- [x] GET /api/agent/tasks — List tasks with optional status/type filters
+- [x] GET /api/agent/tasks/{id} — Get task by id
+- [x] PATCH /api/agent/tasks/{id} — Update task status (running, completed, failed, needs_decision)
+- [x] GET /api/agent/route — Route-only: given task_type, return model + command template (no persistence)
+- [x] Tasks stored in memory for MVP; structure supports future PostgreSQL migration
 
 ## API Contract
 
@@ -37,8 +37,8 @@ Provide an API that Cursor (or any client) can call to submit agent tasks, get m
   "direction": "Add GET /api/projects endpoint",
   "task_type": "impl",
   "status": "pending",
-  "model": "ollama/qwen3-coder:30b",
-  "command": "claude -p \"Add GET /api/projects endpoint\" --model qwen3-coder:30b --allowedTools Read,Edit,Bash",
+  "model": "ollama/glm-4.7-flash:latest",
+  "command": "claude -p \"Add GET /api/projects endpoint\" --model glm-4.7-flash:latest --allowedTools Read,Edit,Bash --dangerously-skip-permissions",
   "created_at": "2026-02-12T12:00:00Z"
 }
 ```
@@ -56,7 +56,7 @@ Provide an API that Cursor (or any client) can call to submit agent tasks, get m
       "direction": "Add GET /api/projects endpoint",
       "task_type": "impl",
       "status": "pending",
-      "model": "ollama/qwen3-coder:30b",
+      "model": "ollama/glm-4.7-flash:latest",
       "created_at": "2026-02-12T12:00:00Z",
       "updated_at": null
     }
@@ -91,8 +91,8 @@ or
 ```json
 {
   "task_type": "impl",
-  "model": "ollama/qwen3-coder:30b",
-  "command_template": "claude -p \"{{direction}}\" --model qwen3-coder:30b --allowedTools Read,Edit,Bash",
+  "model": "ollama/glm-4.7-flash:latest",
+  "command_template": "claude -p \"{{direction}}\" --model glm-4.7-flash:latest --allowedTools Read,Edit,Bash --dangerously-skip-permissions",
   "tier": "local"
 }
 ```
@@ -117,11 +117,13 @@ AgentTask:
 
 | task_type | model | tier |
 |-----------|-------|------|
-| spec | ollama/qwen3-coder:30b | local |
-| test | ollama/qwen3-coder:30b | local |
-| impl | ollama/qwen3-coder:30b | local |
-| review | ollama/qwen3-coder:30b | local |
-| heal | claude-haiku | subscription |
+| spec | ollama/glm-4.7-flash:latest | local |
+| test | ollama/glm-4.7-flash:latest | local |
+| impl | ollama/glm-4.7-flash:latest | local |
+| review | ollama/glm-4.7-flash:latest | local |
+| heal | claude-3-5-haiku-20241022 | claude |
+
+Fallback: use `context.model_override` for glm-5:cloud (cloud) or claude-3-5-haiku-20241022 (claude).
 
 ## Files to Create/Modify
 
@@ -162,6 +164,11 @@ AgentTask:
 2. Use returned `command` to run Claude Code (terminal or script).
 3. Call `PATCH /api/agent/tasks/{id}` when status changes.
 4. Call `GET /api/agent/tasks` to see what's running or pending.
+
+## See also
+
+- [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — orchestrator that uses this API
+- [003-agent-telegram-decision-loop.md](003-agent-telegram-decision-loop.md) — Telegram webhook integration
 
 ## Decision Gates
 

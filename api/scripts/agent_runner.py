@@ -2,17 +2,22 @@
 """Agent runner: polls pending tasks, runs commands, PATCHes status.
 
 Usage:
-  python scripts/agent_runner.py [--interval 10] [--once]
+  python scripts/agent_runner.py [--interval 10] [--once] [--verbose]
 
 Requires API running. Runs one task at a time. When task reaches needs_decision,
 runner stops for that task; user replies via /reply. MVP: no auto-resume.
+
+Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 """
 
 import argparse
+import logging
 import os
 import subprocess
 import sys
+import threading
 import time
+from typing import Optional
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -20,69 +25,156 @@ os.chdir(os.path.dirname(_api_dir))
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(_api_dir, ".env"))
+    load_dotenv(os.path.join(_api_dir, ".env"), override=True)
 except ImportError:
     pass
 
 import httpx
 
 BASE = os.environ.get("AGENT_API_BASE", "http://localhost:8000")
+LOG_DIR = os.path.join(_api_dir, "logs")
+LOG_FILE = os.path.join(LOG_DIR, "agent_runner.log")
+# Local models need longer; cloud/Claude typically faster. Default 1h for local, 10min for cloud.
+TASK_TIMEOUT = int(os.environ.get("AGENT_TASK_TIMEOUT", "3600"))
+HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
+MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
+RETRY_BACKOFF = 2  # seconds between retries
 
 
-def run_one_task(client: httpx.Client, task_id: str, command: str) -> bool:
+def _setup_logging(verbose: bool = False) -> logging.Logger:
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log = logging.getLogger("agent_runner")
+    log.setLevel(logging.DEBUG if verbose else logging.INFO)
+    if not log.handlers:
+        h = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        log.addHandler(h)
+        if verbose:
+            sh = logging.StreamHandler()
+            sh.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+            log.addHandler(sh)
+    return log
+
+
+def _uses_anthropic_cloud(command: str) -> bool:
+    """True if command uses Anthropic cloud (e.g. HEAL with claude-3-5-haiku), not Ollama."""
+    if "ollama/" in command:
+        return False
+    return "claude-3-5" in command or "claude-4" in command
+
+
+def run_one_task(client: httpx.Client, task_id: str, command: str, log: logging.Logger, verbose: bool = False) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
-    env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
-    env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
-    env.setdefault("ANTHROPIC_API_KEY", "")
+    use_anthropic = _uses_anthropic_cloud(command)
+    if use_anthropic:
+        env.pop("ANTHROPIC_BASE_URL", None)
+        env.pop("ANTHROPIC_AUTH_TOKEN", None)
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        env.setdefault("ANTHROPIC_API_KEY", api_key)
+        log.info("task=%s using Anthropic cloud has_key=%s", task_id, bool(api_key))
+    else:
+        env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
+        env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
+        env.setdefault("ANTHROPIC_API_KEY", "")
+    # Suppress Claude Code requests to unsupported Ollama endpoints (GitHub #13949)
+    env.setdefault("DISABLE_TELEMETRY", "1")
+    env.setdefault("DISABLE_ERROR_REPORTING", "1")
+    env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
 
     # PATCH to running
     r = client.patch(f"{BASE}/api/agent/tasks/{task_id}", json={"status": "running"})
     if r.status_code != 200:
-        print(f"PATCH running failed: {r.status_code}")
+        log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
         return True
 
-    print(f"Running: {command[:80]}...")
+    log.info("task=%s starting command=%s", task_id, command[:120])
+    if verbose:
+        print(f"Running: {command[:80]}...")
+
+    out_file = os.path.join(LOG_DIR, f"task_{task_id}.log")
+    output_lines: list[str] = []
+    reader_done = threading.Event()
+
+    def _stream_reader(proc: subprocess.Popen) -> None:
+        """Read process stdout line-by-line, write to log file + collect output."""
+        try:
+            with open(out_file, "w", encoding="utf-8") as f:
+                f.write(f"# task_id={task_id} status=running\n")
+                f.write(f"# command={command}\n")
+                f.write("---\n")
+                f.flush()
+                for line in iter(proc.stdout.readline, ""):
+                    f.write(line)
+                    f.flush()
+                    output_lines.append(line)
+        except Exception as e:
+            output_lines.append(f"\n[stream error: {e}]\n")
+        finally:
+            reader_done.set()
+
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             command,
             shell=True,
             env=env,
             cwd=os.path.dirname(_api_dir),
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=300,
+            bufsize=1,
         )
-        output = (result.stdout or "") + (result.stderr or "")
-        status = "completed" if result.returncode == 0 else "failed"
+        reader = threading.Thread(target=_stream_reader, args=(process,), daemon=False)
+        reader.start()
+
+        try:
+            process.wait(timeout=TASK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            output_lines.append(f"\n[Timeout {TASK_TIMEOUT}s]\n")
+
+        reader_done.wait(timeout=5)
+        reader.join(timeout=2)
+
+        output = "".join(output_lines)
+        returncode = process.returncode if process.returncode is not None else -9
+        status = "completed" if returncode == 0 else "failed"
+
+        with open(out_file, "a", encoding="utf-8") as f:
+            f.write(f"\n# exit={returncode} status={status}\n")
+
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
         )
-        print(f"  -> {status} (exit {result.returncode})")
-        return True
-    except subprocess.TimeoutExpired:
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={"status": "failed", "output": "Timeout 300s"},
-        )
-        print("  -> failed (timeout)")
+        log.info("task=%s %s exit=%s output_len=%d out_file=%s", task_id, status, returncode, len(output), out_file)
+        if verbose:
+            print(f"  -> {status} (exit {returncode})")
         return True
     except Exception as e:
+        with open(out_file, "a", encoding="utf-8") as f:
+            f.write(f"\n# exit=-1 status=failed error={e}\n")
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": "failed", "output": str(e)},
         )
-        print(f"  -> failed: {e}")
+        log.exception("task=%s error: %s", task_id, e)
         return True
 
 
-def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10) -> None:
+def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10, log: logging.Logger = None, verbose: bool = False) -> None:
     """Poll for pending tasks and run one at a time."""
+    log = log or logging.getLogger("agent_runner")
     while True:
-        r = client.get(f"{BASE}/api/agent/tasks", params={"status": "pending", "limit": 1})
+        r = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks", log, params={"status": "pending", "limit": 1})
+        if r is None:
+            if once:
+                break
+            time.sleep(interval)
+            continue
         if r.status_code != 200:
-            print(f"GET tasks failed: {r.status_code}")
+            log.warning("GET tasks failed: %s", r.status_code)
             if once:
                 break
             time.sleep(interval)
@@ -100,8 +192,8 @@ def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10) -
         task = tasks[0]
         task_id = task["id"]
         # List doesn't include command; fetch full task
-        r2 = client.get(f"{BASE}/api/agent/tasks/{task_id}")
-        if r2.status_code != 200:
+        r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
+        if r2 is None or r2.status_code != 200:
             print(f"GET task {task_id} failed: {r2.status_code}")
             continue
         full = r2.json()
@@ -114,21 +206,63 @@ def poll_and_run(client: httpx.Client, once: bool = False, interval: int = 10) -
             )
             continue
 
-        run_one_task(client, task_id, command)
+        run_one_task(client, task_id, command, log=log, verbose=verbose)
         if once:
             break
+
+
+def _check_api(client: httpx.Client) -> bool:
+    """Verify API is reachable. Returns True if OK."""
+    try:
+        r = client.get(f"{BASE}/api/health")
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+def _http_with_retry(client: httpx.Client, method: str, url: str, log: logging.Logger, **kwargs) -> Optional[httpx.Response]:
+    """Make HTTP request with retries for transient connection errors. Returns None on final failure."""
+    last_exc = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            if method.upper() == "GET":
+                return client.get(url, timeout=HTTP_TIMEOUT, **kwargs)
+            if method.upper() == "PATCH":
+                return client.patch(url, timeout=HTTP_TIMEOUT, **kwargs)
+            if method.upper() == "POST":
+                return client.post(url, timeout=HTTP_TIMEOUT, **kwargs)
+            return None
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout) as e:
+            last_exc = e
+            if attempt < MAX_RETRIES:
+                log.warning("API %s %s failed (attempt %d/%d): %s — retrying in %ds", method, url, attempt, MAX_RETRIES, e, RETRY_BACKOFF)
+                time.sleep(RETRY_BACKOFF)
+    log.error("API %s %s failed after %d retries: %s", method, url, MAX_RETRIES, last_exc)
+    return None
 
 
 def main():
     ap = argparse.ArgumentParser(description="Agent runner: poll and execute pending tasks")
     ap.add_argument("--interval", type=int, default=10, help="Poll interval (seconds)")
     ap.add_argument("--once", action="store_true", help="Run one task and exit")
+    ap.add_argument("--verbose", "-v", action="store_true", help="Print progress to stdout")
     args = ap.parse_args()
 
-    print(f"Agent runner | API: {BASE} | interval: {args.interval}s\n")
+    log = _setup_logging(verbose=args.verbose)
+    log.info("Agent runner started API=%s interval=%s timeout=%ds", BASE, args.interval, TASK_TIMEOUT)
 
-    with httpx.Client(timeout=30.0) as client:
-        poll_and_run(client, once=args.once, interval=args.interval)
+    with httpx.Client(timeout=float(HTTP_TIMEOUT)) as client:
+        if not _check_api(client):
+            msg = f"API not reachable at {BASE}/api/health — start the API first"
+            log.error(msg)
+            print(msg)
+            sys.exit(1)
+        if args.verbose:
+            print(f"Agent runner | API: {BASE} | interval: {args.interval}s | timeout: {TASK_TIMEOUT}s")
+            print(f"  Log: {LOG_FILE}")
+            print("  Polling for pending tasks...\n")
+
+        poll_and_run(client, once=args.once, interval=args.interval, log=log, verbose=args.verbose)
 
 
 if __name__ == "__main__":

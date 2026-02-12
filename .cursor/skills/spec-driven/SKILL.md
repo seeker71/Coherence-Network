@@ -16,7 +16,7 @@ description: Implements features strictly from specs. Reads specs first, modifie
 
 - Only modify files listed in the spec's "Files to Create/Modify" section
 - Do not add docs, READMEs, or refactors unless the spec requires them
-- If unsure whether a change is in scope, escalate with `needs_decision`
+- Only escalate with `needs_decision` when truly stuck after research; prefer fixing in-scope
 - Follow API Contract and Data Model from the spec exactly
 
 ## Spec Format Reference

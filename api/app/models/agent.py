@@ -26,7 +26,7 @@ class TaskStatus(str, Enum):
 class AgentTaskCreate(BaseModel):
     """Request body for creating a task."""
 
-    direction: str = Field(..., min_length=1)
+    direction: str = Field(..., min_length=1, max_length=5000)
     task_type: TaskType
     context: Optional[Dict[str, Any]] = None
 
@@ -36,7 +36,7 @@ class AgentTaskUpdate(BaseModel):
 
     status: Optional[TaskStatus] = None
     output: Optional[str] = None
-    progress_pct: Optional[int] = None  # 0-100
+    progress_pct: Optional[int] = Field(None, ge=0, le=100)
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running

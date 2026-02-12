@@ -26,11 +26,11 @@ BASE = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("AGENT_API_BASE", "h
 
 # Expected per MODEL-ROUTING.md
 EXPECTED = {
-    "spec": ("local", "ollama", "qwen3-coder", "granite", "nemotron"),
-    "test": ("local", "ollama", "qwen3-coder", "granite", "nemotron"),
-    "impl": ("local", "ollama", "qwen3-coder", "granite", "nemotron"),
-    "review": ("local", "ollama", "qwen3-coder", "granite", "nemotron"),
-    "heal": ("subscription", "claude"),
+    "spec": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),
+    "test": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),
+    "impl": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),
+    "review": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),
+    "heal": ("claude", "haiku"),
 }
 
 

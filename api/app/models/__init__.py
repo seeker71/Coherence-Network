@@ -7,11 +7,14 @@ from app.models.agent import (
     AgentTaskUpdate,
     RouteResponse,
 )
+from app.models.project import Project, ProjectSummary
 
 __all__ = [
     "AgentTask",
     "AgentTaskCreate",
     "AgentTaskList",
     "AgentTaskUpdate",
+    "Project",
+    "ProjectSummary",
     "RouteResponse",
 ]

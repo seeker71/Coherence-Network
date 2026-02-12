@@ -22,12 +22,11 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
-# Web
+# Web (optional)
 cd web && npm run dev
-
-# Or use Docker
-docker compose up
 ```
+
+Visit http://localhost:3000 for the web app. See [SETUP.md](docs/SETUP.md).
 
 ## Development Workflow
 
@@ -40,9 +39,11 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Documentation
 
+- [Status](docs/STATUS.md) — implementation status, sprint progress
 - [Consolidated Plan](docs/PLAN.md) — vision, architecture, roadmap
 - [Model Routing](docs/MODEL-ROUTING.md) — AI cost optimization
 - [API Keys Setup](docs/API-KEYS-SETUP.md) — subscription configuration
+- [Agent Debugging](docs/AGENT-DEBUGGING.md) — add tasks, run agent, debug failures
 - [Agent Frameworks](docs/AGENT-FRAMEWORKS.md) — OpenClaw, Agent Zero, future autonomy
 - [Reference Repos](docs/REFERENCE-REPOS.md) — links to Crypo-Coin & Living-Codex (source material)
 

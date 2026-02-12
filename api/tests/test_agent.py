@@ -36,7 +36,7 @@ async def test_post_task_returns_201_with_routed_model_and_command(client: Async
     assert data["direction"] == "Add GET /api/projects endpoint"
     assert data["task_type"] == "impl"
     assert data["status"] == "pending"
-    assert "ollama" in data["model"].lower() or "qwen3-coder" in data["model"]
+    assert "ollama" in data["model"].lower() or "qwen3-coder" in data["model"] or "glm-4.7-flash" in data["model"]
     assert "claude -p" in data["command"]
     assert "Add GET /api/projects endpoint" in data["command"]
     assert "created_at" in data
@@ -64,6 +64,11 @@ async def test_get_tasks_list_with_filters(client: AsyncClient):
     resp2 = await client.get("/api/agent/tasks?task_type=spec")
     assert resp2.status_code == 200
     assert all(t["task_type"] == "spec" for t in resp2.json()["tasks"])
+    # Pagination: offset and limit
+    resp3 = await client.get("/api/agent/tasks?limit=2&offset=0")
+    assert resp3.status_code == 200
+    assert len(resp3.json()["tasks"]) <= 2
+    assert resp3.json()["total"] >= 1
 
 
 @pytest.mark.asyncio
@@ -72,6 +77,40 @@ async def test_get_task_by_id_404_when_missing(client: AsyncClient):
     response = await client.get("/api/agent/tasks/task_nonexistent")
     assert response.status_code == 404
     assert response.json()["detail"] == "Task not found"
+
+
+@pytest.mark.asyncio
+async def test_post_task_invalid_task_type_returns_422(client: AsyncClient):
+    """POST /api/agent/tasks with invalid task_type returns 422 (spec 009)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Do something", "task_type": "invalid"},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "detail" in data
+
+
+@pytest.mark.asyncio
+async def test_post_task_empty_direction_returns_422(client: AsyncClient):
+    """POST /api/agent/tasks with empty direction returns 422 (spec 009)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "", "task_type": "impl"},
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "detail" in data
+
+
+@pytest.mark.asyncio
+async def test_post_task_direction_too_long_returns_422(client: AsyncClient):
+    """POST /api/agent/tasks with direction > 5000 chars returns 422 (spec 010)."""
+    response = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "x" * 5001, "task_type": "impl"},
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -88,6 +127,36 @@ async def test_get_task_by_id_returns_full_task(client: AsyncClient):
     assert data["id"] == task_id
     assert "command" in data
     assert "claude" in data["command"]
+
+
+@pytest.mark.asyncio
+async def test_patch_task_invalid_status_returns_422(client: AsyncClient):
+    """PATCH /api/agent/tasks/{id} with invalid status returns 422."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Fix bug", "task_type": "impl"},
+    )
+    task_id = create.json()["id"]
+    response = await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={"status": "invalid"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_task_progress_pct_out_of_range_returns_422(client: AsyncClient):
+    """PATCH /api/agent/tasks/{id} with progress_pct > 100 returns 422 (spec 010)."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Fix bug", "task_type": "impl"},
+    )
+    task_id = create.json()["id"]
+    response = await client.patch(
+        f"/api/agent/tasks/{task_id}",
+        json={"progress_pct": 150},
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -123,6 +192,33 @@ async def test_route_endpoint_returns_model_and_template(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_spec_tasks_route_to_local(client: AsyncClient):
+    """spec task_type routes to local model."""
+    response = await client.get("/api/agent/route?task_type=spec")
+    assert response.status_code == 200
+    data = response.json()
+    assert "ollama" in data["model"].lower() or "glm" in data["model"].lower() or "qwen" in data["model"].lower()
+
+
+@pytest.mark.asyncio
+async def test_test_tasks_route_to_local(client: AsyncClient):
+    """test task_type routes to local model."""
+    response = await client.get("/api/agent/route?task_type=test")
+    assert response.status_code == 200
+    data = response.json()
+    assert "ollama" in data["model"].lower() or "glm" in data["model"].lower() or "qwen" in data["model"].lower()
+
+
+@pytest.mark.asyncio
+async def test_review_tasks_route_to_local(client: AsyncClient):
+    """review task_type routes to local model."""
+    response = await client.get("/api/agent/route?task_type=review")
+    assert response.status_code == 200
+    data = response.json()
+    assert "ollama" in data["model"].lower() or "glm" in data["model"].lower() or "qwen" in data["model"].lower()
+
+
+@pytest.mark.asyncio
 async def test_impl_tasks_route_to_local(client: AsyncClient):
     """impl task_type routes to local (Ollama) model."""
     response = await client.post(
@@ -130,7 +226,7 @@ async def test_impl_tasks_route_to_local(client: AsyncClient):
         json={"direction": "Implement feature", "task_type": "impl"},
     )
     data = response.json()
-    assert "qwen3-coder" in data["model"] or "ollama" in data["model"].lower()
+    assert any(x in data["model"] for x in ("qwen3-coder", "glm-4.7-flash", "ollama"))
 
 
 @pytest.mark.asyncio
@@ -219,6 +315,79 @@ async def test_attention_lists_only_needs_decision_and_failed(client: AsyncClien
     statuses = {t["id"]: t["status"] for t in data["tasks"]}
     assert statuses[tid2] == "needs_decision"
     assert statuses[tid3] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_task_count_returns_200(client: AsyncClient):
+    """GET /api/agent/tasks/count returns total and by_status."""
+    response = await client.get("/api/agent/tasks/count")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "by_status" in data
+
+
+@pytest.mark.asyncio
+async def test_usage_endpoint_returns_200(client: AsyncClient):
+    """GET /api/agent/usage returns usage summary."""
+    response = await client.get("/api/agent/usage")
+    assert response.status_code == 200
+    data = response.json()
+    assert "by_model" in data
+    assert "routing" in data
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_returns_200(client: AsyncClient):
+    """GET /api/agent/pipeline-status returns running, pending, recent_completed."""
+    response = await client.get("/api/agent/pipeline-status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "running" in data
+    assert "pending" in data
+    assert "recent_completed" in data
+
+
+@pytest.mark.asyncio
+async def test_task_log_returns_command_and_output(client: AsyncClient):
+    """GET /api/agent/tasks/{id}/log returns task_id, command, output."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Log test", "task_type": "impl"},
+    )
+    task_id = create.json()["id"]
+    response = await client.get(f"/api/agent/tasks/{task_id}/log")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_id"] == task_id
+    assert "command" in data
+    assert "claude" in (data.get("command") or "")
+
+
+@pytest.mark.asyncio
+async def test_task_log_returns_null_when_file_missing(client: AsyncClient):
+    """GET /api/agent/tasks/{id}/log returns 200 with log null when log file not yet created."""
+    create = await client.post(
+        "/api/agent/tasks",
+        json={"direction": "Task without log file", "task_type": "impl"},
+    )
+    task_id = create.json()["id"]
+    # Log file not created until agent runs; expect 200 with log: null
+    response = await client.get(f"/api/agent/tasks/{task_id}/log")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_id"] == task_id
+    assert data.get("log") is None
+    assert "command" in data
+
+
+@pytest.mark.asyncio
+async def test_root_returns_200(client: AsyncClient):
+    """GET / returns API info."""
+    response = await client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
 
 
 def test_agent_runner_polls_and_executes_one_task():

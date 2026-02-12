@@ -25,4 +25,4 @@ You are the Spec Guard. Verify that work complies with the spec.
 
 - PASS: All changes are within spec
 - FAIL: List each violation (file, reason)
-- If FAIL, recommend: revert out-of-scope changes or escalate to needs_decision
+- If FAIL, recommend: revert out-of-scope changes. Only escalate to needs_decision when human judgment is required (e.g. whether to update spec or revert)

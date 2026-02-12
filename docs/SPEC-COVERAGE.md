@@ -10,8 +10,26 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 002 Agent Orchestration | ✓ | ✓ | ✓ | Complete |
 | 003 Decision Loop | ✓ | ✓ | ✓ | Agent runner: smoke test only (see shortcuts) |
 | 004 CI Pipeline | ✓ | ✓ | ✓ | GitHub Actions for pytest |
-| 005+ | — | — | — | Not started |
-| PLAN Month 1 (Graph, indexer, Neo4j) | — | — | — | Future |
+| 005 Project Manager | ✓ | ✓ | ✓ | Complete |
+| 007 Sprint 0 Landing | ✓ | ✓ | ✓ | Root, /docs, health |
+| 008 Sprint 1 Graph | ✓ | ✓ | ✓ | Via 019; `--target 5000` closes gap |
+| 019 GraphStore Abstraction | ✓ | ✓ | ✓ | In-memory, indexer, projects API |
+| 009 API Error Handling | ✓ | ✓ | ✓ | Complete |
+| 010 Request Validation | ✓ | ✓ | ✓ | Complete |
+| 011 Pagination | ✓ | ✓ | ✓ | Complete |
+| 012 Web Skeleton | ✓ | ✓ | ✓ | Next.js 15 + shadcn; build in CI |
+| 013 Logging Audit | ✓ | ✓ | ✓ | RUNBOOK, no-secrets, format (docs) |
+| 014 Deploy Readiness | ✓ | ✓ | ✓ | DEPLOY.md, CORS env, health (test_health) |
+| 016 Holdout Tests | ✓ | ✓ | ✓ | Pattern implemented |
+| 017 Web CI | ✓ | ✓ | ✓ | Web build in test.yml CI |
+| 018 Coherence Algorithm Spec | ✓ | ✓ | ✓ | COHERENCE-ALGORITHM-SKETCH; spec 020 impl |
+| 020 Sprint 2 Coherence API | ✓ | ✓ | ✓ | GET /coherence; real downstream_impact + dependency_health |
+| 021 Web Project Search UI | ✓ | ✓ | ✓ | /search, /project/[eco]/[name]; build in CI |
+| 022 Sprint 3 Import Stack | ✓ | ✓ | ✓ | POST lockfile; tests in test_import_stack |
+| 023 Web Import Stack UI | ✓ | ✓ | ✓ | /import; file upload; build in CI |
+| 024 PyPI Indexing | ✓ | ✓ | ✓ | index_pypi.py; deps.dev + PyPI; GET /projects/pypi/ tested |
+| 025 requirements.txt Import | ✓ | ✓ | ✓ | POST accepts .txt; pypi lookup; tests pass |
+| PLAN Month 1 (Graph, indexer) | ✓ | — | — | MVP done via 019 |
 
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
@@ -26,6 +44,17 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | **Diagnostic endpoints** | GET /diagnostics, POST /test-send not in specs. | Operational tooling; keep. |
 
 **No mocks, no fake data** in tests. Real `ASGITransport(app=app)` and in-memory store.
+
+---
+
+## Holdout Tests (spec 016)
+
+| Location | Purpose |
+|----------|---------|
+| `api/tests/holdout/` | Tests excluded from agent context; prevent "return true" gaming |
+| CI | Runs full suite including holdout: `pytest -v` |
+| Project manager validation | Runs `pytest --ignore=tests/holdout` so agent impl is validated against visible tests only |
+| Holdout failure | CI fails; agent never saw the test, so cannot game it |
 
 ---
 
@@ -72,6 +101,79 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 007: Sprint 0 Landing
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| Root returns name, version, docs, health | `main.py` root handler | `test_root_returns_landing_info` |
+| GET /docs reachable | FastAPI built-in | `test_docs_returns_200` |
+
+**Files:** `api/app/main.py`, `api/tests/test_health.py`
+
+---
+
+## Spec 008: Sprint 1 Graph Foundation
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GraphStore, indexer, project/search API | spec 019 (InMemoryGraphStore, indexer, projects router) | test_projects, test_graph_store |
+| Index ≥ 5K packages | `scripts/index_npm.py` | Manual run |
+
+**Status:** API + indexer via 019; 5K via `index_npm.py --target 5000`. PyPI via spec 024.
+
+---
+
+## Spec 009: API Error Handling
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| 404/400/422/500 consistent schema | `main.py` exception handler, routers | `test_get_task_by_id_404`, `test_post_task_*_422`, `test_patch_*_422`, `test_unhandled_exception_returns_500` |
+
+---
+
+## Spec 010: Request Validation
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| task_type enum, direction 1–5000, progress_pct 0–100 | `models/agent.py` Field constraints | `test_post_task_*_422`, `test_patch_task_progress_pct_*_422` |
+
+---
+
+## Spec 011: Pagination
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| limit, offset on GET /api/agent/tasks | `routers/agent.py`, `agent_service.py` | `test_get_tasks_list_with_filters` (pagination) |
+
+---
+
+## Spec 022 + 025: Import Stack (lockfile + requirements.txt)
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| POST /api/import/stack (package-lock.json) | `routers/import_stack.py`, `import_stack_service.py` | `test_import_stack_returns_200_with_packages_and_risk`, `test_import_stack_known_package_has_coherence`, `test_import_stack_unknown_package_has_unknown_status` |
+| POST /api/import/stack (requirements.txt) | `parse_requirements`, `process_requirements` | `test_import_stack_requirements_txt_returns_200`, `test_import_stack_requirements_unknown_package` |
+| Invalid JSON / no file | Router validation | `test_import_stack_invalid_json_returns_400`, `test_import_stack_no_file_returns_400` |
+
+**Files:** `api/app/routers/import_stack.py`, `api/app/services/import_stack_service.py`, `api/app/models/import_stack.py`, `api/tests/test_import_stack.py`
+
+---
+
+## Spec 019: GraphStore Abstraction
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GraphStore interface | `adapters/graph_store.py` | `test_graph_store.py` |
+| In-memory + JSON persist | `InMemoryGraphStore` | `test_upsert_and_get_project`, `test_count_projects` |
+| GET /api/projects | `routers/projects.py` | `test_get_project_returns_200_when_exists`, `test_get_project_returns_404_when_missing`, `test_get_project_pypi_returns_200_when_exists` |
+| GET /api/search | `routers/projects.py` | `test_search_returns_matching_results` |
+| Indexer (deps.dev + npm) | `services/indexer_service.py`, `scripts/index_npm.py` | Manual: `index_npm.py --limit 3` |
+| Indexer (deps.dev + pypi) | `index_pypi_packages`, `scripts/index_pypi.py` | Manual: `index_pypi.py --limit 3` |
+
+**Files:** `api/app/adapters/graph_store.py`, `api/app/models/project.py`, `api/app/routers/projects.py`, `api/app/services/indexer_service.py`, `api/scripts/index_npm.py`, `api/scripts/index_pypi.py`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |
@@ -102,6 +204,9 @@ These support development and operations; they are not spec'd but are documented
 | `PLAN.md` | Vision, roadmap |
 | `REFERENCE-REPOS.md` | Symlinks to Crypo-Coin, Living-Codex |
 | `SETUP.md` | API setup, tests, env |
+| `RUNBOOK.md` | Ops: log locations, restart, pipeline recovery |
+| `GLOSSARY.md` | Terms: coherence, backlog, pipeline, etc. |
+| `DEPLOY.md` | Deploy checklist, env vars, health probes |
 
 `AGENT-FRAMEWORKS.md` and `AGENT-FRAMEWORKS-RESEARCH.md` are complementary (short index vs detailed research).
 

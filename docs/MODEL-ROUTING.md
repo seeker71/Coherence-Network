@@ -1,5 +1,19 @@
 # Model Routing — Minimize Cost, Maximize Autonomy
 
+## Fallback Chain (local → cloud → claude)
+
+Tasks use **local first**, then cloud, then Claude:
+
+| Priority | Tier | Model | Env / Override |
+|----------|------|-------|----------------|
+| 1 | local | glm-4.7-flash:latest | `OLLAMA_MODEL` (default) |
+| 2 | cloud | glm-5:cloud | `model_override: "glm-5:cloud"` or `OLLAMA_CLOUD_MODEL` |
+| 3 | claude | claude-3-5-haiku | HEAL tasks, or `model_override: "claude-3-5-haiku-20241022"` |
+
+Use `context.model_override` when creating a task to force cloud or Claude (e.g. when local fails or is unavailable).
+
+---
+
 ## Available Resources
 
 | Resource | Access | Cost |
@@ -19,80 +33,80 @@
 
 ## Routing Tiers
 
-### Tier 0: Local (FREE) — ~70% of work
+### Tier 0: Local (FREE) — Default, ~70% of work
+
+**Proven for Claude Code tool use (Edit/Bash):** Ollama 0.15.x+, glm-4.7-flash (verified Feb 2026)
 
 | Model | Where | Use for |
 |-------|-------|---------|
-| Qwen3-Coder 30B | Ollama local | Spec draft, tests, simple impl, first-pass review |
-| Qwen 2.5 Coder 7B | Ollama local | Fast autocomplete, boilerplate |
+| **GLM-4.7-Flash** | Ollama local | **Default** — native tool calling, 79.5% tool-use benchmarks, ~6.5GB VRAM |
+| Qwen3-Coder 30B | Ollama local | Coding; works with Ollama 0.15.x+ (verified Feb 2026) |
 | Granite 3.3 | Ollama local | General purpose (IBM), ~5GB |
-| Nemotron 3 Nano 30B | Ollama local | Coding, ~24GB |
 
-**Mac M4 Ultra (32GB+ memory):** Use `OLLAMA_MODEL=qwen3-coder:30b` or `deepseek-coder` for best coding. Can run 70B models (e.g. `llama3.3:70b`). Set in `api/.env`.
+**Ollama version:** 0.15.x stable works; GLM-4.7-Flash tool fixes in 0.15.1+.
 
-### Tier 1: OpenRouter Free — ~15% of work
+**Recommended:** `OLLAMA_MODEL=glm-4.7-flash:latest` in `api/.env`. Pull: `ollama pull glm-4.7-flash:latest`
 
-| Model | Endpoint | Use for |
-|-------|----------|---------|
-| `openrouter/free` | OpenRouter | Backup when local struggles, second-opinion review |
-| Free models (Qwen, etc.) | OpenRouter | Escalation without per-token cost |
+**Override:** Set `OLLAMA_MODEL=qwen3-coder:30b` in `api/.env` to use Qwen3-Coder for coding tasks.
 
-### Tier 2: Subscriptions (Included) — ~12% of work
+### Tier 1: Ollama Cloud — Fallback when local unavailable
+
+| Model | Where | Use for |
+|-------|-------|---------|
+| glm-5:cloud | Ollama Cloud | Strong coding/agentic; requires `ollama signin` |
+
+Set `model_override: "glm-5:cloud"` in task context. Requires `ollama pull glm-5:cloud` and signed-in Ollama.
+
+### Tier 2: Claude (Anthropic) — Complex tasks, HEAL
 
 | Source | Use for |
 |--------|---------|
 | Claude (Haiku/Sonnet) | Orchestration, healing, complex integration |
-| OpenAI (GPT-4o) | Codex-style tasks, integration |
-| Cursor Pro+ | Interactive UI, graph viz, debugging |
 
-### Tier 3: Chat Copy/Paste (No API) — Hard issues only
+HEAL tasks route to Claude by default. Set `ANTHROPIC_API_KEY` for Claude models.
+
+### Tier 3: OpenRouter Free — ~15% backup
+
+| Model | Endpoint | Use for |
+|-------|----------|---------|
+| `openrouter/free` | OpenRouter | Backup when local struggles |
+
+### Tier 4: Chat Copy/Paste (No API) — Hard issues only
 
 | Tool | Use for |
 |------|---------|
-| Grok (SuperGrok) | Complex framework questions, architecture dilemmas |
-| OpenAI Chat | Same — paste code/error, get resolution guidance |
-
-Use when stuck. Copy problem + context → paste in chat → apply solution manually.
-
-### Tier 4: Optional Cloud
-
-| Source | Use for |
-|--------|---------|
-| Ollama Cloud Pro | When local Ollama unavailable (travel, different machine) |
-| Perplexity | Research, citations, summaries (use $20 credits sparingly) |
+| Grok (SuperGrok) | Complex framework questions |
+| OpenAI Chat | Same — paste code/error, apply solution manually |
 
 ---
 
 ## Agent-to-Model Mapping
 
-| Agent | Default | Escalation |
-|-------|---------|------------|
-| Spec Drafter | Local Qwen3 | OpenRouter free |
-| Test Writer | Local Qwen3 | OpenRouter free |
-| Impl Worker (backend) | Local Qwen3 | Cursor / Claude Code |
-| Impl Worker (frontend) | Cursor | Claude Code |
-| Review Panel | Local Qwen3 | Claude Haiku |
-| Healer | Claude Haiku | Claude Sonnet |
-| Orchestrator | Claude Haiku | Claude Sonnet |
+| Agent | Default | Fallback |
+|-------|---------|----------|
+| Spec Drafter | glm-4.7-flash (local) | glm-5:cloud → Claude |
+| Test Writer | glm-4.7-flash (local) | glm-5:cloud → Claude |
+| Impl Worker | glm-4.7-flash (local) | glm-5:cloud → Claude |
+| Review Panel | glm-4.7-flash (local) | glm-5:cloud → Claude |
+| Healer | claude-3-5-haiku | — |
 
 ---
 
 ## Escalation Rules
 
-- Local fails tests 2× → OpenRouter free or Cursor
-- OpenRouter/Cursor fails → Claude Code
-- Security/auth code → Start at Claude (subscription)
-- Architecture decision → Claude Sonnet/Opus; consider chat copy/paste for Grok/OpenAI
-- Rate limited → Fall back to next tier
+- Local fails → use `model_override: "glm-5:cloud"` for next task
+- Cloud unavailable → use `model_override: "claude-3-5-haiku-20241022"` (requires ANTHROPIC_API_KEY)
+- Security/auth code → Start at Claude
+- Architecture decision → Claude Sonnet/Opus
 
 ---
 
 ## Setup Order
 
-1. **Ollama local** — Primary workhorse
-2. **OpenRouter** — Free backup, no extra cost
-3. **Claude / OpenAI** — From existing subscriptions
-4. **Cursor** — Already primary IDE
-5. **Ollama Cloud** — When needed for remote work
+1. **Ollama local** — Primary (glm-4.7-flash)
+2. **Ollama Cloud** — `ollama signin`, `ollama pull glm-5:cloud` for fallback
+3. **Claude** — ANTHROPIC_API_KEY for HEAL and escalation
+4. **OpenRouter** — Free backup
+5. **Cursor** — Already primary IDE
 
 See [API-KEYS-SETUP.md](API-KEYS-SETUP.md) for configuration.

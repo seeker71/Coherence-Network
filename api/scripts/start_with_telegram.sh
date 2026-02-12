@@ -41,7 +41,9 @@ sleep 2
 
 # 1. Start API
 echo "[1/4] Starting API on port $PORT..."
-python3 -m uvicorn app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
+PYTHON="${API_DIR}/.venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON="python3"
+$PYTHON -m uvicorn app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
 API_PID=$!
 echo "$API_PID" > "$PIDFILE"
 

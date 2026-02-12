@@ -73,9 +73,12 @@ async def list_tasks(
     status: Optional[TaskStatus] = Query(None),
     task_type: Optional[TaskType] = Query(None),
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
 ) -> AgentTaskList:
-    """List tasks with optional filters."""
-    items, total = agent_service.list_tasks(status=status, task_type=task_type, limit=limit)
+    """List tasks with optional filters. Pagination: limit, offset."""
+    items, total = agent_service.list_tasks(
+        status=status, task_type=task_type, limit=limit, offset=offset
+    )
     return AgentTaskList(
         tasks=[AgentTaskListItem(**_task_to_item(t)) for t in items],
         total=total,
@@ -90,6 +93,12 @@ async def get_attention_tasks(limit: int = Query(20, ge=1, le=100)) -> dict:
         "tasks": [_task_to_item(t) for t in items],
         "total": total,
     }
+
+
+@router.get("/agent/tasks/count")
+async def get_task_count() -> dict:
+    """Lightweight task counts for dashboards (total, by_status)."""
+    return agent_service.get_task_count()
 
 
 @router.get("/agent/tasks/{task_id}")
@@ -250,6 +259,59 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
 async def get_usage() -> dict:
     """Per-model usage and routing. For /usage bot command and dashboards."""
     return agent_service.get_usage_summary()
+
+
+@router.get("/agent/pipeline-status")
+async def get_pipeline_status() -> dict:
+    """Pipeline visibility: running task, pending with wait times, recent completed with duration.
+    Includes project manager state when available. For running tasks, includes live_tail (last 20 lines of streamed log)."""
+    status = agent_service.get_pipeline_status()
+    # Add PM state from file if present (prefer overnight state when running overnight)
+    import json
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    state_file = os.path.join(logs_dir, "project_manager_state.json")
+    overnight_file = os.path.join(logs_dir, "project_manager_state_overnight.json")
+    if os.path.isfile(overnight_file) and (
+        not os.path.isfile(state_file) or os.path.getmtime(overnight_file) > os.path.getmtime(state_file)
+    ):
+        state_file = overnight_file
+    if os.path.isfile(state_file):
+        try:
+            with open(state_file, encoding="utf-8") as f:
+                status["project_manager"] = json.load(f)
+        except Exception:
+            status["project_manager"] = None
+    else:
+        status["project_manager"] = None
+    # Add live tail from running task's log (streamed during execution)
+    running = status.get("running") or []
+    if running:
+        rid = running[0].get("id")
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", f"task_{rid}.log")
+        if os.path.isfile(log_path):
+            try:
+                with open(log_path, encoding="utf-8") as f:
+                    lines = f.readlines()
+                status["running"][0]["live_tail"] = [ln.rstrip() for ln in lines[-25:] if ln.strip()]
+            except Exception:
+                status["running"][0]["live_tail"] = None
+        else:
+            status["running"][0]["live_tail"] = None
+    return status
+
+
+@router.get("/agent/tasks/{task_id}/log")
+async def get_task_log(task_id: str) -> dict:
+    """Full task log (prompt, command, output). File is streamed during execution, complete on finish."""
+    task = agent_service.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", f"task_{task_id}.log")
+    if not os.path.isfile(log_path):
+        return {"task_id": task_id, "log": None, "command": task.get("command"), "output": task.get("output")}
+    with open(log_path, encoding="utf-8") as f:
+        log_content = f.read()
+    return {"task_id": task_id, "log": log_content, "command": task.get("command"), "output": task.get("output")}
 
 
 @router.get("/agent/route", response_model=RouteResponse)

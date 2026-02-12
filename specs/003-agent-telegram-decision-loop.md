@@ -8,12 +8,12 @@ Extends spec 002 (Agent Orchestration API).
 
 ## Requirements
 
-- [ ] Telegram `/reply {task_id} {decision}` — record decision on task, update status to running (or completed if decision is terminal)
-- [ ] Telegram `/attention` — list only tasks with status needs_decision or failed
-- [ ] Agent task: add `progress_pct` (0–100), `current_step`, `decision_prompt` (optional), `decision` (user reply)
-- [ ] PATCH /api/agent/tasks/{id}: accept `progress_pct`, `current_step`, `decision` in request body
-- [ ] Agent runner script: polls pending tasks, runs command, PATCHes progress, blocks on needs_decision until decision present, then continues or stops
-- [ ] Telegram alert for needs_decision includes `decision_prompt` (what to decide) when provided
+- [x] Telegram `/reply {task_id} {decision}` — record decision on task, update status to running (or completed if decision is terminal)
+- [x] Telegram `/attention` — list only tasks with status needs_decision or failed
+- [x] Agent task: add `progress_pct` (0–100), `current_step`, `decision_prompt` (optional), `decision` (user reply)
+- [x] PATCH /api/agent/tasks/{id}: accept `progress_pct`, `current_step`, `decision` in request body
+- [x] Agent runner script: polls pending tasks, runs command, PATCHes progress, blocks on needs_decision until decision present, then continues or stops
+- [x] Telegram alert for needs_decision includes `decision_prompt` (what to decide) when provided
 
 ## API Contract
 

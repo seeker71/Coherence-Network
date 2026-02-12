@@ -125,3 +125,20 @@ AGENT_BY_TASK_TYPE = {
 ```
 
 Commands would use `--agent {name}` when the task type has an agent mapping.
+
+---
+
+## Project Manager Pipeline (spec 005)
+
+The **Project Manager orchestrator** (`api/scripts/project_manager.py`) automates the full cycle:
+
+1. **Find next task** — from `specs/005-backlog.md`
+2. **Spec** — product-manager writes/expands spec
+3. **Impl** — dev-engineer implements per spec
+4. **Test** — qa-engineer writes and runs tests
+5. **Review** — reviewer checks spec compliance, security
+6. **Validate** — pytest passes and review indicates pass
+7. **Loop** — if validation fails, back to impl (fix) → test → review until pass or max iterations
+8. **Advance** — when all pass, next backlog item
+
+State: `api/logs/project_manager_state.json`. On `needs_decision`, orchestrator pauses for human `/reply`.

@@ -1,22 +1,25 @@
 """Agent orchestration: routing and task tracking."""
 
 import os
+import re
 import secrets
 from datetime import datetime, timezone
 from typing import Any, List, Optional, Tuple
 
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
-# Override via OLLAMA_MODEL (e.g. granite3.3:latest, qwen3-coder:30b)
-_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-coder:30b")
+# Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
+_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "glm-4.7-flash:latest")  # Local (default)
+_OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "glm-5:cloud")  # Cloud fallback
+_CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "claude-3-5-haiku-20241022")  # Claude fallback
 
-# Routing from docs/MODEL-ROUTING.md
+# Routing: local first; use model_override in context for cloud/claude
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (f"ollama/{_OLLAMA_MODEL}", "local"),
     TaskType.TEST: (f"ollama/{_OLLAMA_MODEL}", "local"),
     TaskType.IMPL: (f"ollama/{_OLLAMA_MODEL}", "local"),
     TaskType.REVIEW: (f"ollama/{_OLLAMA_MODEL}", "local"),
-    TaskType.HEAL: ("claude-3-5-haiku", "subscription"),
+    TaskType.HEAL: (_CLAUDE_MODEL, "claude"),
 }
 
 # Subagent mapping: task_type → Claude Code --agent name (from .claude/agents/)
@@ -30,8 +33,9 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
 }
 
 # Command templates: {{direction}} placeholder; uses --agent when subagent defined
-_COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL}'
-_COMMAND_HEAL = 'claude -p "{{direction}}" --model claude-3-5-haiku-20241022 --allowedTools Read,Edit,Bash'
+# --allowedTools + --dangerously-skip-permissions required for headless (-p) so Edit runs without prompts
+_COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
+_COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
 
 
 def _command_template(task_type: TaskType) -> str:
@@ -70,7 +74,23 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     task_id = _generate_id()
     model, tier = ROUTING[data.task_type]
-    command = _build_command(data.direction, data.task_type)
+    # Smoke test: context.command_override runs raw bash, bypassing Claude
+    command = (
+        (data.context or {}).get("command_override")
+        if isinstance(data.context, dict)
+        else None
+    )
+    if not command:
+        command = _build_command(data.direction, data.task_type)
+        # Model override for testing (e.g. glm-4.7:cloud for better tool use)
+        ctx = data.context if isinstance(data.context, dict) else {}
+        if ctx.get("model_override"):
+            override = ctx["model_override"]
+            command = re.sub(r"--model\s+\S+", f"--model {override}", command)
+            # Cloud models need ANTHROPIC_BASE_URL=https://ollama.com when using glm-5:cloud etc.
+        # Headless claude needs --dangerously-skip-permissions for Edit to run
+        if "claude -p" in command and "--dangerously-skip-permissions" not in command:
+            command = command.rstrip() + " --dangerously-skip-permissions"
     now = _now()
     task = {
         "id": task_id,
@@ -79,6 +99,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "status": TaskStatus.PENDING,
         "model": model,
         "command": command,
+        "started_at": None,
         "output": None,
         "context": data.context,
         "progress_pct": None,
@@ -102,8 +123,9 @@ def list_tasks(
     status: Optional[TaskStatus] = None,
     task_type: Optional[TaskType] = None,
     limit: int = 20,
+    offset: int = 0,
 ) -> tuple:
-    """List tasks with optional filters."""
+    """List tasks with optional filters. Sorted by created_at descending (newest first)."""
     items = list(_store.values())
     if status is not None:
         items = [t for t in items if t["status"] == status]
@@ -111,7 +133,7 @@ def list_tasks(
         items = [t for t in items if t["task_type"] == task_type]
     total = len(items)
     items.sort(key=lambda t: t["created_at"], reverse=True)
-    items = items[:limit]
+    items = items[offset : offset + limit]
     return items, total
 
 
@@ -136,6 +158,8 @@ def update_task(
         task["decision"] = decision
     if status is not None:
         task["status"] = status
+        if status == TaskStatus.RUNNING and task.get("started_at") is None:
+            task["started_at"] = _now()
     if output is not None:
         task["output"] = output
     if progress_pct is not None:
@@ -161,6 +185,16 @@ def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
     items.sort(key=lambda t: t["created_at"], reverse=True)
     items = items[:limit]
     return items, total
+
+
+def get_task_count() -> dict[str, Any]:
+    """Lightweight task counts for dashboards."""
+    items = list(_store.values())
+    by_status: dict[str, int] = {}
+    for t in items:
+        s = t["status"].value if hasattr(t["status"], "value") else str(t["status"])
+        by_status[s] = by_status.get(s, 0) + 1
+    return {"total": len(items), "by_status": by_status}
 
 
 def get_review_summary() -> dict[str, Any]:
@@ -203,6 +237,104 @@ def get_usage_summary() -> dict[str, Any]:
     return {
         "by_model": by_model,
         "routing": {t.value: {"model": ROUTING[t][0], "tier": ROUTING[t][1]} for t in TaskType},
+    }
+
+
+def get_pipeline_status(now_utc=None) -> dict[str, Any]:
+    """Pipeline visibility: running, pending with wait times, recent completed with duration."""
+    from datetime import timezone
+    now = now_utc or datetime.now(timezone.utc)
+
+    def _ts(obj):
+        return obj.isoformat() if hasattr(obj, "isoformat") else str(obj)
+
+    def _seconds_ago(ts):
+        if ts is None:
+            return None
+        try:
+            delta = now - ts
+            return int(delta.total_seconds())
+        except Exception:
+            return None
+
+    def _duration(start_ts, end_ts):
+        if start_ts is None or end_ts is None:
+            return None
+        try:
+            delta = end_ts - start_ts
+            return int(delta.total_seconds())
+        except Exception:
+            return None
+
+    running = []
+    pending = []
+    completed = []
+
+    for t in _store.values():
+        st = t.get("status")
+        st_val = st.value if hasattr(st, "value") else str(st)
+        created = t.get("created_at")
+        updated = t.get("updated_at")
+        started = t.get("started_at")
+
+        item = {
+            "id": t.get("id"),
+            "task_type": t.get("task_type"),
+            "model": t.get("model"),
+            "direction": (t.get("direction") or "")[:100],
+            "created_at": _ts(created),
+            "wait_seconds": _seconds_ago(created) if st_val == "pending" else None,
+            "running_seconds": _seconds_ago(started) if st_val == "running" and started else None,
+            "duration_seconds": _duration(started, updated) if st_val in ("completed", "failed") and started and updated else None,
+        }
+        if st_val == "running":
+            running.append(item)
+        elif st_val == "pending":
+            pending.append(item)
+        else:
+            completed.append(item)
+
+    completed.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # Latest request/response for visibility into actual LLM activity
+    latest_request = None
+    latest_response = None
+    if running:
+        t = _store.get(running[0]["id"])
+        if t:
+            latest_request = {
+                "task_id": t.get("id"),
+                "status": "running",
+                "direction": t.get("direction"),
+                "prompt_preview": (t.get("command") or "")[:500],
+            }
+    if completed:
+        t = _store.get(completed[0]["id"])
+        if t:
+            if not latest_request:
+                latest_request = {
+                    "task_id": t.get("id"),
+                    "status": t.get("status"),
+                    "direction": t.get("direction"),
+                    "prompt_preview": (t.get("command") or "")[:500],
+                }
+            out = t.get("output") or ""
+            latest_response = {
+                "task_id": t.get("id"),
+                "status": t.get("status"),
+                "output_preview": out[:2000],
+                "output_len": len(out),
+            }
+
+    return {
+        "running": running[:1],
+        "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
+        "recent_completed": [
+            {**c, "output_len": len((_store.get(c["id"]) or {}).get("output") or "")}
+            for c in completed[:10]
+        ],
+        "latest_request": latest_request,
+        "latest_response": latest_response,
     }
 
 

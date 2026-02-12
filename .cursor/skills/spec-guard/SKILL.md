@@ -25,7 +25,7 @@ description: Validates implementation against spec. Flags files modified outside
 **FAIL**: List each violation:
 - `path/to/file.py` — not in spec's Files to Create/Modify
 
-Recommend: revert out-of-scope changes or escalate to `needs_decision`.
+Recommend: revert out-of-scope changes. Escalate to `needs_decision` only when human judgment required.
 
 ## Constraints
 

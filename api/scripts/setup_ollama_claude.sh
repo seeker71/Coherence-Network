@@ -3,14 +3,16 @@
 # Run from api/: ./scripts/setup_ollama_claude.sh
 #
 # Prereqs: brew (macOS)
-# Env: OLLAMA_MODEL (default qwen3-coder:30b), OLLAMA_BASE_URL (default http://localhost:11434)
+# Env: OLLAMA_MODEL (default glm-4.7-flash), OLLAMA_BASE_URL (default http://localhost:11434)
+#
+# Proven setup: glm-4.7-flash local; fallback glm-5:cloud, then claude. Ollama 0.15.x+ works.
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 API_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$API_DIR"
 
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3-coder:30b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-glm-4.7-flash:latest}"
 OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434}"
 
 echo "=== Ollama + Claude Code Setup ==="
@@ -32,6 +34,11 @@ fi
 
 if curl -s "$OLLAMA_BASE_URL/api/tags" >/dev/null 2>&1; then
   echo "      Ollama running at $OLLAMA_BASE_URL"
+  OLLAMA_VER=$(ollama --version 2>/dev/null || echo "unknown")
+  echo "      Version: $OLLAMA_VER"
+  if ! echo "$OLLAMA_VER" | grep -qE "0\.1[4-9]|0\.[2-9]"; then
+    echo "      NOTE: For Claude Code tool use, Ollama 0.15.x+ is recommended. brew upgrade ollama"
+  fi
 else
   echo "      ERROR: Ollama not reachable. Run: ollama serve"
   exit 1
@@ -78,11 +85,16 @@ echo ""
 # 3. Config for Ollama
 echo "[3/4] Config for Ollama"
 ENV_ADD="
-# Claude Code + Ollama (for agent tasks)
+# Claude Code + Ollama (for agent tasks) — fallback: local → cloud (glm-5:cloud) → claude
 OLLAMA_MODEL=$OLLAMA_MODEL
+OLLAMA_CLOUD_MODEL=glm-5:cloud
 ANTHROPIC_AUTH_TOKEN=ollama
 ANTHROPIC_API_KEY=
 ANTHROPIC_BASE_URL=$OLLAMA_BASE_URL
+# Suppress 404s from unsupported endpoints (GitHub ollama/ollama#13949)
+DISABLE_TELEMETRY=1
+DISABLE_ERROR_REPORTING=1
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 "
 if [ -f .env ]; then
   if grep -q "ANTHROPIC_AUTH_TOKEN=ollama" .env 2>/dev/null; then

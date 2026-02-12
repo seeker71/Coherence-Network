@@ -34,7 +34,7 @@ When the multi-agent framework is set up and API keys are configured, evaluate t
 
 - Terminal AI pair programming
 - Supports Ollama, OpenAI, Anthropic
-- `aider --model ollama/qwen3-coder:30b` for free local use
+- `aider --model ollama/glm-4.7-flash` for free local use
 
 ### Continue.dev
 

@@ -149,6 +149,31 @@ Stop and create `needs-decision` issue for: new pip/npm dependency; Neo4j label/
 
 ---
 
+## 5b. Current Status (Feb 2026)
+
+| Area | Status |
+|------|--------|
+| **Sprint 0** | ✓ CI green, /health 200, /docs, root landing, /ready |
+| **Agent API** | ✓ Specs 001–005, 007, 009–019 implemented; 63 tests |
+| **Pipeline** | ✓ Project manager (--max-items), agent runner, overnight backlog |
+| **Docs** | ✓ RUNBOOK, GLOSSARY, AGENT-DEBUGGING, SPEC-COVERAGE, DEPLOY |
+| **Sprint 1 (Graph)** | ✓ GraphStore, API, indexer; `index_npm.py --target 5000` |
+| **Web** | ✓ Spec 012; web/ Next.js 15 + shadcn; / and /api-health |
+
+### MVP Definition
+
+**MVP = Sprints 0 + 1 complete:** A working platform where users can search 5K+ npm packages, view project details, and explore the dependency graph. No coherence scores yet; no funding flows.
+
+**MVP Exit Criteria (achieved):**
+
+- [x] CI green, /health, /ready, landing, docs
+- [x] GraphStore + in-memory backend; JSON persistence
+- [x] Indexer: `index_npm.py --target 5000` populates 5K+ packages
+- [x] GET /api/projects/{eco}/{name} returns project data
+- [x] GET /api/search?q= returns search results
+
+---
+
 ## 6. Roadmap (Months)
 
 | Month | Focus | Deliverables |
@@ -161,12 +186,12 @@ Stop and create `needs-decision` issue for: new pip/npm dependency; Neo4j label/
 
 ### Sprint-Level (Month 1–2)
 
-| Sprint | Focus | Exit Criteria |
-|--------|-------|---------------|
-| 0 | Skeleton, CI, deploy | `git push` → CI green; `/health` 200; landing live |
-| 1 | Graph | 5K+ npm packages; API returns real data; search works |
-| 2 | Coherence + UI | `/project/npm/react` shows score; search across npm+PyPI |
-| 3 | Import Stack | Drop package-lock.json → full risk analysis + tree |
+| Sprint | Focus | Exit Criteria | Status |
+|--------|-------|---------------|--------|
+| 0 | Skeleton, CI, deploy | `git push` → CI green; `/health` 200; landing live | ✓ Done |
+| 1 | Graph | 5K+ npm packages; API returns real data; search works | ✓ Done (019, index_npm --target 5000) |
+| 2 | Coherence + UI | ✓ Done (020 coherence API, 021 web search + project page) |
+| 3 | Import Stack | ✓ Done (022, 025: lockfile + requirements.txt) |
 
 ### Risk Register
 

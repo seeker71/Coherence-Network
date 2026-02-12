@@ -6,9 +6,9 @@ Provide a simple health endpoint so we can verify the API is running and validat
 
 ## Requirements
 
-- [ ] GET /api/health returns 200
-- [ ] Response includes status, version, timestamp (ISO8601)
-- [ ] Response is valid JSON
+- [x] GET /api/health returns 200
+- [x] Response includes status, version, timestamp (ISO8601)
+- [x] Response is valid JSON
 
 ## API Contract
 
@@ -42,6 +42,10 @@ See `api/tests/test_health.py`. All tests must pass.
 - Database connectivity check
 - Dependency health
 - Metrics
+
+## See also
+
+- [014-deploy-readiness.md](014-deploy-readiness.md) — health probes for deploy
 
 ## Decision Gates
 

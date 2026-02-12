@@ -3,7 +3,8 @@
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 try:
     from dotenv import load_dotenv
@@ -18,6 +19,10 @@ logging.basicConfig(level=logging.INFO, format=_LOG_FMT)
 # Log Telegram flow to api/logs/telegram.log for diagnostics
 _log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
 os.makedirs(_log_dir, exist_ok=True)
+
+# Env validation: warn if Telegram chat IDs set but token missing
+if os.environ.get("TELEGRAM_CHAT_IDS") and not os.environ.get("TELEGRAM_BOT_TOKEN"):
+    logging.getLogger(__name__).warning("TELEGRAM_CHAT_IDS set but TELEGRAM_BOT_TOKEN missing — alerts may fail")
 _file_handler = logging.FileHandler(os.path.join(_log_dir, "telegram.log"), encoding="utf-8")
 _file_handler.setFormatter(logging.Formatter(_LOG_FMT))
 _file_handler.setLevel(logging.DEBUG)
@@ -25,7 +30,8 @@ logging.getLogger("app.routers.agent").addHandler(_file_handler)
 logging.getLogger("app.services.telegram_adapter").addHandler(_file_handler)
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import agent, health
+from app.adapters.graph_store import InMemoryGraphStore
+from app.routers import agent, health, import_stack, projects
 
 app = FastAPI(
     title="Coherence Network API",
@@ -33,17 +39,47 @@ app = FastAPI(
     description="Open Source Contribution Intelligence",
 )
 
+_cors_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+_origins_list = (
+    [o.strip() for o in _cors_origins.split(",") if o.strip()]
+    if _cors_origins and _cors_origins.strip() != "*"
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
+app.include_router(projects.router, prefix="/api", tags=["projects"])
+app.include_router(import_stack.router, prefix="/api", tags=["import"])
+
+# GraphStore: in-memory with optional JSON persistence (spec 019)
+_graph_path = os.path.join(_log_dir, "graph_store.json")
+app.state.graph_store = InMemoryGraphStore(persist_path=_graph_path)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Return 500 with generic message for unhandled exceptions (spec 009)."""
+    if isinstance(exc, HTTPException):
+        raise exc
+    logging.getLogger(__name__).exception("Unhandled exception")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 @app.get("/")
 async def root():
-    return {"message": "Coherence Network API", "docs": "/docs"}
+    return {
+        "name": "Coherence Network API",
+        "version": app.version,
+        "docs": "/docs",
+        "health": "/api/health",
+        "message": "Coherence Network API",
+    }

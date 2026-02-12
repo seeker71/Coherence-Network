@@ -4,24 +4,28 @@ Configure once the multi-agent framework is decided. This doc lists what to set 
 
 ## Priority Order
 
-### 1. Ollama + Claude Code (Local) — No key needed
+### 1. Ollama + Claude Code — Local first, cloud/claude fallback
+
+**Model fallback chain:** local (glm-4.7-flash) → cloud (glm-5:cloud) → Claude. Default is local.
 
 One-command setup:
 ```bash
 cd api && ./scripts/setup_ollama_claude.sh
 ```
-Pulls qwen3-coder:30b (or set OLLAMA_MODEL=granite3.3:latest for existing models), installs Claude Code, configures .env.
+Pulls glm-4.7-flash:latest (proven for tool use), installs Claude Code, configures .env. Ollama 0.15.x+ works; no pre-release needed.
 
 Manual:
 ```bash
 brew install ollama
 ollama serve
-ollama pull qwen3-coder:30b
+ollama pull glm-4.7-flash:latest
 curl -fsSL https://claude.ai/install.sh | bash
 # Configure: ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=""
 ```
 
-Test: `python scripts/test_agent_run.py --run --model granite3.3:latest "Your direction"`
+Cloud fallback: `ollama signin` and `ollama pull glm-5:cloud`. Use `model_override: "glm-5:cloud"` in task context.
+
+Test: `python scripts/test_agent_run.py --run --model glm-4.7-flash:latest "Your direction"`
 
 ### 2. OpenRouter — Free tier
 

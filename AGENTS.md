@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-Coherence Network maps the open source ecosystem as an intelligence graph. Tech stack: FastAPI (Python) API, Next.js web (to be added), Neo4j + PostgreSQL.
+Coherence Network maps the open source ecosystem as an intelligence graph. Tech stack: FastAPI (Python) API, Next.js 15 web (web/), Neo4j + PostgreSQL.
 
 ## Workflow
 
@@ -16,9 +16,16 @@ Spec → Test → Implement → CI → Review → Merge
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
+- `docs/STATUS.md` — Current implementation status, sprint progress
+- `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
+- `docs/SPEC-TRACKING.md` — Quick reference: spec status, test mapping, verification
 - `docs/REFERENCE-REPOS.md` — Reference repos (crypo-coin, living-codex); read-only context
 - `docs/PLAN.md` — Consolidated vision and roadmap
 - `docs/MODEL-ROUTING.md` — AI model cost optimization
+- `docs/AGENT-DEBUGGING.md` — Add tasks, run pipeline, debug failures
+- `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
+- `docs/DEPLOY.md` — Deploy checklist
+- `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
 - `specs/TEMPLATE.md` — Spec format
 
 ## Interface
@@ -33,9 +40,28 @@ Spec → Test → Implement → CI → Review → Merge
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
-# Tests
+# Web
+cd web && npm run dev
+
+# Tests (CI runs full; PM validation excludes holdout)
 cd api && pytest -v
+cd api && pytest -v --ignore=tests/holdout   # agent validation
+
+# Scripts
+cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next task
+cd api && .venv/bin/python scripts/run_backlog_item.py --index 5  # run single item
+cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
+
+# Overnight pipeline (API must be running)
+cd api && ./scripts/run_overnight_pipeline.sh
 ```
+
+## Conventions
+
+- **Holdout tests** — `api/tests/holdout/` excluded from agent context; CI runs full suite
+- **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
+- **Spec cross-links** — specs have "See also" sections
+- **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
 
 ## Agent Orchestration API (spec 002)
 
