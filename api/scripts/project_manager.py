@@ -737,9 +737,9 @@ def main():
     args = ap.parse_args()
 
     if args.backlog:
-        BACKLOG_FILE = os.path.abspath(args.backlog)
+        BACKLOG_FILE = os.path.normpath(os.path.abspath(args.backlog))
     if args.state_file:
-        STATE_FILE = os.path.abspath(args.state_file)
+        STATE_FILE = os.path.normpath(os.path.abspath(args.state_file))
     if args.reset and os.path.isfile(STATE_FILE):
         os.remove(STATE_FILE)
 

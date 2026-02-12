@@ -68,8 +68,11 @@ def test_backlog_flag_uses_alternate_file(tmp_path):
     alt_backlog.write_text("# Alternate\n1. " + distinctive_item + "\n")
     state_path = tmp_path / "project_manager_state.json"
     script_path = os.path.join(_api_dir, "scripts", "project_manager.py")
+    # Use resolved absolute path so subprocess finds the file regardless of cwd
+    backlog_arg = str(alt_backlog.resolve())
+    state_arg = str(state_path.resolve())
     result = subprocess.run(
-        [sys.executable, script_path, "--dry-run", "--backlog", str(alt_backlog), "--state-file", str(state_path)],
+        [sys.executable, script_path, "--dry-run", "--backlog", backlog_arg, "--state-file", state_arg],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
