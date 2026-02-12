@@ -7,7 +7,7 @@ Coherence maps the open source ecosystem as an intelligence graph. This repo use
 ## Architecture
 
 - **API**: FastAPI (Python) in `api/`
-- **Web**: Next.js 16 + shadcn/ui in `web/`
+- **Web**: Next.js 15 + shadcn/ui in `web/`
 - **Graph DB**: Neo4j
 - **Relational DB**: PostgreSQL
 - **Specs**: `specs/` — human-written, machine-readable

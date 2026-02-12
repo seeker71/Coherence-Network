@@ -89,8 +89,8 @@ ProjectSummary (for search results):
 ## Out of Scope
 
 - Neo4j adapter (separate spec when needed)
-- PyPI indexing (Sprint 2)
-- Coherence scores (Sprint 2)
+- PyPI indexing — now implemented in [024-pypi-indexing.md](024-pypi-indexing.md)
+- Coherence scores — implemented in spec 020
 - Full 5K seed in CI (use smaller fixture for tests)
 
 ## See also

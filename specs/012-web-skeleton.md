@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Create minimal Next.js 16 app with landing page and API health check for Sprint 0 "landing live". Per docs/PLAN.md: Next.js 16 + shadcn/ui.
+Create minimal Next.js 15 app with landing page and API health check for Sprint 0 "landing live". Per docs/PLAN.md: Next.js 15 + shadcn/ui.
 
 ## Requirements
 

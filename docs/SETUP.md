@@ -44,7 +44,7 @@ Use `.venv/bin/pytest` if `pytest` is not on PATH. Scripts in `api/scripts/` sho
 
 ## Web (Placeholder)
 
-Web app will be added in a follow-up spec. Structure: Next.js 16 + shadcn/ui.
+Web app: Next.js 15 + shadcn/ui (see spec 012).
 
 ## Environment
 

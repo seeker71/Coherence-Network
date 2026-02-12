@@ -38,9 +38,9 @@ Per docs/PLAN.md Sprint 3: Drop package-lock.json → full risk analysis + tree.
   ],
   "risk_summary": {
     "unknown": 2,
-    "low": 1,
-    "medium": 5,
-    "high": 12
+    "high_risk": 1,
+    "medium_risk": 5,
+    "low_risk": 12
   }
 }
 ```
@@ -57,10 +57,10 @@ ImportPackage:
   status: "known" | "unknown"
   dependencies: list[string]  # "name@version"
 RiskSummary:
-  unknown: int
-  low: int    # coherence < 0.4
-  medium: int  # 0.4 <= coherence < 0.7
-  high: int   # coherence >= 0.7
+  unknown: int       # not in GraphStore
+  high_risk: int     # coherence < 0.4 (unhealthy)
+  medium_risk: int   # 0.4 <= coherence < 0.7
+  low_risk: int      # coherence >= 0.7 (healthy)
 ```
 
 ## Files to Create/Modify
@@ -78,9 +78,9 @@ RiskSummary:
 
 ## Out of Scope
 
-- PyPI (requirements.txt) — future
+- PyPI (requirements.txt) — now supported via [025-requirements-txt-import.md](025-requirements-txt-import.md)
 - Graph visualization of tree
-- Web UI for import (separate spec)
+- Web UI for import — implemented in spec 023
 
 ## See also
 
@@ -89,5 +89,5 @@ RiskSummary:
 
 ## Decision Gates
 
-- Thresholds (0.4, 0.7) for low/medium/high are placeholders; override via config later
+- Thresholds (0.4, 0.7) for high_risk/medium_risk/low_risk are placeholders; override via config later
 - python-multipart dependency added for file upload (standard FastAPI requirement)

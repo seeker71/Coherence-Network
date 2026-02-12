@@ -71,9 +71,9 @@ async def test_import_stack_returns_200_with_packages_and_risk(client, graph_sto
     assert "react" in pkg_names
     risk = data["risk_summary"]
     assert "unknown" in risk
-    assert "low" in risk
-    assert "medium" in risk
-    assert "high" in risk
+    assert "high_risk" in risk
+    assert "medium_risk" in risk
+    assert "low_risk" in risk
 
 
 @pytest.mark.asyncio

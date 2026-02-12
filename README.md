@@ -11,7 +11,7 @@ A platform that maps the open source ecosystem as an intelligence graph, compute
 ## Tech Stack (MVP)
 
 - **API**: FastAPI (Python) — speed to value
-- **Web**: Next.js 16 + shadcn/ui
+- **Web**: Next.js 15 + shadcn/ui
 - **Graph**: Neo4j (dependency graph)
 - **Relational**: PostgreSQL (users, events, billing)
 - **Data**: deps.dev API, Libraries.io, GitHub API

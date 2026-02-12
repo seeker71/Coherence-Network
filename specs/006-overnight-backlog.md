@@ -5,6 +5,8 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 
 **Progress:** Phase 1–3 largely done. Phase 4–5 and "Next Hours" below remain.
 
+**Backlog alignment (Feb 2026):** Spec numbers in Phase 4 were planned before implementation. Actual specs: 015 → merged into 018; 017 = Web CI (not agent-runner-resilience); 018 = Coherence algorithm (not rate-limiting). See docs/SPEC-COVERAGE.md for current spec→impl mapping. Duplicate items (e.g. 43/87 run_backlog_item) can be skipped.
+
 ## Phase 1: Specs & Docs (items 1–15) — DONE
 1. specs/001-health-check.md — Verify all health items complete; add any missing tests
 2. specs/002-agent-orchestration-api.md — Verify all agent API items complete; add edge-case tests
@@ -67,14 +69,14 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 55. Add readiness probe route /api/ready (or extend health) for k8s/deploy
 
 ## Phase 4: Specs for Future Work (items 56–70)
-56. Write spec 012-web-skeleton: Next.js 16 app with / and /api-health check page
+56. Write spec 012-web-skeleton: Next.js 15 app with / and /api-health check page
 57. Write spec 013-logging-audit: structured logging, log levels, rotation
 58. Write spec 014-deploy-readiness: env validation, health/ready, Dockerfile skeleton
-59. Write spec 015-coherence-algorithm: algorithm sketch, inputs, outputs, weights stub
+59. Write spec 015-coherence-algorithm — DONE as spec 018; see specs/015-placeholder.md
 60. Expand specs/008-sprint-1-graph-foundation.md: add deps.dev API contract section
-61. Add spec 016-holdout-tests: pattern, directory, CI exclusion, purpose
-62. Add spec 017-agent-runner-resilience: retries, timeouts, backoff
-63. Add spec 018-api-rate-limiting: placeholder/spec for future rate limits
+61. Add spec 016-holdout-tests: pattern, directory, CI exclusion, purpose — DONE
+62. Add spec 017 — DONE (Web CI; agent-runner resilience not a separate spec)
+63. Add spec 018 — DONE (Coherence algorithm; rate-limiting not yet spec'd)
 64. Update docs/concepts/OSS-CONCEPT-MAPPING.md with concrete node/edge examples
 65. Add docs/concepts/COHERENCE-ALGORITHM-SKETCH.md from PLAN.md formula
 66. Review and cross-link all specs: add "See also" where relevant

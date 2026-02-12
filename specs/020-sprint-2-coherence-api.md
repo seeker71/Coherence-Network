@@ -10,6 +10,7 @@ Per docs/PLAN.md Sprint 2: coherence scores on project pages. Expose coherence s
 - [x] Score 0.0–1.0; components per spec 018 (real: downstream_impact, dependency_health; 0.5 when no data)
 - [x] 404 if project not found (same as GET project)
 - [x] Uses GraphStore; no Neo4j dependency for MVP
+- [x] Optional `components_with_data` (0–8) so consumers can show "preliminary" when most components are stubbed
 
 ## API Contract
 
@@ -19,6 +20,7 @@ Per docs/PLAN.md Sprint 2: coherence scores on project pages. Expose coherence s
 ```json
 {
   "score": 0.72,
+  "components_with_data": 2,
   "components": {
     "contributor_diversity": 0.8,
     "dependency_health": 0.7,
@@ -39,8 +41,13 @@ Per docs/PLAN.md Sprint 2: coherence scores on project pages. Expose coherence s
 ```yaml
 CoherenceResponse:
   score: float (0.0–1.0)
+  components_with_data: int (0–8)  # count of components with real data; rest are 0.5 stub
   components: dict[str, float]  # 8 components from spec 018
 ```
+
+## Data confidence
+
+Only 2 of 8 components currently use real data: `downstream_impact`, `dependency_health`. The other 6 return 0.5 (neutral) until Contributor/Organization data and GitHub API integration exist (see PLAN.md gaps). Consumers should use `components_with_data` to show a "preliminary" or "based on N of 8 signals" indicator when appropriate.
 
 ## Files to Create/Modify
 

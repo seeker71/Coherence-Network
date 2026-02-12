@@ -106,13 +106,13 @@ def enrich_and_risk(
     if proj:
         coh = compute_coherence(store, proj)
         score = coh["score"]
-        bucket = "unknown"
+        # High coherence = healthy = low risk; low coherence = high risk
         if score >= 0.7:
-            bucket = "high"
+            bucket = "low_risk"
         elif score >= 0.4:
-            bucket = "medium"
+            bucket = "medium_risk"
         else:
-            bucket = "low"
+            bucket = "high_risk"
         return (
             ImportPackage(
                 name=name,
@@ -139,7 +139,7 @@ def process_lockfile(store: GraphStoreForImport, content: str) -> dict:
     """Parse lockfile, enrich with GraphStore, return ImportStackResponse shape."""
     pkgs_data = parse_lockfile(content)
     packages: list[ImportPackage] = []
-    risk: dict[str, int] = {"unknown": 0, "low": 0, "medium": 0, "high": 0}
+    risk: dict[str, int] = {"unknown": 0, "high_risk": 0, "medium_risk": 0, "low_risk": 0}
     for name, (version, deps) in pkgs_data.items():
         imp_pkg, bucket = enrich_and_risk(store, name, version, deps, ecosystem="npm")
         packages.append(imp_pkg)
@@ -154,7 +154,7 @@ def process_requirements(store: GraphStoreForImport, content: str) -> dict:
     """Parse requirements.txt, enrich with GraphStore, return ImportStackResponse shape — spec 025."""
     pkgs_data = parse_requirements(content)
     packages: list[ImportPackage] = []
-    risk: dict[str, int] = {"unknown": 0, "low": 0, "medium": 0, "high": 0}
+    risk: dict[str, int] = {"unknown": 0, "high_risk": 0, "medium_risk": 0, "low_risk": 0}
     for name, (version, deps) in pkgs_data.items():
         imp_pkg, bucket = enrich_and_risk(store, name, version, deps, ecosystem="pypi")
         packages.append(imp_pkg)

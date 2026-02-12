@@ -24,12 +24,12 @@ class ImportPackage(BaseModel):
 
 
 class RiskSummary(BaseModel):
-    """Aggregate risk counts."""
+    """Aggregate risk counts. High coherence = healthy = low risk."""
 
     unknown: int = Field(default=0, ge=0, description="Not in GraphStore")
-    low: int = Field(default=0, ge=0, description="coherence < 0.4")
-    medium: int = Field(default=0, ge=0, description="0.4 <= coherence < 0.7")
-    high: int = Field(default=0, ge=0, description="coherence >= 0.7")
+    high_risk: int = Field(default=0, ge=0, description="coherence < 0.4 or unknown")
+    medium_risk: int = Field(default=0, ge=0, description="0.4 <= coherence < 0.7")
+    low_risk: int = Field(default=0, ge=0, description="coherence >= 0.7 (healthy)")
 
 
 class ImportStackResponse(BaseModel):

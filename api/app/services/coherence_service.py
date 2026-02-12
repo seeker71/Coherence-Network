@@ -50,4 +50,11 @@ def compute_coherence(store: GraphStoreWithDependents, project: Project) -> dict
     # Equal-weight average per spec 018
     score = sum(components[c] for c in COMPONENT_NAMES) / len(COMPONENT_NAMES)
 
-    return {"score": round(score, 2), "components": components}
+    # Data confidence: only downstream_impact and dependency_health are real (spec 020)
+    components_with_data = 2
+
+    return {
+        "score": round(score, 2),
+        "components_with_data": components_with_data,
+        "components": components,
+    }

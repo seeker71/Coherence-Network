@@ -11,9 +11,9 @@ Formalize the coherence score algorithm from docs/concepts/COHERENCE-ALGORITHM-S
 - [x] Document pitfalls: gaming prevention, contribution-type balance
 - [x] Add weights stub (all equal or placeholder) — actual weights are decision gate
 
-## API Contract (Future)
+## API Contract (implemented in spec 020)
 
-GET /api/projects/{id}/coherence returns `{"score": 0.0–1.0, "components": {...}}` — not implemented here.
+GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "components": {...}}`. Path matches project lookup from spec 008.
 
 ## Files to Create/Modify
 

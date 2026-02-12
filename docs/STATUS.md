@@ -55,6 +55,14 @@
 - 74 tests (73 non-holdout; PM validation excludes holdout)
 - CI runs full suite
 
+## Strategic gaps (Feb 2026)
+
+- **Data confidence:** Coherence API now returns `components_with_data` (0–8); only 2 components are real today. Web/consumers should show "preliminary" or "based on N of 8 signals" when appropriate.
+- **Contributor/Organization:** Not in GraphStore or any spec. Required for real coherence for contributor_diversity, activity_cadence, community_responsiveness, security_posture.
+- **GitHub API:** No spec. High priority for next sprint to populate contributor and activity data.
+- **Funding layer:** No specs yet (Month 4); PostgreSQL/users not spec'd.
+
 ## Next Priority Tasks
 
-1. Pipfile / poetry.lock import (future)
+1. **GitHub API integration spec** — repos, contributors, PRs, issues; critical for coherence beyond stubs.
+2. Pipfile / poetry.lock import (future)

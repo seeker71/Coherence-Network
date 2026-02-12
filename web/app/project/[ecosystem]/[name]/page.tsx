@@ -16,6 +16,7 @@ interface Project {
 
 interface CoherenceResponse {
   score: number;
+  components_with_data?: number; // 0–8; when < 8, score is preliminary (spec 020)
   components: Record<string, number>;
 }
 
@@ -99,6 +100,10 @@ export default function ProjectPage() {
                   <span className="font-medium">{coherence.score}</span>
                   <span className="text-xs text-muted-foreground">
                     (0.0–1.0)
+                    {coherence.components_with_data != null &&
+                      coherence.components_with_data < 8 && (
+                        <> — preliminary ({coherence.components_with_data} of 8 signals)</>
+                      )}
                   </span>
                 </dd>
                 <ul className="mt-2 text-sm text-muted-foreground space-y-0.5">

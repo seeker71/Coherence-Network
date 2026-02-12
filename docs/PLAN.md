@@ -47,7 +47,7 @@
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | API | FastAPI (Python) | Fast iteration, OpenAPI, data ecosystem |
-| Web | Next.js 16 + shadcn/ui | SSR, BFF, professional UI |
+| Web | Next.js 15 + shadcn/ui | SSR, BFF, professional UI (upgrade to 16 when available) |
 | Graph | Neo4j | Dependency traversals |
 | Relational | PostgreSQL | Users, billing, events |
 | Data sources | deps.dev, Libraries.io, GitHub | 100M+ edges, public APIs |
@@ -192,6 +192,13 @@ Stop and create `needs-decision` issue for: new pip/npm dependency; Neo4j label/
 | 1 | Graph | 5K+ npm packages; API returns real data; search works | ✓ Done (019, index_npm --target 5000) |
 | 2 | Coherence + UI | ✓ Done (020 coherence API, 021 web search + project page) |
 | 3 | Import Stack | ✓ Done (022, 025: lockfile + requirements.txt) |
+
+### Gaps & next priorities (Feb 2026)
+
+- **Contributor/Organization not in graph:** GraphStore has Project + DEPENDS_ON only. Plan concepts Contributor, Contribution, CoherenceScore need Contributor/Org nodes and GitHub data to compute real values for contributor_diversity, activity_cadence, community_responsiveness, security_posture.
+- **GitHub API spec missing:** Critical path to real coherence; no spec yet. Next sprint: add spec for GitHub API integration (repos, contributors, PRs, issues).
+- **Funding layer (Month 4):** No specs yet for energy token, funding router, Stripe, subscription tiers, or distribution algorithm. When planning Month 4, add explicit specs.
+- **PostgreSQL / users:** Plan lists PostgreSQL for users, billing, events. No spec for migration or auth. When planning Month 4, add specs for PostgreSQL migration and user/auth if dashboard or Team tier need them.
 
 ### Risk Register
 

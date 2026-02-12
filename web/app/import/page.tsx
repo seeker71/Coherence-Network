@@ -17,9 +17,9 @@ interface ImportPackage {
 
 interface RiskSummary {
   unknown: number;
-  low: number;
-  medium: number;
-  high: number;
+  high_risk: number;   // coherence < 0.4 or unknown
+  medium_risk: number; // 0.4–0.7
+  low_risk: number;    // coherence ≥ 0.7 (healthy)
 }
 
 interface ImportResult {
@@ -106,16 +106,16 @@ export default function ImportPage() {
               <dd className="font-medium">{result.risk_summary.unknown}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Low (&lt;0.4)</dt>
-              <dd className="font-medium">{result.risk_summary.low}</dd>
+              <dt className="text-muted-foreground">High risk (&lt;0.4)</dt>
+              <dd className="font-medium">{result.risk_summary.high_risk}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Medium (0.4–0.7)</dt>
-              <dd className="font-medium">{result.risk_summary.medium}</dd>
+              <dt className="text-muted-foreground">Medium risk (0.4–0.7)</dt>
+              <dd className="font-medium">{result.risk_summary.medium_risk}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">High (≥0.7)</dt>
-              <dd className="font-medium">{result.risk_summary.high}</dd>
+              <dt className="text-muted-foreground">Low risk (≥0.7)</dt>
+              <dd className="font-medium">{result.risk_summary.low_risk}</dd>
             </div>
           </dl>
           <h2 className="text-lg font-semibold">
