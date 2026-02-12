@@ -61,7 +61,7 @@ while true; do
       rm -f "$RESTART_FILE"
       # When api_unreachable or effectiveness_404, restart API (stale routes need fresh API process)
       if [ "$REASON" = "api_unreachable" ] || [ "$REASON" = "effectiveness_404" ]; then
-        echo "API unreachable — attempting API restart..."
+        echo "API restart needed ($REASON) — restarting API..."
         pkill -f "uvicorn app.main" 2>/dev/null || true
         sleep 2
         PORT="${PORT:-8000}"

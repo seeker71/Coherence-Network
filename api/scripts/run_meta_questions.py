@@ -18,6 +18,12 @@ _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
 os.chdir(os.path.dirname(_api_dir))
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(_api_dir, ".env"))
+except ImportError:
+    pass
+
 LOG_DIR = os.path.join(_api_dir, "logs")
 META_QUESTIONS_FILE = os.path.join(LOG_DIR, "meta_questions.json")
 MONITOR_ISSUES_FILE = os.path.join(LOG_DIR, "monitor_issues.json")
@@ -45,12 +51,14 @@ def _load_json(path: str, default: dict) -> dict:
         return default
 
 
-def _check_q1() -> tuple[str, str]:
-    """Executor vs logs: heuristic — if OLLAMA_MODEL set but AGENT_EXECUTOR_DEFAULT=cursor, logs may be wrong."""
+def _check_q1() -> tuple:
+    """Executor vs logs: heuristic. Cursor default + OLLAMA for --claude override is intentional."""
     executor = os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower()
     ollama = os.environ.get("OLLAMA_MODEL", "")
-    if executor == "cursor" and ollama:
-        return "no", "OLLAMA_MODEL set but AGENT_EXECUTOR_DEFAULT=cursor; logs may reference Ollama"
+    if executor == "cursor":
+        if ollama:
+            return "yes", "Executor=cursor (default); OLLAMA for --claude override; logs reflect cursor for normal runs"
+        return "yes", "Executor=cursor; ensure log messages are executor-aware"
     if executor:
         return "yes", f"Executor={executor}; ensure log messages are executor-aware"
     return "unanswered", "AGENT_EXECUTOR_DEFAULT not set; cannot verify"

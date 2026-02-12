@@ -153,9 +153,10 @@ async def test_health_returns_valid_json(client: AsyncClient):
     assert data["status"] == "ok"
     assert "version" in data
     assert "timestamp" in data
-    # Basic ISO8601 check
+    # Basic ISO8601 UTC: T separator and Z or +00:00 (spec 001)
     ts = data["timestamp"]
-    assert "T" in ts and "Z" in ts
+    assert "T" in ts, "timestamp must be ISO8601 with T separator"
+    assert ts.endswith("Z") or ts.endswith("+00:00"), "timestamp must be UTC (Z or +00:00)"
 
 
 @pytest.mark.asyncio

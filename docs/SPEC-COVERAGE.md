@@ -132,6 +132,23 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 004: CI Pipeline
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| Workflow at .github/workflows/test.yml | `.github/workflows/test.yml` | `test_workflow_file_exists` |
+| Triggers on push and pull_request (main/master) | workflow `on:` | `test_workflow_triggers_on_push_and_pull_request` |
+| Python 3.9+ | setup-python step | `test_workflow_uses_python_39_or_newer` |
+| pip install -e ".[dev]" in api/ | Install step | `test_workflow_installs_api_dev_deps` |
+| pytest -v in api/ | Run API tests step | `test_workflow_runs_pytest_in_api` |
+| README CI badge (workflow test.yml) | README.md | `test_readme_has_ci_badge` |
+
+**Files:** `.github/workflows/test.yml`, `README.md`, `api/tests/test_ci_pipeline.py`
+
+**Contract (spec 004):** Workflow present; runs on push/PR to main or master; installs Python 3.9+, API dev deps, runs pytest -v in api/; README contains badge for test.yml. Tests define the contract; do not modify tests to make implementation pass.
+
+---
+
 ## Spec 007: Sprint 0 Landing
 
 | Requirement | Implementation | Test |

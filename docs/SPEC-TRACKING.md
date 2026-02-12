@@ -27,6 +27,7 @@ cd web && npm run build      # 7 routes
 | Spec | Test File(s) |
 |------|--------------|
 | 001 | test_health.py |
+| 004 | test_ci_pipeline.py |
 | 002, 003 | test_agent.py |
 | 007 | test_health.py |
 | 008, 019 | test_projects.py, test_graph_store.py |
