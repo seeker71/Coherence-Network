@@ -1,30 +1,25 @@
-"""GraphStore abstraction + in-memory backend — spec 019."""
+"""GraphStore abstraction + in-memory backend — extended for Coherence Contribution Network.
+
+This version preserves the existing project/dependency API and adds:
+- Contributors
+- Assets
+- Contributions
+
+All money uses Decimal. Store is in-memory with optional JSON persistence.
+"""
 
 from __future__ import annotations
 
 import json
 import os
-from typing import Optional, Protocol, List
+from decimal import Decimal
+from typing import Optional, Protocol
+from uuid import UUID
 
-from pydantic import BaseModel
-
+from app.models.asset import Asset
+from app.models.contribution import Contribution
+from app.models.contributor import Contributor
 from app.models.project import Project, ProjectSummary
-
-
-class Contributor(BaseModel):
-    id: str
-    source: str
-    login: str
-    name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    contributions_count: int
-    last_contribution_date: Optional[str] = None
-
-
-class Organization(BaseModel):
-    id: str
-    login: str
-    type: str
 
 
 def _key(ecosystem: str, name: str) -> tuple[str, str]:
@@ -34,6 +29,7 @@ def _key(ecosystem: str, name: str) -> tuple[str, str]:
 class GraphStore(Protocol):
     """Protocol for graph storage. Implementations: InMemoryGraphStore, future Neo4j."""
 
+    # ---- existing project API ----
     def get_project(self, ecosystem: str, name: str) -> Optional[Project]:
         ...
 
@@ -43,43 +39,62 @@ class GraphStore(Protocol):
     def upsert_project(self, project: Project) -> None:
         ...
 
-    def add_dependency(
-        self, from_eco: str, from_name: str, to_eco: str, to_name: str
-    ) -> None:
+    def add_dependency(self, from_eco: str, from_name: str, to_eco: str, to_name: str) -> None:
         ...
 
     def count_projects(self) -> int:
         ...
 
     def count_dependents(self, ecosystem: str, name: str) -> int:
-        """Count projects that depend on this one (reverse edges). For coherence downstream_impact."""
+        """Count projects that depend on this one (reverse edges)."""
         ...
 
-    def get_contributor(self, id: str) -> Optional[Contributor]:
+    # ---- contribution network API ----
+    def get_contributor(self, contributor_id: UUID) -> Contributor | None:
+        """Get contributor by ID."""
         ...
 
-    def upsert_contributor(self, contributor: Contributor) -> None:
+    def create_contributor(self, contributor: Contributor) -> Contributor:
+        """Create new contributor."""
         ...
 
-    def get_organization(self, id: str) -> Optional[Organization]:
+    def list_contributors(self, limit: int = 100) -> list[Contributor]:
+        """List all contributors."""
         ...
 
-    def upsert_organization(self, org: Organization) -> None:
+    def get_asset(self, asset_id: UUID) -> Asset | None:
+        """Get asset by ID."""
         ...
 
-    def add_contributes_to(self, contributor_id: str, ecosystem: str, name: str) -> None:
+    def create_asset(self, asset: Asset) -> Asset:
+        """Create new asset."""
         ...
 
-    def add_maintains(self, contributor_id: str, ecosystem: str, name: str) -> None:
+    def list_assets(self, limit: int = 100) -> list[Asset]:
+        """List all assets."""
         ...
 
-    def add_member_of(self, contributor_id: str, org_id: str) -> None:
+    def create_contribution(
+        self,
+        contributor_id: UUID,
+        asset_id: UUID,
+        cost_amount: Decimal,
+        coherence_score: float,
+        metadata: dict,
+    ) -> Contribution:
+        """Record a contribution."""
         ...
 
-    def get_project_contributors(self, ecosystem: str, name: str) -> list[Contributor]:
+    def get_contribution(self, contribution_id: UUID) -> Contribution | None:
+        """Get contribution by ID."""
         ...
 
-    def get_contributor_organization(self, contributor_id: str) -> Optional[Organization]:
+    def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
+        """Get all contributions to an asset."""
+        ...
+
+    def get_contributor_contributions(self, contributor_id: UUID) -> list[Contribution]:
+        """Get all contributions by a contributor."""
         ...
 
 
@@ -87,13 +102,15 @@ class InMemoryGraphStore:
     """In-memory GraphStore. Optional JSON persistence for restart."""
 
     def __init__(self, persist_path: Optional[str] = None) -> None:
+        # existing graph data
         self._projects: dict[tuple[str, str], Project] = {}
         self._edges: list[tuple[tuple[str, str], tuple[str, str]]] = []
-        self._contributors: dict[str, Contributor] = {}
-        self._organizations: dict[str, Organization] = {}
-        self._contributes_to: list[tuple[str, tuple[str, str]]] = []
-        self._maintains: list[tuple[str, tuple[str, str]]] = []
-        self._member_of: list[tuple[str, str]] = []
+
+        # contribution network data
+        self._contributors: dict[UUID, Contributor] = {}
+        self._assets: dict[UUID, Asset] = {}
+        self._contributions: dict[UUID, Contribution] = {}
+
         self._persist_path = persist_path
         if persist_path and os.path.isfile(persist_path):
             self._load()
@@ -104,30 +121,27 @@ class InMemoryGraphStore:
         try:
             with open(self._persist_path, encoding="utf-8") as f:
                 data = json.load(f)
+
+            # projects
             for p in data.get("projects", []):
                 proj = Project(**p)
                 self._projects[_key(proj.ecosystem, proj.name)] = proj
             for e in data.get("edges", []):
                 if len(e) >= 2 and len(e[0]) >= 2 and len(e[1]) >= 2:
-                    self._edges.append(
-                        ((e[0][0], e[0][1]), (e[1][0], e[1][1]))
-                    )
+                    self._edges.append(((e[0][0], e[0][1]), (e[1][0], e[1][1])))
+            self._recompute_dependency_counts()
+
+            # contribution network
             for c in data.get("contributors", []):
                 contrib = Contributor(**c)
                 self._contributors[contrib.id] = contrib
-            for o in data.get("organizations", []):
-                org = Organization(**o)
-                self._organizations[org.id] = org
-            for e in data.get("contributes_to", []):
-                if len(e) == 2 and isinstance(e[0], str) and len(e[1]) == 2:
-                    self._contributes_to.append((e[0], _key(e[1][0], e[1][1])))
-            for e in data.get("maintains", []):
-                if len(e) == 2 and isinstance(e[0], str) and len(e[1]) == 2:
-                    self._maintains.append((e[0], _key(e[1][0], e[1][1])))
-            for e in data.get("member_of", []):
-                if len(e) == 2 and isinstance(e[0], str) and isinstance(e[1], str):
-                    self._member_of.append((e[0], e[1]))
-            self._recompute_dependency_counts()
+            for a in data.get("assets", []):
+                asset = Asset(**a)
+                self._assets[asset.id] = asset
+            for cn in data.get("contributions", []):
+                contribn = Contribution(**cn)
+                self._contributions[contribn.id] = contribn
+
         except (json.JSONDecodeError, IOError, KeyError, ValueError):
             pass
 
@@ -148,19 +162,20 @@ class InMemoryGraphStore:
             "projects": [p.model_dump() for p in self._projects.values()],
             "edges": [[list(from_k), list(to_k)] for from_k, to_k in self._edges],
             "contributors": [c.model_dump() for c in self._contributors.values()],
-            "organizations": [o.model_dump() for o in self._organizations.values()],
-            "contributes_to": [[c_id, list(p_k)] for c_id, p_k in self._contributes_to],
-            "maintains": [[c_id, list(p_k)] for c_id, p_k in self._maintains],
-            "member_of": [[c, o] for c, o in self._member_of],
+            "assets": [a.model_dump() for a in self._assets.values()],
+            "contributions": [c.model_dump() for c in self._contributions.values()],
         }
         with open(self._persist_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=0)
 
+    # ----------------------------
+    # Existing project API
+    # ----------------------------
     def get_project(self, ecosystem: str, name: str) -> Optional[Project]:
         return self._projects.get(_key(ecosystem, name))
 
     def search(self, query: str, limit: int = 20) -> list[ProjectSummary]:
-        q = query.lower().strip()
+        q = (query or "").strip().lower()
         if not q:
             return []
         out: list[ProjectSummary] = []
@@ -178,13 +193,10 @@ class InMemoryGraphStore:
         return out
 
     def upsert_project(self, project: Project) -> None:
-        k = _key(project.ecosystem, project.name)
-        self._projects[k] = project
+        self._projects[_key(project.ecosystem, project.name)] = project
         self._recompute_dependency_counts()
 
-    def add_dependency(
-        self, from_eco: str, from_name: str, to_eco: str, to_name: str
-    ) -> None:
+    def add_dependency(self, from_eco: str, from_name: str, to_eco: str, to_name: str) -> None:
         from_k = _key(from_eco, from_name)
         to_k = _key(to_eco, to_name)
         edge = (from_k, to_k)
@@ -196,51 +208,66 @@ class InMemoryGraphStore:
         return len(self._projects)
 
     def count_dependents(self, ecosystem: str, name: str) -> int:
-        """Count projects that depend on this one (reverse edges)."""
-        k = _key(ecosystem, name)
-        return sum(1 for _from, _to in self._edges if _to == k)
+        target = _key(ecosystem, name)
+        return sum(1 for _from_k, to_k in self._edges if to_k == target)
 
-    def get_contributor(self, id: str) -> Optional[Contributor]:
-        return self._contributors.get(id)
+    # ----------------------------
+    # Contribution network API
+    # ----------------------------
+    def get_contributor(self, contributor_id: UUID) -> Contributor | None:
+        return self._contributors.get(contributor_id)
 
-    def upsert_contributor(self, contributor: Contributor) -> None:
+    def create_contributor(self, contributor: Contributor) -> Contributor:
         self._contributors[contributor.id] = contributor
+        return contributor
 
-    def get_organization(self, id: str) -> Optional[Organization]:
-        return self._organizations.get(id)
+    def list_contributors(self, limit: int = 100) -> list[Contributor]:
+        items = sorted(self._contributors.values(), key=lambda c: c.created_at, reverse=True)
+        return items[: max(0, int(limit))]
 
-    def upsert_organization(self, org: Organization) -> None:
-        self._organizations[org.id] = org
+    def get_asset(self, asset_id: UUID) -> Asset | None:
+        return self._assets.get(asset_id)
 
-    def add_contributes_to(self, contributor_id: str, ecosystem: str, name: str) -> None:
-        p_k = _key(ecosystem, name)
-        edge = (contributor_id, p_k)
-        if edge not in self._contributes_to:
-            self._contributes_to.append(edge)
+    def create_asset(self, asset: Asset) -> Asset:
+        self._assets[asset.id] = asset
+        return asset
 
-    def add_maintains(self, contributor_id: str, ecosystem: str, name: str) -> None:
-        p_k = _key(ecosystem, name)
-        edge = (contributor_id, p_k)
-        if edge not in self._maintains:
-            self._maintains.append(edge)
+    def list_assets(self, limit: int = 100) -> list[Asset]:
+        items = sorted(self._assets.values(), key=lambda a: a.created_at, reverse=True)
+        return items[: max(0, int(limit))]
 
-    def add_member_of(self, contributor_id: str, org_id: str) -> None:
-        edge = (contributor_id, org_id)
-        if edge not in self._member_of:
-            self._member_of.append(edge)
+    def create_contribution(
+        self,
+        contributor_id: UUID,
+        asset_id: UUID,
+        cost_amount: Decimal,
+        coherence_score: float,
+        metadata: dict,
+    ) -> Contribution:
+        contrib = Contribution(
+            contributor_id=contributor_id,
+            asset_id=asset_id,
+            cost_amount=cost_amount,
+            coherence_score=coherence_score,
+            metadata=metadata or {},
+        )
+        self._contributions[contrib.id] = contrib
 
-    def get_project_contributors(self, ecosystem: str, name: str) -> list[Contributor]:
-        p_k = _key(ecosystem, name)
-        out = []
-        for c_id, proj_k in self._contributes_to:
-            if proj_k == p_k:
-                contrib = self._contributors.get(c_id)
-                if contrib:
-                    out.append(contrib)
+        asset = self._assets.get(asset_id)
+        if asset:
+            asset.total_cost = (asset.total_cost or Decimal("0.00")) + cost_amount
+
+        return contrib
+
+    def get_contribution(self, contribution_id: UUID) -> Contribution | None:
+        return self._contributions.get(contribution_id)
+
+    def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
+        out = [c for c in self._contributions.values() if c.asset_id == asset_id]
+        out.sort(key=lambda c: c.timestamp)
         return out
 
-    def get_contributor_organization(self, contributor_id: str) -> Optional[Organization]:
-        for c_id, o_id in self._member_of:
-            if c_id == contributor_id:
-                return self._organizations.get(o_id)
-        return None
+    def get_contributor_contributions(self, contributor_id: UUID) -> list[Contribution]:
+        out = [c for c in self._contributions.values() if c.contributor_id == contributor_id]
+        out.sort(key=lambda c: c.timestamp)
+        return out

@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class ContributorType(str, Enum):
+    HUMAN = "HUMAN"
+    SYSTEM = "SYSTEM"
+
+
+class ContributorBase(BaseModel):
+    type: ContributorType
+    name: str
+    email: EmailStr
+    wallet_address: str | None = None
+    hourly_rate: Decimal | None = None
+
+
+class ContributorCreate(ContributorBase):
+    pass
+
+
+class Contributor(ContributorBase):
+    id: UUID = Field(default_factory=uuid4)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True

@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
+
+
+class AssetType(str, Enum):
+    CODE = "CODE"
+    MODEL = "MODEL"
+    CONTENT = "CONTENT"
+    DATA = "DATA"
+
+
+class AssetBase(BaseModel):
+    type: AssetType
+    description: str
+
+
+class AssetCreate(AssetBase):
+    pass
+
+
+class Asset(AssetBase):
+    id: UUID = Field(default_factory=uuid4)
+    total_cost: Decimal = Decimal("0.00")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True
