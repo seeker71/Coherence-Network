@@ -5,6 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
