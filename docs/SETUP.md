@@ -65,7 +65,7 @@ Copy `api/.env.example` to `api/.env` and fill required keys.
 | Problem | Fix |
 |---------|-----|
 | `pytest: command not found` | Use `.venv/bin/pytest` or `python -m pytest` in the venv |
-| Import/module errors | Ensure `pip install -e ".[dev]"` ran in active venv |
+| `ModuleNotFoundError` / import error when running scripts | If venv activation is missing, use the explicit venv path (`api/.venv/bin/python api/scripts/<script>.py`) and ensure `pip install -e ".[dev]"` ran in the active venv |
 | Port 8000 in use | Start API on another port (`--port 8001`) |
 
 ## Deployment
