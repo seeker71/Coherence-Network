@@ -3,10 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Optional
 from uuid import UUID, uuid4
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+try:
+    import email_validator  # type: ignore # noqa: F401
+except ImportError:  # pragma: no cover - env-specific fallback
+    EmailField = str
+else:
+    from pydantic import EmailStr as EmailField
 
 
 class ContributorType(str, Enum):
@@ -17,7 +25,7 @@ class ContributorType(str, Enum):
 class ContributorBase(BaseModel):
     type: ContributorType
     name: str
-    email: str
+    email: EmailField
     wallet_address: Optional[str] = None
     hourly_rate: Optional[Decimal] = None
 
