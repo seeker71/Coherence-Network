@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from uuid import UUID, uuid4
+from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -17,8 +18,8 @@ class ContributorBase(BaseModel):
     type: ContributorType
     name: str
     email: str
-    wallet_address: str | None = None
-    hourly_rate: Decimal | None = None
+    wallet_address: Optional[str] = None
+    hourly_rate: Optional[Decimal] = None
 
 
 class ContributorCreate(ContributorBase):
