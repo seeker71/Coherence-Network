@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Python 3.9+
-- Node.js 20+ (for web, when added)
-- Docker (optional, for Neo4j/Postgres)
+- Node.js 20+
+- Docker (optional for local Neo4j/Postgres)
 
 ## API Setup
 
@@ -22,7 +22,7 @@ cd api
 uvicorn app.main:app --reload --port 8000
 ```
 
-Visit http://localhost:8000/docs for OpenAPI UI.
+Open API docs at `http://localhost:8000/docs`.
 
 ## Run Tests
 
@@ -31,41 +31,43 @@ cd api
 pytest -v
 ```
 
-Use `.venv/bin/pytest` if `pytest` is not on PATH.
+If needed, use `.venv/bin/pytest`.
 
-## Scripts and venv
+## Run Web
 
-For all `api/scripts/*` invocations, use the venv Python explicitly so scripts run reliably from any working directory:
+```bash
+cd web
+npm install
+npm run dev
+```
 
-- **From repo root:** `api/.venv/bin/python api/scripts/script_name.py`
-- **From `api/`:** `.venv/bin/python scripts/script_name.py`
-- **Windows (from repo root):** `api\.venv\Scripts\python.exe api\scripts\script_name.py`
-- **Windows (from `api\`):** `.venv\Scripts\python.exe scripts\script_name.py`
+## Run Pipeline Scripts
 
-Same pattern for pytest: `api/.venv/bin/pytest` or `.venv/bin/pytest` when in `api/`.
+Use the venv Python explicitly for script reliability:
+
+- From repo root: `api/.venv/bin/python api/scripts/<script>.py`
+- From `api/`: `.venv/bin/python scripts/<script>.py`
+
+Useful commands:
+
+```bash
+cd api && .venv/bin/python scripts/project_manager.py --dry-run
+cd api && .venv/bin/python scripts/check_pipeline.py --json
+cd api && ./scripts/run_overnight_pipeline.sh
+```
+
+## Environment
+
+Copy `api/.env.example` to `api/.env` and fill required keys.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `ModuleNotFoundError` or import errors when running scripts | Run from `api/` or use full venv path: `api/.venv/bin/python api/scripts/foo.py` (see **Scripts and venv** above). Ensure `pip install -e ".[dev]"` was run in that venv. |
-| `pytest: command not found` | Use `api/.venv/bin/pytest` or, from `api/`, `.venv/bin/pytest`; or `api/.venv/bin/python -m pytest`. |
-| API won't start (port in use) | Use a different port: `uvicorn app.main:app --reload --port 8001`. Or find and kill the process using port 8000. |
-| Venv activation vs path | You can either activate the venv (`source .venv/bin/activate` in `api/`) and then run `python`/`pytest`, or skip activation and always use the full path (`api/.venv/bin/python`, `api/.venv/bin/pytest`) so the correct interpreter is used from any directory. |
-| Import errors in tests | Run from `api/`; use `api/.venv/bin/pytest` or ensure venv is activated and has `pip install -e ".[dev]"`. |
+| `pytest: command not found` | Use `.venv/bin/pytest` or `python -m pytest` in the venv |
+| Import/module errors | Ensure `pip install -e ".[dev]"` ran in active venv |
+| Port 8000 in use | Start API on another port (`--port 8001`) |
 
-## Web (Placeholder)
+## Deployment
 
-Web app: Next.js 15 + shadcn/ui (see spec 012).
-
-## Environment
-
-Copy `api/.env.example` to `api/.env` and fill in keys. For Telegram alerts and webhook, see [API-KEYS-SETUP.md](API-KEYS-SETUP.md) §6. Test with: `cd api && pip install python-dotenv && python scripts/test_telegram.py`
-
-## Production Deploy
-
-See [DEPLOY.md](DEPLOY.md) for deploy checklist, health probes, and env vars.
-
-## Cursor
-
-Open this repo in Cursor. Rules in `.cursor/rules/` apply. Use Cursor as the primary manual development interface.
+See [DEPLOY.md](DEPLOY.md) and [RUNBOOK.md](RUNBOOK.md).
