@@ -1,0 +1,38 @@
+{
+  "node_operators": [
+    {
+      "node_id": "uuid-node-hobbyist",
+      "operator": "College Student",
+      "setup": "$5/month VPS (free with GitHub Student Pack)",
+      "pricing": {
+        "api_request": 0.00002,
+        "storage_gb_month": 0.005,
+        "compute_hour": 0.008
+      },
+      "expected_revenue": {
+        "10_percent_utilization": 5.00,
+        "50_percent_utilization": 25.00,
+        "90_percent_utilization": 45.00
+      },
+      "costs": 0.00,
+      "profit_at_90_percent": 45.00
+    },
+    {
+      "node_id": "uuid-node-pro",
+      "operator": "Professional Developer",
+      "setup": "$20/month VPS with monitoring",
+      "pricing": {
+        "api_request": 0.00005,
+        "storage_gb_month": 0.010,
+        "compute_hour": 0.015
+      },
+      "expected_revenue": {
+        "10_percent_utilization": 25.00,
+        "50_percent_utilization": 125.00,
+        "90_percent_utilization": 225.00
+      },
+      "costs": 20.00,
+      "profit_at_90_percent": 205.00
+    }
+  ]
+}

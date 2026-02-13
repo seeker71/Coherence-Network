@@ -1,0 +1,51 @@
+{
+  "event_id": "uuid-seeker71-initial",
+  "contributor_id": "uuid-seeker71",
+  "asset_id": "uuid-coherence-network",
+  "event_type": "PROJECT_INCEPTION",
+  "cost_breakdown": {
+    "human_labor": {
+      "hours": 16,
+      "hourly_rate": 150.00,
+      "total": 2400.00
+    },
+    "tool_usage": {
+      "cursor_pro_subscription": {
+        "monthly_cost": 20.00,
+        "days_used": 2,
+        "prorated_cost": 1.33
+      },
+      "cursor_auto": {
+        "requests": 500,
+        "cost": 0.00,
+        "note": "Included in Pro subscription, hit limit"
+      }
+    },
+    "compute": {
+      "hardware": "MacBook M4 Ultra",
+      "hours": 16,
+      "electricity": {
+        "power_watts": 140,
+        "rate_per_kwh": 0.15,
+        "cost": 0.34
+      },
+      "depreciation": {
+        "purchase_price": 7199.00,
+        "useful_life_hours": 10000,
+        "cost": 11.52
+      },
+      "total": 11.86
+    },
+    "total_cost": 2413.19
+  },
+  "resonance": {
+    "code_quality_score": 0.85,
+    "architecture_alignment": 1.0,
+    "value_add_score": 1.0,
+    "test_coverage": 0.3,
+    "documentation_score": 0.7,
+    "coherence_score": 0.92,
+    "coherence_multiplier": 1.42
+  },
+  "timestamp": "2026-02-11T10:00:00Z"
+}
