@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ContributionBase(BaseModel):
@@ -23,5 +23,4 @@ class Contribution(ContributionBase):
     coherence_score: float = Field(ge=0.0, le=1.0)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

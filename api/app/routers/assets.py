@@ -18,7 +18,7 @@ def get_store(request: Request) -> GraphStore:
 @router.post("/assets", response_model=Asset, status_code=201)
 async def create_asset(asset: AssetCreate, store: GraphStore = Depends(get_store)) -> Asset:
     """Create a new asset."""
-    asset_obj = Asset(**asset.dict())
+    asset_obj = Asset(**asset.model_dump())
     return store.create_asset(asset_obj)
 
 
