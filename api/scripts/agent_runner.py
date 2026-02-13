@@ -99,8 +99,10 @@ def run_one_task(
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
     if _uses_cursor_cli(command):
-        # Cursor CLI uses Cursor app auth; do not override ANTHROPIC_* or OLLAMA
-        log.info("task=%s using Cursor CLI", task_id)
+        # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
+        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
+        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
+        log.info("task=%s using Cursor CLI with OpenRouter", task_id)
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)

@@ -1,0 +1,74 @@
+name: Auto-Track Contributions
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [closed]
+
+jobs:
+  track-contribution:
+    if: github.event.pull_request.merged == true || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Get commit info
+        id: commit_info
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --format='%ae')
+          COMMIT_HASH=$(git log -1 --format='%H')
+          FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH | wc -l)
+          LINES_ADDED=$(git diff-tree --no-commit-id --numstat -r $COMMIT_HASH | awk '{sum+=$1} END {print sum}')
+          
+          echo "author_email=$AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_added=$LINES_ADDED" >> $GITHUB_OUTPUT
+      
+      - name: Calculate contribution cost
+        id: calc_cost
+        run: |
+          FILES=${{ steps.commit_info.outputs.files_changed }}
+          LINES=${{ steps.commit_info.outputs.lines_added }}
+          
+          # Base cost: $10 per file + $0.50 per line
+          COST=$(echo "($FILES * 10) + ($LINES * 0.5)" | bc)
+          
+          echo "cost=$COST" >> $GITHUB_OUTPUT
+      
+      - name: Record contribution
+        env:
+          API_URL: ${{ secrets.COHERENCE_API_URL }}
+          API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+        run: |
+          curl -X POST "$API_URL/v1/contributions" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $API_KEY" \
+            -d '{
+              "contributor_email": "${{ steps.commit_info.outputs.author_email }}",
+              "event_type": "GIT_COMMIT",
+              "cost_amount": ${{ steps.calc_cost.outputs.cost }},
+              "metadata": {
+                "commit_hash": "${{ steps.commit_info.outputs.commit_hash }}",
+                "files_changed": ${{ steps.commit_info.outputs.files_changed }},
+                "lines_added": ${{ steps.commit_info.outputs.lines_added }},
+                "repository": "${{ github.repository }}"
+              }
+            }'
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              body: '✅ Contribution recorded! Cost: $$${{ steps.calc_cost.outputs.cost }}\nVerify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}'
+            })

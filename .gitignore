@@ -44,3 +44,5 @@ logs/
 
 # Generated task packages
 api/packages/
+.aider*
+.deployment_config

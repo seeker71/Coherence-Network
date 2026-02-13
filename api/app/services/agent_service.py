@@ -9,22 +9,22 @@ from typing import Any, List, Optional, Tuple
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
 # Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
-_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "glm-4.7-flash:latest")  # Local (default)
-_OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "glm-5:cloud")  # Cloud fallback
-_CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "claude-3-5-haiku-20241022")  # Claude fallback
+_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "openrouter/free")  # Use OpenRouter free model as default
+_OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "openrouter/free")  # Cloud fallback using OpenRouter
+_CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")  # Claude fallback using OpenRouter
 
 # Cursor CLI models (when context.executor == "cursor") — see docs/CURSOR-CLI.md
-# auto avoids per-model usage limits; composer-1/gemini-3-flash for speed
-_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "auto")
-_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
+# Default to OpenRouter free model when using Cursor CLI
+_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
+_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
 # Routing: local first; use model_override in context for cloud/claude
 ROUTING: dict[TaskType, tuple[str, str]] = {
-    TaskType.SPEC: (f"ollama/{_OLLAMA_MODEL}", "local"),
-    TaskType.TEST: (f"ollama/{_OLLAMA_MODEL}", "local"),
-    TaskType.IMPL: (f"ollama/{_OLLAMA_MODEL}", "local"),
-    TaskType.REVIEW: (f"ollama/{_OLLAMA_MODEL}", "local"),
-    TaskType.HEAL: (_CLAUDE_MODEL, "claude"),
+    TaskType.SPEC: (f"openrouter/free", "openrouter"),
+    TaskType.TEST: (f"openrouter/free", "openrouter"),
+    TaskType.IMPL: (f"openrouter/free", "openrouter"),
+    TaskType.REVIEW: (f"openrouter/free", "openrouter"),
+    TaskType.HEAL: (f"openrouter/free", "openrouter"),
 }
 
 # Subagent mapping: task_type → Claude Code --agent name (from .claude/agents/)
@@ -39,8 +39,10 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
 
 # Command templates: {{direction}} placeholder; uses --agent when subagent defined
 # --allowedTools + --dangerously-skip-permissions required for headless (-p) so Edit runs without prompts
-_COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
-_COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
+# _COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
+# _COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
+_COMMAND_LOCAL_AGENT = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
+_COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
 
 # Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
 _CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {

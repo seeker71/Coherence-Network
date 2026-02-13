@@ -1,0 +1,56 @@
+name: Update External Asset Values
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  update-asset-values:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Update NFT values
+        env:
+          OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
+          API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+        run: |
+          python scripts/asset_tracking/update_asset_value.py --type NFT
+      
+      - name: Update tokenized gold values
+        env:
+          CHAINLINK_RPC: ${{ secrets.CHAINLINK_RPC }}
+          API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+        run: |
+          python scripts/asset_tracking/update_asset_value.py --type TOKENIZED_GOLD
+      
+      - name: Update real estate values
+        env:
+          REALT_API_KEY: ${{ secrets.REALT_API_KEY }}
+          API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+        run: |
+          python scripts/asset_tracking/update_asset_value.py --type REAL_ESTATE
+      
+      - name: Generate value report
+        run: |
+          python scripts/utilities/asset_value_report.py > asset_value_report.md
+      
+      - name: Commit report
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add asset_value_report.md
+          git commit -m "Update asset values [automated]" || echo "No changes"
+          git push

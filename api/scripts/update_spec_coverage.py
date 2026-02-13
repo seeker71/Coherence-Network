@@ -56,7 +56,8 @@ def _existing_spec_ids(content: str) -> set[str]:
     """Parse table rows to get spec numbers (001, 002, ...)."""
     ids = set()
     for line in content.splitlines():
-        m = re.match(r"^\|\s*(\d{3})\s+", line)
+        # Match spec IDs like "001 Health" in "| 001 Health | ✓ | ✓ | ✓ | Complete |"
+        m = re.match(r"^\|\s*(\d{3})\s+(.+?)\s*\|", line)
         if m:
             ids.add(m.group(1))
         m = re.match(r"^\|\s*PLAN\s+", line)
