@@ -246,6 +246,7 @@ Helpful header clues:
 1. Open the Vercel URL.
 2. Confirm pages load.
 3. Confirm UI requests API successfully (browser network tab, no CORS errors).
+   - `/api-health` now uses a server-side proxy route (`/api/health-proxy`) to avoid browser CORS issues while still validating upstream API reachability.
 
 ---
 
