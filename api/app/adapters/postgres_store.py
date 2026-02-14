@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -74,9 +75,18 @@ class PostgresGraphStore:
         """Create tables if they don't exist."""
         Base.metadata.create_all(bind=self.engine)
 
-    def _session(self) -> Session:
-        """Get a new database session."""
-        return self.SessionLocal()
+    @contextmanager
+    def _session(self):
+        """Get a new database session with proper cleanup."""
+        session = self.SessionLocal()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     # ---- Contribution network API ----
 
