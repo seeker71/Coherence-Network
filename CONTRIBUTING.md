@@ -193,7 +193,7 @@ curl https://api.coherencycoin.com/v1/assets/external/YOUR_ASSET_ID
 
 ### Free Hosting Options
 
-1. **Oracle Cloud Free Tier** (recommended)
+1. **Railway/Render free tier** (recommended)
    - Forever free
    - 1 CPU, 1GB RAM
    - Perfect for small nodes
@@ -656,7 +656,7 @@ See [LICENSE](LICENSE) for legal details.
 - Contribution: Initial architecture + deployment ($2,413.19)
 - Coherence: 0.92 (1.20x multiplier)
 - Earnings: 96.5% of distributions
-- Node: Running on Oracle Cloud Free Tier
+- Node: Running on Railway/Render free tier
 
 ### Future You?
 - Contribution: Feature X

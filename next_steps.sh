@@ -150,7 +150,7 @@ SERVICES TO CONFIGURE:
   2. Neo4j Aura (https://console.neo4j.io) - Graph DB
   3. Redis Cloud (https://redis.com/try-free) - Cache
   4. Cloudflare (https://dash.cloudflare.com) - DNS
-  5. Oracle Cloud (https://cloud.oracle.com) - VM
+  5. Railway (https://railway.app) - API hosting
   6. GitHub Token (https://github.com/settings/tokens) - CI/CD
 
 GUIDE: See DEPLOYMENT_GUIDE.md Phase 1
@@ -175,7 +175,7 @@ COMMANDS:
 
 This will:
   - Configure DNS records
-  - Set up Oracle VM
+  - Set up Railway API service
   - Deploy application skeleton
   - Verify basic connectivity
 
@@ -218,7 +218,7 @@ EOF
         cat << EOF
 📤 PHASE 4: Deploy Code to VM
 
-ACTION: Push code to GitHub and deploy to Oracle VM
+ACTION: Push code to GitHub and deploy to Railway
 
 COMMANDS:
   # Commit code

@@ -1,51 +1,59 @@
-# Coherence Network — Deploy Checklist
+# Coherence Network — Deploy Checklist (Railway + Vercel)
 
-Quick reference for deploying API and web to a hosted environment.
+Recommended stack (cheap + easy):
+- **API**: Railway
+- **Web**: Vercel
+- **PostgreSQL**: Neon or Supabase (free tier)
+- **Neo4j**: AuraDB Free
 
 ## Pre-deploy
 
 1. **Environment**
-   - Copy `api/.env.example` to `api/.env`
-   - Fill required keys: `ANTHROPIC_API_KEY` or `OLLAMA_BASE_URL` for agent; `TELEGRAM_BOT_TOKEN` if using Telegram
-   - See [API-KEYS-SETUP.md](API-KEYS-SETUP.md) for details
+   - Copy `api/.env.example` to `api/.env` locally for development.
+   - In Railway/Vercel dashboards, set production env vars (do not commit secrets).
 
 2. **CORS**
-   - Set `ALLOWED_ORIGINS=https://your-domain.com` (comma-separated for multiple). Default: `*` (all origins).
+   - Set `ALLOWED_ORIGINS=https://<your-vercel-domain>` (comma-separated for multiple).
 
 3. **Logs**
-   - Ensure `api/logs/` is writable (created automatically on first run)
-   - See [RUNBOOK.md](RUNBOOK.md) for log locations
+   - Ensure `api/logs/` is writable (created automatically on first run).
 
 ## Health Probes
 
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/health` | Liveness — returns 200, `{"status":"ok"}` |
-| `GET /api/ready` | Readiness — returns 200, `{"ready":true}` (for k8s/Docker) |
+| `GET /api/ready` | Readiness — returns 200, `{"ready":true}` |
 | `GET /api/version` | Version — returns `{"version":"0.1.0"}` |
 
-## Run API
+## Deploy API to Railway
+
+1. Create a Railway project and connect this repository.
+2. Set service root to `api/`.
+3. Start command:
 
 ```bash
-cd api
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-For production, run behind a reverse proxy (nginx, Caddy) with TLS termination.
-
-## Web
+4. Add env vars from `api/.env.example` plus DB connection values.
+5. Deploy and validate:
 
 ```bash
-cd web
-npm ci
-npm run build
-npm start
+curl https://<api-domain>/api/health
+curl https://<api-domain>/api/ready
 ```
 
-Set `NEXT_PUBLIC_API_URL` to your API base URL.
+## Deploy Web to Vercel
 
-## Optional
+1. Import repository in Vercel.
+2. Set root directory to `web/`.
+3. Set env var:
+   - `NEXT_PUBLIC_API_URL=https://<api-domain>`
+4. Deploy and confirm the web app can call API endpoints.
 
-- Reverse proxy (nginx, Caddy) in front of uvicorn
-- TLS termination at proxy
-- Process manager (systemd, supervisord) for API and agent_runner
+## Optional hardening
+
+- Attach custom domains.
+- Add rate limiting and WAF (Cloudflare optional).
+- Add uptime checks for `/api/health` and `/api/ready`.
