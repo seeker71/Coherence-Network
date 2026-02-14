@@ -25,21 +25,22 @@ class ContributorModel(Base):
     __tablename__ = "contributors"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    type = Column(String, nullable=False)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=True, index=True)
+    wallet_address = Column(String, nullable=True)
+    hourly_rate = Column(Numeric(precision=10, scale=2), nullable=True)
     created_at = Column(DateTime, nullable=False)
-    meta = Column(JSON, default={})
 
 
 class AssetModel(Base):
     __tablename__ = "assets"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String, nullable=False, index=True)
-    asset_type = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    description = Column(String, nullable=False, index=True)
     total_cost = Column(Numeric(precision=20, scale=2), default=0)
     created_at = Column(DateTime, nullable=False)
-    meta = Column(JSON, default={})
 
 
 class ContributionModel(Base):
@@ -97,10 +98,12 @@ class PostgresGraphStore:
                 return None
             return Contributor(
                 id=model.id,
+                type=model.type,
                 name=model.name,
                 email=model.email,
+                wallet_address=model.wallet_address,
+                hourly_rate=Decimal(str(model.hourly_rate)) if model.hourly_rate else None,
                 created_at=model.created_at,
-                metadata=model.meta or {},
             )
 
     def find_contributor_by_email(self, email: str) -> Contributor | None:
@@ -111,20 +114,24 @@ class PostgresGraphStore:
                 return None
             return Contributor(
                 id=model.id,
+                type=model.type,
                 name=model.name,
                 email=model.email,
+                wallet_address=model.wallet_address,
+                hourly_rate=Decimal(str(model.hourly_rate)) if model.hourly_rate else None,
                 created_at=model.created_at,
-                metadata=model.meta or {},
             )
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
         with self._session() as session:
             model = ContributorModel(
                 id=contributor.id,
+                type=contributor.type.value,
                 name=contributor.name,
                 email=contributor.email,
+                wallet_address=contributor.wallet_address,
+                hourly_rate=float(contributor.hourly_rate) if contributor.hourly_rate else None,
                 created_at=contributor.created_at,
-                meta=contributor.metadata or {},
             )
             session.add(model)
             session.commit()
@@ -141,10 +148,12 @@ class PostgresGraphStore:
             return [
                 Contributor(
                     id=m.id,
+                    type=m.type,
                     name=m.name,
                     email=m.email,
+                    wallet_address=m.wallet_address,
+                    hourly_rate=Decimal(str(m.hourly_rate)) if m.hourly_rate else None,
                     created_at=m.created_at,
-                    metadata=m.metadata or {},
                 )
                 for m in models
             ]
@@ -156,37 +165,34 @@ class PostgresGraphStore:
                 return None
             return Asset(
                 id=model.id,
-                name=model.name,
-                asset_type=model.asset_type,
+                type=model.type,
+                description=model.description,
                 total_cost=Decimal(str(model.total_cost)) if model.total_cost else Decimal("0.00"),
                 created_at=model.created_at,
-                metadata=model.meta or {},
             )
 
     def find_asset_by_name(self, name: str) -> Asset | None:
-        """Find asset by name."""
+        """Find asset by description (name)."""
         with self._session() as session:
-            model = session.query(AssetModel).filter_by(name=name).first()
+            model = session.query(AssetModel).filter_by(description=name).first()
             if not model:
                 return None
             return Asset(
                 id=model.id,
-                name=model.name,
-                asset_type=model.asset_type,
+                type=model.type,
+                description=model.description,
                 total_cost=Decimal(str(model.total_cost)) if model.total_cost else Decimal("0.00"),
                 created_at=model.created_at,
-                metadata=model.meta or {},
             )
 
     def create_asset(self, asset: Asset) -> Asset:
         with self._session() as session:
             model = AssetModel(
                 id=asset.id,
-                name=asset.name,
-                asset_type=asset.asset_type,
+                type=asset.type.value,
+                description=asset.description,
                 total_cost=float(asset.total_cost) if asset.total_cost else 0.0,
                 created_at=asset.created_at,
-                meta=asset.metadata or {},
             )
             session.add(model)
             session.commit()
@@ -198,11 +204,10 @@ class PostgresGraphStore:
             return [
                 Asset(
                     id=m.id,
-                    name=m.name,
-                    asset_type=m.asset_type,
+                    type=m.type,
+                    description=m.description,
                     total_cost=Decimal(str(m.total_cost)) if m.total_cost else Decimal("0.00"),
                     created_at=m.created_at,
-                    metadata=m.metadata or {},
                 )
                 for m in models
             ]
@@ -275,7 +280,7 @@ class PostgresGraphStore:
                     cost_amount=Decimal(str(m.cost_amount)),
                     coherence_score=float(m.coherence_score),
                     timestamp=m.timestamp,
-                    metadata=m.metadata or {},
+                    metadata=m.meta or {},
                 )
                 for m in models
             ]
@@ -296,7 +301,7 @@ class PostgresGraphStore:
                     cost_amount=Decimal(str(m.cost_amount)),
                     coherence_score=float(m.coherence_score),
                     timestamp=m.timestamp,
-                    metadata=m.metadata or {},
+                    metadata=m.meta or {},
                 )
                 for m in models
             ]
