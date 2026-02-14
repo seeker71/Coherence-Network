@@ -1,0 +1,118 @@
+{
+  "records": 689,
+  "status_counts": {
+    "completed": 279,
+    "failed": 410
+  },
+  "success_rate": 0.405,
+  "by_task_type": {
+    "spec": {
+      "completed": 47,
+      "failed": 62
+    },
+    "impl": {
+      "completed": 121,
+      "failed": 309
+    },
+    "test": {
+      "completed": 60,
+      "failed": 11
+    },
+    "review": {
+      "completed": 44,
+      "failed": 5
+    },
+    "heal": {
+      "completed": 7,
+      "failed": 23
+    }
+  },
+  "failure_signals_top": [
+    [
+      "other_failure",
+      274
+    ],
+    [
+      "log_missing",
+      91
+    ],
+    [
+      "validation_error",
+      19
+    ],
+    [
+      "runtime_error",
+      17
+    ],
+    [
+      "timeout",
+      5
+    ],
+    [
+      "command_not_found",
+      4
+    ]
+  ],
+  "failure_examples_top": [
+    [
+      "# duration_seconds=<n>.<n> exit=<n> status=failed",
+      274
+    ],
+    [
+      "log_missing",
+      91
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): write spec <n>-request-validation: task_type enum, direction length limits, pydantic refine",
+      4
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add retry logic to agent_runner for transient api connection errors (<n> retries). review f",
+      4
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add timeout to agent_runner http calls (avoid indefinite hang). review feedback or test fai",
+      4
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): write spec <n>-api-error-handling: <n> validation, <n> consistency, error schema. review fe",
+      3
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add test: patch task with invalid status returns <n>. review feedback or test failures: t: ",
+      3
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): implement spec <n>: consistent <n>/<n> error response schema. review feedback or test failu",
+      3
+    ],
+    [
+      "/bin/sh: line <n>: plan_progress: command not found",
+      3
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add env validation at startup: warn if telegram_bot_token missing but webhook enabled. revi",
+      3
+    ],
+    [
+      "w: [resource_exhausted] error",
+      2
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add test: post /api/agent/tasks with invalid task_type returns <n>. review feedback or test",
+      2
+    ],
+    [
+      "# command=agent \"write and run tests for: write spec <n>-api-error-handling: <n> validation, <n> consistency, error schema. ensure tests def",
+      1
+    ],
+    [
+      "# command=agent \"review the implementation for: write spec <n>-api-error-handling: <n> validation, <n> consistency, error schema. check spec",
+      1
+    ],
+    [
+      "# command=agent \"fix the issues (iteration <n>): add docs/glossary.md: terms (coherence, task_type, pipeline, backlog, etc.). review feedbac",
+      1
+    ]
+  ]
+}

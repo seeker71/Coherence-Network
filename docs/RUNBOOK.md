@@ -135,6 +135,20 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 
 This checks: API reachable, metrics endpoint, monitor-issues endpoint, effectiveness endpoint, version tracking, monitor/runner processes. Reports effectiveness summary (throughput, success rate, issues, goal proximity) and required actions if anything needs attention.
 
+## System Audit (Cost/Value)
+
+Use these when deciding what to fix next (lowest-cost, highest-value first):
+
+```bash
+# Runtime truth: mounted routes vs web expectations and unmounted agent routes
+cd api && .venv/bin/python scripts/audit_runtime_surface.py
+
+# Failure concentration: which task types/signals are dragging success rate
+cd api && .venv/bin/python scripts/analyze_pipeline_failures.py
+```
+
+Save artifacts under `docs/system_audit/` and update `docs/SYSTEM-QUESTION-LEDGER.md` each cycle.
+
 ## Check Pipeline Status
 
 ```bash
