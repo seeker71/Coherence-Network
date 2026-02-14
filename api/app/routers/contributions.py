@@ -179,7 +179,11 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
 
         if not contributor:
             contributor_name = payload.contributor_email.split("@")[0]
-            contributor = Contributor(name=contributor_name, email=payload.contributor_email)
+            contributor = Contributor(
+                type=ContributorType.HUMAN,
+                name=contributor_name,
+                email=payload.contributor_email
+            )
             contributor = store.create_contributor(contributor)
 
         # Find or create asset
@@ -188,7 +192,10 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
             asset = store.find_asset_by_name(payload.repository)
 
         if not asset:
-            asset = Asset(name=payload.repository, asset_type="REPOSITORY")
+            asset = Asset(
+                type=AssetType.CODE,
+                description=f"GitHub repository: {payload.repository}"
+            )
             asset = store.create_asset(asset)
 
         # Calculate coherence
