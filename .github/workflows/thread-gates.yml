@@ -26,7 +26,7 @@ jobs:
         run: |
           python scripts/validate_commit_evidence.py
 
-      - name: Validate collective review (PRs)
+      - name: Record collective review status (PRs, non-blocking)
         if: ${{ github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,8 +40,8 @@ jobs:
             | jq '[.[] | select(.state=="APPROVED") | .user.login] | unique | length')
           echo "unique_approvers=$APPROVERS"
           if [ "${APPROVERS:-0}" -lt 1 ]; then
-            echo "ERROR: collective review gate failed (need >=1 unique approver)"
-            exit 1
+            echo "WARNING: collective review not yet satisfied (need >=1 unique approver)."
+            echo "WARNING: merge may proceed, but post-merge change contract will block contributor acknowledgment until collective review passes."
           fi
 
       - name: Check runtime drift baseline

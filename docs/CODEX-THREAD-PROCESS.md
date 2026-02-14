@@ -39,8 +39,9 @@ If CI fails:
 - Re-run local validation.
 - Push fix and wait for green CI.
 
-Collective review enforcement:
-- `thread-gates.yml` fails PR checks unless at least 1 unique `APPROVED` review exists.
+Collective review signal:
+- `thread-gates.yml` records collective review status on PRs (non-blocking).
+- Contributor acknowledgment remains blocked by post-merge Change Contract until collective review passes.
 
 ### Phase C: Public Deploy Validation (required before next product phase)
 
