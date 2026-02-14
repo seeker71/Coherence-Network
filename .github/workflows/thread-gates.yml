@@ -26,6 +26,10 @@ jobs:
         run: |
           python scripts/validate_commit_evidence.py
 
+      - name: Check runtime drift baseline
+        run: |
+          python scripts/check_runtime_drift.py
+
       - name: Run API tests
         run: |
           cd api && pytest -q
