@@ -11,8 +11,23 @@
 | Coherence endpoint support | ✅ Complete |
 | Import stack support (lockfile + requirements) | ✅ Complete |
 | Agent orchestration endpoints | ✅ Complete |
+| Production deployment (Railway + Vercel) | ✅ Complete |
 | Pipeline monitoring + attention workflow | 🚧 In progress |
 | Full unattended effectiveness loop | 🚧 In progress |
+
+## Public Deployments
+
+| Service | Platform | URL | Status |
+|---------|----------|-----|--------|
+| API | Railway | https://coherence-network-production.up.railway.app | ✅ Live |
+| Web | Vercel | https://coherence-network.vercel.app | ✅ Live |
+
+### Deployment Health
+- API health endpoint: ✅ Responding
+- API ready endpoint: ✅ Responding
+- Web root: ✅ Responding
+- Web API health page: ✅ Responding
+- CORS configuration: ⚙️ Configured (requires Railway env update)
 
 ## Specs Implemented (Selected)
 

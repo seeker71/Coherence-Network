@@ -3,12 +3,9 @@ name: Auto-Track Contributions
 on:
   push:
     branches: [main, develop]
-  pull_request:
-    types: [closed]
 
 jobs:
   track-contribution:
-    if: github.event.pull_request.merged == true || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       API_URL: ${{ secrets.COHERENCE_API_URL }}
@@ -47,18 +44,17 @@ jobs:
       - name: Record contribution
         if: env.API_URL != '' && env.API_KEY != ''
         run: |
-          curl -X POST "$API_URL/v1/contributions" \
+          curl -X POST "$API_URL/v1/contributions/github" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $API_KEY" \
             -d '{
               "contributor_email": "${{ steps.commit_info.outputs.author_email }}",
-              "event_type": "GIT_COMMIT",
+              "repository": "${{ github.repository }}",
+              "commit_hash": "${{ steps.commit_info.outputs.commit_hash }}",
               "cost_amount": ${{ steps.calc_cost.outputs.cost }},
               "metadata": {
-                "commit_hash": "${{ steps.commit_info.outputs.commit_hash }}",
                 "files_changed": ${{ steps.commit_info.outputs.files_changed }},
-                "lines_added": ${{ steps.commit_info.outputs.lines_added }},
-                "repository": "${{ github.repository }}"
+                "lines_added": ${{ steps.commit_info.outputs.lines_added }}
               }
             }'
 
@@ -67,26 +63,10 @@ jobs:
         run: |
           echo "Skipping contribution tracking because COHERENCE_API_URL/COHERENCE_API_KEY is not configured for this run."
 
-      - name: Comment on PR
-        if: github.event_name == 'pull_request' && env.API_URL != '' && env.API_KEY != ''
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.name,
-              body: '✅ Contribution recorded! Cost: $$${{ steps.calc_cost.outputs.cost }}\nVerify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}'
-            })
-
-      - name: Comment on PR when tracking is skipped
-        if: github.event_name == 'pull_request' && (env.API_URL == '' || env.API_KEY == '')
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.name,
-              body: '⚠️ Contribution tracking skipped because COHERENCE_API_URL/COHERENCE_API_KEY are not available in this workflow run.'
-            })
+      - name: Log contribution tracking result
+        if: env.API_URL != '' && env.API_KEY != ''
+        run: |
+          echo "✅ Contribution recorded!"
+          echo "Cost: \$${{ steps.calc_cost.outputs.cost }}"
+          echo "Commit: ${{ steps.commit_info.outputs.commit_hash }}"
+          echo "Verify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}"

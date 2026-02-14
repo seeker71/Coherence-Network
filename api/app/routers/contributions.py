@@ -1,14 +1,28 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
 from app.adapters.graph_store import GraphStore
+from app.models.asset import Asset
 from app.models.contribution import Contribution, ContributionCreate
+from app.models.contributor import Contributor
 from app.models.error import ErrorDetail
 
 router = APIRouter()
+
+
+class GitHubContribution(BaseModel):
+    """GitHub webhook contribution payload."""
+
+    contributor_email: str
+    repository: str
+    commit_hash: str
+    cost_amount: Decimal
+    metadata: dict = {}
 
 
 def get_store(request: Request) -> GraphStore:
@@ -80,3 +94,67 @@ async def get_contributor_contributions(
     if not store.get_contributor(contributor_id):
         raise HTTPException(status_code=404, detail="Contributor not found")
     return store.get_contributor_contributions(contributor_id)
+
+
+@router.post("/contributions/github", response_model=Contribution, status_code=201)
+async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
+    """Track contribution from GitHub webhook.
+
+    Auto-creates contributor and asset if they don't exist.
+    """
+    # Find or create contributor by email
+    contributor = None
+    if hasattr(store, "find_contributor_by_email"):
+        contributor = store.find_contributor_by_email(payload.contributor_email)
+
+    if not contributor:
+        # Create new contributor
+        contributor_name = payload.contributor_email.split("@")[0]
+        contributor = Contributor(name=contributor_name, email=payload.contributor_email)
+        contributor = store.create_contributor(contributor)
+
+    # Find or create asset for repository
+    asset = None
+    if hasattr(store, "find_asset_by_name"):
+        asset = store.find_asset_by_name(payload.repository)
+
+    if not asset:
+        # Create new asset
+        asset = Asset(name=payload.repository, asset_type="REPOSITORY")
+        asset = store.create_asset(asset)
+
+    # Calculate coherence score from metadata
+    coherence = calculate_coherence_from_github_metadata(payload.metadata)
+
+    # Create contribution
+    return store.create_contribution(
+        contributor_id=contributor.id,
+        asset_id=asset.id,
+        cost_amount=payload.cost_amount,
+        coherence_score=coherence,
+        metadata={
+            **payload.metadata,
+            "commit_hash": payload.commit_hash,
+            "repository": payload.repository,
+            "contributor_email": payload.contributor_email,
+        },
+    )
+
+
+def calculate_coherence_from_github_metadata(metadata: dict) -> float:
+    """Calculate coherence score from GitHub commit metadata."""
+    score = 0.5  # Baseline
+
+    # Check for test files
+    files_changed = metadata.get("files_changed", 0)
+    if files_changed > 0:
+        score += 0.1
+
+    # Check for documentation
+    lines_added = metadata.get("lines_added", 0)
+    if lines_added > 0 and lines_added < 100:
+        score += 0.2  # Well-scoped changes
+    elif lines_added >= 100:
+        score += 0.1  # Large changes
+
+    return min(score, 1.0)

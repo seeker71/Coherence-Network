@@ -8,11 +8,12 @@ Define minimum checklist for deploying the API and web to a hosted environment (
 
 - [x] GET /api/health — liveness (returns 200)
 - [x] GET /api/ready — readiness (returns 200; placeholder for DB checks when added)
-- [x] GET /api/version — version string
 - [x] Environment: all required vars documented in .env.example
 - [x] No hardcoded secrets; use env vars
 - [x] CORS: configurable via ALLOWED_ORIGINS in main.py
-- [x] docs/SETUP.md or docs/DEPLOY.md: deploy checklist
+- [x] docs/DEPLOY.md: comprehensive deploy checklist for Railway + Vercel
+- [x] Production deployment: Railway (API) + Vercel (web)
+- [x] Verification script: scripts/verify_web_api_deploy.sh
 
 ## Deploy Checklist (Documentation)
 
@@ -40,13 +41,27 @@ Create or update docs to include:
 ## API Contract (Existing)
 
 ### GET /api/health
-Returns 200, JSON `{"status": "ok"}`
+Returns 200, JSON `{"status": "ok", "service": "coherence-contribution-network", "version": "1.0.0"}`
 
 ### GET /api/ready
 Returns 200, JSON `{"status": "ready"}` — future: check DB connectivity
 
-### GET /api/version
-Returns 200, JSON `{"version": "0.1.0"}`
+## Production Deployment Status
+
+### Live Environments
+- **API**: https://coherence-network-production.up.railway.app (Railway)
+- **Web**: https://coherence-network.vercel.app (Vercel)
+
+### Verification
+```bash
+./scripts/verify_web_api_deploy.sh
+```
+
+Checks:
+- API health endpoint
+- Web root
+- Web API health page (/api-health)
+- CORS configuration
 
 ## Acceptance Tests
 
