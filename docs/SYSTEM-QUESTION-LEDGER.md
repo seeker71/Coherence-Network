@@ -78,6 +78,17 @@ Findings:
 - CI now has a branch-level workflow that runs evidence validation + API tests + web build.
 - This closes the gap where branch pushes previously had no CI signal.
 
+### 5) How to detect new docs/runtime drift before it spreads (answered)
+
+Evidence:
+- Drift checker: `/Users/ursmuff/source/Coherence-Network/scripts/check_runtime_drift.py`
+- Drift baseline: `/Users/ursmuff/source/Coherence-Network/docs/system_audit/runtime_drift_allowlist.json`
+- Tests: `/Users/ursmuff/source/Coherence-Network/api/tests/test_runtime_drift_check.py`
+
+Findings:
+- Known current drift is baselined explicitly.
+- New drift now fails CI in `Thread Gates` via `check_runtime_drift.py`.
+
 ## Still Open (next answer queue)
 
 1. **Docs/runtime drift list with exact file-by-file corrections**  
