@@ -1,0 +1,39 @@
+{
+  "date": "2026-02-14",
+  "thread_branch": "codex/system-question-ledger",
+  "commit_scope": "Document and enforce parallel-thread phase gates with commit evidence requirements",
+  "files_owned": [
+    "docs/CODEX-THREAD-PROCESS.md",
+    "CONTRIBUTING.md",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/commit_evidence_2026-02-14_thread-process.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q",
+      "cd web && npm run build"
+    ],
+    "results": {
+      "api_pytest": "49 passed",
+      "web_build": "success"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting remote GitHub Actions run for this commit/PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Railway API + Vercel web",
+    "required_command": "./scripts/verify_web_api_deploy.sh",
+    "notes": "Must pass before moving to next phase."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "ci_validation",
+      "deploy_validation"
+    ]
+  }
+}
