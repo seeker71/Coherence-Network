@@ -1,0 +1,80 @@
+name: Change Contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA on main to validate (optional)"
+        required: false
+        type: string
+
+jobs:
+  validate-and-acknowledge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install API dependencies
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Validate merged change contract
+        id: contract
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: |
+          cd api
+          python scripts/validate_merged_change_contract.py \
+            --sha "$TARGET_SHA" \
+            --json > ../contract_report.json
+          cat ../contract_report.json
+          echo "pr_number=$(jq -r '.pr.number' ../contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "contributor=$(jq -r '.contributor_ack.contributor' ../contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "approvals=$(jq -r '.collective_review.approval_events' ../contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "unique_approvers=$(jq -c '.collective_review.unique_approvers' ../contract_report.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload contract report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract_report_${{ github.sha }}
+          path: contract_report.json
+
+      - name: Acknowledge contributor on PR
+        if: ${{ steps.contract.outputs.pr_number != '' && steps.contract.outputs.pr_number != 'null' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = Number("${{ steps.contract.outputs.pr_number }}");
+            const contributor = "${{ steps.contract.outputs.contributor }}";
+            const approvals = "${{ steps.contract.outputs.approvals }}";
+            const approvers = JSON.parse('${{ steps.contract.outputs.unique_approvers }}');
+            const body = [
+              "✅ **Change Contract Passed**",
+              "",
+              "This merged change passed the smart-contract style gate:",
+              "- Commit checks: green",
+              "- Collective review: passed",
+              "- Public validation: passed on Railway + Vercel endpoints",
+              "",
+              `Contributor acknowledged: **@${contributor}**`,
+              `Collective approvers: ${approvers.map(a => `@${a}`).join(', ') || '(none)'}`,
+              `Approval events counted: ${approvals}`
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
