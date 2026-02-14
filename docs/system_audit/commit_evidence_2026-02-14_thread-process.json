@@ -21,19 +21,27 @@
   },
   "ci_validation": {
     "status": "pending",
-    "notes": "Awaiting remote GitHub Actions run for this commit/PR."
+    "notes": "Awaiting remote GitHub Actions run for this commit/PR. Branch-level CI gate workflow added in this cycle (.github/workflows/thread-gates.yml)."
   },
   "deploy_validation": {
-    "status": "pending",
+    "status": "pass",
     "environment": "Railway API + Vercel web",
     "required_command": "./scripts/verify_web_api_deploy.sh",
-    "notes": "Must pass before moving to next phase."
+    "notes": "Validated against public production endpoints on 2026-02-14."
   },
   "phase_gate": {
     "can_move_next_phase": false,
     "blocked_by": [
-      "ci_validation",
-      "deploy_validation"
+      "ci_validation"
+    ]
+  },
+  "public_validation": {
+    "status": "pass",
+    "checks": [
+      "GET https://coherence-network-production.up.railway.app/api/health -> 200",
+      "GET https://coherence-network.vercel.app/ -> 200",
+      "GET https://coherence-network.vercel.app/api-health -> 200",
+      "CORS https://coherence-network-production.up.railway.app/api/health with Origin https://coherence-network.vercel.app -> PASS"
     ]
   }
 }

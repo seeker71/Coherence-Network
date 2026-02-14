@@ -66,6 +66,18 @@ Findings:
 Value:
 - Identifies where to focus next improvement budget (impl phase first, then logging quality).
 
+### 4) How to enforce phase-gate process automatically in CI (answered)
+
+Evidence:
+- Validator script: `/Users/ursmuff/source/Coherence-Network/scripts/validate_commit_evidence.py`
+- Tests: `/Users/ursmuff/source/Coherence-Network/api/tests/test_commit_evidence_validation.py`
+- Workflow gate: `/Users/ursmuff/source/Coherence-Network/.github/workflows/thread-gates.yml`
+
+Findings:
+- Commit-evidence schema and gate logic are now machine-validated.
+- CI now has a branch-level workflow that runs evidence validation + API tests + web build.
+- This closes the gap where branch pushes previously had no CI signal.
+
 ## Still Open (next answer queue)
 
 1. **Docs/runtime drift list with exact file-by-file corrections**  
