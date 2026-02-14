@@ -1,15 +1,38 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.adapters.graph_store import InMemoryGraphStore
+from app.adapters.postgres_store import PostgresGraphStore
 from app.routers import assets, contributions, contributors, distributions
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
 
-# Default in-memory store (tests can override app.state.graph_store per test)
-app.state.graph_store = InMemoryGraphStore()
+# Configure CORS
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize graph store based on environment
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    # Production: Use PostgreSQL
+    app.state.graph_store = PostgresGraphStore(database_url)
+else:
+    # Development/Testing: Use in-memory store with optional JSON persistence
+    persist_path = os.getenv("GRAPH_STORE_PATH")
+    app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
 
 # Operational endpoints
 @app.get("/", include_in_schema=False)
