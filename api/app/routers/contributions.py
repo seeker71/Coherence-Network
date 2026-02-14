@@ -172,7 +172,12 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
 
         if not contributor:
             contributor_name = payload.contributor_email.split("@")[0]
-            contributor = Contributor(name=contributor_name, email=payload.contributor_email)
+            from app.models.contributor import ContributorType
+            contributor = Contributor(
+                name=contributor_name,
+                email=payload.contributor_email,
+                type=ContributorType.HUMAN  # Default contributor type
+            )
             contributor = store.create_contributor(contributor)
 
         # Find or create asset
