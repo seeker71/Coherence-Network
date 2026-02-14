@@ -61,7 +61,7 @@ async def ready():
 @app.post("/api/admin/reset-database")
 async def reset_database(x_admin_key: str = Header(None)):
     """Drop and recreate all database tables. DESTRUCTIVE - use with caution!"""
-    admin_key = os.getenv("ADMIN_API_KEY")
+    admin_key = os.getenv("ADMIN_API_KEY") or os.getenv("COHERENCE_API_KEY")
     if not admin_key or x_admin_key != admin_key:
         raise HTTPException(status_code=403, detail="Forbidden")
 
