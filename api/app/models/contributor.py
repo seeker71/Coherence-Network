@@ -23,9 +23,9 @@ class ContributorType(str, Enum):
 
 
 class ContributorBase(BaseModel):
-    type: ContributorType
     name: str
     email: EmailField
+    type: ContributorType = ContributorType.HUMAN  # Default to HUMAN
     wallet_address: Optional[str] = None
     hourly_rate: Optional[Decimal] = None
 

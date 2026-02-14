@@ -16,8 +16,10 @@ class AssetType(str, Enum):
 
 
 class AssetBase(BaseModel):
-    type: AssetType
-    description: str
+    name: str
+    asset_type: str
+    type: AssetType = AssetType.CODE  # Default to CODE
+    description: str = ""  # Optional description
 
 
 class AssetCreate(AssetBase):
