@@ -28,6 +28,8 @@ cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/syste
 - PR is not draft
 - Commit combined status is `success`
 - Required contexts (if branch protection is readable with auth) are all present and successful
+- Collective review status is recorded on PR checks (non-blocking in `thread-gates.yml`)
+- Collective approval is enforced by post-merge Change Contract for contributor acknowledgment
 
 ### Public validation gates
 
@@ -80,3 +82,29 @@ cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/syste
 5. Run with deployment wait:
    `validate_pr_to_public.py --branch <branch> --wait-public`
 6. Only then start next high-value question/artifact cycle.
+
+## Smart-Contract Style Change Contract (Post-Merge)
+
+Workflow: `.github/workflows/change-contract.yml`
+
+On each push to `main`, the workflow enforces:
+
+1. **Checks green** for merged commit.
+2. **Collective review passed**:
+   - PR merged to `main`
+   - minimum 1 approval event
+   - minimum 1 unique approver
+3. **Public validation passed**:
+   - API health and ideas endpoint
+   - web root and `/api-health`
+
+Only when all three pass, the workflow acknowledges the contributor by posting a PR comment with:
+- contributor handle,
+- collective approvers,
+- pass confirmation.
+
+Manual run:
+
+```bash
+cd api && .venv/bin/python scripts/validate_merged_change_contract.py --sha <main_commit_sha> --json
+```

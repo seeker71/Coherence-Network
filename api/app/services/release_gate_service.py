@@ -1,4 +1,4 @@
-"""Release gate checks for PR status and public validation."""
+"""Release gate checks for PR status, collective review, and public validation."""
 
 from __future__ import annotations
 
@@ -95,6 +95,38 @@ def get_required_contexts(
     return contexts
 
 
+def get_commit_pull_requests(
+    repository: str,
+    sha: str,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Return pull requests associated with a commit SHA."""
+    url = f"https://api.github.com/repos/{repository}/commits/{sha}/pulls"
+    headers = _headers(github_token)
+    headers["Accept"] = "application/vnd.github+json"
+    with httpx.Client(timeout=timeout, headers=headers) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        data = response.json()
+    return data if isinstance(data, list) else []
+
+
+def get_pull_request_reviews(
+    repository: str,
+    pr_number: int,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Return reviews for a pull request."""
+    url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}/reviews"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        data = response.json()
+    return data if isinstance(data, list) else []
+
+
 def evaluate_pr_gates(
     pr: dict[str, Any],
     commit_status: dict[str, Any],
@@ -146,6 +178,47 @@ def evaluate_pr_gates(
         "missing_required_contexts": missing_required,
         "failing_required_contexts": failing_required,
         "ready_to_merge": ready,
+    }
+
+
+def evaluate_collective_review_gates(
+    pr: dict[str, Any],
+    reviews: list[dict[str, Any]],
+    min_approvals: int = 1,
+    min_unique_approvers: int = 1,
+) -> dict[str, Any]:
+    """Evaluate collective review contract from PR + review events."""
+    approvers: set[str] = set()
+    approval_events = 0
+    for review in reviews:
+        if str(review.get("state", "")).upper() != "APPROVED":
+            continue
+        approval_events += 1
+        user = review.get("user") if isinstance(review.get("user"), dict) else {}
+        login = user.get("login")
+        if isinstance(login, str) and login:
+            approvers.add(login)
+
+    merged = bool(pr.get("merged_at"))
+    draft = bool(pr.get("draft"))
+    to_main = str(pr.get("base", {}).get("ref", "")) == "main"
+    collective_ok = (
+        merged
+        and (not draft)
+        and to_main
+        and approval_events >= min_approvals
+        and len(approvers) >= min_unique_approvers
+    )
+    return {
+        "pr_number": pr.get("number"),
+        "merged": merged,
+        "draft": draft,
+        "base_ref": pr.get("base", {}).get("ref"),
+        "approval_events": approval_events,
+        "unique_approvers": sorted(approvers),
+        "min_approvals_required": min_approvals,
+        "min_unique_approvers_required": min_unique_approvers,
+        "collective_review_passed": collective_ok,
     }
 
 
