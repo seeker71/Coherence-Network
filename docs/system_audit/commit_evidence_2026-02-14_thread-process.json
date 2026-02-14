@@ -15,14 +15,14 @@
       "cd web && npm run build"
     ],
     "results": {
-      "api_pytest": "49 passed",
+      "api_pytest": "56 passed",
       "web_build": "success"
     }
   },
   "ci_validation": {
     "status": "pass",
-    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22023621097",
-    "notes": "Thread Gates workflow completed successfully."
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22023654682",
+    "notes": "Thread Gates workflow completed successfully with commit evidence + runtime drift checks."
   },
   "deploy_validation": {
     "status": "pass",
