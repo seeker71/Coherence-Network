@@ -61,9 +61,8 @@ async def ready():
 @app.post("/api/admin/reset-database")
 async def reset_database(x_admin_key: str = Header(None)):
     """Drop and recreate all database tables. DESTRUCTIVE - use with caution!"""
-    # Temporary migration key - will be removed after migration
-    admin_key = os.getenv("ADMIN_API_KEY") or os.getenv("COHERENCE_API_KEY") or "migrate-2024-02-14"
-    if not x_admin_key or x_admin_key != admin_key:
+    admin_key = os.getenv("ADMIN_API_KEY") or os.getenv("COHERENCE_API_KEY")
+    if not admin_key or x_admin_key != admin_key:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     store = app.state.graph_store
