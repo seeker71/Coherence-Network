@@ -157,6 +157,90 @@ If you need to validate worker behavior temporarily, run it manually in a contro
    - `NEXT_PUBLIC_API_URL=https://<api-domain>`
 4. Deploy.
 
+### CLI smoke check (Railway + Vercel)
+
+From repository root:
+
+```bash
+./scripts/verify_web_api_deploy.sh \
+  https://<railway-api-domain> \
+  https://<vercel-web-domain>
+```
+
+This checks:
+- `GET <railway-api-domain>/api/health`
+- `GET <vercel-web-domain>/`
+- `GET <vercel-web-domain>/api-health`
+- CORS header alignment (`Origin: <vercel-web-domain>` against API health endpoint)
+
+Use this as a quick connectivity + CORS check after each deployment.
+
+### If Vercel domain returns 404
+
+A Vercel `404` on the project domain usually means the domain is not attached to the correct project or there is no active deployment for that domain.
+
+Verify in Vercel dashboard:
+1. **Project selected**: correct repository imported.
+2. **Root Directory**: `web/`.
+3. **Domains**: the exact domain (for example `coherencenetwork.vercel.app`) is listed under this project.
+4. **Latest deployment**: Production deployment status is **Ready**.
+5. **Environment variable**: `NEXT_PUBLIC_API_URL=https://coherence-network-production.up.railway.app` in Production scope.
+
+Quick CLI checks from your machine:
+
+```bash
+curl -I https://coherencenetwork.vercel.app/
+curl -I https://coherencenetwork.vercel.app/api-health
+./scripts/verify_web_api_deploy.sh \
+  https://coherence-network-production.up.railway.app \
+  https://coherencenetwork.vercel.app
+```
+
+Expected: non-404 responses on `/` and `/api-health`, plus passing CORS check.
+
+### Vercel error: `No Output Directory named "public" found`
+
+If Vercel shows:
+- `No Output Directory named "public" found after the Build completed.`
+
+it means the project is being treated like a generic static site, not a Next.js app.
+
+Fix:
+1. In Vercel Project Settings, set **Framework Preset** to **Next.js**.
+2. Confirm **Root Directory** is `web/`.
+3. Clear any custom **Output Directory** (leave empty for Next.js).
+4. Redeploy.
+
+Repository guardrail added:
+- `web/vercel.json` now pins `"framework": "nextjs"` so Vercel does not expect a static `public/` output.
+
+### Interpreting Vercel build logs
+
+If logs show entries like:
+- `Vercel CLI <version>`
+- `Installing dependencies...`
+- `Running "npm run build"`
+- `> next build`
+
+that only confirms build execution started. A `404` on `https://<project>.vercel.app` after this usually indicates **domain/deployment routing**, not a Next.js compile error.
+
+In Vercel dashboard, verify all of the following:
+1. **Project Settings → General → Root Directory** is `web/`.
+2. **Project Settings → Git** has the correct Production Branch.
+3. **Deployments** has a Production deployment with status **Ready** (not just queued/building).
+4. **Settings → Domains** includes the exact hostname you are opening.
+
+CLI checks from your machine:
+
+```bash
+curl -I https://coherencenetwork.vercel.app/
+curl -I https://coherencenetwork.vercel.app/api-health
+```
+
+Helpful header clues:
+- `server: Vercel` + `404` + `x-vercel-error` => routing/domain attachment issue.
+- `200/3xx` on `/` and `/api-health` => project/domain is connected correctly.
+
 ### Verify Vercel deployment
 
 1. Open the Vercel URL.
