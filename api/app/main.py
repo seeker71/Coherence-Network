@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy import text
 
 from app.adapters.graph_store import InMemoryGraphStore
-from app.adapters.postgres_store import PostgresGraphStore
+from app.adapters.postgres_store import PostgresGraphStore, Base
 from app.routers import assets, contributions, contributors, distributions
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
@@ -56,6 +57,37 @@ async def ready():
     if not ready:
         raise HTTPException(status_code=503, detail="not ready")
     return {"status": "ready"}
+
+@app.post("/api/admin/reset-database")
+async def reset_database(x_admin_key: str = Header(None)):
+    """Drop and recreate all database tables. DESTRUCTIVE - use with caution!"""
+    admin_key = os.getenv("ADMIN_API_KEY")
+    if not admin_key or x_admin_key != admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    store = app.state.graph_store
+    if not isinstance(store, PostgresGraphStore):
+        raise HTTPException(status_code=400, detail="Only PostgreSQL databases can be reset")
+
+    # Drop all tables
+    with store.engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS contributions CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS assets CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS contributors CASCADE;"))
+        conn.commit()
+
+    # Recreate with new schema
+    Base.metadata.create_all(bind=store.engine)
+
+    return {
+        "status": "success",
+        "message": "Database tables dropped and recreated with new schema",
+        "changes": [
+            "contributors: added type, wallet_address, hourly_rate",
+            "assets: changed from name/asset_type to description/type",
+            "contributions: unchanged"
+        ]
+    }
 
 # Resource routers
 app.include_router(contributors.router, prefix="/v1", tags=["contributors"])
