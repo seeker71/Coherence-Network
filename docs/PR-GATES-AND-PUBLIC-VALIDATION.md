@@ -28,7 +28,8 @@ cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/syste
 - PR is not draft
 - Commit combined status is `success`
 - Required contexts (if branch protection is readable with auth) are all present and successful
-- Collective review gate on PR checks: at least 1 unique `APPROVED` review
+- Collective review status is recorded on PR checks (non-blocking in `thread-gates.yml`)
+- Collective approval is enforced by post-merge Change Contract for contributor acknowledgment
 
 ### Public validation gates
 
