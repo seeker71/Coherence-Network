@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.adapters.graph_store import GraphStore
-from app.models.asset import Asset
+from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution, ContributionCreate
-from app.models.contributor import Contributor
+from app.models.contributor import Contributor, ContributorType
 from app.models.error import ErrorDetail
 
 router = APIRouter()
@@ -110,7 +110,11 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
     if not contributor:
         # Create new contributor
         contributor_name = payload.contributor_email.split("@")[0]
-        contributor = Contributor(name=contributor_name, email=payload.contributor_email)
+        contributor = Contributor(
+            type=ContributorType.HUMAN,
+            name=contributor_name,
+            email=payload.contributor_email
+        )
         contributor = store.create_contributor(contributor)
 
     # Find or create asset for repository
@@ -120,7 +124,10 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
 
     if not asset:
         # Create new asset
-        asset = Asset(name=payload.repository, asset_type="REPOSITORY")
+        asset = Asset(
+            type=AssetType.CODE,
+            description=f"GitHub repository: {payload.repository}"
+        )
         asset = store.create_asset(asset)
 
     # Calculate coherence score from metadata
