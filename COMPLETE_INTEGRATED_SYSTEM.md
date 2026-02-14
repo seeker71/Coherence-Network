@@ -86,7 +86,7 @@ cd Coherence-Network
 # Shows: $45.23 earned this month
 ```
 
-**Run on any server: Oracle Cloud (free), AWS, your laptop**
+**Run on any server: Railway, Render, AWS, your laptop**
 
 ### Workflow 3: Asset Owner (External Assets)
 
