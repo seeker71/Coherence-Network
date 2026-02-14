@@ -196,3 +196,4 @@ Or use `api/scripts/cleanup_temp.py` if it supports log cleanup.
 - [AGENTS.md](../AGENTS.md) — Commands, agent API, pipeline scripts
 - [PIPELINE-MONITORING-AUTOMATED.md](PIPELINE-MONITORING-AUTOMATED.md) — Monitor rules, auto-recovery, thresholds
 - [013 Logging Audit](../specs/013-logging-audit.md) — Log rotation; RUNBOOK log list stays in sync
+- [CODEX-THREAD-PROCESS.md](CODEX-THREAD-PROCESS.md) — Required phase gates for parallel Codex threads
