@@ -158,3 +158,59 @@ def calculate_coherence_from_github_metadata(metadata: dict) -> float:
         score += 0.1  # Large changes
 
     return min(score, 1.0)
+
+
+@router.post("/contributions/github/debug", response_model=dict, status_code=200)
+async def debug_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> dict:
+    """Debug version that returns detailed error info instead of raising."""
+    import traceback
+    try:
+        # Find or create contributor by email
+        contributor = None
+        if hasattr(store, "find_contributor_by_email"):
+            contributor = store.find_contributor_by_email(payload.contributor_email)
+
+        if not contributor:
+            contributor_name = payload.contributor_email.split("@")[0]
+            contributor = Contributor(name=contributor_name, email=payload.contributor_email)
+            contributor = store.create_contributor(contributor)
+
+        # Find or create asset
+        asset = None
+        if hasattr(store, "find_asset_by_name"):
+            asset = store.find_asset_by_name(payload.repository)
+
+        if not asset:
+            asset = Asset(name=payload.repository, asset_type="REPOSITORY")
+            asset = store.create_asset(asset)
+
+        # Calculate coherence
+        coherence = calculate_coherence_from_github_metadata(payload.metadata)
+
+        # Create contribution
+        contrib = store.create_contribution(
+            contributor_id=contributor.id,
+            asset_id=asset.id,
+            cost_amount=payload.cost_amount,
+            coherence_score=coherence,
+            metadata={
+                **payload.metadata,
+                "commit_hash": payload.commit_hash,
+                "repository": payload.repository,
+                "contributor_email": payload.contributor_email,
+            }
+        )
+
+        return {
+            "success": True,
+            "contribution_id": str(contrib.id),
+            "contributor_id": str(contributor.id),
+            "asset_id": str(asset.id)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }
