@@ -1,0 +1,163 @@
+{
+  "mounted_route_count": 21,
+  "mounted_routes": [
+    {
+      "path": "/",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/admin/reset-database",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/api/health",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/ready",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/docs",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/docs/oauth2-redirect",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/openapi.json",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/redoc",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/assets",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v1/assets",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/assets/{asset_id}",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/assets/{asset_id}/contributions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/contributions",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v1/contributions/github",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v1/contributions/github/debug",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v1/contributions/{contribution_id}",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/contributors",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "/v1/contributors",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/contributors/{contributor_id}",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/contributors/{contributor_id}/contributions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/distributions",
+      "methods": [
+        "POST"
+      ]
+    }
+  ],
+  "web_expected_paths": [
+    "/api/import/stack",
+    "/api/projects/",
+    "/api/search?q="
+  ],
+  "missing_for_web": [
+    "/api/import/stack",
+    "/api/projects/",
+    "/api/search?q="
+  ],
+  "agent_router": {
+    "declared_count": 16,
+    "mounted_count": 0,
+    "unmounted_paths": [
+      "/agent/effectiveness",
+      "/agent/fatal-issues",
+      "/agent/metrics",
+      "/agent/monitor-issues",
+      "/agent/pipeline-status",
+      "/agent/route",
+      "/agent/status-report",
+      "/agent/tasks",
+      "/agent/tasks/attention",
+      "/agent/tasks/count",
+      "/agent/tasks/{task_id}",
+      "/agent/tasks/{task_id}/log",
+      "/agent/telegram/diagnostics",
+      "/agent/telegram/test-send",
+      "/agent/telegram/webhook",
+      "/agent/usage"
+    ]
+  }
+}
