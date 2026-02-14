@@ -176,7 +176,7 @@ Anyone can run a node providing:
 - Coherence: 0.92 (near-perfect alignment)
 
 **Next Steps**:
-1. Deploy MVP on free tier (Oracle Cloud + Supabase)
+1. Deploy MVP on managed free tier (Railway + Supabase)
 2. Implement core API endpoints
 3. Set up GitHub webhook integration
 4. Launch node operator marketplace

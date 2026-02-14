@@ -466,7 +466,7 @@ Still cheaper than a coffee! ☕
 Once all 6 prompts are complete:
 
 1. **Test locally**: Run verification scripts above
-2. **Deploy to Oracle VM**: Use `deploy_master.sh`
+2. **Deploy to managed hosting (Railway)**: Use `deploy_master.sh`
 3. **Configure GitHub webhook**: Point to your API
 4. **Record your contribution**: Track this development work!
 5. **Invite first contributors**: Share the API docs
