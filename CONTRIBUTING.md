@@ -47,6 +47,9 @@ Coherence Network follows a **spec-driven development** workflow:
 4. **CI** → automated validation via GitHub Actions
 5. **Review** → human approval before merge
 
+Parallel Codex threads must also follow:
+- `docs/CODEX-THREAD-PROCESS.md` (phase gates + commit evidence requirements)
+
 ## 🔧 Making Changes
 
 ### 1. Create a Feature Branch
