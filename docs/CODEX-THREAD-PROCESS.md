@@ -39,6 +39,9 @@ If CI fails:
 - Re-run local validation.
 - Push fix and wait for green CI.
 
+Collective review enforcement:
+- `thread-gates.yml` fails PR checks unless at least 1 unique `APPROVED` review exists.
+
 ### Phase C: Public Deploy Validation (required before next product phase)
 
 After deployment:

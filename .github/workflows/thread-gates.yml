@@ -26,6 +26,24 @@ jobs:
         run: |
           python scripts/validate_commit_evidence.py
 
+      - name: Validate collective review (PRs)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          APPROVERS=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            | jq '[.[] | select(.state=="APPROVED") | .user.login] | unique | length')
+          echo "unique_approvers=$APPROVERS"
+          if [ "${APPROVERS:-0}" -lt 1 ]; then
+            echo "ERROR: collective review gate failed (need >=1 unique approver)"
+            exit 1
+          fi
+
       - name: Check runtime drift baseline
         run: |
           python scripts/check_runtime_drift.py
