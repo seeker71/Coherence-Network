@@ -56,6 +56,15 @@ If deploy checks fail:
 - Treat as blocker.
 - Fix and re-validate before moving to next phase.
 
+### Phase D: Collective Review + Contributor Acknowledgment Contract (post-merge)
+
+On merge to `main`, the Change Contract workflow enforces:
+- merged commit checks are green,
+- collective review approvals are present,
+- public endpoints are validated.
+
+Contributor acknowledgment is emitted **only** when all gates pass.
+
 ## Evidence Artifact (required per commit)
 
 For each commit, add/update one evidence file under:
@@ -78,5 +87,6 @@ A thread can move to the **next execution phase** only when:
 - local validation = pass
 - CI validation = pass
 - deploy validation = pass
+- collective review/contract = pass (for merged changes)
 
 If CI/deploy are pending, thread status must explicitly stay `blocked_for_next_phase`.
