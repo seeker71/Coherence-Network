@@ -59,6 +59,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 045 Effectiveness Plan Progress Phase 6  | ? | ? | ? | Pending |
 | 046 Agent Debugging Pipeline Stuck Task Hang | ? | ? | ? | Pending |
 | 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
+| 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea->spec->impl->usage->payout preview trace API |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -418,6 +419,21 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | Indexer (deps.dev + pypi) | `index_pypi_packages`, `scripts/index_pypi.py` | Manual: `index_pypi.py --limit 3` |
 
 **Files:** `api/app/adapters/graph_store.py`, `api/app/models/project.py`, `api/app/routers/projects.py`, `api/app/services/indexer_service.py`, `api/scripts/index_npm.py`, `api/scripts/index_pypi.py`
+
+---
+
+## Spec 048: Value Lineage and Payout Attribution
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| POST /api/value-lineage/links creates lineage link (idea/spec/implementation/contributors/cost) | `routers/value_lineage.py`, `services/value_lineage_service.py`, `models/value_lineage.py` | `test_create_and_get_lineage_link` |
+| GET /api/value-lineage/links/{id} fetches persisted lineage | same as above | `test_create_and_get_lineage_link` |
+| POST /api/value-lineage/links/{id}/usage-events appends measurable value signals | same as above | `test_usage_events_roll_up_to_valuation` |
+| GET /api/value-lineage/links/{id}/valuation returns measured value, estimated cost, ROI, event count | same as above | `test_usage_events_roll_up_to_valuation` |
+| POST /api/value-lineage/links/{id}/payout-preview returns role-weighted payouts | same as above | `test_payout_preview_uses_role_weights` |
+| Missing lineage returns 404 with exact detail | router raises HTTPException | `test_lineage_404_contract` |
+
+**Files:** `api/app/models/value_lineage.py`, `api/app/services/value_lineage_service.py`, `api/app/routers/value_lineage.py`, `api/app/main.py`, `api/tests/test_value_lineage.py`
 
 ---
 
