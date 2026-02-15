@@ -343,6 +343,36 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "tracking-infrastructure-upgrade",
+        "name": "Tracking infrastructure observability upgrade",
+        "description": "Improve how ideas/specs/manifestations are tracked with stronger automation, auditability, and contributor clarity.",
+        "potential_value": 86.0,
+        "actual_value": 5.0,
+        "estimated_cost": 8.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.79,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api", "human:web", "human:docs", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "What tracking components are currently manual and should be automated first by ROI?",
+                "value_to_whole": 30.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which missing audit signals most reduce blind trust in idea/spec/manifestation tracking?",
+                "value_to_whole": 28.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "How should we score tracking maturity per subsystem and gate releases on that score?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
