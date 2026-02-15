@@ -59,6 +59,10 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["implementation_usage"]["usage_events_count"] >= 1
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
+        assert all(
+            isinstance(item.get("path"), str) and item["path"].startswith("specs/")
+            for item in data["specs"]["items"]
+        )
 
 
 @pytest.mark.asyncio
@@ -142,3 +146,14 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
         created_payload = created.json()
         assert created_payload["result"] == "task_suggested"
         assert "created_task" in created_payload
+
+
+@pytest.mark.asyncio
+async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/page-lineage")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "pages" in data
+        assert isinstance(data["pages"], list)
+        assert any(row.get("path") == "/portfolio" for row in data["pages"])

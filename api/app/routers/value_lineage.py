@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.value_lineage import (
     LineageLink,
     LineageLinkCreate,
+    LineageLinksResponse,
     LineageValuation,
     MinimumE2EFlowResponse,
     PayoutPreview,
@@ -22,6 +23,12 @@ router = APIRouter()
 @router.post("/value-lineage/links", response_model=LineageLink, status_code=201)
 async def create_link(payload: LineageLinkCreate) -> LineageLink:
     return value_lineage_service.create_link(payload)
+
+
+@router.get("/value-lineage/links", response_model=LineageLinksResponse)
+async def list_links(limit: int = 200) -> LineageLinksResponse:
+    links = value_lineage_service.list_links(limit=limit)
+    return LineageLinksResponse(links=links)
 
 
 @router.get("/value-lineage/links/{lineage_id}", response_model=LineageLink)
