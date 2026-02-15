@@ -85,10 +85,20 @@ It must include:
 - `agent` (`name`, `version`)
 - `evidence_refs` (non-empty list of verifiable references)
 - `change_files` (non-empty list of file paths changed by the commit)
+- `change_intent` (`runtime_feature` | `runtime_fix` | `process_only` | `docs_only` | `test_only`)
 - `local_validation` (commands + pass/fail)
 - `ci_validation` (pass/fail/pending + run URL when available)
 - `deploy_validation` (pass/fail/pending + environment checked)
 - `phase_gate` (can_move_next_phase: true/false)
+
+Runtime intent contract:
+- If `change_intent` is `runtime_feature` or `runtime_fix`, evidence must include `e2e_validation` with:
+  - `status` (`pass` | `pending` | `fail`)
+  - `expected_behavior_delta`
+  - `public_endpoints` (non-empty list)
+  - `test_flows` (non-empty list)
+- Runtime intents must include changed files under `api/app/`, `web/app/`, or `web/components/`.
+- Non-runtime intents cannot include runtime file changes.
 
 CI enforcement:
 - `python3 scripts/validate_commit_evidence.py --base <sha> --head <sha> --require-changed-evidence`

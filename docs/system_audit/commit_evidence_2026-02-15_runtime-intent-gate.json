@@ -1,0 +1,73 @@
+{
+  "date": "2026-02-15",
+  "thread_branch": "codex/20260215-runtime-change-contract-gate",
+  "commit_scope": "enforce runtime-intent contract and public E2E evidence metadata",
+  "files_owned": [
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validation.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/SPEC-TRACKING.md",
+    "docs/SPEC-COVERAGE.md",
+    "specs/055-runtime-intent-and-public-e2e-contract-gate.md",
+    "docs/system_audit/commit_evidence_2026-02-15_runtime-intent-gate.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "055"
+  ],
+  "task_ids": [
+    "runtime-intent-contract-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/pytest -q tests/test_commit_evidence_validation.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_runtime-intent-gate.json"
+  ],
+  "change_files": [
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validation.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/SPEC-TRACKING.md",
+    "docs/SPEC-COVERAGE.md",
+    "specs/055-runtime-intent-and-public-e2e-contract-gate.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_commit_evidence_validation.py",
+      "cd api && .venv/bin/pytest -q",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_runtime-intent-gate.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "n/a (process gate)"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local+CI validation"
+  }
+}
