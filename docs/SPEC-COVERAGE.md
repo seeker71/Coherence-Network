@@ -71,6 +71,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 057 Inventory Issue Detection and Auto-Tasking | ✓ | ✓ | ✓ | duplicate-question detection + scan endpoint + monitor integration |
 | 058 Evidence Contract and Automated ROI Questioning | ✓ | ✓ | ✓ | per-subsystem claim/evidence/falsifier checks + automated evidence scan |
 | 059 Core Idea Completeness, Manifestation Visibility, and Question Dedupe | ✓ | ✓ | ✓ | core system/component ideas + manifestations inventory + auto dedupe |
+| 060 High-ROI Auto-Answer and Derived Idea Generation | ✓ | ✓ | ✓ | auto-answer top ROI questions + optional derived ideas |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

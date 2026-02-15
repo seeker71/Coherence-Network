@@ -40,3 +40,14 @@ async def scan_inventory_issues(create_tasks: bool = Query(False)) -> dict:
 @router.post("/inventory/evidence/scan")
 async def scan_evidence_contract(create_tasks: bool = Query(False)) -> dict:
     return inventory_service.scan_evidence_contract(create_tasks=create_tasks)
+
+
+@router.post("/inventory/questions/auto-answer")
+async def auto_answer_high_roi_questions(
+    limit: int = Query(3, ge=1, le=25),
+    create_derived_ideas: bool = Query(False),
+) -> dict:
+    return inventory_service.auto_answer_high_roi_questions(
+        limit=limit,
+        create_derived_ideas=create_derived_ideas,
+    )

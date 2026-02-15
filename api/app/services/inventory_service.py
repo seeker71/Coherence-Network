@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.services import idea_service, runtime_service, value_lineage_service
+from app.services import idea_service, route_registry_service, runtime_service, value_lineage_service
 
 
 def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
@@ -829,3 +829,187 @@ def scan_evidence_contract(create_tasks: bool = False) -> dict:
             )
         )
     return report
+
+
+def _derived_ideas_from_answered_question(question_row: dict) -> list[dict]:
+    question = str(question_row.get("question") or "").lower()
+    out: list[dict] = []
+    if "score tracking maturity" in question:
+        out.append(
+            {
+                "idea_id": "tracking-maturity-scorecard",
+                "name": "Tracking maturity scorecard and release gates",
+                "description": "Compute subsystem tracking maturity scores and enforce minimum thresholds in release contracts.",
+                "potential_value": 84.0,
+                "estimated_cost": 9.0,
+                "interfaces": ["machine:api", "human:web", "ai:automation"],
+                "open_questions": [
+                    {
+                        "question": "Which score dimensions best predict tracking reliability and deployment risk?",
+                        "value_to_whole": 24.0,
+                        "estimated_cost": 2.0,
+                    }
+                ],
+            }
+        )
+    if "audit signals" in question or "blind trust" in question:
+        out.append(
+            {
+                "idea_id": "tracking-audit-anomaly-detection",
+                "name": "Tracking audit anomaly detection",
+                "description": "Detect suspicious or incomplete idea/spec/manifestation evidence and trigger review tasks automatically.",
+                "potential_value": 82.0,
+                "estimated_cost": 8.0,
+                "interfaces": ["machine:api", "ai:automation", "human:operators"],
+                "open_questions": [
+                    {
+                        "question": "Which anomaly rules provide high signal with low false positives for governance workflows?",
+                        "value_to_whole": 23.0,
+                        "estimated_cost": 2.0,
+                    }
+                ],
+            }
+        )
+    return out
+
+
+def _proposed_answer_for_question(question_row: dict, inventory: dict) -> tuple[str | None, float | None]:
+    question = str(question_row.get("question") or "").strip().lower()
+    if not question:
+        return None, None
+
+    if "route set is canonical" in question:
+        routes = route_registry_service.get_canonical_routes()
+        api_count = len(routes.get("api_routes") or [])
+        web_count = len(routes.get("web_routes") or [])
+        version = routes.get("version")
+        milestone = routes.get("milestone")
+        return (
+            f"Canonical route contract is /api/inventory/routes/canonical (version={version}, milestone={milestone}) "
+            f"with {api_count} API routes and {web_count} web routes. This should remain the source of truth.",
+            5.0,
+        )
+    if "leading indicators best represent energy flow" in question:
+        return (
+            "Use runtime event_count/source mix, runtime_cost_estimate by idea, and lineage valuation ROI "
+            "(measured_value_total/estimated_cost) as leading indicators.",
+            3.0,
+        )
+    if "best-known traceability practices" in question:
+        return (
+            "Current practice is strong but not yet best-in-class: we have idea/spec/test mappings, value-lineage, "
+            "evidence contracts, and monitor scans; highest ROI gap is stricter merge-time enforcement and maturity scoring.",
+            3.0,
+        )
+    if "depend on assumptions rather than verifiable evidence" in question:
+        return (
+            "Main assumption-heavy areas are terminology comprehension, manual review quality, and contributor identity confidence. "
+            "Add explicit evidence checks and periodic calibration tests for each.",
+            2.5,
+        )
+    if "tracking components are currently manual" in question:
+        return (
+            "Manual-heavy components include term alignment review, evidence interpretation, and cross-thread consolidation. "
+            "Automate these with scorecards, anomaly scans, and standardized contributor contracts first.",
+            2.8,
+        )
+    if "missing audit signals most reduce blind trust" in question:
+        return (
+            "Highest-value missing signals are immutable decision/audit trail IDs, evidence freshness SLA, "
+            "and anomaly alerts for ROI jumps or missing attribution at deploy time.",
+            2.8,
+        )
+    if "score tracking maturity per subsystem" in question:
+        return (
+            "Score each subsystem on completeness, evidence quality, automation coverage, and freshness; "
+            "gate release when any critical subsystem falls below threshold.",
+            3.2,
+        )
+    if "improve the ui" in question:
+        missing = inventory.get("manifestations", {}).get("missing_count", 0)
+        return (
+            f"Prioritize a single browseable table for ideas/spec links/status plus issue actions; currently missing manifestations count is {missing}.",
+            2.2,
+        )
+    if "missing from the ui for machine and human contributors" in question:
+        return (
+            "Missing key UI elements are full task queue management, contributor/contribution browse pages, and direct ROI anomaly views.",
+            2.2,
+        )
+    return None, None
+
+
+def auto_answer_high_roi_questions(limit: int = 3, create_derived_ideas: bool = False) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    unanswered = inventory.get("questions", {}).get("unanswered")
+    rows = [row for row in (unanswered if isinstance(unanswered, list) else []) if isinstance(row, dict)]
+    rows.sort(
+        key=lambda row: (
+            -float(row.get("question_roi") or 0.0),
+            -float(row.get("idea_estimated_roi") or 0.0),
+        )
+    )
+    selected = rows[: max(1, min(limit, 25))]
+    answered_rows: list[dict] = []
+    derived_rows: list[dict] = []
+    skipped_rows: list[dict] = []
+
+    for row in selected:
+        idea_id = str(row.get("idea_id") or "").strip()
+        question = str(row.get("question") or "").strip()
+        if not idea_id or not question:
+            continue
+        answer, measured_delta = _proposed_answer_for_question(row, inventory)
+        if not answer:
+            skipped_rows.append({"idea_id": idea_id, "question": question, "reason": "no_evidence_template"})
+            continue
+        updated, found = idea_service.answer_question(
+            idea_id=idea_id,
+            question=question,
+            answer=answer,
+            measured_delta=measured_delta,
+        )
+        if not found or updated is None:
+            skipped_rows.append({"idea_id": idea_id, "question": question, "reason": "question_not_found"})
+            continue
+        answered_rows.append(
+            {
+                "idea_id": idea_id,
+                "question": question,
+                "question_roi": float(row.get("question_roi") or 0.0),
+                "answer_roi": round((float(measured_delta) / float(row.get("estimated_cost") or 1.0)), 4)
+                if measured_delta is not None and float(row.get("estimated_cost") or 0.0) > 0.0
+                else 0.0,
+            }
+        )
+        if create_derived_ideas:
+            for candidate in _derived_ideas_from_answered_question(row):
+                created_idea, created = idea_service.add_idea_if_missing(
+                    idea_id=str(candidate["idea_id"]),
+                    name=str(candidate["name"]),
+                    description=str(candidate["description"]),
+                    potential_value=float(candidate["potential_value"]),
+                    estimated_cost=float(candidate["estimated_cost"]),
+                    open_questions=candidate.get("open_questions"),
+                    interfaces=candidate.get("interfaces") or [],
+                )
+                derived_rows.append(
+                    {
+                        "idea_id": created_idea.id,
+                        "created": created,
+                        "estimated_roi": round(
+                            float(created_idea.potential_value) / float(created_idea.estimated_cost), 4
+                        )
+                        if float(created_idea.estimated_cost) > 0
+                        else 0.0,
+                    }
+                )
+
+    return {
+        "result": "completed",
+        "selected_count": len(selected),
+        "answered_count": len(answered_rows),
+        "answered": answered_rows,
+        "skipped": skipped_rows,
+        "derived_ideas": derived_rows,
+    }

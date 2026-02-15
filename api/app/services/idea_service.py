@@ -723,3 +723,60 @@ def answer_question(
 
     _write_ideas(ideas)
     return _with_score(updated), True
+
+
+def add_idea_if_missing(
+    *,
+    idea_id: str,
+    name: str,
+    description: str,
+    potential_value: float,
+    estimated_cost: float,
+    open_questions: list[dict] | None = None,
+    interfaces: list[str] | None = None,
+    actual_value: float = 0.0,
+    actual_cost: float = 0.0,
+    resistance_risk: float = 4.0,
+    confidence: float = 0.7,
+    manifestation_status: ManifestationStatus = ManifestationStatus.NONE,
+) -> tuple[IdeaWithScore, bool]:
+    ideas = _read_ideas()
+    for idea in ideas:
+        if idea.id == idea_id:
+            return _with_score(idea), False
+
+    questions: list[IdeaQuestion] = []
+    for q in open_questions or []:
+        if not isinstance(q, dict):
+            continue
+        question = str(q.get("question") or "").strip()
+        if not question:
+            continue
+        questions.append(
+            IdeaQuestion(
+                question=question,
+                value_to_whole=float(q.get("value_to_whole") or 0.0),
+                estimated_cost=float(q.get("estimated_cost") or 0.0),
+            )
+        )
+
+    new_idea = Idea(
+        id=idea_id,
+        name=name,
+        description=description,
+        potential_value=float(potential_value),
+        actual_value=float(actual_value),
+        estimated_cost=float(estimated_cost),
+        actual_cost=float(actual_cost),
+        resistance_risk=float(resistance_risk),
+        confidence=float(confidence),
+        manifestation_status=manifestation_status,
+        interfaces=interfaces or [],
+        open_questions=questions,
+    )
+    ideas.append(new_idea)
+    ideas, changed = _ensure_standing_questions(ideas)
+    if changed:
+        ideas, _ = _dedupe_open_questions(ideas)
+    _write_ideas(ideas)
+    return _with_score(new_idea), True

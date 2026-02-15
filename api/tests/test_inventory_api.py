@@ -529,3 +529,35 @@ async def test_evidence_scan_can_create_deduped_task(
         assert p2["issues_count"] >= 1
         assert len(p2["created_tasks"]) >= 1
         assert p2["created_tasks"][0]["deduped"] is True
+
+
+@pytest.mark.asyncio
+async def test_auto_answer_high_roi_questions_updates_answers_and_creates_derived_ideas(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        run = await client.post(
+            "/api/inventory/questions/auto-answer",
+            params={"limit": 20, "create_derived_ideas": True},
+        )
+        assert run.status_code == 200
+        payload = run.json()
+        assert payload["result"] == "completed"
+        assert payload["answered_count"] >= 1
+
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        ideas = listed.json()["ideas"]
+        assert any(
+            any((q.get("answer") or "").strip() for q in idea["open_questions"])
+            for idea in ideas
+        )
+        assert any(
+            idea["id"] in {"tracking-maturity-scorecard", "tracking-audit-anomaly-detection"}
+            for idea in ideas
+        )
