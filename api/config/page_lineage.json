@@ -207,6 +207,118 @@
       ]
     },
     {
+      "page_path": "/tasks",
+      "page_title": "Tasks",
+      "idea_id": "coherence-network-agent-pipeline",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Human task queue interface for orchestration.",
+      "spec": {
+        "id": "002",
+        "path": "specs/002-agent-orchestration-api.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Fetch /api/agent/tasks",
+        "Render tasks with status/type/model"
+      ],
+      "source_refs": [
+        "web/app/tasks/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/agent/tasks?limit=100",
+          "example": "curl \"http://localhost:8000/api/agent/tasks?limit=100\""
+        }
+      ]
+    },
+    {
+      "page_path": "/contributors",
+      "page_title": "Contributors",
+      "idea_id": "coherence-network-value-attribution",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Contributor registry visibility.",
+      "spec": {
+        "id": "048",
+        "path": "specs/048-value-lineage-and-payout-attribution.md"
+      },
+      "process_doc": "docs/CONTRIBUTION-TRACKING-IMPLEMENTATION.md",
+      "pseudo_code": [
+        "Fetch /v1/contributors",
+        "Render contributor identity rows"
+      ],
+      "source_refs": [
+        "web/app/contributors/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/v1/contributors?limit=200",
+          "example": "curl \"http://localhost:8000/v1/contributors?limit=200\""
+        }
+      ]
+    },
+    {
+      "page_path": "/assets",
+      "page_title": "Assets",
+      "idea_id": "coherence-network-value-attribution",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Asset registry visibility.",
+      "spec": {
+        "id": "067",
+        "path": "specs/067-unified-system-asset-registry-api-and-ui.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Fetch /v1/assets",
+        "Render asset rows with type and cost"
+      ],
+      "source_refs": [
+        "web/app/assets/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/v1/assets?limit=200",
+          "example": "curl \"http://localhost:8000/v1/assets?limit=200\""
+        }
+      ]
+    },
+    {
+      "page_path": "/contributions",
+      "page_title": "Contributions",
+      "idea_id": "coherence-network-value-attribution",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Contribution attribution visibility.",
+      "spec": {
+        "id": "055",
+        "path": "specs/055-contributor-attribution-and-idea-roi-insights.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Fetch /api/inventory/system-lineage",
+        "Render contributor attribution rows as contribution surface"
+      ],
+      "source_refs": [
+        "web/app/contributions/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/inventory/system-lineage",
+          "example": "curl http://localhost:8000/api/inventory/system-lineage"
+        }
+      ]
+    },
+    {
       "page_path": "/portfolio",
       "page_title": "Portfolio Cockpit",
       "idea_id": "portfolio-governance",

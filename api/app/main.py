@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
 from app.routers import (
+    agent,
     assets,
     contributions,
     contributors,
@@ -98,6 +99,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(agent.router, prefix="/api", tags=["agent"])
 
 
 @app.middleware("http")

@@ -306,18 +306,30 @@ def _discover_api_routes_from_source() -> list[dict]:
     routers_dir = _project_root() / "api" / "app" / "routers"
     if not routers_dir.exists():
         return []
+    main_py = _project_root() / "api" / "app" / "main.py"
+    prefix_by_router: dict[str, str] = {}
+    if main_py.exists():
+        try:
+            main_content = main_py.read_text(encoding="utf-8")
+            for router_name, prefix in re.findall(
+                r'app\.include_router\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\.router\s*,\s*prefix="([^"]+)"',
+                main_content,
+            ):
+                prefix_by_router[router_name] = prefix
+        except OSError:
+            prefix_by_router = {}
     pattern = re.compile(r'@router\.(get|post|put|patch|delete)\(\s*["\']([^"\']+)["\']')
     rows: list[dict] = []
     for path in sorted(routers_dir.glob("*.py")):
+        router_name = path.stem
+        prefix = prefix_by_router.get(router_name, "/api")
         try:
             content = path.read_text(encoding="utf-8")
         except OSError:
             continue
         for match in pattern.finditer(content):
             method = match.group(1).upper()
-            route_path = _normalize_interface_path(f"/api{match.group(2)}")
-            if not route_path.startswith("/api/"):
-                continue
+            route_path = _normalize_interface_path(f"{prefix}{match.group(2)}")
             rows.append({"path": route_path, "method": method, "source_file": str(path)})
     uniq: dict[tuple[str, str], dict] = {}
     for row in rows:
@@ -329,7 +341,7 @@ def _discover_web_api_usage_paths() -> list[str]:
     web_dir = _project_root() / "web"
     if not web_dir.exists():
         return []
-    path_pattern = re.compile(r"/api/[A-Za-z0-9_./${}\-\[\]]+")
+    path_pattern = re.compile(r"/(?:api|v1)/[A-Za-z0-9_./${}\-\[\]]+")
     rows: list[str] = []
     for path in sorted(web_dir.rglob("*")):
         if not path.is_file():
@@ -344,7 +356,7 @@ def _discover_web_api_usage_paths() -> list[str]:
             continue
         for match in path_pattern.findall(content):
             normalized = _normalize_interface_path(match)
-            if normalized.startswith("/api/"):
+            if normalized.startswith("/api/") or normalized.startswith("/v1/"):
                 rows.append(normalized)
     return sorted(set(rows))
 

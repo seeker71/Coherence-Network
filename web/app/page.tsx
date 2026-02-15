@@ -38,6 +38,18 @@ export default function Home() {
         <Button asChild variant="outline">
           <Link href="/portfolio">Portfolio Cockpit</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/tasks">Tasks</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/contributors">Contributors</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/contributions">Contributions</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/assets">Assets</Link>
+        </Button>
       </div>
     </main>
   );

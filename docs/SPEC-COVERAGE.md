@@ -79,6 +79,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 065 API-Web Availability Parity Scan and Tasking | ✓ | ✓ | ✓ | detects API endpoints missing web usage and creates one task per gap |
 | 066 Page-Idea Ontology and Traceability Links | ✓ | ✓ | ✓ | all pages render links to idea/root/spec/process/source/endpoint examples via lineage API |
 | 067 Unified System Asset Registry API and UI | ✓ | ✓ | ✓ | all system parts registered as assets with API and `/portfolio` registry view |
+| 068 Contributor/Contribution/Asset/Task Web Surfaces | ✓ | ✓ | ✓ | dedicated web pages + mounted agent router + `/v1` parity scan support |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
