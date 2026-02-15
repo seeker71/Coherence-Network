@@ -96,6 +96,18 @@ def get_link(lineage_id: str) -> LineageLink | None:
     return None
 
 
+def list_links(limit: int = 200) -> list[LineageLink]:
+    data = _read_store()
+    out: list[LineageLink] = []
+    for raw in data["links"]:
+        try:
+            out.append(LineageLink(**raw))
+        except Exception:
+            continue
+    out.sort(key=lambda x: x.updated_at, reverse=True)
+    return out[: max(1, min(limit, 2000))]
+
+
 def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent | None:
     link = get_link(lineage_id)
     if link is None:
@@ -131,6 +143,18 @@ def _lineage_events(lineage_id: str) -> list[UsageEvent]:
         if ev.lineage_id == lineage_id:
             out.append(ev)
     return out
+
+
+def list_usage_events(limit: int = 500) -> list[UsageEvent]:
+    data = _read_store()
+    out: list[UsageEvent] = []
+    for raw in data["events"]:
+        try:
+            out.append(UsageEvent(**raw))
+        except Exception:
+            continue
+    out.sort(key=lambda x: x.captured_at, reverse=True)
+    return out[: max(1, min(limit, 5000))]
 
 
 def valuation(lineage_id: str) -> LineageValuation | None:

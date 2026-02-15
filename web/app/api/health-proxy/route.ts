@@ -18,13 +18,14 @@ function uptimeHuman(seconds: number) {
 }
 
 export async function GET() {
+  const started = performance.now();
   try {
     const upstream = await fetch(`${API_URL}/api/health`, {
       cache: "no-store",
     });
     const upstreamJson = await upstream.json();
     const up = uptimeSeconds();
-    return NextResponse.json({
+    const response = NextResponse.json({
       api: upstreamJson,
       web: {
         status: "ok",
@@ -35,8 +36,22 @@ export async function GET() {
       },
       checked_at: new Date().toISOString(),
     });
+    const runtimeMs = Math.max(0.1, performance.now() - started);
+    void fetch(`${API_URL}/api/runtime/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "web_api",
+        endpoint: "/api/health-proxy",
+        method: "GET",
+        status_code: response.status,
+        runtime_ms: Number(runtimeMs.toFixed(4)),
+      }),
+      cache: "no-store",
+    }).catch(() => {});
+    return response;
   } catch (error) {
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         error: "Upstream API unreachable",
         api_url: API_URL,
@@ -50,5 +65,19 @@ export async function GET() {
       },
       { status: 502 },
     );
+    const runtimeMs = Math.max(0.1, performance.now() - started);
+    void fetch(`${API_URL}/api/runtime/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "web_api",
+        endpoint: "/api/health-proxy",
+        method: "GET",
+        status_code: response.status,
+        runtime_ms: Number(runtimeMs.toFixed(4)),
+      }),
+      cache: "no-store",
+    }).catch(() => {});
+    return response;
   }
 }

@@ -437,6 +437,21 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 049: System Lineage Inventory and Runtime Telemetry
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/inventory/system-lineage returns unified ideas/questions/specs/implementation usage | `routers/inventory.py`, `services/inventory_service.py` | `test_system_lineage_inventory_includes_core_sections` |
+| POST /api/runtime/events ingests runtime telemetry with idea mapping | `routers/runtime.py`, `services/runtime_service.py`, `models/runtime.py` | `test_runtime_event_ingest_and_summary` |
+| GET /api/runtime/events returns recent runtime events | same as above | `test_runtime_middleware_records_api_calls` |
+| GET /api/runtime/ideas/summary aggregates runtime and estimated cost by idea | same as above | `test_runtime_event_ingest_and_summary` |
+| API middleware auto-captures endpoint runtime to telemetry store | `app/main.py` middleware + `services/runtime_service.py` | `test_runtime_middleware_records_api_calls` |
+| Web runtime beacon forwards route/runtime telemetry to API | `web/app/api/runtime-beacon/route.ts`, `web/components/runtime-beacon.tsx`, `web/app/layout.tsx` | Web build validation (`npm run build`) |
+
+**Files:** `api/app/models/runtime.py`, `api/app/services/runtime_service.py`, `api/app/services/inventory_service.py`, `api/app/routers/runtime.py`, `api/app/routers/inventory.py`, `api/app/main.py`, `api/tests/test_runtime_api.py`, `api/tests/test_inventory_api.py`, `web/app/api/runtime-beacon/route.ts`, `web/components/runtime-beacon.tsx`, `web/app/layout.tsx`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |

@@ -18,8 +18,12 @@ from app.routers import (
     gates,
     health,
     ideas,
+    inventory,
+    runtime,
     value_lineage,
 )
+from app.models.runtime import RuntimeEventCreate
+from app.services import runtime_service
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
 
@@ -92,3 +96,36 @@ app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
+app.include_router(runtime.router, prefix="/api", tags=["runtime"])
+app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+
+
+@app.middleware("http")
+async def capture_runtime_metrics(request, call_next):
+    if os.getenv("RUNTIME_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
+        return await call_next(request)
+
+    import time
+
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+
+    path = request.url.path
+    if path.startswith("/api") or path.startswith("/v1"):
+        try:
+            runtime_service.record_event(
+                RuntimeEventCreate(
+                    source="api",
+                    endpoint=path,
+                    method=request.method,
+                    status_code=response.status_code,
+                    runtime_ms=max(0.1, elapsed_ms),
+                    idea_id=request.headers.get("x-idea-id"),
+                    metadata={},
+                )
+            )
+        except Exception:
+            # Telemetry should not affect request success.
+            pass
+    return response

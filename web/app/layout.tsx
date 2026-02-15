@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import RuntimeBeacon from "@/components/runtime-beacon";
 
 export const metadata: Metadata = {
   title: "Coherence Network",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <RuntimeBeacon />
+        {children}
+      </body>
     </html>
   );
 }
