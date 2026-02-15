@@ -7,6 +7,18 @@ from pathlib import Path
 
 from app.services import idea_service, runtime_service, value_lineage_service
 
+
+def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
+    if estimated_cost <= 0:
+        return 0.0
+    return round(float(value_to_whole) / float(estimated_cost), 4)
+
+
+def _answer_roi(measured_delta: float | None, estimated_cost: float) -> float:
+    if measured_delta is None or estimated_cost <= 0:
+        return 0.0
+    return round(float(measured_delta) / float(estimated_cost), 4)
+
 FALLBACK_SPECS: list[dict[str, str]] = [
     {
         "spec_id": "048",
@@ -59,18 +71,23 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
                 "question": q.question,
                 "value_to_whole": q.value_to_whole,
                 "estimated_cost": q.estimated_cost,
+                "question_roi": _question_roi(q.value_to_whole, q.estimated_cost),
                 "answer": q.answer,
                 "measured_delta": q.measured_delta,
+                "answer_roi": _answer_roi(q.measured_delta, q.estimated_cost),
             }
             if q.answer:
                 answered_questions.append(row)
             else:
                 unanswered_questions.append(row)
 
-    unanswered_questions.sort(
-        key=lambda x: ((x["estimated_cost"] / max(x["value_to_whole"], 0.0001)), -x["value_to_whole"])
+    unanswered_questions.sort(key=lambda x: -float(x.get("question_roi") or 0.0))
+    answered_questions.sort(
+        key=lambda x: (
+            -float(x.get("answer_roi") or 0.0),
+            -float(x.get("question_roi") or 0.0),
+        )
     )
-    answered_questions.sort(key=lambda x: -float(x.get("measured_delta") or 0.0))
 
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
@@ -118,3 +135,62 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "ideas": runtime_summary,
         },
     }
+
+
+def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    answered = inventory.get("questions", {}).get("answered", [])
+    if not isinstance(answered, list) or not answered:
+        return {"result": "no_answered_questions"}
+
+    ranked = sorted(
+        [row for row in answered if isinstance(row, dict)],
+        key=lambda row: (
+            -float(row.get("answer_roi") or 0.0),
+            -float(row.get("question_roi") or 0.0),
+        ),
+    )
+    top = ranked[0]
+    idea_id = str(top.get("idea_id") or "unknown")
+    question = str(top.get("question") or "").strip()
+    answer = str(top.get("answer") or "").strip()
+    question_roi = float(top.get("question_roi") or 0.0)
+    answer_roi = float(top.get("answer_roi") or 0.0)
+
+    direction = (
+        f"Highest-ROI follow-up for idea '{idea_id}': {question} "
+        f"Use this answer as working contract: {answer} "
+        "Produce a measurable artifact with tests, link to value-lineage usage, and update inventory metrics."
+    )
+    report: dict = {
+        "result": "task_suggested",
+        "idea_id": idea_id,
+        "question": question,
+        "question_roi": question_roi,
+        "answer_roi": answer_roi,
+        "direction": direction,
+    }
+    if not create_task:
+        return report
+
+    from app.models.agent import AgentTaskCreate, TaskType
+    from app.services import agent_service
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.IMPL,
+            context={
+                "source": "inventory_high_roi",
+                "idea_id": idea_id,
+                "question_roi": question_roi,
+                "answer_roi": answer_roi,
+            },
+        )
+    )
+    report["created_task"] = {
+        "id": task["id"],
+        "status": task["status"].value if hasattr(task["status"], "value") else str(task["status"]),
+        "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
+    }
+    return report

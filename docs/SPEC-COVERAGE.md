@@ -486,6 +486,18 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 053: Standing Questions, ROI Fields, and Next-Task Generation
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| Every idea includes standing improvement/measurement question | `services/idea_service.py` | `test_standing_question_exists_for_every_idea` |
+| Inventory exposes question and answer ROI fields | `services/inventory_service.py` | `test_system_lineage_inventory_includes_core_sections` |
+| Next highest-ROI task suggestion and optional task creation | `routers/inventory.py`, `services/inventory_service.py` | `test_next_highest_roi_task_generation_from_answered_questions` |
+
+**Files:** `api/app/services/idea_service.py`, `api/app/services/inventory_service.py`, `api/app/routers/inventory.py`, `api/tests/test_inventory_api.py`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |
