@@ -39,6 +39,12 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
         assert g.status_code == 200
         assert g.json()["id"] == contrib_id
 
+        l = await client.get("/v1/contributions?limit=10")
+        assert l.status_code == 200
+        items = l.json()
+        assert isinstance(items, list)
+        assert any(i.get("id") == contrib_id for i in items)
+
         asset = await client.get(f"/v1/assets/{asset_id}")
         assert Decimal(asset.json()["total_cost"]) == Decimal("100.00")
 
@@ -129,3 +135,16 @@ async def test_create_contribution_422() -> None:
             },
         )
         assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_agent_tasks_router_is_exposed() -> None:
+    # Validates /api/agent/tasks is publicly mountable (router included in main app).
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/agent/tasks")
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body, dict)
+        assert "tasks" in body

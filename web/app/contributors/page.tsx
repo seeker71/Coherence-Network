@@ -9,8 +9,8 @@ type Contributor = {
   id: string;
   name: string;
   type: string;
-  total_contributions: number;
-  total_value: number;
+  email: string;
+  created_at: string;
 };
 
 export default function ContributorsPage() {
@@ -26,7 +26,7 @@ export default function ContributorsPage() {
         const res = await fetch(`${API_URL}/v1/contributors`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(JSON.stringify(json));
-        setRows(Array.isArray(json.contributors) ? json.contributors : []);
+        setRows(Array.isArray(json) ? json : []);
         setStatus("ok");
       } catch (e) {
         setStatus("error");
@@ -57,9 +57,9 @@ export default function ContributorsPage() {
           <ul className="space-y-2 text-sm">
             {rows.slice(0, 100).map((c) => (
               <li key={c.id} className="rounded border p-2 flex justify-between gap-3">
-                <span className="font-medium">{c.id}</span>
+                <span className="font-medium">{c.name}</span>
                 <span className="text-muted-foreground">
-                  {c.type} | contributions {c.total_contributions} | value {c.total_value}
+                  {c.type} | {c.email} | {c.created_at}
                 </span>
               </li>
             ))}
@@ -69,4 +69,3 @@ export default function ContributorsPage() {
     </main>
   );
 }
-

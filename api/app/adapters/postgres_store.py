@@ -264,6 +264,27 @@ class PostgresGraphStore:
                 metadata=model.meta or {},
             )
 
+    def list_contributions(self, limit: int = 100) -> list[Contribution]:
+        with self._session() as session:
+            models = (
+                session.query(ContributionModel)
+                .order_by(ContributionModel.timestamp.desc())
+                .limit(limit)
+                .all()
+            )
+            return [
+                Contribution(
+                    id=m.id,
+                    contributor_id=m.contributor_id,
+                    asset_id=m.asset_id,
+                    cost_amount=Decimal(str(m.cost_amount)),
+                    coherence_score=float(m.coherence_score),
+                    timestamp=m.timestamp,
+                    metadata=m.meta or {},
+                )
+                for m in models
+            ]
+
     def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
         with self._session() as session:
             models = (
