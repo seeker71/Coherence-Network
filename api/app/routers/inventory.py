@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query
 
 from app.services import inventory_service
+from app.services import page_lineage_service
 from app.services import route_registry_service
 
 router = APIRouter()
@@ -20,6 +21,11 @@ async def system_lineage_inventory(
 @router.get("/inventory/routes/canonical")
 async def canonical_routes() -> dict:
     return route_registry_service.get_canonical_routes()
+
+
+@router.get("/inventory/page-lineage")
+async def page_lineage() -> dict:
+    return page_lineage_service.get_page_lineage()
 
 
 @router.post("/inventory/questions/next-highest-roi-task")

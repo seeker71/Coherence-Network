@@ -77,3 +77,7 @@ class MinimumE2EFlowResponse(BaseModel):
     valuation: LineageValuation
     payout_preview: PayoutPreview
     checks: list[str]
+
+
+class LineageLinksResponse(BaseModel):
+    links: list[LineageLink]

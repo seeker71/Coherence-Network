@@ -47,11 +47,18 @@ def _discover_specs(limit: int = 300) -> list[dict]:
         stem = path.stem
         spec_id = stem.split("-", 1)[0] if "-" in stem else stem
         title = stem.replace("-", " ")
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines()[:8]:
+                if line.lstrip().startswith("#"):
+                    title = line.lstrip("#").strip()
+                    break
+        except OSError:
+            pass
         out.append(
             {
                 "spec_id": spec_id,
                 "title": title,
-                "path": str(path),
+                "path": f"specs/{path.name}",
             }
         )
     return out or FALLBACK_SPECS[: max(1, min(limit, 2000))]

@@ -150,3 +150,38 @@ async def test_minimum_e2e_flow_endpoint(tmp_path, monkeypatch: pytest.MonkeyPat
         assert data["payout_preview"]["payout_pool"] == 100.0
         assert "lineage_created" in data["checks"]
         assert "usage_event_created" in data["checks"]
+
+
+@pytest.mark.asyncio
+async def test_list_links_endpoint_returns_links_newest_first(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+
+    payload_a = {
+        "idea_id": "portfolio-governance",
+        "spec_id": "048-value-lineage-and-payout-attribution",
+        "implementation_refs": ["PR#1"],
+        "contributors": {"idea": "a", "spec": "b", "implementation": "c", "review": "d"},
+        "estimated_cost": 1.0,
+    }
+    payload_b = {
+        "idea_id": "oss-interface-alignment",
+        "spec_id": "049-system-lineage-inventory-and-runtime-telemetry",
+        "implementation_refs": ["PR#2"],
+        "contributors": {"idea": "a", "spec": "b", "implementation": "c", "review": "d"},
+        "estimated_cost": 2.0,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created_a = await client.post("/api/value-lineage/links", json=payload_a)
+        assert created_a.status_code == 201
+        created_b = await client.post("/api/value-lineage/links", json=payload_b)
+        assert created_b.status_code == 201
+
+        listed = await client.get("/api/value-lineage/links")
+        assert listed.status_code == 200
+        data = listed.json()
+        assert "links" in data
+        assert isinstance(data["links"], list)
+        assert data["links"][0]["spec_id"] == payload_b["spec_id"]
