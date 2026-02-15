@@ -33,8 +33,9 @@ Quick reference: spec status, test coverage, last verified.
 | 068 | ✓ | ✓ | ✓ |
 | 069 | ✓ | ✓ | ✓ |
 | 070 | ✓ | ✓ | ✓ |
+| 071 | ✓ | ✓ | ✓ |
 
-**Total:** 48 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–070).
+**Total:** 49 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–071).
 
 ## Test Verification
 
@@ -85,6 +86,7 @@ cd web && npm run build      # 12 routes
 | 068 | test_inventory_api.py, test_runtime_api.py, web build |
 | 069 | test_ideas.py, test_inventory_api.py |
 | 070 | test_inventory_api.py |
+| 071 | scripts/validate_commit_evidence.py (CLI validation), workflow gates |
 
 ## Last Updated
 

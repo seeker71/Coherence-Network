@@ -78,10 +78,22 @@ It must include:
 - `thread_branch`
 - `commit_scope`
 - `files_owned`
+- `idea_ids` (non-empty list)
+- `spec_ids` (non-empty list)
+- `task_ids` (non-empty list)
+- `contributors` (non-empty list; each with `contributor_id`, `contributor_type` = `human|machine`, `roles`)
+- `agent` (`name`, `version`)
+- `evidence_refs` (non-empty list of verifiable references: test commands, CI run URLs, deploy checks, API endpoints)
+- `change_files` (non-empty list of file paths changed by the commit)
 - `local_validation` (commands + pass/fail)
 - `ci_validation` (pass/fail/pending + run URL when available)
 - `deploy_validation` (pass/fail/pending + environment checked)
 - `phase_gate` (can_move_next_phase: true/false)
+
+CI enforcement:
+- `scripts/validate_commit_evidence.py --base <sha> --head <sha> --require-changed-evidence`
+- Fails if no changed `docs/system_audit/commit_evidence_*.json` exists for the diff range.
+- Fails if changed files are not declared in `change_files`.
 
 ## Merge Policy
 
