@@ -258,6 +258,44 @@ After both are deployed:
    - Railway API env must include exact Vercel domain in `ALLOWED_ORIGINS`.
    - If preview deployments are used, add required preview domains.
 
+---
+
+## 7) Automated deploy-gate healing (GitHub checks -> Railway deploy)
+
+Railway can skip deployment when commit check status is not green. This repo now includes an automatic recovery loop:
+
+- Workflow: `.github/workflows/auto-heal-deploy-gates.yml`
+- Trigger:
+  - `workflow_run` when `Test` or `Thread Gates` completes on `main` with non-success conclusion
+  - Manual `workflow_dispatch` with optional commit SHA
+- Script: `api/scripts/auto_heal_deploy_gates.py`
+
+What it does:
+1. Resolves target SHA on `main`.
+2. Reads branch protection required checks.
+3. Evaluates failing required contexts.
+4. Finds rerunnable GitHub Actions workflow runs for those failed required checks.
+5. Calls GitHub API `rerun-failed-jobs` for each run.
+6. Polls check state until green or timeout.
+7. Uploads `auto_heal_report.json` as workflow artifact.
+
+Manual run (local):
+
+```bash
+cd api
+GITHUB_TOKEN=<token> python scripts/auto_heal_deploy_gates.py \
+  --repo seeker71/Coherence-Network \
+  --branch main \
+  --base main \
+  --timeout-seconds 900 \
+  --poll-seconds 30 \
+  --json
+```
+
+Exit codes:
+- `0`: checks already green or healed to green
+- `2`: still blocked (non-rerunnable failure or retries did not heal)
+
 2. **API URL alignment**
    - Vercel `NEXT_PUBLIC_API_URL` must point to Railway API domain (https).
 

@@ -65,6 +65,74 @@ def get_check_runs(
     return runs if isinstance(runs, list) else []
 
 
+def extract_actions_run_id(details_url: str) -> Optional[int]:
+    """Extract GitHub Actions workflow run id from a check run details URL."""
+    marker = "/actions/runs/"
+    if marker not in details_url:
+        return None
+    tail = details_url.split(marker, 1)[1]
+    candidate = tail.split("/", 1)[0].strip()
+    if not candidate.isdigit():
+        return None
+    return int(candidate)
+
+
+def collect_rerunnable_actions_run_ids(
+    failing_required_contexts: list[str],
+    check_runs: list[dict[str, Any]],
+) -> list[int]:
+    """Return unique GitHub Actions run IDs that can be retried.
+
+    If failing required contexts are known, only those contexts are retried.
+    Otherwise, fallback to any failed GitHub Actions check run for the commit.
+    """
+
+    retryable = {"failure", "timed_out", "cancelled", "action_required", "stale"}
+    required_set = set(failing_required_contexts)
+    filter_by_context = bool(required_set)
+    run_ids: set[int] = set()
+
+    for run in check_runs:
+        name = run.get("name")
+        if not isinstance(name, str):
+            continue
+        if filter_by_context and name not in required_set:
+            continue
+        app = run.get("app")
+        app_slug = app.get("slug") if isinstance(app, dict) else None
+        if app_slug != "github-actions":
+            continue
+        conclusion = str(run.get("conclusion") or "").lower()
+        if conclusion not in retryable:
+            continue
+        details_url = run.get("details_url")
+        if not isinstance(details_url, str):
+            continue
+        run_id = extract_actions_run_id(details_url)
+        if run_id is not None:
+            run_ids.add(run_id)
+
+    return sorted(run_ids)
+
+
+def rerun_actions_failed_jobs(
+    repository: str,
+    run_id: int,
+    github_token: str,
+    timeout: float = 10.0,
+) -> dict[str, Any]:
+    """Trigger rerun-failed-jobs for an Actions workflow run."""
+    url = f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/rerun-failed-jobs"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.post(url)
+    accepted = response.status_code == 201
+    return {
+        "run_id": run_id,
+        "accepted": accepted,
+        "status_code": response.status_code,
+    }
+
+
 def get_required_contexts(
     repository: str,
     base_branch: str,
