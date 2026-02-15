@@ -25,6 +25,11 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Set up Node.js (Railway CLI runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install API dependencies
         run: |
           cd api && pip install -e ".[dev]"
@@ -46,6 +51,69 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
 
+      - name: Install Railway CLI
+        if: ${{ steps.validate.outputs.exit_code != '0' && secrets.RAILWAY_TOKEN != '' }}
+        run: |
+          npm install -g @railway/cli
+
+      - name: Trigger Railway redeploy
+        id: railway_redeploy
+        if: ${{ steps.validate.outputs.exit_code != '0' && secrets.RAILWAY_TOKEN != '' }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+        run: |
+          set +e
+          if [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT:-}" ] || [ -z "${RAILWAY_SERVICE:-}" ]; then
+            echo "attempted=false" >> "$GITHUB_OUTPUT"
+            echo "reason=missing_railway_context_secrets" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_SERVICE" --json > railway_link.json
+          railway redeploy --service "$RAILWAY_SERVICE" --yes --json > railway_redeploy.json
+          cat railway_redeploy.json
+          echo "attempted=true" >> "$GITHUB_OUTPUT"
+          echo "reason=redeploy_triggered" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Re-validate after Railway redeploy
+        id: revalidate
+        if: ${{ steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          code=2
+          for i in $(seq 1 40); do
+            cd api
+            python scripts/validate_public_deploy_contract.py \
+              --repo "${{ github.repository }}" \
+              --branch main \
+              --json > ../public_deploy_contract_report.json
+            code=$?
+            cd ..
+            cat public_deploy_contract_report.json
+            if [ "$code" -eq 0 ]; then
+              break
+            fi
+            sleep 30
+          done
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Select effective contract result
+        id: outcome
+        run: |
+          final="${{ steps.validate.outputs.exit_code }}"
+          if [ -n "${{ steps.revalidate.outputs.exit_code }}" ]; then
+            final="${{ steps.revalidate.outputs.exit_code }}"
+          fi
+          echo "exit_code=$final" >> "$GITHUB_OUTPUT"
+          echo "initial_exit_code=${{ steps.validate.outputs.exit_code }}" >> "$GITHUB_OUTPUT"
+          echo "revalidated_exit_code=${{ steps.revalidate.outputs.exit_code }}" >> "$GITHUB_OUTPUT"
+
       - name: Upload public deploy report
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,8 +121,17 @@ jobs:
           name: public_deploy_contract_report_${{ github.sha }}
           path: public_deploy_contract_report.json
 
+      - name: Upload Railway redeploy artifacts
+        if: ${{ always() && steps.railway_redeploy.outputs.attempted == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: railway_redeploy_artifacts_${{ github.sha }}
+          path: |
+            railway_link.json
+            railway_redeploy.json
+
       - name: Create or update deploy drift issue
-        if: ${{ steps.validate.outputs.exit_code != '0' }}
+        if: ${{ steps.outcome.outputs.exit_code != '0' }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -69,6 +146,10 @@ jobs:
               `- Expected SHA: \`${report.expected_sha || 'unknown'}\``,
               `- Result: \`${report.result || 'blocked'}\``,
               `- Reason: ${report.reason || 'n/a'}`,
+              `- Initial exit code: \`${"${{ steps.outcome.outputs.initial_exit_code }}"}\``,
+              `- Revalidated exit code: \`${"${{ steps.outcome.outputs.revalidated_exit_code }}"}\``,
+              `- Railway redeploy attempted: \`${"${{ steps.railway_redeploy.outputs.attempted || 'false' }}"}\``,
+              `- Railway redeploy note: \`${"${{ steps.railway_redeploy.outputs.reason || 'n/a' }}"}\``,
               '',
               'Failing checks:',
               ...(Array.isArray(report.failing_checks) && report.failing_checks.length
@@ -99,8 +180,33 @@ jobs:
               });
             }
 
+      - name: Resolve deploy drift issue when contract passes
+        if: ${{ steps.outcome.outputs.exit_code == '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Public deployment contract failing on main';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length === 0) {
+              return;
+            }
+            const issue = existing.data.items[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Resolved by workflow run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}. Public deployment contract is now passing.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+            });
+
       - name: Fail when contract is not satisfied
-        if: ${{ steps.validate.outputs.exit_code != '0' }}
+        if: ${{ steps.outcome.outputs.exit_code != '0' }}
         run: |
           echo "Public deployment contract failed"
           exit 1
