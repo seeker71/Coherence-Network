@@ -12,6 +12,7 @@ export default function GatesPage() {
   const [sha, setSha] = useState("");
   const [prReport, setPrReport] = useState<Record<string, unknown> | null>(null);
   const [contractReport, setContractReport] = useState<Record<string, unknown> | null>(null);
+  const [publicDeployReport, setPublicDeployReport] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,21 @@ export default function GatesPage() {
     }
   }
 
+  async function runPublicDeployContract() {
+    setStatus("loading");
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/gates/public-deploy-contract`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(JSON.stringify(json));
+      setPublicDeployReport(json);
+      setStatus("idle");
+    } catch (e) {
+      setStatus("error");
+      setError(String(e));
+    }
+  }
+
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-6">
       <div>
@@ -110,6 +126,13 @@ export default function GatesPage() {
         </div>
       </section>
 
+      <section className="space-y-3 border border-border rounded-md p-4">
+        <h2 className="text-lg font-semibold">Public Deploy Contract</h2>
+        <Button variant="outline" onClick={runPublicDeployContract} disabled={status === "loading"}>
+          Check Public Deploy Contract
+        </Button>
+      </section>
+
       {status === "error" && error && (
         <p className="text-destructive">Error: {error}</p>
       )}
@@ -128,6 +151,15 @@ export default function GatesPage() {
           <h3 className="font-medium">Change Contract Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(contractReport, null, 2)}
+          </pre>
+        </section>
+      )}
+
+      {publicDeployReport && (
+        <section className="space-y-2">
+          <h3 className="font-medium">Public Deploy Report</h3>
+          <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+            {JSON.stringify(publicDeployReport, null, 2)}
           </pre>
         </section>
       )}
