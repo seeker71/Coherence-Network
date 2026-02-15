@@ -17,6 +17,11 @@ jobs:
     permissions:
       contents: read
       issues: write
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
+      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,21 +57,20 @@ jobs:
           exit 0
 
       - name: Install Railway CLI
-        if: ${{ steps.validate.outputs.exit_code != '0' && secrets.RAILWAY_TOKEN != '' }}
+        if: ${{ steps.validate.outputs.exit_code != '0' }}
         run: |
+          if [ -z "${RAILWAY_TOKEN:-}" ]; then
+            echo "RAILWAY_TOKEN not configured, skipping CLI install."
+            exit 0
+          fi
           npm install -g @railway/cli
 
       - name: Trigger Railway redeploy
         id: railway_redeploy
-        if: ${{ steps.validate.outputs.exit_code != '0' && secrets.RAILWAY_TOKEN != '' }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
-          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+        if: ${{ steps.validate.outputs.exit_code != '0' }}
         run: |
           set +e
-          if [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT:-}" ] || [ -z "${RAILWAY_SERVICE:-}" ]; then
+          if [ -z "${RAILWAY_TOKEN:-}" ] || [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT:-}" ] || [ -z "${RAILWAY_SERVICE:-}" ]; then
             echo "attempted=false" >> "$GITHUB_OUTPUT"
             echo "reason=missing_railway_context_secrets" >> "$GITHUB_OUTPUT"
             exit 0
