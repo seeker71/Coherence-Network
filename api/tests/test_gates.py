@@ -62,3 +62,24 @@ async def test_gate_public_deploy_contract_endpoint_returns_report(
         data = resp.json()
         assert data["result"] == "public_contract_passed"
         assert data["failing_checks"] == []
+
+
+@pytest.mark.asyncio
+async def test_gate_commit_traceability_endpoint_returns_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_report(**_kwargs):
+        return {
+            "result": "traceability_ready",
+            "traceability": {"ideas": [{"idea_id": "portfolio-governance"}]},
+            "missing_answers": [],
+        }
+
+    monkeypatch.setattr(gates, "evaluate_commit_traceability_report", fake_report)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/gates/commit-traceability", params={"sha": "abc1234"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["result"] == "traceability_ready"
+        assert data["traceability"]["ideas"][0]["idea_id"] == "portfolio-governance"

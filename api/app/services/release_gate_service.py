@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+import json
+import re
 import time
 import uuid
 from typing import Any, Optional
+from urllib.parse import quote
 
 import httpx
 
@@ -754,3 +759,263 @@ def evaluate_public_deploy_contract_report(
 
     report["result"] = "public_contract_passed"
     return report
+
+
+def get_commit_files(
+    repository: str,
+    sha: str,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> list[str]:
+    """Return file paths changed in a commit."""
+    url = f"https://api.github.com/repos/{repository}/commits/{sha}"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        data = response.json()
+    files = data.get("files") if isinstance(data, dict) else []
+    out: list[str] = []
+    if isinstance(files, list):
+        for item in files:
+            if isinstance(item, dict) and isinstance(item.get("filename"), str):
+                out.append(item["filename"])
+    return out
+
+
+def get_pull_request_files(
+    repository: str,
+    pr_number: int,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> list[str]:
+    """Return file paths changed in a pull request."""
+    url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}/files"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.get(url, params={"per_page": "100"})
+        response.raise_for_status()
+        data = response.json()
+    out: list[str] = []
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and isinstance(item.get("filename"), str):
+                out.append(item["filename"])
+    return out
+
+
+def get_file_content_at_ref(
+    repository: str,
+    path: str,
+    ref: str,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> str | None:
+    """Return decoded text content for a repository file at a ref, when available."""
+    quoted_path = quote(path, safe="/")
+    url = f"https://api.github.com/repos/{repository}/contents/{quoted_path}"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.get(url, params={"ref": ref})
+        response.raise_for_status()
+        data = response.json()
+    if not isinstance(data, dict):
+        return None
+    content = data.get("content")
+    encoding = data.get("encoding")
+    if not isinstance(content, str) or encoding != "base64":
+        return None
+    try:
+        decoded = base64.b64decode(content.encode("utf-8"), validate=False)
+        return decoded.decode("utf-8")
+    except (ValueError, UnicodeDecodeError, binascii.Error):
+        return None
+
+
+def list_spec_paths_at_ref(
+    repository: str,
+    ref: str,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> list[str]:
+    """List spec markdown file paths for a repository ref."""
+    url = f"https://api.github.com/repos/{repository}/contents/specs"
+    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        response = client.get(url, params={"ref": ref})
+        response.raise_for_status()
+        data = response.json()
+    out: list[str] = []
+    if isinstance(data, list):
+        for item in data:
+            path = item.get("path") if isinstance(item, dict) else None
+            if isinstance(path, str) and path.startswith("specs/") and path.endswith(".md"):
+                out.append(path)
+    return out
+
+
+def _extract_spec_id(path: str) -> str | None:
+    match = re.match(r"^specs/(\d{3})-[^/]+\.md$", path)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def _parse_commit_evidence(
+    repository: str,
+    evidence_path: str,
+    sha: str,
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> dict[str, Any]:
+    raw = get_file_content_at_ref(
+        repository=repository,
+        path=evidence_path,
+        ref=sha,
+        github_token=github_token,
+        timeout=timeout,
+    )
+    if not isinstance(raw, str):
+        return {}
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def evaluate_commit_traceability_report(
+    repository: str,
+    sha: str,
+    api_base: str = "https://coherence-network-production.up.railway.app",
+    web_base: str = "https://coherence-network.vercel.app",
+    github_token: str | None = None,
+    timeout: float = 10.0,
+) -> dict[str, Any]:
+    """Derive idea/spec/implementation traceability references from a commit SHA."""
+    commit_files = get_commit_files(repository, sha, github_token=github_token, timeout=timeout)
+    commit_prs = get_commit_pull_requests(repository, sha, github_token=github_token, timeout=timeout)
+
+    # Merge commits may not expose full file list; fallback to first associated PR files.
+    if not commit_files and commit_prs:
+        pr_number = commit_prs[0].get("number")
+        if isinstance(pr_number, int):
+            commit_files = get_pull_request_files(
+                repository,
+                pr_number,
+                github_token=github_token,
+                timeout=timeout,
+            )
+
+    evidence_files = sorted(
+        path for path in commit_files if path.startswith("docs/system_audit/commit_evidence_")
+    )
+    evidence_payloads = [
+        _parse_commit_evidence(
+            repository=repository,
+            evidence_path=path,
+            sha=sha,
+            github_token=github_token,
+            timeout=timeout,
+        )
+        for path in evidence_files
+    ]
+
+    idea_ids: set[str] = set()
+    spec_ids: set[str] = set()
+    evidence_change_files: set[str] = set()
+    for payload in evidence_payloads:
+        ids = payload.get("idea_ids")
+        if isinstance(ids, list):
+            idea_ids.update(i for i in ids if isinstance(i, str) and i.strip())
+        specs = payload.get("spec_ids")
+        if isinstance(specs, list):
+            spec_ids.update(s for s in specs if isinstance(s, str) and s.strip())
+        changed = payload.get("change_files")
+        if isinstance(changed, list):
+            evidence_change_files.update(c for c in changed if isinstance(c, str) and c.strip())
+
+    implementation_files = sorted(
+        evidence_change_files
+        if evidence_change_files
+        else [path for path in commit_files if not path.startswith("docs/system_audit/")]
+    )
+
+    specs_dir_paths = list_spec_paths_at_ref(
+        repository=repository,
+        ref=sha,
+        github_token=github_token,
+        timeout=timeout,
+    )
+    spec_id_to_path = {
+        sid: path
+        for path in specs_dir_paths
+        for sid in [_extract_spec_id(path)]
+        if isinstance(sid, str)
+    }
+    mapped_specs = sorted(spec_ids)
+
+    repo_url = f"https://github.com/{repository}"
+    api_root = api_base.rstrip("/")
+    web_root = web_base.rstrip("/")
+    ideas = [
+        {
+            "idea_id": idea_id,
+            "api_path": f"/api/ideas/{idea_id}",
+            "api_url": f"{api_root}/api/ideas/{idea_id}",
+        }
+        for idea_id in sorted(idea_ids)
+    ]
+    specs = [
+        {
+            "spec_id": spec_id,
+            "path": spec_id_to_path.get(spec_id),
+            "github_url": (
+                f"{repo_url}/blob/{sha}/{spec_id_to_path[spec_id]}"
+                if spec_id_to_path.get(spec_id)
+                else None
+            ),
+        }
+        for spec_id in mapped_specs
+    ]
+    implementations = [
+        {
+            "path": path,
+            "github_url": f"{repo_url}/blob/{sha}/{path}",
+        }
+        for path in implementation_files
+    ]
+
+    questions_answered = {
+        "idea_links_derived": bool(ideas),
+        "spec_links_derived": bool(specs),
+        "implementation_links_derived": bool(implementations),
+        "commit_evidence_present": bool(evidence_files),
+    }
+    missing_answers: list[str] = []
+    if not ideas:
+        missing_answers.append("No idea_ids found in commit evidence")
+    if not specs:
+        missing_answers.append("No spec_ids found in commit evidence")
+    if not implementations:
+        missing_answers.append("No implementation files derivable from commit")
+    if not evidence_files:
+        missing_answers.append("No commit evidence file changed in this commit")
+
+    return {
+        "repository": repository,
+        "sha": sha,
+        "pr_numbers": [pr.get("number") for pr in commit_prs if isinstance(pr, dict)],
+        "traceability": {
+            "ideas": ideas,
+            "specs": specs,
+            "implementations": implementations,
+            "evidence_files": evidence_files,
+        },
+        "questions_answered": questions_answered,
+        "missing_answers": missing_answers,
+        "machine_access": {
+            "api_traceability_path": "/api/gates/commit-traceability",
+            "api_ideas_path_template": "/api/ideas/{idea_id}",
+        },
+        "human_access": {
+            "web_gates_path": f"{web_root}/gates",
+        },
+        "result": "traceability_ready" if not missing_answers else "traceability_incomplete",
+    }
