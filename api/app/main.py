@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
-from app.routers import assets, contributions, contributors, distributions, friction, gates, ideas
+from app.routers import assets, contributions, contributors, distributions, friction, gates, health, ideas
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
 
@@ -40,23 +40,6 @@ else:
 async def root():
     """Redirect to API documentation."""
     return RedirectResponse(url="/docs")
-
-@app.get("/api/health")
-async def health():
-    """Liveness check - is process up?"""
-    return {
-        "status": "ok",
-        "service": "coherence-contribution-network",
-        "version": app.version,
-    }
-
-@app.get("/api/ready")
-async def ready():
-    """Readiness check - can handle traffic?"""
-    ready = getattr(app.state, "graph_store", None) is not None
-    if not ready:
-        raise HTTPException(status_code=503, detail="not ready")
-    return {"status": "ready"}
 
 @app.post("/api/admin/reset-database")
 async def reset_database(x_admin_key: str = Header(None)):
@@ -97,3 +80,4 @@ app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
+app.include_router(health.router, prefix="/api", tags=["health"])
