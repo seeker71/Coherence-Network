@@ -53,6 +53,8 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "implementation_usage" in data
         assert "contributors" in data
         assert "roi_insights" in data
+        assert "next_roi_work" in data
+        assert "operating_console" in data
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
@@ -62,6 +64,8 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["implementation_usage"]["usage_events_count"] >= 1
         assert "by_perspective" in data["contributors"]
         assert "most_estimated_roi" in data["roi_insights"]
+        assert data["next_roi_work"]["selection_basis"] == "highest_idea_estimated_roi_then_question_roi"
+        assert "estimated_roi_rank" in data["operating_console"]
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
 
@@ -243,3 +247,27 @@ async def test_inventory_contributor_perspective_and_roi_rankings(
         assert isinstance(roi["most_estimated_roi"], list)
         assert isinstance(roi["least_estimated_roi"], list)
         assert isinstance(roi["missing_actual_roi_high_potential"], list)
+
+
+@pytest.mark.asyncio
+async def test_next_highest_estimated_roi_task_endpoint(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        suggest = await client.post("/api/inventory/roi/next-task")
+        assert suggest.status_code == 200
+        payload = suggest.json()
+        assert payload["result"] == "task_suggested"
+        assert payload["selection_basis"] == "estimated_roi_queue"
+        assert payload["idea_estimated_roi"] >= 0
+
+        created = await client.post("/api/inventory/roi/next-task", params={"create_task": True})
+        assert created.status_code == 200
+        created_payload = created.json()
+        assert created_payload["result"] == "task_suggested"
+        assert "created_task" in created_payload

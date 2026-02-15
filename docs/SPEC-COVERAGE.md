@@ -67,6 +67,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 053 Standing Questions ROI and Next Task Generation | ✓ | ✓ | ✓ | standing question policy + auto next-task suggestion |
 | 054 Web UI Standing Questions and Cost/Value Signals | ✓ | ✓ | ✓ | web-ui-governance idea + `/portfolio` UI value/cost signals |
 | 055 Contributor Attribution and Idea ROI Insights | ✓ | ✓ | ✓ | inventory exposes human/machine attribution + ROI rankings |
+| 056 Operating Console Estimated ROI Queue | ✓ | ✓ | ✓ | tracks operating console rank and pulls next estimated-ROI task |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

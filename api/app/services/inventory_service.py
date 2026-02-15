@@ -81,6 +81,12 @@ def _discover_specs(limit: int = 300) -> list[dict]:
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     ideas_response = idea_service.list_ideas()
     ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
+    estimated_roi_by_idea: dict[str, float] = {}
+    for item in ideas:
+        idea_id = str(item.get("id") or "")
+        estimated_cost = float(item.get("estimated_cost") or 0.0)
+        potential_value = float(item.get("potential_value") or 0.0)
+        estimated_roi_by_idea[idea_id] = round((potential_value / estimated_cost), 4) if estimated_cost > 0 else 0.0
 
     answered_questions: list[dict] = []
     unanswered_questions: list[dict] = []
@@ -93,6 +99,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
                 "value_to_whole": q.value_to_whole,
                 "estimated_cost": q.estimated_cost,
                 "question_roi": _question_roi(q.value_to_whole, q.estimated_cost),
+                "idea_estimated_roi": float(estimated_roi_by_idea.get(idea.id) or 0.0),
                 "answer": q.answer,
                 "measured_delta": q.measured_delta,
                 "answer_roi": _answer_roi(q.measured_delta, q.estimated_cost),
@@ -182,6 +189,31 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             -float(row.get("potential_value") or 0.0),
         )
     )
+    ranked_estimated = sorted(roi_rows, key=lambda row: -float(row.get("estimated_roi") or 0.0))
+
+    next_question = None
+    if unanswered_questions:
+        next_question = sorted(
+            unanswered_questions,
+            key=lambda row: (
+                -float(row.get("idea_estimated_roi") or 0.0),
+                -float(row.get("question_roi") or 0.0),
+            ),
+        )[0]
+
+    operating_console_id = "web-ui-governance"
+    operating_console_rank = None
+    for idx, row in enumerate(ranked_estimated, start=1):
+        if row.get("idea_id") == operating_console_id:
+            operating_console_rank = idx
+            break
+    operating_console = next((row for row in roi_rows if row.get("idea_id") == operating_console_id), None)
+    operating_console_status = {
+        "idea_id": operating_console_id,
+        "estimated_roi": float((operating_console or {}).get("estimated_roi") or 0.0),
+        "estimated_roi_rank": operating_console_rank,
+        "is_next": bool(next_question and next_question.get("idea_id") == operating_console_id),
+    }
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -217,6 +249,11 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "least_actual_roi": sorted(actual_present, key=lambda row: float(row.get("actual_roi") or 0.0))[:5],
             "missing_actual_roi_high_potential": missing_actual[:5],
         },
+        "next_roi_work": {
+            "selection_basis": "highest_idea_estimated_roi_then_question_roi",
+            "item": next_question,
+        },
+        "operating_console": operating_console_status,
         "runtime": {
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,
@@ -272,6 +309,56 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
                 "idea_id": idea_id,
                 "question_roi": question_roi,
                 "answer_roi": answer_roi,
+            },
+        )
+    )
+    report["created_task"] = {
+        "id": task["id"],
+        "status": task["status"].value if hasattr(task["status"], "value") else str(task["status"]),
+        "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
+    }
+    return report
+
+
+def next_highest_estimated_roi_task(create_task: bool = False) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    item = inventory.get("next_roi_work", {}).get("item")
+    if not isinstance(item, dict) or not item:
+        return {"result": "no_unanswered_questions"}
+
+    idea_id = str(item.get("idea_id") or "unknown")
+    question = str(item.get("question") or "").strip()
+    idea_estimated_roi = float(item.get("idea_estimated_roi") or 0.0)
+    question_roi = float(item.get("question_roi") or 0.0)
+    direction = (
+        f"Next highest estimated-ROI work item for idea '{idea_id}': {question} "
+        f"(idea_estimated_roi={idea_estimated_roi}, question_roi={question_roi}). "
+        "Produce measurable implementation with tests and update system-lineage metrics."
+    )
+    report: dict = {
+        "result": "task_suggested",
+        "selection_basis": "estimated_roi_queue",
+        "idea_id": idea_id,
+        "question": question,
+        "idea_estimated_roi": idea_estimated_roi,
+        "question_roi": question_roi,
+        "direction": direction,
+    }
+    if not create_task:
+        return report
+
+    from app.models.agent import AgentTaskCreate, TaskType
+    from app.services import agent_service
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.IMPL,
+            context={
+                "source": "inventory_estimated_roi",
+                "idea_id": idea_id,
+                "idea_estimated_roi": idea_estimated_roi,
+                "question_roi": question_roi,
             },
         )
     )

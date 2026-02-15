@@ -96,6 +96,16 @@ interface InventoryResponse {
     least_actual_roi: RoiIdeaRow[];
     missing_actual_roi_high_potential: RoiIdeaRow[];
   };
+  next_roi_work: {
+    selection_basis: string;
+    item: (IdeaQuestionRow & { idea_estimated_roi?: number }) | null;
+  };
+  operating_console: {
+    idea_id: string;
+    estimated_roi: number;
+    estimated_roi_rank: number | null;
+    is_next: boolean;
+  };
 }
 
 export default function PortfolioPage() {
@@ -267,6 +277,37 @@ export default function PortfolioPage() {
             <div className="rounded border p-3">
               <p className="text-muted-foreground">Lineage links</p>
               <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
+            </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Operating Console ROI Queue</h2>
+            <div className="grid md:grid-cols-2 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="font-medium">Operating Console Estimated ROI</p>
+                <p className="text-muted-foreground">
+                  {inventory.operating_console.estimated_roi.toFixed(2)} (rank{" "}
+                  {inventory.operating_console.estimated_roi_rank ?? "n/a"})
+                </p>
+                <p className="text-muted-foreground">
+                  next in queue: {inventory.operating_console.is_next ? "yes" : "no"}
+                </p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="font-medium">Next ROI Work Item</p>
+                {inventory.next_roi_work.item ? (
+                  <>
+                    <p className="text-muted-foreground">{inventory.next_roi_work.item.question}</p>
+                    <p className="text-muted-foreground">
+                      idea {inventory.next_roi_work.item.idea_id} | idea ROI{" "}
+                      {(inventory.next_roi_work.item.idea_estimated_roi || 0).toFixed(2)} | question ROI{" "}
+                      {(inventory.next_roi_work.item.question_roi || 0).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">No queued ROI work item</p>
+                )}
+              </div>
             </div>
           </section>
 

@@ -25,3 +25,8 @@ async def canonical_routes() -> dict:
 @router.post("/inventory/questions/next-highest-roi-task")
 async def next_highest_roi_task(create_task: bool = Query(False)) -> dict:
     return inventory_service.next_highest_roi_task_from_answered_questions(create_task=create_task)
+
+
+@router.post("/inventory/roi/next-task")
+async def next_highest_estimated_roi_task(create_task: bool = Query(False)) -> dict:
+    return inventory_service.next_highest_estimated_roi_task(create_task=create_task)
