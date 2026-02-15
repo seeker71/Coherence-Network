@@ -160,3 +160,24 @@ Behavior:
 3. Rerun failed GitHub Actions jobs for those required contexts.
 4. Re-check status until reruns finish with success (or fail/timeout); upload `auto_heal_report.json`.
 5. Guard against recursion with one-attempt trigger (`run_attempt == 1`) and per-SHA concurrency.
+
+## Public Deploy Drift Monitor (Main + Schedule)
+
+To detect production drift even when CI checks are green:
+
+- Workflow: `.github/workflows/public-deploy-contract.yml`
+- Script: `api/scripts/validate_public_deploy_contract.py`
+- Trigger:
+  - Push to `main`
+  - Every 30 minutes (`cron`)
+  - Manual run (`workflow_dispatch`)
+
+Contract checks:
+1. Railway `/api/health` responds `200`.
+2. Railway `/api/gates/main-head` responds `200` and returns SHA equal to GitHub `main` head.
+3. Vercel `/gates` page responds `200`.
+4. Vercel `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
+
+If contract fails:
+- Workflow uploads `public_deploy_contract_report.json`.
+- Workflow opens or updates issue: `Public deployment contract failing on main`.
