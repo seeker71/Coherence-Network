@@ -82,6 +82,41 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
             }
         ],
     },
+    {
+        "id": "web-ui-governance",
+        "name": "Web UI contribution cockpit",
+        "description": "Continuously improve the human interface to inspect and contribute through ROI-first workflows.",
+        "potential_value": 76.0,
+        "actual_value": 9.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.72,
+        "manifestation_status": "partial",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "How can we improve the UI?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "What is missing from the UI for machine and human contributors?",
+                "value_to_whole": 25.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which UI element has the highest actual value and least cost?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which UI element has the highest cost and least value?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            },
+        ],
+    },
 ]
 
 STANDING_QUESTION_TEXT = (
@@ -130,8 +165,9 @@ def _read_ideas() -> list[Idea]:
     if not ideas:
         ideas = [Idea(**item) for item in DEFAULT_IDEAS]
 
-    ideas, changed = _ensure_standing_questions(ideas)
-    if changed:
+    ideas, default_changed = _ensure_default_ideas(ideas)
+    ideas, standing_changed = _ensure_standing_questions(ideas)
+    if default_changed or standing_changed:
         _write_ideas(ideas)
     return ideas
 
@@ -141,6 +177,19 @@ def _write_ideas(ideas: list[Idea]) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
+
+
+def _ensure_default_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    existing_ids = {idea.id for idea in ideas}
+    for raw in DEFAULT_IDEAS:
+        candidate_id = str(raw.get("id") or "").strip()
+        if not candidate_id or candidate_id in existing_ids:
+            continue
+        ideas.append(Idea(**raw))
+        existing_ids.add(candidate_id)
+        changed = True
+    return ideas, changed
 
 
 def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:

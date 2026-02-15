@@ -16,14 +16,15 @@ Quick reference: spec status, test coverage, last verified.
 | 051 | ✓ | ✓ | ✓ |
 | 052 | ✓ | ✓ | ✓ |
 | 053 | ✓ | ✓ | ✓ |
+| 054 | ✓ | ✓ | ✓ |
 
-**Total:** 31 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–053).
+**Total:** 32 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–054).
 
 ## Test Verification
 
 ```bash
-cd api && pytest -v          # 85 tests
-cd web && npm run build      # 11 routes
+cd api && pytest -v          # 86 tests
+cd web && npm run build      # 12 routes
 ```
 
 **CI:** `.github/workflows/test.yml` runs full suite on push/PR.
@@ -51,6 +52,7 @@ cd web && npm run build      # 11 routes
 | 051 | test_ideas.py, test_value_lineage.py |
 | 052 | web build + manual validation (`/portfolio`) |
 | 053 | test_inventory_api.py |
+| 054 | test_inventory_api.py, web build + manual validation (`/portfolio`) |
 
 ## Last Updated
 

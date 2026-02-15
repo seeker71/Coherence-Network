@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -103,6 +104,56 @@ async def test_standing_question_exists_for_every_idea(
             assert any(
                 "How can we improve this idea" in q["question"] for q in idea["open_questions"]
             )
+        web_ui = next((idea for idea in ideas if idea["id"] == "web-ui-governance"), None)
+        assert web_ui is not None
+        web_ui_questions = {q["question"] for q in web_ui["open_questions"]}
+        assert "How can we improve the UI?" in web_ui_questions
+        assert "What is missing from the UI for machine and human contributors?" in web_ui_questions
+        assert "Which UI element has the highest actual value and least cost?" in web_ui_questions
+        assert "Which UI element has the highest cost and least value?" in web_ui_questions
+
+
+@pytest.mark.asyncio
+async def test_missing_default_idea_is_added_for_existing_portfolio_file(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    portfolio_path = tmp_path / "ideas.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "legacy-only",
+                        "name": "Legacy idea",
+                        "description": "pre-existing file without newer defaults",
+                        "potential_value": 10.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 5.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.5,
+                        "manifestation_status": "none",
+                        "interfaces": ["human:web"],
+                        "open_questions": [
+                            {
+                                "question": "Legacy open question?",
+                                "value_to_whole": 1.0,
+                                "estimated_cost": 1.0,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        ideas = listed.json()["ideas"]
+        assert any(idea["id"] == "web-ui-governance" for idea in ideas)
 
 
 @pytest.mark.asyncio

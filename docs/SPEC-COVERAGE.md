@@ -60,6 +60,12 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 046 Agent Debugging Pipeline Stuck Task Hang | ? | ? | ? | Pending |
 | 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
 | 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea->spec->impl->usage->payout preview trace API |
+| 049 System Lineage Inventory and Runtime Telemetry | ✓ | ✓ | ✓ | unified inventory with runtime usage summary |
+| 050 Canonical Route Registry and Runtime Mapping | ✓ | ✓ | ✓ | canonical route contract and runtime idea map |
+| 051 Question Answering and Minimum E2E Flow | ✓ | ✓ | ✓ | answer questions + minimum value-lineage E2E check |
+| 052 Portfolio Cockpit UI | ✓ | ✓ | ✓ | `/portfolio` human governance workflow |
+| 053 Standing Questions ROI and Next Task Generation | ✓ | ✓ | ✓ | standing question policy + auto next-task suggestion |
+| 054 Web UI Standing Questions and Cost/Value Signals | ✓ | ✓ | ✓ | web-ui-governance idea + `/portfolio` UI value/cost signals |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

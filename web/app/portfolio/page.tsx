@@ -13,8 +13,10 @@ interface IdeaQuestionRow {
   question: string;
   value_to_whole: number;
   estimated_cost: number;
+  question_roi?: number;
   answer: string | null;
   measured_delta: number | null;
+  answer_roi?: number;
 }
 
 interface RuntimeIdeaRow {
@@ -22,6 +24,13 @@ interface RuntimeIdeaRow {
   event_count: number;
   total_runtime_ms: number;
   runtime_cost_estimate: number;
+}
+
+interface RuntimeEventRow {
+  endpoint: string;
+  runtime_ms: number;
+  runtime_cost_estimate: number;
+  status_code: number;
 }
 
 interface InventoryResponse {
@@ -36,6 +45,7 @@ interface InventoryResponse {
   questions: {
     answered_count: number;
     unanswered_count: number;
+    answered: IdeaQuestionRow[];
     unanswered: IdeaQuestionRow[];
   };
   runtime: {
@@ -49,6 +59,7 @@ interface InventoryResponse {
 
 export default function PortfolioPage() {
   const [inventory, setInventory] = useState<InventoryResponse | null>(null);
+  const [runtimeEvents, setRuntimeEvents] = useState<RuntimeEventRow[]>([]);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>({});
@@ -59,12 +70,20 @@ export default function PortfolioPage() {
     setStatus("loading");
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(JSON.stringify(json));
-      setInventory(json);
+      const [inventoryRes, eventsRes] = await Promise.all([
+        fetch(`${API_URL}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/runtime/events?limit=1000`, {
+          cache: "no-store",
+        }),
+      ]);
+      const inventoryJson = await inventoryRes.json();
+      const eventsJson = await eventsRes.json();
+      if (!inventoryRes.ok) throw new Error(JSON.stringify(inventoryJson));
+      if (!eventsRes.ok) throw new Error(JSON.stringify(eventsJson));
+      setInventory(inventoryJson);
+      setRuntimeEvents(Array.isArray(eventsJson) ? eventsJson : []);
       setStatus("ok");
     } catch (e) {
       setStatus("error");
@@ -82,6 +101,67 @@ export default function PortfolioPage() {
       .sort((a, b) => b.runtime_cost_estimate - a.runtime_cost_estimate)
       .slice(0, 5);
   }, [inventory]);
+
+  const uiOpenQuestions = useMemo(() => {
+    if (!inventory) return [];
+    return inventory.questions.unanswered.filter((q) => q.idea_id === "web-ui-governance");
+  }, [inventory]);
+
+  const uiAnsweredQuestions = useMemo(() => {
+    if (!inventory) return [];
+    return inventory.questions.answered.filter((q) => q.idea_id === "web-ui-governance");
+  }, [inventory]);
+
+  const uiElementInsights = useMemo(() => {
+    const uiEvents = runtimeEvents.filter((event) => {
+      if (typeof event.endpoint !== "string" || event.endpoint.length < 1) return false;
+      if (!event.endpoint.startsWith("/")) return false;
+      if (event.endpoint.startsWith("/api/") && event.endpoint !== "/api/runtime-beacon") return false;
+      return true;
+    });
+
+    const perEndpoint = new Map<
+      string,
+      { endpoint: string; event_count: number; total_cost: number; value_proxy: number }
+    >();
+    for (const event of uiEvents) {
+      const key = event.endpoint;
+      const current = perEndpoint.get(key) || {
+        endpoint: key,
+        event_count: 0,
+        total_cost: 0,
+        value_proxy: 0,
+      };
+      current.event_count += 1;
+      current.total_cost += Number(event.runtime_cost_estimate || 0);
+      if ((event.status_code || 500) < 400) current.value_proxy += 1;
+      perEndpoint.set(key, current);
+    }
+
+    const rows = [...perEndpoint.values()].map((row) => {
+      const valuePerCost = row.total_cost > 0 ? row.value_proxy / row.total_cost : 0;
+      const costPerValue = row.value_proxy > 0 ? row.total_cost / row.value_proxy : row.total_cost;
+      return {
+        ...row,
+        value_per_cost: valuePerCost,
+        cost_per_value: costPerValue,
+      };
+    });
+
+    if (rows.length === 0) {
+      return { highestValueLeastCost: null, highestCostLeastValue: null, rows: [] };
+    }
+
+    const byValuePerCost = [...rows].sort((a, b) => b.value_per_cost - a.value_per_cost || a.total_cost - b.total_cost);
+    const byCostPerValue = [...rows].sort(
+      (a, b) => b.cost_per_value - a.cost_per_value || b.total_cost - a.total_cost
+    );
+    return {
+      highestValueLeastCost: byValuePerCost[0],
+      highestCostLeastValue: byCostPerValue[0],
+      rows,
+    };
+  }, [runtimeEvents]);
 
   async function submitAnswer(question: IdeaQuestionRow) {
     const key = `${question.idea_id}::${question.question}`;
@@ -150,6 +230,95 @@ export default function PortfolioPage() {
           </section>
 
           <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Web UI Standing Questions</h2>
+            <p className="text-sm text-muted-foreground">
+              Keep the UI measurable and improvable. These are the standing web UI questions.
+            </p>
+            {uiOpenQuestions.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No open web UI questions. Answered items are tracked below.
+              </p>
+            )}
+            <ul className="space-y-3">
+              {uiOpenQuestions.map((q) => {
+                const key = `${q.idea_id}::${q.question}`;
+                const roi = q.estimated_cost > 0 ? q.value_to_whole / q.estimated_cost : 0;
+                return (
+                  <li key={key} className="rounded border p-3 space-y-2">
+                    <p className="font-medium">{q.question}</p>
+                    <p className="text-sm text-muted-foreground">
+                      idea: {q.idea_id} | value: {q.value_to_whole} | cost: {q.estimated_cost} | ROI:{" "}
+                      {roi.toFixed(2)}
+                    </p>
+                    <div className="flex flex-col md:flex-row gap-2">
+                      <Input
+                        placeholder="Answer"
+                        value={draftAnswers[key] || ""}
+                        onChange={(e) => setDraftAnswers((prev) => ({ ...prev, [key]: e.target.value }))}
+                      />
+                      <Input
+                        placeholder="Measured delta (optional)"
+                        value={draftDeltas[key] || ""}
+                        onChange={(e) => setDraftDeltas((prev) => ({ ...prev, [key]: e.target.value }))}
+                      />
+                      <Button
+                        disabled={submittingKey === key || !(draftAnswers[key] || "").trim()}
+                        onClick={() => void submitAnswer(q)}
+                      >
+                        {submittingKey === key ? "Saving…" : "Answer"}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {uiAnsweredQuestions.length > 0 && (
+              <ul className="space-y-2 text-sm">
+                {uiAnsweredQuestions.slice(0, 5).map((q) => (
+                  <li key={`${q.idea_id}::answered::${q.question}`} className="rounded border p-2">
+                    <p className="font-medium">{q.question}</p>
+                    <p className="text-muted-foreground">
+                      answer ROI: {(q.answer_roi || 0).toFixed(2)} | measured delta:{" "}
+                      {q.measured_delta === null ? "n/a" : q.measured_delta}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">UI Element Value/Cost Signals</h2>
+            <p className="text-sm text-muted-foreground">
+              Actual value is estimated from successful interaction volume in runtime telemetry.
+            </p>
+            {!uiElementInsights.highestValueLeastCost || !uiElementInsights.highestCostLeastValue ? (
+              <p className="text-sm text-muted-foreground">
+                Not enough UI runtime events yet to rank UI elements.
+              </p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-3 text-sm">
+                <div className="rounded border p-3">
+                  <p className="font-medium">Highest actual value, least cost</p>
+                  <p className="text-muted-foreground">{uiElementInsights.highestValueLeastCost.endpoint}</p>
+                  <p>
+                    value/cost {uiElementInsights.highestValueLeastCost.value_per_cost.toFixed(2)} | events{" "}
+                    {uiElementInsights.highestValueLeastCost.event_count}
+                  </p>
+                </div>
+                <div className="rounded border p-3">
+                  <p className="font-medium">Highest cost, least value</p>
+                  <p className="text-muted-foreground">{uiElementInsights.highestCostLeastValue.endpoint}</p>
+                  <p>
+                    cost/value {uiElementInsights.highestCostLeastValue.cost_per_value.toFixed(6)} | events{" "}
+                    {uiElementInsights.highestCostLeastValue.event_count}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
             <h2 className="font-semibold">Top Unanswered Questions (ROI-ordered)</h2>
             {inventory.questions.unanswered.length === 0 && (
               <p className="text-sm text-muted-foreground">No open questions. Add new high-value questions.</p>
@@ -208,4 +377,3 @@ export default function PortfolioPage() {
     </main>
   );
 }
-
