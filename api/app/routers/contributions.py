@@ -45,9 +45,66 @@ def calculate_coherence(contribution: ContributionCreate, store: GraphStore) -> 
     return min(score, 1.0)
 
 
-@router.post("/contributions", response_model=Contribution, status_code=201)
+@router.post(
+    "/contributions",
+    response_model=Contribution,
+    status_code=201,
+    summary="Record contribution with automatic coherence scoring",
+    description="""
+**Purpose**: Track contributor impact with automatic quality assessment for fair value distribution.
+
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution` - Enable transparent, quality-weighted contributor rewards
+**Tests**: `api/tests/test_contributions.py::test_create_get_contribution_and_asset_rollup_cost`
+
+**Coherence Scoring**:
+- Baseline: 0.5
+- +0.2 if `has_tests=true`
+- +0.2 if `has_docs=true`
+- +0.1 if `complexity="low"`
+- Capped at 1.0
+
+**Change Process**:
+1. **Idea**: Update `/api/logs/idea_portfolio.json` (if changing rationale/value)
+2. **Spec**: Update `/specs/048-contributions-api.md` (if changing API contract)
+3. **Tests**: Update `/api/tests/test_contributions.py` (add/modify tests)
+4. **Implementation**: Update `/api/app/routers/contributions.py` (this file)
+5. **Validation**: Run `pytest api/tests/test_contributions.py -v`
+    """,
+    responses={
+        201: {
+            "description": "Contribution recorded with coherence score",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "770e8400-e29b-41d4-a716-446655440000",
+                        "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "asset_id": "660e8400-e29b-41d4-a716-446655440000",
+                        "cost_amount": 150.00,
+                        "coherence_score": 1.0,
+                        "metadata": {
+                            "has_tests": True,
+                            "has_docs": True,
+                            "complexity": "low"
+                        },
+                        "timestamp": "2026-02-15T10:30:00Z"
+                    }
+                }
+            }
+        },
+        404: {"description": "Contributor or Asset not found"},
+        422: {"description": "Validation error (missing required fields)"}
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py",
+        "x-implementation-file": "api/app/routers/contributions.py",
+        "x-coherence-formula": "0.5 + (0.2 * has_tests) + (0.2 * has_docs) + (0.1 * low_complexity)"
+    }
+)
 async def create_contribution(contribution: ContributionCreate, store: GraphStore = Depends(get_store)) -> Contribution:
-    """Record a new contribution."""
+    """Record a new contribution with automatic coherence scoring."""
     if not store.get_contributor(contribution.contributor_id):
         raise HTTPException(status_code=404, detail="Contributor not found")
 
@@ -68,40 +125,208 @@ async def create_contribution(contribution: ContributionCreate, store: GraphStor
 @router.get(
     "/contributions/{contribution_id}",
     response_model=Contribution,
-    responses={404: {"model": ErrorDetail}},
+    summary="Retrieve contribution by ID",
+    description="""
+**Purpose**: Fetch a specific contribution record with coherence score and metadata.
+
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution`
+**Tests**: `api/tests/test_contributions.py::test_create_get_contribution_and_asset_rollup_cost`
+
+**Change Process**: See POST /contributions for full change process.
+    """,
+    responses={
+        200: {
+            "description": "Contribution found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "770e8400-e29b-41d4-a716-446655440000",
+                        "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "asset_id": "660e8400-e29b-41d4-a716-446655440000",
+                        "cost_amount": 150.00,
+                        "coherence_score": 1.0,
+                        "metadata": {},
+                        "timestamp": "2026-02-15T10:30:00Z"
+                    }
+                }
+            }
+        },
+        404: {"model": ErrorDetail, "description": "Contribution not found"}
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py"
+    }
 )
 async def get_contribution(contribution_id: UUID, store: GraphStore = Depends(get_store)) -> Contribution:
-    """Get contribution by ID."""
+    """Retrieve contribution by ID."""
     contrib = store.get_contribution(contribution_id)
     if not contrib:
         raise HTTPException(status_code=404, detail="Contribution not found")
     return contrib
 
 
-@router.get("/assets/{asset_id}/contributions", response_model=list[Contribution])
+@router.get(
+    "/assets/{asset_id}/contributions",
+    response_model=list[Contribution],
+    summary="List all contributions to an asset",
+    description="""
+**Purpose**: Retrieve contribution history for an asset (used for rollup calculations and distribution).
+
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution`
+**Tests**: `api/tests/test_contributions.py::test_get_asset_and_contributor_contributions`
+
+**Use Case**: Calculate total weighted cost for distribution: sum(cost × (0.5 + coherence))
+
+**Change Process**: See POST /contributions for full change process.
+    """,
+    responses={
+        200: {
+            "description": "List of contributions to asset (may be empty)",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "770e8400-e29b-41d4-a716-446655440000",
+                            "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "asset_id": "660e8400-e29b-41d4-a716-446655440000",
+                            "cost_amount": 150.00,
+                            "coherence_score": 1.0,
+                            "metadata": {},
+                            "timestamp": "2026-02-15T10:30:00Z"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {"description": "Asset not found"}
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py"
+    }
+)
 async def get_asset_contributions(asset_id: UUID, store: GraphStore = Depends(get_store)) -> list[Contribution]:
-    """Get all contributions to an asset."""
+    """List all contributions to an asset."""
     if not store.get_asset(asset_id):
         raise HTTPException(status_code=404, detail="Asset not found")
     return store.get_asset_contributions(asset_id)
 
 
-@router.get("/contributors/{contributor_id}/contributions", response_model=list[Contribution])
+@router.get(
+    "/contributors/{contributor_id}/contributions",
+    response_model=list[Contribution],
+    summary="List all contributions by a contributor",
+    description="""
+**Purpose**: Retrieve contribution history for a contributor (used for analytics and payout calculations).
+
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution`
+**Tests**: `api/tests/test_contributions.py::test_get_asset_and_contributor_contributions`
+
+**Use Case**: Show contributor impact across all assets, calculate average coherence score.
+
+**Change Process**: See POST /contributions for full change process.
+    """,
+    responses={
+        200: {
+            "description": "List of contributions by contributor (may be empty)",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "770e8400-e29b-41d4-a716-446655440000",
+                            "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "asset_id": "660e8400-e29b-41d4-a716-446655440000",
+                            "cost_amount": 150.00,
+                            "coherence_score": 1.0,
+                            "metadata": {},
+                            "timestamp": "2026-02-15T10:30:00Z"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {"description": "Contributor not found"}
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py"
+    }
+)
 async def get_contributor_contributions(
     contributor_id: UUID, store: GraphStore = Depends(get_store)
 ) -> list[Contribution]:
-    """Get all contributions by a contributor."""
+    """List all contributions by a contributor."""
     if not store.get_contributor(contributor_id):
         raise HTTPException(status_code=404, detail="Contributor not found")
     return store.get_contributor_contributions(contributor_id)
 
 
-@router.post("/contributions/github", response_model=Contribution, status_code=201)
-async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
-    """Track contribution from GitHub webhook.
+@router.post(
+    "/contributions/github",
+    response_model=Contribution,
+    status_code=201,
+    summary="Track GitHub contribution via webhook",
+    description="""
+**Purpose**: Automatically track contributions from GitHub webhooks with auto-creation of contributors/assets.
 
-    Auto-creates contributor and asset if they don't exist.
-    """
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution`
+**Tests**: `api/tests/test_contributions.py`
+
+**Auto-Creation**:
+- Creates Contributor if `contributor_email` not found
+- Creates Asset if `repository` not found
+
+**GitHub Coherence Formula**:
+- Baseline: 0.5
+- +0.1 if `files_changed > 0`
+- +0.2 if `0 < lines_added < 100` (well-scoped)
+- +0.1 if `lines_added >= 100` (large changes)
+- Capped at 1.0
+
+**Change Process**: See POST /contributions for full change process.
+    """,
+    responses={
+        201: {
+            "description": "Contribution tracked from GitHub webhook",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "770e8400-e29b-41d4-a716-446655440000",
+                        "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "asset_id": "660e8400-e29b-41d4-a716-446655440000",
+                        "cost_amount": 100.00,
+                        "coherence_score": 0.8,
+                        "metadata": {
+                            "files_changed": 3,
+                            "lines_added": 50,
+                            "lines_deleted": 10,
+                            "commit_hash": "abc123def456",
+                            "repository": "org/repo",
+                            "contributor_email": "alice@example.com"
+                        },
+                        "timestamp": "2026-02-15T12:00:00Z"
+                    }
+                }
+            }
+        }
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py",
+        "x-webhook-type": "github"
+    }
+)
+async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
+    """Track contribution from GitHub webhook. Auto-creates contributor and asset if they don't exist."""
     # Find or create contributor by email
     contributor = None
     if hasattr(store, "find_contributor_by_email"):
@@ -167,9 +392,63 @@ def calculate_coherence_from_github_metadata(metadata: dict) -> float:
     return min(score, 1.0)
 
 
-@router.post("/contributions/github/debug", response_model=dict, status_code=200)
+@router.post(
+    "/contributions/github/debug",
+    response_model=dict,
+    status_code=200,
+    summary="Debug GitHub webhook integration",
+    description="""
+**Purpose**: Test GitHub webhook integration with detailed error reporting (doesn't raise exceptions).
+
+**Spec**: [048-contributions-api.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/048-contributions-api.md)
+**Idea**: `coherence-network-value-attribution`
+**Tests**: `api/tests/test_contributions.py`
+
+**Returns**:
+- On success: `{"success": true, "contribution_id": "...", "contributor_id": "...", "asset_id": "..."}`
+- On error: `{"success": false, "error": "...", "error_type": "...", "traceback": "..."}`
+
+**Use Case**: Debugging webhook configuration without 500 errors.
+
+**Change Process**: See POST /contributions for full change process.
+    """,
+    responses={
+        200: {
+            "description": "Debug response (success or error details)",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "success": {
+                            "value": {
+                                "success": True,
+                                "contribution_id": "770e8400-e29b-41d4-a716-446655440000",
+                                "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "asset_id": "660e8400-e29b-41d4-a716-446655440000"
+                            }
+                        },
+                        "error": {
+                            "value": {
+                                "success": False,
+                                "error": "Database connection failed",
+                                "error_type": "ConnectionError",
+                                "traceback": "..."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    openapi_extra={
+        "x-spec-file": "specs/048-contributions-api.md",
+        "x-idea-id": "coherence-network-value-attribution",
+        "x-test-file": "api/tests/test_contributions.py",
+        "x-webhook-type": "github",
+        "x-debug-endpoint": True
+    }
+)
 async def debug_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> dict:
-    """Debug version that returns detailed error info instead of raising."""
+    """Debug version that returns detailed error info instead of raising exceptions."""
     import traceback
     try:
         # Find or create contributor by email
