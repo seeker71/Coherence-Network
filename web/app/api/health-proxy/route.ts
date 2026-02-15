@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { getApiBase } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = getApiBase();
 const WEB_STARTED_AT = new Date();
 const WEB_UPDATED_AT = process.env.WEB_UPDATED_AT || process.env.VERCEL_GIT_COMMIT_SHA || "unknown";
 

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getApiBase } from "@/lib/api";
 
 export default function Home() {
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiUrl = getApiBase();
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
       <h1 className="text-3xl font-bold mb-4">Coherence Network</h1>
@@ -37,6 +37,15 @@ export default function Home() {
         </Button>
         <Button asChild variant="outline">
           <Link href="/portfolio">Portfolio Cockpit</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/ideas">Ideas</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/specs">Specs</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/usage">Usage</Link>
         </Button>
       </div>
     </main>
