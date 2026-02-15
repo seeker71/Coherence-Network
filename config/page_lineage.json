@@ -1,0 +1,12 @@
+{
+  "pages": [
+    { "path": "/portfolio", "idea_id": "portfolio-governance" },
+    { "path": "/gates", "idea_id": "oss-interface-alignment" },
+    { "path": "/search", "idea_id": "coherence-signal-depth" },
+    { "path": "/api-health", "idea_id": "oss-interface-alignment" },
+    { "path": "/contributors", "idea_id": "portfolio-governance" },
+    { "path": "/contributions", "idea_id": "portfolio-governance" },
+    { "path": "/assets", "idea_id": "portfolio-governance" },
+    { "path": "/tasks", "idea_id": "coherence-network-agent-pipeline" }
+  ]
+}

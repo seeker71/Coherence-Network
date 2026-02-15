@@ -124,6 +124,20 @@ export default function PortfolioPage() {
       <p className="text-muted-foreground">
         Human interface for ROI-first idea governance: unanswered questions, runtime cost, and value gap.
       </p>
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground underline">
+          Contributors
+        </Link>
+        <Link href="/contributions" className="text-muted-foreground hover:text-foreground underline">
+          Contributions
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground underline">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground underline">
+          Tasks
+        </Link>
+      </div>
 
       {status === "loading" && <p className="text-muted-foreground">Loading portfolio data…</p>}
       {status === "error" && error && <p className="text-destructive">Error: {error}</p>}
@@ -208,4 +222,3 @@ export default function PortfolioPage() {
     </main>
   );
 }
-
