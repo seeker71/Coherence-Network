@@ -66,12 +66,19 @@ def _write_store(data: dict) -> None:
 def _default_idea_map() -> dict:
     return {
         "prefix_map": {
+            "/api/health": "oss-interface-alignment",
             "/api/ideas": "portfolio-governance",
+            "/api/inventory": "portfolio-governance",
+            "/api/agent": "portfolio-governance",
             "/api/value-lineage": "portfolio-governance",
             "/api/gates": "oss-interface-alignment",
             "/api/runtime": "oss-interface-alignment",
+            "/api/health-proxy": "oss-interface-alignment",
+            "/v1": "portfolio-governance",
+            "/api": "oss-interface-alignment",
             "/gates": "oss-interface-alignment",
             "/search": "coherence-signal-depth",
+            "/": "oss-interface-alignment",
         }
     }
 
@@ -110,6 +117,13 @@ def resolve_idea_id(endpoint: str, explicit_idea_id: str | None = None) -> str:
         link = value_lineage_service.get_link(lineage_id)
         if link:
             return link.idea_id
+
+    if endpoint.startswith("/api"):
+        return "oss-interface-alignment"
+    if endpoint.startswith("/v1"):
+        return "portfolio-governance"
+    if endpoint.startswith("/"):
+        return "oss-interface-alignment"
 
     return "unmapped"
 
@@ -174,4 +188,3 @@ def summarize_by_idea(seconds: int = 3600) -> list[IdeaRuntimeSummary]:
         )
     summaries.sort(key=lambda x: x.runtime_cost_estimate, reverse=True)
     return summaries
-

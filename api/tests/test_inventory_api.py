@@ -56,3 +56,13 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["implementation_usage"]["usage_events_count"] >= 1
         assert isinstance(data["runtime"]["ideas"], list)
 
+
+@pytest.mark.asyncio
+async def test_canonical_routes_inventory_endpoint_returns_registry() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/routes/canonical")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "api_routes" in data
+        assert "web_routes" in data
+        assert any(route["path"] == "/api/inventory/system-lineage" for route in data["api_routes"])
