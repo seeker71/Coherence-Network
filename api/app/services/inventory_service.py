@@ -889,6 +889,30 @@ def _proposed_answer_for_question(question_row: dict, inventory: dict) -> tuple[
             f"with {api_count} API routes and {web_count} web routes. This should remain the source of truth.",
             5.0,
         )
+    if "overall system is improving end-to-end value flow" in question:
+        ideas_summary = inventory.get("ideas", {}).get("summary", {})
+        runtime_rows = inventory.get("runtime", {}).get("ideas", [])
+        quality_dup = (
+            inventory.get("quality_issues", {})
+            .get("duplicate_idea_questions", {})
+            .get("count", 0)
+        )
+        evidence_violations = inventory.get("evidence_contract", {}).get("violations_count", 0)
+        total_value_gap = float(ideas_summary.get("total_value_gap") or 0.0)
+        total_actual_value = float(ideas_summary.get("total_actual_value") or 0.0)
+        runtime_events = int(sum(int(row.get("event_count") or 0) for row in runtime_rows if isinstance(row, dict)))
+        runtime_cost = round(
+            sum(float(row.get("runtime_cost_estimate") or 0.0) for row in runtime_rows if isinstance(row, dict)),
+            6,
+        )
+        return (
+            "Evidence summary: "
+            f"actual_value={total_actual_value}, value_gap={total_value_gap}, "
+            f"runtime_events_24h={runtime_events}, runtime_cost_24h={runtime_cost}, "
+            f"duplicate_question_groups={quality_dup}, evidence_violations={evidence_violations}. "
+            "Improvement is supported when actual value rises and value gap/violations decrease while runtime cost stays bounded.",
+            3.4,
+        )
     if "leading indicators best represent energy flow" in question:
         return (
             "Use runtime event_count/source mix, runtime_cost_estimate by idea, and lineage valuation ROI "
