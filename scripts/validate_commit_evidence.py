@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 VALID_STATUS = {"pass", "fail", "pending"}
+VALID_CHANGE_INTENTS = {"runtime_feature", "runtime_fix", "process_only", "docs_only", "test_only"}
+VALID_E2E_STATUS = {"pass", "fail", "pending"}
+RUNTIME_PATH_PREFIXES = ("api/app/", "web/app/", "web/components/")
 REQUIRED_TOP_LEVEL = {
     "date",
     "thread_branch",
@@ -26,6 +29,7 @@ REQUIRED_TOP_LEVEL = {
     "agent",
     "evidence_refs",
     "change_files",
+    "change_intent",
 }
 EVIDENCE_PREFIX = "docs/system_audit/commit_evidence_"
 EVIDENCE_SUFFIX = ".json"
@@ -98,6 +102,9 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
         errors.append("evidence_refs must be a non-empty list of strings")
     if not _is_non_empty_string_list(data.get("change_files")):
         errors.append("change_files must be a non-empty list of strings")
+    change_intent = str(data.get("change_intent") or "").strip().lower()
+    if change_intent not in VALID_CHANGE_INTENTS:
+        errors.append(f"change_intent must be one of {sorted(VALID_CHANGE_INTENTS)}")
 
     contributors = data.get("contributors")
     if not isinstance(contributors, list) or not contributors:
@@ -140,6 +147,30 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
         missing_coverage = sorted(path for path in expected if path not in declared)
         if missing_coverage:
             errors.append(f"change_files missing changed paths: {missing_coverage}")
+
+        runtime_changed = any(path.startswith(RUNTIME_PATH_PREFIXES) for path in expected)
+        runtime_intent = change_intent in {"runtime_feature", "runtime_fix"}
+        if runtime_intent and not runtime_changed:
+            errors.append("change_intent requires runtime changes under api/app or web/app or web/components")
+        if (not runtime_intent) and runtime_changed:
+            errors.append("runtime files changed but change_intent is not runtime_feature/runtime_fix")
+
+    if change_intent in {"runtime_feature", "runtime_fix"}:
+        e2e = data.get("e2e_validation")
+        if not isinstance(e2e, dict):
+            errors.append("runtime change_intent requires e2e_validation object")
+        else:
+            e2e_status = str(e2e.get("status") or "").strip().lower()
+            if e2e_status not in VALID_E2E_STATUS:
+                errors.append(f"e2e_validation.status must be one of {sorted(VALID_E2E_STATUS)}")
+            if not str(e2e.get("expected_behavior_delta") or "").strip():
+                errors.append("e2e_validation.expected_behavior_delta is required for runtime intents")
+            if not _is_non_empty_string_list(e2e.get("public_endpoints")):
+                errors.append("e2e_validation.public_endpoints must be a non-empty list")
+            if not _is_non_empty_string_list(e2e.get("test_flows")):
+                errors.append("e2e_validation.test_flows must be a non-empty list")
+            if can_move is True and e2e_status != "pass":
+                errors.append("phase_gate.can_move_next_phase=true requires e2e_validation.status=pass for runtime intents")
 
     return errors
 
