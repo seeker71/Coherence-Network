@@ -16,6 +16,19 @@ def _base_payload() -> dict:
         "thread_branch": "codex/example",
         "commit_scope": "Example",
         "files_owned": ["docs/a.md"],
+        "idea_ids": ["coherence-network-agent-pipeline"],
+        "spec_ids": ["054"],
+        "task_ids": ["example-task"],
+        "contributors": [
+            {
+                "contributor_id": "openai-codex",
+                "contributor_type": "machine",
+                "roles": ["implementation"],
+            }
+        ],
+        "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
+        "evidence_refs": ["pytest api/tests/test_commit_evidence_validation.py -q"],
+        "change_files": ["scripts/validate_commit_evidence.py"],
         "local_validation": {"status": "pass"},
         "ci_validation": {"status": "pending"},
         "deploy_validation": {"status": "pending"},
