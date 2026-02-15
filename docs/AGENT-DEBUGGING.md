@@ -211,3 +211,52 @@ Observe stdout/stderr directly.
 - Ollama running (`ollama serve`)
 - Model pulled (`ollama pull glm-4.7-flash:latest` for tool use)
 - Claude Code installed (see API-KEYS-SETUP.md)
+
+## GitHub Auth Preflight (Avoid `gh` 401 / Missing GH_TOKEN)
+
+Some Codex threads require `gh` (create PRs, check CI, merge). `gh` stores auth in the OS keychain, but **does not** automatically export `GH_TOKEN`.
+
+### One-time: authenticate `gh` (persists in keychain)
+
+```bash
+gh auth login -h github.com
+gh auth setup-git
+gh auth status
+```
+
+### Recommended: set `GH_TOKEN` automatically for login shells
+
+Add this block to `~/.zprofile` (login shells) so `zsh -lc` and CI helper scripts see it:
+
+```bash
+# >>> codex gh token sync >>>
+if [ -z "$GH_TOKEN" ] && command -v gh >/dev/null 2>&1; then
+  export GH_TOKEN="$(gh auth token 2>/dev/null)"
+fi
+# <<< codex gh token sync <<<
+```
+
+Verify:
+
+```bash
+zsh -lc 'echo GH_TOKEN_len=${#GH_TOKEN}; test -n "$GH_TOKEN" && echo ok'
+```
+
+If you need `GH_TOKEN` in the current shell (non-login), run:
+
+```bash
+source scripts/source_gh_token.sh
+echo GH_TOKEN_len=${#GH_TOKEN}
+```
+
+### Preflight script (safe: never prints token)
+
+```bash
+python3 scripts/check_dev_auth.py
+python3 scripts/check_dev_auth.py --json
+```
+
+### Notes
+
+- `api/.env` is for the API process; it won’t automatically configure `gh` unless you export variables into your shell.
+- Do not commit tokens into the repo. Use keychain-backed `gh auth login` and environment export.
