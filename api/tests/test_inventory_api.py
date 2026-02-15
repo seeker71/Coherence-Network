@@ -55,6 +55,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "roi_insights" in data
         assert "next_roi_work" in data
         assert "operating_console" in data
+        assert "evidence_contract" in data
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
@@ -66,6 +67,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "most_estimated_roi" in data["roi_insights"]
         assert data["next_roi_work"]["selection_basis"] == "highest_idea_estimated_roi_then_question_roi"
         assert "estimated_roi_rank" in data["operating_console"]
+        assert "checks" in data["evidence_contract"]
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
 
@@ -383,4 +385,116 @@ async def test_inventory_issue_scan_can_create_deduped_task(
         p2 = second.json()
         assert p2["issues_count"] >= 1
         assert len(p2["created_tasks"]) == 1
+        assert p2["created_tasks"][0]["deduped"] is True
+
+
+@pytest.mark.asyncio
+async def test_evidence_contract_reports_violation_for_duplicate_questions(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    portfolio_path = tmp_path / "ideas.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "dup-idea",
+                        "name": "Duplicate question idea",
+                        "description": "Has duplicate questions for evidence violation",
+                        "potential_value": 20.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 5.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.6,
+                        "manifestation_status": "none",
+                        "interfaces": ["human:web"],
+                        "open_questions": [
+                            {
+                                "question": "What is missing from the UI?",
+                                "value_to_whole": 5.0,
+                                "estimated_cost": 1.0,
+                            },
+                            {
+                                "question": "What is missing from the UI?",
+                                "value_to_whole": 6.0,
+                                "estimated_cost": 1.0,
+                            },
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        inventory = await client.get("/api/inventory/system-lineage")
+        assert inventory.status_code == 200
+        payload = inventory.json()
+        violations = payload["evidence_contract"]["violations"]
+        assert any(v["subsystem_id"] == "inventory_quality" for v in violations)
+
+
+@pytest.mark.asyncio
+async def test_evidence_scan_can_create_deduped_task(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    portfolio_path = tmp_path / "ideas.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "dup-idea",
+                        "name": "Duplicate question idea",
+                        "description": "Has duplicate questions for evidence violation",
+                        "potential_value": 20.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 5.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.6,
+                        "manifestation_status": "none",
+                        "interfaces": ["human:web"],
+                        "open_questions": [
+                            {
+                                "question": "What is missing from the UI?",
+                                "value_to_whole": 5.0,
+                                "estimated_cost": 1.0,
+                            },
+                            {
+                                "question": "What is missing from the UI?",
+                                "value_to_whole": 6.0,
+                                "estimated_cost": 1.0,
+                            },
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/inventory/evidence/scan", params={"create_tasks": True})
+        assert first.status_code == 200
+        p1 = first.json()
+        assert p1["issues_count"] >= 1
+        assert len(p1["created_tasks"]) >= 1
+        assert p1["created_tasks"][0]["deduped"] is False
+
+        second = await client.post("/api/inventory/evidence/scan", params={"create_tasks": True})
+        assert second.status_code == 200
+        p2 = second.json()
+        assert p2["issues_count"] >= 1
+        assert len(p2["created_tasks"]) >= 1
         assert p2["created_tasks"][0]["deduped"] is True

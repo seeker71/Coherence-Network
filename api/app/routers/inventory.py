@@ -35,3 +35,8 @@ async def next_highest_estimated_roi_task(create_task: bool = Query(False)) -> d
 @router.post("/inventory/issues/scan")
 async def scan_inventory_issues(create_tasks: bool = Query(False)) -> dict:
     return inventory_service.scan_inventory_issues(create_tasks=create_tasks)
+
+
+@router.post("/inventory/evidence/scan")
+async def scan_evidence_contract(create_tasks: bool = Query(False)) -> dict:
+    return inventory_service.scan_evidence_contract(create_tasks=create_tasks)

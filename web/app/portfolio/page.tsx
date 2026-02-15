@@ -106,6 +106,26 @@ interface InventoryResponse {
     estimated_roi_rank: number | null;
     is_next: boolean;
   };
+  evidence_contract: {
+    checks: Array<{
+      subsystem_id: string;
+      standing_question: string;
+      claim: string;
+      falsifier: string;
+      owner_role: string;
+      auto_action: string;
+      status: "ok" | "needs_attention";
+    }>;
+    violations_count: number;
+    violations: Array<{
+      subsystem_id: string;
+      claim: string;
+      falsifier: string;
+      owner_role: string;
+      auto_action: string;
+      status: "needs_attention";
+    }>;
+  };
 }
 
 export default function PortfolioPage() {
@@ -309,6 +329,38 @@ export default function PortfolioPage() {
                 )}
               </div>
             </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Evidence Contract</h2>
+            <p className="text-sm text-muted-foreground">
+              Regularly ask: what evidence supports this claim, what falsifies it, and who acts when it drifts.
+            </p>
+            <div className="grid md:grid-cols-2 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="font-medium">Violations</p>
+                <p className="text-muted-foreground">{inventory.evidence_contract.violations_count}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="font-medium">Checks</p>
+                <p className="text-muted-foreground">{inventory.evidence_contract.checks.length}</p>
+              </div>
+            </div>
+            <ul className="space-y-2 text-sm">
+              {inventory.evidence_contract.violations.length === 0 ? (
+                <li className="rounded border p-2 text-muted-foreground">No evidence violations detected.</li>
+              ) : (
+                inventory.evidence_contract.violations.map((row) => (
+                  <li key={`evidence:${row.subsystem_id}`} className="rounded border p-2">
+                    <p className="font-medium">{row.subsystem_id}</p>
+                    <p className="text-muted-foreground">{row.claim}</p>
+                    <p className="text-muted-foreground">
+                      falsifier: {row.falsifier} | owner: {row.owner_role}
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
           </section>
 
           <section className="rounded border p-4 space-y-3">

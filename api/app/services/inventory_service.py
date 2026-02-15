@@ -92,6 +92,113 @@ def _detect_duplicate_questions(question_rows: list[dict]) -> list[dict]:
     )
     return duplicates
 
+
+def _build_evidence_contract(
+    *,
+    ideas: list[dict],
+    unanswered_questions: list[dict],
+    duplicate_questions: list[dict],
+    link_rows: list[dict],
+    contributor_rows: list[dict],
+    next_question: dict | None,
+    operating_console_status: dict,
+) -> dict:
+    standing_phrase = "how can we improve this idea"
+    total_ideas = len(ideas)
+    ideas_with_standing = 0
+    for idea in ideas:
+        open_questions = idea.get("open_questions") if isinstance(idea.get("open_questions"), list) else []
+        has_standing = any(
+            isinstance(q, dict)
+            and standing_phrase in str(q.get("question") or "").strip().lower()
+            for q in open_questions
+        )
+        if has_standing:
+            ideas_with_standing += 1
+    standing_ratio = round((ideas_with_standing / total_ideas), 4) if total_ideas > 0 else 0.0
+    has_next_work = bool(next_question) if unanswered_questions else True
+    dup_count = len(duplicate_questions)
+    link_count = len(link_rows)
+    has_attribution = (len(contributor_rows) > 0) if link_count > 0 else True
+
+    checks = [
+        {
+            "subsystem_id": "idea_governance",
+            "standing_question": "What evidence supports this claim now, what would falsify it, and who acts if it drifts?",
+            "claim": "Every idea has a standing improvement/measurement question.",
+            "evidence": [{"metric": "standing_question_coverage_ratio", "value": standing_ratio, "source": "ideas.items[].open_questions"}],
+            "falsifier": "Coverage ratio drops below 1.0",
+            "threshold": {"operator": ">=", "value": 1.0},
+            "owner_role": "spec-review",
+            "auto_action": "create heal task to restore standing questions",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if standing_ratio >= 1.0 else "needs_attention",
+        },
+        {
+            "subsystem_id": "roi_queue",
+            "standing_question": "Is next ROI work selected from evidence-backed queue and visible to operators?",
+            "claim": "If there are unanswered questions, next ROI work item must exist.",
+            "evidence": [
+                {"metric": "unanswered_count", "value": len(unanswered_questions), "source": "questions.unanswered_count"},
+                {"metric": "next_roi_item_present", "value": has_next_work, "source": "next_roi_work.item"},
+            ],
+            "falsifier": "Unanswered questions exist but next ROI item is missing.",
+            "threshold": {"operator": "==", "value": True},
+            "owner_role": "orchestration",
+            "auto_action": "create implementation task for next ROI item",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if has_next_work else "needs_attention",
+        },
+        {
+            "subsystem_id": "inventory_quality",
+            "standing_question": "Is inventory internally consistent with no duplicate question groups per idea?",
+            "claim": "Duplicate normalized questions per idea must be zero.",
+            "evidence": [{"metric": "duplicate_question_groups", "value": dup_count, "source": "quality_issues.duplicate_idea_questions.count"}],
+            "falsifier": "Duplicate question group count is greater than zero.",
+            "threshold": {"operator": "==", "value": 0},
+            "owner_role": "data-quality",
+            "auto_action": "create heal task to deduplicate and migrate",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if dup_count == 0 else "needs_attention",
+        },
+        {
+            "subsystem_id": "contribution_attribution",
+            "standing_question": "Can we prove who contributed idea/spec/implementation for valued work?",
+            "claim": "Attribution evidence exists when lineage links exist.",
+            "evidence": [
+                {"metric": "lineage_links_count", "value": link_count, "source": "implementation_usage.lineage_links_count"},
+                {"metric": "attribution_rows", "value": len(contributor_rows), "source": "contributors.attributions"},
+            ],
+            "falsifier": "Lineage links exist but attribution rows are missing.",
+            "threshold": {"operator": "==", "value": True},
+            "owner_role": "contributors-review",
+            "auto_action": "create review task to fill contributor attribution",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if has_attribution else "needs_attention",
+        },
+        {
+            "subsystem_id": "operating_console",
+            "standing_question": "Is the operating console being prioritized when ROI indicates it should be next?",
+            "claim": "Operating console ROI rank is tracked with explicit next/not-next signal.",
+            "evidence": [
+                {"metric": "operating_console_rank", "value": operating_console_status.get("estimated_roi_rank"), "source": "operating_console.estimated_roi_rank"},
+                {"metric": "operating_console_is_next", "value": bool(operating_console_status.get("is_next")), "source": "operating_console.is_next"},
+            ],
+            "falsifier": "Operating console rank is missing from inventory.",
+            "threshold": {"operator": "is_not_null", "value": True},
+            "owner_role": "ui-governance",
+            "auto_action": "create task from /api/inventory/roi/next-task when it becomes next",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if operating_console_status.get("estimated_roi_rank") is not None else "needs_attention",
+        },
+    ]
+    violations = [row for row in checks if row.get("status") != "ok"]
+    return {
+        "checks": checks,
+        "violations_count": len(violations),
+        "violations": violations,
+    }
+
 FALLBACK_SPECS: list[dict[str, str]] = [
     {
         "spec_id": "048",
@@ -268,6 +375,15 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "estimated_roi_rank": operating_console_rank,
         "is_next": bool(next_question and next_question.get("idea_id") == operating_console_id),
     }
+    evidence_contract = _build_evidence_contract(
+        ideas=ideas,
+        unanswered_questions=unanswered_questions,
+        duplicate_questions=duplicate_questions,
+        link_rows=link_rows,
+        contributor_rows=contributor_rows,
+        next_question=next_question,
+        operating_console_status=operating_console_status,
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -314,6 +430,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "item": next_question,
         },
         "operating_console": operating_console_status,
+        "evidence_contract": evidence_contract,
         "runtime": {
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,
@@ -430,6 +547,59 @@ def next_highest_estimated_roi_task(create_task: bool = False) -> dict:
     return report
 
 
+def _create_or_reuse_issue_task(
+    *,
+    condition: str,
+    signature: str,
+    direction: str,
+    context: dict,
+) -> dict:
+    from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
+    from app.services import agent_service
+
+    existing, _ = agent_service.list_tasks(limit=200)
+    for task in existing:
+        ctx = task.get("context") if isinstance(task, dict) else None
+        if not isinstance(ctx, dict):
+            continue
+        if ctx.get("issue_signature") != signature:
+            continue
+        status = task.get("status")
+        status_text = status.value if hasattr(status, "value") else str(status)
+        if status_text in (
+            TaskStatus.PENDING.value,
+            TaskStatus.RUNNING.value,
+            TaskStatus.NEEDS_DECISION.value,
+        ):
+            return {
+                "id": task.get("id"),
+                "status": status_text,
+                "task_type": task.get("task_type").value
+                if hasattr(task.get("task_type"), "value")
+                else str(task.get("task_type")),
+                "deduped": True,
+            }
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.HEAL,
+            context={
+                **context,
+                "source": "inventory_issue_scan",
+                "issue_condition": condition,
+                "issue_signature": signature,
+            },
+        )
+    )
+    return {
+        "id": created["id"],
+        "status": created["status"].value if hasattr(created["status"], "value") else str(created["status"]),
+        "task_type": created["task_type"].value if hasattr(created["task_type"], "value") else str(created["task_type"]),
+        "deduped": False,
+    }
+
+
 def scan_inventory_issues(create_tasks: bool = False) -> dict:
     inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
     dup = (
@@ -460,37 +630,8 @@ def scan_inventory_issues(create_tasks: bool = False) -> dict:
     if not create_tasks or not issues:
         return report
 
-    from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
-    from app.services import agent_service
-
     issue = issues[0]
     signature = f"{issue['condition']}:{issue['count']}"
-    existing, _ = agent_service.list_tasks(limit=200)
-    for task in existing:
-        ctx = task.get("context") if isinstance(task, dict) else None
-        if not isinstance(ctx, dict):
-            continue
-        if ctx.get("issue_signature") != signature:
-            continue
-        status = task.get("status")
-        status_text = status.value if hasattr(status, "value") else str(status)
-        if status_text in (
-            TaskStatus.PENDING.value,
-            TaskStatus.RUNNING.value,
-            TaskStatus.NEEDS_DECISION.value,
-        ):
-            report["created_tasks"].append(
-                {
-                    "id": task.get("id"),
-                    "status": status_text,
-                    "task_type": task.get("task_type").value
-                    if hasattr(task.get("task_type"), "value")
-                    else str(task.get("task_type")),
-                    "deduped": True,
-                }
-            )
-            return report
-
     top = duplicate_groups[0]
     direction = (
         "Inventory issue: duplicate idea questions detected. "
@@ -498,24 +639,67 @@ def scan_inventory_issues(create_tasks: bool = False) -> dict:
         f"Top duplicate: idea={top.get('idea_id')} question='{top.get('question')}' occurrences={top.get('occurrences')}. "
         "Implement canonical dedupe and migration, add tests, and validate inventory no longer reports duplicates."
     )
-    created = agent_service.create_task(
-        AgentTaskCreate(
+    report["created_tasks"].append(
+        _create_or_reuse_issue_task(
+            condition=issue["condition"],
+            signature=signature,
             direction=direction,
-            task_type=TaskType.HEAL,
-            context={
-                "source": "inventory_issue_scan",
-                "issue_condition": issue["condition"],
-                "issue_signature": signature,
-                "issue_count": issue["count"],
-            },
+            context={"issue_count": issue["count"]},
         )
     )
-    report["created_tasks"].append(
-        {
-            "id": created["id"],
-            "status": created["status"].value if hasattr(created["status"], "value") else str(created["status"]),
-            "task_type": created["task_type"].value if hasattr(created["task_type"], "value") else str(created["task_type"]),
-            "deduped": False,
-        }
-    )
+    return report
+
+
+def scan_evidence_contract(create_tasks: bool = False) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    evidence = inventory.get("evidence_contract", {})
+    violations = evidence.get("violations") if isinstance(evidence.get("violations"), list) else []
+    issues: list[dict] = []
+    for row in violations:
+        if not isinstance(row, dict):
+            continue
+        subsystem_id = str(row.get("subsystem_id") or "unknown")
+        issues.append(
+            {
+                "condition": f"evidence_contract::{subsystem_id}",
+                "severity": "medium",
+                "priority": 2,
+                "subsystem_id": subsystem_id,
+                "claim": row.get("claim"),
+                "falsifier": row.get("falsifier"),
+                "suggested_action": row.get("auto_action"),
+                "owner_role": row.get("owner_role"),
+            }
+        )
+
+    report: dict = {
+        "generated_at": inventory.get("generated_at"),
+        "issues": issues,
+        "issues_count": len(issues),
+        "created_tasks": [],
+    }
+    if not create_tasks or not issues:
+        return report
+
+    for issue in issues:
+        condition = str(issue["condition"])
+        subsystem_id = str(issue.get("subsystem_id") or "unknown")
+        signature = f"{condition}:1"
+        direction = (
+            "Evidence contract violation detected. "
+            f"Subsystem={subsystem_id}. Claim='{issue.get('claim')}'. "
+            f"Falsifier='{issue.get('falsifier')}'. "
+            "Collect objective evidence, correct thresholds/assumptions, add tests, and close the violation."
+        )
+        report["created_tasks"].append(
+            _create_or_reuse_issue_task(
+                condition=condition,
+                signature=signature,
+                direction=direction,
+                context={
+                    "subsystem_id": subsystem_id,
+                    "owner_role": issue.get("owner_role"),
+                },
+            )
+        )
     return report

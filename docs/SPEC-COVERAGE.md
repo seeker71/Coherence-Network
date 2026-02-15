@@ -69,6 +69,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 055 Contributor Attribution and Idea ROI Insights | ✓ | ✓ | ✓ | inventory exposes human/machine attribution + ROI rankings |
 | 056 Operating Console Estimated ROI Queue | ✓ | ✓ | ✓ | tracks operating console rank and pulls next estimated-ROI task |
 | 057 Inventory Issue Detection and Auto-Tasking | ✓ | ✓ | ✓ | duplicate-question detection + scan endpoint + monitor integration |
+| 058 Evidence Contract and Automated ROI Questioning | ✓ | ✓ | ✓ | per-subsystem claim/evidence/falsifier checks + automated evidence scan |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

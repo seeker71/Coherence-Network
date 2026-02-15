@@ -19,6 +19,7 @@ Detection rules:
   - runner_log_errors: ERROR or "API not reachable" in agent_runner.log (last 2h)
   - orphan_running: running task > 2h (likely stale)
   - phase_6_7_not_worked: backlog has not reached Phase 6 (006); Phase 6/7 product-critical items not being worked
+  - evidence_contract::<subsystem>: claim/evidence/falsifier checks failed in inventory evidence contract
 
 Fallback: when PIPELINE_AUTO_RECOVER=1, write restart_requested (stale_version), PATCH orphan to failed, create heal tasks.
 """
@@ -189,6 +190,22 @@ def _scan_inventory_issues(client: httpx.Client, create_tasks: bool = False) -> 
     try:
         resp = client.post(
             f"{BASE}/api/inventory/issues/scan",
+            params={"create_tasks": create_tasks},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        body = resp.json()
+        return body if isinstance(body, dict) else None
+    except Exception:
+        return None
+
+
+def _scan_evidence_contract(client: httpx.Client, create_tasks: bool = False) -> Optional[dict]:
+    """Call evidence contract scan endpoint. Returns payload or None if unavailable."""
+    try:
+        resp = client.post(
+            f"{BASE}/api/inventory/evidence/scan",
             params={"create_tasks": create_tasks},
             timeout=10,
         )
@@ -891,6 +908,33 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                 condition,
                 "medium",
                 f"Inventory detected duplicate idea questions: {count} duplicate group(s).",
+                action,
+            )
+            if scan_created_tasks:
+                data["issues"][-1]["heal_task_ids"] = [
+                    t.get("id") for t in scan_created_tasks if isinstance(t, dict) and t.get("id")
+                ]
+
+    # Evidence contract violations: ensure each subsystem claim has direct evidence and falsifier checks.
+    evidence_scan = _scan_evidence_contract(
+        client,
+        create_tasks=(auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"),
+    )
+    if isinstance(evidence_scan, dict):
+        scan_created_tasks = evidence_scan.get("created_tasks") if isinstance(evidence_scan.get("created_tasks"), list) else []
+        for ev_issue in evidence_scan.get("issues") or []:
+            if not isinstance(ev_issue, dict):
+                continue
+            condition = str(ev_issue.get("condition") or "").strip()
+            if not condition.startswith("evidence_contract::"):
+                continue
+            subsystem_id = str(ev_issue.get("subsystem_id") or "unknown")
+            action = str(ev_issue.get("suggested_action") or "Review evidence contract and remediate.")
+            _add_issue(
+                data,
+                condition,
+                "medium",
+                f"Evidence contract violation in subsystem '{subsystem_id}'.",
                 action,
             )
             if scan_created_tasks:
