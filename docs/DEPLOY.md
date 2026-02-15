@@ -169,8 +169,11 @@ From repository root:
 
 This checks:
 - `GET <railway-api-domain>/api/health`
+- `GET <railway-api-domain>/api/gates/main-head`
 - `GET <vercel-web-domain>/`
+- `GET <vercel-web-domain>/gates`
 - `GET <vercel-web-domain>/api-health`
+- `GET <vercel-web-domain>/api/health-proxy`
 - CORS header alignment (`Origin: <vercel-web-domain>` against API health endpoint)
 
 Use this as a quick connectivity + CORS check after each deployment.
@@ -182,18 +185,18 @@ A Vercel `404` on the project domain usually means the domain is not attached to
 Verify in Vercel dashboard:
 1. **Project selected**: correct repository imported.
 2. **Root Directory**: `web/`.
-3. **Domains**: the exact domain (for example `coherencenetwork.vercel.app`) is listed under this project.
+3. **Domains**: the exact domain (for example `coherence-network.vercel.app`) is listed under this project.
 4. **Latest deployment**: Production deployment status is **Ready**.
 5. **Environment variable**: `NEXT_PUBLIC_API_URL=https://coherence-network-production.up.railway.app` in Production scope.
 
 Quick CLI checks from your machine:
 
 ```bash
-curl -I https://coherencenetwork.vercel.app/
-curl -I https://coherencenetwork.vercel.app/api-health
+curl -I https://coherence-network.vercel.app/
+curl -I https://coherence-network.vercel.app/api-health
 ./scripts/verify_web_api_deploy.sh \
   https://coherence-network-production.up.railway.app \
-  https://coherencenetwork.vercel.app
+  https://coherence-network.vercel.app
 ```
 
 Expected: non-404 responses on `/` and `/api-health`, plus passing CORS check.
@@ -233,8 +236,8 @@ In Vercel dashboard, verify all of the following:
 CLI checks from your machine:
 
 ```bash
-curl -I https://coherencenetwork.vercel.app/
-curl -I https://coherencenetwork.vercel.app/api-health
+curl -I https://coherence-network.vercel.app/
+curl -I https://coherence-network.vercel.app/api-health
 ```
 
 Helpful header clues:
@@ -269,6 +272,7 @@ Railway can skip deployment when commit check status is not green. This repo now
   - `workflow_run` when `Test`, `Thread Gates`, or `Change Contract` completes on `main` with non-success conclusion
   - Manual `workflow_dispatch` with optional commit SHA
 - Script: `api/scripts/auto_heal_deploy_gates.py`
+- Complementary monitor: `.github/workflows/public-deploy-contract.yml` validates public Railway + Vercel contract and opens/updates an issue when drift is detected.
 
 What it does:
 1. Resolves target SHA on `main`.

@@ -303,6 +303,36 @@ def check_http_endpoint(url: str, timeout: float = 8.0) -> dict[str, Any]:
         return {"url": url, "ok": False, "status_code": None, "error": str(exc)}
 
 
+def check_http_json_endpoint(url: str, timeout: float = 8.0) -> dict[str, Any]:
+    """Fetch URL and parse JSON body when available."""
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            response = client.get(url)
+        payload: dict[str, Any] | None = None
+        parse_error: str | None = None
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if isinstance(data, dict):
+                    payload = data
+                else:
+                    parse_error = "response body is not a JSON object"
+            except ValueError as exc:
+                parse_error = str(exc)
+        out: dict[str, Any] = {
+            "url": url,
+            "ok": response.status_code == 200,
+            "status_code": response.status_code,
+        }
+        if payload is not None:
+            out["json"] = payload
+        if parse_error:
+            out["parse_error"] = parse_error
+        return out
+    except httpx.HTTPError as exc:
+        return {"url": url, "ok": False, "status_code": None, "error": str(exc)}
+
+
 def wait_for_public_validation(
     endpoint_urls: list[str],
     timeout_seconds: int = 1200,
@@ -392,6 +422,8 @@ def evaluate_pr_to_public_report(
     endpoints = endpoint_urls or [
         f"{api_base.rstrip('/')}/api/health",
         f"{api_base.rstrip('/')}/api/ideas",
+        f"{api_base.rstrip('/')}/api/gates/main-head",
+        f"{web_base.rstrip('/')}/gates",
         f"{web_base.rstrip('/')}/api-health",
     ]
     public = wait_for_public_validation(
@@ -470,7 +502,9 @@ def evaluate_merged_change_contract_report(
     endpoints = endpoint_urls or [
         f"{api_base.rstrip('/')}/api/health",
         f"{api_base.rstrip('/')}/api/ideas",
+        f"{api_base.rstrip('/')}/api/gates/main-head",
         f"{web_base.rstrip('/')}/",
+        f"{web_base.rstrip('/')}/gates",
         f"{web_base.rstrip('/')}/api-health",
     ]
     public = wait_for_public_validation(
@@ -490,4 +524,83 @@ def evaluate_merged_change_contract_report(
         "contributor": report["pr"]["author"] if isinstance(report.get("pr"), dict) else None,
     }
     report["result"] = "contract_passed"
+    return report
+
+
+def evaluate_public_deploy_contract_report(
+    repository: str = "seeker71/Coherence-Network",
+    branch: str = "main",
+    api_base: str = "https://coherence-network-production.up.railway.app",
+    web_base: str = "https://coherence-network.vercel.app",
+    expected_sha: str | None = None,
+    timeout: float = 8.0,
+    github_token: str | None = None,
+) -> dict[str, Any]:
+    """Validate public API + web deployment contract against branch head SHA."""
+    report: dict[str, Any] = {
+        "repository": repository,
+        "branch": branch,
+        "api_base": api_base.rstrip("/"),
+        "web_base": web_base.rstrip("/"),
+    }
+    target_sha = expected_sha or get_branch_head_sha(
+        repository,
+        branch,
+        github_token=github_token,
+    )
+    report["expected_sha"] = target_sha
+    if not isinstance(target_sha, str) or not target_sha:
+        report["result"] = "blocked"
+        report["reason"] = "Unable to resolve expected branch head SHA"
+        return report
+
+    checks: list[dict[str, Any]] = []
+
+    api_health_url = f"{report['api_base']}/api/health"
+    api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
+    api_health["name"] = "railway_health"
+    checks.append(api_health)
+
+    api_gates_head_url = f"{report['api_base']}/api/gates/main-head"
+    api_gates_head = check_http_json_endpoint(api_gates_head_url, timeout=timeout)
+    api_gates_head["name"] = "railway_gates_main_head"
+    if api_gates_head.get("ok") and isinstance(api_gates_head.get("json"), dict):
+        observed_sha = api_gates_head["json"].get("sha")
+        api_gates_head["observed_sha"] = observed_sha
+        api_gates_head["sha_match"] = observed_sha == target_sha
+        api_gates_head["ok"] = bool(api_gates_head["ok"] and api_gates_head["sha_match"])
+    checks.append(api_gates_head)
+
+    web_gates_url = f"{report['web_base']}/gates"
+    web_gates = check_http_endpoint(web_gates_url, timeout=timeout)
+    web_gates["name"] = "vercel_gates_page"
+    checks.append(web_gates)
+
+    web_proxy_url = f"{report['web_base']}/api/health-proxy"
+    web_proxy = check_http_json_endpoint(web_proxy_url, timeout=timeout)
+    web_proxy["name"] = "vercel_health_proxy"
+    if web_proxy.get("ok") and isinstance(web_proxy.get("json"), dict):
+        payload = web_proxy["json"]
+        api_payload = payload.get("api") if isinstance(payload.get("api"), dict) else {}
+        web_payload = payload.get("web") if isinstance(payload.get("web"), dict) else {}
+        updated_at = web_payload.get("updated_at")
+        api_status = api_payload.get("status")
+        web_proxy["web_updated_at"] = updated_at
+        web_proxy["api_status"] = api_status
+        web_proxy["sha_match"] = updated_at == target_sha
+        web_proxy["api_ok"] = api_status == "ok"
+        web_proxy["ok"] = bool(
+            web_proxy["ok"] and web_proxy["sha_match"] and web_proxy["api_ok"]
+        )
+    checks.append(web_proxy)
+
+    report["checks"] = checks
+    failing = [c.get("name") for c in checks if not c.get("ok")]
+    report["failing_checks"] = failing
+    if failing:
+        report["result"] = "blocked"
+        report["reason"] = f"Public deployment contract failed: {', '.join(str(x) for x in failing)}"
+        return report
+
+    report["result"] = "public_contract_passed"
     return report
