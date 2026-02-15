@@ -74,6 +74,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 060 High-ROI Auto-Answer and Derived Idea Generation | ✓ | ✓ | ✓ | auto-answer top ROI questions + optional derived ideas |
 | 061 Import Living-Codex-CSharp Top ROI Ideas | ✓ | ✓ | ✓ | seeded top ROI idea candidates from reference C# docs |
 | 062 Tracking Mechanism Efficiency and ROI Ranking | ✓ | ✓ | ✓ | inventory exposes mechanism assessment and ranked tracking improvements |
+| 063 Typed Idea Seed Source and ROI Follow-ups | ✓ | ✓ | ✓ | typed JSON seed source + fallback + ROI-tracked follow-up ideas |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

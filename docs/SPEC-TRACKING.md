@@ -25,8 +25,9 @@ Quick reference: spec status, test coverage, last verified.
 | 060 | ✓ | ✓ | ✓ |
 | 061 | ✓ | ✓ | ✓ |
 | 062 | ✓ | ✓ | ✓ |
+| 063 | ✓ | ✓ | ✓ |
 
-**Total:** 40 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–062).
+**Total:** 41 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–063).
 
 ## Test Verification
 
@@ -69,6 +70,7 @@ cd web && npm run build      # 12 routes
 | 060 | test_inventory_api.py |
 | 061 | test_ideas.py |
 | 062 | test_inventory_api.py |
+| 063 | test_ideas.py |
 
 ## Last Updated
 

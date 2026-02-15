@@ -1,0 +1,924 @@
+{
+  "ideas": [
+    {
+      "id": "coherence-network-overall",
+      "name": "Coherence Network overall system",
+      "description": "Top-level system idea connecting all component ideas into one measurable operating model.",
+      "potential_value": 100.0,
+      "actual_value": 14.0,
+      "estimated_cost": 20.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.78,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "What evidence proves the overall system is improving end-to-end value flow?",
+          "value_to_whole": 32.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "coherence-network-api-runtime",
+      "name": "System component: API and runtime telemetry",
+      "description": "Machine interface for inventory, telemetry, and validation contracts.",
+      "potential_value": 90.0,
+      "actual_value": 13.0,
+      "estimated_cost": 16.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.76,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which runtime signals best predict value creation by component?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "coherence-network-web-interface",
+      "name": "System component: human web interface",
+      "description": "Human interface for idea browsing, manifestation status, and intervention.",
+      "potential_value": 86.0,
+      "actual_value": 11.0,
+      "estimated_cost": 14.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.74,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "human:web"
+      ],
+      "open_questions": [
+        {
+          "question": "Can operators inspect and intervene across all ideas from web UI only?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "coherence-network-agent-pipeline",
+      "name": "System component: agent task pipeline",
+      "description": "Automated task orchestration, monitor issues, and intervention loops.",
+      "potential_value": 88.0,
+      "actual_value": 12.0,
+      "estimated_cost": 15.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.73,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "ai:automation",
+        "machine:api",
+        "human:operators"
+      ],
+      "open_questions": [
+        {
+          "question": "Which automated checks reduce unresolved pipeline issues fastest?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "coherence-network-value-attribution",
+      "name": "System component: value attribution and ROI",
+      "description": "Track idea/spec/implementation/review contributions and value realization.",
+      "potential_value": 92.0,
+      "actual_value": 13.0,
+      "estimated_cost": 16.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.77,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web"
+      ],
+      "open_questions": [
+        {
+          "question": "Which attribution signals best predict realized ROI payout quality?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-contribution-matching",
+      "name": "Living Codex contribution matching engine",
+      "description": "Match contributor profiles to highest-value contribution opportunities.",
+      "potential_value": 96.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.7,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which matching signals most improve contribution throughput with least coordination cost?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-personalized-experience",
+      "name": "Living Codex personalized experience engine",
+      "description": "Generate personalized views from stable profile state plus session context.",
+      "potential_value": 94.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.69,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which personalization features increase contributor retention without reducing transparency?",
+          "value_to_whole": 27.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-autonomous-learning-loop",
+      "name": "Living Codex autonomous learning loop",
+      "description": "Continuously detect knowledge gaps, generate tasks, and learn from outcomes.",
+      "potential_value": 92.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 6.0,
+      "confidence": 0.68,
+      "manifestation_status": "none",
+      "interfaces": [
+        "ai:automation",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "What minimal autonomous learning loop produces measurable value within one week?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-water-state-storage",
+      "name": "Living Codex water-state storage architecture",
+      "description": "Implement ICE/WATER/VAPOR/PLASMA storage tiers with lifecycle transitions.",
+      "potential_value": 90.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 6.0,
+      "confidence": 0.67,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which data classes should be mapped first to water states for maximum ROI?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-ice-bootstrap-core",
+      "name": "Living Codex ICE bootstrap core",
+      "description": "Package and boot a self-contained immutable core that reconstructs the system.",
+      "potential_value": 88.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 7.0,
+      "confidence": 0.66,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "ai:automation",
+        "human:operators"
+      ],
+      "open_questions": [
+        {
+          "question": "What is the minimum reproducible ICE bootstrap artifact for this system?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-real-time-plasma-streams",
+      "name": "Living Codex plasma real-time collaboration streams",
+      "description": "Add event-stream collaboration for real-time co-creation and feedback loops.",
+      "potential_value": 86.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 7.0,
+      "confidence": 0.65,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which collaboration events provide the strongest signal of shared value creation?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-quantum-ontology-nodes",
+      "name": "Living Codex quantum-inspired ontology nodes",
+      "description": "Model superposition, entanglement, and coherence factors in knowledge graph nodes.",
+      "potential_value": 84.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 8.0,
+      "confidence": 0.64,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "human:docs"
+      ],
+      "open_questions": [
+        {
+          "question": "Which ontology fields produce practical decision value without over-complexity?",
+          "value_to_whole": 23.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-knowledge-hologram-analysis",
+      "name": "Living Codex knowledge hologram analysis",
+      "description": "Measure wholeness, interconnectedness, redundancy, and resilience in the knowledge graph.",
+      "potential_value": 82.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 8.0,
+      "confidence": 0.63,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "human:web"
+      ],
+      "open_questions": [
+        {
+          "question": "Which hologram metrics best predict downstream system robustness?",
+          "value_to_whole": 22.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-user-profile-complexity",
+      "name": "Living Codex user complexity profile model",
+      "description": "Capture identity, communication, skills, interests, and local context for contributors.",
+      "potential_value": 80.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 7.0,
+      "confidence": 0.64,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which profile dimensions improve collaboration quality while respecting privacy?",
+          "value_to_whole": 22.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-self-bootstrap-validation",
+      "name": "Living Codex self-bootstrap validation suite",
+      "description": "Run full self-bootstrap and coherence validation as a repeatable system contract.",
+      "potential_value": 78.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 6.0,
+      "confidence": 0.65,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "human:operators",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which bootstrap validation checks should block promotion to public deployment?",
+          "value_to_whole": 21.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-profile-edit-completion",
+      "name": "Living Codex C# profile editing completion",
+      "description": "Complete profile edit flows currently partial in UI; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 83.0,
+      "actual_value": 0.0,
+      "estimated_cost": 7.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 2.0,
+      "confidence": 0.82,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which profile edit fields deliver the highest retention gain per implementation hour?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 1.5,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-concept-creation-ui",
+      "name": "Living Codex C# concept creation flow UI",
+      "description": "Expose backend concept creation endpoints in the web flow; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 90.0,
+      "actual_value": 0.0,
+      "estimated_cost": 10.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.8,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "What minimum create flow validates idea-to-manifestation conversion end-to-end?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-contribution-dashboard-ui",
+      "name": "Living Codex C# contribution dashboard UI",
+      "description": "Expose contribution and reward tracking in UI; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 84.0,
+      "actual_value": 0.0,
+      "estimated_cost": 9.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.79,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which dashboard KPI most improves contribution throughput and payout trust?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-enhanced-news-ui",
+      "name": "Living Codex C# enhanced news experience",
+      "description": "Upgrade news UI to use extraction/filtering capabilities from backend; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 80.0,
+      "actual_value": 0.0,
+      "estimated_cost": 9.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.77,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which news interaction metric best correlates with high-quality idea generation?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-graph-visualization-ui",
+      "name": "Living Codex C# graph visualization system UI",
+      "description": "Expose node-edge graph capabilities through dedicated graph pages; grounded in references/living-codex/IMPLEMENTATION_STATUS.md and specs/LIVING_UI_SPEC.md.",
+      "potential_value": 95.0,
+      "actual_value": 0.0,
+      "estimated_cost": 14.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.78,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which graph view provides the highest decision value in the first user session?",
+          "value_to_whole": 30.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-people-discovery-ui",
+      "name": "Living Codex C# people discovery interface",
+      "description": "Build people search and discovery pages to expose existing backend discovery APIs; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 88.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.76,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which people-discovery filters create the strongest collaboration acceptance rate?",
+          "value_to_whole": 27.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-portal-management-ui",
+      "name": "Living Codex C# portal management UI",
+      "description": "Add UI for portal lifecycle and external integration flows; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 85.0,
+      "actual_value": 0.0,
+      "estimated_cost": 13.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.74,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api",
+        "external:integrations"
+      ],
+      "open_questions": [
+        {
+          "question": "Which portal workflow yields the highest validated external value per setup cost?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-ucore-ontology-browser-ui",
+      "name": "Living Codex C# U-CORE ontology browser UI",
+      "description": "Expose ontology and resonance axis navigation in human interface; grounded in references/living-codex/IMPLEMENTATION_STATUS.md and specs/LIVING_UI_SPEC.md.",
+      "potential_value": 86.0,
+      "actual_value": 0.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.75,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which ontology navigation task most increases concept precision with least complexity?",
+          "value_to_whole": 27.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-realtime-ui-completion",
+      "name": "Living Codex C# real-time collaboration UI completion",
+      "description": "Close UI gaps for live updates, collaboration streams, and push notifications; grounded in references/living-codex/LIVING_CODEX_SPECIFICATION.md and IMPLEMENTATION_STATUS.md.",
+      "potential_value": 89.0,
+      "actual_value": 0.0,
+      "estimated_cost": 14.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.72,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "Which real-time event classes should be surfaced first to maximize measurable collaboration gains?",
+          "value_to_whole": 29.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "living-codex-csharp-temporal-ui",
+      "name": "Living Codex C# temporal consciousness UI",
+      "description": "Expose temporal portal capabilities through dedicated human-facing workflows; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+      "potential_value": 72.0,
+      "actual_value": 0.0,
+      "estimated_cost": 14.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.68,
+      "manifestation_status": "none",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "What is the smallest temporal UI flow that can be validated with real user behavior data?",
+          "value_to_whole": 22.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "traceability-maturity-governance",
+      "name": "Idea-spec-manifestation traceability maturity",
+      "description": "Strengthen end-to-end tracking from idea to spec to implementation/manifestation with auditable evidence.",
+      "potential_value": 89.0,
+      "actual_value": 6.0,
+      "estimated_cost": 9.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.78,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Are we using best-known traceability practices, and which maturity gaps have the highest ROI to close?",
+          "value_to_whole": 30.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "Which parts of the idea-spec-manifestation chain still depend on assumptions rather than verifiable evidence?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "tracking-infrastructure-upgrade",
+      "name": "Tracking infrastructure observability upgrade",
+      "description": "Improve how ideas/specs/manifestations are tracked with stronger automation, auditability, and contributor clarity.",
+      "potential_value": 86.0,
+      "actual_value": 5.0,
+      "estimated_cost": 8.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.79,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "human:docs",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "What tracking components are currently manual and should be automated first by ROI?",
+          "value_to_whole": 30.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "Which missing audit signals most reduce blind trust in idea/spec/manifestation tracking?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "How should we score tracking maturity per subsystem and gate releases on that score?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "tracking-mechanism-efficiency",
+      "name": "Idea/spec tracking mechanism efficiency optimization",
+      "description": "Continuously assess whether idea/spec/linkage tracking uses the most efficient mechanism and prioritize best ROI improvements.",
+      "potential_value": 91.0,
+      "actual_value": 4.0,
+      "estimated_cost": 8.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.79,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "human:docs",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Are we using the most efficient tracking mechanism for idea-to-spec-to-implementation flow?",
+          "value_to_whole": 31.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "Which tracking improvement has the highest ROI and should be implemented next?",
+          "value_to_whole": 33.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "tracking-db-evidence-store",
+      "name": "Tracking evidence storage in database",
+      "description": "Replace file-backed evidence/lineage state with relational storage for auditability, query performance, and safer concurrent updates.",
+      "potential_value": 96.0,
+      "actual_value": 0.0,
+      "estimated_cost": 18.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.72,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which lineage and evidence entities should be migrated first for maximum reliability gain per engineering day?",
+          "value_to_whole": 34.0,
+          "estimated_cost": 3.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "tracking-ci-drift-gates",
+      "name": "Tracking drift CI gate enforcement",
+      "description": "Enforce automated drift gates so idea/spec/implementation mappings and evidence freshness cannot silently regress.",
+      "potential_value": 94.0,
+      "actual_value": 0.0,
+      "estimated_cost": 14.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.74,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "ai:automation",
+        "human:review"
+      ],
+      "open_questions": [
+        {
+          "question": "What minimum CI gate set catches high-impact lineage and evidence drift with low false positives?",
+          "value_to_whole": 33.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "oss-interface-alignment",
+      "name": "Align OSS intelligence interfaces with runtime",
+      "description": "Expose and validate declared API routes used by web and scripts.",
+      "potential_value": 90.0,
+      "actual_value": 10.0,
+      "estimated_cost": 18.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.7,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which route set is canonical for current milestone?",
+          "value_to_whole": 30.0,
+          "estimated_cost": 1.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "What is the minimum E2E flow to validate machine-human interface integrity?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "portfolio-governance",
+      "name": "Unified idea portfolio governance",
+      "description": "Track potential value, actual value, cost, and open questions for all ideas.",
+      "potential_value": 82.0,
+      "actual_value": 12.0,
+      "estimated_cost": 10.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 2.0,
+      "confidence": 0.75,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "machine:api",
+        "human:docs",
+        "human:operators"
+      ],
+      "open_questions": [
+        {
+          "question": "Which leading indicators best represent energy flow to the whole?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "coherence-signal-depth",
+      "name": "Increase coherence signal depth with real data",
+      "description": "Convert coherence components from stubs to measured signals.",
+      "potential_value": 78.0,
+      "actual_value": 8.0,
+      "estimated_cost": 24.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 8.0,
+      "confidence": 0.55,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "external:github"
+      ],
+      "open_questions": [
+        {
+          "question": "What minimal GitHub ingestion yields measurable component uplift?",
+          "value_to_whole": 20.0,
+          "estimated_cost": 4.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    },
+    {
+      "id": "web-ui-governance",
+      "name": "Web UI contribution cockpit",
+      "description": "Continuously improve the human interface to inspect and contribute through ROI-first workflows.",
+      "potential_value": 76.0,
+      "actual_value": 9.0,
+      "estimated_cost": 12.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.72,
+      "manifestation_status": "partial",
+      "interfaces": [
+        "human:web",
+        "machine:api"
+      ],
+      "open_questions": [
+        {
+          "question": "How can we improve the UI?",
+          "value_to_whole": 26.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "What is missing from the UI for machine and human contributors?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "Which UI element has the highest actual value and least cost?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        },
+        {
+          "question": "Which UI element has the highest cost and least value?",
+          "value_to_whole": 24.0,
+          "estimated_cost": 2.0,
+          "answer": null,
+          "measured_delta": null
+        }
+      ]
+    }
+  ]
+}

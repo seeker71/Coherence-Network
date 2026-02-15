@@ -7,6 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import idea_service
 
 
 @pytest.mark.asyncio
@@ -139,3 +140,50 @@ async def test_living_codex_csharp_top_roi_ideas_are_seeded(
     assert listed.status_code == 200
     ids = {idea["id"] for idea in listed.json()["ideas"]}
     assert expected_ids.issubset(ids)
+
+
+@pytest.mark.asyncio
+async def test_ideas_can_load_defaults_from_typed_seed_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    seed_path = tmp_path / "idea_defaults.json"
+    seed_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "seed-test-idea",
+                        "name": "Seed test idea",
+                        "description": "Loaded from typed JSON seed.",
+                        "potential_value": 55.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 6.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 2.0,
+                        "confidence": 0.8,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [
+                            {
+                                "question": "Is typed seed loading active?",
+                                "value_to_whole": 9.0,
+                                "estimated_cost": 1.0,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.setenv("IDEA_DEFAULTS_PATH", str(seed_path))
+    monkeypatch.setattr(idea_service, "_DEFAULT_IDEAS_CACHE", None)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+
+    assert listed.status_code == 200
+    ids = {idea["id"] for idea in listed.json()["ideas"]}
+    assert "seed-test-idea" in ids

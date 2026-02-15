@@ -598,6 +598,46 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "tracking-db-evidence-store",
+        "name": "Tracking evidence storage in database",
+        "description": "Replace file-backed evidence/lineage state with relational storage for auditability, query performance, and safer concurrent updates.",
+        "potential_value": 96.0,
+        "actual_value": 0.0,
+        "estimated_cost": 18.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.72,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "human:web", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Which lineage and evidence entities should be migrated first for maximum reliability gain per engineering day?",
+                "value_to_whole": 34.0,
+                "estimated_cost": 3.0,
+            }
+        ],
+    },
+    {
+        "id": "tracking-ci-drift-gates",
+        "name": "Tracking drift CI gate enforcement",
+        "description": "Enforce automated drift gates so idea/spec/implementation mappings and evidence freshness cannot silently regress.",
+        "potential_value": 94.0,
+        "actual_value": 0.0,
+        "estimated_cost": 14.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.74,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "ai:automation", "human:review"],
+        "open_questions": [
+            {
+                "question": "What minimum CI gate set catches high-impact lineage and evidence drift with low false positives?",
+                "value_to_whole": 33.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
@@ -712,10 +752,52 @@ REQUIRED_CORE_IDEA_IDS: tuple[str, ...] = (
     "coherence-network-value-attribution",
 )
 
+_DEFAULT_IDEAS_CACHE: list[dict[str, Any]] | None = None
+
 
 def _default_portfolio_path() -> str:
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
     return os.path.join(logs_dir, "idea_portfolio.json")
+
+
+def _default_idea_seed_path() -> str:
+    config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config")
+    return os.path.join(config_dir, "idea_defaults.json")
+
+
+def _idea_seed_path() -> str:
+    return os.getenv("IDEA_DEFAULTS_PATH", _default_idea_seed_path())
+
+
+def _resolved_default_ideas() -> list[dict[str, Any]]:
+    global _DEFAULT_IDEAS_CACHE
+    if _DEFAULT_IDEAS_CACHE is not None:
+        return _DEFAULT_IDEAS_CACHE
+
+    path = _idea_seed_path()
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        _DEFAULT_IDEAS_CACHE = DEFAULT_IDEAS
+        return _DEFAULT_IDEAS_CACHE
+
+    raw_items = data.get("ideas") if isinstance(data, dict) else None
+    if not isinstance(raw_items, list):
+        _DEFAULT_IDEAS_CACHE = DEFAULT_IDEAS
+        return _DEFAULT_IDEAS_CACHE
+
+    validated: list[dict[str, Any]] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            validated.append(Idea(**item).model_dump(mode="json"))
+        except Exception:
+            continue
+
+    _DEFAULT_IDEAS_CACHE = validated or DEFAULT_IDEAS
+    return _DEFAULT_IDEAS_CACHE
 
 
 def _portfolio_path() -> str:
@@ -728,7 +810,7 @@ def _ensure_portfolio_file() -> None:
         return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"ideas": DEFAULT_IDEAS}, f, indent=2)
+        json.dump({"ideas": _resolved_default_ideas()}, f, indent=2)
 
 
 def _read_ideas() -> list[Idea]:
@@ -738,11 +820,11 @@ def _read_ideas() -> list[Idea]:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return [Idea(**item) for item in DEFAULT_IDEAS]
+        return [Idea(**item) for item in _resolved_default_ideas()]
 
     raw_ideas = data.get("ideas") if isinstance(data, dict) else None
     if not isinstance(raw_ideas, list):
-        return [Idea(**item) for item in DEFAULT_IDEAS]
+        return [Idea(**item) for item in _resolved_default_ideas()]
 
     ideas: list[Idea] = []
     for item in raw_ideas:
@@ -751,7 +833,7 @@ def _read_ideas() -> list[Idea]:
         except Exception:
             continue
     if not ideas:
-        ideas = [Idea(**item) for item in DEFAULT_IDEAS]
+        ideas = [Idea(**item) for item in _resolved_default_ideas()]
 
     ideas, default_changed = _ensure_default_ideas(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
@@ -771,7 +853,7 @@ def _write_ideas(ideas: list[Idea]) -> None:
 def _ensure_default_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     changed = False
     existing_ids = {idea.id for idea in ideas}
-    for raw in DEFAULT_IDEAS:
+    for raw in _resolved_default_ideas():
         candidate_id = str(raw.get("id") or "").strip()
         if not candidate_id or candidate_id in existing_ids:
             continue
