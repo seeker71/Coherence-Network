@@ -110,3 +110,22 @@ async def gates_public_deploy_contract(
         timeout=timeout,
         github_token=os.getenv("GITHUB_TOKEN"),
     )
+
+
+@router.get("/gates/commit-traceability")
+async def gates_commit_traceability(
+    sha: str = Query(..., min_length=7, description="Commit SHA to derive traceability from"),
+    repo: str = Query("seeker71/Coherence-Network"),
+    api_base: str = Query("https://coherence-network-production.up.railway.app"),
+    web_base: str = Query("https://coherence-network.vercel.app"),
+    timeout: float = Query(10.0, ge=1.0, le=60.0),
+) -> dict:
+    return await asyncio.to_thread(
+        gates.evaluate_commit_traceability_report,
+        repository=repo,
+        sha=sha,
+        api_base=api_base,
+        web_base=web_base,
+        timeout=timeout,
+        github_token=os.getenv("GITHUB_TOKEN"),
+    )

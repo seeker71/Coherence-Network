@@ -18,8 +18,9 @@ Quick reference: spec status, test coverage, last verified.
 | 053 | ✓ | ✓ | ✓ |
 | 054 | ✓ | ✓ | ✓ |
 | 055 | ✓ | ✓ | ✓ |
+| 056 | ✓ | ✓ | ✓ |
 
-**Total:** 33 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–055).
+**Total:** 34 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056).
 
 ## Test Verification
 
@@ -55,6 +56,7 @@ cd web && npm run build      # 11 routes
 | 053 | test_inventory_api.py |
 | 054 | scripts/validate_commit_evidence.py (CLI validation), workflow gates |
 | 055 | test_commit_evidence_validation.py, scripts/validate_commit_evidence.py |
+| 056 | test_release_gate_service.py, test_gates.py |
 
 ## Last Updated
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
+    evaluate_commit_traceability_report,
     evaluate_public_deploy_contract_report,
     evaluate_collective_review_gates,
     evaluate_pr_gates,
@@ -307,3 +308,72 @@ def test_evaluate_public_deploy_contract_report_allows_main_head_502_with_warnin
     assert out["result"] == "public_contract_passed"
     assert out["failing_checks"] == []
     assert "railway_gates_main_head_unavailable" in out["warnings"]
+
+
+def test_evaluate_commit_traceability_report_derives_references_from_commit_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_files",
+        lambda *args, **kwargs: [
+            "docs/system_audit/commit_evidence_2026-02-15_traceability.json",
+            "api/app/routers/gates.py",
+        ],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_pull_requests",
+        lambda *args, **kwargs: [{"number": 88}],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_file_content_at_ref",
+        lambda *args, **kwargs: (
+            '{"idea_ids":["portfolio-governance"],'
+            '"spec_ids":["055"],'
+            '"change_files":["api/app/routers/gates.py"]}'
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.list_spec_paths_at_ref",
+        lambda *args, **kwargs: [
+            "specs/055-runtime-intent-and-public-e2e-contract-gate.md",
+            "specs/054-commit-provenance-contract-gate.md",
+        ],
+    )
+
+    out = evaluate_commit_traceability_report(
+        repository="seeker71/Coherence-Network",
+        sha="abc1234",
+        api_base="https://api.example.com",
+        web_base="https://web.example.com",
+    )
+
+    assert out["result"] == "traceability_ready"
+    assert out["questions_answered"]["commit_evidence_present"] is True
+    assert out["traceability"]["ideas"][0]["api_url"] == "https://api.example.com/api/ideas/portfolio-governance"
+    assert out["traceability"]["specs"][0]["path"] == "specs/055-runtime-intent-and-public-e2e-contract-gate.md"
+    assert out["traceability"]["implementations"][0]["path"] == "api/app/routers/gates.py"
+
+
+def test_evaluate_commit_traceability_report_is_incomplete_without_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_files",
+        lambda *args, **kwargs: ["api/app/main.py"],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_pull_requests",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.list_spec_paths_at_ref",
+        lambda *args, **kwargs: [],
+    )
+
+    out = evaluate_commit_traceability_report(
+        repository="seeker71/Coherence-Network",
+        sha="abc1234",
+    )
+
+    assert out["result"] == "traceability_incomplete"
+    assert "No commit evidence file changed in this commit" in out["missing_answers"]
