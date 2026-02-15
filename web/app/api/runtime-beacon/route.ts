@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getApiBase } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = getApiBase();
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,4 +24,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
