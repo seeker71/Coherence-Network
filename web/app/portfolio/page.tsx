@@ -33,6 +33,20 @@ interface RuntimeEventRow {
   status_code: number;
 }
 
+interface LineageLinkRow {
+  lineage_id: string;
+  idea_id: string;
+  spec_id: string;
+  implementation_refs: string[];
+  estimated_cost: number;
+  valuation: {
+    measured_value_total: number;
+    estimated_cost: number;
+    roi_ratio: number;
+    usage_events_count: number;
+  } | null;
+}
+
 interface ContributorAttributionRow {
   lineage_id: string;
   idea_id: string;
@@ -69,12 +83,15 @@ interface InventoryResponse {
     items: Array<{
       id: string;
       name: string;
+      description: string;
       manifestation_status: string;
+      free_energy_score: number;
       potential_value: number;
       actual_value: number;
       estimated_cost: number;
       actual_cost: number;
       value_gap: number;
+      interfaces: string[];
     }>;
   };
   manifestations: {
@@ -108,6 +125,7 @@ interface InventoryResponse {
   implementation_usage: {
     lineage_links_count: number;
     usage_events_count: number;
+    lineage_links: LineageLinkRow[];
   };
   contributors: {
     attribution_count: number;
@@ -165,6 +183,10 @@ export default function PortfolioPage() {
   const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>({});
   const [draftDeltas, setDraftDeltas] = useState<Record<string, string>>({});
   const [submittingKey, setSubmittingKey] = useState<string | null>(null);
+  const [ideaQuery, setIdeaQuery] = useState("");
+  const [ideaStatusFilter, setIdeaStatusFilter] = useState<"all" | "none" | "partial" | "validated">("all");
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string>("");
+  const [ideaPage, setIdeaPage] = useState(1);
 
   async function loadInventory() {
     setStatus("loading");
@@ -194,6 +216,14 @@ export default function PortfolioPage() {
   useEffect(() => {
     void loadInventory();
   }, []);
+
+  useEffect(() => {
+    if (!inventory) return;
+    const hasSelected = inventory.ideas.items.some((i) => i.id === selectedIdeaId);
+    if (!hasSelected && inventory.ideas.items.length > 0) {
+      setSelectedIdeaId(inventory.ideas.items[0].id);
+    }
+  }, [inventory, selectedIdeaId]);
 
   const topRuntime = useMemo(() => {
     if (!inventory) return [];
@@ -263,6 +293,76 @@ export default function PortfolioPage() {
     };
   }, [runtimeEvents]);
 
+  const ideaQuestionMap = useMemo(() => {
+    if (!inventory) {
+      return new Map<string, { answered: IdeaQuestionRow[]; unanswered: IdeaQuestionRow[] }>();
+    }
+    const map = new Map<string, { answered: IdeaQuestionRow[]; unanswered: IdeaQuestionRow[] }>();
+    for (const q of inventory.questions.unanswered) {
+      const row = map.get(q.idea_id) || { answered: [], unanswered: [] };
+      row.unanswered.push(q);
+      map.set(q.idea_id, row);
+    }
+    for (const q of inventory.questions.answered) {
+      const row = map.get(q.idea_id) || { answered: [], unanswered: [] };
+      row.answered.push(q);
+      map.set(q.idea_id, row);
+    }
+    return map;
+  }, [inventory]);
+
+  const filteredIdeas = useMemo(() => {
+    if (!inventory) return [];
+    const q = ideaQuery.trim().toLowerCase();
+    return inventory.ideas.items.filter((idea) => {
+      if (ideaStatusFilter !== "all" && idea.manifestation_status !== ideaStatusFilter) return false;
+      if (!q) return true;
+      return (
+        idea.id.toLowerCase().includes(q) ||
+        idea.name.toLowerCase().includes(q) ||
+        idea.description.toLowerCase().includes(q)
+      );
+    });
+  }, [inventory, ideaQuery, ideaStatusFilter]);
+
+  const pagedIdeas = useMemo(() => {
+    const pageSize = 10;
+    const start = (ideaPage - 1) * pageSize;
+    return filteredIdeas.slice(start, start + pageSize);
+  }, [filteredIdeas, ideaPage]);
+
+  const totalIdeaPages = Math.max(1, Math.ceil(filteredIdeas.length / 10));
+
+  useEffect(() => {
+    if (ideaPage > totalIdeaPages) setIdeaPage(totalIdeaPages);
+    if (ideaPage < 1) setIdeaPage(1);
+  }, [ideaPage, totalIdeaPages]);
+
+  const selectedIdea = useMemo(() => {
+    if (!inventory) return null;
+    return inventory.ideas.items.find((i) => i.id === selectedIdeaId) || null;
+  }, [inventory, selectedIdeaId]);
+
+  const selectedIdeaQuestions = useMemo(() => {
+    if (!selectedIdea) return { answered: [] as IdeaQuestionRow[], unanswered: [] as IdeaQuestionRow[] };
+    return ideaQuestionMap.get(selectedIdea.id) || { answered: [], unanswered: [] };
+  }, [selectedIdea, ideaQuestionMap]);
+
+  const selectedIdeaLineage = useMemo(() => {
+    if (!inventory || !selectedIdea) return [];
+    return inventory.implementation_usage.lineage_links.filter((l) => l.idea_id === selectedIdea.id);
+  }, [inventory, selectedIdea]);
+
+  const selectedIdeaManifestation = useMemo(() => {
+    if (!inventory || !selectedIdea) return null;
+    return inventory.manifestations.items.find((m) => m.idea_id === selectedIdea.id) || null;
+  }, [inventory, selectedIdea]);
+
+  const selectedIdeaRuntime = useMemo(() => {
+    if (!inventory || !selectedIdea) return null;
+    return inventory.runtime.ideas.find((r) => r.idea_id === selectedIdea.id) || null;
+  }, [inventory, selectedIdea]);
+
   async function submitAnswer(question: IdeaQuestionRow) {
     const key = `${question.idea_id}::${question.question}`;
     const answer = (draftAnswers[key] || "").trim();
@@ -326,6 +426,199 @@ export default function PortfolioPage() {
             <div className="rounded border p-3">
               <p className="text-muted-foreground">Lineage links</p>
               <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
+            </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Idea Explorer</h2>
+            <p className="text-sm text-muted-foreground">
+              Browse every idea, inspect questions and answers, implementation/manifestation process evidence, and cost-benefit signals.
+            </p>
+            <div className="grid md:grid-cols-3 gap-2">
+              <Input
+                placeholder="Search idea id, name, description"
+                value={ideaQuery}
+                onChange={(e) => {
+                  setIdeaQuery(e.target.value);
+                  setIdeaPage(1);
+                }}
+              />
+              <select
+                className="rounded border bg-background px-3 py-2 text-sm"
+                value={ideaStatusFilter}
+                onChange={(e) => {
+                  setIdeaStatusFilter(e.target.value as "all" | "none" | "partial" | "validated");
+                  setIdeaPage(1);
+                }}
+              >
+                <option value="all">All manifestations</option>
+                <option value="none">None</option>
+                <option value="partial">Partial</option>
+                <option value="validated">Validated</option>
+              </select>
+              <div className="flex items-center justify-end text-sm text-muted-foreground">
+                {filteredIdeas.length} ideas
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-12 gap-3">
+              <div className="md:col-span-4 space-y-2">
+                <ul className="space-y-2 max-h-[28rem] overflow-auto pr-1">
+                  {pagedIdeas.map((idea) => (
+                    <li key={idea.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIdeaId(idea.id)}
+                        className={`w-full text-left rounded border p-2 ${
+                          selectedIdeaId === idea.id ? "border-foreground" : "border-border"
+                        }`}
+                      >
+                        <p className="font-medium">{idea.name}</p>
+                        <p className="text-xs text-muted-foreground">{idea.id}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {idea.manifestation_status} | est ROI{" "}
+                          {(idea.estimated_cost > 0 ? idea.potential_value / idea.estimated_cost : 0).toFixed(2)}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between text-sm">
+                  <Button variant="outline" disabled={ideaPage <= 1} onClick={() => setIdeaPage((p) => Math.max(1, p - 1))}>
+                    Prev
+                  </Button>
+                  <span className="text-muted-foreground">
+                    Page {ideaPage} / {totalIdeaPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    disabled={ideaPage >= totalIdeaPages}
+                    onClick={() => setIdeaPage((p) => Math.min(totalIdeaPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+
+              <div className="md:col-span-8 rounded border p-3 space-y-3">
+                {!selectedIdea ? (
+                  <p className="text-sm text-muted-foreground">Select an idea to inspect details.</p>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-lg font-semibold">{selectedIdea.name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedIdea.id}</p>
+                      <p className="text-sm text-muted-foreground">{selectedIdea.description}</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-2 text-sm">
+                      <div className="rounded border p-2">
+                        <p className="text-muted-foreground">Manifestation</p>
+                        <p className="font-medium">{selectedIdea.manifestation_status}</p>
+                      </div>
+                      <div className="rounded border p-2">
+                        <p className="text-muted-foreground">Value / Cost</p>
+                        <p className="font-medium">
+                          est {selectedIdea.potential_value.toFixed(2)} / {selectedIdea.estimated_cost.toFixed(2)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          act {selectedIdea.actual_value.toFixed(2)} / {selectedIdea.actual_cost.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded border p-2">
+                        <p className="text-muted-foreground">ROI</p>
+                        <p className="font-medium">
+                          est {(selectedIdea.estimated_cost > 0 ? selectedIdea.potential_value / selectedIdea.estimated_cost : 0).toFixed(2)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          act {(selectedIdea.actual_cost > 0 ? selectedIdea.actual_value / selectedIdea.actual_cost : 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded border p-2 text-sm">
+                      <p className="font-medium">Questions</p>
+                      <p className="text-muted-foreground">
+                        unanswered {selectedIdeaQuestions.unanswered.length} | answered {selectedIdeaQuestions.answered.length}
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {selectedIdeaQuestions.unanswered.slice(0, 8).map((q) => (
+                          <li key={`open:${q.idea_id}:${q.question}`} className="rounded border p-2">
+                            <p>{q.question}</p>
+                            <p className="text-xs text-muted-foreground">
+                              value {q.value_to_whole} | cost {q.estimated_cost} | ROI{" "}
+                              {(q.estimated_cost > 0 ? q.value_to_whole / q.estimated_cost : 0).toFixed(2)}
+                            </p>
+                          </li>
+                        ))}
+                        {selectedIdeaQuestions.answered.slice(0, 8).map((q) => (
+                          <li key={`ans:${q.idea_id}:${q.question}`} className="rounded border p-2">
+                            <p>{q.question}</p>
+                            <p className="text-xs text-muted-foreground">{q.answer || "No answer text"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              measured delta {q.measured_delta === null ? "n/a" : q.measured_delta} | answer ROI{" "}
+                              {(q.answer_roi || 0).toFixed(2)}
+                            </p>
+                          </li>
+                        ))}
+                        {selectedIdeaQuestions.unanswered.length === 0 && selectedIdeaQuestions.answered.length === 0 && (
+                          <li className="text-muted-foreground">No question rows found for this idea.</li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="rounded border p-2 text-sm">
+                      <p className="font-medium">Implementation / Manifestation Process</p>
+                      <p className="text-muted-foreground">
+                        lineage links {selectedIdeaLineage.length} | interfaces {selectedIdea.interfaces.join(", ")}
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {selectedIdeaLineage.map((link) => (
+                          <li key={link.lineage_id} className="rounded border p-2">
+                            <p className="font-medium">spec {link.spec_id}</p>
+                            <p className="text-xs text-muted-foreground">
+                              refs: {link.implementation_refs.length > 0 ? link.implementation_refs.join(", ") : "none"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              est cost {link.estimated_cost.toFixed(2)} | measured value{" "}
+                              {(link.valuation?.measured_value_total || 0).toFixed(2)} | lineage ROI{" "}
+                              {(link.valuation?.roi_ratio || 0).toFixed(2)}
+                            </p>
+                          </li>
+                        ))}
+                        {selectedIdeaLineage.length === 0 && (
+                          <li className="text-muted-foreground">No lineage links yet for this idea.</li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-2 text-sm">
+                      <div className="rounded border p-2">
+                        <p className="font-medium">Manifestation Runtime</p>
+                        {selectedIdeaRuntime ? (
+                          <p className="text-muted-foreground">
+                            events {selectedIdeaRuntime.event_count} | runtime {selectedIdeaRuntime.total_runtime_ms.toFixed(2)}ms | cost $
+                            {selectedIdeaRuntime.runtime_cost_estimate.toFixed(6)}
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">No runtime rows in selected window.</p>
+                        )}
+                      </div>
+                      <div className="rounded border p-2">
+                        <p className="font-medium">Manifestation Snapshot</p>
+                        {selectedIdeaManifestation ? (
+                          <p className="text-muted-foreground">
+                            {selectedIdeaManifestation.manifestation_status} | value {selectedIdeaManifestation.actual_value.toFixed(2)} | cost{" "}
+                            {selectedIdeaManifestation.actual_cost.toFixed(2)}
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">No manifestation snapshot row found.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </section>
 

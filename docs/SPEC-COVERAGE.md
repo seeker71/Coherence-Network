@@ -75,6 +75,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 061 Import Living-Codex-CSharp Top ROI Ideas | ✓ | ✓ | ✓ | seeded top ROI idea candidates from reference C# docs |
 | 062 Tracking Mechanism Efficiency and ROI Ranking | ✓ | ✓ | ✓ | inventory exposes mechanism assessment and ranked tracking improvements |
 | 063 Typed Idea Seed Source and ROI Follow-ups | ✓ | ✓ | ✓ | typed JSON seed source + fallback + ROI-tracked follow-up ideas |
+| 064 Portfolio Idea Explorer and Manifestation Traceability UI | ✓ | ✓ | ✓ | browseable all-idea UI with per-idea questions, lineage process, and cost-benefit details |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
