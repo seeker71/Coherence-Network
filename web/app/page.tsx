@@ -35,6 +35,9 @@ export default function Home() {
         <Button asChild variant="outline">
           <Link href="/gates">Gate Status</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/portfolio">Portfolio Cockpit</Link>
+        </Button>
       </div>
     </main>
   );

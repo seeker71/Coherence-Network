@@ -474,6 +474,18 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 052: Portfolio Cockpit UI
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| `/portfolio` page presents ROI-prioritized unanswered questions and runtime-by-idea summary | `web/app/portfolio/page.tsx` | `npm run build` |
+| Home page links to Portfolio Cockpit | `web/app/page.tsx` | `npm run build` |
+| Answer action posts to question-answer API | `web/app/portfolio/page.tsx` | Manual public validation |
+
+**Files:** `web/app/portfolio/page.tsx`, `web/app/page.tsx`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |
