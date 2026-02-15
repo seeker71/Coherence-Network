@@ -1,7 +1,7 @@
 {
   "date": "2026-02-15",
   "thread_branch": "codex/20260215-tool-failure-awareness",
-  "commit_scope": "instrument agent_runner for tool failure telemetry and friction events; monitor flags expensive failed tasks",
+  "commit_scope": "instrument agent_runner for tool failure telemetry and friction events; monitor flags expensive failed tasks; fix CI-safe import path in tests",
   "files_owned": [
     "specs/074-tool-failure-awareness.md",
     "api/scripts/agent_runner.py",
