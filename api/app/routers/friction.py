@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Query
 
 from app.models.friction import FrictionEvent, FrictionReport
@@ -13,7 +15,7 @@ router = APIRouter()
 @router.get("/friction/events", response_model=list[FrictionEvent])
 async def list_events(
     limit: int = Query(100, ge=1, le=1000),
-    status: str | None = Query(None),
+    status: Optional[str] = Query(None),
 ) -> list[FrictionEvent]:
     events, _ignored = friction_service.load_events()
     if status:
