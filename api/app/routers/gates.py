@@ -87,3 +87,21 @@ async def gates_main_contract(
     )
     report["branch"] = branch
     return report
+
+
+@router.get("/gates/public-deploy-contract")
+async def gates_public_deploy_contract(
+    repo: str = Query("seeker71/Coherence-Network"),
+    branch: str = Query("main"),
+    api_base: str = Query("https://coherence-network-production.up.railway.app"),
+    web_base: str = Query("https://coherence-network.vercel.app"),
+    timeout: float = Query(8.0, ge=1.0, le=60.0),
+) -> dict:
+    return gates.evaluate_public_deploy_contract_report(
+        repository=repo,
+        branch=branch,
+        api_base=api_base,
+        web_base=web_base,
+        timeout=timeout,
+        github_token=os.getenv("GITHUB_TOKEN"),
+    )

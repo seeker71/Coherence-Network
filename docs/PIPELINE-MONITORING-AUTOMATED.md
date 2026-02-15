@@ -177,11 +177,26 @@ Contract checks:
 2. Railway `/api/gates/main-head` responds `200` and returns SHA equal to GitHub `main` head.
 3. Vercel `/gates` page responds `200`.
 4. Vercel `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
+5. Railway value-lineage E2E transaction passes:
+   - `POST /api/value-lineage/links`
+   - `POST /api/value-lineage/links/{id}/usage-events`
+   - `GET /api/value-lineage/links/{id}/valuation`
+   - `POST /api/value-lineage/links/{id}/payout-preview`
+   - invariants validated (`measured_value_total`, payout weights/amounts).
+
+Note: if `/api/gates/main-head` is unavailable due missing GitHub auth in public runtime (401/403/502),
+the contract records a warning (`railway_gates_main_head_unavailable`) but still requires all other checks,
+including value-lineage E2E, to pass.
 
 If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
 - If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates for up to 20 minutes before deciding pass/fail.
+
+Machine and human access:
+- Machine API: `GET /api/gates/public-deploy-contract`
+- Human UI: `/gates` page, section **Public Deploy Contract**
+- CI artifact: `public_deploy_contract_report.json`
 
 ## External Tool Drift Monitor (Twice Weekly)
 
