@@ -273,6 +273,11 @@ Railway can skip deployment when commit check status is not green. This repo now
   - Manual `workflow_dispatch` with optional commit SHA
 - Script: `api/scripts/auto_heal_deploy_gates.py`
 - Complementary monitor: `.github/workflows/public-deploy-contract.yml` validates public Railway + Vercel contract and opens/updates an issue when drift is detected.
+  - Optional self-heal via Railway CLI is enabled when these GitHub repo secrets are set:
+    - `RAILWAY_TOKEN`
+    - `RAILWAY_PROJECT_ID`
+    - `RAILWAY_ENVIRONMENT` (for example `production`)
+    - `RAILWAY_SERVICE` (service name or ID)
 
 What it does:
 1. Resolves target SHA on `main`.
