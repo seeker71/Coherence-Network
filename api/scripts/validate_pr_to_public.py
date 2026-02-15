@@ -41,55 +41,24 @@ def main() -> None:
     args = parser.parse_args()
 
     token = os.getenv("GITHUB_TOKEN")
-    report: dict[str, object] = {
-        "repo": args.repo,
-        "branch": args.branch,
-        "base": args.base,
-    }
-
-    prs = gates.get_open_prs(args.repo, head_branch=args.branch, github_token=token)
-    report["open_pr_count"] = len(prs)
-    if not prs:
-        report["result"] = "blocked"
-        report["reason"] = "No open PR found for branch"
-        _emit(report, as_json=args.json)
-        sys.exit(2)
-
-    pr = prs[0]
-    sha = pr.get("head", {}).get("sha")
-    if not isinstance(sha, str):
-        report["result"] = "blocked"
-        report["reason"] = "PR has no head SHA"
-        _emit(report, as_json=args.json)
-        sys.exit(2)
-
-    commit_status = gates.get_commit_status(args.repo, sha, github_token=token)
-    check_runs = gates.get_check_runs(args.repo, sha, github_token=token)
-    required = gates.get_required_contexts(args.repo, args.base, github_token=token)
-    pr_gate = gates.evaluate_pr_gates(pr, commit_status, check_runs, required)
-    report["pr_gate"] = pr_gate
-
-    if not pr_gate.get("ready_to_merge"):
-        report["result"] = "blocked"
-        report["reason"] = "PR gates not fully green"
-        _emit(report, as_json=args.json)
-        sys.exit(2)
-
-    if not args.wait_public:
-        report["result"] = "ready_for_merge"
-        _emit(report, as_json=args.json)
-        return
-
     endpoints = args.endpoint or _default_endpoints(args.api_base, args.web_base)
-    public = gates.wait_for_public_validation(
-        endpoint_urls=endpoints,
+    report = gates.evaluate_pr_to_public_report(
+        repository=args.repo,
+        branch=args.branch,
+        base=args.base,
+        api_base=args.api_base,
+        web_base=args.web_base,
+        wait_public=args.wait_public,
         timeout_seconds=args.timeout_seconds,
-        poll_interval_seconds=args.poll_seconds,
+        poll_seconds=args.poll_seconds,
+        endpoint_urls=endpoints,
+        github_token=token,
     )
-    report["public_validation"] = public
-    report["result"] = "public_validated" if public.get("ready") else "blocked"
     _emit(report, as_json=args.json)
-    sys.exit(0 if public.get("ready") else 2)
+    result = str(report.get("result"))
+    if result in ("ready_for_merge", "public_validated"):
+        sys.exit(0)
+    sys.exit(2)
 
 
 def _emit(payload: dict[str, object], as_json: bool) -> None:
