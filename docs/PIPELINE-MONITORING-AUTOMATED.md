@@ -166,6 +166,8 @@ Behavior:
 - `CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS` (repo variable, default `0`)
 Raise these values when collective review coverage is strong enough to enforce stricter payout/ack gates.
 
+To avoid race conditions right after merge, `Change Contract` now re-validates for up to 5 minutes when the only failure reason is `Commit checks are not green on main`.
+
 ## Public Deploy Drift Monitor (Main + Schedule)
 
 To detect production drift even when CI checks are green:
