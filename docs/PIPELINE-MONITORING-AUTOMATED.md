@@ -182,3 +182,27 @@ If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
 - If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates for up to 20 minutes before deciding pass/fail.
+
+## External Tool Drift Monitor (Twice Weekly)
+
+To track newly added external tools and keep upgrade cadence:
+
+- Workflow: `.github/workflows/external-tools-audit.yml`
+- Script: `scripts/audit_external_tools.py`
+- Registry: `docs/system_audit/external_tools_registry.json`
+- Trigger:
+  - Tuesdays + Fridays (`cron`)
+  - Manual run (`workflow_dispatch`)
+
+Behavior:
+1. Discover external GitHub Actions, workflow CLI tools, and dependency ecosystems.
+2. Compare discovered set against tracked registry.
+3. Upload `external_tools_audit_report.json`.
+4. Open/update issue `External tools registry drift detected` if new tools appear.
+5. Close the issue automatically once registry is updated and audit passes.
+
+Dependency update cadence:
+- Dependabot config in `.github/dependabot.yml` runs daily for:
+  - GitHub Actions
+  - Python (`/api`)
+  - npm (`/web`)
