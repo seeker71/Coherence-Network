@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
+import importlib.util
+from pathlib import Path
 
 import pytest
 
-from api.scripts import agent_runner
+_AGENT_RUNNER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "agent_runner.py"
+_spec = importlib.util.spec_from_file_location("agent_runner", _AGENT_RUNNER_PATH)
+assert _spec and _spec.loader
+agent_runner = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(agent_runner)
 
 
 @dataclass
