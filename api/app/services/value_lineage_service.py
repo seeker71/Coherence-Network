@@ -12,6 +12,7 @@ from app.models.value_lineage import (
     LineageLink,
     LineageLinkCreate,
     LineageValuation,
+    MinimumE2EFlowResponse,
     PayoutPreview,
     PayoutRow,
     UsageEvent,
@@ -207,4 +208,45 @@ def payout_preview(lineage_id: str, payout_pool: float) -> PayoutPreview | None:
         roi_ratio=summary.roi_ratio,
         weights=DEFAULT_ROLE_WEIGHTS,
         payouts=payouts,
+    )
+
+
+def run_minimum_e2e_flow() -> MinimumE2EFlowResponse:
+    link = create_link(
+        LineageLinkCreate(
+            idea_id="oss-interface-alignment",
+            spec_id="050-canonical-route-registry-and-runtime-mapping",
+            implementation_refs=["runtime-minimum-e2e"],
+            contributors={
+                "idea": "codex-idea",
+                "spec": "codex-spec",
+                "implementation": "codex-impl",
+                "review": "human-review",
+            },
+            estimated_cost=2.0,
+        )
+    )
+    event = add_usage_event(
+        link.id,
+        UsageEventCreate(source="api", metric="minimum_e2e_validated", value=5.0),
+    )
+    valuation_report = valuation(link.id)
+    payout = payout_preview(link.id, 100.0)
+    if event is None or valuation_report is None or payout is None:
+        raise RuntimeError("Minimum E2E flow failed to produce expected artifacts")
+
+    checks = []
+    if valuation_report.measured_value_total == 5.0:
+        checks.append("valuation_matches_usage")
+    if payout.payout_pool == 100.0 and len(payout.payouts) >= 1:
+        checks.append("payout_preview_generated")
+    checks.append("lineage_created")
+    checks.append("usage_event_created")
+
+    return MinimumE2EFlowResponse(
+        lineage_id=link.id,
+        usage_event_id=event.id,
+        valuation=valuation_report,
+        payout_preview=payout,
+        checks=checks,
     )
