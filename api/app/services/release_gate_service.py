@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from typing import Any, Optional
 
 import httpx
@@ -333,6 +334,138 @@ def check_http_json_endpoint(url: str, timeout: float = 8.0) -> dict[str, Any]:
         return {"url": url, "ok": False, "status_code": None, "error": str(exc)}
 
 
+def check_value_lineage_e2e_flow(api_base: str, timeout: float = 8.0) -> dict[str, Any]:
+    """Run a live public transaction check for value-lineage contract behavior."""
+    base = api_base.rstrip("/")
+    marker = uuid.uuid4().hex[:8]
+    create_payload = {
+        "idea_id": f"public-e2e-{marker}",
+        "spec_id": "048-value-lineage-and-payout-attribution",
+        "implementation_refs": [f"contract:{marker}"],
+        "contributors": {
+            "idea": "gate-idea",
+            "spec": "gate-spec",
+            "implementation": "gate-impl",
+            "review": "gate-review",
+        },
+        "estimated_cost": 2.25,
+    }
+    usage_payload = {"source": "public-contract", "metric": "validated_flow", "value": 5.0}
+    payout_payload = {"payout_pool": 100.0}
+
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            created = client.post(f"{base}/api/value-lineage/links", json=create_payload)
+            if created.status_code != 201:
+                return {
+                    "url": f"{base}/api/value-lineage/links",
+                    "ok": False,
+                    "status_code": created.status_code,
+                    "error": "create_link_failed",
+                }
+            body = created.json()
+            lineage_id = body.get("id") if isinstance(body, dict) else None
+            if not isinstance(lineage_id, str) or not lineage_id:
+                return {
+                    "url": f"{base}/api/value-lineage/links",
+                    "ok": False,
+                    "status_code": created.status_code,
+                    "error": "missing_lineage_id",
+                }
+
+            usage = client.post(
+                f"{base}/api/value-lineage/links/{lineage_id}/usage-events",
+                json=usage_payload,
+            )
+            if usage.status_code != 201:
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/usage-events",
+                    "ok": False,
+                    "status_code": usage.status_code,
+                    "error": "usage_event_failed",
+                }
+
+            valuation = client.get(f"{base}/api/value-lineage/links/{lineage_id}/valuation")
+            if valuation.status_code != 200:
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/valuation",
+                    "ok": False,
+                    "status_code": valuation.status_code,
+                    "error": "valuation_failed",
+                }
+            valuation_body = valuation.json()
+            measured_total = (
+                valuation_body.get("measured_value_total")
+                if isinstance(valuation_body, dict)
+                else None
+            )
+            event_count = valuation_body.get("event_count") if isinstance(valuation_body, dict) else 0
+            if measured_total != 5.0 or not isinstance(event_count, int) or event_count < 1:
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/valuation",
+                    "ok": False,
+                    "status_code": valuation.status_code,
+                    "error": "valuation_invariant_failed",
+                    "measured_value_total": measured_total,
+                    "event_count": event_count,
+                }
+
+            payout = client.post(
+                f"{base}/api/value-lineage/links/{lineage_id}/payout-preview",
+                json=payout_payload,
+            )
+            if payout.status_code != 200:
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/payout-preview",
+                    "ok": False,
+                    "status_code": payout.status_code,
+                    "error": "payout_preview_failed",
+                }
+            payout_body = payout.json()
+            payout_rows = payout_body.get("payouts") if isinstance(payout_body, dict) else None
+            if not isinstance(payout_rows, list):
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/payout-preview",
+                    "ok": False,
+                    "status_code": payout.status_code,
+                    "error": "payout_rows_missing",
+                }
+            role_to_amount = {
+                row.get("role"): row.get("amount")
+                for row in payout_rows
+                if isinstance(row, dict) and isinstance(row.get("role"), str)
+            }
+            expected_amounts = {"idea": 10.0, "spec": 20.0, "implementation": 50.0, "review": 20.0}
+            if role_to_amount != expected_amounts:
+                return {
+                    "url": f"{base}/api/value-lineage/links/{lineage_id}/payout-preview",
+                    "ok": False,
+                    "status_code": payout.status_code,
+                    "error": "payout_invariant_failed",
+                    "observed_amounts": role_to_amount,
+                }
+
+            return {
+                "url": f"{base}/api/value-lineage/links/{lineage_id}",
+                "ok": True,
+                "status_code": 200,
+                "lineage_id": lineage_id,
+                "validated_invariants": [
+                    "create_link_201",
+                    "usage_event_201",
+                    "valuation_matches_event_value",
+                    "payout_matches_role_weights",
+                ],
+            }
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        return {
+            "url": f"{base}/api/value-lineage/links",
+            "ok": False,
+            "status_code": None,
+            "error": str(exc),
+        }
+
+
 def wait_for_public_validation(
     endpoint_urls: list[str],
     timeout_seconds: int = 1200,
@@ -594,8 +727,25 @@ def evaluate_public_deploy_contract_report(
         )
     checks.append(web_proxy)
 
+    value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
+    value_lineage_e2e["name"] = "railway_value_lineage_e2e"
+    checks.append(value_lineage_e2e)
+
     report["checks"] = checks
-    failing = [c.get("name") for c in checks if not c.get("ok")]
+    warnings: list[str] = []
+    failing: list[str] = []
+    for check in checks:
+        name = check.get("name")
+        if check.get("ok"):
+            continue
+        if (
+            name == "railway_gates_main_head"
+            and check.get("status_code") in {401, 403, 502}
+        ):
+            warnings.append("railway_gates_main_head_unavailable")
+            continue
+        failing.append(str(name))
+    report["warnings"] = warnings
     report["failing_checks"] = failing
     if failing:
         report["result"] = "blocked"

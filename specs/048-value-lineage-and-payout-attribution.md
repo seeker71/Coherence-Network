@@ -187,6 +187,7 @@ UsageEvent:
   - Valuation computes `roi_ratio = measured_value_total / estimated_cost` (0 when estimated_cost is 0).
   - Payout preview allocates by role weights among present contributors.
   - Missing lineage returns 404 exact detail message.
+- Public deploy gate must include a live E2E transaction check for this flow and fail deployment contract when invariants break.
 
 ## Files to Create/Modify
 
@@ -195,6 +196,10 @@ UsageEvent:
 - `api/app/routers/value_lineage.py` — API endpoints
 - `api/app/main.py` — router wiring
 - `api/tests/test_value_lineage.py` — contract tests
+- `api/app/services/release_gate_service.py` — public E2E transaction gate check
+- `api/tests/test_release_gate_service.py` — deploy contract coverage for value-lineage E2E
+- `api/app/routers/gates.py` — machine-access endpoint for public deploy contract report
+- `web/app/gates/page.tsx` — human-access report viewer for public deploy contract
 
 ## Out of Scope
 

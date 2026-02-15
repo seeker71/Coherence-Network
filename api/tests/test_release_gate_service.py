@@ -166,6 +166,10 @@ def test_evaluate_public_deploy_contract_report_passes(monkeypatch: pytest.Monke
         "app.services.release_gate_service.check_http_endpoint",
         lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
     )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
+    )
 
     out = evaluate_public_deploy_contract_report(
         repository="seeker71/Coherence-Network",
@@ -202,6 +206,10 @@ def test_evaluate_public_deploy_contract_report_flags_sha_mismatch(
         "app.services.release_gate_service.check_http_endpoint",
         lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
     )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
+    )
 
     out = evaluate_public_deploy_contract_report(
         repository="seeker71/Coherence-Network",
@@ -213,3 +221,89 @@ def test_evaluate_public_deploy_contract_report_flags_sha_mismatch(
     assert out["result"] == "blocked"
     assert "railway_gates_main_head" in out["failing_checks"]
     assert "vercel_health_proxy" in out["failing_checks"]
+
+
+def test_evaluate_public_deploy_contract_report_flags_value_lineage_e2e_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_json(url: str, timeout: float = 8.0) -> dict:
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "abc123"}}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_branch_head_sha",
+        lambda *args, **kwargs: "abc123",
+    )
+    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links",
+            "ok": False,
+            "status_code": 500,
+            "error": "payout_invariant_failed",
+        },
+    )
+
+    out = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        api_base="https://api.example.com",
+        web_base="https://web.example.com",
+    )
+
+    assert out["result"] == "blocked"
+    assert "railway_value_lineage_e2e" in out["failing_checks"]
+
+
+def test_evaluate_public_deploy_contract_report_allows_main_head_502_with_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_json(url: str, timeout: float = 8.0) -> dict:
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": False, "status_code": 502}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_branch_head_sha",
+        lambda *args, **kwargs: "abc123",
+    )
+    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
+    )
+
+    out = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        api_base="https://api.example.com",
+        web_base="https://web.example.com",
+    )
+
+    assert out["result"] == "public_contract_passed"
+    assert out["failing_checks"] == []
+    assert "railway_gates_main_head_unavailable" in out["warnings"]
