@@ -38,14 +38,36 @@ jobs:
           MIN_UNIQUE_APPROVERS: ${{ vars.CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS || '0' }}
         run: |
           set +e
-          cd api
-          python scripts/validate_merged_change_contract.py \
-            --sha "$TARGET_SHA" \
-            --min-approvals "$MIN_APPROVALS" \
-            --min-unique-approvers "$MIN_UNIQUE_APPROVERS" \
-            --json > ../contract_report.json
-          exit_code=$?
-          cd ..
+          run_validate() {
+            cd api
+            python scripts/validate_merged_change_contract.py \
+              --sha "$TARGET_SHA" \
+              --min-approvals "$MIN_APPROVALS" \
+              --min-unique-approvers "$MIN_UNIQUE_APPROVERS" \
+              --json > ../contract_report.json
+            code=$?
+            cd ..
+            echo "$code"
+          }
+
+          exit_code=$(run_validate)
+          reason=$(jq -r '.reason // ""' contract_report.json)
+
+          # Avoid false negatives when workflow runs before main checks are fully green.
+          if [ "$exit_code" -ne 0 ] && [ "$reason" = "Commit checks are not green on main" ]; then
+            for i in $(seq 1 20); do
+              sleep 15
+              exit_code=$(run_validate)
+              reason=$(jq -r '.reason // ""' contract_report.json)
+              if [ "$exit_code" -eq 0 ]; then
+                break
+              fi
+              if [ "$reason" != "Commit checks are not green on main" ]; then
+                break
+              fi
+            done
+          fi
+
           cat contract_report.json
           echo "pr_number=$(jq -r '.pr.number' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "contributor=$(jq -r '.contributor_ack.contributor' contract_report.json)" >> "$GITHUB_OUTPUT"
@@ -54,6 +76,7 @@ jobs:
           echo "collective_review_passed=$(jq -r '.collective_review.collective_review_passed // false' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "min_approvals_required=$(jq -r '.collective_review.min_approvals_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "min_unique_approvers_required=$(jq -r '.collective_review.min_unique_approvers_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "reason=$(jq -r '.reason // \"\"' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           exit 0
 
