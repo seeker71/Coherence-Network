@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
-from app.routers import assets, contributions, contributors, distributions, ideas
+from app.routers import assets, contributions, contributors, distributions, friction, gates, ideas
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
 
@@ -95,3 +95,5 @@ app.include_router(assets.router, prefix="/v1", tags=["assets"])
 app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
 app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(friction.router, prefix="/api", tags=["friction"])
+app.include_router(gates.router, prefix="/api", tags=["gates"])
