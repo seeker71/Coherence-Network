@@ -13,13 +13,14 @@ Quick reference: spec status, test coverage, last verified.
 | 048 | ✓ | ✓ | ✓ |
 | 049 | ✓ | ✓ | ✓ |
 | 050 | ✓ | ✓ | ✓ |
+| 051 | ✓ | ✓ | ✓ |
 
-**Total:** 28 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–050).
+**Total:** 29 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–051).
 
 ## Test Verification
 
 ```bash
-cd api && pytest -v          # 80 tests
+cd api && pytest -v          # 83 tests
 cd web && npm run build      # 11 routes
 ```
 
@@ -45,6 +46,7 @@ cd web && npm run build      # 11 routes
 | 048 | test_value_lineage.py |
 | 049 | test_runtime_api.py, test_inventory_api.py |
 | 050 | test_runtime_api.py, test_inventory_api.py |
+| 051 | test_ideas.py, test_value_lineage.py |
 
 ## Last Updated
 

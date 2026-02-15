@@ -61,3 +61,9 @@ class IdeaUpdate(BaseModel):
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
+
+
+class IdeaQuestionAnswerUpdate(BaseModel):
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+    measured_delta: Optional[float] = None

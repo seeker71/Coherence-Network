@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.models.idea import IdeaPortfolioResponse, IdeaUpdate, IdeaWithScore
+from app.models.idea import (
+    IdeaPortfolioResponse,
+    IdeaQuestionAnswerUpdate,
+    IdeaUpdate,
+    IdeaWithScore,
+)
 from app.services import idea_service
 
 router = APIRouter()
@@ -47,4 +52,19 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")
+    return updated
+
+
+@router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore)
+async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate) -> IdeaWithScore:
+    updated, question_found = idea_service.answer_question(
+        idea_id=idea_id,
+        question=data.question,
+        answer=data.answer,
+        measured_delta=data.measured_delta,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if not question_found:
+        raise HTTPException(status_code=404, detail="Question not found for idea")
     return updated

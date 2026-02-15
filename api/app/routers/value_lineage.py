@@ -8,6 +8,7 @@ from app.models.value_lineage import (
     LineageLink,
     LineageLinkCreate,
     LineageValuation,
+    MinimumE2EFlowResponse,
     PayoutPreview,
     PayoutPreviewRequest,
     UsageEvent,
@@ -57,3 +58,8 @@ async def payout_preview(lineage_id: str, payload: PayoutPreviewRequest) -> Payo
     if report is None:
         raise HTTPException(status_code=404, detail="Lineage link not found")
     return report
+
+
+@router.post("/value-lineage/minimum-e2e-flow", response_model=MinimumE2EFlowResponse)
+async def run_minimum_e2e_flow() -> MinimumE2EFlowResponse:
+    return value_lineage_service.run_minimum_e2e_flow()
