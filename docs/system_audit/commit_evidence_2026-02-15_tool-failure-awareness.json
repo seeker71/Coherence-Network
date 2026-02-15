@@ -51,20 +51,7 @@
     "api/scripts/monitor_pipeline.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py"
   ],
-  "change_intent": "runtime_feature",
-  "e2e_validation": {
-    "status": "pending",
-    "expected_behavior_delta": "When an agent task command fails, runtime telemetry is recorded and a friction event is written; monitor surfaces expensive failed tasks.",
-    "public_endpoints": [
-      "https://coherence-network-production.up.railway.app/api/friction/report",
-      "https://coherence-network-production.up.railway.app/api/runtime/events",
-      "https://coherence-network-production.up.railway.app/api/agent/monitor-issues"
-    ],
-    "test_flows": [
-      "run pipeline->induce a failed task->verify friction events increase and runtime events include source=worker",
-      "monitor->detect expensive_failed_task when failed durations exceed threshold"
-    ]
-  },
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
