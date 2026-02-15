@@ -10,8 +10,9 @@ Quick reference: spec status, test coverage, last verified.
 | 012–014 | ✓ | ✓ | ✓ |
 | 016–019 | ✓ | ✓ | ✓ |
 | 020–025 | ✓ | ✓ | ✓ |
+| 048 | ✓ | ✓ | ✓ |
 
-**Total:** 25 specs (001–025, excluding 006, 015); all implemented and covered.
+**Total:** 26 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048).
 
 ## Test Verification
 
@@ -39,6 +40,7 @@ cd web && npm run build      # 7 routes
 | 022, 025 | test_import_stack.py |
 | 024 | test_projects.py |
 | 027 (auto-update) | test_update_spec_coverage.py |
+| 048 | test_value_lineage.py |
 
 ## Last Updated
 
