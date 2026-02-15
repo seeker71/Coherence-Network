@@ -5,6 +5,7 @@ on:
     workflows:
       - Test
       - Thread Gates
+      - Change Contract
     types: [completed]
   workflow_dispatch:
     inputs:

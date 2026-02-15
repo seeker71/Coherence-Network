@@ -266,7 +266,7 @@ Railway can skip deployment when commit check status is not green. This repo now
 
 - Workflow: `.github/workflows/auto-heal-deploy-gates.yml`
 - Trigger:
-  - `workflow_run` when `Test` or `Thread Gates` completes on `main` with non-success conclusion
+  - `workflow_run` when `Test`, `Thread Gates`, or `Change Contract` completes on `main` with non-success conclusion
   - Manual `workflow_dispatch` with optional commit SHA
 - Script: `api/scripts/auto_heal_deploy_gates.py`
 
