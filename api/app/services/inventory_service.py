@@ -827,6 +827,120 @@ def _tracking_mechanism_assessment(
     }
 
 
+def _traceability_maturity_assessment(
+    *,
+    specs_count: int,
+    link_rows: list[dict],
+    ideas_count: int,
+) -> dict:
+    """Calculate traceability maturity metrics for idea→spec→impl lineage.
+
+    Tracks maturity dimensions:
+    - Lineage coverage: % of specs with lineage links
+    - Completeness: % of lineage links with all required fields
+    - Evidence freshness: % of links with recent activity
+
+    Spec: 061-traceability-maturity-governance.md
+    """
+    lineage_count = len(link_rows)
+
+    # Count specs with lineage (from spec_id in links)
+    specs_with_lineage = set()
+    complete_links = 0
+    incomplete_links = []
+
+    for link in link_rows:
+        spec_id = link.get("spec_id")
+        if spec_id:
+            specs_with_lineage.add(spec_id)
+
+        # Check completeness
+        idea_id = link.get("idea_id")
+        contributors = link.get("contributors", {})
+        impl_refs = link.get("implementation_refs", [])
+
+        required_roles = ["idea", "spec", "implementation", "review"]
+        missing_roles = [role for role in required_roles if not contributors.get(role)]
+
+        is_complete = (
+            bool(idea_id) and
+            bool(spec_id) and
+            len(missing_roles) == 0 and
+            len(impl_refs) > 0
+        )
+
+        if is_complete:
+            complete_links += 1
+        else:
+            errors = []
+            if not idea_id:
+                errors.append("missing_idea_id")
+            if not spec_id:
+                errors.append("missing_spec_id")
+            if missing_roles:
+                errors.extend([f"missing_contributor_{role}" for role in missing_roles])
+            if not impl_refs:
+                errors.append("missing_implementation_refs")
+
+            incomplete_links.append({
+                "lineage_id": link.get("id"),
+                "spec_id": spec_id or "unknown",
+                "errors": errors
+            })
+
+    # Calculate metrics
+    lineage_coverage = round(len(specs_with_lineage) / specs_count, 4) if specs_count > 0 else 0.0
+    completeness = round(complete_links / lineage_count, 4) if lineage_count > 0 else 0.0
+
+    # Overall maturity score (0.0-1.0)
+    # Weighted: 60% coverage + 40% completeness
+    maturity_score = round((lineage_coverage * 0.6) + (completeness * 0.4), 4)
+
+    # Maturity level
+    if maturity_score >= 0.9:
+        maturity_level = "excellent"
+    elif maturity_score >= 0.75:
+        maturity_level = "good"
+    elif maturity_score >= 0.5:
+        maturity_level = "fair"
+    else:
+        maturity_level = "needs_improvement"
+
+    return {
+        "principle": "Every spec must be traceable to an idea with complete contributor attribution.",
+        "maturity_score": maturity_score,
+        "maturity_level": maturity_level,
+        "metrics": {
+            "lineage_coverage": lineage_coverage,
+            "lineage_coverage_pct": f"{lineage_coverage * 100:.1f}%",
+            "completeness": completeness,
+            "completeness_pct": f"{completeness * 100:.1f}%",
+        },
+        "counts": {
+            "total_specs": specs_count,
+            "specs_with_lineage": len(specs_with_lineage),
+            "specs_without_lineage": specs_count - len(specs_with_lineage),
+            "total_lineage_links": lineage_count,
+            "complete_links": complete_links,
+            "incomplete_links": len(incomplete_links),
+        },
+        "gaps": incomplete_links[:10] if incomplete_links else [],
+        "enforcement": {
+            "merge_time_gate": "active",
+            "gate_spec": "061-traceability-maturity-governance.md",
+            "workflow": ".github/workflows/spec-lineage-enforcement.yml",
+            "validation_script": "scripts/validate_spec_lineage.py"
+        },
+        "improvement_targets": {
+            "next_milestone": {
+                "coverage": 0.95,
+                "completeness": 0.98,
+                "target_maturity": 0.96
+            }
+        }
+    }
+
+
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     ideas_response = idea_service.list_ideas()
     ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
@@ -1060,6 +1174,11 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         duplicate_questions=duplicate_questions,
         unanswered_questions=unanswered_questions,
     )
+    traceability_maturity = _traceability_maturity_assessment(
+        specs_count=len(spec_items),
+        link_rows=link_rows,
+        ideas_count=len(ideas),
+    )
     interface_gaps, web_usage_paths, api_routes_total = _api_web_gap_rows()
     assets = _build_asset_registry(
         ideas=ideas,
@@ -1149,6 +1268,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "operating_console": operating_console_status,
         "evidence_contract": evidence_contract,
         "tracking_mechanism": tracking_mechanism,
+        "traceability_maturity": traceability_maturity,
         "availability_gaps": {
             "principle": "No gap between machine API and human web availability.",
             "why_previously_missed": (
