@@ -10,7 +10,8 @@
     "docs/SPEC-TRACKING.md",
     "docs/SPEC-COVERAGE.md",
     "specs/054-commit-provenance-contract-gate.md",
-    "docs/system_audit/commit_evidence_2026-02-15_provenance-gate-mainline.json"
+    "docs/system_audit/commit_evidence_2026-02-15_provenance-gate-mainline.json",
+    "api/tests/test_commit_evidence_validation.py"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline",
@@ -49,7 +50,8 @@
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/SPEC-TRACKING.md",
     "docs/SPEC-COVERAGE.md",
-    "specs/054-commit-provenance-contract-gate.md"
+    "specs/054-commit-provenance-contract-gate.md",
+    "api/tests/test_commit_evidence_validation.py"
   ],
   "local_validation": {
     "status": "pass",
