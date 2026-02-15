@@ -118,6 +118,206 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "living-codex-contribution-matching",
+        "name": "Living Codex contribution matching engine",
+        "description": "Match contributor profiles to highest-value contribution opportunities.",
+        "potential_value": 96.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.7,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Which matching signals most improve contribution throughput with least coordination cost?",
+                "value_to_whole": 28.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-personalized-experience",
+        "name": "Living Codex personalized experience engine",
+        "description": "Generate personalized views from stable profile state plus session context.",
+        "potential_value": 94.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.69,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which personalization features increase contributor retention without reducing transparency?",
+                "value_to_whole": 27.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-autonomous-learning-loop",
+        "name": "Living Codex autonomous learning loop",
+        "description": "Continuously detect knowledge gaps, generate tasks, and learn from outcomes.",
+        "potential_value": 92.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 6.0,
+        "confidence": 0.68,
+        "manifestation_status": "none",
+        "interfaces": ["ai:automation", "machine:api"],
+        "open_questions": [
+            {
+                "question": "What minimal autonomous learning loop produces measurable value within one week?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-water-state-storage",
+        "name": "Living Codex water-state storage architecture",
+        "description": "Implement ICE/WATER/VAPOR/PLASMA storage tiers with lifecycle transitions.",
+        "potential_value": 90.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 6.0,
+        "confidence": 0.67,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Which data classes should be mapped first to water states for maximum ROI?",
+                "value_to_whole": 25.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-ice-bootstrap-core",
+        "name": "Living Codex ICE bootstrap core",
+        "description": "Package and boot a self-contained immutable core that reconstructs the system.",
+        "potential_value": 88.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 7.0,
+        "confidence": 0.66,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "ai:automation", "human:operators"],
+        "open_questions": [
+            {
+                "question": "What is the minimum reproducible ICE bootstrap artifact for this system?",
+                "value_to_whole": 25.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-real-time-plasma-streams",
+        "name": "Living Codex plasma real-time collaboration streams",
+        "description": "Add event-stream collaboration for real-time co-creation and feedback loops.",
+        "potential_value": 86.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 7.0,
+        "confidence": 0.65,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which collaboration events provide the strongest signal of shared value creation?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-quantum-ontology-nodes",
+        "name": "Living Codex quantum-inspired ontology nodes",
+        "description": "Model superposition, entanglement, and coherence factors in knowledge graph nodes.",
+        "potential_value": 84.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 8.0,
+        "confidence": 0.64,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "human:docs"],
+        "open_questions": [
+            {
+                "question": "Which ontology fields produce practical decision value without over-complexity?",
+                "value_to_whole": 23.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-knowledge-hologram-analysis",
+        "name": "Living Codex knowledge hologram analysis",
+        "description": "Measure wholeness, interconnectedness, redundancy, and resilience in the knowledge graph.",
+        "potential_value": 82.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 8.0,
+        "confidence": 0.63,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "human:web"],
+        "open_questions": [
+            {
+                "question": "Which hologram metrics best predict downstream system robustness?",
+                "value_to_whole": 22.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-user-profile-complexity",
+        "name": "Living Codex user complexity profile model",
+        "description": "Capture identity, communication, skills, interests, and local context for contributors.",
+        "potential_value": 80.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 7.0,
+        "confidence": 0.64,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which profile dimensions improve collaboration quality while respecting privacy?",
+                "value_to_whole": 22.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-self-bootstrap-validation",
+        "name": "Living Codex self-bootstrap validation suite",
+        "description": "Run full self-bootstrap and coherence validation as a repeatable system contract.",
+        "potential_value": 78.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 6.0,
+        "confidence": 0.65,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "human:operators", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Which bootstrap validation checks should block promotion to public deployment?",
+                "value_to_whole": 21.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
