@@ -452,6 +452,17 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 050: Canonical Route Registry and Runtime Mapping
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/inventory/routes/canonical returns canonical route registry | `routers/inventory.py`, `services/route_registry_service.py`, `config/canonical_routes.json` | `test_canonical_routes_inventory_endpoint_returns_registry` |
+| Runtime mapping defaults avoid `unmapped` for known API/web surfaces | `services/runtime_service.py` | `test_runtime_default_mapping_avoids_unmapped_for_known_surfaces` |
+
+**Files:** `config/canonical_routes.json`, `api/app/services/route_registry_service.py`, `api/app/routers/inventory.py`, `api/app/services/runtime_service.py`, `api/tests/test_inventory_api.py`, `api/tests/test_runtime_api.py`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |

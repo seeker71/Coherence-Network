@@ -51,3 +51,25 @@ async def test_runtime_middleware_records_api_calls(tmp_path, monkeypatch: pytes
         rows = events.json()
         assert any(row["source"] == "api" and row["endpoint"] == "/api/ideas" for row in rows)
 
+
+@pytest.mark.asyncio
+async def test_runtime_default_mapping_avoids_unmapped_for_known_surfaces(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for endpoint in ("/api/health-proxy", "/api/unknown-route", "/v1/contributors", "/some-web-route"):
+            created = await client.post(
+                "/api/runtime/events",
+                json={
+                    "source": "web",
+                    "endpoint": endpoint,
+                    "method": "GET",
+                    "status_code": 200,
+                    "runtime_ms": 11.0,
+                },
+            )
+            assert created.status_code == 201
+            assert created.json()["idea_id"] != "unmapped"

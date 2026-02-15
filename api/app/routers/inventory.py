@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query
 
 from app.services import inventory_service
+from app.services import route_registry_service
 
 router = APIRouter()
 
@@ -15,3 +16,7 @@ async def system_lineage_inventory(
 ) -> dict:
     return inventory_service.build_system_lineage_inventory(runtime_window_seconds=runtime_window_seconds)
 
+
+@router.get("/inventory/routes/canonical")
+async def canonical_routes() -> dict:
+    return route_registry_service.get_canonical_routes()
