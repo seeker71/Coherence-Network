@@ -15,6 +15,9 @@ export default function Home() {
           <Link href="/search">Search projects</Link>
         </Button>
         <Button asChild variant="outline">
+          <Link href="/use-cases">Use Cases</Link>
+        </Button>
+        <Button asChild variant="outline">
           <Link href="/import">Import stack</Link>
         </Button>
         <Button asChild variant="outline">
