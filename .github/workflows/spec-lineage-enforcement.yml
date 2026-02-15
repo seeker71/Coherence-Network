@@ -1,0 +1,133 @@
+name: Spec Lineage Enforcement
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'specs/**/*.md'
+
+jobs:
+  validate-lineage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate spec lineage
+        id: validate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          chmod +x scripts/validate_spec_lineage.py
+          python3 scripts/validate_spec_lineage.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --json > lineage_report.json || true
+
+          cat lineage_report.json
+
+          result=$(jq -r '.result' lineage_report.json)
+          reason=$(jq -r '.reason' lineage_report.json)
+          missing=$(jq -r '.stats.specs_missing_lineage' lineage_report.json)
+          incomplete=$(jq -r '.stats.specs_incomplete_lineage' lineage_report.json)
+
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+          echo "incomplete=$incomplete" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR (if validation fails)
+        if: steps.validate.outputs.result == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('lineage_report.json', 'utf8'));
+
+            let comment = '## ❌ Spec Lineage Validation Failed\n\n';
+            comment += `**Reason**: ${report.reason}\n\n`;
+
+            if (report.missing_lineage.length > 0) {
+              comment += '### Missing Lineage\n\n';
+              comment += 'The following specs were modified but have no value-lineage link:\n\n';
+              for (const item of report.missing_lineage) {
+                comment += `- \`${item.spec_path}\` (spec_id: \`${item.spec_id}\`)\n`;
+              }
+              comment += '\n';
+            }
+
+            if (report.incomplete_lineage.length > 0) {
+              comment += '### Incomplete Lineage\n\n';
+              comment += 'The following specs have lineage links but are missing required fields:\n\n';
+              for (const item of report.incomplete_lineage) {
+                comment += `- \`${item.spec_path}\` (spec_id: \`${item.spec_id}\`)\n`;
+                for (const error of item.errors) {
+                  comment += `  - ${error}\n`;
+                }
+              }
+              comment += '\n';
+            }
+
+            comment += '### 🔧 How to Fix\n\n';
+            comment += 'Create or update value-lineage links via the API:\n\n';
+            comment += '```bash\n';
+            comment += 'curl -X POST http://localhost:8000/api/value-lineage/links \\\n';
+            comment += '  -H "Content-Type: application/json" \\\n';
+            comment += '  -d \'{\n';
+            comment += '    "idea_id": "<idea-id>",\n';
+            comment += '    "spec_id": "<spec-id>",\n';
+            comment += '    "implementation_refs": ["PR#' + context.issue.number + '"],\n';
+            comment += '    "contributors": {\n';
+            comment += '      "idea": "' + context.payload.pull_request.user.login + '",\n';
+            comment += '      "spec": "' + context.payload.pull_request.user.login + '",\n';
+            comment += '      "implementation": "' + context.payload.pull_request.user.login + '",\n';
+            comment += '      "review": "<reviewer-github-username>"\n';
+            comment += '    },\n';
+            comment += '    "estimated_cost": <hours>\n';
+            comment += '  }\'\n';
+            comment += '```\n\n';
+            comment += '**Spec Reference**: [061-traceability-maturity-governance](https://github.com/seeker71/Coherence-Network/blob/main/specs/061-traceability-maturity-governance.md)\n\n';
+            comment += '**Idea**: `traceability-maturity-governance` - Strengthen end-to-end tracking for autonomous evolution\n\n';
+            comment += '---\n';
+            comment += '_This check enforces merge-time lineage for spec changes. All specs must be traceable to ideas for machine reasoning._';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+      - name: Fail if lineage invalid
+        if: steps.validate.outputs.result == 'fail'
+        run: |
+          echo "❌ Spec lineage validation failed"
+          echo "Missing lineage: ${{ steps.validate.outputs.missing }}"
+          echo "Incomplete lineage: ${{ steps.validate.outputs.incomplete }}"
+          echo ""
+          echo "See PR comment for details on how to fix."
+          exit 1
+
+      - name: Success comment
+        if: steps.validate.outputs.result == 'pass'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = '## ✅ Spec Lineage Validation Passed\n\nAll modified specs have complete value-lineage links with:\n- Idea traceability\n- Complete contributor attribution\n- Implementation references\n\n_Traceability enforcement active - enabling autonomous evolution._';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
