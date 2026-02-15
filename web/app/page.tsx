@@ -29,6 +29,9 @@ export default function Home() {
         <Button asChild variant="outline">
           <Link href="/api-health">API Health</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/friction">Friction Ledger</Link>
+        </Button>
       </div>
     </main>
   );
