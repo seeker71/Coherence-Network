@@ -22,7 +22,7 @@ def _events_path() -> Path:
 
 
 def _default_idea_map_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "logs" / "runtime_idea_map.json"
+    return Path(__file__).resolve().parents[3] / "config" / "runtime_idea_map.json"
 
 
 def _idea_map_path() -> Path:

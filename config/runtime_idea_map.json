@@ -1,0 +1,26 @@
+{
+  "prefix_map": {
+    "/api/ideas": "portfolio-governance",
+    "/api/value-lineage": "portfolio-governance",
+    "/api/gates": "oss-interface-alignment",
+    "/api/runtime": "oss-interface-alignment",
+    "/api/inventory": "coherence-network-api-runtime",
+    "/api/contributions": "coherence-network-value-attribution",
+    "/api/contributors": "coherence-network-value-attribution",
+    "/api/assets": "coherence-network-value-attribution",
+    "/api/agents": "coherence-network-agent-pipeline",
+    "/api/tasks": "coherence-network-agent-pipeline",
+    "/api/friction": "coherence-network-agent-pipeline",
+    "/api/health": "coherence-network-agent-pipeline",
+    "/api/distributions": "coherence-network-value-attribution",
+    "/gates": "oss-interface-alignment",
+    "/search": "coherence-signal-depth",
+    "/portfolio": "portfolio-governance",
+    "/friction": "coherence-network-agent-pipeline",
+    "/tasks": "coherence-network-agent-pipeline",
+    "/contributors": "coherence-network-value-attribution",
+    "/contributions": "coherence-network-value-attribution",
+    "/assets": "coherence-network-value-attribution",
+    "/api-health": "coherence-network-agent-pipeline"
+  }
+}

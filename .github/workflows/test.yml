@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,10 +23,28 @@ jobs:
         run: |
           cd api && pip install -e ".[dev]"
 
+      - name: Enforce commit provenance evidence
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          python scripts/validate_commit_evidence.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --require-changed-evidence
+
       - name: Run API tests
         run: |
           cd api && pytest -v
         # Includes spec 027 contract tests: tests/test_update_spec_coverage.py
+
+      - name: Check runtime idea mapping coverage
+        run: |
+          python3 scripts/check_runtime_coverage.py
+        # Spec 062: Ensures critical ideas have runtime mappings for telemetry
 
       - name: Update spec coverage (post-test, non-blocking)
         continue-on-error: true
