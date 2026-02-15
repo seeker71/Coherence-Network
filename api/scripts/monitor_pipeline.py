@@ -899,7 +899,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             if not isinstance(inv_issue, dict):
                 continue
             condition = str(inv_issue.get("condition") or "").strip()
-            if condition != "duplicate_idea_questions":
+            if condition not in ("duplicate_idea_questions", "missing_core_ideas", "missing_core_manifestations"):
                 continue
             count = int(inv_issue.get("count") or 0)
             action = str(inv_issue.get("suggested_action") or "Review inventory issue and remediate.")

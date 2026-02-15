@@ -70,6 +70,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 056 Operating Console Estimated ROI Queue | ✓ | ✓ | ✓ | tracks operating console rank and pulls next estimated-ROI task |
 | 057 Inventory Issue Detection and Auto-Tasking | ✓ | ✓ | ✓ | duplicate-question detection + scan endpoint + monitor integration |
 | 058 Evidence Contract and Automated ROI Questioning | ✓ | ✓ | ✓ | per-subsystem claim/evidence/falsifier checks + automated evidence scan |
+| 059 Core Idea Completeness, Manifestation Visibility, and Question Dedupe | ✓ | ✓ | ✓ | core system/component ideas + manifestations inventory + auto dedupe |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

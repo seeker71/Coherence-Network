@@ -120,6 +120,21 @@ def _build_evidence_contract(
     dup_count = len(duplicate_questions)
     link_count = len(link_rows)
     has_attribution = (len(contributor_rows) > 0) if link_count > 0 else True
+    required_core_ids = set(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ()))
+    present_ids = {str(i.get("id") or "").strip() for i in ideas if isinstance(i, dict)}
+    missing_core_ids = sorted(i for i in required_core_ids if i not in present_ids)
+    core_present = len(missing_core_ids) == 0
+    ideas_by_id = {
+        str(i.get("id") or "").strip(): i
+        for i in ideas
+        if isinstance(i, dict) and str(i.get("id") or "").strip()
+    }
+    missing_core_manifestations = sorted(
+        idea_id
+        for idea_id in required_core_ids
+        if str((ideas_by_id.get(idea_id, {}) or {}).get("manifestation_status") or "none").strip().lower() == "none"
+    )
+    core_manifested = len(missing_core_manifestations) == 0
 
     checks = [
         {
@@ -148,6 +163,35 @@ def _build_evidence_contract(
             "auto_action": "create implementation task for next ROI item",
             "review_cadence": "per monitor cycle",
             "status": "ok" if has_next_work else "needs_attention",
+        },
+        {
+            "subsystem_id": "portfolio_completeness",
+            "standing_question": "Are the overall system idea and required component ideas present in portfolio?",
+            "claim": "All required core ideas exist in portfolio inventory.",
+            "evidence": [
+                {"metric": "required_core_ideas_total", "value": len(required_core_ids), "source": "idea_service.REQUIRED_CORE_IDEA_IDS"},
+                {"metric": "missing_core_idea_ids", "value": missing_core_ids, "source": "ideas.items[].id"},
+            ],
+            "falsifier": "Any required core idea id is missing from ideas inventory.",
+            "threshold": {"operator": "==", "value": []},
+            "owner_role": "portfolio-governance",
+            "auto_action": "create heal task to add missing core ideas",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if core_present else "needs_attention",
+        },
+        {
+            "subsystem_id": "manifestation_coverage",
+            "standing_question": "Are core system/component ideas manifested (not none)?",
+            "claim": "All required core ideas have manifestation status partial or validated.",
+            "evidence": [
+                {"metric": "missing_core_manifestations", "value": missing_core_manifestations, "source": "ideas.items[].manifestation_status"},
+            ],
+            "falsifier": "Any required core idea has manifestation_status 'none'.",
+            "threshold": {"operator": "==", "value": []},
+            "owner_role": "delivery",
+            "auto_action": "create implementation task for missing core manifestations",
+            "review_cadence": "per monitor cycle",
+            "status": "ok" if core_manifested else "needs_attention",
         },
         {
             "subsystem_id": "inventory_quality",
@@ -240,6 +284,25 @@ def _discover_specs(limit: int = 300) -> list[dict]:
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     ideas_response = idea_service.list_ideas()
     ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
+    manifestation_rows = [
+        {
+            "idea_id": str(item.get("id") or ""),
+            "idea_name": str(item.get("name") or ""),
+            "manifestation_status": str(item.get("manifestation_status") or "none"),
+            "actual_value": float(item.get("actual_value") or 0.0),
+            "actual_cost": float(item.get("actual_cost") or 0.0),
+        }
+        for item in ideas
+    ]
+    manifestation_by_status: dict[str, int] = {"none": 0, "partial": 0, "validated": 0}
+    for row in manifestation_rows:
+        status = str(row.get("manifestation_status") or "none").strip().lower()
+        if status not in manifestation_by_status:
+            manifestation_by_status[status] = 0
+        manifestation_by_status[status] += 1
+    missing_manifestations = [
+        row for row in manifestation_rows if str(row.get("manifestation_status") or "none").strip().lower() == "none"
+    ]
     estimated_roi_by_idea: dict[str, float] = {}
     for item in ideas:
         idea_id = str(item.get("id") or "")
@@ -390,6 +453,13 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "ideas": {
             "summary": ideas_response.summary.model_dump(mode="json"),
             "items": ideas,
+        },
+        "manifestations": {
+            "total": len(manifestation_rows),
+            "by_status": manifestation_by_status,
+            "missing_count": len(missing_manifestations),
+            "missing": missing_manifestations,
+            "items": manifestation_rows,
         },
         "questions": {
             "total": len(answered_questions) + len(unanswered_questions),
@@ -608,7 +678,49 @@ def scan_inventory_issues(create_tasks: bool = False) -> dict:
     )
     groups = dup.get("groups") if isinstance(dup, dict) else []
     duplicate_groups = [g for g in groups if isinstance(g, dict)]
+    required_core_ids = set(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ()))
+    idea_items = inventory.get("ideas", {}).get("items")
+    present_ids = {
+        str(item.get("id") or "").strip()
+        for item in (idea_items if isinstance(idea_items, list) else [])
+        if isinstance(item, dict)
+    }
+    missing_core_ids = sorted(i for i in required_core_ids if i not in present_ids)
+    core_missing_manifestations: list[str] = []
+    manifestations = inventory.get("manifestations", {}).get("items")
+    if isinstance(manifestations, list):
+        status_by_id = {
+            str(row.get("idea_id") or "").strip(): str(row.get("manifestation_status") or "none").strip().lower()
+            for row in manifestations
+            if isinstance(row, dict)
+        }
+        core_missing_manifestations = sorted(
+            idea_id for idea_id in required_core_ids if status_by_id.get(idea_id, "none") == "none"
+        )
+
     issues: list[dict] = []
+    if missing_core_ids:
+        issues.append(
+            {
+                "condition": "missing_core_ideas",
+                "severity": "high",
+                "priority": 1,
+                "count": len(missing_core_ids),
+                "missing_core_idea_ids": missing_core_ids,
+                "suggested_action": "Add missing overall/component ideas to portfolio defaults and migrate persisted portfolio files.",
+            }
+        )
+    if core_missing_manifestations:
+        issues.append(
+            {
+                "condition": "missing_core_manifestations",
+                "severity": "medium",
+                "priority": 2,
+                "count": len(core_missing_manifestations),
+                "missing_core_manifestation_idea_ids": core_missing_manifestations,
+                "suggested_action": "Prioritize implementation tasks to move core ideas from none to partial/validated.",
+            }
+        )
     if duplicate_groups:
         issues.append(
             {
@@ -630,21 +742,35 @@ def scan_inventory_issues(create_tasks: bool = False) -> dict:
     if not create_tasks or not issues:
         return report
 
+    issues.sort(key=lambda row: int(row.get("priority") or 99))
     issue = issues[0]
     signature = f"{issue['condition']}:{issue['count']}"
-    top = duplicate_groups[0]
-    direction = (
-        "Inventory issue: duplicate idea questions detected. "
-        f"Condition={issue['condition']} groups={issue['count']}. "
-        f"Top duplicate: idea={top.get('idea_id')} question='{top.get('question')}' occurrences={top.get('occurrences')}. "
-        "Implement canonical dedupe and migration, add tests, and validate inventory no longer reports duplicates."
-    )
+    if issue["condition"] == "duplicate_idea_questions":
+        top = duplicate_groups[0]
+        direction = (
+            "Inventory issue: duplicate idea questions detected. "
+            f"Condition={issue['condition']} groups={issue['count']}. "
+            f"Top duplicate: idea={top.get('idea_id')} question='{top.get('question')}' occurrences={top.get('occurrences')}. "
+            "Implement canonical dedupe and migration, add tests, and validate inventory no longer reports duplicates."
+        )
+    elif issue["condition"] == "missing_core_ideas":
+        direction = (
+            "Inventory issue: required core ideas missing from portfolio. "
+            f"Missing IDs={','.join(issue.get('missing_core_idea_ids') or [])}. "
+            "Add/migrate missing core ideas and ensure evidence contract passes."
+        )
+    else:
+        direction = (
+            "Inventory issue: core ideas missing manifestations. "
+            f"Idea IDs={','.join(issue.get('missing_core_manifestation_idea_ids') or [])}. "
+            "Create and execute tasks to move these ideas from none to partial/validated with measurable artifacts."
+        )
     report["created_tasks"].append(
         _create_or_reuse_issue_task(
             condition=issue["condition"],
             signature=signature,
             direction=direction,
-            context={"issue_count": issue["count"]},
+            context={"issue_count": issue["count"], "issue_payload": issue},
         )
     )
     return report

@@ -7,7 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.services import route_registry_service
+from app.services import idea_service, route_registry_service
 
 
 @pytest.mark.asyncio
@@ -48,6 +48,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         data = inventory.json()
 
         assert "ideas" in data
+        assert "manifestations" in data
         assert "questions" in data
         assert "specs" in data
         assert "implementation_usage" in data
@@ -59,6 +60,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
+        assert data["manifestations"]["total"] >= 1
         assert data["questions"]["total"] >= 1
         assert data["specs"]["count"] >= 1
         assert data["implementation_usage"]["lineage_links_count"] >= 1
@@ -121,6 +123,9 @@ async def test_standing_question_exists_for_every_idea(
         assert "What is missing from the UI for machine and human contributors?" in web_ui_questions
         assert "Which UI element has the highest actual value and least cost?" in web_ui_questions
         assert "Which UI element has the highest cost and least value?" in web_ui_questions
+        required_core = set(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ()))
+        listed_ids = {idea["id"] for idea in ideas}
+        assert required_core.issubset(listed_ids)
 
 
 @pytest.mark.asyncio
@@ -164,6 +169,9 @@ async def test_missing_default_idea_is_added_for_existing_portfolio_file(
         assert listed.status_code == 200
         ideas = listed.json()["ideas"]
         assert any(idea["id"] == "web-ui-governance" for idea in ideas)
+        listed_ids = {idea["id"] for idea in ideas}
+        required_core = set(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ()))
+        assert required_core.issubset(listed_ids)
 
 
 @pytest.mark.asyncio
@@ -320,12 +328,19 @@ async def test_inventory_detects_duplicate_questions_and_exposes_quality_issue(
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        ideas = await client.get("/api/ideas")
+        assert ideas.status_code == 200
+        dup_idea = next((x for x in ideas.json()["ideas"] if x["id"] == "dup-idea"), None)
+        assert dup_idea is not None
+        questions = [q["question"] for q in dup_idea["open_questions"]]
+        normalized = {" ".join(q.lower().split()) for q in questions}
+        assert len(questions) == len(normalized)
+
         inventory = await client.get("/api/inventory/system-lineage")
         assert inventory.status_code == 200
         payload = inventory.json()
         dup = payload["quality_issues"]["duplicate_idea_questions"]
-        assert dup["count"] >= 1
-        assert any(row["idea_id"] == "dup-idea" for row in dup["groups"])
+        assert dup["count"] == 0
 
 
 @pytest.mark.asyncio
@@ -371,6 +386,11 @@ async def test_inventory_issue_scan_can_create_deduped_task(
     monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setattr(
+        idea_service,
+        "REQUIRED_CORE_IDEA_IDS",
+        tuple(list(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ())) + ["missing-core-for-scan-test"]),
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         first = await client.post("/api/inventory/issues/scan", params={"create_tasks": True})
@@ -389,7 +409,7 @@ async def test_inventory_issue_scan_can_create_deduped_task(
 
 
 @pytest.mark.asyncio
-async def test_evidence_contract_reports_violation_for_duplicate_questions(
+async def test_evidence_contract_reports_violation_for_missing_core_idea(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     portfolio_path = tmp_path / "ideas.json"
@@ -431,13 +451,18 @@ async def test_evidence_contract_reports_violation_for_duplicate_questions(
     monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setattr(
+        idea_service,
+        "REQUIRED_CORE_IDEA_IDS",
+        tuple(list(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ())) + ["missing-core-for-evidence-test"]),
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         inventory = await client.get("/api/inventory/system-lineage")
         assert inventory.status_code == 200
         payload = inventory.json()
         violations = payload["evidence_contract"]["violations"]
-        assert any(v["subsystem_id"] == "inventory_quality" for v in violations)
+        assert any(v["subsystem_id"] == "portfolio_completeness" for v in violations)
 
 
 @pytest.mark.asyncio
@@ -483,6 +508,12 @@ async def test_evidence_scan_can_create_deduped_task(
     monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    monkeypatch.setattr(
+        idea_service,
+        "REQUIRED_CORE_IDEA_IDS",
+        tuple(list(getattr(idea_service, "REQUIRED_CORE_IDEA_IDS", ())) + ["missing-core-for-test"]),
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         first = await client.post("/api/inventory/evidence/scan", params={"create_tasks": True})

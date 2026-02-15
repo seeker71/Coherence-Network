@@ -18,6 +18,106 @@ from app.models.idea import (
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
     {
+        "id": "coherence-network-overall",
+        "name": "Coherence Network overall system",
+        "description": "Top-level system idea connecting all component ideas into one measurable operating model.",
+        "potential_value": 100.0,
+        "actual_value": 14.0,
+        "estimated_cost": 20.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.78,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api", "human:web", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "What evidence proves the overall system is improving end-to-end value flow?",
+                "value_to_whole": 32.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "coherence-network-api-runtime",
+        "name": "System component: API and runtime telemetry",
+        "description": "Machine interface for inventory, telemetry, and validation contracts.",
+        "potential_value": 90.0,
+        "actual_value": 13.0,
+        "estimated_cost": 16.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.76,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api"],
+        "open_questions": [
+            {
+                "question": "Which runtime signals best predict value creation by component?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "coherence-network-web-interface",
+        "name": "System component: human web interface",
+        "description": "Human interface for idea browsing, manifestation status, and intervention.",
+        "potential_value": 86.0,
+        "actual_value": 11.0,
+        "estimated_cost": 14.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.74,
+        "manifestation_status": "partial",
+        "interfaces": ["human:web"],
+        "open_questions": [
+            {
+                "question": "Can operators inspect and intervene across all ideas from web UI only?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "coherence-network-agent-pipeline",
+        "name": "System component: agent task pipeline",
+        "description": "Automated task orchestration, monitor issues, and intervention loops.",
+        "potential_value": 88.0,
+        "actual_value": 12.0,
+        "estimated_cost": 15.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.73,
+        "manifestation_status": "partial",
+        "interfaces": ["ai:automation", "machine:api", "human:operators"],
+        "open_questions": [
+            {
+                "question": "Which automated checks reduce unresolved pipeline issues fastest?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "coherence-network-value-attribution",
+        "name": "System component: value attribution and ROI",
+        "description": "Track idea/spec/implementation/review contributions and value realization.",
+        "potential_value": 92.0,
+        "actual_value": 13.0,
+        "estimated_cost": 16.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.77,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api", "human:web"],
+        "open_questions": [
+            {
+                "question": "Which attribution signals best predict realized ROI payout quality?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
@@ -124,6 +224,14 @@ STANDING_QUESTION_TEXT = (
     "and if it is measured how can that measurement be improved?"
 )
 
+REQUIRED_CORE_IDEA_IDS: tuple[str, ...] = (
+    "coherence-network-overall",
+    "coherence-network-api-runtime",
+    "coherence-network-web-interface",
+    "coherence-network-agent-pipeline",
+    "coherence-network-value-attribution",
+)
+
 
 def _default_portfolio_path() -> str:
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -167,7 +275,8 @@ def _read_ideas() -> list[Idea]:
 
     ideas, default_changed = _ensure_default_ideas(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if default_changed or standing_changed:
+    ideas, dedupe_changed = _dedupe_open_questions(ideas)
+    if default_changed or standing_changed or dedupe_changed:
         _write_ideas(ideas)
     return ideas
 
@@ -189,6 +298,55 @@ def _ensure_default_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
         ideas.append(Idea(**raw))
         existing_ids.add(candidate_id)
         changed = True
+    return ideas, changed
+
+
+def _normalize_question_key(question: str) -> str:
+    return " ".join((question or "").strip().lower().split())
+
+
+def _dedupe_open_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    for idea in ideas:
+        if not idea.open_questions:
+            continue
+        seen: dict[str, IdeaQuestion] = {}
+        ordered_keys: list[str] = []
+        for q in idea.open_questions:
+            key = _normalize_question_key(q.question)
+            existing = seen.get(key)
+            if existing is None:
+                seen[key] = q
+                ordered_keys.append(key)
+                continue
+            existing_answered = bool((existing.answer or "").strip())
+            incoming_answered = bool((q.answer or "").strip())
+            replace = False
+            if incoming_answered and not existing_answered:
+                replace = True
+            elif incoming_answered == existing_answered:
+                if float(q.value_to_whole) > float(existing.value_to_whole):
+                    replace = True
+                elif float(q.value_to_whole) == float(existing.value_to_whole):
+                    if float(q.estimated_cost) < float(existing.estimated_cost):
+                        replace = True
+            if replace:
+                if (
+                    existing_answered
+                    and incoming_answered
+                    and existing.answer
+                    and q.answer
+                    and existing.answer != q.answer
+                ):
+                    q.answer = f"{existing.answer}\n---\n{q.answer}"
+                if existing.measured_delta is not None and q.measured_delta is None:
+                    q.measured_delta = existing.measured_delta
+                seen[key] = q
+            changed = True
+        deduped = [seen[key] for key in ordered_keys]
+        if len(deduped) != len(idea.open_questions):
+            idea.open_questions = deduped
+            changed = True
     return ideas, changed
 
 

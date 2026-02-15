@@ -66,6 +66,35 @@ interface InventoryResponse {
       total_actual_value: number;
       total_value_gap: number;
     };
+    items: Array<{
+      id: string;
+      name: string;
+      manifestation_status: string;
+      potential_value: number;
+      actual_value: number;
+      estimated_cost: number;
+      actual_cost: number;
+      value_gap: number;
+    }>;
+  };
+  manifestations: {
+    total: number;
+    by_status: Record<string, number>;
+    missing_count: number;
+    missing: Array<{
+      idea_id: string;
+      idea_name: string;
+      manifestation_status: string;
+      actual_value: number;
+      actual_cost: number;
+    }>;
+    items: Array<{
+      idea_id: string;
+      idea_name: string;
+      manifestation_status: string;
+      actual_value: number;
+      actual_cost: number;
+    }>;
   };
   questions: {
     answered_count: number;
@@ -298,6 +327,38 @@ export default function PortfolioPage() {
               <p className="text-muted-foreground">Lineage links</p>
               <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
             </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Idea Manifestations</h2>
+            <div className="grid md:grid-cols-4 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">None</p>
+                <p className="text-lg font-semibold">{inventory.manifestations.by_status.none || 0}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Partial</p>
+                <p className="text-lg font-semibold">{inventory.manifestations.by_status.partial || 0}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Validated</p>
+                <p className="text-lg font-semibold">{inventory.manifestations.by_status.validated || 0}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Missing manifestations</p>
+                <p className="text-lg font-semibold">{inventory.manifestations.missing_count}</p>
+              </div>
+            </div>
+            <ul className="space-y-2 text-sm">
+              {inventory.manifestations.items.map((row) => (
+                <li key={`manifest:${row.idea_id}`} className="rounded border p-2 flex justify-between">
+                  <span>{row.idea_id}</span>
+                  <span className="text-muted-foreground">
+                    {row.manifestation_status} | value {row.actual_value.toFixed(2)} | cost {row.actual_cost.toFixed(2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
 
           <section className="rounded border p-4 space-y-3">
