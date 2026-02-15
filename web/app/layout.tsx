@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
+import PageLineageBanner from "@/components/page-lineage-banner";
 
 export const metadata: Metadata = {
   title: "Coherence Network",
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <RuntimeBeacon />
+        <PageLineageBanner />
         {children}
       </body>
     </html>

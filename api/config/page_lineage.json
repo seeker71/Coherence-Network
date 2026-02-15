@@ -1,0 +1,245 @@
+{
+  "pages": [
+    {
+      "page_path": "/",
+      "page_title": "Home",
+      "idea_id": "coherence-network-overall",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Core system landing page.",
+      "spec": {
+        "id": "007",
+        "path": "specs/007-sprint-0-landing.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Render core navigation actions",
+        "Route human users to search/import/gates/portfolio",
+        "Expose machine docs link for API use"
+      ],
+      "source_refs": [
+        "web/app/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "example": "curl http://localhost:8000/api/health"
+        }
+      ]
+    },
+    {
+      "page_path": "/api-health",
+      "page_title": "API Health",
+      "idea_id": "coherence-network-api-runtime",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Core machine health visibility.",
+      "spec": {
+        "id": "001",
+        "path": "specs/001-health-check.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Poll health proxy every 15s",
+        "Display upstream machine status or error"
+      ],
+      "source_refs": [
+        "web/app/api-health/page.tsx",
+        "web/app/api/health-proxy/route.ts"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "example": "curl http://localhost:8000/api/health"
+        }
+      ]
+    },
+    {
+      "page_path": "/search",
+      "page_title": "Search Projects",
+      "idea_id": "coherence-signal-depth",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Graph discovery workflow.",
+      "spec": {
+        "id": "021",
+        "path": "specs/021-web-project-search-ui.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Accept query",
+        "Call /api/search",
+        "Render project result links"
+      ],
+      "source_refs": [
+        "web/app/search/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/search?q=react",
+          "example": "curl \"http://localhost:8000/api/search?q=react\""
+        }
+      ]
+    },
+    {
+      "page_path": "/project/[ecosystem]/[name]",
+      "page_title": "Project Detail",
+      "idea_id": "coherence-signal-depth",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Project-level coherence inspection.",
+      "spec": {
+        "id": "020",
+        "path": "specs/020-sprint-2-coherence-api.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Resolve route params",
+        "Fetch project and coherence endpoints",
+        "Render dependency and component metrics"
+      ],
+      "source_refs": [
+        "web/app/project/[ecosystem]/[name]/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/projects/npm/react",
+          "example": "curl http://localhost:8000/api/projects/npm/react"
+        },
+        {
+          "method": "GET",
+          "path": "/api/projects/npm/react/coherence",
+          "example": "curl http://localhost:8000/api/projects/npm/react/coherence"
+        }
+      ]
+    },
+    {
+      "page_path": "/import",
+      "page_title": "Import Stack",
+      "idea_id": "coherence-signal-depth",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Dependency intake and risk review.",
+      "spec": {
+        "id": "023",
+        "path": "specs/023-web-import-stack-ui.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Upload lockfile/requirements",
+        "POST /api/import/stack",
+        "Render risk summary and package rows"
+      ],
+      "source_refs": [
+        "web/app/import/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "POST",
+          "path": "/api/import/stack",
+          "example": "curl -X POST -F \"file=@package-lock.json\" http://localhost:8000/api/import/stack"
+        }
+      ]
+    },
+    {
+      "page_path": "/friction",
+      "page_title": "Friction Ledger",
+      "idea_id": "coherence-network-agent-pipeline",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Operational friction and delay analysis.",
+      "spec": {
+        "id": "045",
+        "path": "specs/045-effectiveness-plan-progress-phase-6-7.md"
+      },
+      "process_doc": "docs/SPEC-COVERAGE.md",
+      "pseudo_code": [
+        "Load friction summary and recent events",
+        "Surface top loss vectors and cost-of-delay"
+      ],
+      "source_refs": [
+        "web/app/friction/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/friction/report?window_days=7",
+          "example": "curl \"http://localhost:8000/api/friction/report?window_days=7\""
+        }
+      ]
+    },
+    {
+      "page_path": "/gates",
+      "page_title": "Gate Status",
+      "idea_id": "oss-interface-alignment",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Release/public validation controls.",
+      "spec": {
+        "id": "051",
+        "path": "specs/051-question-answering-and-minimum-e2e-flow.md"
+      },
+      "process_doc": "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+      "pseudo_code": [
+        "Trigger PR/public gate endpoints",
+        "Render contract outputs and errors"
+      ],
+      "source_refs": [
+        "web/app/gates/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/gates/public-deploy-contract",
+          "example": "curl http://localhost:8000/api/gates/public-deploy-contract"
+        }
+      ]
+    },
+    {
+      "page_path": "/portfolio",
+      "page_title": "Portfolio Cockpit",
+      "idea_id": "portfolio-governance",
+      "root_idea_id": "coherence-network-overall",
+      "origin_type": "system",
+      "system_tied": true,
+      "origin_note": "Idea ontology and ROI governance interface.",
+      "spec": {
+        "id": "064",
+        "path": "specs/064-portfolio-idea-explorer-and-manifestation-traceability-ui.md"
+      },
+      "process_doc": "docs/IDEA-PORTFOLIO.md",
+      "pseudo_code": [
+        "Fetch system lineage inventory + runtime events",
+        "Rank questions and ideas by ROI/cost",
+        "Render explorer with manifestations, lineage, and answers",
+        "Allow answer submissions to /api/ideas/{idea_id}/questions/answer"
+      ],
+      "source_refs": [
+        "web/app/portfolio/page.tsx"
+      ],
+      "endpoint_examples": [
+        {
+          "method": "GET",
+          "path": "/api/inventory/system-lineage",
+          "example": "curl http://localhost:8000/api/inventory/system-lineage"
+        },
+        {
+          "method": "POST",
+          "path": "/api/ideas/{idea_id}/questions/answer",
+          "example": "curl -X POST http://localhost:8000/api/ideas/portfolio-governance/questions/answer -H \"Content-Type: application/json\" -d '{\"question\":\"...\",\"answer\":\"...\"}'"
+        }
+      ]
+    }
+  ]
+}

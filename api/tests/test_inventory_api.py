@@ -115,6 +115,25 @@ async def test_canonical_routes_fallback_when_config_missing(
 
 
 @pytest.mark.asyncio
+async def test_page_lineage_endpoint_covers_web_pages_and_returns_entry() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        all_rows = await client.get("/api/inventory/page-lineage")
+        assert all_rows.status_code == 200
+        payload = all_rows.json()
+        assert payload["web_pages_total"] >= 1
+        assert payload["mapped_pages_total"] >= 1
+        assert isinstance(payload["entries"], list)
+        assert len(payload["missing_pages"]) == 0
+
+        by_path = await client.get("/api/inventory/page-lineage", params={"page_path": "/portfolio"})
+        assert by_path.status_code == 200
+        entry = by_path.json().get("entry")
+        assert entry is not None
+        assert entry["idea_id"] == "portfolio-governance"
+        assert entry["root_idea_id"] == "coherence-network-overall"
+
+
+@pytest.mark.asyncio
 async def test_standing_question_exists_for_every_idea(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
