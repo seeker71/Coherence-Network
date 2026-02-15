@@ -57,6 +57,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "next_roi_work" in data
         assert "operating_console" in data
         assert "evidence_contract" in data
+        assert "tracking_mechanism" in data
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
@@ -70,6 +71,13 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["next_roi_work"]["selection_basis"] == "highest_idea_estimated_roi_then_question_roi"
         assert "estimated_roi_rank" in data["operating_console"]
         assert "checks" in data["evidence_contract"]
+        assert "improvements_ranked" in data["tracking_mechanism"]
+        ranked = data["tracking_mechanism"]["improvements_ranked"]
+        assert isinstance(ranked, list)
+        assert len(ranked) >= 1
+        rois = [float(row.get("estimated_roi") or 0.0) for row in ranked]
+        assert rois == sorted(rois, reverse=True)
+        assert data["tracking_mechanism"]["best_next_improvement"] == ranked[0]
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
 

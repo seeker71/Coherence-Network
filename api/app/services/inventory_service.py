@@ -281,6 +281,108 @@ def _discover_specs(limit: int = 300) -> list[dict]:
     return out or FALLBACK_SPECS[: max(1, min(limit, 2000))]
 
 
+def _tracking_mechanism_assessment(
+    *,
+    ideas_count: int,
+    specs_count: int,
+    link_rows: list[dict],
+    contributor_rows: list[dict],
+    runtime_summary: list[dict],
+    duplicate_questions: list[dict],
+    unanswered_questions: list[dict],
+) -> dict:
+    lineage_count = len(link_rows)
+    attribution_count = len(contributor_rows)
+    duplicate_count = len(duplicate_questions)
+    unanswered_count = len(unanswered_questions)
+    runtime_coverage = 0
+    for row in runtime_summary:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("idea_id") or "").strip():
+            runtime_coverage += 1
+    runtime_coverage_ratio = round((runtime_coverage / ideas_count), 4) if ideas_count > 0 else 0.0
+
+    evidence_signals = {
+        "ideas_count": ideas_count,
+        "specs_count": specs_count,
+        "lineage_links_count": lineage_count,
+        "attribution_rows_count": attribution_count,
+        "runtime_idea_coverage_ratio": runtime_coverage_ratio,
+        "duplicate_question_groups": duplicate_count,
+        "unanswered_questions_count": unanswered_count,
+    }
+
+    improvements = [
+        {
+            "id": "tracking-improvement-runtime-coverage",
+            "question": "How do we increase runtime mapping coverage across ideas?",
+            "current_gap": "Runtime telemetry does not yet cover all idea IDs.",
+            "estimated_cost_hours": 6.0,
+            "potential_value": 40.0,
+            "estimated_roi": round(40.0 / 6.0, 4),
+            "action": "Add route-to-idea mappings for uncovered API and web routes and enforce coverage threshold in CI.",
+        },
+        {
+            "id": "tracking-improvement-lineage-adoption",
+            "question": "How do we ensure every implemented spec has value-lineage links?",
+            "current_gap": "Lineage links are present but not guaranteed for all shipped changes.",
+            "estimated_cost_hours": 8.0,
+            "potential_value": 45.0,
+            "estimated_roi": round(45.0 / 8.0, 4),
+            "action": "Gate PR merge on lineage creation for touched specs and require contributor roles.",
+        },
+        {
+            "id": "tracking-improvement-duplicate-question-prevention",
+            "question": "How do we prevent duplicate idea questions from entering portfolio data?",
+            "current_gap": "Duplicate questions are detected but prevention can still drift over time.",
+            "estimated_cost_hours": 4.0,
+            "potential_value": 22.0,
+            "estimated_roi": round(22.0 / 4.0, 4),
+            "action": "Enforce normalized uniqueness on question writes and add monitor alert thresholds.",
+        },
+        {
+            "id": "tracking-improvement-unanswered-burn-rate",
+            "question": "How do we reduce unanswered high-ROI questions faster?",
+            "current_gap": "Question backlog can accumulate without a burn-rate SLO.",
+            "estimated_cost_hours": 5.0,
+            "potential_value": 28.0,
+            "estimated_roi": round(28.0 / 5.0, 4),
+            "action": "Track weekly unanswered burn rate and auto-create implementation tasks for top ROI unanswered rows.",
+        },
+        {
+            "id": "tracking-improvement-spec-implementation-freshness",
+            "question": "How do we detect stale spec-to-implementation mappings quickly?",
+            "current_gap": "Spec tracking is maintained but freshness age is not currently scored.",
+            "estimated_cost_hours": 7.0,
+            "potential_value": 30.0,
+            "estimated_roi": round(30.0 / 7.0, 4),
+            "action": "Add freshness timestamps and attention issues when implementation/test mapping is stale.",
+        },
+    ]
+
+    improvements.sort(
+        key=lambda row: (
+            -float(row.get("estimated_roi") or 0.0),
+            float(row.get("estimated_cost_hours") or 0.0),
+        )
+    )
+
+    current_mechanism = {
+        "idea_tracking": "JSON portfolio persisted through idea service",
+        "spec_tracking": "Specs in markdown with coverage/tracking docs",
+        "linkage_tracking": "Value-lineage links + usage events API",
+        "quality_tracking": "Inventory scans and evidence contract checks",
+    }
+
+    return {
+        "current_mechanism": current_mechanism,
+        "evidence_signals": evidence_signals,
+        "improvements_ranked": improvements,
+        "best_next_improvement": improvements[0] if improvements else None,
+    }
+
+
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     ideas_response = idea_service.list_ideas()
     ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
@@ -447,6 +549,15 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         next_question=next_question,
         operating_console_status=operating_console_status,
     )
+    tracking_mechanism = _tracking_mechanism_assessment(
+        ideas_count=len(ideas),
+        specs_count=len(spec_items),
+        link_rows=link_rows,
+        contributor_rows=contributor_rows,
+        runtime_summary=runtime_summary,
+        duplicate_questions=duplicate_questions,
+        unanswered_questions=unanswered_questions,
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -501,6 +612,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         },
         "operating_console": operating_console_status,
         "evidence_contract": evidence_contract,
+        "tracking_mechanism": tracking_mechanism,
         "runtime": {
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,

@@ -573,6 +573,31 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "tracking-mechanism-efficiency",
+        "name": "Idea/spec tracking mechanism efficiency optimization",
+        "description": "Continuously assess whether idea/spec/linkage tracking uses the most efficient mechanism and prioritize best ROI improvements.",
+        "potential_value": 91.0,
+        "actual_value": 4.0,
+        "estimated_cost": 8.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.79,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api", "human:web", "human:docs", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Are we using the most efficient tracking mechanism for idea-to-spec-to-implementation flow?",
+                "value_to_whole": 31.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which tracking improvement has the highest ROI and should be implemented next?",
+                "value_to_whole": 33.0,
+                "estimated_cost": 2.0,
+            },
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
