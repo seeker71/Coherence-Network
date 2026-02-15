@@ -89,6 +89,10 @@ class GraphStore(Protocol):
         """Get contribution by ID."""
         ...
 
+    def list_contributions(self, limit: int = 100) -> list[Contribution]:
+        """List all contributions."""
+        ...
+
     def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
         """Get all contributions to an asset."""
         ...
@@ -261,6 +265,10 @@ class InMemoryGraphStore:
 
     def get_contribution(self, contribution_id: UUID) -> Contribution | None:
         return self._contributions.get(contribution_id)
+
+    def list_contributions(self, limit: int = 100) -> list[Contribution]:
+        items = sorted(self._contributions.values(), key=lambda c: c.timestamp, reverse=True)
+        return items[: max(0, int(limit))]
 
     def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
         out = [c for c in self._contributions.values() if c.asset_id == asset_id]

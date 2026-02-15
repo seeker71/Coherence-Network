@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
 from app.routers import (
+    agent,
     assets,
     contributions,
     contributors,
@@ -91,6 +92,7 @@ app.include_router(contributors.router, prefix="/v1", tags=["contributors"])
 app.include_router(assets.router, prefix="/v1", tags=["assets"])
 app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
 app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
+app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])

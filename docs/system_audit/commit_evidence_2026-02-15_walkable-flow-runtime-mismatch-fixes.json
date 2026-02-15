@@ -1,0 +1,107 @@
+{
+  "date": "2026-02-15",
+  "thread_branch": "codex/20260215-walkable-flow-fixes",
+  "commit_scope": "fix public walkability runtime mismatches: expose agent router, add GET /v1/contributions, align web pages with array schemas",
+  "files_owned": [
+    "specs/073-walkable-flow-runtime-mismatch-fixes.md",
+    "api/app/main.py",
+    "api/app/routers/contributions.py",
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/tests/test_contributions.py",
+    "web/app/contributors/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-15_walkable-flow-runtime-mismatch-fixes.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment",
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "073"
+  ],
+  "task_ids": [
+    "walkable-flow-runtime-mismatch-fixes"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_contributions.py",
+    "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_walkable-flow-runtime-mismatch-fixes.json"
+  ],
+  "change_files": [
+    "specs/073-walkable-flow-runtime-mismatch-fixes.md",
+    "api/app/main.py",
+    "api/app/routers/contributions.py",
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/tests/test_contributions.py",
+    "web/app/contributors/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public web UI pages load without schema mismatch; tasks page successfully reads /api/agent/tasks; contributions page successfully reads list of contributions from GET /v1/contributions.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/v1/contributors",
+      "https://coherence-network-production.up.railway.app/v1/assets",
+      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network.vercel.app/contributors",
+      "https://coherence-network.vercel.app/assets",
+      "https://coherence-network.vercel.app/contributions",
+      "https://coherence-network.vercel.app/tasks"
+    ],
+    "test_flows": [
+      "web:/portfolio->navigate->/contributors,/assets,/contributions,/tasks->observe non-error render",
+      "api:/api/agent/tasks->200->body.tasks array",
+      "api:/v1/contributions->200->array payload"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_contributions.py",
+      "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway + vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deploy validation"
+  }
+}
