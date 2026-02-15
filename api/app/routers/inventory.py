@@ -79,12 +79,136 @@ async def system_lineage_inventory(
     return inventory_service.build_system_lineage_inventory(runtime_window_seconds=runtime_window_seconds)
 
 
-@router.get("/inventory/routes/canonical")
+@router.get(
+    "/inventory/routes/canonical",
+    summary="Get canonical route registry with idea linkage",
+    description="""
+**Purpose**: Expose canonical API/web route set with milestone metadata and idea linkage for machine/human tooling and runtime attribution.
+
+**Spec**: [050-canonical-route-registry-and-runtime-mapping.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/050-canonical-route-registry-and-runtime-mapping.md)
+**Idea**: `coherence-network-api-runtime` - API and runtime telemetry for inventory and validation
+**Tests**: `api/tests/test_inventory_api.py::test_canonical_routes_inventory_endpoint_returns_registry`
+
+**Registry Contents**:
+- API endpoint definitions with methods, paths, idea linkage
+- Web route definitions with page paths, component locations
+- Milestone metadata for work tracking
+- Runtime mapping defaults to avoid unmapped telemetry
+
+**Use Case**: Machines can discover all available routes, understand their purpose via idea linkage, and ensure runtime telemetry maps correctly for attribution.
+
+**Change Process**:
+1. **Idea**: Update `/api/logs/idea_portfolio.json` (coherence-network-api-runtime idea)
+2. **Spec**: Update `/specs/050-canonical-route-registry-and-runtime-mapping.md`
+3. **Config**: Update `/config/canonical_routes.json` (route definitions)
+4. **Tests**: Update `/api/tests/test_inventory_api.py` (modify registry tests)
+5. **Implementation**: Update `/api/services/route_registry_service.py` and `/api/app/routers/inventory.py`
+6. **Validation**: Run `pytest api/tests/test_inventory_api.py -v`
+    """,
+    responses={
+        200: {
+            "description": "Canonical route registry",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "api_routes": [
+                            {
+                                "path": "/api/ideas",
+                                "method": "GET",
+                                "idea_id": "portfolio-governance",
+                                "milestone": "m1-core-intelligence"
+                            }
+                        ],
+                        "web_routes": [
+                            {
+                                "path": "/portfolio",
+                                "component": "app/portfolio/page.tsx",
+                                "idea_id": "portfolio-governance",
+                                "milestone": "m1-core-intelligence"
+                            }
+                        ],
+                        "coverage": {"api_mapped": 45, "web_mapped": 12, "unmapped": 0}
+                    }
+                }
+            }
+        }
+    },
+    openapi_extra={
+        "x-spec-file": "specs/050-canonical-route-registry-and-runtime-mapping.md",
+        "x-idea-id": "coherence-network-api-runtime",
+        "x-test-file": "api/tests/test_inventory_api.py",
+        "x-implementation-file": "api/app/services/route_registry_service.py",
+        "x-config-file": "config/canonical_routes.json"
+    }
+)
 async def canonical_routes() -> dict:
     return route_registry_service.get_canonical_routes()
 
 
-@router.get("/inventory/page-lineage")
+@router.get(
+    "/inventory/page-lineage",
+    summary="Get page-idea ontology and traceability links",
+    description="""
+**Purpose**: Ensure every human UI page is explicitly traceable to originating idea, root idea, API contract, governing spec, process/pseudocode, and source files.
+
+**Spec**: [066-page-idea-ontology-and-traceability-links.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/066-page-idea-ontology-and-traceability-links.md)
+**Idea**: `coherence-network-api-runtime` - API and runtime telemetry for inventory and validation
+**Tests**: `api/tests/test_inventory_api.py::test_page_lineage_endpoint_covers_web_pages_and_returns_entry`
+
+**Page Lineage Fields**:
+- page_path: UI route path (e.g., "/portfolio")
+- idea_id: Originating idea for the page
+- root_idea: Root system idea
+- api_contract: Related API endpoint(s)
+- spec_id: Governing specification
+- source_files: Component file locations
+- endpoint_examples: Usage examples with curl commands
+
+**Query Options**:
+- No params: Returns all page lineage entries with coverage summary
+- page_path="<path>": Returns specific page lineage details
+
+**Use Case**: Machines can understand WHY each UI page exists, WHAT idea it serves, and HOW to modify it by following the traceability chain to spec/API/implementation.
+
+**Change Process**:
+1. **Idea**: Update `/api/logs/idea_portfolio.json` (coherence-network-api-runtime idea)
+2. **Spec**: Update `/specs/066-page-idea-ontology-and-traceability-links.md`
+3. **Config**: Update `/api/config/page_lineage.json` (page definitions)
+4. **Tests**: Update `/api/tests/test_inventory_api.py` (modify page lineage tests)
+5. **Implementation**: Update `/api/services/page_lineage_service.py` and `/api/app/routers/inventory.py`
+6. **Validation**: Run `pytest api/tests/test_inventory_api.py -v`
+    """,
+    responses={
+        200: {
+            "description": "Page lineage registry with coverage",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "pages": [
+                            {
+                                "page_path": "/portfolio",
+                                "idea_id": "portfolio-governance",
+                                "root_idea": "coherence-network-value-attribution",
+                                "api_contract": ["/api/ideas"],
+                                "spec_id": "053-ideas-prioritization",
+                                "source_files": ["app/portfolio/page.tsx"],
+                                "endpoint_examples": ["curl http://localhost:8000/api/ideas"]
+                            }
+                        ],
+                        "coverage": {"total_pages": 12, "mapped_pages": 12, "missing_mappings": 0}
+                    }
+                }
+            }
+        }
+    },
+    openapi_extra={
+        "x-spec-file": "specs/066-page-idea-ontology-and-traceability-links.md",
+        "x-idea-id": "coherence-network-api-runtime",
+        "x-test-file": "api/tests/test_inventory_api.py",
+        "x-implementation-file": "api/app/services/page_lineage_service.py",
+        "x-config-file": "api/config/page_lineage.json"
+    }
+)
 async def page_lineage(page_path: str | None = Query(default=None)) -> dict:
     return page_lineage_service.get_page_lineage(page_path=page_path)
 
