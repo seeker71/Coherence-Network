@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -281,6 +282,102 @@ def _discover_specs(limit: int = 300) -> list[dict]:
     return out or FALLBACK_SPECS[: max(1, min(limit, 2000))]
 
 
+def _normalize_interface_path(path: str) -> str:
+    out = (path or "").strip()
+    if not out:
+        return ""
+    if "?" in out:
+        out = out.split("?", 1)[0]
+    out = re.sub(r"\$\{[^}]+\}", "{param}", out)
+    out = re.sub(r"\[[^\]]+\]", "{param}", out)
+    out = re.sub(r"/{2,}", "/", out)
+    if not out.startswith("/"):
+        out = "/" + out
+    return out.rstrip("/") or "/"
+
+
+def _discover_api_routes_from_source() -> list[dict]:
+    routers_dir = _project_root() / "api" / "app" / "routers"
+    if not routers_dir.exists():
+        return []
+    pattern = re.compile(r'@router\.(get|post|put|patch|delete)\(\s*["\']([^"\']+)["\']')
+    rows: list[dict] = []
+    for path in sorted(routers_dir.glob("*.py")):
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in pattern.finditer(content):
+            method = match.group(1).upper()
+            route_path = _normalize_interface_path(f"/api{match.group(2)}")
+            if not route_path.startswith("/api/"):
+                continue
+            rows.append({"path": route_path, "method": method, "source_file": str(path)})
+    uniq: dict[tuple[str, str], dict] = {}
+    for row in rows:
+        uniq[(row["path"], row["method"])] = row
+    return sorted(uniq.values(), key=lambda row: (row["path"], row["method"]))
+
+
+def _discover_web_api_usage_paths() -> list[str]:
+    web_dir = _project_root() / "web"
+    if not web_dir.exists():
+        return []
+    path_pattern = re.compile(r"/api/[A-Za-z0-9_./${}\-\[\]]+")
+    rows: list[str] = []
+    for path in sorted(web_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix not in {".ts", ".tsx", ".js", ".jsx"}:
+            continue
+        if ".next" in path.parts or "node_modules" in path.parts:
+            continue
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in path_pattern.findall(content):
+            normalized = _normalize_interface_path(match)
+            if normalized.startswith("/api/"):
+                rows.append(normalized)
+    return sorted(set(rows))
+
+
+def _api_route_matches_web_usage(api_path: str, web_path: str) -> bool:
+    if api_path == web_path:
+        return True
+    pattern = "^" + re.escape(api_path).replace(r"\{", "{").replace(r"\}", "}") + "$"
+    pattern = re.sub(r"\{[^/]+\}", r"[^/]+", pattern)
+    if re.match(pattern, web_path):
+        return True
+    if "{param}" in web_path:
+        wildcard_web = "^" + re.escape(web_path).replace(r"\{param\}", r"[^/]+") + "$"
+        if re.match(wildcard_web, api_path):
+            return True
+    return False
+
+
+def _api_web_gap_rows() -> tuple[list[dict], list[str], int]:
+    api_routes = _discover_api_routes_from_source()
+    web_paths = _discover_web_api_usage_paths()
+    gaps: list[dict] = []
+    for route in api_routes:
+        api_path = str(route.get("path") or "")
+        matched = any(_api_route_matches_web_usage(api_path, web_path) for web_path in web_paths)
+        if matched:
+            continue
+        gaps.append(
+            {
+                "path": api_path,
+                "method": route.get("method"),
+                "source_file": route.get("source_file"),
+                "gap_type": "api_not_used_in_web_ui",
+                "impact": "machine_only_availability",
+            }
+        )
+    return gaps, web_paths, len(api_routes)
+
+
 def _tracking_mechanism_assessment(
     *,
     ideas_count: int,
@@ -558,6 +655,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         duplicate_questions=duplicate_questions,
         unanswered_questions=unanswered_questions,
     )
+    interface_gaps, web_usage_paths, api_routes_total = _api_web_gap_rows()
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -613,6 +711,17 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "operating_console": operating_console_status,
         "evidence_contract": evidence_contract,
         "tracking_mechanism": tracking_mechanism,
+        "availability_gaps": {
+            "principle": "No gap between machine API and human web availability.",
+            "why_previously_missed": (
+                "Prior workflow tracked canonical milestone routes and runtime telemetry, but lacked "
+                "automated full API-route to web-usage parity scanning."
+            ),
+            "api_routes_total": api_routes_total,
+            "web_api_usage_paths_total": len(web_usage_paths),
+            "unavailable_in_web_count": len(interface_gaps),
+            "unavailable_in_web": interface_gaps[:100],
+        },
         "runtime": {
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,
@@ -886,6 +995,46 @@ def scan_inventory_issues(create_tasks: bool = False) -> dict:
         )
     )
     return report
+
+
+def scan_api_web_availability_gaps(create_tasks: bool = False) -> dict:
+    gap_rows, web_usage_paths, api_routes_total = _api_web_gap_rows()
+    generated_tasks: list[dict] = []
+    if create_tasks:
+        for gap in gap_rows:
+            method = str(gap.get("method") or "GET")
+            path = str(gap.get("path") or "")
+            signature = f"api_web_gap::{method}::{path}"
+            direction = (
+                f"API/web availability gap: {method} {path} has machine availability but no web UI usage path. "
+                "Implement or wire a human web UI flow, add tests, and verify parity in availability scan."
+            )
+            task = _create_or_reuse_issue_task(
+                condition="api_web_availability_gap",
+                signature=signature,
+                direction=direction,
+                context={
+                    "path": path,
+                    "method": method,
+                    "source_file": gap.get("source_file"),
+                    "gap_type": gap.get("gap_type"),
+                },
+            )
+            generated_tasks.append({"path": path, "method": method, "task": task})
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "principle": "No gap between machine API and human web availability.",
+        "why_previously_missed": (
+            "Canonical route tracking and runtime checks covered only milestone surfaces; no automated scanner compared "
+            "all API route declarations against web UI API usage paths."
+        ),
+        "api_routes_total": api_routes_total,
+        "web_api_usage_paths_total": len(web_usage_paths),
+        "gaps_count": len(gap_rows),
+        "gaps": gap_rows,
+        "create_tasks": create_tasks,
+        "generated_tasks": generated_tasks,
+    }
 
 
 def scan_evidence_contract(create_tasks: bool = False) -> dict:

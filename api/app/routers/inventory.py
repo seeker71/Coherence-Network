@@ -37,6 +37,11 @@ async def scan_inventory_issues(create_tasks: bool = Query(False)) -> dict:
     return inventory_service.scan_inventory_issues(create_tasks=create_tasks)
 
 
+@router.post("/inventory/availability/scan")
+async def scan_api_web_availability_gaps(create_tasks: bool = Query(False)) -> dict:
+    return inventory_service.scan_api_web_availability_gaps(create_tasks=create_tasks)
+
+
 @router.post("/inventory/evidence/scan")
 async def scan_evidence_contract(create_tasks: bool = Query(False)) -> dict:
     return inventory_service.scan_evidence_contract(create_tasks=create_tasks)

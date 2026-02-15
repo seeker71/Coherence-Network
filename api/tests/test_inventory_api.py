@@ -58,6 +58,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "operating_console" in data
         assert "evidence_contract" in data
         assert "tracking_mechanism" in data
+        assert "availability_gaps" in data
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
@@ -78,6 +79,9 @@ async def test_system_lineage_inventory_includes_core_sections(
         rois = [float(row.get("estimated_roi") or 0.0) for row in ranked]
         assert rois == sorted(rois, reverse=True)
         assert data["tracking_mechanism"]["best_next_improvement"] == ranked[0]
+        assert data["availability_gaps"]["api_routes_total"] >= 1
+        assert data["availability_gaps"]["web_api_usage_paths_total"] >= 1
+        assert "why_previously_missed" in data["availability_gaps"]
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
 
@@ -414,6 +418,31 @@ async def test_inventory_issue_scan_can_create_deduped_task(
         assert p2["issues_count"] >= 1
         assert len(p2["created_tasks"]) == 1
         assert p2["created_tasks"][0]["deduped"] is True
+
+
+@pytest.mark.asyncio
+async def test_api_web_availability_scan_reports_gaps_and_can_create_tasks(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.post("/api/inventory/availability/scan")
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["api_routes_total"] >= 1
+        assert payload["web_api_usage_paths_total"] >= 1
+        assert isinstance(payload["gaps"], list)
+        assert "why_previously_missed" in payload
+
+        created = await client.post("/api/inventory/availability/scan", params={"create_tasks": True})
+        assert created.status_code == 200
+        created_payload = created.json()
+        assert created_payload["create_tasks"] is True
+        assert len(created_payload["generated_tasks"]) == created_payload["gaps_count"]
 
 
 @pytest.mark.asyncio

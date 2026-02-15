@@ -76,6 +76,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 062 Tracking Mechanism Efficiency and ROI Ranking | ✓ | ✓ | ✓ | inventory exposes mechanism assessment and ranked tracking improvements |
 | 063 Typed Idea Seed Source and ROI Follow-ups | ✓ | ✓ | ✓ | typed JSON seed source + fallback + ROI-tracked follow-up ideas |
 | 064 Portfolio Idea Explorer and Manifestation Traceability UI | ✓ | ✓ | ✓ | browseable all-idea UI with per-idea questions, lineage process, and cost-benefit details |
+| 065 API-Web Availability Parity Scan and Tasking | ✓ | ✓ | ✓ | detects API endpoints missing web usage and creates one task per gap |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
