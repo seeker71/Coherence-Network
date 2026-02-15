@@ -40,6 +40,58 @@ def _classify_perspective(contributor: str | None) -> str:
         return "machine"
     return "human"
 
+
+def _normalized_question_key(question: str) -> str:
+    return " ".join((question or "").strip().lower().split())
+
+
+def _detect_duplicate_questions(question_rows: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str], dict] = {}
+    for row in question_rows:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        question = str(row.get("question") or "").strip()
+        if not idea_id or not question:
+            continue
+        key = (idea_id, _normalized_question_key(question))
+        item = grouped.get(
+            key,
+            {
+                "idea_id": idea_id,
+                "question": question,
+                "occurrences": 0,
+                "question_rois": [],
+            },
+        )
+        item["occurrences"] += 1
+        roi = row.get("question_roi")
+        if isinstance(roi, (int, float)):
+            item["question_rois"].append(float(roi))
+        grouped[key] = item
+
+    duplicates: list[dict] = []
+    for value in grouped.values():
+        count = int(value.get("occurrences") or 0)
+        if count < 2:
+            continue
+        rois = value.get("question_rois") or []
+        duplicates.append(
+            {
+                "idea_id": value.get("idea_id"),
+                "question": value.get("question"),
+                "occurrences": count,
+                "max_question_roi": round(max(rois), 4) if rois else 0.0,
+            }
+        )
+    duplicates.sort(
+        key=lambda row: (
+            -int(row.get("occurrences") or 0),
+            -float(row.get("max_question_roi") or 0.0),
+        )
+    )
+    return duplicates
+
 FALLBACK_SPECS: list[dict[str, str]] = [
     {
         "spec_id": "048",
@@ -116,6 +168,8 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             -float(x.get("question_roi") or 0.0),
         )
     )
+    all_questions = [*answered_questions, *unanswered_questions]
+    duplicate_questions = _detect_duplicate_questions(all_questions)
 
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
@@ -227,6 +281,12 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "unanswered_count": len(unanswered_questions),
             "answered": answered_questions,
             "unanswered": unanswered_questions,
+        },
+        "quality_issues": {
+            "duplicate_idea_questions": {
+                "count": len(duplicate_questions),
+                "groups": duplicate_questions,
+            }
         },
         "specs": {
             "count": len(spec_items),
@@ -367,4 +427,95 @@ def next_highest_estimated_roi_task(create_task: bool = False) -> dict:
         "status": task["status"].value if hasattr(task["status"], "value") else str(task["status"]),
         "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
     }
+    return report
+
+
+def scan_inventory_issues(create_tasks: bool = False) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    dup = (
+        inventory.get("quality_issues", {})
+        .get("duplicate_idea_questions", {})
+    )
+    groups = dup.get("groups") if isinstance(dup, dict) else []
+    duplicate_groups = [g for g in groups if isinstance(g, dict)]
+    issues: list[dict] = []
+    if duplicate_groups:
+        issues.append(
+            {
+                "condition": "duplicate_idea_questions",
+                "severity": "medium",
+                "priority": 2,
+                "count": len(duplicate_groups),
+                "groups": duplicate_groups,
+                "suggested_action": "Deduplicate questions per idea and keep one canonical phrasing with ROI/cost values.",
+            }
+        )
+
+    report: dict = {
+        "generated_at": inventory.get("generated_at"),
+        "issues": issues,
+        "issues_count": len(issues),
+        "created_tasks": [],
+    }
+    if not create_tasks or not issues:
+        return report
+
+    from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
+    from app.services import agent_service
+
+    issue = issues[0]
+    signature = f"{issue['condition']}:{issue['count']}"
+    existing, _ = agent_service.list_tasks(limit=200)
+    for task in existing:
+        ctx = task.get("context") if isinstance(task, dict) else None
+        if not isinstance(ctx, dict):
+            continue
+        if ctx.get("issue_signature") != signature:
+            continue
+        status = task.get("status")
+        status_text = status.value if hasattr(status, "value") else str(status)
+        if status_text in (
+            TaskStatus.PENDING.value,
+            TaskStatus.RUNNING.value,
+            TaskStatus.NEEDS_DECISION.value,
+        ):
+            report["created_tasks"].append(
+                {
+                    "id": task.get("id"),
+                    "status": status_text,
+                    "task_type": task.get("task_type").value
+                    if hasattr(task.get("task_type"), "value")
+                    else str(task.get("task_type")),
+                    "deduped": True,
+                }
+            )
+            return report
+
+    top = duplicate_groups[0]
+    direction = (
+        "Inventory issue: duplicate idea questions detected. "
+        f"Condition={issue['condition']} groups={issue['count']}. "
+        f"Top duplicate: idea={top.get('idea_id')} question='{top.get('question')}' occurrences={top.get('occurrences')}. "
+        "Implement canonical dedupe and migration, add tests, and validate inventory no longer reports duplicates."
+    )
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.HEAL,
+            context={
+                "source": "inventory_issue_scan",
+                "issue_condition": issue["condition"],
+                "issue_signature": signature,
+                "issue_count": issue["count"],
+            },
+        )
+    )
+    report["created_tasks"].append(
+        {
+            "id": created["id"],
+            "status": created["status"].value if hasattr(created["status"], "value") else str(created["status"]),
+            "task_type": created["task_type"].value if hasattr(created["task_type"], "value") else str(created["task_type"]),
+            "deduped": False,
+        }
+    )
     return report

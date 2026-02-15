@@ -30,3 +30,8 @@ async def next_highest_roi_task(create_task: bool = Query(False)) -> dict:
 @router.post("/inventory/roi/next-task")
 async def next_highest_estimated_roi_task(create_task: bool = Query(False)) -> dict:
     return inventory_service.next_highest_estimated_roi_task(create_task=create_task)
+
+
+@router.post("/inventory/issues/scan")
+async def scan_inventory_issues(create_tasks: bool = Query(False)) -> dict:
+    return inventory_service.scan_inventory_issues(create_tasks=create_tasks)

@@ -184,6 +184,22 @@ def _runner_log_has_recent_errors() -> Tuple[bool, str]:
     return False, ""
 
 
+def _scan_inventory_issues(client: httpx.Client, create_tasks: bool = False) -> Optional[dict]:
+    """Call inventory issue scan endpoint. Returns payload or None if unavailable."""
+    try:
+        resp = client.post(
+            f"{BASE}/api/inventory/issues/scan",
+            params={"create_tasks": create_tasks},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        body = resp.json()
+        return body if isinstance(body, dict) else None
+    except Exception:
+        return None
+
+
 def _get_pipeline_process_args() -> dict:
     """Inspect running agent_runner and project_manager. Return {runner_workers, pm_parallel, runner_seen, pm_seen}."""
     import subprocess
@@ -854,6 +870,33 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         _add_issue(data, "runner_log_errors", "medium", msg, action)
         if heal_task_id:
             data["issues"][-1]["heal_task_id"] = heal_task_id
+
+    # Inventory quality issues: duplicate idea questions (auto-detect + optional task creation).
+    scan = _scan_inventory_issues(
+        client,
+        create_tasks=(auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"),
+    )
+    if isinstance(scan, dict):
+        scan_created_tasks = scan.get("created_tasks") if isinstance(scan.get("created_tasks"), list) else []
+        for inv_issue in scan.get("issues") or []:
+            if not isinstance(inv_issue, dict):
+                continue
+            condition = str(inv_issue.get("condition") or "").strip()
+            if condition != "duplicate_idea_questions":
+                continue
+            count = int(inv_issue.get("count") or 0)
+            action = str(inv_issue.get("suggested_action") or "Review inventory issue and remediate.")
+            _add_issue(
+                data,
+                condition,
+                "medium",
+                f"Inventory detected duplicate idea questions: {count} duplicate group(s).",
+                action,
+            )
+            if scan_created_tasks:
+                data["issues"][-1]["heal_task_ids"] = [
+                    t.get("id") for t in scan_created_tasks if isinstance(t, dict) and t.get("id")
+                ]
 
     # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked (from 006, PLAN phases)
     # Also: effectiveness 404 means API has stale routes — request restart so watchdog restarts API
