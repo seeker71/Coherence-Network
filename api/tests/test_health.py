@@ -26,7 +26,10 @@ async def test_health_returns_ok():
         data = resp.json()
         assert data["status"] == "ok"
         assert "version" in data
-        assert "service" in data
+        assert "timestamp" in data
+        assert "started_at" in data
+        assert isinstance(data["uptime_seconds"], int)
+        assert "uptime_human" in data
 
 
 @pytest.mark.asyncio
@@ -37,3 +40,8 @@ async def test_ready_returns_ready_when_store_exists():
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ready"
+        assert "version" in data
+        assert "timestamp" in data
+        assert "started_at" in data
+        assert isinstance(data["uptime_seconds"], int)
+        assert "uptime_human" in data
