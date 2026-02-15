@@ -2,6 +2,16 @@
 
 Automated process to check merge gates for a PR branch and then validate public deployments.
 
+## Access Pattern
+
+- **Machine access (API):**
+  - `GET /api/gates/pr-to-public?branch=...`
+  - `GET /api/gates/merged-contract?sha=...`
+  - `GET /api/gates/main-head`
+  - `GET /api/gates/main-contract`
+- **Human access (Web UI):**
+  - `/gates` page in the web app
+
 ## Why
 
 After commits are pushed, we need a deterministic gate:

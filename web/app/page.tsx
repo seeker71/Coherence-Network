@@ -32,6 +32,9 @@ export default function Home() {
         <Button asChild variant="outline">
           <Link href="/friction">Friction Ledger</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/gates">Gate Status</Link>
+        </Button>
       </div>
     </main>
   );
