@@ -17,6 +17,8 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime, timezone
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
@@ -42,12 +44,126 @@ MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
 RETRY_BACKOFF = 2  # seconds between retries
 
 
+def _tool_token(command: str) -> str:
+    """Extract best-effort tool token from a shell command."""
+    s = (command or "").strip()
+    if not s:
+        return "unknown"
+    # Very simple parse: first token.
+    return s.split()[0].strip() or "unknown"
+
+
+def _scrub_command(command: str) -> str:
+    """Best-effort scrub of secrets in command strings before writing to friction notes."""
+    s = (command or "").replace("\n", " ").strip()
+    if not s:
+        return ""
+    # Redact common token prefixes.
+    redactions = ("gho_", "ghp_", "github_pat_", "sk-", "rk-", "xoxb-", "xoxp-")
+    for pref in redactions:
+        if pref in s:
+            # Keep prefix visible, redact remainder of token chunk.
+            parts = s.split(pref)
+            rebuilt = parts[0]
+            for tail in parts[1:]:
+                # Redact until next whitespace.
+                rest = tail.split(None, 1)
+                redacted = pref + "REDACTED"
+                rebuilt += redacted + ((" " + rest[1]) if len(rest) == 2 else "")
+            s = rebuilt
+    return s[:240]
+
+
+def _time_cost_per_second() -> float:
+    """Convert wall time into an energy loss estimate. Units are relative (not dollars)."""
+    try:
+        v = float(os.environ.get("PIPELINE_TIME_COST_PER_SECOND", "0.01"))
+    except ValueError:
+        v = 0.01
+    return max(0.0, v)
+
+
+def _post_runtime_event(
+    client: httpx.Client,
+    *,
+    tool_name: str,
+    status_code: int,
+    runtime_ms: float,
+    task_id: str,
+    task_type: str,
+    model: str,
+    returncode: int,
+    output_len: int,
+) -> None:
+    if os.environ.get("PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
+        return
+    payload = {
+        "source": "worker",
+        "endpoint": f"tool:{tool_name}",
+        "method": "RUN",
+        "status_code": int(status_code),
+        "runtime_ms": max(0.1, float(runtime_ms)),
+        "idea_id": "coherence-network-agent-pipeline",
+        "metadata": {
+            "task_id": task_id,
+            "task_type": task_type,
+            "model": model,
+            "returncode": int(returncode),
+            "output_len": int(output_len),
+        },
+    }
+    try:
+        client.post(f"{BASE}/api/runtime/events", json=payload, timeout=5.0)
+    except Exception:
+        # Telemetry should not affect task progression.
+        pass
+
+
+def _post_tool_failure_friction(
+    client: httpx.Client,
+    *,
+    tool_name: str,
+    task_id: str,
+    task_type: str,
+    model: str,
+    duration_seconds: float,
+    returncode: int,
+    command: str,
+) -> None:
+    if os.environ.get("PIPELINE_TOOL_FAILURE_FRICTION_ENABLED", "1").strip() in {"0", "false", "False"}:
+        return
+    now = datetime.now(timezone.utc)
+    energy_loss = round(max(0.0, float(duration_seconds)) * _time_cost_per_second(), 6)
+    cmd_summary = _scrub_command(command)
+    payload = {
+        "id": f"fr_toolfail_{task_id}_{uuid.uuid4().hex[:8]}",
+        "timestamp": now.isoformat(),
+        "stage": "agent_runner",
+        "block_type": "tool_failure",
+        "severity": "high" if duration_seconds >= 120 or returncode != 0 else "medium",
+        "owner": "automation",
+        "unblock_condition": "Fix tool invocation/dependencies/auth; rerun task",
+        "energy_loss_estimate": energy_loss,
+        "cost_of_delay": energy_loss,
+        "status": "resolved",
+        "resolved_at": now.isoformat(),
+        "time_open_hours": round(max(0.0, float(duration_seconds)) / 3600.0, 6),
+        "resolution_action": "task_marked_failed",
+        "notes": f"tool={tool_name} task_id={task_id} task_type={task_type} model={model} returncode={returncode} cmd={cmd_summary}",
+    }
+    try:
+        client.post(f"{BASE}/api/friction/events", json=payload, timeout=5.0)
+    except Exception:
+        pass
+
+
 def _setup_logging(verbose: bool = False) -> logging.Logger:
     os.makedirs(LOG_DIR, exist_ok=True)
+    log_file = os.path.join(LOG_DIR, "agent_runner.log")
     log = logging.getLogger("agent_runner")
     log.setLevel(logging.DEBUG if verbose else logging.INFO)
     if not log.handlers:
-        h = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        h = logging.FileHandler(log_file, encoding="utf-8")
         h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         log.addHandler(h)
         if verbose:
@@ -177,6 +293,7 @@ def run_one_task(
         output = "".join(output_lines)
         returncode = process.returncode if process.returncode is not None else -9
         duration_sec = round(time.monotonic() - start_time, 1)
+        tool_name = _tool_token(command)
 
         # Zero/short output on exit 0 is suspicious: likely capture failure or silent crash
         MIN_OUTPUT_CHARS = 10
@@ -193,6 +310,31 @@ def run_one_task(
         with open(out_file, "a", encoding="utf-8") as f:
             f.write(f"\n# duration_seconds={duration_sec} exit={returncode} status={status}\n")
 
+        # Record tool execution telemetry (cost even when failing).
+        sc = 200 if status == "completed" else 500
+        _post_runtime_event(
+            client,
+            tool_name=tool_name,
+            status_code=sc,
+            runtime_ms=duration_sec * 1000.0,
+            task_id=task_id,
+            task_type=task_type,
+            model=model,
+            returncode=returncode,
+            output_len=len(output or ""),
+        )
+        if status != "completed":
+            _post_tool_failure_friction(
+                client,
+                tool_name=tool_name,
+                task_id=task_id,
+                task_type=task_type,
+                model=model,
+                duration_seconds=duration_sec,
+                returncode=returncode,
+                command=command,
+            )
+
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
@@ -208,8 +350,30 @@ def run_one_task(
         return True
     except Exception as e:
         duration_sec = round(time.monotonic() - start_time, 1)  # start_time set before try
+        tool_name = _tool_token(command)
         with open(out_file, "a", encoding="utf-8") as f:
             f.write(f"\n# duration_seconds={duration_sec} exit=-1 status=failed error={e}\n")
+        _post_runtime_event(
+            client,
+            tool_name=tool_name,
+            status_code=500,
+            runtime_ms=duration_sec * 1000.0,
+            task_id=task_id,
+            task_type=task_type,
+            model=model,
+            returncode=-1,
+            output_len=len(str(e)),
+        )
+        _post_tool_failure_friction(
+            client,
+            tool_name=tool_name,
+            task_id=task_id,
+            task_type=task_type,
+            model=model,
+            duration_seconds=duration_sec,
+            returncode=-1,
+            command=command,
+        )
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": "failed", "output": str(e)},

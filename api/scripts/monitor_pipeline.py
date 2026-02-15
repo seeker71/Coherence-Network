@@ -13,6 +13,7 @@ Detection rules:
   - no_task_running: pending 3+ min, no running (analyze why, debug, fix, restart)
   - low_phase_coverage: running < 2 when pending exist (ensure PM creates tasks for all phases)
   - repeated_failures: 3+ consecutive failed
+  - expensive_failed_task: recent failed tasks wasted significant time (cost without gain)
   - executor_fail: failed task with 0 output (executor crash / command not found)
   - low_success_rate: 7d rate < 80% (10+ tasks)
   - api_unreachable: pipeline-status fails
@@ -68,6 +69,8 @@ ORPHAN_RUNNING_SEC = 7200  # 2 h
 LOW_SUCCESS_RATE = 0.80
 MIN_TASKS_FOR_RATE = 10
 MIN_RUNNING_WHEN_PENDING = 2  # expect at least 2 tasks running when we have pending (phase coverage)
+EXPENSIVE_FAIL_LOOKBACK_SEC = int(os.environ.get("PIPELINE_EXPENSIVE_FAIL_LOOKBACK_SEC", "7200"))  # 2h
+EXPENSIVE_FAIL_THRESHOLD_SEC = float(os.environ.get("PIPELINE_EXPENSIVE_FAIL_THRESHOLD_SEC", "120"))  # 2m
 
 NO_TASK_RUNNING_ACTION = """ANALYZE why no task is running:
 - agent_runner process may have died or crashed
@@ -182,6 +185,50 @@ def _runner_log_has_recent_errors() -> Tuple[bool, str]:
     except (OSError, IOError):
         pass
     return False, ""
+
+
+def _load_recent_failed_task_durations(now: datetime) -> list[dict]:
+    """Scan local api/logs/metrics.jsonl for recent failed tasks with durations."""
+    metrics_file = os.path.join(LOG_DIR, "metrics.jsonl")
+    if not os.path.isfile(metrics_file):
+        return []
+    cutoff = now.timestamp() - max(60, int(EXPENSIVE_FAIL_LOOKBACK_SEC))
+    out: list[dict] = []
+    try:
+        with open(metrics_file, encoding="utf-8") as f:
+            for line in f:
+                line = (line or "").strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if rec.get("status") != "failed":
+                    continue
+                created_at = rec.get("created_at") or ""
+                try:
+                    ts = datetime.fromisoformat(str(created_at).replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    continue
+                if ts < cutoff:
+                    continue
+                dur = rec.get("duration_seconds")
+                if not isinstance(dur, (int, float)):
+                    continue
+                out.append(
+                    {
+                        "task_id": rec.get("task_id", ""),
+                        "task_type": rec.get("task_type", ""),
+                        "model": rec.get("model", ""),
+                        "duration_seconds": float(dur),
+                        "created_at": created_at,
+                    }
+                )
+    except (OSError, IOError):
+        return []
+    out.sort(key=lambda r: float(r.get("duration_seconds") or 0.0), reverse=True)
+    return out
 
 
 def _get_pipeline_process_args() -> dict:
@@ -670,6 +717,24 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         )
         if heal_task_id:
             data["issues"][-1]["heal_task_id"] = heal_task_id
+
+    # Expensive failed tasks: cost without gain (time burned on failures).
+    recent_failed = _load_recent_failed_task_durations(now)
+    expensive = [
+        r
+        for r in recent_failed
+        if float(r.get("duration_seconds") or 0.0) >= float(EXPENSIVE_FAIL_THRESHOLD_SEC)
+    ]
+    if expensive:
+        top = expensive[:3]
+        msg = "Recent failed tasks wasted significant time: " + ", ".join(
+            f"{r.get('task_id','?')}({round(float(r.get('duration_seconds') or 0.0),1)}s)" for r in top
+        )
+        action = (
+            "Inspect task logs for these failures; fix root cause (auth/deps/tooling). "
+            "If recurring, add a meta-pipeline item to prevent future waste."
+        )
+        _add_issue(data, "expensive_failed_task", "high", msg, action)
 
     # Repeated failures
     if att.get("repeated_failures"):
