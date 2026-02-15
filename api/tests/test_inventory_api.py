@@ -51,6 +51,8 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "questions" in data
         assert "specs" in data
         assert "implementation_usage" in data
+        assert "contributors" in data
+        assert "roi_insights" in data
         assert "runtime" in data
 
         assert data["ideas"]["summary"]["total_ideas"] >= 1
@@ -58,6 +60,8 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["specs"]["count"] >= 1
         assert data["implementation_usage"]["lineage_links_count"] >= 1
         assert data["implementation_usage"]["usage_events_count"] >= 1
+        assert "by_perspective" in data["contributors"]
+        assert "most_estimated_roi" in data["roi_insights"]
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
 
@@ -193,3 +197,49 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
         created_payload = created.json()
         assert created_payload["result"] == "task_suggested"
         assert "created_task" in created_payload
+
+
+@pytest.mark.asyncio
+async def test_inventory_contributor_perspective_and_roi_rankings(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    link_payload = {
+        "idea_id": "portfolio-governance",
+        "spec_id": "054-web-ui-standing-questions-and-cost-value-signals",
+        "implementation_refs": ["PR#ui-roi"],
+        "contributors": {
+            "idea": "human-alice",
+            "spec": "codex-spec",
+            "implementation": "human-bob",
+            "review": "ci-review-bot",
+        },
+        "estimated_cost": 8.0,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/value-lineage/links", json=link_payload)
+        assert created.status_code == 201
+        lineage_id = created.json()["id"]
+        usage = await client.post(
+            f"/api/value-lineage/links/{lineage_id}/usage-events",
+            json={"source": "api", "metric": "validated_flow", "value": 4.0},
+        )
+        assert usage.status_code == 201
+
+        inventory = await client.get("/api/inventory/system-lineage", params={"runtime_window_seconds": 3600})
+        assert inventory.status_code == 200
+        data = inventory.json()
+
+        by_perspective = data["contributors"]["by_perspective"]
+        assert by_perspective["human"] >= 1
+        assert by_perspective["machine"] >= 1
+
+        roi = data["roi_insights"]
+        assert isinstance(roi["most_estimated_roi"], list)
+        assert isinstance(roi["least_estimated_roi"], list)
+        assert isinstance(roi["missing_actual_roi_high_potential"], list)

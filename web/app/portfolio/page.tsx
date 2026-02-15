@@ -33,6 +33,31 @@ interface RuntimeEventRow {
   status_code: number;
 }
 
+interface ContributorAttributionRow {
+  lineage_id: string;
+  idea_id: string;
+  spec_id: string;
+  role: string;
+  contributor: string;
+  perspective: "human" | "machine" | "unknown";
+  estimated_cost: number;
+  measured_value_total: number;
+  roi_ratio: number;
+}
+
+interface RoiIdeaRow {
+  idea_id: string;
+  idea_name: string;
+  manifestation_status: string;
+  potential_value: number;
+  actual_value: number;
+  estimated_cost: number;
+  actual_cost: number;
+  estimated_roi: number;
+  actual_roi: number | null;
+  missing_actual_roi: boolean;
+}
+
 interface InventoryResponse {
   ideas: {
     summary: {
@@ -54,6 +79,22 @@ interface InventoryResponse {
   implementation_usage: {
     lineage_links_count: number;
     usage_events_count: number;
+  };
+  contributors: {
+    attribution_count: number;
+    by_perspective: {
+      human: number;
+      machine: number;
+      unknown: number;
+    };
+    attributions: ContributorAttributionRow[];
+  };
+  roi_insights: {
+    most_estimated_roi: RoiIdeaRow[];
+    least_estimated_roi: RoiIdeaRow[];
+    most_actual_roi: RoiIdeaRow[];
+    least_actual_roi: RoiIdeaRow[];
+    missing_actual_roi_high_potential: RoiIdeaRow[];
   };
 }
 
@@ -226,6 +267,75 @@ export default function PortfolioPage() {
             <div className="rounded border p-3">
               <p className="text-muted-foreground">Lineage links</p>
               <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
+            </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Contributor Attribution (Human vs Machine)</h2>
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Human attributions</p>
+                <p className="text-lg font-semibold">{inventory.contributors.by_perspective.human}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Machine attributions</p>
+                <p className="text-lg font-semibold">{inventory.contributors.by_perspective.machine}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Unknown attributions</p>
+                <p className="text-lg font-semibold">{inventory.contributors.by_perspective.unknown}</p>
+              </div>
+            </div>
+            <ul className="space-y-2 text-sm">
+              {inventory.contributors.attributions.slice(0, 6).map((row) => (
+                <li key={`${row.lineage_id}:${row.role}:${row.contributor}`} className="rounded border p-2">
+                  <p className="font-medium">
+                    {row.role}: {row.contributor} ({row.perspective})
+                  </p>
+                  <p className="text-muted-foreground">
+                    idea {row.idea_id} | spec {row.spec_id} | lineage ROI {row.roi_ratio.toFixed(2)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">Idea ROI Rankings</h2>
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="font-medium">Most estimated ROI</p>
+                {inventory.roi_insights.most_estimated_roi[0] ? (
+                  <p className="text-muted-foreground">
+                    {inventory.roi_insights.most_estimated_roi[0].idea_id} (
+                    {inventory.roi_insights.most_estimated_roi[0].estimated_roi.toFixed(2)})
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">n/a</p>
+                )}
+              </div>
+              <div className="rounded border p-3">
+                <p className="font-medium">Least estimated ROI</p>
+                {inventory.roi_insights.least_estimated_roi[0] ? (
+                  <p className="text-muted-foreground">
+                    {inventory.roi_insights.least_estimated_roi[0].idea_id} (
+                    {inventory.roi_insights.least_estimated_roi[0].estimated_roi.toFixed(2)})
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">n/a</p>
+                )}
+              </div>
+              <div className="rounded border p-3">
+                <p className="font-medium">Missing actual ROI, highest potential</p>
+                {inventory.roi_insights.missing_actual_roi_high_potential[0] ? (
+                  <p className="text-muted-foreground">
+                    {inventory.roi_insights.missing_actual_roi_high_potential[0].idea_id} (
+                    est ROI {inventory.roi_insights.missing_actual_roi_high_potential[0].estimated_roi.toFixed(2)})
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">n/a</p>
+                )}
+              </div>
             </div>
           </section>
 

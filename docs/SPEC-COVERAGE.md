@@ -66,6 +66,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 052 Portfolio Cockpit UI | ✓ | ✓ | ✓ | `/portfolio` human governance workflow |
 | 053 Standing Questions ROI and Next Task Generation | ✓ | ✓ | ✓ | standing question policy + auto next-task suggestion |
 | 054 Web UI Standing Questions and Cost/Value Signals | ✓ | ✓ | ✓ | web-ui-governance idea + `/portfolio` UI value/cost signals |
+| 055 Contributor Attribution and Idea ROI Insights | ✓ | ✓ | ✓ | inventory exposes human/machine attribution + ROI rankings |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

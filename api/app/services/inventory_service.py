@@ -19,6 +19,27 @@ def _answer_roi(measured_delta: float | None, estimated_cost: float) -> float:
         return 0.0
     return round(float(measured_delta) / float(estimated_cost), 4)
 
+
+def _classify_perspective(contributor: str | None) -> str:
+    if not contributor:
+        return "unknown"
+    token = contributor.strip().lower()
+    if not token:
+        return "unknown"
+    machine_markers = (
+        "codex",
+        "claude",
+        "gpt",
+        "bot",
+        "agent",
+        "automation",
+        "ci",
+        "github-actions",
+    )
+    if any(marker in token for marker in machine_markers):
+        return "machine"
+    return "human"
+
 FALLBACK_SPECS: list[dict[str, str]] = [
     {
         "spec_id": "048",
@@ -92,8 +113,29 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
     link_rows = []
+    contributor_rows: list[dict] = []
+    perspective_counts: dict[str, int] = {"human": 0, "machine": 0, "unknown": 0}
     for link in links:
         valuation = value_lineage_service.valuation(link.id)
+        for role in ("idea", "spec", "implementation", "review"):
+            contributor = getattr(link.contributors, role, None)
+            if not contributor:
+                continue
+            perspective = _classify_perspective(contributor)
+            perspective_counts[perspective] = perspective_counts.get(perspective, 0) + 1
+            contributor_rows.append(
+                {
+                    "lineage_id": link.id,
+                    "idea_id": link.idea_id,
+                    "spec_id": link.spec_id,
+                    "role": role,
+                    "contributor": contributor,
+                    "perspective": perspective,
+                    "estimated_cost": link.estimated_cost,
+                    "measured_value_total": valuation.measured_value_total if valuation else 0.0,
+                    "roi_ratio": valuation.roi_ratio if valuation else 0.0,
+                }
+            )
         link_rows.append(
             {
                 "lineage_id": link.id,
@@ -107,6 +149,39 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
 
     runtime_summary = [x.model_dump(mode="json") for x in runtime_service.summarize_by_idea(runtime_window_seconds)]
     spec_items = _discover_specs()
+
+    roi_rows: list[dict] = []
+    for item in ideas:
+        estimated_cost = float(item.get("estimated_cost") or 0.0)
+        actual_cost = float(item.get("actual_cost") or 0.0)
+        potential_value = float(item.get("potential_value") or 0.0)
+        actual_value = float(item.get("actual_value") or 0.0)
+        estimated_roi = round((potential_value / estimated_cost), 4) if estimated_cost > 0 else 0.0
+        actual_roi = round((actual_value / actual_cost), 4) if actual_cost > 0 else None
+        roi_rows.append(
+            {
+                "idea_id": str(item.get("id") or ""),
+                "idea_name": str(item.get("name") or ""),
+                "manifestation_status": str(item.get("manifestation_status") or ""),
+                "potential_value": potential_value,
+                "actual_value": actual_value,
+                "estimated_cost": estimated_cost,
+                "actual_cost": actual_cost,
+                "estimated_roi": estimated_roi,
+                "actual_roi": actual_roi,
+                "missing_actual_roi": actual_cost <= 0.0,
+            }
+        )
+    estimated_sorted = sorted(roi_rows, key=lambda row: -float(row.get("estimated_roi") or 0.0))
+    actual_present = [row for row in roi_rows if isinstance(row.get("actual_roi"), float)]
+    actual_sorted = sorted(actual_present, key=lambda row: -float(row.get("actual_roi") or 0.0))
+    missing_actual = [row for row in roi_rows if bool(row.get("missing_actual_roi"))]
+    missing_actual.sort(
+        key=lambda row: (
+            -float(row.get("estimated_roi") or 0.0),
+            -float(row.get("potential_value") or 0.0),
+        )
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -129,6 +204,18 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "lineage_links_count": len(link_rows),
             "usage_events_count": len(events),
             "lineage_links": link_rows,
+        },
+        "contributors": {
+            "attribution_count": len(contributor_rows),
+            "by_perspective": perspective_counts,
+            "attributions": contributor_rows,
+        },
+        "roi_insights": {
+            "most_estimated_roi": estimated_sorted[:5],
+            "least_estimated_roi": sorted(roi_rows, key=lambda row: float(row.get("estimated_roi") or 0.0))[:5],
+            "most_actual_roi": actual_sorted[:5],
+            "least_actual_roi": sorted(actual_present, key=lambda row: float(row.get("actual_roi") or 0.0))[:5],
+            "missing_actual_roi_high_potential": missing_actual[:5],
         },
         "runtime": {
             "window_seconds": runtime_window_seconds,
