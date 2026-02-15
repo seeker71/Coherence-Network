@@ -1,0 +1,68 @@
+{
+  "date": "2026-02-15",
+  "thread_branch": "codex/20260215-auth-preflight",
+  "commit_scope": "document GH auth expectations for agents and add preflight script to verify gh + GH_TOKEN availability",
+  "files_owned": [
+    "docs/AGENT-DEBUGGING.md",
+    "scripts/check_dev_auth.py",
+    "scripts/source_gh_token.sh",
+    "docs/system_audit/commit_evidence_2026-02-15_gh-auth-preflight.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "054",
+    "056"
+  ],
+  "task_ids": [
+    "dev-auth-preflight"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/check_dev_auth.py",
+    "python3 scripts/check_dev_auth.py --json",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_gh-auth-preflight.json"
+  ],
+  "change_files": [
+    "docs/AGENT-DEBUGGING.md",
+    "scripts/check_dev_auth.py",
+    "scripts/source_gh_token.sh"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/check_dev_auth.py",
+      "python3 scripts/check_dev_auth.py --json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "n/a (docs+scripts only)"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI validation"
+  }
+}
