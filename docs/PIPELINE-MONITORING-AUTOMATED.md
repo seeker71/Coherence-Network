@@ -146,3 +146,16 @@ export PIPELINE_AUTO_RECOVER=1
 ```
 
 The watchdog runs the pipeline in a loop; every 90s it checks `api/logs/restart_requested.json`. When present (e.g. from stale_version), it stops the pipeline and restarts it.
+
+## CI/CD Gate Auto-Heal (Main Deploy Path)
+
+To reduce Railway skipped deploys caused by failed required checks on `main`, CI includes:
+
+- Workflow: `.github/workflows/auto-heal-deploy-gates.yml`
+- Script: `api/scripts/auto_heal_deploy_gates.py`
+
+Behavior:
+1. Trigger when `Test` or `Thread Gates` finishes on `main` with non-success conclusion.
+2. Detect failing required contexts from branch protection.
+3. Rerun failed GitHub Actions jobs for those required contexts.
+4. Re-check status until green or timeout; upload `auto_heal_report.json`.
