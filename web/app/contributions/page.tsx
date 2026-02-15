@@ -9,7 +9,8 @@ type Contribution = {
   id: string;
   contributor_id: string;
   asset_id: string;
-  value: number;
+  cost_amount: string;
+  coherence_score: number;
   timestamp: string;
 };
 
@@ -26,7 +27,7 @@ export default function ContributionsPage() {
         const res = await fetch(`${API_URL}/v1/contributions`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(JSON.stringify(json));
-        setRows(Array.isArray(json.contributions) ? json.contributions : []);
+        setRows(Array.isArray(json) ? json : []);
         setStatus("ok");
       } catch (e) {
         setStatus("error");
@@ -62,7 +63,7 @@ export default function ContributionsPage() {
                   <span className="text-muted-foreground">{c.timestamp}</span>
                 </div>
                 <div className="text-muted-foreground">
-                  contributor {c.contributor_id} | asset {c.asset_id} | value {c.value}
+                  contributor {c.contributor_id} | asset {c.asset_id} | cost {c.cost_amount} | coherence {c.coherence_score}
                 </div>
               </li>
             ))}
@@ -72,4 +73,3 @@ export default function ContributionsPage() {
     </main>
   );
 }
-

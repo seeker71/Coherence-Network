@@ -7,8 +7,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type Asset = {
   id: string;
-  name: string;
   type: string;
+  description: string;
+  total_cost: string;
   created_at: string;
 };
 
@@ -25,7 +26,7 @@ export default function AssetsPage() {
         const res = await fetch(`${API_URL}/v1/assets`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(JSON.stringify(json));
-        setRows(Array.isArray(json.assets) ? json.assets : []);
+        setRows(Array.isArray(json) ? json : []);
         setStatus("ok");
       } catch (e) {
         setStatus("error");
@@ -58,7 +59,7 @@ export default function AssetsPage() {
               <li key={a.id} className="rounded border p-2 flex justify-between gap-3">
                 <span className="font-medium">{a.id}</span>
                 <span className="text-muted-foreground">
-                  {a.type} | {a.name} | {a.created_at}
+                  {a.type} | {a.description} | cost {a.total_cost} | {a.created_at}
                 </span>
               </li>
             ))}
@@ -68,4 +69,3 @@ export default function AssetsPage() {
     </main>
   );
 }
-
