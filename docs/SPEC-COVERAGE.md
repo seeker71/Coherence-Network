@@ -61,6 +61,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
 | 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea->spec->impl->usage->payout preview trace API |
 | 054 Commit Provenance Contract Gate | ✓ | ✓ | ✓ | CI-enforced evidence schema + diff-range changed-file coverage gate |
+| 055 Runtime Intent and Public E2E Contract Gate | ✓ | ✓ | ✓ | runtime-intent classification + runtime-diff and E2E evidence requirements |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
