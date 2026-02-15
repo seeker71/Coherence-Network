@@ -158,4 +158,4 @@ Behavior:
 1. Trigger when `Test`, `Thread Gates`, or `Change Contract` finishes on `main` with non-success conclusion.
 2. Detect failing required contexts from branch protection.
 3. Rerun failed GitHub Actions jobs for those required contexts.
-4. Re-check status until green or timeout; upload `auto_heal_report.json`.
+4. Re-check status until reruns finish with success (or fail/timeout); upload `auto_heal_report.json`.
