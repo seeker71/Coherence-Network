@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.9+
+- Python 3.13 recommended (latest stable); 3.9+ minimum supported
 - Node.js 20+
 - Docker (optional for local Neo4j/Postgres)
 
