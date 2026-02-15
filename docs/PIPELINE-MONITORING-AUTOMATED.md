@@ -159,3 +159,4 @@ Behavior:
 2. Detect failing required contexts from branch protection.
 3. Rerun failed GitHub Actions jobs for those required contexts.
 4. Re-check status until reruns finish with success (or fail/timeout); upload `auto_heal_report.json`.
+5. Guard against recursion with one-attempt trigger (`run_attempt == 1`) and per-SHA concurrency.
