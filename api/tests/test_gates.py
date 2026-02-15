@@ -45,3 +45,20 @@ async def test_gate_main_head_502_when_unavailable(monkeypatch: pytest.MonkeyPat
         resp = await client.get("/api/gates/main-head")
         assert resp.status_code == 502
         assert resp.json()["detail"] == "Could not resolve branch head SHA"
+
+
+@pytest.mark.asyncio
+async def test_gate_public_deploy_contract_endpoint_returns_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_report(**_kwargs):
+        return {"result": "public_contract_passed", "failing_checks": []}
+
+    monkeypatch.setattr(gates, "evaluate_public_deploy_contract_report", fake_report)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/gates/public-deploy-contract")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["result"] == "public_contract_passed"
+        assert data["failing_checks"] == []
