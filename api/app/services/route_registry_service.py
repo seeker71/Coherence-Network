@@ -11,8 +11,73 @@ def _default_registry() -> dict:
     return {
         "version": "2026-02-15",
         "milestone": "runtime-value-attribution",
-        "api_routes": [],
-        "web_routes": [],
+        "api_routes": [
+            {
+                "path": "/api/inventory/system-lineage",
+                "methods": ["GET"],
+                "purpose": "Unified questions, ideas, specs, implementation usage, runtime summary",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/inventory/routes/canonical",
+                "methods": ["GET"],
+                "purpose": "Canonical route set for current milestone",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
+                "path": "/api/runtime/events",
+                "methods": ["POST", "GET"],
+                "purpose": "Runtime event ingestion and inspection",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
+                "path": "/api/runtime/ideas/summary",
+                "methods": ["GET"],
+                "purpose": "Runtime/cost rollup by idea",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/value-lineage/links",
+                "methods": ["POST"],
+                "purpose": "Create idea/spec/implementation lineage",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/value-lineage/links/{lineage_id}/usage-events",
+                "methods": ["POST"],
+                "purpose": "Append measurable usage/value signal",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/value-lineage/links/{lineage_id}/valuation",
+                "methods": ["GET"],
+                "purpose": "Value/cost/ROI summary per lineage",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/value-lineage/links/{lineage_id}/payout-preview",
+                "methods": ["POST"],
+                "purpose": "Role-weight payout attribution preview",
+                "idea_id": "portfolio-governance",
+            },
+        ],
+        "web_routes": [
+            {
+                "path": "/gates",
+                "purpose": "Human validation view for release/public contracts",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
+                "path": "/search",
+                "purpose": "Human discovery interface for graph intelligence",
+                "idea_id": "coherence-signal-depth",
+            },
+            {
+                "path": "/api/runtime-beacon",
+                "purpose": "Web runtime telemetry forwarder",
+                "idea_id": "oss-interface-alignment",
+            },
+        ],
     }
 
 
@@ -39,4 +104,3 @@ def get_canonical_routes() -> dict:
         "api_routes": base.get("api_routes", []),
         "web_routes": base.get("web_routes", []),
     }
-

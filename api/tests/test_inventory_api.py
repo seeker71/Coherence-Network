@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import route_registry_service
 
 
 @pytest.mark.asyncio
@@ -66,3 +69,20 @@ async def test_canonical_routes_inventory_endpoint_returns_registry() -> None:
         assert "api_routes" in data
         assert "web_routes" in data
         assert any(route["path"] == "/api/inventory/system-lineage" for route in data["api_routes"])
+
+
+@pytest.mark.asyncio
+async def test_canonical_routes_fallback_when_config_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        route_registry_service,
+        "_registry_path",
+        lambda: Path("/definitely-missing/canonical_routes.json"),
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/routes/canonical")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert any(route["path"] == "/api/runtime/events" for route in data["api_routes"])
