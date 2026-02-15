@@ -1,0 +1,121 @@
+name: External Tools Audit
+
+on:
+  schedule:
+    - cron: "0 9 * * 2,5"
+  workflow_dispatch:
+
+jobs:
+  audit-tools:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Audit external tools registry
+        id: audit
+        run: |
+          set +e
+          python scripts/audit_external_tools.py --json --fail-on-untracked > external_tools_audit_report.json
+          code=$?
+          cat external_tools_audit_report.json
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external_tools_audit_report_${{ github.sha }}
+          path: external_tools_audit_report.json
+
+      - name: Create or update external tools drift issue
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('external_tools_audit_report.json', 'utf8'));
+            const title = 'External tools registry drift detected';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'Automated audit detected new/untracked external tools.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              '',
+              'Untracked github actions:',
+              ...(report.untracked.github_actions.length
+                ? report.untracked.github_actions.map((x) => `- \`${x}\``)
+                : ['- (none)']),
+              '',
+              'Untracked workflow CLI tools:',
+              ...(report.untracked.workflow_cli_tools.length
+                ? report.untracked.workflow_cli_tools.map((x) => `- \`${x}\``)
+                : ['- (none)']),
+              '',
+              'Untracked dependency ecosystems:',
+              ...(report.untracked.dependency_ecosystems.length
+                ? report.untracked.dependency_ecosystems.map((x) => `- \`${x}\``)
+                : ['- (none)']),
+              '',
+              'Raw report:',
+              '```json',
+              JSON.stringify(report, null, 2).slice(0, 6000),
+              '```'
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Resolve external tools drift issue when audit passes
+        if: ${{ steps.audit.outputs.exit_code == '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'External tools registry drift detected';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length === 0) {
+              return;
+            }
+            const issue = existing.data.items[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Resolved by workflow run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}. External tools registry audit is passing.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+            });
+
+      - name: Fail when untracked tools are detected
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        run: |
+          echo "External tool audit failed"
+          exit 1
