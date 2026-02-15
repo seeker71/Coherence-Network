@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 
 from fastapi import APIRouter, HTTPException, Query
@@ -20,7 +21,8 @@ async def gate_pr_to_public(
     timeout_seconds: int = Query(1200, ge=10, le=7200),
     poll_seconds: int = Query(30, ge=1, le=300),
 ) -> dict:
-    report = gates.evaluate_pr_to_public_report(
+    report = await asyncio.to_thread(
+        gates.evaluate_pr_to_public_report,
         repository=repo,
         branch=branch,
         base=base,
@@ -41,7 +43,8 @@ async def gate_merged_contract(
     timeout_seconds: int = Query(1200, ge=10, le=7200),
     poll_seconds: int = Query(30, ge=1, le=300),
 ) -> dict:
-    report = gates.evaluate_merged_change_contract_report(
+    report = await asyncio.to_thread(
+        gates.evaluate_merged_change_contract_report,
         repository=repo,
         sha=sha,
         timeout_seconds=timeout_seconds,
@@ -76,7 +79,8 @@ async def gates_main_contract(
     sha = gates.get_branch_head_sha(repo, branch, github_token=os.getenv("GITHUB_TOKEN"))
     if not sha:
         raise HTTPException(status_code=502, detail="Could not resolve branch head SHA")
-    report = gates.evaluate_merged_change_contract_report(
+    report = await asyncio.to_thread(
+        gates.evaluate_merged_change_contract_report,
         repository=repo,
         sha=sha,
         timeout_seconds=timeout_seconds,
@@ -97,7 +101,8 @@ async def gates_public_deploy_contract(
     web_base: str = Query("https://coherence-network.vercel.app"),
     timeout: float = Query(8.0, ge=1.0, le=60.0),
 ) -> dict:
-    return gates.evaluate_public_deploy_contract_report(
+    return await asyncio.to_thread(
+        gates.evaluate_public_deploy_contract_report,
         repository=repo,
         branch=branch,
         api_base=api_base,
