@@ -134,3 +134,19 @@ async def test_lineage_404_contract(tmp_path, monkeypatch: pytest.MonkeyPatch) -
         )
         assert missing_usage.status_code == 404
         assert missing_usage.json()["detail"] == "Lineage link not found"
+
+
+@pytest.mark.asyncio
+async def test_minimum_e2e_flow_endpoint(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        run = await client.post("/api/value-lineage/minimum-e2e-flow")
+        assert run.status_code == 200
+        data = run.json()
+        assert data["lineage_id"].startswith("lnk_")
+        assert data["usage_event_id"].startswith("evt_")
+        assert data["valuation"]["measured_value_total"] == 5.0
+        assert data["payout_preview"]["payout_pool"] == 100.0
+        assert "lineage_created" in data["checks"]
+        assert "usage_event_created" in data["checks"]

@@ -463,6 +463,17 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 051: Question Answering and Minimum E2E Flow
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| POST /api/ideas/{idea_id}/questions/answer persists answer and measured delta | `models/idea.py`, `routers/ideas.py`, `services/idea_service.py` | `test_answer_idea_question_persists_answer` |
+| POST /api/value-lineage/minimum-e2e-flow runs minimum end-to-end lineage flow | `models/value_lineage.py`, `routers/value_lineage.py`, `services/value_lineage_service.py` | `test_minimum_e2e_flow_endpoint` |
+
+**Files:** `api/app/models/idea.py`, `api/app/services/idea_service.py`, `api/app/routers/ideas.py`, `api/app/models/value_lineage.py`, `api/app/services/value_lineage_service.py`, `api/app/routers/value_lineage.py`, `api/tests/test_ideas.py`, `api/tests/test_value_lineage.py`
+
+---
+
 ## Files Not in Specs (Operational / Tooling)
 
 | File | Purpose |

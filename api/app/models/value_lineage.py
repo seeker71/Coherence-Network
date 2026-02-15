@@ -69,3 +69,11 @@ class PayoutPreview(BaseModel):
     roi_ratio: float = Field(ge=0.0)
     weights: dict[str, float]
     payouts: list[PayoutRow]
+
+
+class MinimumE2EFlowResponse(BaseModel):
+    lineage_id: str
+    usage_event_id: str
+    valuation: LineageValuation
+    payout_preview: PayoutPreview
+    checks: list[str]

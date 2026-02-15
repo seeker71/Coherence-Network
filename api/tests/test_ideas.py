@@ -78,3 +78,36 @@ async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_pa
 
     raw = json.loads(portfolio_path.read_text(encoding="utf-8"))
     assert any(item["id"] == idea_id and item["manifestation_status"] == "validated" for item in raw["ideas"])
+
+
+@pytest.mark.asyncio
+async def test_answer_idea_question_persists_answer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        idea = listed.json()["ideas"][0]
+        idea_id = idea["id"]
+        question = idea["open_questions"][0]["question"]
+
+        answered = await client.post(
+            f"/api/ideas/{idea_id}/questions/answer",
+            json={
+                "question": question,
+                "answer": "Canonical route set is /api/inventory/routes/canonical",
+                "measured_delta": 3.5,
+            },
+        )
+        assert answered.status_code == 200
+        refetched = await client.get(f"/api/ideas/{idea_id}")
+        assert refetched.status_code == 200
+        found = [
+            q
+            for q in refetched.json()["open_questions"]
+            if q["question"] == question
+        ][0]
+        assert found["answer"] is not None
+        assert found["measured_delta"] == 3.5

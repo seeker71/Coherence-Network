@@ -191,3 +191,36 @@ def update_idea(
 
     _write_ideas(ideas)
     return _with_score(updated)
+
+
+def answer_question(
+    idea_id: str,
+    question: str,
+    answer: str,
+    measured_delta: float | None = None,
+) -> tuple[IdeaWithScore | None, bool]:
+    ideas = _read_ideas()
+    updated: Idea | None = None
+    question_found = False
+
+    for idx, idea in enumerate(ideas):
+        if idea.id != idea_id:
+            continue
+        for q in idea.open_questions:
+            if q.question == question:
+                q.answer = answer
+                if measured_delta is not None:
+                    q.measured_delta = measured_delta
+                question_found = True
+                break
+        ideas[idx] = idea
+        updated = idea
+        break
+
+    if updated is None:
+        return None, False
+    if not question_found:
+        return _with_score(updated), False
+
+    _write_ideas(ideas)
+    return _with_score(updated), True
