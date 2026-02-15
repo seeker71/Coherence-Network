@@ -318,6 +318,31 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "traceability-maturity-governance",
+        "name": "Idea-spec-manifestation traceability maturity",
+        "description": "Strengthen end-to-end tracking from idea to spec to implementation/manifestation with auditable evidence.",
+        "potential_value": 89.0,
+        "actual_value": 6.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.78,
+        "manifestation_status": "partial",
+        "interfaces": ["machine:api", "human:web", "ai:automation"],
+        "open_questions": [
+            {
+                "question": "Are we using best-known traceability practices, and which maturity gaps have the highest ROI to close?",
+                "value_to_whole": 30.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which parts of the idea-spec-manifestation chain still depend on assumptions rather than verifiable evidence?",
+                "value_to_whole": 28.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
         "description": "Expose and validate declared API routes used by web and scripts.",
