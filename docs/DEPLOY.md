@@ -276,7 +276,7 @@ What it does:
 3. Evaluates failing required contexts.
 4. Finds rerunnable GitHub Actions workflow runs for those failed required checks.
 5. Calls GitHub API `rerun-failed-jobs` for each run.
-6. Polls check state until green or timeout.
+6. Polls check state until retried runs complete with `success` (or timeout/failure).
 7. Uploads `auto_heal_report.json` as workflow artifact.
 
 Manual run (local):
@@ -294,7 +294,7 @@ GITHUB_TOKEN=<token> python scripts/auto_heal_deploy_gates.py \
 
 Exit codes:
 - `0`: checks already green or healed to green
-- `2`: still blocked (non-rerunnable failure or retries did not heal)
+- `2`: still blocked (non-rerunnable failure, retry still failed, or retry timeout)
 
 2. **API URL alignment**
    - Vercel `NEXT_PUBLIC_API_URL` must point to Railway API domain (https).
