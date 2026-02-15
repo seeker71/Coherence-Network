@@ -60,6 +60,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 046 Agent Debugging Pipeline Stuck Task Hang | ? | ? | ? | Pending |
 | 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
 | 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea->spec->impl->usage->payout preview trace API |
+| 054 Commit Provenance Contract Gate | ✓ | ✓ | ✓ | CI-enforced evidence schema + diff-range changed-file coverage gate |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
