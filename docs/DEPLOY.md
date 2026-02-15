@@ -279,6 +279,10 @@ What it does:
 6. Polls check state until retried runs complete with `success` (or timeout/failure).
 7. Uploads `auto_heal_report.json` as workflow artifact.
 
+Safety controls:
+- Concurrency per SHA (`cancel-in-progress: true`) to avoid parallel healer races.
+- `workflow_run.run_attempt == 1` guard so reruns of failed checks do not recursively retrigger healer loops.
+
 Manual run (local):
 
 ```bash
