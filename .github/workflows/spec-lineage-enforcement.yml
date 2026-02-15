@@ -169,7 +169,7 @@ jobs:
             comment += '    "estimated_cost": <hours>\n';
             comment += '  }\'\n';
             comment += '```\n\n';
-            comment += '**Spec Reference**: [061-traceability-maturity-governance](https://github.com/seeker71/Coherence-Network/blob/main/specs/061-traceability-maturity-governance.md)\n\n';
+            comment += '**Spec Reference**: [057-spec-lineage-autocreate-from-pr-metadata](https://github.com/seeker71/Coherence-Network/blob/main/specs/057-spec-lineage-autocreate-from-pr-metadata.md)\n\n';
             comment += '**Idea**: `traceability-maturity-governance` - Strengthen end-to-end tracking for autonomous evolution\n\n';
             comment += '---\n';
             comment += '_This check enforces merge-time lineage for spec changes. All specs must be traceable to ideas for machine reasoning._';

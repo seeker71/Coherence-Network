@@ -63,6 +63,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 054 Commit Provenance Contract Gate | ✓ | ✓ | ✓ | CI-enforced evidence schema + diff-range changed-file coverage gate |
 | 055 Runtime Intent and Public E2E Contract Gate | ✓ | ✓ | ✓ | runtime-intent classification + runtime-diff and E2E evidence requirements |
 | 056 Commit-Derived Traceability Report | ✓ | ✓ | ✓ | derives idea/spec/implementation references from commit evidence + SHA |
+| 057 Spec Lineage Auto-Create From PR Metadata | ✓ | ✓ | ✓ | metadata extraction + dry-run lineage generation and PR lineage workflow |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
