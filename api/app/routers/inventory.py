@@ -48,6 +48,14 @@ async def scan_api_web_availability_gaps(create_tasks: bool = Query(False)) -> d
     return inventory_service.scan_api_web_availability_gaps(create_tasks=create_tasks)
 
 
+@router.get("/inventory/assets")
+async def list_assets_inventory(
+    asset_type: str | None = Query(default=None),
+    limit: int = Query(default=500, ge=1, le=5000),
+) -> dict:
+    return inventory_service.list_assets_inventory(asset_type=asset_type, limit=limit)
+
+
 @router.post("/inventory/evidence/scan")
 async def scan_evidence_contract(create_tasks: bool = Query(False)) -> dict:
     return inventory_service.scan_evidence_contract(create_tasks=create_tasks)

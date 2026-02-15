@@ -127,6 +127,26 @@ interface InventoryResponse {
     usage_events_count: number;
     lineage_links: LineageLinkRow[];
   };
+  assets: {
+    total: number;
+    by_type: Record<string, number>;
+    coverage: {
+      api_routes_total: number;
+      web_api_usage_paths_total: number;
+      api_web_gap_count: number;
+    };
+    items: Array<{
+      asset_id: string;
+      asset_type: string;
+      name: string;
+      linked_id: string;
+      status: string;
+      estimated_value: number;
+      estimated_cost: number;
+      machine_path: string;
+      human_path: string;
+    }>;
+  };
   contributors: {
     attribution_count: number;
     by_perspective: {
@@ -427,6 +447,53 @@ export default function PortfolioPage() {
               <p className="text-muted-foreground">Lineage links</p>
               <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
             </div>
+            <div className="rounded border p-3">
+              <p className="text-muted-foreground">Registered assets</p>
+              <p className="text-lg font-semibold">{inventory.assets.total}</p>
+            </div>
+          </section>
+
+          <section className="rounded border p-4 space-y-3">
+            <h2 className="font-semibold">System Asset Registry</h2>
+            <p className="text-sm text-muted-foreground">
+              All system parts are registered as assets for machine and human inspection.
+            </p>
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">API routes tracked</p>
+                <p className="text-lg font-semibold">{inventory.assets.coverage.api_routes_total}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">Web API usage tracked</p>
+                <p className="text-lg font-semibold">{inventory.assets.coverage.web_api_usage_paths_total}</p>
+              </div>
+              <div className="rounded border p-3">
+                <p className="text-muted-foreground">API↔Web gaps</p>
+                <p className="text-lg font-semibold">{inventory.assets.coverage.api_web_gap_count}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {Object.entries(inventory.assets.by_type).map(([k, v]) => (
+                <span key={`assettype:${k}`} className="rounded border px-2 py-1">
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
+            <ul className="space-y-2 text-sm max-h-72 overflow-auto pr-1">
+              {inventory.assets.items.slice(0, 120).map((row) => (
+                <li key={row.asset_id} className="rounded border p-2">
+                  <p className="font-medium">
+                    {row.name} <span className="text-muted-foreground">({row.asset_type})</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    status {row.status} | est value {row.estimated_value.toFixed(2)} | est cost {row.estimated_cost.toFixed(2)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    machine <code>{row.machine_path}</code> | human <code>{row.human_path}</code>
+                  </p>
+                </li>
+              ))}
+            </ul>
           </section>
 
           <section className="rounded border p-4 space-y-3">

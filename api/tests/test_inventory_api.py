@@ -52,6 +52,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "questions" in data
         assert "specs" in data
         assert "implementation_usage" in data
+        assert "assets" in data
         assert "contributors" in data
         assert "roi_insights" in data
         assert "next_roi_work" in data
@@ -67,6 +68,9 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["specs"]["count"] >= 1
         assert data["implementation_usage"]["lineage_links_count"] >= 1
         assert data["implementation_usage"]["usage_events_count"] >= 1
+        assert data["assets"]["total"] >= 1
+        assert "by_type" in data["assets"]
+        assert "coverage" in data["assets"]
         assert "by_perspective" in data["contributors"]
         assert "most_estimated_roi" in data["roi_insights"]
         assert data["next_roi_work"]["selection_basis"] == "highest_idea_estimated_roi_then_question_roi"
@@ -131,6 +135,22 @@ async def test_page_lineage_endpoint_covers_web_pages_and_returns_entry() -> Non
         assert entry is not None
         assert entry["idea_id"] == "portfolio-governance"
         assert entry["root_idea_id"] == "coherence-network-overall"
+
+
+@pytest.mark.asyncio
+async def test_assets_inventory_endpoint_lists_registered_assets() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/assets")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] >= 1
+        assert isinstance(data["items"], list)
+        assert "coverage" in data
+
+        ideas_only = await client.get("/api/inventory/assets", params={"asset_type": "idea", "limit": 20})
+        assert ideas_only.status_code == 200
+        rows = ideas_only.json()["items"]
+        assert all(row["asset_type"] == "idea" for row in rows)
 
 
 @pytest.mark.asyncio

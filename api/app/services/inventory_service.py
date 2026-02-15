@@ -6,7 +6,13 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.services import idea_service, route_registry_service, runtime_service, value_lineage_service
+from app.services import (
+    idea_service,
+    page_lineage_service,
+    route_registry_service,
+    runtime_service,
+    value_lineage_service,
+)
 
 
 def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
@@ -378,6 +384,116 @@ def _api_web_gap_rows() -> tuple[list[dict], list[str], int]:
     return gaps, web_paths, len(api_routes)
 
 
+def _build_asset_registry(
+    *,
+    ideas: list[dict],
+    spec_items: list[dict],
+    api_routes_total: int,
+    web_usage_paths_total: int,
+    interface_gaps: list[dict],
+) -> dict:
+    assets: list[dict] = []
+    for item in ideas:
+        idea_id = str(item.get("id") or "").strip()
+        if not idea_id:
+            continue
+        assets.append(
+            {
+                "asset_id": f"idea:{idea_id}",
+                "asset_type": "idea",
+                "name": str(item.get("name") or idea_id),
+                "linked_id": idea_id,
+                "status": str(item.get("manifestation_status") or "none"),
+                "estimated_value": float(item.get("potential_value") or 0.0),
+                "estimated_cost": float(item.get("estimated_cost") or 0.0),
+                "machine_path": f"/api/ideas/{idea_id}",
+                "human_path": "/portfolio",
+            }
+        )
+    for item in spec_items:
+        spec_id = str(item.get("spec_id") or "").strip()
+        spec_path = str(item.get("path") or "").strip()
+        if not spec_id:
+            continue
+        assets.append(
+            {
+                "asset_id": f"spec:{spec_id}",
+                "asset_type": "spec",
+                "name": str(item.get("title") or spec_id),
+                "linked_id": spec_id,
+                "status": "tracked",
+                "estimated_value": 0.0,
+                "estimated_cost": 0.0,
+                "machine_path": "/api/inventory/system-lineage",
+                "human_path": spec_path or "specs/",
+            }
+        )
+
+    lineage = page_lineage_service.get_page_lineage()
+    entries = lineage.get("entries") if isinstance(lineage.get("entries"), list) else []
+    for row in entries:
+        if not isinstance(row, dict):
+            continue
+        page_path = str(row.get("page_path") or "").strip()
+        if not page_path:
+            continue
+        assets.append(
+            {
+                "asset_id": f"page:{page_path}",
+                "asset_type": "page",
+                "name": str(row.get("page_title") or page_path),
+                "linked_id": page_path,
+                "status": "mapped",
+                "estimated_value": 0.0,
+                "estimated_cost": 0.0,
+                "machine_path": f"/api/inventory/page-lineage?page_path={page_path}",
+                "human_path": page_path,
+            }
+        )
+
+    assets.append(
+        {
+            "asset_id": "runtime:api-route-surface",
+            "asset_type": "api_surface",
+            "name": "API route surface",
+            "linked_id": "api_routes",
+            "status": "tracked",
+            "estimated_value": float(api_routes_total),
+            "estimated_cost": float(len(interface_gaps)),
+            "machine_path": "/api/inventory/availability/scan",
+            "human_path": "/gates",
+        }
+    )
+    assets.append(
+        {
+            "asset_id": "runtime:web-api-usage-surface",
+            "asset_type": "web_usage_surface",
+            "name": "Web API usage surface",
+            "linked_id": "web_api_usage_paths",
+            "status": "tracked",
+            "estimated_value": float(web_usage_paths_total),
+            "estimated_cost": 0.0,
+            "machine_path": "/api/inventory/availability/scan",
+            "human_path": "/portfolio",
+        }
+    )
+
+    counts: dict[str, int] = {}
+    for row in assets:
+        key = str(row.get("asset_type") or "unknown")
+        counts[key] = counts.get(key, 0) + 1
+    return {
+        "total": len(assets),
+        "by_type": counts,
+        "coverage": {
+            "api_routes_total": api_routes_total,
+            "web_api_usage_paths_total": web_usage_paths_total,
+            "api_web_gap_count": len(interface_gaps),
+        },
+        "items": assets,
+    }
+
+
 def _tracking_mechanism_assessment(
     *,
     ideas_count: int,
@@ -656,6 +772,13 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         unanswered_questions=unanswered_questions,
     )
     interface_gaps, web_usage_paths, api_routes_total = _api_web_gap_rows()
+    assets = _build_asset_registry(
+        ideas=ideas,
+        spec_items=spec_items,
+        api_routes_total=api_routes_total,
+        web_usage_paths_total=len(web_usage_paths),
+        interface_gaps=interface_gaps,
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -692,6 +815,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "usage_events_count": len(events),
             "lineage_links": link_rows,
         },
+        "assets": assets,
         "contributors": {
             "attribution_count": len(contributor_rows),
             "by_perspective": perspective_counts,
@@ -1034,6 +1158,24 @@ def scan_api_web_availability_gaps(create_tasks: bool = False) -> dict:
         "gaps": gap_rows,
         "create_tasks": create_tasks,
         "generated_tasks": generated_tasks,
+    }
+
+
+def list_assets_inventory(asset_type: str | None = None, limit: int = 500) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    assets = inventory.get("assets", {}).get("items")
+    rows = [row for row in (assets if isinstance(assets, list) else []) if isinstance(row, dict)]
+    if asset_type:
+        token = asset_type.strip().lower()
+        rows = [row for row in rows if str(row.get("asset_type") or "").strip().lower() == token]
+    rows = rows[: max(1, min(limit, 5000))]
+    return {
+        "generated_at": inventory.get("generated_at"),
+        "total": len(rows),
+        "asset_type": asset_type,
+        "items": rows,
+        "coverage": inventory.get("assets", {}).get("coverage"),
+        "by_type": inventory.get("assets", {}).get("by_type"),
     }
 
 
