@@ -91,8 +91,11 @@ check_cors() {
 
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
+check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
 check_url "Vercel web root" "${WEB_URL%/}/" || fail=1
+check_url "Vercel gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Vercel API health page" "${WEB_URL%/}/api-health" || fail=1
+check_url "Vercel API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
 check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
 
 if [[ "$fail" -eq 0 ]]; then

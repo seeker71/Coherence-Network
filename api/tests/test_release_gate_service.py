@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
+    evaluate_public_deploy_contract_report,
     evaluate_collective_review_gates,
     evaluate_pr_gates,
     extract_actions_run_id,
@@ -141,3 +142,74 @@ def test_collect_rerunnable_actions_run_ids_fallbacks_when_required_unknown() ->
     ]
     run_ids = collect_rerunnable_actions_run_ids([], check_runs)
     assert run_ids == [444, 555]
+
+
+def test_evaluate_public_deploy_contract_report_passes(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_json(url: str, timeout: float = 8.0) -> dict:
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "abc123"}}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_branch_head_sha",
+        lambda *args, **kwargs: "abc123",
+    )
+    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+
+    out = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        api_base="https://api.example.com",
+        web_base="https://web.example.com",
+    )
+
+    assert out["result"] == "public_contract_passed"
+    assert out["failing_checks"] == []
+
+
+def test_evaluate_public_deploy_contract_report_flags_sha_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_json(url: str, timeout: float = 8.0) -> dict:
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "oldsha"}}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": "oldsha"}},
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_branch_head_sha",
+        lambda *args, **kwargs: "newsha",
+    )
+    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
+    monkeypatch.setattr(
+        "app.services.release_gate_service.check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+
+    out = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        api_base="https://api.example.com",
+        web_base="https://web.example.com",
+    )
+
+    assert out["result"] == "blocked"
+    assert "railway_gates_main_head" in out["failing_checks"]
+    assert "vercel_health_proxy" in out["failing_checks"]
