@@ -50,6 +50,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "ideas" in data
         assert "manifestations" in data
         assert "questions" in data
+        assert "question_ontology" in data
         assert "specs" in data
         assert "implementation_usage" in data
         assert "assets" in data
@@ -65,6 +66,8 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert data["ideas"]["summary"]["total_ideas"] >= 1
         assert data["manifestations"]["total"] >= 1
         assert data["questions"]["total"] >= 1
+        assert data["question_ontology"]["total_questions"] >= 1
+        assert data["question_ontology"]["unlinked_count"] == 0
         assert data["specs"]["count"] >= 1
         assert data["implementation_usage"]["lineage_links_count"] >= 1
         assert data["implementation_usage"]["usage_events_count"] >= 1

@@ -18,6 +18,13 @@ class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
     estimated_cost: float = Field(ge=0.0)
+    question_id: Optional[str] = None
+    parent_idea_id: Optional[str] = None
+    parent_question_id: Optional[str] = None
+    evolved_from_answer_of: Optional[str] = None
+    asked_by: Optional[str] = None
+    answered_by: Optional[str] = None
+    evidence_refs: list[str] = Field(default_factory=list)
     answer: Optional[str] = None
     measured_delta: Optional[float] = None
 
@@ -67,3 +74,6 @@ class IdeaQuestionAnswerUpdate(BaseModel):
     question: str = Field(min_length=1)
     answer: str = Field(min_length=1)
     measured_delta: Optional[float] = None
+    answered_by: Optional[str] = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    evolved_from_answer_of: Optional[str] = None

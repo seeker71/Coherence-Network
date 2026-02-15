@@ -645,6 +645,13 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
                 "idea_id": idea.id,
                 "idea_name": idea.name,
                 "question": q.question,
+                "question_id": q.question_id,
+                "parent_idea_id": q.parent_idea_id,
+                "parent_question_id": q.parent_question_id,
+                "evolved_from_answer_of": q.evolved_from_answer_of,
+                "asked_by": q.asked_by,
+                "answered_by": q.answered_by,
+                "evidence_refs": q.evidence_refs,
                 "value_to_whole": q.value_to_whole,
                 "estimated_cost": q.estimated_cost,
                 "question_roi": _question_roi(q.value_to_whole, q.estimated_cost),
@@ -667,6 +674,55 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     )
     all_questions = [*answered_questions, *unanswered_questions]
     duplicate_questions = _detect_duplicate_questions(all_questions)
+    valid_idea_ids = {
+        str(row.get("id") or "").strip()
+        for row in ideas
+        if isinstance(row, dict)
+    }
+    question_id_set = {
+        str(row.get("question_id") or "").strip()
+        for row in all_questions
+        if isinstance(row, dict) and str(row.get("question_id") or "").strip()
+    }
+    linked_to_idea = [
+        row
+        for row in all_questions
+        if isinstance(row, dict)
+        and str(row.get("parent_idea_id") or "").strip() in valid_idea_ids
+    ]
+    linked_to_parent_question = [
+        row
+        for row in all_questions
+        if isinstance(row, dict)
+        and str(row.get("parent_question_id") or "").strip() in question_id_set
+    ]
+    unlinked_questions = [
+        row
+        for row in all_questions
+        if isinstance(row, dict)
+        and str(row.get("parent_idea_id") or "").strip() not in valid_idea_ids
+        and str(row.get("parent_question_id") or "").strip() not in question_id_set
+    ]
+    answered_without_provenance = [
+        row
+        for row in answered_questions
+        if isinstance(row, dict)
+        and not str(row.get("answered_by") or "").strip()
+    ]
+    evolution_edges = [
+        {
+            "from_question_id": str(row.get("parent_question_id") or row.get("evolved_from_answer_of") or "").strip(),
+            "to_question_id": str(row.get("question_id") or "").strip(),
+            "idea_id": str(row.get("idea_id") or "").strip(),
+        }
+        for row in all_questions
+        if isinstance(row, dict)
+        and (
+            str(row.get("parent_question_id") or "").strip()
+            or str(row.get("evolved_from_answer_of") or "").strip()
+        )
+        and str(row.get("question_id") or "").strip()
+    ]
 
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
@@ -811,6 +867,18 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "unanswered_count": len(unanswered_questions),
             "answered": answered_questions,
             "unanswered": unanswered_questions,
+        },
+        "question_ontology": {
+            "principle": "Every question/answer is linked to an idea or higher-level parent question.",
+            "total_questions": len(all_questions),
+            "linked_to_idea_count": len(linked_to_idea),
+            "linked_to_parent_question_count": len(linked_to_parent_question),
+            "unlinked_count": len(unlinked_questions),
+            "answered_without_provenance_count": len(answered_without_provenance),
+            "evolution_edges_count": len(evolution_edges),
+            "unlinked": unlinked_questions[:50],
+            "answered_without_provenance": answered_without_provenance[:50],
+            "evolution_edges": evolution_edges[:200],
         },
         "quality_issues": {
             "duplicate_idea_questions": {

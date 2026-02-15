@@ -100,6 +100,8 @@ async def test_answer_idea_question_persists_answer(
                 "question": question,
                 "answer": "Canonical route set is /api/inventory/routes/canonical",
                 "measured_delta": 3.5,
+                "answered_by": "human:tester",
+                "evidence_refs": ["specs/050-canonical-route-registry-and-runtime-mapping.md"],
             },
         )
         assert answered.status_code == 200
@@ -112,6 +114,8 @@ async def test_answer_idea_question_persists_answer(
         ][0]
         assert found["answer"] is not None
         assert found["measured_delta"] == 3.5
+        assert found["answered_by"] == "human:tester"
+        assert "specs/050-canonical-route-registry-and-runtime-mapping.md" in (found.get("evidence_refs") or [])
 
 
 @pytest.mark.asyncio

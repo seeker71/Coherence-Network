@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import hashlib
 from typing import Any
 
 from app.models.idea import (
@@ -838,7 +839,8 @@ def _read_ideas() -> list[Idea]:
     ideas, default_changed = _ensure_default_ideas(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
     ideas, dedupe_changed = _dedupe_open_questions(ideas)
-    if default_changed or standing_changed or dedupe_changed:
+    ideas, ontology_changed = _ensure_question_ontology(ideas)
+    if default_changed or standing_changed or dedupe_changed or ontology_changed:
         _write_ideas(ideas)
     return ideas
 
@@ -865,6 +867,38 @@ def _ensure_default_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
 
 def _normalize_question_key(question: str) -> str:
     return " ".join((question or "").strip().lower().split())
+
+
+def _question_id(idea_id: str, question: str) -> str:
+    norm = _normalize_question_key(question)
+    token = f"{idea_id}:{norm}".encode("utf-8")
+    return f"q_{hashlib.sha1(token).hexdigest()[:16]}"
+
+
+def _ensure_question_ontology(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    known_idea_ids = {idea.id for idea in ideas}
+    for idea in ideas:
+        for q in idea.open_questions:
+            if not q.question_id:
+                q.question_id = _question_id(idea.id, q.question)
+                changed = True
+            if not q.parent_idea_id:
+                q.parent_idea_id = idea.id
+                changed = True
+            elif q.parent_idea_id not in known_idea_ids:
+                q.parent_idea_id = idea.id
+                changed = True
+            if q.answer and not q.answered_by:
+                q.answered_by = "unknown:legacy"
+                changed = True
+            if not q.answer and q.asked_by is None:
+                q.asked_by = "system:seed"
+                changed = True
+            if q.evidence_refs is None:
+                q.evidence_refs = []
+                changed = True
+    return ideas, changed
 
 
 def _dedupe_open_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
@@ -903,6 +937,21 @@ def _dedupe_open_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
                     q.answer = f"{existing.answer}\n---\n{q.answer}"
                 if existing.measured_delta is not None and q.measured_delta is None:
                     q.measured_delta = existing.measured_delta
+                if not q.question_id and existing.question_id:
+                    q.question_id = existing.question_id
+                if not q.parent_idea_id and existing.parent_idea_id:
+                    q.parent_idea_id = existing.parent_idea_id
+                if not q.parent_question_id and existing.parent_question_id:
+                    q.parent_question_id = existing.parent_question_id
+                if not q.evolved_from_answer_of and existing.evolved_from_answer_of:
+                    q.evolved_from_answer_of = existing.evolved_from_answer_of
+                if not q.asked_by and existing.asked_by:
+                    q.asked_by = existing.asked_by
+                if not q.answered_by and existing.answered_by:
+                    q.answered_by = existing.answered_by
+                if existing.evidence_refs:
+                    merged = list(dict.fromkeys([*(q.evidence_refs or []), *existing.evidence_refs]))
+                    q.evidence_refs = merged
                 seen[key] = q
             changed = True
         deduped = [seen[key] for key in ordered_keys]
@@ -1004,6 +1053,9 @@ def answer_question(
     question: str,
     answer: str,
     measured_delta: float | None = None,
+    answered_by: str | None = None,
+    evidence_refs: list[str] | None = None,
+    evolved_from_answer_of: str | None = None,
 ) -> tuple[IdeaWithScore | None, bool]:
     ideas = _read_ideas()
     updated: Idea | None = None
@@ -1017,6 +1069,13 @@ def answer_question(
                 q.answer = answer
                 if measured_delta is not None:
                     q.measured_delta = measured_delta
+                if answered_by is not None:
+                    q.answered_by = answered_by.strip() or q.answered_by
+                if evolved_from_answer_of is not None:
+                    q.evolved_from_answer_of = evolved_from_answer_of.strip() or q.evolved_from_answer_of
+                if evidence_refs is not None:
+                    refs = [str(x).strip() for x in evidence_refs if str(x).strip()]
+                    q.evidence_refs = list(dict.fromkeys([*(q.evidence_refs or []), *refs]))
                 question_found = True
                 break
         ideas[idx] = idea
@@ -1028,6 +1087,7 @@ def answer_question(
     if not question_found:
         return _with_score(updated), False
 
+    ideas, _ = _ensure_question_ontology(ideas)
     _write_ideas(ideas)
     return _with_score(updated), True
 
@@ -1064,6 +1124,17 @@ def add_idea_if_missing(
                 question=question,
                 value_to_whole=float(q.get("value_to_whole") or 0.0),
                 estimated_cost=float(q.get("estimated_cost") or 0.0),
+                question_id=str(q.get("question_id") or "") or None,
+                parent_idea_id=str(q.get("parent_idea_id") or "") or None,
+                parent_question_id=str(q.get("parent_question_id") or "") or None,
+                evolved_from_answer_of=str(q.get("evolved_from_answer_of") or "") or None,
+                asked_by=str(q.get("asked_by") or "") or None,
+                answered_by=str(q.get("answered_by") or "") or None,
+                evidence_refs=[
+                    str(x).strip()
+                    for x in (q.get("evidence_refs") or [])
+                    if isinstance(x, str) and str(x).strip()
+                ],
             )
         )
 
@@ -1083,7 +1154,10 @@ def add_idea_if_missing(
     )
     ideas.append(new_idea)
     ideas, changed = _ensure_standing_questions(ideas)
+    ideas, ontology_changed = _ensure_question_ontology(ideas)
     if changed:
+        ideas, _ = _dedupe_open_questions(ideas)
+    elif ontology_changed:
         ideas, _ = _dedupe_open_questions(ideas)
     _write_ideas(ideas)
     return _with_score(new_idea), True
