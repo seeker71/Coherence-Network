@@ -111,3 +111,31 @@ async def test_answer_idea_question_persists_answer(
         ][0]
         assert found["answer"] is not None
         assert found["measured_delta"] == 3.5
+
+
+@pytest.mark.asyncio
+async def test_living_codex_csharp_top_roi_ideas_are_seeded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    expected_ids = {
+        "living-codex-csharp-profile-edit-completion",
+        "living-codex-csharp-concept-creation-ui",
+        "living-codex-csharp-contribution-dashboard-ui",
+        "living-codex-csharp-enhanced-news-ui",
+        "living-codex-csharp-graph-visualization-ui",
+        "living-codex-csharp-people-discovery-ui",
+        "living-codex-csharp-portal-management-ui",
+        "living-codex-csharp-ucore-ontology-browser-ui",
+        "living-codex-csharp-realtime-ui-completion",
+        "living-codex-csharp-temporal-ui",
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+
+    assert listed.status_code == 200
+    ids = {idea["id"] for idea in listed.json()["ideas"]}
+    assert expected_ids.issubset(ids)

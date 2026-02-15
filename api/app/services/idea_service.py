@@ -318,6 +318,206 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "living-codex-csharp-profile-edit-completion",
+        "name": "Living Codex C# profile editing completion",
+        "description": "Complete profile edit flows currently partial in UI; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 83.0,
+        "actual_value": 0.0,
+        "estimated_cost": 7.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 2.0,
+        "confidence": 0.82,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which profile edit fields deliver the highest retention gain per implementation hour?",
+                "value_to_whole": 25.0,
+                "estimated_cost": 1.5,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-concept-creation-ui",
+        "name": "Living Codex C# concept creation flow UI",
+        "description": "Expose backend concept creation endpoints in the web flow; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 90.0,
+        "actual_value": 0.0,
+        "estimated_cost": 10.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.8,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "What minimum create flow validates idea-to-manifestation conversion end-to-end?",
+                "value_to_whole": 28.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-contribution-dashboard-ui",
+        "name": "Living Codex C# contribution dashboard UI",
+        "description": "Expose contribution and reward tracking in UI; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 84.0,
+        "actual_value": 0.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.79,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which dashboard KPI most improves contribution throughput and payout trust?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-enhanced-news-ui",
+        "name": "Living Codex C# enhanced news experience",
+        "description": "Upgrade news UI to use extraction/filtering capabilities from backend; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 80.0,
+        "actual_value": 0.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.77,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which news interaction metric best correlates with high-quality idea generation?",
+                "value_to_whole": 24.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-graph-visualization-ui",
+        "name": "Living Codex C# graph visualization system UI",
+        "description": "Expose node-edge graph capabilities through dedicated graph pages; grounded in references/living-codex/IMPLEMENTATION_STATUS.md and specs/LIVING_UI_SPEC.md.",
+        "potential_value": 95.0,
+        "actual_value": 0.0,
+        "estimated_cost": 14.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.78,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which graph view provides the highest decision value in the first user session?",
+                "value_to_whole": 30.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-people-discovery-ui",
+        "name": "Living Codex C# people discovery interface",
+        "description": "Build people search and discovery pages to expose existing backend discovery APIs; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 88.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.76,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which people-discovery filters create the strongest collaboration acceptance rate?",
+                "value_to_whole": 27.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-portal-management-ui",
+        "name": "Living Codex C# portal management UI",
+        "description": "Add UI for portal lifecycle and external integration flows; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 85.0,
+        "actual_value": 0.0,
+        "estimated_cost": 13.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.74,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api", "external:integrations"],
+        "open_questions": [
+            {
+                "question": "Which portal workflow yields the highest validated external value per setup cost?",
+                "value_to_whole": 26.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-ucore-ontology-browser-ui",
+        "name": "Living Codex C# U-CORE ontology browser UI",
+        "description": "Expose ontology and resonance axis navigation in human interface; grounded in references/living-codex/IMPLEMENTATION_STATUS.md and specs/LIVING_UI_SPEC.md.",
+        "potential_value": 86.0,
+        "actual_value": 0.0,
+        "estimated_cost": 12.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 4.0,
+        "confidence": 0.75,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which ontology navigation task most increases concept precision with least complexity?",
+                "value_to_whole": 27.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-realtime-ui-completion",
+        "name": "Living Codex C# real-time collaboration UI completion",
+        "description": "Close UI gaps for live updates, collaboration streams, and push notifications; grounded in references/living-codex/LIVING_CODEX_SPECIFICATION.md and IMPLEMENTATION_STATUS.md.",
+        "potential_value": 89.0,
+        "actual_value": 0.0,
+        "estimated_cost": 14.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.72,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "Which real-time event classes should be surfaced first to maximize measurable collaboration gains?",
+                "value_to_whole": 29.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
+        "id": "living-codex-csharp-temporal-ui",
+        "name": "Living Codex C# temporal consciousness UI",
+        "description": "Expose temporal portal capabilities through dedicated human-facing workflows; grounded in references/living-codex/IMPLEMENTATION_STATUS.md.",
+        "potential_value": 72.0,
+        "actual_value": 0.0,
+        "estimated_cost": 14.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.68,
+        "manifestation_status": "none",
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {
+                "question": "What is the smallest temporal UI flow that can be validated with real user behavior data?",
+                "value_to_whole": 22.0,
+                "estimated_cost": 2.0,
+            }
+        ],
+    },
+    {
         "id": "traceability-maturity-governance",
         "name": "Idea-spec-manifestation traceability maturity",
         "description": "Strengthen end-to-end tracking from idea to spec to implementation/manifestation with auditable evidence.",

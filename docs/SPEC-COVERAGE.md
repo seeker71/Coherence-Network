@@ -72,6 +72,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 058 Evidence Contract and Automated ROI Questioning | ✓ | ✓ | ✓ | per-subsystem claim/evidence/falsifier checks + automated evidence scan |
 | 059 Core Idea Completeness, Manifestation Visibility, and Question Dedupe | ✓ | ✓ | ✓ | core system/component ideas + manifestations inventory + auto dedupe |
 | 060 High-ROI Auto-Answer and Derived Idea Generation | ✓ | ✓ | ✓ | auto-answer top ROI questions + optional derived ideas |
+| 061 Import Living-Codex-CSharp Top ROI Ideas | ✓ | ✓ | ✓ | seeded top ROI idea candidates from reference C# docs |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
