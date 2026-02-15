@@ -161,6 +161,11 @@ Behavior:
 4. Re-check status until reruns finish with success (or fail/timeout); upload `auto_heal_report.json`.
 5. Guard against recursion with one-attempt trigger (`run_attempt == 1`) and per-SHA concurrency.
 
+`Change Contract` review thresholds are configurable to avoid blocking velocity when no reviewer is available:
+- `CHANGE_CONTRACT_MIN_APPROVALS` (repo variable, default `0`)
+- `CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS` (repo variable, default `0`)
+Raise these values when collective review coverage is strong enough to enforce stricter payout/ack gates.
+
 ## Public Deploy Drift Monitor (Main + Schedule)
 
 To detect production drift even when CI checks are green:

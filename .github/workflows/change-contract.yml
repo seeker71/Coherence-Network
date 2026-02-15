@@ -34,16 +34,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+          MIN_APPROVALS: ${{ vars.CHANGE_CONTRACT_MIN_APPROVALS || '0' }}
+          MIN_UNIQUE_APPROVERS: ${{ vars.CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS || '0' }}
         run: |
+          set +e
           cd api
           python scripts/validate_merged_change_contract.py \
             --sha "$TARGET_SHA" \
+            --min-approvals "$MIN_APPROVALS" \
+            --min-unique-approvers "$MIN_UNIQUE_APPROVERS" \
             --json > ../contract_report.json
-          cat ../contract_report.json
-          echo "pr_number=$(jq -r '.pr.number' ../contract_report.json)" >> "$GITHUB_OUTPUT"
-          echo "contributor=$(jq -r '.contributor_ack.contributor' ../contract_report.json)" >> "$GITHUB_OUTPUT"
-          echo "approvals=$(jq -r '.collective_review.approval_events' ../contract_report.json)" >> "$GITHUB_OUTPUT"
-          echo "unique_approvers=$(jq -c '.collective_review.unique_approvers' ../contract_report.json)" >> "$GITHUB_OUTPUT"
+          exit_code=$?
+          cd ..
+          cat contract_report.json
+          echo "pr_number=$(jq -r '.pr.number' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "contributor=$(jq -r '.contributor_ack.contributor' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "approvals=$(jq -r '.collective_review.approval_events' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "unique_approvers=$(jq -c '.collective_review.unique_approvers' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "collective_review_passed=$(jq -r '.collective_review.collective_review_passed // false' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "min_approvals_required=$(jq -r '.collective_review.min_approvals_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "min_unique_approvers_required=$(jq -r '.collective_review.min_unique_approvers_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Upload contract report artifact
         uses: actions/upload-artifact@v4
@@ -65,10 +77,12 @@ jobs:
               "",
               "This merged change passed the smart-contract style gate:",
               "- Commit checks: green",
-              "- Collective review: passed",
+              "- Collective review: evaluated",
               "- Public validation: passed on Railway + Vercel endpoints",
               "",
               `Contributor acknowledged: **@${contributor}**`,
+              `Collective review passed: ${"${{ steps.contract.outputs.collective_review_passed }}"}`,
+              `Review policy: min approvals=${"${{ steps.contract.outputs.min_approvals_required }}"} min unique approvers=${"${{ steps.contract.outputs.min_unique_approvers_required }}"}`,
               `Collective approvers: ${approvers.map(a => `@${a}`).join(', ') || '(none)'}`,
               `Approval events counted: ${approvals}`
             ].join("\n");
@@ -78,3 +92,9 @@ jobs:
               issue_number: prNumber,
               body
             });
+
+      - name: Fail when merged change contract does not pass
+        if: ${{ steps.contract.outputs.exit_code != '0' }}
+        run: |
+          echo "Merged change contract failed"
+          exit 1
