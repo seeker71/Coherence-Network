@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
+from app.models.idea import RoiEstimatorWeightsUpdate, RoiMeasurementCreate
 from app.services import inventory_service
 from app.services import page_lineage_service
 from app.services import route_registry_service
@@ -11,7 +12,67 @@ from app.services import route_registry_service
 router = APIRouter()
 
 
-@router.get("/inventory/system-lineage")
+@router.get(
+    "/inventory/system-lineage",
+    summary="Get unified system inventory with runtime telemetry",
+    description="""
+**Purpose**: Unified machine-readable inventory of all core planning/execution artifacts (ideas, questions, specs, implementation usage) with real-time runtime telemetry for continuous cost/value measurement.
+
+**Spec**: [049-system-lineage-inventory-and-runtime-telemetry.md](https://github.com/seeker71/Coherence-Network/blob/main/specs/049-system-lineage-inventory-and-runtime-telemetry.md)
+**Idea**: `coherence-network-api-runtime` - API and runtime telemetry for inventory and validation
+**Tests**: `api/tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections`
+
+**Inventory Sections**:
+- **ideas**: Portfolio summary, unvalidated vs validated ideas
+- **manifestations**: Implementation progress tracking
+- **questions**: Open vs answered question inventory
+- **question_ontology**: Question lineage and evolution
+- **specs**: Discovered specs from `specs/` directory
+- **implementation_usage**: Value-lineage links and usage events
+- **assets**: System asset registry by type with coverage
+- **contributors**: Contribution tracking by perspective
+- **roi_insights**: ROI rankings and estimated returns
+- **next_roi_work**: Highest ROI task recommendations
+- **operating_console**: Estimated ROI queue
+- **evidence_contract**: Evidence freshness tracking
+- **tracking_mechanism**: Idea/spec/implementation mapping efficiency
+- **availability_gaps**: API/web parity gaps
+- **runtime**: Runtime telemetry summaries by idea
+
+**Use Case**: Machines can query complete system state to understand priorities, track progress, identify gaps, and make autonomous decisions about what to work on next.
+
+**Change Process**:
+1. **Idea**: Update `/api/logs/idea_portfolio.json` (coherence-network-api-runtime idea)
+2. **Spec**: Update `/specs/049-system-lineage-inventory-and-runtime-telemetry.md`
+3. **Tests**: Update `/api/tests/test_inventory_api.py` (modify inventory tests)
+4. **Implementation**: Update `/api/services/inventory_service.py` and `/api/app/routers/inventory.py`
+5. **Validation**: Run `pytest api/tests/test_inventory_api.py -v`
+    """,
+    responses={
+        200: {
+            "description": "Complete system inventory with runtime telemetry",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "ideas": {"summary": {"total_ideas": 15, "unvalidated_ideas": 10, "validated_ideas": 5}},
+                        "manifestations": {"total": 12, "by_status": {"partial": 8, "validated": 4}},
+                        "questions": {"total": 45, "unanswered": 32, "answered": 13},
+                        "specs": {"count": 70, "coverage_pct": 92.3},
+                        "implementation_usage": {"lineage_links_count": 28, "usage_events_count": 156},
+                        "assets": {"total": 234, "by_type": {"spec": 70, "implementation": 89, "test": 75}},
+                        "runtime": {"window_seconds": 3600, "total_events": 1520, "by_idea": {"portfolio-governance": {"event_count": 245}}}
+                    }
+                }
+            }
+        }
+    },
+    openapi_extra={
+        "x-spec-file": "specs/049-system-lineage-inventory-and-runtime-telemetry.md",
+        "x-idea-id": "coherence-network-api-runtime",
+        "x-test-file": "api/tests/test_inventory_api.py",
+        "x-implementation-file": "api/app/services/inventory_service.py"
+    }
+)
 async def system_lineage_inventory(
     runtime_window_seconds: int = Query(3600, ge=60, le=2592000),
 ) -> dict:
@@ -69,4 +130,53 @@ async def auto_answer_high_roi_questions(
     return inventory_service.auto_answer_high_roi_questions(
         limit=limit,
         create_derived_ideas=create_derived_ideas,
+    )
+
+
+@router.get("/inventory/roi/estimator")
+async def get_roi_estimator(
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.get_roi_estimator(runtime_window_seconds=runtime_window_seconds)
+
+
+@router.post("/inventory/roi/estimator/measurements")
+async def create_roi_measurement(data: RoiMeasurementCreate) -> dict:
+    return inventory_service.record_roi_measurement(
+        subject_type=data.subject_type,
+        subject_id=data.subject_id,
+        idea_id=data.idea_id,
+        estimated_roi=data.estimated_roi,
+        actual_roi=data.actual_roi,
+        actual_value=data.actual_value,
+        actual_cost=data.actual_cost,
+        measured_delta=data.measured_delta,
+        estimated_cost=data.estimated_cost,
+        source=data.source,
+        measured_by=data.measured_by,
+        evidence_refs=data.evidence_refs,
+        notes=data.notes,
+    )
+
+
+@router.post("/inventory/roi/estimator/calibrate")
+async def calibrate_roi_estimator(
+    apply: bool = Query(True),
+    min_samples: int = Query(3, ge=1, le=200),
+    calibrated_by: str | None = Query(default=None),
+) -> dict:
+    return inventory_service.calibrate_roi_estimator(
+        apply=apply,
+        min_samples=min_samples,
+        calibrated_by=calibrated_by,
+    )
+
+
+@router.patch("/inventory/roi/estimator/weights")
+async def patch_roi_estimator_weights(data: RoiEstimatorWeightsUpdate) -> dict:
+    return inventory_service.update_roi_estimator_weights(
+        idea_multiplier=data.idea_multiplier,
+        question_multiplier=data.question_multiplier,
+        answer_multiplier=data.answer_multiplier,
+        updated_by=data.updated_by,
     )

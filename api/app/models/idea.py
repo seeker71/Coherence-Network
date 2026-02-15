@@ -77,3 +77,26 @@ class IdeaQuestionAnswerUpdate(BaseModel):
     answered_by: Optional[str] = None
     evidence_refs: list[str] = Field(default_factory=list)
     evolved_from_answer_of: Optional[str] = None
+
+
+class RoiMeasurementCreate(BaseModel):
+    subject_type: str = Field(pattern="^(idea|question)$")
+    subject_id: str = Field(min_length=1)
+    idea_id: Optional[str] = None
+    estimated_roi: Optional[float] = None
+    actual_roi: Optional[float] = None
+    actual_value: Optional[float] = Field(default=None, ge=0.0)
+    actual_cost: Optional[float] = Field(default=None, ge=0.0)
+    measured_delta: Optional[float] = None
+    estimated_cost: Optional[float] = Field(default=None, ge=0.0)
+    source: str = Field(default="api")
+    measured_by: Optional[str] = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    notes: Optional[str] = None
+
+
+class RoiEstimatorWeightsUpdate(BaseModel):
+    idea_multiplier: Optional[float] = Field(default=None, gt=0.0, le=10.0)
+    question_multiplier: Optional[float] = Field(default=None, gt=0.0, le=10.0)
+    answer_multiplier: Optional[float] = Field(default=None, gt=0.0, le=10.0)
+    updated_by: Optional[str] = None

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,16 +17,233 @@ from app.services import (
 )
 
 
+def _roi_estimator_path() -> Path:
+    configured = os.getenv("ROI_ESTIMATOR_PATH")
+    if configured:
+        return Path(configured)
+    return _project_root() / "api" / "data" / "roi_estimator.json"
+
+
+def _default_roi_estimator_state() -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "version": 1,
+        "updated_at": now,
+        "weights": {
+            "idea_multiplier": 1.0,
+            "question_multiplier": 1.0,
+            "answer_multiplier": 1.0,
+        },
+        "measurement_events": [],
+        "calibration_runs": [],
+    }
+
+
+def _read_roi_estimator_state() -> dict:
+    path = _roi_estimator_path()
+    if not path.exists():
+        return _default_roi_estimator_state()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _default_roi_estimator_state()
+    if not isinstance(payload, dict):
+        return _default_roi_estimator_state()
+    out = _default_roi_estimator_state()
+    out["weights"].update(payload.get("weights") or {})
+    out["measurement_events"] = [
+        row for row in (payload.get("measurement_events") or []) if isinstance(row, dict)
+    ][-2000:]
+    out["calibration_runs"] = [
+        row for row in (payload.get("calibration_runs") or []) if isinstance(row, dict)
+    ][-200:]
+    out["updated_at"] = str(payload.get("updated_at") or out["updated_at"])
+    return out
+
+
+def _write_roi_estimator_state(state: dict) -> None:
+    path = _roi_estimator_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        **state,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "measurement_events": [row for row in (state.get("measurement_events") or []) if isinstance(row, dict)][-2000:],
+        "calibration_runs": [row for row in (state.get("calibration_runs") or []) if isinstance(row, dict)][-200:],
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _roi_weights() -> dict[str, float]:
+    state = _read_roi_estimator_state()
+    raw = state.get("weights") if isinstance(state.get("weights"), dict) else {}
+    return {
+        "idea_multiplier": float(raw.get("idea_multiplier") or 1.0),
+        "question_multiplier": float(raw.get("question_multiplier") or 1.0),
+        "answer_multiplier": float(raw.get("answer_multiplier") or 1.0),
+    }
+
+
+def _safe_ratio(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None:
+        return None
+    denom = float(denominator)
+    if denom <= 0.0:
+        return None
+    return round(float(numerator) / denom, 6)
+
+
+def _median(values: list[float]) -> float | None:
+    rows = sorted([float(v) for v in values if isinstance(v, (int, float)) and float(v) > 0.0])
+    if not rows:
+        return None
+    n = len(rows)
+    if n % 2 == 1:
+        return rows[n // 2]
+    return round((rows[n // 2 - 1] + rows[n // 2]) / 2.0, 6)
+
+
+def _extract_roi_observations(inventory: dict) -> dict[str, list[dict]]:
+    idea_rows = inventory.get("roi_insights", {}).get("most_estimated_roi")
+    all_idea_rows = inventory.get("ideas", {}).get("items")
+    by_id = {
+        str(row.get("id") or "").strip(): row
+        for row in (all_idea_rows if isinstance(all_idea_rows, list) else [])
+        if isinstance(row, dict)
+    }
+    idea_obs: list[dict] = []
+    if isinstance(idea_rows, list):
+        seen_ids: set[str] = set()
+        for row in idea_rows:
+            if not isinstance(row, dict):
+                continue
+            idea_id = str(row.get("idea_id") or "").strip()
+            if not idea_id or idea_id in seen_ids:
+                continue
+            source = by_id.get(idea_id, {})
+            base_estimated = _safe_ratio(
+                float(source.get("potential_value") or 0.0) * float(source.get("confidence") or 0.0),
+                float(source.get("estimated_cost") or 0.0) + float(source.get("resistance_risk") or 0.0),
+            )
+            realized = _safe_ratio(
+                float(source.get("actual_value") or 0.0),
+                float(source.get("actual_cost") or 0.0),
+            )
+            if base_estimated is None or realized is None:
+                continue
+            seen_ids.add(idea_id)
+            idea_obs.append(
+                {
+                    "kind": "idea",
+                    "subject_id": idea_id,
+                    "estimated_base": base_estimated,
+                    "actual_roi": realized,
+                    "error": round(realized - base_estimated, 6),
+                    "ratio": round(realized / base_estimated, 6) if base_estimated > 0 else None,
+                    "source": "inventory",
+                }
+            )
+
+    question_rows = inventory.get("questions", {}).get("answered")
+    question_obs: list[dict] = []
+    if isinstance(question_rows, list):
+        for row in question_rows:
+            if not isinstance(row, dict):
+                continue
+            estimated_cost = float(row.get("estimated_cost") or 0.0)
+            value_to_whole = float(row.get("value_to_whole") or 0.0)
+            measured_delta = row.get("measured_delta")
+            if estimated_cost <= 0.0 or measured_delta is None:
+                continue
+            base_estimated = _safe_ratio(value_to_whole, estimated_cost)
+            actual = _safe_ratio(float(measured_delta), estimated_cost)
+            if base_estimated is None or actual is None:
+                continue
+            question_obs.append(
+                {
+                    "kind": "question",
+                    "subject_id": str(row.get("question_id") or row.get("question") or "").strip(),
+                    "idea_id": str(row.get("idea_id") or "").strip(),
+                    "estimated_base": base_estimated,
+                    "actual_roi": actual,
+                    "error": round(actual - base_estimated, 6),
+                    "ratio": round(actual / base_estimated, 6) if base_estimated > 0 else None,
+                    "source": "inventory",
+                }
+            )
+    return {"ideas": idea_obs, "questions": question_obs}
+
+
+def _extract_manual_observations(state: dict) -> dict[str, list[dict]]:
+    events = state.get("measurement_events")
+    if not isinstance(events, list):
+        return {"ideas": [], "questions": []}
+    ideas: list[dict] = []
+    questions: list[dict] = []
+    for row in events:
+        if not isinstance(row, dict):
+            continue
+        kind = str(row.get("subject_type") or "").strip().lower()
+        estimated_base = _safe_ratio(
+            float(row.get("estimated_base") or 0.0),
+            1.0,
+        )
+        actual_roi = _safe_ratio(
+            float(row.get("actual_roi") or 0.0),
+            1.0,
+        )
+        if estimated_base is None or actual_roi is None:
+            continue
+        obs = {
+            "kind": kind,
+            "subject_id": str(row.get("subject_id") or "").strip(),
+            "idea_id": str(row.get("idea_id") or "").strip() or None,
+            "estimated_base": estimated_base,
+            "actual_roi": actual_roi,
+            "error": round(actual_roi - estimated_base, 6),
+            "ratio": round(actual_roi / estimated_base, 6) if estimated_base > 0 else None,
+            "source": "manual",
+        }
+        if kind == "idea":
+            ideas.append(obs)
+        elif kind == "question":
+            questions.append(obs)
+    return {"ideas": ideas, "questions": questions}
+
+
+def _suggested_multipliers(idea_obs: list[dict], question_obs: list[dict]) -> dict:
+    idea_ratios = [float(row.get("ratio")) for row in idea_obs if isinstance(row.get("ratio"), (int, float))]
+    question_ratios = [float(row.get("ratio")) for row in question_obs if isinstance(row.get("ratio"), (int, float))]
+    idea_suggested = _median(idea_ratios)
+    question_suggested = _median(question_ratios)
+    if idea_suggested is None:
+        idea_suggested = 1.0
+    if question_suggested is None:
+        question_suggested = 1.0
+    idea_suggested = min(max(float(idea_suggested), 0.2), 5.0)
+    question_suggested = min(max(float(question_suggested), 0.2), 5.0)
+    return {
+        "idea_multiplier": round(idea_suggested, 6),
+        "question_multiplier": round(question_suggested, 6),
+        "answer_multiplier": round(question_suggested, 6),
+        "idea_samples": len(idea_ratios),
+        "question_samples": len(question_ratios),
+    }
+
+
 def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
     if estimated_cost <= 0:
         return 0.0
-    return round(float(value_to_whole) / float(estimated_cost), 4)
+    weights = _roi_weights()
+    base = float(value_to_whole) / float(estimated_cost)
+    return round(base * float(weights.get("question_multiplier") or 1.0), 4)
 
 
 def _answer_roi(measured_delta: float | None, estimated_cost: float) -> float:
     if measured_delta is None or estimated_cost <= 0:
         return 0.0
-    return round(float(measured_delta) / float(estimated_cost), 4)
+    weights = _roi_weights()
+    base = float(measured_delta) / float(estimated_cost)
+    return round(base * float(weights.get("answer_multiplier") or 1.0), 4)
 
 
 def _classify_perspective(contributor: str | None) -> str:
@@ -630,12 +849,14 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
     missing_manifestations = [
         row for row in manifestation_rows if str(row.get("manifestation_status") or "none").strip().lower() == "none"
     ]
+    weights = _roi_weights()
+    idea_multiplier = float(weights.get("idea_multiplier") or 1.0)
     estimated_roi_by_idea: dict[str, float] = {}
     for item in ideas:
         idea_id = str(item.get("id") or "")
         estimated_cost = float(item.get("estimated_cost") or 0.0)
         potential_value = float(item.get("potential_value") or 0.0)
-        estimated_roi_by_idea[idea_id] = round((potential_value / estimated_cost), 4) if estimated_cost > 0 else 0.0
+        estimated_roi_by_idea[idea_id] = round((potential_value / estimated_cost) * idea_multiplier, 4) if estimated_cost > 0 else 0.0
 
     answered_questions: list[dict] = []
     unanswered_questions: list[dict] = []
@@ -770,7 +991,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         actual_cost = float(item.get("actual_cost") or 0.0)
         potential_value = float(item.get("potential_value") or 0.0)
         actual_value = float(item.get("actual_value") or 0.0)
-        estimated_roi = round((potential_value / estimated_cost), 4) if estimated_cost > 0 else 0.0
+        estimated_roi = round((potential_value / estimated_cost) * idea_multiplier, 4) if estimated_cost > 0 else 0.0
         actual_roi = round((actual_value / actual_cost), 4) if actual_cost > 0 else None
         roi_rows.append(
             {
@@ -847,6 +1068,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         web_usage_paths_total=len(web_usage_paths),
         interface_gaps=interface_gaps,
     )
+    estimator_state = _read_roi_estimator_state()
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -907,6 +1129,18 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "most_actual_roi": actual_sorted[:5],
             "least_actual_roi": sorted(actual_present, key=lambda row: float(row.get("actual_roi") or 0.0))[:5],
             "missing_actual_roi_high_potential": missing_actual[:5],
+        },
+        "roi_estimator": {
+            "weights": estimator_state.get("weights", {}),
+            "measurement_events_count": len(estimator_state.get("measurement_events") or []),
+            "calibration_runs_count": len(estimator_state.get("calibration_runs") or []),
+            "updated_at": estimator_state.get("updated_at"),
+            "api": {
+                "estimator": "/api/inventory/roi/estimator",
+                "measurements": "/api/inventory/roi/estimator/measurements",
+                "calibrate": "/api/inventory/roi/estimator/calibrate",
+                "weights": "/api/inventory/roi/estimator/weights",
+            },
         },
         "next_roi_work": {
             "selection_basis": "highest_idea_estimated_roi_then_question_roi",
@@ -1040,6 +1274,250 @@ def next_highest_estimated_roi_task(create_task: bool = False) -> dict:
         "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
     }
     return report
+
+
+def get_roi_estimator(runtime_window_seconds: int = 86400) -> dict:
+    state = _read_roi_estimator_state()
+    inventory = build_system_lineage_inventory(runtime_window_seconds=runtime_window_seconds)
+    live = _extract_roi_observations(inventory)
+    manual = _extract_manual_observations(state)
+    merged_ideas = [*live["ideas"], *manual["ideas"]]
+    merged_questions = [*live["questions"], *manual["questions"]]
+    suggestions = _suggested_multipliers(merged_ideas, merged_questions)
+
+    def _mae(rows: list[dict]) -> float | None:
+        errors = [abs(float(row.get("error") or 0.0)) for row in rows if isinstance(row.get("error"), (int, float))]
+        if not errors:
+            return None
+        return round(sum(errors) / float(len(errors)), 6)
+
+    return {
+        "version": state.get("version", 1),
+        "updated_at": state.get("updated_at"),
+        "formula": {
+            "idea_estimated_roi": "((potential_value * confidence) / (estimated_cost + resistance_risk)) * idea_multiplier",
+            "question_estimated_roi": "(value_to_whole / estimated_cost) * question_multiplier",
+            "answer_measured_roi": "(measured_delta / estimated_cost) * answer_multiplier",
+        },
+        "weights": state.get("weights", {}),
+        "observations": {
+            "idea_samples": len(merged_ideas),
+            "question_samples": len(merged_questions),
+            "idea_mae": _mae(merged_ideas),
+            "question_mae": _mae(merged_questions),
+            "latest_manual_measurements": (state.get("measurement_events") or [])[-10:],
+        },
+        "suggested_weights": suggestions,
+        "calibration_runs": (state.get("calibration_runs") or [])[-20:],
+    }
+
+
+def update_roi_estimator_weights(
+    *,
+    idea_multiplier: float | None = None,
+    question_multiplier: float | None = None,
+    answer_multiplier: float | None = None,
+    updated_by: str | None = None,
+) -> dict:
+    state = _read_roi_estimator_state()
+    weights = state.get("weights") if isinstance(state.get("weights"), dict) else {}
+    if idea_multiplier is not None:
+        weights["idea_multiplier"] = round(float(idea_multiplier), 6)
+    if question_multiplier is not None:
+        weights["question_multiplier"] = round(float(question_multiplier), 6)
+    if answer_multiplier is not None:
+        weights["answer_multiplier"] = round(float(answer_multiplier), 6)
+    state["weights"] = weights
+    runs = state.get("calibration_runs") if isinstance(state.get("calibration_runs"), list) else []
+    runs.append(
+        {
+            "type": "manual_update",
+            "applied": True,
+            "updated_by": str(updated_by or "unknown"),
+            "applied_weights": weights,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    state["calibration_runs"] = runs[-200:]
+    _write_roi_estimator_state(state)
+    return get_roi_estimator()
+
+
+def record_roi_measurement(
+    *,
+    subject_type: str,
+    subject_id: str,
+    idea_id: str | None = None,
+    estimated_roi: float | None = None,
+    actual_roi: float | None = None,
+    actual_value: float | None = None,
+    actual_cost: float | None = None,
+    measured_delta: float | None = None,
+    estimated_cost: float | None = None,
+    source: str = "api",
+    measured_by: str | None = None,
+    evidence_refs: list[str] | None = None,
+    notes: str | None = None,
+) -> dict:
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    normalized_subject_type = str(subject_type or "").strip().lower()
+    normalized_subject_id = str(subject_id or "").strip()
+    if normalized_subject_type not in {"idea", "question"}:
+        return {"result": "invalid_subject_type"}
+    if not normalized_subject_id:
+        return {"result": "invalid_subject_id"}
+
+    inferred_estimated = estimated_roi
+    inferred_actual = actual_roi
+    inferred_idea_id = str(idea_id or "").strip() or None
+    inferred_estimated_cost = estimated_cost
+
+    if normalized_subject_type == "idea":
+        roi_rows = inventory.get("roi_insights", {}).get("most_estimated_roi")
+        if isinstance(roi_rows, list):
+            match = next(
+                (
+                    row for row in roi_rows
+                    if isinstance(row, dict) and str(row.get("idea_id") or "").strip() == normalized_subject_id
+                ),
+                None,
+            )
+            if isinstance(match, dict):
+                if inferred_estimated is None:
+                    inferred_estimated = float(match.get("estimated_roi") or 0.0)
+                if inferred_actual is None and isinstance(match.get("actual_roi"), (int, float)):
+                    inferred_actual = float(match.get("actual_roi") or 0.0)
+                if inferred_estimated_cost is None:
+                    inferred_estimated_cost = float(match.get("estimated_cost") or 0.0)
+    else:
+        answered = inventory.get("questions", {}).get("answered")
+        unanswered = inventory.get("questions", {}).get("unanswered")
+        candidates = [*(answered if isinstance(answered, list) else []), *(unanswered if isinstance(unanswered, list) else [])]
+        match = next(
+            (
+                row
+                for row in candidates
+                if isinstance(row, dict)
+                and (
+                    str(row.get("question_id") or "").strip() == normalized_subject_id
+                    or str(row.get("question") or "").strip() == normalized_subject_id
+                )
+            ),
+            None,
+        )
+        if isinstance(match, dict):
+            inferred_idea_id = inferred_idea_id or str(match.get("idea_id") or "").strip() or None
+            if inferred_estimated is None:
+                inferred_estimated = float(match.get("question_roi") or 0.0)
+            if inferred_estimated_cost is None:
+                inferred_estimated_cost = float(match.get("estimated_cost") or 0.0)
+            if inferred_actual is None and match.get("measured_delta") is not None:
+                candidate_actual = _safe_ratio(float(match.get("measured_delta") or 0.0), float(match.get("estimated_cost") or 0.0))
+                if candidate_actual is not None:
+                    inferred_actual = candidate_actual
+
+    if inferred_actual is None:
+        candidate_actual = _safe_ratio(actual_value, actual_cost)
+        if candidate_actual is not None:
+            inferred_actual = candidate_actual
+    if inferred_actual is None:
+        candidate_actual = _safe_ratio(measured_delta, inferred_estimated_cost)
+        if candidate_actual is not None:
+            inferred_actual = candidate_actual
+    if inferred_estimated is None and inferred_estimated_cost is not None:
+        candidate_estimated = _safe_ratio(actual_value, inferred_estimated_cost)
+        if candidate_estimated is not None:
+            inferred_estimated = candidate_estimated
+
+    if inferred_estimated is None or inferred_actual is None:
+        return {
+            "result": "insufficient_measurement_data",
+            "required": [
+                "estimated_roi or inferable estimate from idea/question",
+                "actual_roi or pair (actual_value,actual_cost) or (measured_delta,estimated_cost)",
+            ],
+        }
+
+    base_estimated = float(inferred_estimated)
+    event = {
+        "subject_type": normalized_subject_type,
+        "subject_id": normalized_subject_id,
+        "idea_id": inferred_idea_id,
+        "estimated_base": round(base_estimated, 6),
+        "actual_roi": round(float(inferred_actual), 6),
+        "error": round(float(inferred_actual) - base_estimated, 6),
+        "ratio": round(float(inferred_actual) / base_estimated, 6) if base_estimated > 0 else None,
+        "source": str(source or "api"),
+        "measured_by": str(measured_by or "unknown"),
+        "evidence_refs": [str(x) for x in (evidence_refs or []) if str(x).strip()],
+        "notes": str(notes or "").strip() or None,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    state = _read_roi_estimator_state()
+    events = state.get("measurement_events") if isinstance(state.get("measurement_events"), list) else []
+    events.append(event)
+    state["measurement_events"] = events[-2000:]
+    _write_roi_estimator_state(state)
+    return {
+        "result": "measurement_recorded",
+        "measurement": event,
+        "estimator": get_roi_estimator(),
+    }
+
+
+def calibrate_roi_estimator(
+    *,
+    apply: bool = True,
+    min_samples: int = 3,
+    calibrated_by: str | None = None,
+) -> dict:
+    state = _read_roi_estimator_state()
+    inventory = build_system_lineage_inventory(runtime_window_seconds=86400)
+    live = _extract_roi_observations(inventory)
+    manual = _extract_manual_observations(state)
+    idea_obs = [*live["ideas"], *manual["ideas"]]
+    question_obs = [*live["questions"], *manual["questions"]]
+    suggested = _suggested_multipliers(idea_obs, question_obs)
+
+    can_apply = (
+        int(suggested.get("idea_samples") or 0) >= int(min_samples)
+        or int(suggested.get("question_samples") or 0) >= int(min_samples)
+    )
+    applied = bool(apply and can_apply)
+    if applied:
+        state["weights"] = {
+            "idea_multiplier": float(suggested["idea_multiplier"]),
+            "question_multiplier": float(suggested["question_multiplier"]),
+            "answer_multiplier": float(suggested["answer_multiplier"]),
+        }
+
+    runs = state.get("calibration_runs") if isinstance(state.get("calibration_runs"), list) else []
+    run = {
+        "type": "auto_calibration",
+        "applied": applied,
+        "can_apply": can_apply,
+        "calibrated_by": str(calibrated_by or "system"),
+        "min_samples": int(min_samples),
+        "sample_counts": {
+            "idea_samples": int(suggested.get("idea_samples") or 0),
+            "question_samples": int(suggested.get("question_samples") or 0),
+        },
+        "suggested_weights": {
+            "idea_multiplier": float(suggested["idea_multiplier"]),
+            "question_multiplier": float(suggested["question_multiplier"]),
+            "answer_multiplier": float(suggested["answer_multiplier"]),
+        },
+        "applied_weights": state.get("weights"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    runs.append(run)
+    state["calibration_runs"] = runs[-200:]
+    _write_roi_estimator_state(state)
+    return {
+        "result": "calibrated" if applied else "calibration_suggested_only",
+        "run": run,
+        "estimator": get_roi_estimator(),
+    }
 
 
 def _create_or_reuse_issue_task(

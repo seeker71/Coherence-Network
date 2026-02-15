@@ -81,6 +81,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 067 Unified System Asset Registry API and UI | ✓ | ✓ | ✓ | all system parts registered as assets with API and `/portfolio` registry view |
 | 068 Contributor/Contribution/Asset/Task Web Surfaces | ✓ | ✓ | ✓ | dedicated web pages + mounted agent router + `/v1` parity scan support |
 | 069 Question/Answer Ontology and Evolution Trace | ✓ | ✓ | ✓ | all Q/A rows linked to idea/parent and exposed with provenance/evolution in inventory |
+| 070 ROI Estimator and Measurement Feedback Loop | ✓ | ✓ | ✓ | estimator API + measurement ingestion + calibration + persisted weights/history |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

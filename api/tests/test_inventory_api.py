@@ -56,6 +56,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "assets" in data
         assert "contributors" in data
         assert "roi_insights" in data
+        assert "roi_estimator" in data
         assert "next_roi_work" in data
         assert "operating_console" in data
         assert "evidence_contract" in data
@@ -76,6 +77,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert "coverage" in data["assets"]
         assert "by_perspective" in data["contributors"]
         assert "most_estimated_roi" in data["roi_insights"]
+        assert "weights" in data["roi_estimator"]
         assert data["next_roi_work"]["selection_basis"] == "highest_idea_estimated_roi_then_question_roi"
         assert "estimated_roi_rank" in data["operating_console"]
         assert "checks" in data["evidence_contract"]
@@ -640,3 +642,77 @@ async def test_auto_answer_high_roi_questions_updates_answers_and_creates_derive
             idea["id"] in {"tracking-maturity-scorecard", "tracking-audit-anomaly-detection"}
             for idea in ideas
         )
+
+
+@pytest.mark.asyncio
+async def test_roi_estimator_endpoint_exposes_weights_and_observations(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("ROI_ESTIMATOR_PATH", str(tmp_path / "roi_estimator.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        estimator = await client.get("/api/inventory/roi/estimator")
+        assert estimator.status_code == 200
+        payload = estimator.json()
+        assert "weights" in payload
+        assert "suggested_weights" in payload
+        assert "observations" in payload
+        assert "formula" in payload
+
+        patched = await client.patch(
+            "/api/inventory/roi/estimator/weights",
+            json={"question_multiplier": 1.2, "updated_by": "human:tester"},
+        )
+        assert patched.status_code == 200
+        patched_payload = patched.json()
+        assert patched_payload["weights"]["question_multiplier"] == 1.2
+
+
+@pytest.mark.asyncio
+async def test_roi_measurement_and_calibration_updates_estimator(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("ROI_ESTIMATOR_PATH", str(tmp_path / "roi_estimator.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        first = listed.json()["ideas"][0]
+        question = first["open_questions"][0]["question"]
+        answered = await client.post(
+            f"/api/ideas/{first['id']}/questions/answer",
+            json={
+                "question": question,
+                "answer": "Measure realized delta for calibration.",
+                "measured_delta": 6.0,
+            },
+        )
+        assert answered.status_code == 200
+
+        measurement = await client.post(
+            "/api/inventory/roi/estimator/measurements",
+            json={
+                "subject_type": "question",
+                "subject_id": question,
+                "idea_id": first["id"],
+                "estimated_roi": 2.0,
+                "actual_roi": 3.0,
+                "measured_by": "codex:test",
+                "source": "test",
+            },
+        )
+        assert measurement.status_code == 200
+        m_payload = measurement.json()
+        assert m_payload["result"] == "measurement_recorded"
+
+        calibration = await client.post(
+            "/api/inventory/roi/estimator/calibrate",
+            params={"apply": True, "min_samples": 1, "calibrated_by": "codex:test"},
+        )
+        assert calibration.status_code == 200
+        c_payload = calibration.json()
+        assert c_payload["result"] in {"calibrated", "calibration_suggested_only"}
+        assert "run" in c_payload
+        assert "estimator" in c_payload

@@ -32,8 +32,9 @@ Quick reference: spec status, test coverage, last verified.
 | 067 | ✓ | ✓ | ✓ |
 | 068 | ✓ | ✓ | ✓ |
 | 069 | ✓ | ✓ | ✓ |
+| 070 | ✓ | ✓ | ✓ |
 
-**Total:** 47 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–069).
+**Total:** 48 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–070).
 
 ## Test Verification
 
@@ -83,6 +84,7 @@ cd web && npm run build      # 12 routes
 | 067 | test_inventory_api.py, web build + manual validation (`/portfolio`) |
 | 068 | test_inventory_api.py, test_runtime_api.py, web build |
 | 069 | test_ideas.py, test_inventory_api.py |
+| 070 | test_inventory_api.py |
 
 ## Last Updated
 
