@@ -7,6 +7,19 @@ from pathlib import Path
 
 from app.services import idea_service, runtime_service, value_lineage_service
 
+FALLBACK_SPECS: list[dict[str, str]] = [
+    {
+        "spec_id": "048",
+        "title": "value lineage and payout attribution",
+        "path": "specs/048-value-lineage-and-payout-attribution.md",
+    },
+    {
+        "spec_id": "049",
+        "title": "system lineage inventory and runtime telemetry",
+        "path": "specs/049-system-lineage-inventory-and-runtime-telemetry.md",
+    },
+]
+
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[3]
@@ -15,7 +28,7 @@ def _project_root() -> Path:
 def _discover_specs(limit: int = 300) -> list[dict]:
     specs_dir = _project_root() / "specs"
     if not specs_dir.exists():
-        return []
+        return FALLBACK_SPECS[: max(1, min(limit, 2000))]
     files = sorted(specs_dir.glob("*.md"))
     out: list[dict] = []
     for path in files[: max(1, min(limit, 2000))]:
@@ -29,7 +42,7 @@ def _discover_specs(limit: int = 300) -> list[dict]:
                 "path": str(path),
             }
         )
-    return out
+    return out or FALLBACK_SPECS[: max(1, min(limit, 2000))]
 
 
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
