@@ -6,7 +6,14 @@ import json
 import os
 from typing import Any
 
-from app.models.idea import Idea, IdeaPortfolioResponse, IdeaSummary, IdeaWithScore, ManifestationStatus
+from app.models.idea import (
+    Idea,
+    IdeaPortfolioResponse,
+    IdeaQuestion,
+    IdeaSummary,
+    IdeaWithScore,
+    ManifestationStatus,
+)
 
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
@@ -77,6 +84,11 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
     },
 ]
 
+STANDING_QUESTION_TEXT = (
+    "How can we improve this idea, and if it cannot be measured yet how can it be measured, "
+    "and if it is measured how can that measurement be improved?"
+)
+
 
 def _default_portfolio_path() -> str:
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -115,7 +127,13 @@ def _read_ideas() -> list[Idea]:
             ideas.append(Idea(**item))
         except Exception:
             continue
-    return ideas or [Idea(**item) for item in DEFAULT_IDEAS]
+    if not ideas:
+        ideas = [Idea(**item) for item in DEFAULT_IDEAS]
+
+    ideas, changed = _ensure_standing_questions(ideas)
+    if changed:
+        _write_ideas(ideas)
+    return ideas
 
 
 def _write_ideas(ideas: list[Idea]) -> None:
@@ -123,6 +141,25 @@ def _write_ideas(ideas: list[Idea]) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
+
+
+def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    for idea in ideas:
+        has_standing = any(q.question == STANDING_QUESTION_TEXT for q in idea.open_questions)
+        if has_standing:
+            continue
+        default_value = 24.0 if idea.manifestation_status != ManifestationStatus.NONE else 20.0
+        default_cost = 2.0 if idea.manifestation_status != ManifestationStatus.NONE else 3.0
+        idea.open_questions.append(
+            IdeaQuestion(
+                question=STANDING_QUESTION_TEXT,
+                value_to_whole=default_value,
+                estimated_cost=default_cost,
+            )
+        )
+        changed = True
+    return ideas, changed
 
 
 def _score(idea: Idea) -> float:
