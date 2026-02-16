@@ -217,6 +217,12 @@ def _default_registry() -> dict:
                 "idea_id": "coherence-network-agent-pipeline",
             },
             {
+                "path": "/api/friction/entry-points",
+                "methods": ["GET"],
+                "purpose": "Unified high-impact friction entry points from failures, high-cost tasks, and CI usage waste",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
                 "path": "/api/automation/usage/readiness",
                 "methods": ["GET"],
                 "purpose": "Provider configuration/readiness contract with blocking issues and recommendations",
@@ -274,6 +280,11 @@ def _default_registry() -> dict:
             {
                 "path": "/automation",
                 "purpose": "Human interface for automation provider capacity and alert visibility",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/friction",
+                "purpose": "Human view of high-impact friction entry points and evidence links",
                 "idea_id": "coherence-network-agent-pipeline",
             },
         ],

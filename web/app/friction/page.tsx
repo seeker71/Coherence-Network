@@ -36,25 +36,51 @@ interface FrictionEvent {
   cost_of_delay: number;
 }
 
+interface FrictionEntryPoint {
+  key: string;
+  title: string;
+  severity: string;
+  status: string;
+  event_count: number;
+  energy_loss: number;
+  cost_of_delay: number;
+  wasted_minutes: number;
+  recommended_action: string;
+  evidence_links: string[];
+  sources: string[];
+}
+
+interface FrictionEntryPointReport {
+  generated_at: string;
+  window_days: number;
+  total_entry_points: number;
+  open_entry_points: number;
+  entry_points: FrictionEntryPoint[];
+}
+
 export default function FrictionPage() {
   const [report, setReport] = useState<FrictionReport | null>(null);
   const [events, setEvents] = useState<FrictionEvent[]>([]);
+  const [entryPoints, setEntryPoints] = useState<FrictionEntryPointReport | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [reportRes, eventsRes] = await Promise.all([
+      const [reportRes, eventsRes, entryRes] = await Promise.all([
         fetch(`${API_URL}/api/friction/report?window_days=7`, { cache: "no-store" }),
         fetch(`${API_URL}/api/friction/events?limit=20`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/friction/entry-points?window_days=7&limit=25`, { cache: "no-store" }),
       ]);
-      if (!reportRes.ok || !eventsRes.ok) {
-        throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}`);
+      if (!reportRes.ok || !eventsRes.ok || !entryRes.ok) {
+        throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}/${entryRes.status}`);
       }
       const reportJson = (await reportRes.json()) as FrictionReport;
       const eventsJson = (await eventsRes.json()) as FrictionEvent[];
+      const entryJson = (await entryRes.json()) as FrictionEntryPointReport;
       setReport(reportJson);
       setEvents(eventsJson);
+      setEntryPoints(entryJson);
       setStatus("ok");
       setError(null);
     } catch (e) {
@@ -93,6 +119,45 @@ export default function FrictionPage() {
 
       {status === "ok" && report && (
         <section className="space-y-6">
+          {entryPoints && (
+            <div className="rounded border p-4">
+              <h2 className="font-semibold mb-3">Friction entry points</h2>
+              <p className="text-muted-foreground text-sm mb-3">
+                total {entryPoints.total_entry_points} | open {entryPoints.open_entry_points}
+              </p>
+              <ul className="space-y-3 text-sm">
+                {entryPoints.entry_points.length === 0 && (
+                  <li className="text-muted-foreground">No friction entry points detected.</li>
+                )}
+                {entryPoints.entry_points.map((entry) => (
+                  <li key={entry.key} className="rounded border p-3">
+                    <p className="font-medium">
+                      {entry.title} | severity {entry.severity} | status {entry.status}
+                    </p>
+                    <p className="text-muted-foreground">
+                      events {entry.event_count} | wasted_minutes {entry.wasted_minutes} | energy_loss {entry.energy_loss} | cost_of_delay{" "}
+                      {entry.cost_of_delay}
+                    </p>
+                    <p className="text-muted-foreground">{entry.recommended_action}</p>
+                    {entry.evidence_links.length > 0 && (
+                      <p className="text-muted-foreground">
+                        evidence:{" "}
+                        {entry.evidence_links.slice(0, 3).map((link, idx) => (
+                          <span key={`${entry.key}-${link}`}>
+                            {idx > 0 ? " | " : ""}
+                            <a href={link} target={link.startsWith("http") ? "_blank" : "_self"} rel="noreferrer" className="underline">
+                              {link}
+                            </a>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded border p-3">
               <p className="text-muted-foreground">Events (7d)</p>

@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from app.models.friction import FrictionEvent, FrictionReport
+from app.models.friction import FrictionEntryPointReport, FrictionEvent, FrictionReport
 from app.services import friction_service
 
 router = APIRouter()
@@ -38,3 +38,12 @@ async def report(
     data["source_file"] = str(friction_service.friction_file_path())
     data["ignored_lines"] = ignored
     return FrictionReport(**data)
+
+
+@router.get("/friction/entry-points", response_model=FrictionEntryPointReport)
+async def entry_points(
+    window_days: int = Query(7, ge=1, le=365),
+    limit: int = Query(20, ge=1, le=200),
+) -> FrictionEntryPointReport:
+    data = friction_service.friction_entry_points(window_days=window_days, limit=limit)
+    return FrictionEntryPointReport(**data)
