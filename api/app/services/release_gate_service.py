@@ -851,9 +851,22 @@ def list_spec_paths_at_ref(
     """List spec markdown file paths for a repository ref."""
     url = f"https://api.github.com/repos/{repository}/contents/specs"
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url, params={"ref": ref})
-        response.raise_for_status()
-        data = response.json()
+        data: Any = None
+        for attempt in range(3):
+            response = client.get(url, params={"ref": ref})
+            if response.status_code >= 500 and attempt < 2:
+                time.sleep(0.2 * float(attempt + 1))
+                continue
+            # 403 can happen in unauthenticated CI due GitHub API rate-limit.
+            # Traceability report should still render with degraded spec linkage.
+            if response.status_code in {403, 404}:
+                return []
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError:
+                return []
+            data = response.json()
+            break
     out: list[str] = []
     if isinstance(data, list):
         for item in data:

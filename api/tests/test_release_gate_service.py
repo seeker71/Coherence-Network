@@ -6,14 +6,15 @@ import httpx
 import respx
 
 from app.services.release_gate_service import (
-    get_branch_head_sha,
-    get_file_content_at_ref,
     collect_rerunnable_actions_run_ids,
+    evaluate_collective_review_gates,
     evaluate_commit_traceability_report,
     evaluate_public_deploy_contract_report,
-    evaluate_collective_review_gates,
     evaluate_pr_gates,
     extract_actions_run_id,
+    get_branch_head_sha,
+    get_file_content_at_ref,
+    list_spec_paths_at_ref,
 )
 
 
@@ -234,3 +235,19 @@ def test_get_file_content_at_ref_returns_none_when_github_keeps_5xx() -> None:
 
     assert out is None
     assert route.call_count == 3
+
+
+@respx.mock
+def test_list_spec_paths_at_ref_returns_empty_on_403_rate_limit() -> None:
+    repository = "seeker71/Coherence-Network"
+    ref = "main"
+    url = f"https://api.github.com/repos/{repository}/contents/specs"
+
+    route = respx.get(url).mock(
+        return_value=httpx.Response(403, json={"message": "API rate limit exceeded"})
+    )
+
+    out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
+
+    assert out == []
+    assert route.call_count == 1
