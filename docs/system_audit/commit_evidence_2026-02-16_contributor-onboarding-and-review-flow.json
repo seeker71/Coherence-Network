@@ -1,0 +1,132 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/contributor-onboarding-and-review-flow",
+  "commit_scope": "Add end-to-end contributor onboarding and governed change flow: register contributor, create/update idea/spec/question via change requests, and review with human/machine yes-no votes",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/models/governance.py",
+    "api/app/models/idea.py",
+    "api/app/models/spec_registry.py",
+    "api/app/routers/governance.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/spec_registry.py",
+    "api/app/services/governance_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_spec_registry_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_contributor-onboarding-and-review-flow.json",
+    "specs/094-contributor-onboarding-and-governed-change-flow.md",
+    "web/app/contribute/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-web-interface",
+    "coherence-network-value-attribution"
+  ],
+  "spec_ids": [
+    "094"
+  ],
+  "task_ids": [
+    "contributor-onboarding-and-review-flow"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["spec", "implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_ideas.py tests/test_spec_registry_api.py tests/test_governance_api.py tests/test_inventory_api.py",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_contributor-onboarding-and-review-flow.json"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/models/governance.py",
+    "api/app/models/idea.py",
+    "api/app/models/spec_registry.py",
+    "api/app/routers/governance.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/spec_registry.py",
+    "api/app/services/governance_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_spec_registry_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "docs/SPEC-TRACKING.md",
+    "specs/094-contributor-onboarding-and-governed-change-flow.md",
+    "web/app/contribute/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "New contributors can register and submit governed change requests for idea/spec/question updates, with attributable yes/no votes by human or machine reviewers, auto-applied on approval.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/contribute",
+      "https://coherence-network.vercel.app/contributors",
+      "https://coherence-network.vercel.app/specs",
+      "https://coherence-network-production.up.railway.app/api/governance/change-requests",
+      "https://coherence-network-production.up.railway.app/api/spec-registry"
+    ],
+    "test_flows": [
+      "web: register contributor in contribution console",
+      "web: submit idea/spec/question change request from contribution console",
+      "web: cast yes/no vote and observe status transition open->applied or open->rejected",
+      "api: create change request and vote yes/no using governance endpoints"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T12:13:41Z",
+    "environment": {
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_ideas.py tests/test_spec_registry_api.py tests/test_governance_api.py tests/test_inventory_api.py",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

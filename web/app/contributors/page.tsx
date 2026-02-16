@@ -58,6 +58,9 @@ function ContributorsPageContent() {
         <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
           Portfolio
         </Link>
+        <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
+          Contribute
+        </Link>
         <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
           Contributions
         </Link>
@@ -77,6 +80,10 @@ function ContributorsPageContent() {
             Filtered by contributor <code>{selectedContributorId}</code>.
           </>
         ) : null}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        To register a new contributor and submit idea/spec/question changes, use the{" "}
+        <Link href="/contribute" className="underline hover:text-foreground">Contribution Console</Link>.
       </p>
 
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
