@@ -187,6 +187,7 @@ Before implementation work on changed specs:
 
 ```bash
 python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD
+python3 scripts/check_worktree_isolation.py
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
 
@@ -197,6 +198,7 @@ The preflight command also runs common branch CI/CD failure checks locally and w
 - `docs/system_audit/vercel_rate_limit_guard_latest.json`
 - `docs/system_audit/vercel_rate_limit_guard_history.jsonl`
 When Vercel checks are rate-limited, preflight fails fast by default to prevent repeated PR iteration during cooldown.
+The worktree guard fails when run from the primary checkout, enforcing parallel-safe thread isolation.
 
 ## Local Web Validation In Worktrees
 

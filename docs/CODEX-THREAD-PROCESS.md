@@ -23,6 +23,7 @@ Run and record:
 
 ```bash
 python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD
+python3 scripts/check_worktree_isolation.py
 cd api && .venv/bin/pytest -q
 ./scripts/verify_worktree_local_web.sh
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
@@ -34,6 +35,7 @@ Gate status:
 - PASS only if changed specs pass the spec quality contract (when any feature spec changed).
 - PASS only if no stale open `codex/*` PR is left unattended.
 - PASS only if local CI/CD preflight catches no blocking issues.
+- PASS only if `check_worktree_isolation.py` confirms execution is in a linked worktree (`.git` file pointing to `.git/worktrees/...`).
 
 Worktree notes:
 - This command is the default local web validation for Codex threads.

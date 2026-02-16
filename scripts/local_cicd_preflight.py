@@ -158,6 +158,12 @@ def main() -> int:
     steps: list[dict[str, Any]] = []
     pipeline: list[tuple[str, list[str], Path, bool]] = [
         (
+            "worktree_isolation_guard",
+            ["python3", "scripts/check_worktree_isolation.py"],
+            root,
+            True,
+        ),
+        (
             "vercel_rate_limit_guard",
             [
                 "python3",
