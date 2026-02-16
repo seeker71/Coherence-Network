@@ -136,7 +136,7 @@ jobs:
 
       - name: Create or update deploy drift issue
         if: ${{ steps.outcome.outputs.exit_code != '0' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -186,7 +186,7 @@ jobs:
 
       - name: Resolve deploy drift issue when contract passes
         if: ${{ steps.outcome.outputs.exit_code == '0' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = 'Public deployment contract failing on main';
