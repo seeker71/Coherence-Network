@@ -1,0 +1,71 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/no-partial-work-gate",
+  "commit_scope": "Add local PR follow-through gate to prevent abandoned open Codex PRs and enforce this in autonomous execution workflow.",
+  "files_owned": [
+    "scripts/check_pr_followthrough.py",
+    "api/scripts/run_autonomous.sh",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/system_audit/commit_evidence_2026-02-16_pr-followthrough-local-gate.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "006"
+  ],
+  "task_ids": [
+    "pr-followthrough-local-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 100000 --fail-on-stale --strict",
+    "bash -n api/scripts/run_autonomous.sh",
+    "python3 scripts/validate_workflow_references.py"
+  ],
+  "change_files": [
+    "scripts/check_pr_followthrough.py",
+    "api/scripts/run_autonomous.sh",
+    "docs/CODEX-THREAD-PROCESS.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T20:40:00Z",
+    "environment": {
+      "python": "3.11"
+    },
+    "commands": [
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 100000 --fail-on-stale --strict",
+      "bash -n api/scripts/run_autonomous.sh",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI validation"
+  }
+}
