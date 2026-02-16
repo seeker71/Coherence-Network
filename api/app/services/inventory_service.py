@@ -307,20 +307,7 @@ def sync_implementation_request_question_tasks() -> dict:
     }
 
 
-FALLBACK_SPECS: list[dict[str, str]] = [
-    {
-        "spec_id": "048",
-        "title": "value lineage and payout attribution",
-        "path": "specs/048-value-lineage-and-payout-attribution.md",
-    },
-    {
-        "spec_id": "049",
-        "title": "system lineage inventory and runtime telemetry",
-        "path": "specs/049-system-lineage-inventory-and-runtime-telemetry.md",
-    },
-]
-
-_SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "fallback"}
+_SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
 _SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
 _EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
 _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
@@ -443,7 +430,7 @@ def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
 
     if local:
         return local, "local"
-    return FALLBACK_SPECS[: max(1, min(limit, 2000))], "fallback"
+    return [], "none"
 
 
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
