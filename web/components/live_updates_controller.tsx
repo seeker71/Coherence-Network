@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { LIVE_REFRESH_EVENT } from "@/lib/live_refresh";
 
-const POLL_MS = 20000;
+const POLL_MS = 10000;
+const VERSION_CHECK_INTERVAL_TICKS = 3;
+const LIVE_UPDATES_STORAGE_KEY = "coherence_live_updates_enabled";
 
 type HealthProxyResponse = {
   web?: {
@@ -22,14 +24,14 @@ export default function LiveUpdatesController() {
   const tickRef = useRef<number>(0);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("coherence_live_updates_enabled");
+    const stored = window.localStorage.getItem(LIVE_UPDATES_STORAGE_KEY);
     if (stored === "0") {
       setEnabled(false);
     }
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("coherence_live_updates_enabled", enabled ? "1" : "0");
+    window.localStorage.setItem(LIVE_UPDATES_STORAGE_KEY, enabled ? "1" : "0");
   }, [enabled]);
 
   useEffect(() => {
@@ -37,17 +39,7 @@ export default function LiveUpdatesController() {
 
     let cancelled = false;
 
-    const runTick = async () => {
-      if (cancelled || document.visibilityState !== "visible") return;
-
-      tickRef.current += 1;
-      const now = new Date().toISOString();
-      setLastRefreshAt(now);
-
-      window.dispatchEvent(new Event(LIVE_REFRESH_EVENT));
-      router.refresh();
-
-      if (tickRef.current % 3 !== 0) return;
+    const checkWebVersion = async () => {
       try {
         const res = await fetch("/api/health-proxy", { cache: "no-store" });
         if (!res.ok) return;
@@ -67,6 +59,36 @@ export default function LiveUpdatesController() {
       }
     };
 
+    const runTick = async () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+
+      tickRef.current += 1;
+      const now = new Date().toISOString();
+      setLastRefreshAt(now);
+
+      window.dispatchEvent(new Event(LIVE_REFRESH_EVENT));
+      router.refresh();
+
+      if (tickRef.current % VERSION_CHECK_INTERVAL_TICKS === 0) {
+        await checkWebVersion();
+      }
+    };
+
+    const handleFocus = () => {
+      void runTick();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void runTick();
+      }
+    };
+
+    void checkWebVersion();
+    void runTick();
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     const timer = window.setInterval(() => {
       void runTick();
     }, POLL_MS);
@@ -74,6 +96,8 @@ export default function LiveUpdatesController() {
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [enabled, router]);
 

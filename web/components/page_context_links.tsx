@@ -17,15 +17,19 @@ type ContextDef = {
 };
 
 const SHARED_RELATED: LinkItem[] = [
+  { href: "/search", label: "Search" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/flow", label: "Flow" },
   { href: "/ideas", label: "Ideas" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
+  { href: "/friction", label: "Friction" },
   { href: "/contributors", label: "Contributors" },
   { href: "/contributions", label: "Contributions" },
   { href: "/assets", label: "Assets" },
   { href: "/tasks", label: "Tasks" },
+  { href: "/import", label: "Import" },
+  { href: "/api-health", label: "API Health" },
   { href: "/gates", label: "Gates" },
 ];
 
@@ -59,6 +63,14 @@ const CONTEXTS: Record<string, ContextDef> = {
     ],
   },
   "/ideas": {
+    ideaId: "portfolio-governance",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/ideas", label: "Ideas API" },
+      { href: "/api/inventory/system-lineage", label: "System lineage" },
+    ],
+  },
+  "/ideas/[idea_id]": {
     ideaId: "portfolio-governance",
     related: SHARED_RELATED,
     machinePaths: [
@@ -138,6 +150,14 @@ const CONTEXTS: Record<string, ContextDef> = {
     machinePaths: [
       { href: "/api/search?q=react", label: "Search API example" },
       { href: "/api/inventory/routes/canonical", label: "Canonical routes" },
+    ],
+  },
+  "/project/[ecosystem]/[name]": {
+    ideaId: "coherence-network-web-interface",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/search?q=react", label: "Search API example" },
+      { href: "/api/inventory/page-lineage", label: "Page lineage" },
     ],
   },
   "/import": {

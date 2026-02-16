@@ -36,8 +36,8 @@ export default function ProjectPage() {
     if (!ecosystem || !name) return;
     try {
       const [projRes, cohRes] = await Promise.all([
-        fetch(`${API_URL}/api/projects/${ecosystem}/${name}`),
-        fetch(`${API_URL}/api/projects/${ecosystem}/${name}/coherence`),
+        fetch(`${API_URL}/api/projects/${ecosystem}/${name}`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/projects/${ecosystem}/${name}/coherence`, { cache: "no-store" }),
       ]);
       if (!projRes.ok) {
         if (projRes.status === 404) setError("Project not found");

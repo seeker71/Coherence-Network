@@ -68,9 +68,19 @@ type OpportunityIdea = IdeaWithScore & {
 
 const API_NAV_CARDS: Array<{ href: string; title: string; description: string }> = [
   {
+    href: "/search",
+    title: "Search",
+    description: "Find projects, then drill into per-project runtime and coherence signals.",
+  },
+  {
     href: "/portfolio",
     title: "Portfolio",
     description: "ROI-first governance: questions, costs, signals, and next actions.",
+  },
+  {
+    href: "/flow",
+    title: "Flow",
+    description: "See how ideas, contributors, contributions, and assets connect.",
   },
   {
     href: "/ideas",
@@ -88,14 +98,44 @@ const API_NAV_CARDS: Array<{ href: string; title: string; description: string }>
     description: "Runtime telemetry and friction signals.",
   },
   {
+    href: "/friction",
+    title: "Friction",
+    description: "Inspect blockers and delay-cost hotspots in the execution pipeline.",
+  },
+  {
     href: "/contributors",
     title: "Contributors",
     description: "Register contributors and track who created value.",
   },
   {
+    href: "/contributions",
+    title: "Contributions",
+    description: "Trace contributor work to assets, specs, and realized impact.",
+  },
+  {
     href: "/assets",
     title: "Assets",
     description: "Track code/docs/endpoints as measurable system assets.",
+  },
+  {
+    href: "/tasks",
+    title: "Tasks",
+    description: "Track active and queued execution items with ownership and status.",
+  },
+  {
+    href: "/gates",
+    title: "Gates",
+    description: "Validate merge/deploy contracts and endpoint traceability coverage.",
+  },
+  {
+    href: "/import",
+    title: "Import",
+    description: "Analyze dependency manifests and identify coherence risk.",
+  },
+  {
+    href: "/api-health",
+    title: "API Health",
+    description: "Monitor API readiness and web/API version alignment.",
   },
 ];
 
