@@ -19,6 +19,7 @@ def _config_path() -> Path:
 FALLBACK_PAGES: list[dict[str, str]] = [
     {"path": "/", "idea_id": "portfolio-governance"},
     {"path": "/portfolio", "idea_id": "portfolio-governance"},
+    {"path": "/flow", "idea_id": "portfolio-governance"},
     {"path": "/ideas", "idea_id": "portfolio-governance"},
     {"path": "/ideas/[idea_id]", "idea_id": "portfolio-governance"},
     {"path": "/specs", "idea_id": "coherence-network-api-runtime"},

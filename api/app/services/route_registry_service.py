@@ -60,6 +60,12 @@ def _default_registry() -> dict:
                 "purpose": "Role-weight payout attribution preview",
                 "idea_id": "portfolio-governance",
             },
+            {
+                "path": "/api/inventory/flow",
+                "methods": ["GET"],
+                "purpose": "Unified idea->spec->process->implementation->validation flow inventory",
+                "idea_id": "portfolio-governance",
+            },
         ],
         "web_routes": [
             {
@@ -76,6 +82,11 @@ def _default_registry() -> dict:
                 "path": "/api/runtime-beacon",
                 "purpose": "Web runtime telemetry forwarder",
                 "idea_id": "oss-interface-alignment",
+            },
+            {
+                "path": "/flow",
+                "purpose": "Human flow visualization for spec-process-implementation-validation tracking",
+                "idea_id": "portfolio-governance",
             },
         ],
     }
