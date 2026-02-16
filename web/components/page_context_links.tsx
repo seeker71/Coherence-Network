@@ -205,6 +205,8 @@ export default function PageContextLinks() {
     });
   }
 
+  const machineLinks = dedupe(machine);
+
   return (
     <section className="border-b bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 md:px-8 py-2 space-y-1">
@@ -221,7 +223,7 @@ export default function PageContextLinks() {
               {item.label}
             </Link>
           ))}
-          {machine.map((item) => (
+          {machineLinks.map((item) => (
             <a
               key={`api-${item.href}`}
               href={`${apiBase}${item.href}`}
