@@ -254,6 +254,20 @@ This gate fails when:
 - current worktree has uncommitted local changes,
 - primary workspace still has leftover local changes from unfinished tasks.
 
+## Telemetry Migration To DB
+
+Migrate local telemetry files (`automation_usage_snapshots.json`, `friction_events.jsonl`) into DB-backed telemetry tables:
+
+```bash
+cd api && python scripts/migrate_local_telemetry_to_db.py --json
+```
+
+After `parity_ok=true`, remove outdated local telemetry files:
+
+```bash
+cd api && python scripts/migrate_local_telemetry_to_db.py --purge-local --yes --json
+```
+
 ## Cleanup Old Task Logs
 
 Task logs accumulate. To remove logs older than 7 days:

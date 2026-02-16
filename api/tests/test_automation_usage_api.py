@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -96,6 +98,45 @@ async def test_automation_usage_snapshots_endpoint_returns_persisted_rows(
         payload = snapshots.json()
         assert payload["count"] >= 1
         assert len(payload["snapshots"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_snapshots_bootstrap_into_db_backend(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshots_file = tmp_path / "automation_usage.json"
+    snapshots_file.write_text(
+        json.dumps(
+            {
+                "snapshots": [
+                    {
+                        "id": "provider_bootstrap_1",
+                        "provider": "github",
+                        "kind": "github",
+                        "status": "ok",
+                        "collected_at": "2026-02-16T00:00:00Z",
+                        "metrics": [],
+                        "notes": ["bootstrapped"],
+                        "raw": {},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(snapshots_file))
+    monkeypatch.setenv("AUTOMATION_USAGE_USE_DB", "1")
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'telemetry.db'}")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        snapshots = await client.get("/api/automation/usage/snapshots", params={"limit": 20})
+        assert snapshots.status_code == 200
+        payload = snapshots.json()
+        ids = {row["id"] for row in payload["snapshots"]}
+        assert "provider_bootstrap_1" in ids
 
 
 @pytest.mark.asyncio
