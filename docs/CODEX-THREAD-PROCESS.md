@@ -29,6 +29,12 @@ Gate status:
 - PASS only when running from a linked worktree (`.git` is a file, not the main repo dir).
 - PASS only when current worktree has no local changes before starting the next task.
 - PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
+- PASS only when latest `main` GitHub Actions workflow run is green.
+- PASS only when open PRs have no failing check-runs (if failures exist, fix process/gates before starting new work).
+
+Remote CI note:
+- Start gate now queries GitHub via `gh`. Ensure `gh auth status` succeeds in your shell.
+- Emergency bypass exists (`--skip-remote-ci`) but is not recommended and should be used only for local debugging.
 
 ### Phase A: Local Validation (required before commit)
 

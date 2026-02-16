@@ -243,6 +243,12 @@ Before starting a new task, enforce worktree-only + clean-state:
 python3 scripts/ensure_worktree_start_clean.py --json
 ```
 
+What it blocks:
+- dirty current worktree
+- dirty primary workspace
+- latest `main` CI run not green
+- open PRs with failing check-runs
+
 This gate fails when:
 - work is started in the primary repo workspace instead of a linked worktree,
 - current worktree has uncommitted local changes,
