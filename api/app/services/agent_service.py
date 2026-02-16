@@ -69,6 +69,129 @@ _OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
 }
 
+_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+
+
+def _int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return default
+    return max(0, value)
+
+
+def _executor_policy_enabled() -> bool:
+    raw = os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _normalize_executor(value: str | None, default: str = "claude") -> str:
+    candidate = (value or "").strip().lower()
+    if candidate in _EXECUTOR_VALUES:
+        return candidate
+    return default
+
+
+def _cheap_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_CHEAP_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="cursor")
+    fallback = os.environ.get("AGENT_EXECUTOR_DEFAULT", "cursor")
+    return _normalize_executor(fallback, default="cursor")
+
+
+def _escalation_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_ESCALATE_TO")
+    if configured:
+        return _normalize_executor(configured, default="claude")
+    cheap = _cheap_executor_default()
+    return "claude" if cheap != "claude" else "openclaw"
+
+
+def _task_fingerprint(task_type: TaskType, direction: str) -> str:
+    basis = f"{task_type.value}:{direction.strip().lower()}"
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+
+
+def _task_retry_hint(context: dict[str, Any]) -> int:
+    for key in ("retry_count", "retry_index", "attempt", "attempt_count"):
+        raw = context.get(key)
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, (int, float)):
+            return max(0, int(raw))
+        if isinstance(raw, str):
+            value = raw.strip()
+            if value.isdigit():
+                return max(0, int(value))
+    return 0
+
+
+def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
+    attempts = 0
+    failed = 0
+    for task in _store.values():
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if str(context.get("task_fingerprint") or "").strip() != task_fingerprint:
+            continue
+        attempts += 1
+        status = task.get("status")
+        status_value = status.value if hasattr(status, "value") else str(status or "")
+        if status_value == "failed":
+            failed += 1
+    return {"attempts": attempts, "failed": failed}
+
+
+def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    explicit = _normalize_executor(context.get("executor"), default="")
+    if explicit:
+        return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+
+    if not _executor_policy_enabled():
+        default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+        return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+
+    task_fingerprint = str(context.get("task_fingerprint") or "").strip()
+    if not task_fingerprint:
+        task_fingerprint = _task_fingerprint(task_type, direction)
+        context["task_fingerprint"] = task_fingerprint
+
+    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
+    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
+    cheap = _cheap_executor_default()
+    escalate_to = _escalation_executor_default()
+    if escalate_to == cheap:
+        escalate_to = "claude" if cheap != "claude" else "openclaw"
+
+    stats = _prior_attempt_stats(task_fingerprint)
+    retry_hint = _task_retry_hint(context)
+    effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
+
+    should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
+    selected = escalate_to if should_escalate else cheap
+    reason = "cheap_default"
+    if should_escalate:
+        reason = "retry_threshold" if effective_retry_count >= retry_threshold else "failure_threshold"
+
+    return selected, {
+        "policy_applied": True,
+        "reason": reason,
+        "task_fingerprint": task_fingerprint,
+        "retry_threshold": retry_threshold,
+        "failure_threshold": failure_threshold,
+        "historical_attempts": stats["attempts"],
+        "historical_failures": stats["failed"],
+        "retry_hint": retry_hint,
+        "effective_retry_count": effective_retry_count,
+        "cheap_executor": cheap,
+        "escalation_executor": escalate_to,
+    }
+
 
 def _command_template(task_type: TaskType) -> str:
     agent = AGENT_BY_TASK_TYPE.get(task_type)
@@ -431,10 +554,14 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     _ensure_store_loaded()
     task_id = _generate_id()
-    ctx = data.context if isinstance(data.context, dict) else {}
-    executor = (ctx.get("executor") or os.environ.get("AGENT_EXECUTOR_DEFAULT", "claude")).lower()
-    if executor not in ("claude", "cursor", "openclaw"):
-        executor = "claude"
+    ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    executor, policy_meta = _select_executor(data.task_type, data.direction, ctx)
+    if policy_meta.get("policy_applied"):
+        ctx["executor_policy"] = policy_meta
+    if "task_fingerprint" in policy_meta:
+        ctx.setdefault("task_fingerprint", policy_meta["task_fingerprint"])
+    ctx["executor"] = executor
+
     model, tier = ROUTING[data.task_type]
     if executor == "cursor":
         model = f"cursor/{_CURSOR_MODEL_BY_TYPE[data.task_type]}"
@@ -468,7 +595,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "command": command,
         "started_at": None,
         "output": None,
-        "context": data.context,
+        "context": ctx,
         "progress_pct": None,
         "current_step": None,
         "decision_prompt": None,
@@ -594,6 +721,10 @@ def get_review_summary() -> dict[str, Any]:
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
     """Return routing info for a task type (no persistence). executor: claude|cursor|openclaw."""
+    executor = (executor or "auto").strip().lower()
+    if executor == "auto":
+        executor = _cheap_executor_default()
+    executor = _normalize_executor(executor, default="claude")
     if executor == "cursor":
         model = f"cursor/{_CURSOR_MODEL_BY_TYPE[task_type]}"
         template = _cursor_command_template(task_type)

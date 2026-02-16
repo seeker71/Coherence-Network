@@ -99,6 +99,27 @@ HEAL tasks route to Claude by default. Set `ANTHROPIC_API_KEY` for Claude models
 - Security/auth code → Start at Claude
 - Architecture decision → Claude Sonnet/Opus
 
+### Automatic Executor Cost Policy
+
+The agent API now supports an automatic executor policy:
+
+- Use the cheap executor by default.
+- Escalate to a stronger executor only when retry/failure thresholds are reached.
+
+Environment variables:
+
+- `AGENT_EXECUTOR_POLICY_ENABLED` (default `1`)
+- `AGENT_EXECUTOR_CHEAP_DEFAULT` (default `cursor`, falls back to `AGENT_EXECUTOR_DEFAULT`)
+- `AGENT_EXECUTOR_ESCALATE_TO` (default `claude`; if equal to cheap, falls back to `openclaw`)
+- `AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD` (default `2`)
+- `AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD` (default `1`)
+
+Notes:
+
+- `POST /api/agent/tasks` applies this automatically when `context.executor` is not explicitly set.
+- `GET /api/agent/route` supports `executor=auto` (policy default).
+- Each task stores policy decision metadata under `context.executor_policy` for auditability.
+
 ---
 
 ## Setup Order
