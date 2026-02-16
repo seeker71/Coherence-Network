@@ -1010,6 +1010,7 @@ def sync_traceability_gap_artifacts(
     runtime_window_seconds: int = 86400,
     max_spec_idea_links: int = 150,
     max_missing_endpoint_specs: int = 200,
+    max_spec_process_backfills: int = 500,
     max_usage_gap_tasks: int = 200,
 ) -> dict[str, Any]:
     traceability = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
@@ -1021,6 +1022,7 @@ def sync_traceability_gap_artifacts(
 
     max_link = max(1, min(max_spec_idea_links, 1000))
     max_spec_create = max(1, min(max_missing_endpoint_specs, 2000))
+    max_process_backfill = max(1, min(max_spec_process_backfills, 5000))
     max_usage_tasks = max(1, min(max_usage_gap_tasks, 2000))
 
     linked_specs_to_ideas: list[dict[str, Any]] = []
@@ -1145,6 +1147,53 @@ def sync_traceability_gap_artifacts(
             }
         )
 
+    updated_spec_process_pseudocode: list[str] = []
+    for spec in spec_registry_service.list_specs(limit=5000):
+        if len(updated_spec_process_pseudocode) >= max_process_backfill:
+            break
+        process_summary = str(spec.process_summary or "").strip()
+        pseudocode_summary = str(spec.pseudocode_summary or "").strip()
+        if process_summary and pseudocode_summary:
+            continue
+
+        title_hint = str(spec.title or spec.spec_id).strip()
+        path_hint = ""
+        method_hint = ""
+        if title_hint.lower().startswith("auto spec:"):
+            payload = title_hint.split(":", 1)[1].strip()
+            parts = payload.split(" ", 1)
+            if len(parts) == 2:
+                method_hint = parts[0].upper().strip()
+                path_hint = parts[1].strip()
+
+        generated_process_summary = process_summary or (
+            f"Define contract for {title_hint}. Validate request, execute deterministic logic, "
+            "record runtime telemetry, and verify deploy/e2e evidence."
+        )
+        generated_pseudocode_summary = pseudocode_summary or (
+            (
+                f"if request.method == '{method_hint}' and request.path == '{path_hint}': "
+                "validate_input(); run_core_logic(); persist_outputs(); emit_runtime_event(); return_response()"
+            )
+            if method_hint and path_hint
+            else (
+                "validate_input(); run_core_logic(); persist_outputs(); "
+                "emit_runtime_event(); return_response()"
+            )
+        )
+
+        updated = spec_registry_service.update_spec(
+            spec.spec_id,
+            SpecRegistryUpdate(
+                process_summary=generated_process_summary,
+                pseudocode_summary=generated_pseudocode_summary,
+                updated_by_contributor_id=_TRACEABILITY_GAP_CONTRIBUTOR_ID,
+            ),
+        )
+        if updated is None:
+            continue
+        updated_spec_process_pseudocode.append(spec.spec_id)
+
     known_usage_fingerprints = _all_task_fingerprints_for_source("endpoint_usage_gap")
     created_usage_gap_tasks: list[dict[str, Any]] = []
     skipped_existing_usage_gap_tasks = 0
@@ -1211,12 +1260,14 @@ def sync_traceability_gap_artifacts(
         "linked_specs_to_ideas_count": len(linked_specs_to_ideas),
         "created_ideas_for_specs_count": len(created_ideas_for_specs),
         "created_missing_endpoint_specs_count": len(created_specs_for_endpoints),
+        "updated_spec_process_pseudocode_count": len(updated_spec_process_pseudocode),
         "created_usage_gap_tasks_count": len(created_usage_gap_tasks),
         "skipped_spec_idea_links_existing_count": skipped_spec_idea_links_existing,
         "skipped_existing_endpoint_specs_count": skipped_existing_endpoint_specs,
         "skipped_existing_usage_gap_tasks_count": skipped_existing_usage_gap_tasks,
         "linked_specs_to_ideas": linked_specs_to_ideas[:50],
         "created_missing_endpoint_specs": created_specs_for_endpoints[:50],
+        "updated_spec_process_pseudocode": updated_spec_process_pseudocode[:50],
         "created_usage_gap_tasks": created_usage_gap_tasks[:50],
     }
 
