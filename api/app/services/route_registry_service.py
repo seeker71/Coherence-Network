@@ -11,7 +11,14 @@ def _default_registry() -> dict:
     return {
         "version": "fallback",
         "milestone": "runtime-value-attribution",
-        "api_routes": [],
+        "api_routes": [
+            {
+                "path": "/api/runtime/events",
+                "methods": ["POST", "GET"],
+                "purpose": "Runtime event ingestion and inspection",
+                "idea_id": "oss-interface-alignment",
+            }
+        ],
         "web_routes": [],
     }
 
