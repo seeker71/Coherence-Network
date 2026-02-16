@@ -329,6 +329,7 @@ _EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "so
 _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 _ROUTE_PROBE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "item": None, "source": "none"}
 _ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
+_ROUTE_PROBE_LATEST_FILE = "route_evidence_probe_latest.json"
 
 
 def _project_root() -> Path:
@@ -794,10 +795,28 @@ def _read_latest_route_evidence_probe() -> dict[str, Any] | None:
 
     repository = _tracking_repository()
     ref = _tracking_ref()
+    raw_latest_url = (
+        f"https://raw.githubusercontent.com/{repository}/{ref}/docs/system_audit/{_ROUTE_PROBE_LATEST_FILE}"
+    )
     list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
     remote_payload: dict[str, Any] | None = None
     try:
         with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
+            raw_latest = client.get(raw_latest_url)
+            if raw_latest.status_code == 200:
+                try:
+                    payload = raw_latest.json()
+                except ValueError:
+                    payload = None
+                if isinstance(payload, dict):
+                    payload["_probe_file"] = f"docs/system_audit/{_ROUTE_PROBE_LATEST_FILE}"
+                    remote_payload = payload
+            if remote_payload is not None:
+                _ROUTE_PROBE_DISCOVERY_CACHE["item"] = dict(remote_payload)
+                _ROUTE_PROBE_DISCOVERY_CACHE["expires_at"] = now + _ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS
+                _ROUTE_PROBE_DISCOVERY_CACHE["source"] = "github-raw-latest"
+                return remote_payload
+
             response = client.get(list_url, params={"ref": ref})
             response.raise_for_status()
             rows = response.json()
