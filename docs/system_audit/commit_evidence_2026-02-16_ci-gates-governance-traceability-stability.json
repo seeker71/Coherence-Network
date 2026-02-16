@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/contributor-onboarding-and-review-flow",
+  "commit_scope": "Stabilize CI gates by reducing governance vote-function complexity and hardening commit-traceability spec listing against GitHub API rate limits",
+  "files_owned": [
+    "api/app/services/governance_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "docs/system_audit/commit_evidence_2026-02-16_ci-gates-governance-traceability-stability.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-value-attribution"
+  ],
+  "spec_ids": [
+    "094"
+  ],
+  "task_ids": [
+    "ci-gates-governance-traceability-stability"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_governance_api.py tests/test_spec_registry_api.py tests/test_ideas.py tests/test_inventory_api.py",
+    "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_report.json --fail-on-regression",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_ci-gates-governance-traceability-stability.json"
+  ],
+  "change_files": [
+    "api/app/services/governance_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Governed contributor flow remains functional while CI gates no longer fail on maintainability regression from cast_vote complexity and commit traceability gracefully handles GitHub 403 rate-limit for specs listing.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/contribute",
+      "https://coherence-network-production.up.railway.app/api/governance/change-requests",
+      "https://coherence-network-production.up.railway.app/api/gates/commit-traceability"
+    ],
+    "test_flows": [
+      "api: post change request and vote yes/no; verify applied/rejected states",
+      "api: call commit-traceability gate and verify structured response shape under degraded upstream conditions",
+      "web: contributor console remains usable for submit-and-vote path"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T12:20:16Z",
+    "commands": [
+      "cd api && pytest -q tests/test_governance_api.py tests/test_spec_registry_api.py tests/test_ideas.py tests/test_inventory_api.py",
+      "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_report.json --fail-on-regression"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}
