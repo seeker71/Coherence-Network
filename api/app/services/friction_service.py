@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.friction import FrictionEvent
-from app.services import metrics_service
+from app.services import metrics_service, telemetry_persistence_service
 
 
 def _default_path() -> Path:
@@ -21,6 +21,17 @@ def _default_path() -> Path:
 def friction_file_path() -> Path:
     configured = os.getenv("FRICTION_EVENTS_PATH")
     return Path(configured) if configured else _default_path()
+
+
+def _use_db_events() -> bool:
+    override = str(os.getenv("FRICTION_USE_DB", "")).strip().lower()
+    if override in {"1", "true", "yes", "on"}:
+        return True
+    if override in {"0", "false", "no", "off"}:
+        return False
+    if os.getenv("FRICTION_EVENTS_PATH"):
+        return False
+    return True
 
 
 def monitor_issues_file_path() -> Path:
@@ -46,6 +57,19 @@ def _parse_iso_utc(value: str) -> datetime:
 
 
 def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
+    if _use_db_events():
+        telemetry_persistence_service.ensure_schema()
+        telemetry_persistence_service.import_friction_events_from_file(friction_file_path())
+        events: list[FrictionEvent] = []
+        ignored = 0
+        for payload in telemetry_persistence_service.list_friction_events(limit=10000):
+            try:
+                events.append(FrictionEvent(**payload))
+            except Exception:
+                ignored += 1
+                continue
+        events.sort(key=lambda e: e.timestamp, reverse=True)
+        return events, ignored
     path = path or friction_file_path()
     if not path.exists():
         return [], 0
@@ -68,6 +92,9 @@ def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
 
 
 def append_event(event: FrictionEvent, path: Path | None = None) -> None:
+    if _use_db_events():
+        telemetry_persistence_service.append_friction_event(event.model_dump(mode="json"))
+        return
     path = path or friction_file_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(event.model_dump(mode="json"))
