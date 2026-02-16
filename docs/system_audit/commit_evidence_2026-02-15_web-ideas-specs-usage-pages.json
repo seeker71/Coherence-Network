@@ -1,0 +1,126 @@
+{
+  "date": "2026-02-15",
+  "thread_branch": "codex/20260215-web-ideas-specs-usage",
+  "commit_scope": "add web pages for ideas/specs/usage and default API base to production when NEXT_PUBLIC_API_URL is unset",
+  "files_owned": [
+    "specs/075-web-ideas-specs-usage-pages.md",
+    "web/lib/api.ts",
+    "web/app/page.tsx",
+    "web/app/portfolio/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/search/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/api-health/page.tsx",
+    "web/app/api/health-proxy/route.ts",
+    "web/app/api/runtime-beacon/route.ts",
+    "web/app/ideas/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/usage/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-15_web-ideas-specs-usage-pages.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface",
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "075"
+  ],
+  "task_ids": [
+    "web-ideas-specs-usage-pages"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_web-ideas-specs-usage-pages.json"
+  ],
+  "change_files": [
+    "specs/075-web-ideas-specs-usage-pages.md",
+    "web/lib/api.ts",
+    "web/app/page.tsx",
+    "web/app/portfolio/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/search/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/api-health/page.tsx",
+    "web/app/api/health-proxy/route.ts",
+    "web/app/api/runtime-beacon/route.ts",
+    "web/app/ideas/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/usage/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Vercel UI exposes dedicated pages for ideas/specs/usage; all UI pages fetch production API by default without requiring NEXT_PUBLIC_API_URL.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/ideas",
+      "https://coherence-network.vercel.app/specs",
+      "https://coherence-network.vercel.app/usage",
+      "https://coherence-network.vercel.app/portfolio",
+      "https://coherence-network-production.up.railway.app/api/ideas",
+      "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
+      "https://coherence-network-production.up.railway.app/api/runtime/ideas/summary",
+      "https://coherence-network-production.up.railway.app/api/friction/report"
+    ],
+    "test_flows": [
+      "web:/ -> click Ideas/Specs/Usage -> pages render data",
+      "web:/portfolio -> loads inventory from production API even if NEXT_PUBLIC_API_URL is unset",
+      "web:/ideas/{idea_id} -> idea detail renders questions",
+      "web:/usage -> runtime + friction summaries render"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deploy validation"
+  }
+}
