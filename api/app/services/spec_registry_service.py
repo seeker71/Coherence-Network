@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import DateTime, String, Text, create_engine, func
+from sqlalchemy import DateTime, Float, String, Text, create_engine, func, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -25,6 +25,10 @@ class SpecRegistryRecord(Base):
     spec_id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
+    potential_value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    actual_value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    estimated_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    actual_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     idea_id: Mapped[str | None] = mapped_column(String, nullable=True)
     process_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     pseudocode_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -103,13 +107,54 @@ def _session() -> Session:
 def ensure_schema() -> None:
     engine = _engine()
     Base.metadata.create_all(bind=engine)
+    _ensure_runtime_columns(engine)
+
+
+def _ensure_runtime_columns(engine: Any) -> None:
+    """Backfill newly added tracking columns for existing databases."""
+    inspector = inspect(engine)
+    if "spec_registry_entries" not in inspector.get_table_names():
+        return
+    existing = {str(col.get("name")) for col in inspector.get_columns("spec_registry_entries")}
+    required: dict[str, str] = {
+        "potential_value": "FLOAT NOT NULL DEFAULT 0.0",
+        "actual_value": "FLOAT NOT NULL DEFAULT 0.0",
+        "estimated_cost": "FLOAT NOT NULL DEFAULT 0.0",
+        "actual_cost": "FLOAT NOT NULL DEFAULT 0.0",
+    }
+    missing = {name: ddl for name, ddl in required.items() if name not in existing}
+    if not missing:
+        return
+    with engine.begin() as conn:
+        for name, ddl in missing.items():
+            conn.execute(text(f"ALTER TABLE spec_registry_entries ADD COLUMN {name} {ddl}"))
+
+
+def _safe_ratio(numerator: float, denominator: float) -> float:
+    if denominator <= 0:
+        return 0.0
+    return round(numerator / denominator, 4)
 
 
 def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
+    potential_value = float(row.potential_value or 0.0)
+    actual_value = float(row.actual_value or 0.0)
+    estimated_cost = float(row.estimated_cost or 0.0)
+    actual_cost = float(row.actual_cost or 0.0)
+    value_gap = max(potential_value - actual_value, 0.0)
+    cost_gap = actual_cost - estimated_cost
     return SpecRegistryEntry(
         spec_id=row.spec_id,
         title=row.title,
         summary=row.summary,
+        potential_value=potential_value,
+        actual_value=actual_value,
+        estimated_cost=estimated_cost,
+        actual_cost=actual_cost,
+        value_gap=round(value_gap, 4),
+        cost_gap=round(cost_gap, 4),
+        estimated_roi=_safe_ratio(potential_value, estimated_cost),
+        actual_roi=_safe_ratio(actual_value, actual_cost),
         idea_id=row.idea_id,
         process_summary=row.process_summary,
         pseudocode_summary=row.pseudocode_summary,
@@ -153,6 +198,10 @@ def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
             spec_id=data.spec_id,
             title=data.title,
             summary=data.summary,
+            potential_value=float(data.potential_value),
+            actual_value=float(data.actual_value),
+            estimated_cost=float(data.estimated_cost),
+            actual_cost=float(data.actual_cost),
             idea_id=data.idea_id,
             process_summary=data.process_summary,
             pseudocode_summary=data.pseudocode_summary,
@@ -178,6 +227,14 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
             row.title = data.title
         if data.summary is not None:
             row.summary = data.summary
+        if data.potential_value is not None:
+            row.potential_value = float(data.potential_value)
+        if data.actual_value is not None:
+            row.actual_value = float(data.actual_value)
+        if data.estimated_cost is not None:
+            row.estimated_cost = float(data.estimated_cost)
+        if data.actual_cost is not None:
+            row.actual_cost = float(data.actual_cost)
         if data.idea_id is not None:
             row.idea_id = data.idea_id
         if data.process_summary is not None:

@@ -22,6 +22,14 @@ type SpecRegistryEntry = {
   spec_id: string;
   title: string;
   summary: string;
+  potential_value: number;
+  actual_value: number;
+  estimated_cost: number;
+  actual_cost: number;
+  value_gap: number;
+  cost_gap: number;
+  estimated_roi: number;
+  actual_roi: number;
   idea_id?: string | null;
   process_summary?: string | null;
   pseudocode_summary?: string | null;
@@ -192,6 +200,30 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
             .
           </p>
         )}
+      </section>
+
+      <section className="rounded border p-4 space-y-2 text-sm">
+        <h2 className="font-semibold">Spec Value/Cost/Gap Tracking</h2>
+        <p className="text-muted-foreground">
+          potential_value {registryItem?.potential_value?.toFixed(2) ?? "-"} | actual_value {registryItem?.actual_value?.toFixed(2) ?? "-"} |
+          value_gap {registryItem?.value_gap?.toFixed(2) ?? "-"}
+        </p>
+        <p className="text-muted-foreground">
+          estimated_cost {registryItem?.estimated_cost?.toFixed(2) ?? "-"} | actual_cost {registryItem?.actual_cost?.toFixed(2) ?? "-"} |
+          cost_gap {registryItem?.cost_gap?.toFixed(2) ?? "-"}
+        </p>
+        <p className="text-muted-foreground">
+          estimated_roi {registryItem?.estimated_roi?.toFixed(2) ?? "-"} | actual_roi {registryItem?.actual_roi?.toFixed(2) ?? "-"}
+        </p>
+        {!registryItem ? (
+          <p className="text-muted-foreground">
+            Spec registry metrics missing.{" "}
+            <Link href="/contribute" className="underline hover:text-foreground">
+              Add spec value/cost measurements
+            </Link>
+            .
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">

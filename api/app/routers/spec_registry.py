@@ -38,6 +38,10 @@ async def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEnt
         for value in (
             data.title,
             data.summary,
+            data.potential_value,
+            data.actual_value,
+            data.estimated_cost,
+            data.actual_cost,
             data.idea_id,
             data.process_summary,
             data.pseudocode_summary,

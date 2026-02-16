@@ -19,6 +19,14 @@ type SpecRegistryEntry = {
   spec_id: string;
   title: string;
   summary: string;
+  potential_value: number;
+  actual_value: number;
+  estimated_cost: number;
+  actual_cost: number;
+  value_gap: number;
+  cost_gap: number;
+  estimated_roi: number;
+  actual_roi: number;
   idea_id?: string | null;
   process_summary?: string | null;
   pseudocode_summary?: string | null;
@@ -245,6 +253,11 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
               </div>
               <p>{s.title}</p>
               <p className="text-muted-foreground">{s.summary}</p>
+              <p className="text-xs text-muted-foreground">
+                value potential {s.potential_value.toFixed(2)} | value actual {s.actual_value.toFixed(2)} | value_gap{" "}
+                {s.value_gap.toFixed(2)} | cost est {s.estimated_cost.toFixed(2)} | cost actual {s.actual_cost.toFixed(2)} | cost_gap{" "}
+                {s.cost_gap.toFixed(2)} | roi est {s.estimated_roi.toFixed(2)} | roi actual {s.actual_roi.toFixed(2)}
+              </p>
               <p className="text-xs text-muted-foreground">
                 idea{" "}
                 {s.idea_id ? (
