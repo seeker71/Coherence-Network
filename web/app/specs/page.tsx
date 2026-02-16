@@ -10,20 +10,24 @@ type SpecItem = {
 
 type InventoryResponse = {
   specs?: {
+    source?: string;
     items?: SpecItem[];
   };
 };
 
-async function loadSpecs(): Promise<SpecItem[]> {
+async function loadSpecs(): Promise<{ source: string; items: SpecItem[] }> {
   const API = getApiBase();
   const res = await fetch(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = (await res.json()) as InventoryResponse;
-  return (json.specs?.items ?? []).filter((s) => Boolean(s?.spec_id));
+  return {
+    source: json.specs?.source ?? "unknown",
+    items: (json.specs?.items ?? []).filter((s) => Boolean(s?.spec_id)),
+  };
 }
 
 export default async function SpecsPage() {
-  const specs = await loadSpecs();
+  const { source, items: specs } = await loadSpecs();
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -46,7 +50,9 @@ export default async function SpecsPage() {
       <p className="text-muted-foreground">Human interface for specs discovered via `GET /api/inventory/system-lineage`.</p>
 
       <section className="rounded border p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">Total: {specs.length}</p>
+        <p className="text-sm text-muted-foreground">
+          Total: {specs.length} | source: {source}
+        </p>
         <ul className="space-y-2 text-sm">
           {specs.map((s) => (
             <li key={s.spec_id} className="rounded border p-3">

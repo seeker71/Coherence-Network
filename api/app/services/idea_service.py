@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import time
+from pathlib import Path
 from typing import Any
+
+import httpx
 
 from app.models.idea import (
     Idea,
@@ -89,6 +93,52 @@ STANDING_QUESTION_TEXT = (
     "and if it is measured how can that measurement be improved?"
 )
 
+_TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": []}
+_TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
+
+DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
+    "coherence-network-agent-pipeline": {
+        "name": "Coherence network agent pipeline",
+        "description": "Evolve autonomous task orchestration, validation gates, and failure recovery signals.",
+        "interfaces": ["machine:api", "machine:automation", "human:operators"],
+        "potential_value": 88.0,
+        "estimated_cost": 16.0,
+        "confidence": 0.65,
+    },
+    "coherence-network-api-runtime": {
+        "name": "Coherence network API runtime parity",
+        "description": "Ensure public API behavior, runtime telemetry, and deployment state stay in sync.",
+        "interfaces": ["machine:api", "human:web", "external:railway"],
+        "potential_value": 80.0,
+        "estimated_cost": 14.0,
+        "confidence": 0.62,
+    },
+    "coherence-network-value-attribution": {
+        "name": "Coherence network value attribution",
+        "description": "Track value lineage from idea to payout with measurable contribution attribution.",
+        "interfaces": ["machine:api", "human:web", "human:contributors"],
+        "potential_value": 92.0,
+        "estimated_cost": 18.0,
+        "confidence": 0.68,
+    },
+    "coherence-network-web-interface": {
+        "name": "Coherence network web interface parity",
+        "description": "Keep human-facing navigation and detail views aligned with machine-facing inventory.",
+        "interfaces": ["human:web", "machine:api", "human:contributors"],
+        "potential_value": 84.0,
+        "estimated_cost": 13.0,
+        "confidence": 0.64,
+    },
+    "deployment-gate-reliability": {
+        "name": "Deployment gate reliability",
+        "description": "Harden deploy and validation gates so failures are detected quickly and recovered automatically.",
+        "interfaces": ["external:github", "external:vercel", "external:railway"],
+        "potential_value": 86.0,
+        "estimated_cost": 15.0,
+        "confidence": 0.63,
+    },
+}
+
 
 def _default_portfolio_path() -> str:
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -97,6 +147,174 @@ def _default_portfolio_path() -> str:
 
 def _portfolio_path() -> str:
     return os.getenv("IDEA_PORTFOLIO_PATH", _default_portfolio_path())
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _tracking_repository() -> str:
+    return os.getenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+
+
+def _tracking_ref() -> str:
+    return os.getenv("TRACKING_REPOSITORY_REF", "main")
+
+
+def _github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _commit_evidence_dir() -> Path:
+    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    if custom:
+        return Path(custom)
+    return _repo_root() / "docs" / "system_audit"
+
+
+def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
+    raw = payload.get("idea_ids")
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        value = item.strip()
+        if value:
+            out.append(value)
+    return out
+
+
+def _tracked_idea_ids_from_local(max_files: int = 400) -> list[str]:
+    evidence_dir = _commit_evidence_dir()
+    if not evidence_dir.exists():
+        return []
+    out: set[str] = set()
+    files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, max_files)]
+    for path in files:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            out.update(_idea_ids_from_payload(payload))
+    return sorted(out)
+
+
+def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> list[str]:
+    now = time.time()
+    cached_ids = _TRACKED_IDEA_CACHE.get("idea_ids")
+    if (
+        isinstance(cached_ids, list)
+        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+    ):
+        return [x for x in cached_ids if isinstance(x, str) and x.strip()]
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
+    out: set[str] = set()
+
+    try:
+        with httpx.Client(timeout=timeout, headers=_github_headers()) as client:
+            response = client.get(url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+            if not isinstance(rows, list):
+                return []
+            evidence_rows = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("name"), str)
+                and row["name"].startswith("commit_evidence_")
+                and row["name"].endswith(".json")
+            ][: max(1, max_files)]
+
+            for row in evidence_rows:
+                download_url = row.get("download_url")
+                if not isinstance(download_url, str) or not download_url:
+                    continue
+                payload_resp = client.get(download_url)
+                if payload_resp.status_code != 200:
+                    continue
+                payload = payload_resp.json()
+                if isinstance(payload, dict):
+                    out.update(_idea_ids_from_payload(payload))
+    except (httpx.HTTPError, ValueError, TypeError):
+        return []
+
+    result = sorted(out)
+    _TRACKED_IDEA_CACHE["idea_ids"] = result
+    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    return result
+
+
+def _tracked_idea_ids() -> list[str]:
+    local = _tracked_idea_ids_from_local()
+    if local:
+        return local
+    return _tracked_idea_ids_from_github()
+
+
+def _humanize_idea_id(idea_id: str) -> str:
+    words = [part for part in idea_id.replace("_", "-").split("-") if part]
+    if not words:
+        return "Derived tracked idea"
+    return " ".join(words).strip().capitalize()
+
+
+def _derived_idea_for_id(idea_id: str) -> Idea:
+    metadata = DERIVED_IDEA_METADATA.get(idea_id, {})
+    name = str(metadata.get("name") or _humanize_idea_id(idea_id))
+    description = str(
+        metadata.get("description")
+        or f"Automatically derived from commit-evidence tracking for idea id '{idea_id}'."
+    )
+    interfaces = metadata.get("interfaces")
+    if not isinstance(interfaces, list) or not all(isinstance(x, str) for x in interfaces):
+        interfaces = ["machine:api", "human:web", "machine:commit-evidence"]
+    potential_value = float(metadata.get("potential_value", 70.0))
+    estimated_cost = float(metadata.get("estimated_cost", 12.0))
+    confidence = float(metadata.get("confidence", 0.55))
+
+    return Idea(
+        id=idea_id,
+        name=name,
+        description=description,
+        potential_value=potential_value,
+        actual_value=0.0,
+        estimated_cost=estimated_cost,
+        actual_cost=0.0,
+        resistance_risk=3.0,
+        confidence=max(0.0, min(confidence, 1.0)),
+        manifestation_status=ManifestationStatus.NONE,
+        interfaces=interfaces,
+        open_questions=[],
+    )
+
+
+def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    tracked_ids = _tracked_idea_ids()
+    if not tracked_ids:
+        return ideas, False
+    existing = {idea.id for idea in ideas}
+    changed = False
+    for idea_id in tracked_ids:
+        if idea_id in existing:
+            continue
+        ideas.append(_derived_idea_for_id(idea_id))
+        existing.add(idea_id)
+        changed = True
+    return ideas, changed
 
 
 def _ensure_portfolio_file() -> None:
@@ -130,8 +348,9 @@ def _read_ideas() -> list[Idea]:
     if not ideas:
         ideas = [Idea(**item) for item in DEFAULT_IDEAS]
 
-    ideas, changed = _ensure_standing_questions(ideas)
-    if changed:
+    ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+    ideas, standing_changed = _ensure_standing_questions(ideas)
+    if tracked_changed or standing_changed:
         _write_ideas(ideas)
     return ideas
 
@@ -261,3 +480,8 @@ def answer_question(
 
     _write_ideas(ideas)
     return _with_score(updated), True
+
+
+def list_tracked_idea_ids() -> list[str]:
+    """Expose tracked idea IDs (from commit evidence artifacts)."""
+    return _tracked_idea_ids()

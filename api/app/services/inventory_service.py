@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+import httpx
 
 from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service, idea_service, runtime_service, value_lineage_service
@@ -146,15 +151,47 @@ FALLBACK_SPECS: list[dict[str, str]] = [
     },
 ]
 
+_SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "fallback"}
+_SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
+
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def _discover_specs(limit: int = 300) -> list[dict]:
+def _tracking_repository() -> str:
+    return os.getenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+
+
+def _tracking_ref() -> str:
+    return os.getenv("TRACKING_REPOSITORY_REF", "main")
+
+
+def _github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _sort_spec_items(rows: list[dict]) -> list[dict]:
+    def key(row: dict) -> tuple[int, int, str]:
+        spec_id = str(row.get("spec_id") or "")
+        if spec_id.isdigit():
+            return (0, int(spec_id), "")
+        return (1, 0, spec_id)
+
+    return sorted(rows, key=key)
+
+
+def _discover_specs_local(limit: int = 300) -> list[dict]:
     specs_dir = _project_root() / "specs"
     if not specs_dir.exists():
-        return FALLBACK_SPECS[: max(1, min(limit, 2000))]
+        return []
     files = sorted(specs_dir.glob("*.md"))
     out: list[dict] = []
     for path in files[: max(1, min(limit, 2000))]:
@@ -175,7 +212,67 @@ def _discover_specs(limit: int = 300) -> list[dict]:
                 "path": f"specs/{path.name}",
             }
         )
-    return out or FALLBACK_SPECS[: max(1, min(limit, 2000))]
+    return _sort_spec_items(out)
+
+
+def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[dict]:
+    now = time.time()
+    cached = _SPEC_DISCOVERY_CACHE.get("items")
+    if isinstance(cached, list) and _SPEC_DISCOVERY_CACHE.get("expires_at", 0.0) > now:
+        return [item for item in cached if isinstance(item, dict)][: max(1, min(limit, 2000))]
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    url = f"https://api.github.com/repos/{repository}/contents/specs"
+    out: list[dict] = []
+    try:
+        with httpx.Client(timeout=timeout, headers=_github_headers()) as client:
+            response = client.get(url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+        if not isinstance(rows, list):
+            return []
+        for row in rows[: max(1, min(limit, 2000))]:
+            if not isinstance(row, dict):
+                continue
+            path = row.get("path")
+            if not isinstance(path, str) or not path.startswith("specs/") or not path.endswith(".md"):
+                continue
+            name = row.get("name") if isinstance(row.get("name"), str) else Path(path).name
+            stem = Path(name).stem
+            spec_id = stem.split("-", 1)[0] if "-" in stem else stem
+            title = stem.replace("-", " ")
+            out.append({"spec_id": spec_id, "title": title, "path": path})
+    except httpx.HTTPError:
+        return []
+
+    out = _sort_spec_items(out)
+    _SPEC_DISCOVERY_CACHE["items"] = out
+    _SPEC_DISCOVERY_CACHE["expires_at"] = now + _SPEC_DISCOVERY_CACHE_TTL_SECONDS
+    _SPEC_DISCOVERY_CACHE["source"] = "github"
+    return out
+
+
+def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
+    local = _discover_specs_local(limit=limit)
+    # If local checkout is sparse (e.g., deployment package without root specs), use GitHub source of truth.
+    if len(local) >= 5:
+        return local, "local"
+
+    remote = _discover_specs_from_github(limit=limit)
+    if remote:
+        if local:
+            by_path = {str(item.get("path")): item for item in remote}
+            for item in local:
+                path = str(item.get("path"))
+                if path and path not in by_path:
+                    by_path[path] = item
+            return _sort_spec_items(list(by_path.values())), "local+github"
+        return remote, "github"
+
+    if local:
+        return local, "local"
+    return FALLBACK_SPECS[: max(1, min(limit, 2000))], "fallback"
 
 
 def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
@@ -227,7 +324,9 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         )
 
     runtime_summary = [x.model_dump(mode="json") for x in runtime_service.summarize_by_idea(runtime_window_seconds)]
-    spec_items = _discover_specs()
+    spec_items, spec_source = _discover_specs()
+    tracked_idea_ids = idea_service.list_tracked_idea_ids()
+    runtime_events = runtime_service.list_events(limit=10000)
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -244,6 +343,7 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         },
         "specs": {
             "count": len(spec_items),
+            "source": spec_source,
             "items": spec_items,
         },
         "implementation_usage": {
@@ -254,6 +354,13 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "runtime": {
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,
+        },
+        "tracking": {
+            "tracked_idea_ids_count": len(tracked_idea_ids),
+            "tracked_idea_ids": tracked_idea_ids,
+            "spec_discovery_source": spec_source,
+            "runtime_events_count": len(runtime_events),
+            "commit_evidence_local_available": (_project_root() / "docs" / "system_audit").exists(),
         },
     }
 
