@@ -86,3 +86,38 @@ Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed comma
 - Cursor CLI has no `--agent` subagent flag; role is implied by the direction/prompt.
 - Agent runner does not set ANTHROPIC_* for Cursor; Cursor uses app login.
 - Requires Cursor Pro+ for best models (composer-1, claude-4-opus).
+
+## OpenClaw Integration
+
+OpenClaw is supported as an additional executor through `context.executor=openclaw` or `AGENT_EXECUTOR_DEFAULT=openclaw`.
+
+### Required env
+
+Set in `api/.env`:
+
+```bash
+AGENT_EXECUTOR_DEFAULT=openclaw
+OPENCLAW_MODEL=openrouter/free
+OPENCLAW_REVIEW_MODEL=openrouter/free
+OPENCLAW_COMMAND_TEMPLATE='openclaw run "{{direction}}" --model {{model}}'
+OPENCLAW_API_KEY=...
+OPENCLAW_BASE_URL=...
+```
+
+### API usage
+
+```bash
+curl -X POST http://localhost:8000/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Implement GET /api/foo","task_type":"impl","context":{"executor":"openclaw"}}'
+```
+
+### Routing check
+
+```bash
+curl "http://localhost:8000/api/agent/route?task_type=impl&executor=openclaw"
+```
+
+Notes:
+- `OPENCLAW_COMMAND_TEMPLATE` must include `{{direction}}`; `{{model}}` is optional and replaced automatically.
+- Runner telemetry classifies OpenClaw runs under `executor=openclaw` for usage/success-rate reporting.

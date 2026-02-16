@@ -22,6 +22,10 @@ _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")  # Cl
 _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
+# OpenClaw models (when context.executor == "openclaw")
+_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "openrouter/free")
+_OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
+
 # Routing: local first; use model_override in context for cloud/claude
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (f"openrouter/free", "openrouter"),
@@ -57,6 +61,14 @@ _CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _CURSOR_MODEL_REVIEW,
 }
 
+_OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
+    TaskType.SPEC: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.TEST: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
+    TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
+}
+
 
 def _command_template(task_type: TaskType) -> str:
     agent = AGENT_BY_TASK_TYPE.get(task_type)
@@ -69,6 +81,18 @@ def _cursor_command_template(task_type: TaskType) -> str:
     """Cursor CLI: agent "{{direction}}" --model X. Escapes direction for shell."""
     model = _CURSOR_MODEL_BY_TYPE[task_type]
     return f'agent "{{{{direction}}}}" --model {model}'
+
+
+def _openclaw_command_template(task_type: TaskType) -> str:
+    """OpenClaw CLI template configurable via env; must include {{direction}}."""
+    model = _OPENCLAW_MODEL_BY_TYPE[task_type]
+    template = os.environ.get(
+        "OPENCLAW_COMMAND_TEMPLATE",
+        'openclaw run "{{direction}}" --model {{model}}',
+    )
+    if "{{direction}}" not in template:
+        template = template.strip() + ' "{{direction}}"'
+    return template.replace("{{model}}", model)
 
 
 COMMAND_TEMPLATES: dict[TaskType, str] = {
@@ -252,6 +276,8 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
+    if model.startswith("openclaw/") or command.startswith("openclaw "):
+        return "openclaw"
     if command.startswith("aider "):
         return "aider"
     if command.startswith("claude "):
@@ -389,9 +415,11 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default) or 'cursor'."""
+    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw'."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
+    elif executor == "openclaw":
+        template = _openclaw_command_template(task_type)
     else:
         template = COMMAND_TEMPLATES[task_type]
     # Escape direction for shell (double-quoted string)
@@ -405,12 +433,15 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     task_id = _generate_id()
     ctx = data.context if isinstance(data.context, dict) else {}
     executor = (ctx.get("executor") or os.environ.get("AGENT_EXECUTOR_DEFAULT", "claude")).lower()
-    if executor not in ("claude", "cursor"):
+    if executor not in ("claude", "cursor", "openclaw"):
         executor = "claude"
     model, tier = ROUTING[data.task_type]
     if executor == "cursor":
         model = f"cursor/{_CURSOR_MODEL_BY_TYPE[data.task_type]}"
         tier = "cursor"
+    elif executor == "openclaw":
+        model = f"openclaw/{_OPENCLAW_MODEL_BY_TYPE[data.task_type]}"
+        tier = "openclaw"
     # Smoke test: context.command_override runs raw bash, bypassing Claude
     command = (
         (data.context or {}).get("command_override")
@@ -562,11 +593,15 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: 'claude' or 'cursor'."""
+    """Return routing info for a task type (no persistence). executor: claude|cursor|openclaw."""
     if executor == "cursor":
         model = f"cursor/{_CURSOR_MODEL_BY_TYPE[task_type]}"
         template = _cursor_command_template(task_type)
         tier = "cursor"
+    elif executor == "openclaw":
+        model = f"openclaw/{_OPENCLAW_MODEL_BY_TYPE[task_type]}"
+        template = _openclaw_command_template(task_type)
+        tier = "openclaw"
     else:
         model, tier = ROUTING[task_type]
         template = COMMAND_TEMPLATES[task_type]
