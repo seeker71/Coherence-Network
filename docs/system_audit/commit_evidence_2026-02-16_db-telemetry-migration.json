@@ -45,13 +45,30 @@
     "python scripts/migrate_local_telemetry_to_db.py --purge-local --yes --json"
   ],
   "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "api/app/models/automation_usage.py",
+    "api/app/models/friction.py",
+    "api/app/routers/friction.py",
     "api/app/services/telemetry_persistence_service.py",
     "api/app/services/automation_usage_service.py",
     "api/app/services/friction_service.py",
+    "api/app/services/route_registry_service.py",
     "api/scripts/migrate_local_telemetry_to_db.py",
+    "api/scripts/monitor_pipeline.py",
     "api/tests/test_automation_usage_api.py",
     "api/tests/test_friction_api.py",
-    "docs/RUNBOOK.md"
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "config/canonical_routes.json",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/RUNBOOK.md",
+    "docs/SPEC-COVERAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-16_db-telemetry-migration.json",
+    "scripts/ensure_worktree_start_clean.py",
+    "specs/050-friction-analysis.md",
+    "web/app/automation/page.tsx",
+    "web/app/friction/page.tsx"
   ],
   "change_intent": "runtime_feature",
   "local_validation": {
