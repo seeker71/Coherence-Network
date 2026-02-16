@@ -7,6 +7,8 @@ on:
       - Thread Gates
       - Change Contract
     types: [completed]
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       sha:
@@ -24,9 +26,9 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'workflow_run' &&
-        github.event.workflow_run.head_branch == 'main' &&
         github.event.workflow_run.run_attempt == 1 &&
-        github.event.workflow_run.conclusion != 'success'
+        github.event.workflow_run.actor.login != 'github-actions[bot]' &&
+        contains(fromJSON('["failure","cancelled","timed_out","action_required","startup_failure"]'), github.event.workflow_run.conclusion)
       )
     runs-on: ubuntu-latest
     permissions:
