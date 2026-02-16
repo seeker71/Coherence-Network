@@ -182,6 +182,7 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("GH_TOKEN", "")
     monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
 
