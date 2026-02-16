@@ -2,6 +2,9 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 
+const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
+const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
+
 type ValidationCounts = {
   pass: number;
   fail: number;
@@ -18,11 +21,13 @@ type FlowItem = {
     task_ids: string[];
     thread_branches: string[];
     change_intents: string[];
+    evidence_refs: string[];
     source_files: string[];
   };
   implementation: {
     tracked: boolean;
     lineage_link_count: number;
+    lineage_ids: string[];
     implementation_refs: string[];
     runtime_events_count: number;
     runtime_total_ms: number;
@@ -40,6 +45,7 @@ type FlowItem = {
   contributors: {
     tracked: boolean;
     total_unique: number;
+    all: string[];
     by_role: Record<string, string[]>;
   };
   contributions: {
@@ -73,14 +79,44 @@ type FlowResponse = {
 type Contributor = { id: string; name: string; type: string };
 type Contribution = { id: string; contributor_id: string; asset_id: string; timestamp: string };
 
+type FlowSearchParams = Promise<{
+  idea_id?: string | string[];
+  spec_id?: string | string[];
+  contributor_id?: string | string[];
+}>;
+
+function normalizeFilter(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return (value[0] || "").trim();
+  return (value || "").trim();
+}
+
+function toRepoHref(pathOrUrl: string): string {
+  if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
+  return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
+}
+
+function toBranchHref(branch: string): string {
+  return `${REPO_TREE}/${encodeURIComponent(branch)}`;
+}
+
 async function loadData(): Promise<{
   flow: FlowResponse;
   contributors: Contributor[];
   contributions: Contribution[];
 }> {
+  return loadDataForIdea("");
+}
+
+async function loadDataForIdea(ideaId: string): Promise<{
+  flow: FlowResponse;
+  contributors: Contributor[];
+  contributions: Contribution[];
+}> {
   const API = getApiBase();
+  const flowParams = new URLSearchParams({ runtime_window_seconds: "86400" });
+  if (ideaId) flowParams.set("idea_id", ideaId);
   const [flowRes, contributorsRes, contributionsRes] = await Promise.all([
-    fetch(`${API}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
+    fetch(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }),
     fetch(`${API}/v1/contributors`, { cache: "no-store" }),
     fetch(`${API}/v1/contributions`, { cache: "no-store" }),
   ]);
@@ -99,11 +135,25 @@ function statLabel(value: boolean): string {
   return value ? "tracked" : "missing";
 }
 
-export default async function FlowPage() {
-  const { flow, contributors, contributions } = await loadData();
-  const contributorsById = new Map(contributors.map((c) => [c.id, c]));
+export default async function FlowPage({ searchParams }: { searchParams: FlowSearchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const ideaFilter = normalizeFilter(resolvedSearchParams.idea_id);
+  const specFilter = normalizeFilter(resolvedSearchParams.spec_id);
+  const contributorFilter = normalizeFilter(resolvedSearchParams.contributor_id);
 
-  const topContributors = [...contributions]
+  const { flow, contributors, contributions } = ideaFilter ? await loadDataForIdea(ideaFilter) : await loadData();
+  const contributorsById = new Map(contributors.map((c) => [c.id, c]));
+  const filteredItems = flow.items.filter((item) => {
+    if (specFilter && !item.spec.spec_ids.includes(specFilter)) return false;
+    if (contributorFilter && !item.contributors.all.includes(contributorFilter)) return false;
+    return true;
+  });
+  const filteredContributions = contributions.filter((row) => {
+    if (contributorFilter && row.contributor_id !== contributorFilter) return false;
+    return true;
+  });
+
+  const topContributors = [...filteredContributions]
     .reduce<Map<string, number>>((acc, row) => {
       acc.set(row.contributor_id, (acc.get(row.contributor_id) ?? 0) + 1);
       return acc;
@@ -157,16 +207,43 @@ export default async function FlowPage() {
       <p className="text-muted-foreground">
         Unified tracking of <code>idea -&gt; spec -&gt; process -&gt; implementation -&gt; validation</code> with contributor and contribution visibility.
       </p>
+      {(ideaFilter || specFilter || contributorFilter) && (
+        <p className="text-sm text-muted-foreground">
+          Filters:
+          {ideaFilter ? (
+            <>
+              {" "}
+              idea <code>{ideaFilter}</code>
+            </>
+          ) : null}
+          {specFilter ? (
+            <>
+              {" "}
+              spec <code>{specFilter}</code>
+            </>
+          ) : null}
+          {contributorFilter ? (
+            <>
+              {" "}
+              contributor <code>{contributorFilter}</code>
+            </>
+          ) : null}
+          {" | "}
+          <Link href="/flow" className="underline hover:text-foreground">
+            Clear filters
+          </Link>
+        </p>
+      )}
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <div className="rounded border p-3">
           <p className="text-muted-foreground">Ideas tracked</p>
-          <p className="text-lg font-semibold">{flow.summary.ideas}</p>
+          <p className="text-lg font-semibold">{filteredItems.length}</p>
         </div>
         <div className="rounded border p-3">
           <p className="text-muted-foreground">Flow complete (spec+process+impl+validation)</p>
           <p className="text-lg font-semibold">
-            {flow.items.filter((row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked).length}
+            {filteredItems.filter((row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked).length}
           </p>
         </div>
         <div className="rounded border p-3">
@@ -199,7 +276,7 @@ export default async function FlowPage() {
       </section>
 
       <section className="space-y-4">
-        {flow.items.map((item) => (
+        {filteredItems.map((item) => (
           <article key={item.idea_id} className="rounded border p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">
@@ -225,9 +302,63 @@ export default async function FlowPage() {
                 <p className="text-muted-foreground">
                   specs {item.spec.count} ({statLabel(item.spec.tracked)}) | evidence {item.process.evidence_count} ({statLabel(item.process.tracked)})
                 </p>
-                <p className="text-muted-foreground">spec_ids {item.spec.spec_ids.slice(0, 8).join(", ") || "-"}</p>
-                <p className="text-muted-foreground">task_ids {item.process.task_ids.slice(0, 8).join(", ") || "-"}</p>
-                <p className="text-muted-foreground">threads {item.process.thread_branches.slice(0, 4).join(", ") || "-"}</p>
+                <p className="text-muted-foreground">
+                  spec_ids{" "}
+                  {item.spec.spec_ids.length > 0
+                    ? item.spec.spec_ids.slice(0, 8).map((specId, idx) => (
+                        <span key={specId}>
+                          {idx > 0 ? ", " : ""}
+                          <Link href={`/specs/${encodeURIComponent(specId)}`} className="underline hover:text-foreground">
+                            {specId}
+                          </Link>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
+                <p className="text-muted-foreground">
+                  task_ids{" "}
+                  {item.process.task_ids.length > 0
+                    ? item.process.task_ids.slice(0, 8).map((taskId, idx) => (
+                        <span key={taskId}>
+                          {idx > 0 ? ", " : ""}
+                          <Link href={`/tasks?task_id=${encodeURIComponent(taskId)}`} className="underline hover:text-foreground">
+                            {taskId}
+                          </Link>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
+                <p className="text-muted-foreground">
+                  threads{" "}
+                  {item.process.thread_branches.length > 0
+                    ? item.process.thread_branches.slice(0, 4).map((branch, idx) => (
+                        <span key={branch}>
+                          {idx > 0 ? ", " : ""}
+                          <a href={toBranchHref(branch)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                            {branch}
+                          </a>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
+                <p className="text-muted-foreground">
+                  source_files{" "}
+                  {item.process.source_files.length > 0
+                    ? item.process.source_files.slice(0, 6).map((filePath, idx) => (
+                        <span key={filePath}>
+                          {idx > 0 ? ", " : ""}
+                          <a
+                            href={toRepoHref(filePath)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-foreground"
+                          >
+                            {filePath}
+                          </a>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
               </div>
 
               <div className="rounded border p-3 space-y-1">
@@ -241,6 +372,37 @@ export default async function FlowPage() {
                 <p className="text-muted-foreground">
                   usage_events {item.contributions.usage_events_count} | measured_value {item.contributions.measured_value_total.toFixed(2)}
                 </p>
+                <p className="text-muted-foreground">
+                  lineage_ids{" "}
+                  {item.implementation.lineage_ids.length > 0
+                    ? item.implementation.lineage_ids.slice(0, 6).map((lineageId, idx) => (
+                        <span key={lineageId}>
+                          {idx > 0 ? ", " : ""}
+                          <a
+                            href={`${getApiBase()}/api/value-lineage/links/${encodeURIComponent(lineageId)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-foreground"
+                          >
+                            {lineageId}
+                          </a>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
+                <p className="text-muted-foreground">
+                  implementation_refs{" "}
+                  {item.implementation.implementation_refs.length > 0
+                    ? item.implementation.implementation_refs.slice(0, 6).map((ref, idx) => (
+                        <span key={ref}>
+                          {idx > 0 ? ", " : ""}
+                          <a href={toRepoHref(ref)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                            {ref}
+                          </a>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
               </div>
 
               <div className="rounded border p-3 space-y-1">
@@ -251,7 +413,19 @@ export default async function FlowPage() {
                 <p className="text-muted-foreground">
                   phase_gate pass {item.validation.phase_gate.pass_count} | blocked {item.validation.phase_gate.blocked_count}
                 </p>
-                <p className="text-muted-foreground">public_endpoints {item.validation.public_endpoints.length}</p>
+                <p className="text-muted-foreground">
+                  public_endpoints{" "}
+                  {item.validation.public_endpoints.length > 0
+                    ? item.validation.public_endpoints.slice(0, 5).map((endpoint, idx) => (
+                        <span key={endpoint}>
+                          {idx > 0 ? ", " : ""}
+                          <a href={endpoint} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                            {endpoint}
+                          </a>
+                        </span>
+                      ))
+                    : "-"}
+                </p>
               </div>
 
               <div className="rounded border p-3 space-y-1">
@@ -264,7 +438,20 @@ export default async function FlowPage() {
                     .slice(0, 8)
                     .map(([role, ids]) => (
                       <li key={role}>
-                        {role}: {ids.slice(0, 5).join(", ") || "-"}
+                        {role}:{" "}
+                        {ids.length > 0
+                          ? ids.slice(0, 5).map((contributorId, idx) => (
+                              <span key={`${role}-${contributorId}`}>
+                                {idx > 0 ? ", " : ""}
+                                <Link
+                                  href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
+                                  className="underline hover:text-foreground"
+                                >
+                                  {contributorId}
+                                </Link>
+                              </span>
+                            ))
+                          : "-"}
                       </li>
                     ))}
                 </ul>
@@ -272,6 +459,11 @@ export default async function FlowPage() {
             </div>
           </article>
         ))}
+        {filteredItems.length === 0 && (
+          <article className="rounded border p-4 text-sm text-muted-foreground">
+            No flow rows match current filters.
+          </article>
+        )}
       </section>
     </main>
   );
