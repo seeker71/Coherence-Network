@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "main",
+  "commit_scope": "Backfill flow tracking from real contributor, contribution, and asset registry data",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/flow/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pass"
+  },
+  "deploy_validation": {
+    "status": "pass"
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-value-attribution",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "088",
+    "089-endpoint-traceability-coverage",
+    "094"
+  ],
+  "task_ids": [
+    "flow-registry-data-linkage"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/pytest -q tests/test_inventory_api.py",
+    "cd web && npm run build"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/flow/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Flow API/UI now report real registry-linked contributors, contributions, and assets instead of lineage-only contribution tracking.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/flow",
+      "https://coherence-network.vercel.app/flow",
+      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network-production.up.railway.app/v1/assets",
+      "https://coherence-network-production.up.railway.app/v1/contributors"
+    ],
+    "test_flows": [
+      "api:/api/inventory/flow?idea_id=portfolio-governance returns contributions.registry_contribution_count and assets.count",
+      "web:/flow shows registry_contributions, registry_cost, assets count, and contributor registry_ids",
+      "api:/v1/contributions,/v1/assets,/v1/contributors remain consistent and linkable"
+    ]
+  }
+}
