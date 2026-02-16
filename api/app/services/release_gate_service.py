@@ -634,7 +634,7 @@ def evaluate_merged_change_contract_report(
     }
     checks_gate = evaluate_pr_gates(pseudo_pr, commit_status, check_runs, required)
     report["checks_gate"] = checks_gate
-    if checks_gate.get("combined_status_state") != "success":
+    if not bool(checks_gate.get("ready_to_merge")):
         report["result"] = "blocked"
         report["reason"] = "Commit checks are not green on main"
         return report

@@ -3,12 +3,14 @@ from __future__ import annotations
 import base64
 
 import httpx
+import pytest
 import respx
 
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
     evaluate_collective_review_gates,
     evaluate_commit_traceability_report,
+    evaluate_merged_change_contract_report,
     evaluate_public_deploy_contract_report,
     evaluate_pr_gates,
     extract_actions_run_id,
@@ -68,6 +70,53 @@ def test_evaluate_pr_gates_allows_merge_when_required_contexts_unavailable() -> 
 
     assert out["ready_to_merge"] is True
     assert out["required_contexts"] == []
+
+
+def test_merged_change_contract_uses_ready_to_merge_not_combined_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    merged_pr = {
+        "number": 127,
+        "merged_at": "2026-02-16T23:37:00Z",
+        "base": {"ref": "main"},
+        "user": {"login": "seeker71"},
+        "merged_by": {"login": "seeker71"},
+        "html_url": "https://github.com/seeker71/Coherence-Network/pull/127",
+        "draft": False,
+    }
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_pull_requests",
+        lambda *_args, **_kwargs: [merged_pr],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_pull_request_reviews",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_status",
+        lambda *_args, **_kwargs: {"state": "failure", "statuses": []},
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_check_runs",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_required_contexts",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.wait_for_public_validation",
+        lambda **_kwargs: {"ready": True, "elapsed_seconds": 1, "checks": []},
+    )
+
+    out = evaluate_merged_change_contract_report(
+        repository="seeker71/Coherence-Network",
+        sha="fd3b7daea14feb4d2188b7c61d5f06233f4cfc78",
+        min_approvals=0,
+        min_unique_approvers=0,
+        timeout_seconds=5,
+        poll_seconds=1,
+    )
+
+    assert out["result"] == "contract_passed"
 
 
 def test_evaluate_collective_review_gates_passes_with_approval() -> None:
