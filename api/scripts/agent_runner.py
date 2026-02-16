@@ -95,6 +95,9 @@ def _post_runtime_event(
     model: str,
     returncode: int,
     output_len: int,
+    worker_id: str,
+    executor: str,
+    is_openai_codex: bool,
 ) -> None:
     if os.environ.get("PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
         return
@@ -111,6 +114,10 @@ def _post_runtime_event(
             "model": model,
             "returncode": int(returncode),
             "output_len": int(output_len),
+            "worker_id": worker_id,
+            "executor": executor,
+            "agent_id": "openai-codex" if is_openai_codex else worker_id,
+            "is_openai_codex": bool(is_openai_codex),
         },
     }
     try:
@@ -204,6 +211,25 @@ def _uses_cursor_cli(command: str) -> bool:
     return command.strip().startswith("agent ")
 
 
+def _infer_executor(command: str, model: str) -> str:
+    s = (command or "").strip()
+    model_value = (model or "").strip().lower()
+    if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
+        return "cursor"
+    if s.startswith("aider "):
+        return "aider"
+    if s.startswith("claude "):
+        return "claude"
+    return "unknown"
+
+
+def _is_openai_codex_worker(worker_id: str) -> bool:
+    normalized = (worker_id or "").strip().lower()
+    if not normalized:
+        return False
+    return normalized == "openai-codex" or normalized.startswith("openai-codex:")
+
+
 def run_one_task(
     client: httpx.Client,
     task_id: str,
@@ -236,6 +262,8 @@ def run_one_task(
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
 
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    executor = _infer_executor(command, model)
+    is_openai_codex = _is_openai_codex_worker(worker_id)
 
     # PATCH to running
     r = client.patch(
@@ -331,6 +359,9 @@ def run_one_task(
             model=model,
             returncode=returncode,
             output_len=len(output or ""),
+            worker_id=worker_id,
+            executor=executor,
+            is_openai_codex=is_openai_codex,
         )
         if status != "completed":
             _post_tool_failure_friction(
@@ -372,6 +403,9 @@ def run_one_task(
             model=model,
             returncode=-1,
             output_len=len(str(e)),
+            worker_id=worker_id,
+            executor=executor,
+            is_openai_codex=is_openai_codex,
         )
         _post_tool_failure_friction(
             client,

@@ -146,3 +146,44 @@ def test_suspicious_zero_output_success_creates_friction(monkeypatch, tmp_path):
 
     friction_posts = [p for p in client.posts if p[0].endswith("/api/friction/events")]
     assert len(friction_posts) == 1
+
+
+def test_agent_runner_runtime_event_includes_codex_execution_metadata(monkeypatch, tmp_path):
+    t = [3000.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("PIPELINE_TOOL_TELEMETRY_ENABLED", "1")
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex")
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=0, stdout_text="codex execution output\n")
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_codex",
+        command='agent "Run implementation task" --model openrouter/free',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/openrouter/free",
+    )
+    assert done is True
+
+    runtime_posts = [p for p in client.posts if p[0].endswith("/api/runtime/events")]
+    assert len(runtime_posts) == 1
+    _, payload = runtime_posts[0]
+    metadata = payload["metadata"]
+    assert metadata["worker_id"] == "openai-codex"
+    assert metadata["executor"] == "cursor"
+    assert metadata["agent_id"] == "openai-codex"
+    assert metadata["is_openai_codex"] is True
