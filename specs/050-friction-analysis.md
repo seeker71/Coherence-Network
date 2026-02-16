@@ -66,7 +66,7 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 }
 ```
 
-## Files
+## Files to Create/Modify
 
 - `api/app/routers/friction.py` (implemented)
 - `api/app/services/friction_service.py` (implemented)
@@ -75,7 +75,30 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 
 ## Acceptance Tests
 
-- [x] `test_friction_events_create_list_and_filter` — Create and filter events
-- [x] `test_friction_report_aggregates` — Verify report aggregation
+- [x] `api/tests/test_friction_api.py::test_friction_events_create_list_and_filter` — Create and filter events
+- [x] `api/tests/test_friction_api.py::test_friction_report_aggregates` — Verify report aggregation
+- [x] `api/tests/test_friction_api.py::test_friction_entry_points_merges_sources` — Verify unified entry-point aggregation
 
 All tests passing.
+
+## Verification
+
+```bash
+cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_friction_api.py
+cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py
+cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_monitor_pipeline_github_actions.py
+```
+
+## Out of Scope
+
+- UI redesign for friction analytics beyond entry-point visibility pages.
+- Provider-specific failure remediation workflows.
+
+## Risks and Assumptions
+
+- Risk: event-source files or DB snapshots can be unavailable; mitigation is tolerant parsing with explicit ignored/error counters.
+- Assumption: monitor issue and metrics schemas remain backward compatible for friction aggregation.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up task: `friction-metric-cost-normalization` to calibrate cost-of-delay models against measured provider billing data.
