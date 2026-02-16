@@ -25,6 +25,7 @@ function TasksPageContent() {
 
   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);
+  const taskIdFilter = useMemo(() => (searchParams.get("task_id") || "").trim(), [searchParams]);
 
   const loadRows = useCallback(async () => {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
@@ -47,9 +48,10 @@ function TasksPageContent() {
     return rows.filter((row) => {
       if (statusFilter && row.status !== statusFilter) return false;
       if (typeFilter && row.task_type !== typeFilter) return false;
+      if (taskIdFilter && row.id !== taskIdFilter) return false;
       return true;
     });
-  }, [rows, statusFilter, typeFilter]);
+  }, [rows, statusFilter, typeFilter, taskIdFilter]);
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -85,6 +87,12 @@ function TasksPageContent() {
             task type <code>{typeFilter}</code>.
           </>
         ) : null}
+        {taskIdFilter ? (
+          <>
+            {" "}
+            task id <code>{taskIdFilter}</code>.
+          </>
+        ) : null}
       </p>
 
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
@@ -94,7 +102,7 @@ function TasksPageContent() {
         <section className="rounded border p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
             Total: {filteredRows.length}
-            {(statusFilter || typeFilter) ? (
+            {(statusFilter || typeFilter || taskIdFilter) ? (
               <>
                 {" "}
                 | <Link href="/tasks" className="underline hover:text-foreground">Clear filters</Link>
@@ -105,7 +113,11 @@ function TasksPageContent() {
             {filteredRows.slice(0, 50).map((t) => (
               <li key={t.id} className="rounded border p-2 space-y-1">
                 <div className="flex justify-between gap-3">
-                  <span className="font-medium">{t.id}</span>
+                  <span className="font-medium">
+                    <Link href={`/tasks?task_id=${encodeURIComponent(t.id)}`} className="underline hover:text-foreground">
+                      {t.id}
+                    </Link>
+                  </span>
                   <span className="text-muted-foreground text-right">
                     <Link
                       href={`/tasks?task_type=${encodeURIComponent(t.task_type)}`}

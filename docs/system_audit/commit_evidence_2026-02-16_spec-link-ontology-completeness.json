@@ -1,0 +1,105 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/spec-link-ontology",
+  "commit_scope": "Close cross-linkage gaps so spec, idea, contributor, process, and implementation views all link to related concepts without silent dead-ends",
+  "files_owned": [
+    "api/tests/test_inventory_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "docs/system_audit/commit_evidence_2026-02-16_spec-link-ontology-completeness.json",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-api-runtime",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "094"
+  ],
+  "task_ids": [
+    "spec-link-ontology-completeness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_spec-link-ontology-completeness.json"
+  ],
+  "change_files": [
+    "api/tests/test_inventory_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Humans can navigate from any spec/idea/contributor/process/implementation surface to all directly related components with explicit links and missing-link fallback paths.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/specs",
+      "https://coherence-network.vercel.app/specs/094",
+      "https://coherence-network.vercel.app/ideas/portfolio-governance",
+      "https://coherence-network.vercel.app/flow?spec_id=094",
+      "https://coherence-network.vercel.app/contributors",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow"
+    ],
+    "test_flows": [
+      "web: open /specs and navigate to /specs/{spec_id}, then follow idea/contributor/process/implementation links",
+      "web: open /ideas/{idea_id} and follow spec/process/implementation/contributor links",
+      "web: open /contributors and follow linked idea/spec/process/implementation paths",
+      "api: inspect /api/inventory/flow to verify process and implementation references are present for linked entities"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T12:40:00Z",
+    "environment": {
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_inventory_api.py",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}
