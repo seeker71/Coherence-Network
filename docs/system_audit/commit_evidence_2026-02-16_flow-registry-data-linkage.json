@@ -65,7 +65,7 @@
     "api/tests/test_inventory_api.py",
     "web/app/flow/page.tsx"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "e2e_validation": {
     "status": "pass",
     "expected_behavior_delta": "Flow API/UI now report real registry-linked contributors, contributions, and assets instead of lineage-only contribution tracking.",
