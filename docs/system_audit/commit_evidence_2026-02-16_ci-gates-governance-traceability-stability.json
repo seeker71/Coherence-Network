@@ -1,7 +1,7 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/contributor-onboarding-and-review-flow",
-  "commit_scope": "Stabilize CI gates by reducing governance vote-function complexity and hardening commit-traceability spec listing against GitHub API rate limits",
+  "commit_scope": "Stabilize CI gates by reducing governance vote-function complexity and hardening commit-traceability spec listing against GitHub API rate limits (403/429)",
   "files_owned": [
     "api/app/services/governance_service.py",
     "api/app/services/release_gate_service.py",
@@ -84,7 +84,7 @@
   },
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-16T12:20:16Z",
+    "ran_at": "2026-02-16T12:24:30Z",
     "commands": [
       "cd api && pytest -q tests/test_governance_api.py tests/test_spec_registry_api.py tests/test_ideas.py tests/test_inventory_api.py",
       "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_report.json --fail-on-regression"

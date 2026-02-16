@@ -251,3 +251,19 @@ def test_list_spec_paths_at_ref_returns_empty_on_403_rate_limit() -> None:
 
     assert out == []
     assert route.call_count == 1
+
+
+@respx.mock
+def test_list_spec_paths_at_ref_returns_empty_on_429_rate_limit() -> None:
+    repository = "seeker71/Coherence-Network"
+    ref = "main"
+    url = f"https://api.github.com/repos/{repository}/contents/specs"
+
+    route = respx.get(url).mock(
+        return_value=httpx.Response(429, json={"message": "API rate limit exceeded"})
+    )
+
+    out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
+
+    assert out == []
+    assert route.call_count == 1

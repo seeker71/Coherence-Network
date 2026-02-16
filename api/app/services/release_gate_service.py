@@ -857,9 +857,9 @@ def list_spec_paths_at_ref(
             if response.status_code >= 500 and attempt < 2:
                 time.sleep(0.2 * float(attempt + 1))
                 continue
-            # 403 can happen in unauthenticated CI due GitHub API rate-limit.
+            # 403/429 can happen in unauthenticated CI due GitHub API rate-limit.
             # Traceability report should still render with degraded spec linkage.
-            if response.status_code in {403, 404}:
+            if response.status_code in {403, 404, 429}:
                 return []
             try:
                 response.raise_for_status()
