@@ -181,3 +181,10 @@ def test_inventory_limits_remote_commit_evidence_fetch_without_token(
 
     assert len(records) == 20
     assert fake_client.download_calls == 20
+
+
+def test_source_aliases_normalize_deployed_double_app_prefix() -> None:
+    aliases = inventory_service._source_path_aliases("/app/app/routers/inventory.py")
+
+    assert "app/routers/inventory.py" in aliases
+    assert "api/app/routers/inventory.py" in aliases
