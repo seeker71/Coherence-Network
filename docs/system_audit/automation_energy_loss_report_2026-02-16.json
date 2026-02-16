@@ -1,0 +1,377 @@
+{
+  "generated_at": "2026-02-16T20:34:12.175936+00:00",
+  "sources": {
+    "commit_evidence_glob": "docs/system_audit/commit_evidence_*.json",
+    "github_actions_run_limit": 120,
+    "actions_cost_per_minute_usd": 0.008
+  },
+  "pipeline_stage_audit": {
+    "idea_to_spec_to_implementation": {
+      "idea_linked": 42,
+      "spec_linked": 42,
+      "implementation_linked": 42
+    },
+    "verification_and_gate_states": {
+      "local_validation": {
+        "pass": 43
+      },
+      "ci_validation": {
+        "pass": 2,
+        "pending": 41
+      },
+      "deploy_validation": {
+        "pass": 2,
+        "pending": 41
+      },
+      "phase_gate": {
+        "true": 2,
+        "false": 41
+      }
+    }
+  },
+  "automation_energy": {
+    "evidence_summary": {
+      "evidence_file_count": 43,
+      "parse_errors": 0,
+      "stage_coverage": {
+        "idea_linked": 42,
+        "spec_linked": 42,
+        "implementation_linked": 42
+      },
+      "validation_status": {
+        "local_validation": {
+          "pass": 43
+        },
+        "ci_validation": {
+          "pass": 2,
+          "pending": 41
+        },
+        "deploy_validation": {
+          "pass": 2,
+          "pending": 41
+        },
+        "phase_gate": {
+          "true": 2,
+          "false": 41
+        }
+      },
+      "runtime_intent": {
+        "runtime_intent_count": 30,
+        "with_e2e_validation": 30,
+        "missing_e2e_validation": 0
+      },
+      "missing_field_counts": {
+        "idea_ids": 1,
+        "spec_ids": 1,
+        "change_files": 1
+      },
+      "missing_field_files": {
+        "idea_ids": [
+          "docs/system_audit/commit_evidence_2026-02-14_thread-process.json"
+        ],
+        "spec_ids": [
+          "docs/system_audit/commit_evidence_2026-02-14_thread-process.json"
+        ],
+        "change_files": [
+          "docs/system_audit/commit_evidence_2026-02-14_thread-process.json"
+        ]
+      }
+    },
+    "actions_summary": {
+      "run_count": 120,
+      "total_duration_minutes": 274.2836,
+      "estimated_total_cost_usd": 2.1943,
+      "by_workflow": {
+        "Auto Heal Deploy Gates": {
+          "run_count": 30,
+          "total_minutes": 28.2671,
+          "failed_minutes": 26.7333,
+          "failure_count": 5,
+          "success_count": 0,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.2261,
+          "estimated_failed_cost_usd": 0.2139,
+          "failure_rate": 0.1667
+        },
+        "Public Deploy Contract": {
+          "run_count": 11,
+          "total_minutes": 98.1333,
+          "failed_minutes": 95.7,
+          "failure_count": 9,
+          "success_count": 2,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.7851,
+          "estimated_failed_cost_usd": 0.7656,
+          "failure_rate": 0.8182
+        },
+        "Thread Gates": {
+          "run_count": 37,
+          "total_minutes": 48.6333,
+          "failed_minutes": 1.75,
+          "failure_count": 5,
+          "success_count": 32,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.3891,
+          "estimated_failed_cost_usd": 0.014,
+          "failure_rate": 0.1351
+        },
+        "Test": {
+          "run_count": 23,
+          "total_minutes": 32.7999,
+          "failed_minutes": 0.7,
+          "failure_count": 2,
+          "success_count": 21,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.2624,
+          "estimated_failed_cost_usd": 0.0056,
+          "failure_rate": 0.087
+        },
+        "Change Contract": {
+          "run_count": 9,
+          "total_minutes": 64.6667,
+          "failed_minutes": 49.2834,
+          "failure_count": 4,
+          "success_count": 4,
+          "in_progress_count": 1,
+          "estimated_cost_usd": 0.5173,
+          "estimated_failed_cost_usd": 0.3943,
+          "failure_rate": 0.4444
+        },
+        "Auto-Track Contributions": {
+          "run_count": 9,
+          "total_minutes": 1.6,
+          "failed_minutes": 0.0,
+          "failure_count": 0,
+          "success_count": 9,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.0128,
+          "estimated_failed_cost_usd": 0.0,
+          "failure_rate": 0.0
+        },
+        "Update External Asset Values": {
+          "run_count": 1,
+          "total_minutes": 0.1833,
+          "failed_minutes": 0.1833,
+          "failure_count": 1,
+          "success_count": 0,
+          "in_progress_count": 0,
+          "estimated_cost_usd": 0.0015,
+          "estimated_failed_cost_usd": 0.0015,
+          "failure_rate": 1.0
+        }
+      },
+      "top_energy_loss_workflows": [
+        {
+          "workflow": "Public Deploy Contract",
+          "failed_minutes": 95.7,
+          "failure_rate": 0.8182,
+          "estimated_failed_cost_usd": 0.7656
+        },
+        {
+          "workflow": "Change Contract",
+          "failed_minutes": 49.2834,
+          "failure_rate": 0.4444,
+          "estimated_failed_cost_usd": 0.3943
+        },
+        {
+          "workflow": "Auto Heal Deploy Gates",
+          "failed_minutes": 26.7333,
+          "failure_rate": 0.1667,
+          "estimated_failed_cost_usd": 0.2139
+        },
+        {
+          "workflow": "Thread Gates",
+          "failed_minutes": 1.75,
+          "failure_rate": 0.1351,
+          "estimated_failed_cost_usd": 0.014
+        },
+        {
+          "workflow": "Test",
+          "failed_minutes": 0.7,
+          "failure_rate": 0.087,
+          "estimated_failed_cost_usd": 0.0056
+        },
+        {
+          "workflow": "Update External Asset Values",
+          "failed_minutes": 0.1833,
+          "failure_rate": 1.0,
+          "estimated_failed_cost_usd": 0.0015
+        },
+        {
+          "workflow": "Auto-Track Contributions",
+          "failed_minutes": 0.0,
+          "failure_rate": 0.0,
+          "estimated_failed_cost_usd": 0.0
+        }
+      ],
+      "sample_failure_runs": [
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 1.05,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076655637"
+        },
+        {
+          "workflow": "Auto Heal Deploy Gates",
+          "event": "workflow_run",
+          "conclusion": "cancelled",
+          "duration_minutes": 0.0333,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076502544"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 1.15,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076464471"
+        },
+        {
+          "workflow": "Thread Gates",
+          "event": "pull_request",
+          "conclusion": "failure",
+          "duration_minutes": 0.3667,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076306307"
+        },
+        {
+          "workflow": "Thread Gates",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 0.3667,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076305420"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 1.1667,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22076076478"
+        },
+        {
+          "workflow": "Auto Heal Deploy Gates",
+          "event": "workflow_run",
+          "conclusion": "cancelled",
+          "duration_minutes": 6.5167,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075628647"
+        },
+        {
+          "workflow": "Change Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 12.1167,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075484785"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 22.15,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075484764"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "schedule",
+          "conclusion": "cancelled",
+          "duration_minutes": 2.5167,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075429623"
+        },
+        {
+          "workflow": "Thread Gates",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 0.3333,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075365877"
+        },
+        {
+          "workflow": "Thread Gates",
+          "event": "pull_request",
+          "conclusion": "failure",
+          "duration_minutes": 0.3333,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075323676"
+        },
+        {
+          "workflow": "Test",
+          "event": "pull_request",
+          "conclusion": "failure",
+          "duration_minutes": 0.3667,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075323665"
+        },
+        {
+          "workflow": "Thread Gates",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 0.35,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22075320150"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "schedule",
+          "conclusion": "failure",
+          "duration_minutes": 22.95,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22074444606"
+        },
+        {
+          "workflow": "Update External Asset Values",
+          "event": "schedule",
+          "conclusion": "failure",
+          "duration_minutes": 0.1833,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22074443290"
+        },
+        {
+          "workflow": "Auto Heal Deploy Gates",
+          "event": "workflow_run",
+          "conclusion": "cancelled",
+          "duration_minutes": 6.4833,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22074037622"
+        },
+        {
+          "workflow": "Auto Heal Deploy Gates",
+          "event": "workflow_run",
+          "conclusion": "cancelled",
+          "duration_minutes": 6.8333,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22073919573"
+        },
+        {
+          "workflow": "Public Deploy Contract",
+          "event": "push",
+          "conclusion": "cancelled",
+          "duration_minutes": 22.95,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22073894739"
+        },
+        {
+          "workflow": "Change Contract",
+          "event": "push",
+          "conclusion": "failure",
+          "duration_minutes": 12.2167,
+          "url": "https://github.com/seeker71/Coherence-Network/actions/runs/22073894724"
+        }
+      ]
+    },
+    "highest_energy_loss_hotspots": [
+      {
+        "workflow": "Public Deploy Contract",
+        "failed_minutes": 95.7,
+        "failure_rate": 0.8182,
+        "estimated_failed_cost_usd": 0.7656
+      },
+      {
+        "workflow": "Change Contract",
+        "failed_minutes": 49.2834,
+        "failure_rate": 0.4444,
+        "estimated_failed_cost_usd": 0.3943
+      },
+      {
+        "workflow": "Auto Heal Deploy Gates",
+        "failed_minutes": 26.7333,
+        "failure_rate": 0.1667,
+        "estimated_failed_cost_usd": 0.2139
+      }
+    ]
+  },
+  "data_gaps": [
+    "commit_evidence_missing_idea_ids",
+    "commit_evidence_missing_spec_ids",
+    "commit_evidence_missing_change_files",
+    "missing_stage_timestamps_for_idea_spec_implementation"
+  ]
+}
