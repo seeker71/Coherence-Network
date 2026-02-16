@@ -1,0 +1,148 @@
+{
+  "date": "2026-02-16T17:11:31Z",
+  "thread_branch": "codex/endpoint-usage-origin-lineage",
+  "commit_scope": "release-gap-fix",
+  "files_owned": [
+    "api/app/",
+    "api/tests/",
+    "web/app/",
+    "config/",
+    "docs/"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "notes": "Targeted runtime/inventory/agent/automation tests pass locally."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks rerunning after evidence artifact addition."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deployment validation will run after merge to main."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Await CI green and public deployment verification."
+  },
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "089-endpoint-traceability-coverage"
+  ],
+  "task_ids": [
+    "task_4aee77ff4c27b9be"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "review",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "api/tests/test_runtime_api.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "Makefile",
+    "api/app/main.py",
+    "api/app/models/agent.py",
+    "api/app/models/automation_usage.py",
+    "api/app/models/runtime.py",
+    "api/app/models/spec_registry.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/inventory.py",
+    "api/app/routers/runtime.py",
+    "api/app/routers/spec_registry.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/idea_lineage_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/page_lineage_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/project_manager.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_agent_visibility_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_runtime_api.py",
+    "api/tests/test_spec_quality_gate.py",
+    "api/tests/test_spec_registry_api.py",
+    "config/canonical_routes.json",
+    "config/idea_lineage.json",
+    "config/page_lineage.json",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/RUNBOOK.md",
+    "docs/SPEC-QUALITY-GATE.md",
+    "scripts/validate_spec_quality.py",
+    "scripts/verify_worktree_local_web.sh",
+    "specs/TEMPLATE.md",
+    "web/app/agent/page.tsx",
+    "web/app/automation/page.tsx",
+    "web/app/contribute/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Merged branch changes should be publicly reachable on web and API, including contributions and usage/traceability flows.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/contributions",
+      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network-production.up.railway.app/api/inventory/process-completeness"
+    ],
+    "test_flows": [
+      "Web /contributions renders and loads API data from production Railway endpoint.",
+      "API /v1/contributions returns persisted contribution rows (200).",
+      "API /api/inventory/process-completeness remains reachable and reports traceability checks."
+    ]
+  }
+}
