@@ -27,6 +27,10 @@ type Idea = {
 type SpecEntry = {
   spec_id: string;
   title: string;
+  potential_value?: number;
+  estimated_cost?: number;
+  actual_value?: number;
+  actual_cost?: number;
 };
 
 type Vote = {
@@ -103,10 +107,18 @@ export default function ContributePage() {
   const [specCreateTitle, setSpecCreateTitle] = useState("");
   const [specCreateSummary, setSpecCreateSummary] = useState("");
   const [specCreateIdeaId, setSpecCreateIdeaId] = useState("");
+  const [specCreatePotentialValue, setSpecCreatePotentialValue] = useState("0");
+  const [specCreateEstimatedCost, setSpecCreateEstimatedCost] = useState("0");
+  const [specCreateActualValue, setSpecCreateActualValue] = useState("0");
+  const [specCreateActualCost, setSpecCreateActualCost] = useState("0");
 
   const [specUpdateId, setSpecUpdateId] = useState("");
   const [specUpdateTitle, setSpecUpdateTitle] = useState("");
   const [specUpdateSummary, setSpecUpdateSummary] = useState("");
+  const [specUpdatePotentialValue, setSpecUpdatePotentialValue] = useState("");
+  const [specUpdateEstimatedCost, setSpecUpdateEstimatedCost] = useState("");
+  const [specUpdateActualValue, setSpecUpdateActualValue] = useState("");
+  const [specUpdateActualCost, setSpecUpdateActualCost] = useState("");
 
   const loadData = useCallback(async () => {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
@@ -492,6 +504,30 @@ export default function ContributePage() {
             <input className="rounded border px-3 py-2 bg-background" placeholder="new spec title" value={specCreateTitle} onChange={(e) => setSpecCreateTitle(e.target.value)} />
             <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="new spec summary" value={specCreateSummary} onChange={(e) => setSpecCreateSummary(e.target.value)} />
             <input className="rounded border px-3 py-2 bg-background" placeholder="related idea_id (optional)" value={specCreateIdeaId} onChange={(e) => setSpecCreateIdeaId(e.target.value)} />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="potential_value (default 0)"
+              value={specCreatePotentialValue}
+              onChange={(e) => setSpecCreatePotentialValue(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="estimated_cost (default 0)"
+              value={specCreateEstimatedCost}
+              onChange={(e) => setSpecCreateEstimatedCost(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="actual_value (default 0)"
+              value={specCreateActualValue}
+              onChange={(e) => setSpecCreateActualValue(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="actual_cost (default 0)"
+              value={specCreateActualCost}
+              onChange={(e) => setSpecCreateActualCost(e.target.value)}
+            />
             <button
               type="button"
               className="rounded border px-3 py-2 hover:bg-accent"
@@ -502,6 +538,10 @@ export default function ContributePage() {
                   title: specCreateTitle.trim(),
                   summary: specCreateSummary.trim(),
                   idea_id: specCreateIdeaId.trim() || undefined,
+                  potential_value: Number(specCreatePotentialValue || "0"),
+                  estimated_cost: Number(specCreateEstimatedCost || "0"),
+                  actual_value: Number(specCreateActualValue || "0"),
+                  actual_cost: Number(specCreateActualCost || "0"),
                   created_by_contributor_id: proposerId,
                 })
               }
@@ -519,6 +559,30 @@ export default function ContributePage() {
             </select>
             <input className="rounded border px-3 py-2 bg-background" placeholder="updated title (optional)" value={specUpdateTitle} onChange={(e) => setSpecUpdateTitle(e.target.value)} />
             <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="updated summary (optional)" value={specUpdateSummary} onChange={(e) => setSpecUpdateSummary(e.target.value)} />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="potential_value (optional)"
+              value={specUpdatePotentialValue}
+              onChange={(e) => setSpecUpdatePotentialValue(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="estimated_cost (optional)"
+              value={specUpdateEstimatedCost}
+              onChange={(e) => setSpecUpdateEstimatedCost(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="actual_value (optional)"
+              value={specUpdateActualValue}
+              onChange={(e) => setSpecUpdateActualValue(e.target.value)}
+            />
+            <input
+              className="rounded border px-3 py-2 bg-background"
+              placeholder="actual_cost (optional)"
+              value={specUpdateActualCost}
+              onChange={(e) => setSpecUpdateActualCost(e.target.value)}
+            />
             <button
               type="button"
               className="rounded border px-3 py-2 hover:bg-accent"
@@ -528,6 +592,10 @@ export default function ContributePage() {
                   spec_id: specUpdateId,
                   ...(specUpdateTitle.trim() ? { title: specUpdateTitle.trim() } : {}),
                   ...(specUpdateSummary.trim() ? { summary: specUpdateSummary.trim() } : {}),
+                  ...(specUpdatePotentialValue.trim() ? { potential_value: Number(specUpdatePotentialValue) } : {}),
+                  ...(specUpdateEstimatedCost.trim() ? { estimated_cost: Number(specUpdateEstimatedCost) } : {}),
+                  ...(specUpdateActualValue.trim() ? { actual_value: Number(specUpdateActualValue) } : {}),
+                  ...(specUpdateActualCost.trim() ? { actual_cost: Number(specUpdateActualCost) } : {}),
                   updated_by_contributor_id: proposerId,
                 })
               }
