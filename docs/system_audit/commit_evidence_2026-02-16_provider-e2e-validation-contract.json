@@ -3,6 +3,7 @@
   "thread_branch": "codex/provider-e2e-validation",
   "commit_scope": "Add provider execution validation contract (config + usage + execution evidence) for openai-codex, github, railway, and claude with API and web visibility.",
   "files_owned": [
+    ".github/workflows/thread-gates.yml",
     ".github/workflows/provider-readiness-contract.yml",
     "api/app/models/automation_usage.py",
     "api/app/routers/automation_usage.py",
@@ -53,6 +54,7 @@
     "web/app/automation/page.tsx"
   ],
   "change_files": [
+    ".github/workflows/thread-gates.yml",
     ".github/workflows/provider-readiness-contract.yml",
     "api/app/models/automation_usage.py",
     "api/app/routers/automation_usage.py",
