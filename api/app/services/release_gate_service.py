@@ -674,6 +674,7 @@ def evaluate_public_deploy_contract_report(
     branch: str = "main",
     api_base: str = "https://coherence-network-production.up.railway.app",
     web_base: str = "https://coherence-network.vercel.app",
+    web_backup_base: str | None = None,
     expected_sha: str | None = None,
     timeout: float = 8.0,
     github_token: str | None = None,
@@ -684,6 +685,7 @@ def evaluate_public_deploy_contract_report(
         "branch": branch,
         "api_base": api_base.rstrip("/"),
         "web_base": web_base.rstrip("/"),
+        "web_backup_base": (web_backup_base or "").rstrip("/"),
     }
     target_sha = expected_sha or get_branch_head_sha(
         repository,
@@ -713,28 +715,44 @@ def evaluate_public_deploy_contract_report(
         api_gates_head["ok"] = bool(api_gates_head["ok"] and api_gates_head["sha_match"])
     checks.append(api_gates_head)
 
-    web_gates_url = f"{report['web_base']}/gates"
-    web_gates = check_http_endpoint(web_gates_url, timeout=timeout)
-    web_gates["name"] = "vercel_gates_page"
-    checks.append(web_gates)
+    def _web_checks(base_url: str, name_prefix: str) -> tuple[list[dict[str, Any]], bool]:
+        out: list[dict[str, Any]] = []
+        ok = True
 
-    web_proxy_url = f"{report['web_base']}/api/health-proxy"
-    web_proxy = check_http_json_endpoint(web_proxy_url, timeout=timeout)
-    web_proxy["name"] = "vercel_health_proxy"
-    if web_proxy.get("ok") and isinstance(web_proxy.get("json"), dict):
-        payload = web_proxy["json"]
-        api_payload = payload.get("api") if isinstance(payload.get("api"), dict) else {}
-        web_payload = payload.get("web") if isinstance(payload.get("web"), dict) else {}
-        updated_at = web_payload.get("updated_at")
-        api_status = api_payload.get("status")
-        web_proxy["web_updated_at"] = updated_at
-        web_proxy["api_status"] = api_status
-        web_proxy["sha_match"] = updated_at == target_sha
-        web_proxy["api_ok"] = api_status == "ok"
-        web_proxy["ok"] = bool(
-            web_proxy["ok"] and web_proxy["sha_match"] and web_proxy["api_ok"]
-        )
-    checks.append(web_proxy)
+        gates_url = f"{base_url.rstrip('/')}/gates"
+        gates_check = check_http_endpoint(gates_url, timeout=timeout)
+        gates_check["name"] = f"{name_prefix}_gates_page"
+        out.append(gates_check)
+        ok = ok and bool(gates_check.get("ok"))
+
+        proxy_url = f"{base_url.rstrip('/')}/api/health-proxy"
+        proxy_check = check_http_json_endpoint(proxy_url, timeout=timeout)
+        proxy_check["name"] = f"{name_prefix}_health_proxy"
+        if proxy_check.get("ok") and isinstance(proxy_check.get("json"), dict):
+            payload = proxy_check["json"]
+            api_payload = payload.get("api") if isinstance(payload.get("api"), dict) else {}
+            web_payload = payload.get("web") if isinstance(payload.get("web"), dict) else {}
+            updated_at = web_payload.get("updated_at")
+            api_status = api_payload.get("status")
+            proxy_check["web_updated_at"] = updated_at
+            proxy_check["api_status"] = api_status
+            proxy_check["sha_match"] = updated_at == target_sha
+            proxy_check["api_ok"] = api_status == "ok"
+            proxy_check["ok"] = bool(
+                proxy_check["ok"] and proxy_check["sha_match"] and proxy_check["api_ok"]
+            )
+        out.append(proxy_check)
+        ok = ok and bool(proxy_check.get("ok"))
+        return out, ok
+
+    primary_web_checks, primary_web_ok = _web_checks(report["web_base"], "web_primary")
+    checks.extend(primary_web_checks)
+
+    backup_web_ok = False
+    backup_base = report.get("web_backup_base")
+    if isinstance(backup_base, str) and backup_base.strip():
+        backup_web_checks, backup_web_ok = _web_checks(backup_base.strip(), "web_backup")
+        checks.extend(backup_web_checks)
 
     value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
     value_lineage_e2e["name"] = "railway_value_lineage_e2e"
@@ -743,9 +761,17 @@ def evaluate_public_deploy_contract_report(
     report["checks"] = checks
     warnings: list[str] = []
     failing: list[str] = []
+    web_primary_failed = False
+    web_backup_failed = False
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
+            continue
+        if isinstance(name, str) and name.startswith("web_primary_"):
+            web_primary_failed = True
+            continue
+        if isinstance(name, str) and name.startswith("web_backup_"):
+            web_backup_failed = True
             continue
         if (
             name == "railway_gates_main_head"
@@ -754,6 +780,16 @@ def evaluate_public_deploy_contract_report(
             warnings.append("railway_gates_main_head_unavailable")
             continue
         failing.append(str(name))
+
+    if web_primary_failed:
+        if backup_web_ok:
+            warnings.append("web_primary_failed_backup_ok")
+        else:
+            warnings.append("web_primary_failed_no_backup_ok")
+            failing.append("web_surface_unavailable")
+    elif isinstance(backup_base, str) and backup_base.strip() and web_backup_failed:
+        warnings.append("web_backup_failed")
+
     report["warnings"] = warnings
     report["failing_checks"] = failing
     if failing:

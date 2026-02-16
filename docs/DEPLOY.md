@@ -1,12 +1,14 @@
-# Coherence Network — Deploy Guide (Railway + Vercel)
+# Coherence Network — Deploy Guide (Railway primary + Vercel backup)
 
 This guide covers **initial setup**, **configuration**, and **verification** for:
 - **API on Railway**
-- **Web app on Vercel**
+- **Web app on Railway (primary)**
+- **Web app on Vercel (backup)**
 
 Recommended stack:
 - **API**: Railway
-- **Web**: Vercel
+- **Web primary**: Railway
+- **Web backup**: Vercel
 - **PostgreSQL**: Neon or Supabase
 - **Neo4j**: AuraDB Free
 
@@ -147,36 +149,51 @@ If you need to validate worker behavior temporarily, run it manually in a contro
 
 ---
 
-## 5) Setup Vercel project (web)
+## 5) Setup Railway web service (primary)
+
+1. In Railway, create a second service from this same repository.
+2. Configure:
+   - **Root Directory**: `web/`
+   - Build/start: default Nixpacks detection (repo includes `web/nixpacks.toml` and `web/Procfile`)
+3. Add environment variable:
+   - `NEXT_PUBLIC_API_URL=https://<railway-api-domain>`
+4. Deploy and assign a public Railway domain (`https://<railway-web-domain>`).
+
+### CLI smoke check (Railway API + Railway web primary)
+
+```bash
+./scripts/verify_web_api_deploy.sh \
+  https://<railway-api-domain> \
+  https://<railway-web-domain>
+```
+
+This checks API health, gate head SHA endpoint, web pages, health proxy, and CORS alignment.
+
+## 6) Setup Vercel project (web backup)
 
 1. In Vercel, click **Add New Project** and import this repository.
 2. Configure project:
    - **Root Directory**: `web/`
    - Framework should detect Next.js automatically.
 3. Add environment variable:
-   - `NEXT_PUBLIC_API_URL=https://<api-domain>`
+   - `NEXT_PUBLIC_API_URL=https://<railway-api-domain>`
 4. Deploy.
 
-### CLI smoke check (Railway + Vercel)
+### CLI smoke check (primary + backup)
 
 From repository root:
 
 ```bash
 ./scripts/verify_web_api_deploy.sh \
   https://<railway-api-domain> \
+  https://<railway-web-domain> \
   https://<vercel-web-domain>
 ```
 
-This checks:
-- `GET <railway-api-domain>/api/health`
-- `GET <railway-api-domain>/api/gates/main-head`
-- `GET <vercel-web-domain>/`
-- `GET <vercel-web-domain>/gates`
-- `GET <vercel-web-domain>/api-health`
-- `GET <vercel-web-domain>/api/health-proxy`
-- CORS header alignment (`Origin: <vercel-web-domain>` against API health endpoint)
-
-Use this as a quick connectivity + CORS check after each deployment.
+Behavior:
+- Primary web (`arg2`) is checked first.
+- If primary fails and backup (`arg3`) is provided, backup is checked.
+- Contract passes when API is healthy and at least one web surface is healthy with valid CORS.
 
 ### If Vercel domain returns 404
 
@@ -254,7 +271,7 @@ Helpful header clues:
 
 ---
 
-## 6) Cross-platform configuration checks (Railway + Vercel)
+## 7) Cross-platform configuration checks (Railway + Vercel backup)
 
 After both are deployed:
 
@@ -264,7 +281,7 @@ After both are deployed:
 
 ---
 
-## 7) Automated deploy-gate healing (GitHub checks -> Railway deploy)
+## 8) Automated deploy-gate healing (GitHub checks -> Railway deploy)
 
 Railway can skip deployment when commit check status is not green. This repo now includes an automatic recovery loop:
 
@@ -273,7 +290,7 @@ Railway can skip deployment when commit check status is not green. This repo now
   - `workflow_run` when `Test`, `Thread Gates`, or `Change Contract` completes on `main` with non-success conclusion
   - Manual `workflow_dispatch` with optional commit SHA
 - Script: `api/scripts/auto_heal_deploy_gates.py`
-- Complementary monitor: `.github/workflows/public-deploy-contract.yml` validates public Railway + Vercel contract and opens/updates an issue when drift is detected.
+- Complementary monitor: `.github/workflows/public-deploy-contract.yml` validates Railway API + primary web contract and can use backup web URL when configured, then opens/updates an issue when drift is detected.
   - Optional self-heal via Railway CLI is enabled when these GitHub repo secrets are set:
     - `RAILWAY_TOKEN`
     - `RAILWAY_PROJECT_ID`
@@ -322,7 +339,7 @@ Exit codes:
 
 ---
 
-## 7) Capture and monitor signals
+## 9) Capture and monitor signals
 
 Capture these operational signals continuously (Railway logs and/or external observability stack):
 - API process logs
@@ -341,7 +358,7 @@ Store snapshots in your observability tool (Datadog, CloudWatch, Grafana Loki, e
 
 ---
 
-## 8) Post-deploy verification checklist
+## 10) Post-deploy verification checklist
 
 Run after every config/deploy change:
 
@@ -372,7 +389,7 @@ curl -fsS https://<api-domain>/api/agent/fatal-issues
 
 ---
 
-## 9) Optional hardening
+## 11) Optional hardening
 
 - Add custom domains for API and web.
 - Add uptime checks for `/api/health` and `/api/ready`.

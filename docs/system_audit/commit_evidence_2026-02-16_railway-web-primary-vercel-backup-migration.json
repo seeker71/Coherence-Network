@@ -1,0 +1,90 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "prepare migration to Railway web primary with Vercel backup by adding Railway web runtime config and primary/backup-aware public deploy validation",
+  "files_owned": [
+    ".github/workflows/public-deploy-contract.yml",
+    "api/app/services/release_gate_service.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "docs/DEPLOY.md",
+    "docs/STATUS.md",
+    "scripts/verify_web_api_deploy.sh",
+    "web/Procfile",
+    "web/nixpacks.toml"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile api/scripts/validate_public_deploy_contract.py api/app/services/release_gate_service.py",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "cd web && npm run build",
+      "./scripts/verify_web_api_deploy.sh",
+      "cd api && .venv/bin/python scripts/validate_public_deploy_contract.py --help"
+    ],
+    "notes": [
+      "Railway web runtime files added and Next.js build remains successful.",
+      "Deployment verifier now supports primary web URL with optional backup web URL fallback."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test",
+      "public-deploy-contract"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel",
+    "notes": "Railway web service/domain must be created and set as PUBLIC_WEB_BASE_PRIMARY to complete migration."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Railway web primary domain not yet provisioned and CI/deploy pending"
+  },
+  "idea_ids": [
+    "idea-railway-web-primary-vercel-backup"
+  ],
+  "spec_ids": [
+    "spec-public-deploy-contract-primary-backup-web"
+  ],
+  "task_ids": [
+    "task-migrate-web-primary-to-railway"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/nixpacks.toml",
+    "web/Procfile",
+    "scripts/verify_web_api_deploy.sh",
+    "api/scripts/validate_public_deploy_contract.py",
+    ".github/workflows/public-deploy-contract.yml"
+  ],
+  "change_files": [
+    ".github/workflows/public-deploy-contract.yml",
+    "api/app/services/release_gate_service.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "docs/DEPLOY.md",
+    "docs/STATUS.md",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-web-primary-vercel-backup-migration.json",
+    "scripts/verify_web_api_deploy.sh",
+    "web/Procfile",
+    "web/nixpacks.toml"
+  ],
+  "change_intent": "process_only"
+}

@@ -2,7 +2,8 @@
 set -euo pipefail
 
 API_URL="${1:-https://coherence-network-production.up.railway.app}"
-WEB_URL="${2:-https://coherence-network.vercel.app}"
+PRIMARY_WEB_URL="${2:-https://coherence-network.vercel.app}"
+BACKUP_WEB_URL="${3:-}"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -92,15 +93,35 @@ check_cors() {
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
-check_url "Vercel web root" "${WEB_URL%/}/" || fail=1
-check_url "Vercel gates page" "${WEB_URL%/}/gates" || fail=1
-check_url "Vercel API health page" "${WEB_URL%/}/api-health" || fail=1
-check_url "Vercel API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
-check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
+primary_fail=0
+check_url "Primary web root" "${PRIMARY_WEB_URL%/}/" || primary_fail=1
+check_url "Primary gates page" "${PRIMARY_WEB_URL%/}/gates" || primary_fail=1
+check_url "Primary API health page" "${PRIMARY_WEB_URL%/}/api-health" || primary_fail=1
+check_url "Primary API health proxy" "${PRIMARY_WEB_URL%/}/api/health-proxy" || primary_fail=1
+check_cors "${API_URL%/}/api/health" "${PRIMARY_WEB_URL%/}" || primary_fail=1
+
+if [[ "$primary_fail" -ne 0 && -n "${BACKUP_WEB_URL}" ]]; then
+  echo
+  echo "Primary web checks failed; trying backup web deployment..."
+  backup_fail=0
+  check_url "Backup web root" "${BACKUP_WEB_URL%/}/" || backup_fail=1
+  check_url "Backup gates page" "${BACKUP_WEB_URL%/}/gates" || backup_fail=1
+  check_url "Backup API health page" "${BACKUP_WEB_URL%/}/api-health" || backup_fail=1
+  check_url "Backup API health proxy" "${BACKUP_WEB_URL%/}/api/health-proxy" || backup_fail=1
+  check_cors "${API_URL%/}/api/health" "${BACKUP_WEB_URL%/}" || backup_fail=1
+  if [[ "$backup_fail" -eq 0 ]]; then
+    echo
+    echo "Primary web unavailable, but backup web deployment is healthy."
+  else
+    fail=1
+  fi
+elif [[ "$primary_fail" -ne 0 ]]; then
+  fail=1
+fi
 
 if [[ "$fail" -eq 0 ]]; then
   echo
-  echo "Deployment verification passed: Railway API and Vercel web are reachable and CORS is aligned."
+  echo "Deployment verification passed: Railway API and web deployment are reachable and CORS is aligned."
 else
   echo
   echo "Deployment verification failed: at least one endpoint or CORS check failed."

@@ -22,6 +22,9 @@ jobs:
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
       RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+      PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE || 'https://coherence-network-production.up.railway.app' }}
+      PUBLIC_WEB_BASE_PRIMARY: ${{ vars.PUBLIC_WEB_BASE_PRIMARY || 'https://coherence-network.vercel.app' }}
+      PUBLIC_WEB_BASE_BACKUP: ${{ vars.PUBLIC_WEB_BASE_BACKUP || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,10 +49,16 @@ jobs:
         run: |
           set +e
           cd api
-          python scripts/validate_public_deploy_contract.py \
+          cmd=(python scripts/validate_public_deploy_contract.py \
             --repo "${{ github.repository }}" \
             --branch main \
-            --json > ../public_deploy_contract_report.json
+            --api-base "${PUBLIC_API_BASE}" \
+            --web-base "${PUBLIC_WEB_BASE_PRIMARY}" \
+            --json)
+          if [ -n "${PUBLIC_WEB_BASE_BACKUP}" ]; then
+            cmd+=(--web-backup-base "${PUBLIC_WEB_BASE_BACKUP}")
+          fi
+          "${cmd[@]}" > ../public_deploy_contract_report.json
           code=$?
           cd ..
           cat public_deploy_contract_report.json
@@ -99,10 +108,16 @@ jobs:
 
           for i in $(seq 1 "$max_attempts"); do
             cd api
-            python scripts/validate_public_deploy_contract.py \
+            cmd=(python scripts/validate_public_deploy_contract.py \
               --repo "${{ github.repository }}" \
               --branch main \
-              --json > ../public_deploy_contract_report.json
+              --api-base "${PUBLIC_API_BASE}" \
+              --web-base "${PUBLIC_WEB_BASE_PRIMARY}" \
+              --json)
+            if [ -n "${PUBLIC_WEB_BASE_BACKUP}" ]; then
+              cmd+=(--web-backup-base "${PUBLIC_WEB_BASE_BACKUP}")
+            fi
+            "${cmd[@]}" > ../public_deploy_contract_report.json
             code=$?
             cd ..
             cat public_deploy_contract_report.json
@@ -111,7 +126,7 @@ jobs:
             fi
 
             fail_sig="$(jq -c '.failing_checks // []' public_deploy_contract_report.json)"
-            vercel_only="$(jq -r '((.failing_checks // []) | length > 0 and all(.[]; startswith("vercel_")))' public_deploy_contract_report.json)"
+            web_only="$(jq -r '((.failing_checks // []) | length > 0 and all(.[]; startswith("web_")))' public_deploy_contract_report.json)"
 
             if [ "$fail_sig" = "$previous_fail_sig" ]; then
               unchanged_fail_count=$((unchanged_fail_count + 1))
@@ -124,8 +139,8 @@ jobs:
               echo "Fail-fast: failing_checks stable for 4 attempts (${fail_sig})."
               break
             fi
-            if [ "$vercel_only" = "true" ] && [ "$i" -ge 3 ]; then
-              echo "Fail-fast: only Vercel checks failing after Railway redeploy."
+            if [ "$web_only" = "true" ] && [ "$i" -ge 3 ]; then
+              echo "Fail-fast: only web surface checks failing after Railway redeploy."
               break
             fi
 
