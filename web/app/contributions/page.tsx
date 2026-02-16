@@ -51,13 +51,29 @@ export default function ContributionsPage() {
     return Number.isFinite(parsed) ? parsed : null;
   };
 
-  const effectiveCost = (row: Contribution): { effective: number; raw: number; normalized: number | null } => {
+  const deriveLegacyNormalizedCost = (row: Contribution): number | null => {
+    const files = toFinite(row.metadata?.files_changed);
+    const lines = toFinite(row.metadata?.lines_added);
+    if (files === null && lines === null) return null;
+    const filesN = Math.max(0, Math.trunc(files ?? 0));
+    const linesN = Math.max(0, Math.trunc(lines ?? 0));
+    let derived = 0.1 + (filesN * 0.15) + (linesN * 0.002);
+    if (derived < 0.05) derived = 0.05;
+    if (derived > 10.0) derived = 10.0;
+    return Number(derived.toFixed(2));
+  };
+
+  const effectiveCost = (
+    row: Contribution,
+  ): { effective: number; raw: number; normalized: number | null; source: "normalized" | "derived" | "raw" } => {
     const raw = toFinite(row.cost_amount) ?? 0;
     const normalized = toFinite(row.metadata?.normalized_cost_amount);
+    const derived = normalized === null ? deriveLegacyNormalizedCost(row) : null;
     return {
-      effective: normalized ?? raw,
+      effective: normalized ?? derived ?? raw,
       raw,
       normalized,
+      source: normalized !== null ? "normalized" : derived !== null ? "derived" : "raw",
     };
   };
 
@@ -98,6 +114,11 @@ export default function ContributionsPage() {
                 {cost.normalized !== null && Math.abs(cost.raw - cost.normalized) >= 0.01 && (
                   <div className="text-xs text-muted-foreground">
                     raw {cost.raw.toFixed(2)} → normalized {cost.normalized.toFixed(2)} ({c.metadata?.cost_estimator_version ?? "v2"})
+                  </div>
+                )}
+                {cost.source === "derived" && Math.abs(cost.raw - cost.effective) >= 0.01 && (
+                  <div className="text-xs text-muted-foreground">
+                    raw {cost.raw.toFixed(2)} → normalized {cost.effective.toFixed(2)} (legacy-derived-v2)
                   </div>
                 )}
                 {commitHash && (
