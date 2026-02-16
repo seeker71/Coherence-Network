@@ -138,6 +138,51 @@ async def test_create_contribution_422() -> None:
 
 
 @pytest.mark.asyncio
+async def test_github_contribution_cost_is_normalized_from_metadata() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/v1/contributions/github",
+            json={
+                "contributor_email": "alice@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "abc123",
+                "cost_amount": "342.50",
+                "metadata": {"files_changed": 3, "lines_added": 120},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert Decimal(payload["cost_amount"]) == Decimal("0.79")
+        assert payload["metadata"]["raw_cost_amount"] == "342.50"
+        assert payload["metadata"]["normalized_cost_amount"] == "0.79"
+        assert payload["metadata"]["cost_estimator_version"] == "v2_normalized"
+
+
+@pytest.mark.asyncio
+async def test_github_contribution_cost_clamps_when_metadata_missing() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/v1/contributions/github",
+            json={
+                "contributor_email": "bob@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "def456",
+                "cost_amount": "342.50",
+                "metadata": {},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert Decimal(payload["cost_amount"]) == Decimal("10.00")
+        assert payload["metadata"]["raw_cost_amount"] == "342.50"
+        assert payload["metadata"]["normalized_cost_amount"] == "10.00"
+
+
+@pytest.mark.asyncio
 async def test_agent_tasks_router_is_exposed() -> None:
     # Validates /api/agent/tasks is publicly mountable (router included in main app).
     app.state.graph_store = InMemoryGraphStore()
