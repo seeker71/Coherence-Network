@@ -1,7 +1,7 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/endpoint-evidence-coverage",
-  "commit_scope": "Track canonical API and web endpoint evidence in inventory, add public route probe artifact, and close endpoint evidence gaps to zero",
+  "commit_scope": "Track canonical API and web endpoint evidence in inventory, restore canonical route coverage, add public route probe artifact, and close endpoint evidence gaps to zero",
   "files_owned": [
     "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
@@ -47,6 +47,7 @@
   },
   "evidence_refs": [
     "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_api.py",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_api.py::test_runtime_endpoint_summary_includes_origin_idea_lineage",
     "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
     "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && PYTHONPATH=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_route_evidence_probe.py --api-base-url https://coherence-network-production.up.railway.app --web-base-url https://coherence-network.vercel.app --output ../docs/system_audit/route_evidence_probe_2026-02-16_public.json",
     "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && PYTHONPATH=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api ROUTE_EVIDENCE_PROBE_DIR=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/docs/system_audit /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -c \"from app.services import inventory_service; print(inventory_service.build_route_evidence_inventory()['summary'])\""
