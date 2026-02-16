@@ -116,6 +116,66 @@ async def test_get_asset_and_contributor_contributions() -> None:
 
 
 @pytest.mark.asyncio
+async def test_bidirectional_asset_contributor_links_and_audit() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        c1 = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        contributor_a = c1.json()["id"]
+        c2 = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Bob", "email": "bob@example.com"})
+        contributor_b = c2.json()["id"]
+
+        a1 = await client.post("/v1/assets", json={"type": "CODE", "description": "API service"})
+        asset_linked = a1.json()["id"]
+        a2 = await client.post("/v1/assets", json={"type": "DATA", "description": "Resource catalog"})
+        asset_unlinked = a2.json()["id"]
+
+        r = await client.post(
+            "/v1/contributions",
+            json={
+                "contributor_id": contributor_a,
+                "asset_id": asset_linked,
+                "cost_amount": "12.50",
+                "metadata": {"has_docs": True},
+            },
+        )
+        assert r.status_code == 201
+
+        by_asset = await client.get(f"/v1/links/assets/{asset_linked}/contributors")
+        assert by_asset.status_code == 200
+        linked_contributor_ids = {row["id"] for row in by_asset.json()}
+        assert contributor_a in linked_contributor_ids
+
+        by_contributor = await client.get(f"/v1/links/contributors/{contributor_a}/assets")
+        assert by_contributor.status_code == 200
+        linked_asset_ids = {row["id"] for row in by_contributor.json()}
+        assert asset_linked in linked_asset_ids
+
+        matrix_assets = await client.get("/v1/links/assets/with-contributors?limit=10")
+        assert matrix_assets.status_code == 200
+        matrix_by_asset_id = {row["asset_id"]: row for row in matrix_assets.json()}
+        assert matrix_by_asset_id[asset_linked]["contributor_count"] == 1
+        assert matrix_by_asset_id[asset_unlinked]["contributor_count"] == 0
+
+        matrix_contributors = await client.get("/v1/links/contributors/with-assets?limit=10")
+        assert matrix_contributors.status_code == 200
+        matrix_by_contributor_id = {row["contributor_id"]: row for row in matrix_contributors.json()}
+        assert matrix_by_contributor_id[contributor_a]["asset_count"] == 1
+        assert matrix_by_contributor_id[contributor_b]["asset_count"] == 0
+
+        audit = await client.get("/v1/links/asset-contributor/audit")
+        assert audit.status_code == 200
+        body = audit.json()
+        assert body["total_assets"] == 2
+        assert body["total_contributors"] == 2
+        assert body["linked_assets"] == 1
+        assert body["linked_contributors"] == 1
+        assert body["fully_linked"] is False
+        assert asset_unlinked in body["missing_asset_links"]
+        assert contributor_b in body["missing_contributor_links"]
+
+
+@pytest.mark.asyncio
 async def test_create_contribution_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 

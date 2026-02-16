@@ -29,6 +29,36 @@ class GitHubContribution(BaseModel):
     metadata: dict = {}
 
 
+class AssetContributorLinks(BaseModel):
+    """Bidirectional link view for one asset -> contributors."""
+
+    asset_id: UUID
+    contributor_ids: list[UUID]
+    contributor_count: int
+
+
+class ContributorAssetLinks(BaseModel):
+    """Bidirectional link view for one contributor -> assets."""
+
+    contributor_id: UUID
+    asset_ids: list[UUID]
+    asset_count: int
+
+
+class AssetContributorLinkAudit(BaseModel):
+    """Coverage/audit view for asset<->contributor links."""
+
+    total_assets: int
+    total_contributors: int
+    linked_assets: int
+    linked_contributors: int
+    missing_asset_links: list[UUID]
+    missing_contributor_links: list[UUID]
+    coverage_assets_ratio: float
+    coverage_contributors_ratio: float
+    fully_linked: bool
+
+
 def get_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
 
@@ -104,6 +134,124 @@ async def get_contributor_contributions(
     if not store.get_contributor(contributor_id):
         raise HTTPException(status_code=404, detail="Contributor not found")
     return store.get_contributor_contributions(contributor_id)
+
+
+@router.get("/links/assets/{asset_id}/contributors", response_model=list[Contributor])
+async def get_asset_contributors(asset_id: UUID, store: GraphStore = Depends(get_store)) -> list[Contributor]:
+    """Get unique contributors linked to an asset via contributions."""
+    if not store.get_asset(asset_id):
+        raise HTTPException(status_code=404, detail="Asset not found")
+    rows = store.get_asset_contributions(asset_id)
+    out: list[Contributor] = []
+    seen: set[UUID] = set()
+    for row in rows:
+        cid = row.contributor_id
+        if cid in seen:
+            continue
+        seen.add(cid)
+        contributor = store.get_contributor(cid)
+        if contributor:
+            out.append(contributor)
+    return out
+
+
+@router.get("/links/contributors/{contributor_id}/assets", response_model=list[Asset])
+async def get_contributor_assets(contributor_id: UUID, store: GraphStore = Depends(get_store)) -> list[Asset]:
+    """Get unique assets linked to a contributor via contributions."""
+    if not store.get_contributor(contributor_id):
+        raise HTTPException(status_code=404, detail="Contributor not found")
+    rows = store.get_contributor_contributions(contributor_id)
+    out: list[Asset] = []
+    seen: set[UUID] = set()
+    for row in rows:
+        aid = row.asset_id
+        if aid in seen:
+            continue
+        seen.add(aid)
+        asset = store.get_asset(aid)
+        if asset:
+            out.append(asset)
+    return out
+
+
+@router.get("/links/assets/with-contributors", response_model=list[AssetContributorLinks])
+async def list_asset_contributor_links(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[AssetContributorLinks]:
+    """List link state for assets -> contributors (resources are tracked as assets)."""
+    assets = store.list_assets(limit=limit)
+    out: list[AssetContributorLinks] = []
+    for asset in assets:
+        contributor_ids = sorted({row.contributor_id for row in store.get_asset_contributions(asset.id)})
+        out.append(
+            AssetContributorLinks(
+                asset_id=asset.id,
+                contributor_ids=contributor_ids,
+                contributor_count=len(contributor_ids),
+            )
+        )
+    return out
+
+
+@router.get("/links/contributors/with-assets", response_model=list[ContributorAssetLinks])
+async def list_contributor_asset_links(
+    limit: int = 100, store: GraphStore = Depends(get_store)
+) -> list[ContributorAssetLinks]:
+    """List link state for contributors -> assets."""
+    contributors = store.list_contributors(limit=limit)
+    out: list[ContributorAssetLinks] = []
+    for contributor in contributors:
+        asset_ids = sorted({row.asset_id for row in store.get_contributor_contributions(contributor.id)})
+        out.append(
+            ContributorAssetLinks(
+                contributor_id=contributor.id,
+                asset_ids=asset_ids,
+                asset_count=len(asset_ids),
+            )
+        )
+    return out
+
+
+@router.get("/links/asset-contributor/audit", response_model=AssetContributorLinkAudit)
+async def audit_asset_contributor_links(store: GraphStore = Depends(get_store)) -> AssetContributorLinkAudit:
+    """Audit whether every asset and contributor has at least one bidirectional link."""
+    assets = store.list_assets(limit=100000)
+    contributors = store.list_contributors(limit=100000)
+
+    missing_asset_links: list[UUID] = []
+    for asset in assets:
+        rows = store.get_asset_contributions(asset.id)
+        if not rows:
+            missing_asset_links.append(asset.id)
+            continue
+        if not any(store.get_contributor(row.contributor_id) for row in rows):
+            missing_asset_links.append(asset.id)
+
+    missing_contributor_links: list[UUID] = []
+    for contributor in contributors:
+        rows = store.get_contributor_contributions(contributor.id)
+        if not rows:
+            missing_contributor_links.append(contributor.id)
+            continue
+        if not any(store.get_asset(row.asset_id) for row in rows):
+            missing_contributor_links.append(contributor.id)
+
+    total_assets = len(assets)
+    total_contributors = len(contributors)
+    linked_assets = total_assets - len(missing_asset_links)
+    linked_contributors = total_contributors - len(missing_contributor_links)
+    coverage_assets_ratio = float(linked_assets / total_assets) if total_assets > 0 else 1.0
+    coverage_contributors_ratio = float(linked_contributors / total_contributors) if total_contributors > 0 else 1.0
+
+    return AssetContributorLinkAudit(
+        total_assets=total_assets,
+        total_contributors=total_contributors,
+        linked_assets=linked_assets,
+        linked_contributors=linked_contributors,
+        missing_asset_links=missing_asset_links,
+        missing_contributor_links=missing_contributor_links,
+        coverage_assets_ratio=round(coverage_assets_ratio, 4),
+        coverage_contributors_ratio=round(coverage_contributors_ratio, 4),
+        fully_linked=not missing_asset_links and not missing_contributor_links,
+    )
 
 
 @router.post("/contributions/github", response_model=Contribution, status_code=201)
