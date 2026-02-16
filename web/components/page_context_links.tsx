@@ -24,6 +24,7 @@ const SHARED_RELATED: LinkItem[] = [
   { href: "/ideas", label: "Ideas" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
+  { href: "/automation", label: "Automation" },
   { href: "/agent", label: "Agent" },
   { href: "/friction", label: "Friction" },
   { href: "/contributors", label: "Contributors" },
@@ -103,6 +104,15 @@ const CONTEXTS: Record<string, ContextDef> = {
     machinePaths: [
       { href: "/api/runtime/ideas/summary?seconds=86400", label: "Runtime summary" },
       { href: "/api/friction/report?window_days=7", label: "Friction report" },
+    ],
+  },
+  "/automation": {
+    ideaId: "coherence-network-agent-pipeline",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/automation/usage", label: "Automation usage API" },
+      { href: "/api/automation/usage/alerts", label: "Automation alerts API" },
+      { href: "/api/automation/usage/snapshots", label: "Automation snapshots API" },
     ],
   },
   "/contributors": {

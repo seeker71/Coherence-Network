@@ -8,6 +8,7 @@
     { "path": "/specs", "idea_id": "coherence-network-api-runtime" },
     { "path": "/specs/[spec_id]", "idea_id": "coherence-network-api-runtime" },
     { "path": "/usage", "idea_id": "coherence-network-value-attribution" },
+    { "path": "/automation", "idea_id": "coherence-network-agent-pipeline" },
     { "path": "/contribute", "idea_id": "portfolio-governance" },
     { "path": "/friction", "idea_id": "coherence-network-agent-pipeline" },
     { "path": "/gates", "idea_id": "oss-interface-alignment" },

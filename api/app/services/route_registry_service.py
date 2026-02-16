@@ -132,6 +132,24 @@ def _default_registry() -> dict:
                 "purpose": "Unified pipeline and usage visibility with remaining tracking gaps",
                 "idea_id": "coherence-network-agent-pipeline",
             },
+            {
+                "path": "/api/automation/usage",
+                "methods": ["GET"],
+                "purpose": "Provider adapter usage and normalized automation capacity metrics",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/api/automation/usage/alerts",
+                "methods": ["GET"],
+                "purpose": "Threshold alerts for provider usage remaining capacity",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/api/automation/usage/snapshots",
+                "methods": ["GET"],
+                "purpose": "Historical normalized provider usage snapshots",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
         ],
         "web_routes": [
             {
@@ -157,6 +175,11 @@ def _default_registry() -> dict:
             {
                 "path": "/agent",
                 "purpose": "Human visibility console for agent pipeline and usage coverage",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/automation",
+                "purpose": "Human interface for automation provider capacity and alert visibility",
                 "idea_id": "coherence-network-agent-pipeline",
             },
         ],

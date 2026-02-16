@@ -24,6 +24,7 @@ FALLBACK_PAGES: list[dict[str, str]] = [
     {"path": "/ideas/[idea_id]", "idea_id": "portfolio-governance"},
     {"path": "/specs", "idea_id": "coherence-network-api-runtime"},
     {"path": "/usage", "idea_id": "coherence-network-value-attribution"},
+    {"path": "/automation", "idea_id": "coherence-network-agent-pipeline"},
     {"path": "/friction", "idea_id": "coherence-network-agent-pipeline"},
     {"path": "/gates", "idea_id": "oss-interface-alignment"},
     {"path": "/import", "idea_id": "coherence-signal-depth"},

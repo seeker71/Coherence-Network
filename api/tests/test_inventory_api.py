@@ -170,6 +170,7 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
             "/specs",
             "/specs/[spec_id]",
             "/usage",
+            "/automation",
             "/contribute",
             "/friction",
             "/gates",
