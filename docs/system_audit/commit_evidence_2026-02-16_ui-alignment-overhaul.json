@@ -1,0 +1,99 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/20260216-ui-alignment",
+  "commit_scope": "UI alignment overhaul: add global header/nav, search-first home, and intentional typography/background",
+  "files_owned": [
+    "specs/076-ui-alignment-overhaul.md",
+    "web/app/layout.tsx",
+    "web/app/globals.css",
+    "web/tailwind.config.ts",
+    "web/app/page.tsx",
+    "web/components/site_header.tsx",
+    "docs/system_audit/commit_evidence_2026-02-16_ui-alignment-overhaul.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "076"
+  ],
+  "task_ids": [
+    "ui-alignment-overhaul"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit --prefer-offline && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_ui-alignment-overhaul.json"
+  ],
+  "change_files": [
+    "specs/076-ui-alignment-overhaul.md",
+    "web/app/layout.tsx",
+    "web/app/globals.css",
+    "web/tailwind.config.ts",
+    "web/app/page.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Root page is search-first and provides human navigation to the key console pages; global header makes primary objects discoverable on every page.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network.vercel.app/search",
+      "https://coherence-network.vercel.app/portfolio",
+      "https://coherence-network.vercel.app/ideas",
+      "https://coherence-network.vercel.app/specs",
+      "https://coherence-network.vercel.app/usage"
+    ],
+    "test_flows": [
+      "web:/ -> submit search form -> /search loads",
+      "web:/ -> click Console cards -> routes load",
+      "web:any page -> header nav is present and usable"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T00:16:38Z",
+    "environment": {
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit --prefer-offline && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deploy validation"
+  }
+}
