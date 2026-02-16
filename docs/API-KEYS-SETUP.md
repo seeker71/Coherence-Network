@@ -179,8 +179,14 @@ See [AGENT-FRAMEWORKS.md](AGENT-FRAMEWORKS.md) for options.
 The provider readiness contract checks required provider configuration every 6 hours and raises an issue when blocking gaps exist.
 
 - API: `GET /api/automation/usage/readiness`
+- API: `POST /api/automation/usage/provider-validation/run`
+- API: `GET /api/automation/usage/provider-validation`
 - CI workflow: `.github/workflows/provider-readiness-contract.yml`
 - Required providers variable: `AUTOMATION_REQUIRED_PROVIDERS` (comma-separated)
+- Required validation providers variable: `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (comma-separated)
+
+Default validation set:
+- `coherence-internal,openai-codex,github,railway,claude`
 - Active-provider key policy: `AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1` (default)
   - Any provider observed in runtime usage is treated as required and must have its API key/config present.
 

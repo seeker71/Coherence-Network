@@ -237,27 +237,29 @@ To ensure provider configuration is continuously validated and failures are surf
 - Workflow: `.github/workflows/provider-readiness-contract.yml`
 - Script: `api/scripts/check_provider_readiness.py`
 - API endpoint: `GET /api/automation/usage/readiness`
+- API endpoint: `POST /api/automation/usage/provider-validation/run`
+- API endpoint: `GET /api/automation/usage/provider-validation`
 - Trigger:
   - Every 6 hours (`cron`)
   - Manual (`workflow_dispatch`)
 
 Contract behavior:
 1. Collect provider usage/readiness snapshots.
-2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
+2. Run live provider execution probes for required providers and record runtime events.
+3. Evaluate required providers from `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (fallback: `AUTOMATION_REQUIRED_PROVIDERS`).
    - Providers observed in runtime usage are also required by default (`AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1`).
-3. Fail when any required provider is not configured or not healthy.
-4. Upload `provider_readiness_report.json` artifact.
-5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
+4. Fail when any required provider lacks config/readiness or successful execution evidence.
+5. Upload `provider_readiness_report.json` artifact.
+6. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
 
 Required provider defaults:
-- `coherence-internal`
-- `github`
-- `openai`
-- `railway`
-- `vercel`
+- Readiness: `coherence-internal,github,openai,railway,vercel`
+- Validation: `coherence-internal,openai-codex,github,railway,claude`
 
 Machine and human access:
 - Machine API: `GET /api/automation/usage/readiness`
+- Machine API: `POST /api/automation/usage/provider-validation/run`
+- Machine API: `GET /api/automation/usage/provider-validation`
 - Human UI: `/automation` page, section **Provider Readiness**
   - Manual run (`workflow_dispatch`)
 
@@ -297,20 +299,20 @@ To ensure provider configuration is continuously validated and failures are surf
 
 Contract behavior:
 1. Collect provider usage/readiness snapshots.
-2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
-3. Fail when any required provider is not configured or not healthy.
-4. Upload `provider_readiness_report.json` artifact.
-5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
+2. Run live provider execution probes for required providers and record runtime events.
+3. Evaluate required providers from `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (fallback: `AUTOMATION_REQUIRED_PROVIDERS`).
+4. Fail when any required provider lacks config/readiness or successful execution evidence.
+5. Upload `provider_readiness_report.json` artifact.
+6. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
 
 Required provider defaults:
-- `coherence-internal`
-- `github`
-- `openai`
-- `railway`
-- `vercel`
+- Readiness: `coherence-internal,github,openai,railway,vercel`
+- Validation: `coherence-internal,openai-codex,github,railway,claude`
 
 Machine and human access:
 - Machine API: `GET /api/automation/usage/readiness`
+- Machine API: `POST /api/automation/usage/provider-validation/run`
+- Machine API: `GET /api/automation/usage/provider-validation`
 - Human UI: `/automation` page, section **Provider Readiness**
 
 ## Maintainability Architecture Monitor (Twice Weekly + PR Gate)

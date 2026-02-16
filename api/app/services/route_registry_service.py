@@ -216,6 +216,18 @@ def _default_registry() -> dict:
                 "purpose": "Provider configuration/readiness contract with blocking issues and recommendations",
                 "idea_id": "coherence-network-agent-pipeline",
             },
+            {
+                "path": "/api/automation/usage/provider-validation/run",
+                "methods": ["POST"],
+                "purpose": "Run live provider execution probes and emit runtime validation events",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/api/automation/usage/provider-validation",
+                "methods": ["GET"],
+                "purpose": "Provider validation contract (config + usage + successful execution evidence)",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
         ],
         "web_routes": [
             {
