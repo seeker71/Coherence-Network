@@ -476,10 +476,124 @@ def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
     }
 
 
+def _metadata_text(value: Any, default: str = "unknown") -> str:
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned or default
+    if value is None:
+        return default
+    cleaned = str(value).strip()
+    return cleaned or default
+
+
+def _metadata_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return False
+
+
+def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[str, Any]:
+    tracked_task_ids: set[str] = set()
+    by_executor: dict[str, dict[str, int]] = {}
+    by_agent: dict[str, dict[str, int]] = {}
+    recent_runs: list[dict[str, Any]] = []
+    tracked_runs = 0
+    failed_runs = 0
+    codex_runs = 0
+
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=2000)
+    except Exception:
+        events = []
+
+    for event in events:
+        if str(getattr(event, "source", "")).strip() != "worker":
+            continue
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        task_id = _metadata_text(metadata.get("task_id"), default="")
+        if not task_id:
+            continue
+
+        tracked_runs += 1
+        tracked_task_ids.add(task_id)
+
+        executor = _metadata_text(metadata.get("executor"))
+        agent_id = _metadata_text(metadata.get("agent_id"), default="")
+        if not agent_id:
+            agent_id = _metadata_text(metadata.get("worker_id"))
+        is_openai_codex = _metadata_bool(metadata.get("is_openai_codex")) or (
+            agent_id.lower() == "openai-codex"
+        )
+        if is_openai_codex:
+            codex_runs += 1
+
+        status_key = "failed" if int(getattr(event, "status_code", 0)) >= 400 else "completed"
+        if status_key == "failed":
+            failed_runs += 1
+
+        if executor not in by_executor:
+            by_executor[executor] = {"count": 0, "completed": 0, "failed": 0}
+        by_executor[executor]["count"] += 1
+        by_executor[executor][status_key] += 1
+
+        if agent_id not in by_agent:
+            by_agent[agent_id] = {"count": 0, "completed": 0, "failed": 0}
+        by_agent[agent_id]["count"] += 1
+        by_agent[agent_id][status_key] += 1
+
+        recent_runs.append(
+            {
+                "event_id": getattr(event, "id", ""),
+                "task_id": task_id,
+                "endpoint": getattr(event, "endpoint", ""),
+                "status_code": int(getattr(event, "status_code", 0)),
+                "executor": executor,
+                "agent_id": agent_id,
+                "is_openai_codex": is_openai_codex,
+                "runtime_ms": float(getattr(event, "runtime_ms", 0.0)),
+                "recorded_at": (
+                    getattr(event, "recorded_at").isoformat()
+                    if hasattr(getattr(event, "recorded_at"), "isoformat")
+                    else str(getattr(event, "recorded_at", ""))
+                ),
+            }
+        )
+
+    completed_or_failed_set = {tid for tid in completed_or_failed_task_ids if tid}
+    tracked_completed_or_failed = completed_or_failed_set.intersection(tracked_task_ids)
+    completed_or_failed_count = len(completed_or_failed_set)
+    tracked_count = len(tracked_completed_or_failed)
+    coverage_rate = 1.0 if completed_or_failed_count == 0 else round(tracked_count / completed_or_failed_count, 4)
+
+    return {
+        "tracked_runs": tracked_runs,
+        "failed_runs": failed_runs,
+        "codex_runs": codex_runs,
+        "by_executor": by_executor,
+        "by_agent": by_agent,
+        "coverage": {
+            "completed_or_failed_tasks": completed_or_failed_count,
+            "tracked_task_runs": tracked_count,
+            "coverage_rate": coverage_rate,
+            "untracked_task_ids": sorted(completed_or_failed_set - tracked_completed_or_failed),
+        },
+        "recent_runs": recent_runs[:50],
+    }
+
+
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
     _ensure_store_loaded()
     by_model: dict[str, dict[str, Any]] = {}
+    completed_or_failed_task_ids: list[str] = []
     for t in _store.values():
         m = t.get("model", "unknown")
         if m not in by_model:
@@ -491,9 +605,12 @@ def get_usage_summary() -> dict[str, Any]:
         ts = t.get("updated_at") or t.get("created_at")
         if ts:
             u["last_used"] = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+        if s in {"completed", "failed"}:
+            completed_or_failed_task_ids.append(str(t.get("id", "")).strip())
     return {
         "by_model": by_model,
         "routing": {t.value: {"model": ROUTING[t][0], "tier": ROUTING[t][1]} for t in TaskType},
+        "execution": _execution_usage_summary(completed_or_failed_task_ids),
     }
 
 
