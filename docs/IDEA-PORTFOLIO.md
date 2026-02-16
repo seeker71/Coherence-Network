@@ -31,8 +31,9 @@ The portfolio is exposed for machine and human interfaces:
 - `GET /api/ideas?only_unvalidated=true`
 - `GET /api/ideas/{idea_id}`
 - `PATCH /api/ideas/{idea_id}`
+- `GET /api/ideas/storage`
 
-Data is persisted in `api/logs/idea_portfolio.json` (or `IDEA_PORTFOLIO_PATH`).
+Primary persistence is a structured SQL registry (`sqlite` by default, `postgres` when configured), with a compatibility JSON snapshot at `api/logs/idea_portfolio.json` (or `IDEA_PORTFOLIO_PATH`).
 
 ## Operating Loop
 
