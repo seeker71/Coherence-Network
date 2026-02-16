@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-16T18:03:38.102193+00:00",
+  "generated_at": "2026-02-16T18:07:16.728821+00:00",
   "api_base_url": "https://coherence-network-production.up.railway.app",
   "web_base_url": "https://coherence-network.vercel.app",
   "registry_version": "2026-02-15",
@@ -12,7 +12,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 1250.108,
+      "runtime_ms": 5187.277,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/routes/canonical",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 37.904,
+      "runtime_ms": 40.089,
       "error": null
     },
     {
@@ -34,7 +34,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/runtime/events",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 37.585,
+      "runtime_ms": 39.804,
       "error": null
     },
     {
@@ -45,7 +45,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/runtime/events",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 56.03,
+      "runtime_ms": 62.451,
       "error": null
     },
     {
@@ -56,7 +56,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/runtime/ideas/summary",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 49.844,
+      "runtime_ms": 58.964,
       "error": null
     },
     {
@@ -67,7 +67,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 54.427,
+      "runtime_ms": 59.25,
       "error": null
     },
     {
@@ -78,7 +78,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/runtime/exerciser/run",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 38.221,
+      "runtime_ms": 37.89,
       "error": null
     },
     {
@@ -89,7 +89,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/value-lineage/links",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 37.698,
+      "runtime_ms": 39.302,
       "error": null
     },
     {
@@ -100,7 +100,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/value-lineage/links/sample/usage-events",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 39.524,
+      "runtime_ms": 39.164,
       "error": null
     },
     {
@@ -111,7 +111,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/value-lineage/links/sample/valuation",
       "status_code": 404,
       "probe_ok": true,
-      "runtime_ms": 36.229,
+      "runtime_ms": 37.498,
       "error": null
     },
     {
@@ -122,7 +122,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/value-lineage/links/sample/payout-preview",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 39.102,
+      "runtime_ms": 41.048,
       "error": null
     },
     {
@@ -133,7 +133,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/flow",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 1836.607,
+      "runtime_ms": 2030.538,
       "error": null
     },
     {
@@ -144,7 +144,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 1137.996,
+      "runtime_ms": 1135.998,
       "error": null
     },
     {
@@ -155,7 +155,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/route-evidence",
       "status_code": 404,
       "probe_ok": true,
-      "runtime_ms": 42.483,
+      "runtime_ms": 38.343,
       "error": null
     },
     {
@@ -166,7 +166,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/gaps/sync-traceability",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 38.419,
+      "runtime_ms": 37.559,
       "error": null
     },
     {
@@ -177,7 +177,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/process-completeness",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 4360.554,
+      "runtime_ms": 4361.625,
       "error": null
     },
     {
@@ -188,7 +188,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/gaps/sync-process-tasks",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 40.674,
+      "runtime_ms": 45.81,
       "error": null
     },
     {
@@ -199,7 +199,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/asset-modularity",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 2190.509,
+      "runtime_ms": 2176.973,
       "error": null
     },
     {
@@ -210,7 +210,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/gaps/sync-asset-modularity-tasks",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 35.717,
+      "runtime_ms": 38.956,
       "error": null
     },
     {
@@ -221,7 +221,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/questions/proactive",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 1135.233,
+      "runtime_ms": 1091.497,
       "error": null
     },
     {
@@ -232,7 +232,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/questions/sync-proactive",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 38.593,
+      "runtime_ms": 46.095,
       "error": null
     },
     {
@@ -243,7 +243,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 36.846,
+      "runtime_ms": 41.294,
       "error": null
     },
     {
@@ -254,7 +254,106 @@
       "url": "https://coherence-network-production.up.railway.app/api/ideas/storage",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 674.168,
+      "runtime_ms": 678.641,
+      "error": null
+    },
+    {
+      "path_template": "/api/ideas",
+      "path": "/api/ideas",
+      "method": "POST",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/ideas",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 67.787,
+      "error": null
+    },
+    {
+      "path_template": "/api/ideas/{idea_id}/questions",
+      "path": "/api/ideas/sample/questions",
+      "method": "POST",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/ideas/sample/questions",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 47.938,
+      "error": null
+    },
+    {
+      "path_template": "/api/spec-registry",
+      "path": "/api/spec-registry",
+      "method": "GET",
+      "probe_method": "GET",
+      "url": "https://coherence-network-production.up.railway.app/api/spec-registry",
+      "status_code": 200,
+      "probe_ok": true,
+      "runtime_ms": 40.47,
+      "error": null
+    },
+    {
+      "path_template": "/api/spec-registry",
+      "path": "/api/spec-registry",
+      "method": "POST",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/spec-registry",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 45.902,
+      "error": null
+    },
+    {
+      "path_template": "/api/spec-registry/{spec_id}",
+      "path": "/api/spec-registry/sample",
+      "method": "GET",
+      "probe_method": "GET",
+      "url": "https://coherence-network-production.up.railway.app/api/spec-registry/sample",
+      "status_code": 404,
+      "probe_ok": true,
+      "runtime_ms": 43.85,
+      "error": null
+    },
+    {
+      "path_template": "/api/spec-registry/{spec_id}",
+      "path": "/api/spec-registry/sample",
+      "method": "PATCH",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/spec-registry/sample",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 38.419,
+      "error": null
+    },
+    {
+      "path_template": "/api/governance/change-requests",
+      "path": "/api/governance/change-requests",
+      "method": "GET",
+      "probe_method": "GET",
+      "url": "https://coherence-network-production.up.railway.app/api/governance/change-requests",
+      "status_code": 200,
+      "probe_ok": true,
+      "runtime_ms": 41.291,
+      "error": null
+    },
+    {
+      "path_template": "/api/governance/change-requests",
+      "path": "/api/governance/change-requests",
+      "method": "POST",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/governance/change-requests",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 41.405,
+      "error": null
+    },
+    {
+      "path_template": "/api/governance/change-requests/{change_request_id}/votes",
+      "path": "/api/governance/change-requests/sample/votes",
+      "method": "POST",
+      "probe_method": "OPTIONS",
+      "url": "https://coherence-network-production.up.railway.app/api/governance/change-requests/sample/votes",
+      "status_code": 405,
+      "probe_ok": true,
+      "runtime_ms": 37.959,
       "error": null
     },
     {
@@ -265,7 +364,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/agent/tasks/upsert-active",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 35.93,
+      "runtime_ms": 38.96,
       "error": null
     },
     {
@@ -276,7 +375,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/agent/visibility",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 50.035,
+      "runtime_ms": 63.243,
       "error": null
     },
     {
@@ -287,7 +386,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/automation/usage",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 36.008,
+      "runtime_ms": 39.251,
       "error": null
     },
     {
@@ -298,7 +397,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/automation/usage/alerts",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 67.493,
+      "runtime_ms": 70.001,
       "error": null
     },
     {
@@ -309,7 +408,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/automation/usage/snapshots",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 58.151,
+      "runtime_ms": 52.596,
       "error": null
     }
   ],
@@ -320,7 +419,7 @@
       "url": "https://coherence-network.vercel.app/gates",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 153.501,
+      "runtime_ms": 196.049,
       "error": null
     },
     {
@@ -329,7 +428,7 @@
       "url": "https://coherence-network.vercel.app/search",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 58.998,
+      "runtime_ms": 54.684,
       "error": null
     },
     {
@@ -338,7 +437,7 @@
       "url": "https://coherence-network.vercel.app/api/runtime-beacon",
       "status_code": 405,
       "probe_ok": true,
-      "runtime_ms": 126.557,
+      "runtime_ms": 143.592,
       "error": null
     },
     {
@@ -347,7 +446,7 @@
       "url": "https://coherence-network.vercel.app/flow",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 2590.171,
+      "runtime_ms": 2607.352,
       "error": null
     },
     {
@@ -356,7 +455,7 @@
       "url": "https://coherence-network.vercel.app/contribute",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 66.426,
+      "runtime_ms": 48.351,
       "error": null
     },
     {
@@ -365,7 +464,7 @@
       "url": "https://coherence-network.vercel.app/specs/sample",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 3220.367,
+      "runtime_ms": 3244.908,
       "error": null
     },
     {
@@ -374,7 +473,7 @@
       "url": "https://coherence-network.vercel.app/agent",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 213.493,
+      "runtime_ms": 237.159,
       "error": null
     },
     {
@@ -383,13 +482,13 @@
       "url": "https://coherence-network.vercel.app/automation",
       "status_code": 200,
       "probe_ok": true,
-      "runtime_ms": 248.608,
+      "runtime_ms": 352.883,
       "error": null
     }
   ],
   "summary": {
-    "api_total": 28,
-    "api_probe_ok": 28,
+    "api_total": 37,
+    "api_probe_ok": 37,
     "web_total": 8,
     "web_probe_ok": 8
   }
