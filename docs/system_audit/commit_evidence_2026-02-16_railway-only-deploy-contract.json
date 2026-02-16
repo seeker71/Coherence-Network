@@ -1,0 +1,131 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/railway-only-migration",
+  "commit_scope": "Switch local scripts, CI/CD gates, provider readiness, and documentation from mixed Vercel/Railway assumptions to Railway-only API+web deployment.",
+  "files_owned": [
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "api/.env.example",
+    "api/app/routers/gates.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/scripts/run_route_evidence_probe.py",
+    "api/scripts/validate_merged_change_contract.py",
+    "api/scripts/validate_pr_to_public.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "api/tests/test_gates.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_release_gate_service.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/CONTRIBUTION-TRACKING-IMPLEMENTATION.md",
+    "docs/DEPLOY.md",
+    "docs/DEPLOYMENT-CHECKLIST.md",
+    "docs/DEPLOYMENT-UPDATE-2026-02-14.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/PLAN.md",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "docs/SETUP.md",
+    "docs/STATUS.md",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "scripts/verify_full_deployment.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "web/scripts/vercel-ignore.sh",
+    "web/vercel.json",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-only-deploy-contract.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "014-deploy-readiness",
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-migrate-vercel-to-railway-only-2026-02-16"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "documentation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".venv/bin/ruff check app/services/release_gate_service.py app/services/automation_usage_service.py app/services/idea_service.py app/routers/gates.py scripts/validate_public_deploy_contract.py scripts/validate_pr_to_public.py scripts/validate_merged_change_contract.py scripts/run_route_evidence_probe.py tests/test_gates.py tests/test_release_gate_service.py tests/test_inventory_api.py",
+    ".venv/bin/pytest -q tests/test_gates.py tests/test_release_gate_service.py tests/test_inventory_api.py tests/test_automation_usage_api.py",
+    "NPM_CONFIG_CACHE=.npm-cache npm ci && NPM_CONFIG_CACHE=.npm-cache npm run build"
+  ],
+  "change_files": [
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "api/.env.example",
+    "api/app/routers/gates.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/scripts/run_route_evidence_probe.py",
+    "api/scripts/validate_merged_change_contract.py",
+    "api/scripts/validate_pr_to_public.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "api/tests/test_gates.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_release_gate_service.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/CONTRIBUTION-TRACKING-IMPLEMENTATION.md",
+    "docs/DEPLOY.md",
+    "docs/DEPLOYMENT-CHECKLIST.md",
+    "docs/DEPLOYMENT-UPDATE-2026-02-14.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/PLAN.md",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "docs/SETUP.md",
+    "docs/STATUS.md",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "scripts/verify_full_deployment.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "web/scripts/vercel-ignore.sh",
+    "web/vercel.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      ".venv/bin/ruff check app/services/release_gate_service.py app/services/automation_usage_service.py app/services/idea_service.py app/routers/gates.py scripts/validate_public_deploy_contract.py scripts/validate_pr_to_public.py scripts/validate_merged_change_contract.py scripts/run_route_evidence_probe.py tests/test_gates.py tests/test_release_gate_service.py tests/test_inventory_api.py",
+      ".venv/bin/pytest -q tests/test_gates.py tests/test_release_gate_service.py tests/test_inventory_api.py tests/test_automation_usage_api.py",
+      "NPM_CONFIG_CACHE=.npm-cache npm ci && NPM_CONFIG_CACHE=.npm-cache npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public deploy and gate validation use Railway web endpoints only; provider readiness no longer requires Vercel credentials.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract",
+      "https://coherence-web-production.up.railway.app/gates",
+      "https://coherence-web-production.up.railway.app/api-health"
+    ],
+    "test_flows": [
+      "Run public deploy contract and confirm web checks are railway_web_* without any vercel_* checks.",
+      "Run provider readiness contract and confirm required providers do not include vercel."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting CI and post-merge public deploy validation."
+  }
+}

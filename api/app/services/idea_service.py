@@ -164,7 +164,7 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     "deployment-gate-reliability": {
         "name": "Deployment gate reliability",
         "description": "Harden deploy and validation gates so failures are detected quickly and recovered automatically.",
-        "interfaces": ["external:github", "external:vercel", "external:railway"],
+        "interfaces": ["external:github", "external:railway"],
         "potential_value": 86.0,
         "estimated_cost": 15.0,
         "confidence": 0.63,

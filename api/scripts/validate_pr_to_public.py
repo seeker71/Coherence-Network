@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument("--branch", required=True, help="Head branch to inspect (e.g. codex/system-question-ledger)")
     parser.add_argument("--base", default="main", help="Base branch for required checks/protection")
     parser.add_argument("--api-base", default="https://coherence-network-production.up.railway.app")
-    parser.add_argument("--web-base", default="https://coherence-network.vercel.app")
+    parser.add_argument("--web-base", default="https://coherence-web-production.up.railway.app")
     parser.add_argument(
         "--endpoint",
         action="append",

@@ -101,7 +101,7 @@ jobs:
               "This merged change passed the smart-contract style gate:",
               "- Commit checks: green",
               "- Collective review: evaluated",
-              "- Public validation: passed on Railway + Vercel endpoints",
+              "- Public validation: passed on Railway API + Railway web endpoints",
               "",
               `Contributor acknowledged: **@${contributor}**`,
               `Collective review passed: ${"${{ steps.contract.outputs.collective_review_passed }}"}`,

@@ -186,8 +186,8 @@ To detect production drift even when CI checks are green:
 Contract checks:
 1. Railway `/api/health` responds `200`.
 2. Railway `/api/gates/main-head` responds `200` and returns SHA equal to GitHub `main` head.
-3. Vercel `/gates` page responds `200`.
-4. Vercel `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
+3. Railway web `/gates` page responds `200`.
+4. Railway web `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
 5. Railway value-lineage E2E transaction passes:
    - `POST /api/value-lineage/links`
    - `POST /api/value-lineage/links/{id}/usage-events`
@@ -253,7 +253,7 @@ Contract behavior:
 6. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
 
 Required provider defaults:
-- Readiness: `coherence-internal,github,openai,railway,vercel`
+- Readiness: `coherence-internal,github,openai,railway`
 - Validation: `coherence-internal,openai-codex,github,railway,claude`
 
 Machine and human access:
@@ -306,7 +306,7 @@ Contract behavior:
 6. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
 
 Required provider defaults:
-- Readiness: `coherence-internal,github,openai,railway,vercel`
+- Readiness: `coherence-internal,github,openai,railway`
 - Validation: `coherence-internal,openai-codex,github,railway,claude`
 
 Machine and human access:
