@@ -216,6 +216,7 @@ Fix:
 
 Repository guardrail added:
 - `web/vercel.json` now pins `"framework": "nextjs"` so Vercel does not expect a static `public/` output.
+- `web/vercel.json` includes `"ignoreCommand": "./scripts/vercel-ignore.sh"` to skip preview deployments for non-web-only commits and reduce rate-limit pressure.
 
 ### Interpreting Vercel build logs
 

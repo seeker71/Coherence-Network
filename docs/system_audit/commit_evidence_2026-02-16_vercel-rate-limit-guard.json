@@ -1,0 +1,73 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/vercel-rate-limit-guard",
+  "commit_scope": "Reduce recurring Vercel deployment rate-limit failures by skipping preview deployments for non-web changes via vercel ignoreCommand.",
+  "files_owned": [
+    "web/vercel.json",
+    "web/scripts/vercel-ignore.sh",
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-02-16_vercel-rate-limit-guard.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "014"
+  ],
+  "task_ids": [
+    "vercel-rate-limit-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && VERCEL_GIT_COMMIT_REF=main ./scripts/vercel-ignore.sh",
+    "cd web && VERCEL_GIT_COMMIT_REF=feature/vercel ./scripts/vercel-ignore.sh",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 api/scripts/run_maintainability_audit.py --fail-on-regression"
+  ],
+  "change_files": [
+    "web/vercel.json",
+    "web/scripts/vercel-ignore.sh",
+    "docs/DEPLOY.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T20:30:00Z",
+    "environment": {
+      "python": "3.11"
+    },
+    "commands": [
+      "cd web && VERCEL_GIT_COMMIT_REF=main ./scripts/vercel-ignore.sh",
+      "cd web && VERCEL_GIT_COMMIT_REF=feature/vercel ./scripts/vercel-ignore.sh",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 api/scripts/run_maintainability_audit.py --fail-on-regression"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and Vercel deployment validation"
+  }
+}
