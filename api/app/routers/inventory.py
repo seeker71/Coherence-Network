@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
+from app.adapters.graph_store import GraphStore
 from app.services import inventory_service
 from app.services import page_lineage_service
 from app.services import route_registry_service
 
 router = APIRouter()
+
+
+def get_store(request: Request) -> GraphStore:
+    return request.app.state.graph_store
 
 
 @router.get("/inventory/system-lineage")
@@ -116,12 +121,20 @@ async def sync_process_gap_tasks(
 
 @router.get("/inventory/flow")
 async def spec_process_implementation_validation_flow(
+    request: Request,
     idea_id: str | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
+    store = get_store(request)
+    contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=5000)]
+    contribution_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=10000)]
+    asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=5000)]
     return inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
         runtime_window_seconds=runtime_window_seconds,
+        contributor_rows=contributor_rows,
+        contribution_rows=contribution_rows,
+        asset_rows=asset_rows,
     )
 
 

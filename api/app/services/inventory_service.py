@@ -2060,6 +2060,9 @@ def _new_flow_row(idea_id: str, idea_name: str) -> dict[str, Any]:
         "_public_endpoints": set(),
         "_contributors_all": set(),
         "_contributors_by_role": {},
+        "_contributor_registry_ids": set(),
+        "_contribution_ids": set(),
+        "_asset_ids": set(),
         "process_evidence_count": 0,
         "usage_events_count": 0,
         "measured_value_total": 0.0,
@@ -2091,9 +2094,31 @@ def _add_contributor(flow: dict[str, Any], contributor_id: str, roles: list[str]
         role_map[normalized].add(cid)
 
 
+def _normalize_contributor_token(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+
+
+def _direct_idea_ids_from_contribution_metadata(metadata: Any) -> list[str]:
+    if not isinstance(metadata, dict):
+        return []
+    out: set[str] = set()
+    raw_single = metadata.get("idea_id")
+    if isinstance(raw_single, str) and raw_single.strip():
+        out.add(raw_single.strip())
+    raw_multi = metadata.get("idea_ids")
+    if isinstance(raw_multi, list):
+        for item in raw_multi:
+            if isinstance(item, str) and item.strip():
+                out.add(item.strip())
+    return sorted(out)
+
+
 def build_spec_process_implementation_validation_flow(
     idea_id: str | None = None,
     runtime_window_seconds: int = 86400,
+    contributor_rows: list[dict[str, Any]] | None = None,
+    contribution_rows: list[dict[str, Any]] | None = None,
+    asset_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     portfolio = idea_service.list_ideas()
     idea_name_map = {item.id: item.name for item in portfolio.ideas}
@@ -2119,6 +2144,35 @@ def build_spec_process_implementation_validation_flow(
     for event in usage_events:
         usage_by_lineage_count[event.lineage_id] = usage_by_lineage_count.get(event.lineage_id, 0) + 1
         usage_by_lineage_value[event.lineage_id] = usage_by_lineage_value.get(event.lineage_id, 0.0) + float(event.value)
+
+    contributor_rows = contributor_rows or []
+    contribution_rows = contribution_rows or []
+    asset_rows = asset_rows or []
+    known_asset_ids = {
+        str(row.get("id")).strip()
+        for row in asset_rows
+        if isinstance(row, dict) and str(row.get("id") or "").strip()
+    }
+
+    contributor_id_by_token: dict[str, set[str]] = {}
+    for contributor in contributor_rows:
+        if not isinstance(contributor, dict):
+            continue
+        contributor_id = str(contributor.get("id") or "").strip()
+        if not contributor_id:
+            continue
+        token_candidates = {
+            _normalize_contributor_token(contributor_id),
+            _normalize_contributor_token(str(contributor.get("name") or "")),
+            _normalize_contributor_token(str(contributor.get("email") or "")),
+        }
+        email = str(contributor.get("email") or "").strip().lower()
+        if "@" in email:
+            token_candidates.add(_normalize_contributor_token(email.split("@", 1)[0]))
+        for token in token_candidates:
+            if not token:
+                continue
+            contributor_id_by_token.setdefault(token, set()).add(contributor_id)
 
     evidence_records = _read_commit_evidence_records(limit=800)
 
@@ -2254,6 +2308,57 @@ def build_spec_process_implementation_validation_flow(
         flow["runtime_total_ms"] = float(runtime.total_runtime_ms)
         flow["runtime_cost_estimate"] = float(runtime.runtime_cost_estimate)
 
+    contribution_by_id: dict[str, dict[str, Any]] = {}
+    contributions_by_contributor_id: dict[str, list[dict[str, Any]]] = {}
+    direct_contribs_by_idea: dict[str, list[dict[str, Any]]] = {}
+    for row in contribution_rows:
+        if not isinstance(row, dict):
+            continue
+        contribution_id = str(row.get("id") or "").strip()
+        if contribution_id:
+            contribution_by_id[contribution_id] = row
+        contributor_id = str(row.get("contributor_id") or "").strip()
+        if contributor_id:
+            contributions_by_contributor_id.setdefault(contributor_id, []).append(row)
+        for direct_idea_id in _direct_idea_ids_from_contribution_metadata(row.get("metadata")):
+            direct_contribs_by_idea.setdefault(direct_idea_id, []).append(row)
+
+    # Direct mapping: contribution metadata explicitly references idea ids.
+    for current_idea_id, rows in direct_contribs_by_idea.items():
+        if idea_id and current_idea_id != idea_id:
+            continue
+        flow = ensure(current_idea_id)
+        for row in rows:
+            contribution_id = str(row.get("id") or "").strip()
+            if contribution_id:
+                flow["_contribution_ids"].add(contribution_id)
+            contributor_id = str(row.get("contributor_id") or "").strip()
+            if contributor_id:
+                flow["_contributor_registry_ids"].add(contributor_id)
+                _add_contributor(flow, contributor_id, ["contribution"])
+            asset_id = str(row.get("asset_id") or "").strip()
+            if asset_id and (not known_asset_ids or asset_id in known_asset_ids):
+                flow["_asset_ids"].add(asset_id)
+
+    # Alias-based fallback: match evidence/lineage contributor handles to registry contributors.
+    for flow in flows.values():
+        for alias in list(flow["_contributors_all"]):
+            token = _normalize_contributor_token(alias)
+            if not token:
+                continue
+            resolved_ids = contributor_id_by_token.get(token, set())
+            if not resolved_ids:
+                continue
+            for contributor_id in resolved_ids:
+                flow["_contributor_registry_ids"].add(contributor_id)
+                for row in contributions_by_contributor_id.get(contributor_id, []):
+                    contribution_id = str(row.get("id") or "").strip()
+                    if contribution_id:
+                        flow["_contribution_ids"].add(contribution_id)
+                    asset_id = str(row.get("asset_id") or "").strip()
+                    if asset_id and (not known_asset_ids or asset_id in known_asset_ids):
+                        flow["_asset_ids"].add(asset_id)
+
     items: list[dict[str, Any]] = []
     unblock_queue: list[dict[str, Any]] = []
     active_task_cache: dict[str, dict[str, Any] | None] = {}
@@ -2271,7 +2376,19 @@ def build_spec_process_implementation_validation_flow(
             or flow["usage_events_count"] > 0
         )
         contributors_tracked = bool(flow["_contributors_all"])
-        contributions_tracked = bool(flow["usage_events_count"] > 0 or flow["measured_value_total"] > 0)
+        registry_contribution_count = len(flow["_contribution_ids"])
+        registry_cost_total = round(
+            sum(
+                float((contribution_by_id.get(contribution_id) or {}).get("cost_amount") or 0.0)
+                for contribution_id in flow["_contribution_ids"]
+            ),
+            4,
+        )
+        contributions_tracked = bool(
+            flow["usage_events_count"] > 0
+            or flow["measured_value_total"] > 0
+            or registry_contribution_count > 0
+        )
         idea_signals = idea_signal_map.get(
             current_idea_id,
             {"value_gap": 0.0, "confidence": 0.0, "estimated_cost": 0.0, "potential_value": 0.0, "actual_value": 0.0},
@@ -2348,6 +2465,7 @@ def build_spec_process_implementation_validation_flow(
                     "tracked": contributors_tracked,
                     "total_unique": len(flow["_contributors_all"]),
                     "all": sorted(flow["_contributors_all"]),
+                    "registry_ids": sorted(flow["_contributor_registry_ids"]),
                     "by_role": {
                         role: sorted(ids)
                         for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0])
@@ -2357,6 +2475,14 @@ def build_spec_process_implementation_validation_flow(
                     "tracked": contributions_tracked,
                     "usage_events_count": int(flow["usage_events_count"]),
                     "measured_value_total": round(float(flow["measured_value_total"]), 4),
+                    "registry_contribution_count": registry_contribution_count,
+                    "registry_total_cost": registry_cost_total,
+                    "contribution_ids": sorted(flow["_contribution_ids"]),
+                },
+                "assets": {
+                    "tracked": len(flow["_asset_ids"]) > 0,
+                    "count": len(flow["_asset_ids"]),
+                    "asset_ids": sorted(flow["_asset_ids"]),
                 },
                 "chain": {
                     "spec": "tracked" if spec_count > 0 else "missing",
@@ -2365,6 +2491,7 @@ def build_spec_process_implementation_validation_flow(
                     "validation": "tracked" if validation_tracked else "missing",
                     "contributors": "tracked" if contributors_tracked else "missing",
                     "contributions": "tracked" if contributions_tracked else "missing",
+                    "assets": "tracked" if len(flow["_asset_ids"]) > 0 else "missing",
                 },
                 "interdependencies": interdependencies,
                 "idea_signals": {
@@ -2394,6 +2521,7 @@ def build_spec_process_implementation_validation_flow(
         "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
         "with_contributors": sum(1 for row in items if row["contributors"]["tracked"]),
         "with_contributions": sum(1 for row in items if row["contributions"]["tracked"]),
+        "with_assets": sum(1 for row in items if row["assets"]["tracked"]),
         "blocked_ideas": sum(1 for row in items if row["interdependencies"]["blocked"]),
         "queue_items": len(unblock_queue),
     }

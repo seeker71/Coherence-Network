@@ -46,12 +46,21 @@ type FlowItem = {
     tracked: boolean;
     total_unique: number;
     all: string[];
+    registry_ids: string[];
     by_role: Record<string, string[]>;
   };
   contributions: {
     tracked: boolean;
     usage_events_count: number;
     measured_value_total: number;
+    registry_contribution_count: number;
+    registry_total_cost: number;
+    contribution_ids: string[];
+  };
+  assets: {
+    tracked: boolean;
+    count: number;
+    asset_ids: string[];
   };
   chain: {
     spec: string;
@@ -60,6 +69,7 @@ type FlowItem = {
     validation: string;
     contributors: string;
     contributions: string;
+    assets: string;
   };
   interdependencies: {
     blocked: boolean;
@@ -375,6 +385,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
               <span className="rounded border px-2 py-1">validation: {item.chain.validation}</span>
               <span className="rounded border px-2 py-1">contributors: {item.chain.contributors}</span>
               <span className="rounded border px-2 py-1">contributions: {item.chain.contributions}</span>
+              <span className="rounded border px-2 py-1">assets: {item.chain.assets}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               blocker {item.interdependencies.blocking_stage ?? "none"} | unblock priority{" "}
@@ -459,6 +470,12 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                   usage_events {item.contributions.usage_events_count} | measured_value {item.contributions.measured_value_total.toFixed(2)}
                 </p>
                 <p className="text-muted-foreground">
+                  registry_contributions {item.contributions.registry_contribution_count} | registry_cost {item.contributions.registry_total_cost.toFixed(2)}
+                </p>
+                <p className="text-muted-foreground">
+                  assets {item.assets.count} ({statLabel(item.assets.tracked)})
+                </p>
+                <p className="text-muted-foreground">
                   lineage_ids{" "}
                   {item.implementation.lineage_ids.length > 0
                     ? item.implementation.lineage_ids.slice(0, 6).map((lineageId, idx) => (
@@ -519,6 +536,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                 <p className="text-muted-foreground">
                   unique {item.contributors.total_unique} ({statLabel(item.contributors.tracked)})
                 </p>
+                <p className="text-muted-foreground">registry_ids {item.contributors.registry_ids.slice(0, 5).join(", ") || "-"}</p>
                 <ul className="space-y-1 text-muted-foreground">
                   {Object.entries(item.contributors.by_role)
                     .slice(0, 8)
