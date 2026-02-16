@@ -102,3 +102,24 @@ class ProviderReadinessReport(BaseModel):
     blocking_issues: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     providers: list[ProviderReadinessRow] = Field(default_factory=list)
+
+
+class ProviderValidationRow(BaseModel):
+    provider: str = Field(min_length=1, max_length=120)
+    configured: bool = False
+    readiness_status: ProviderStatus = "unavailable"
+    usage_events: int = Field(ge=0)
+    successful_events: int = Field(ge=0)
+    validated_execution: bool = False
+    last_event_at: datetime | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
+class ProviderValidationReport(BaseModel):
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    required_providers: list[str] = Field(default_factory=list)
+    runtime_window_seconds: int = Field(ge=60, le=2592000)
+    min_execution_events: int = Field(ge=1, le=50)
+    all_required_validated: bool = False
+    blocking_issues: list[str] = Field(default_factory=list)
+    providers: list[ProviderValidationRow] = Field(default_factory=list)

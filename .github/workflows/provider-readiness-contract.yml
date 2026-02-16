@@ -28,6 +28,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       AUTOMATION_REQUIRED_PROVIDERS: ${{ vars.AUTOMATION_REQUIRED_PROVIDERS }}
+      AUTOMATION_PROVIDER_VALIDATION_REQUIRED: ${{ vars.AUTOMATION_PROVIDER_VALIDATION_REQUIRED }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +46,12 @@ jobs:
         run: |
           set +e
           cd api
-          python scripts/check_provider_readiness.py --json --fail-on-blocking > ../provider_readiness_report.json
+          REQUIRED="${AUTOMATION_PROVIDER_VALIDATION_REQUIRED:-$AUTOMATION_REQUIRED_PROVIDERS}"
+          python scripts/check_provider_readiness.py \
+            --required-providers "$REQUIRED" \
+            --run-probes \
+            --json \
+            --fail-on-blocking > ../provider_readiness_report.json
           code=$?
           cd ..
           cat provider_readiness_report.json
@@ -66,23 +72,26 @@ jobs:
           script: |
             const fs = require('fs');
             const report = JSON.parse(fs.readFileSync('provider_readiness_report.json', 'utf8'));
+            const readiness = report.readiness || {};
+            const validation = report.validation || {};
             const title = 'Provider readiness contract failing';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const body = [
               'Automated provider readiness contract detected blocking issues.',
               '',
               `- Workflow run: ${runUrl}`,
-              `- all_required_ready: ${report.all_required_ready}`,
-              `- required_providers: ${(report.required_providers || []).join(', ')}`,
+              `- all_required_ready: ${readiness.all_required_ready}`,
+              `- all_required_validated: ${validation.all_required_validated}`,
+              `- required_providers: ${(validation.required_providers || []).join(', ')}`,
               '',
               'Blocking issues:',
-              ...((report.blocking_issues || []).length
-                ? report.blocking_issues.map((x) => `- ${x}`)
+              ...((validation.blocking_issues || []).length
+                ? validation.blocking_issues.map((x) => `- ${x}`)
                 : ['- (none reported)']),
               '',
-              'Recommendations:',
-              ...((report.recommendations || []).length
-                ? report.recommendations.map((x) => `- ${x}`)
+              'Readiness recommendations:',
+              ...((readiness.recommendations || []).length
+                ? readiness.recommendations.map((x) => `- ${x}`)
                 : ['- (none)']),
               '',
               'Raw report:',

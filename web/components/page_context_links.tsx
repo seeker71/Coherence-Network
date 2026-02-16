@@ -114,6 +114,8 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/automation/usage/alerts", label: "Automation alerts API" },
       { href: "/api/automation/usage/snapshots", label: "Automation snapshots API" },
       { href: "/api/automation/usage/readiness", label: "Automation readiness API" },
+      { href: "/api/automation/usage/provider-validation", label: "Provider validation API" },
+      { href: "/api/automation/usage/provider-validation/run", label: "Provider validation run API" },
     ],
   },
   "/contributors": {
