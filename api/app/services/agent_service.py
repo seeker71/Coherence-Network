@@ -1,5 +1,6 @@
 """Agent orchestration: routing and task tracking."""
 
+import hashlib
 import json
 import os
 import re
@@ -8,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
+from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
 # Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
@@ -245,6 +247,106 @@ def _normalize_worker_id(worker_id: str | None) -> str:
     return cleaned or "unknown"
 
 
+def _derive_task_executor(task: dict[str, Any]) -> str:
+    model = str(task.get("model") or "").strip().lower()
+    command = str(task.get("command") or "").strip()
+    if model.startswith("cursor/") or command.startswith("agent "):
+        return "cursor"
+    if command.startswith("aider "):
+        return "aider"
+    if command.startswith("claude "):
+        return "claude"
+    return "unknown"
+
+
+def _task_duration_ms(task: dict[str, Any]) -> float:
+    started = task.get("started_at")
+    created = task.get("created_at")
+    updated = task.get("updated_at") or _now()
+    start_ts = started or created
+    if hasattr(start_ts, "timestamp") and hasattr(updated, "timestamp"):
+        seconds = max(0.0, float((updated - start_ts).total_seconds()))
+        return max(0.1, round(seconds * 1000.0, 4))
+    return 0.1
+
+
+def _has_completion_tracking_event(task_id: str, final_status: str) -> bool:
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=5000)
+    except Exception:
+        return False
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        if str(metadata.get("tracking_kind") or "").strip() != "agent_task_completion":
+            continue
+        if str(metadata.get("task_id") or "").strip() != task_id:
+            continue
+        if str(metadata.get("task_final_status") or "").strip() != final_status:
+            continue
+        return True
+    return False
+
+
+def _record_completion_tracking_event(task: dict[str, Any]) -> None:
+    status_value = task.get("status")
+    final_status = status_value.value if hasattr(status_value, "value") else str(status_value or "")
+    if final_status not in {"completed", "failed"}:
+        return
+
+    task_id = str(task.get("id") or "").strip()
+    if not task_id:
+        return
+    if _has_completion_tracking_event(task_id, final_status):
+        return
+
+    command = str(task.get("command") or "").strip()
+    command_sha = hashlib.sha256(command.encode("utf-8")).hexdigest() if command else ""
+    worker_id = _normalize_worker_id(task.get("claimed_by"))
+    executor = _derive_task_executor(task)
+    runtime_ms = _task_duration_ms(task)
+    status_code = 200 if final_status == "completed" else 500
+
+    try:
+        from app.services import runtime_service
+
+        runtime_service.record_event(
+            RuntimeEventCreate(
+                source="worker",
+                endpoint="tool:agent-task-completion",
+                method="RUN",
+                status_code=status_code,
+                runtime_ms=runtime_ms,
+                idea_id="coherence-network-agent-pipeline",
+                metadata={
+                    "task_id": task_id,
+                    "task_type": str(task.get("task_type") or ""),
+                    "task_final_status": final_status,
+                    "model": str(task.get("model") or "unknown"),
+                    "worker_id": worker_id,
+                    "agent_id": "openai-codex"
+                    if worker_id == "openai-codex" or worker_id.startswith("openai-codex:")
+                    else worker_id,
+                    "executor": executor,
+                    "is_openai_codex": worker_id == "openai-codex"
+                    or worker_id.startswith("openai-codex:"),
+                    "tracking_kind": "agent_task_completion",
+                    "repeatable_tool_name": "agent_task_completion",
+                    "repeatable_tool_call": command or "PATCH /api/agent/tasks/{task_id}",
+                    "repeatable_tool_call_sha256": command_sha,
+                    "repeatable_replay_hint": command
+                    or "Replay by patching the task to completed/failed with the same task id.",
+                },
+            )
+        )
+    except Exception:
+        # Tracking should never block task state transitions.
+        return
+
+
 def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
     now = _now()
     claimant = _normalize_worker_id(worker_id)
@@ -417,6 +519,7 @@ def update_task(
     if decision is not None and task.get("decision") is None:
         task["decision"] = decision
     task["updated_at"] = _now()
+    _record_completion_tracking_event(task)
     _save_store_to_disk()
     return task
 
