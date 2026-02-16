@@ -1,0 +1,37 @@
+{
+  "version": "2026-02-16",
+  "ideas": [
+    {
+      "idea_id": "portfolio-governance",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "oss-interface-alignment",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "coherence-signal-depth",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "coherence-network-agent-pipeline",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "coherence-network-api-runtime",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "coherence-network-value-attribution",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "coherence-network-web-interface",
+      "origin_idea_id": "portfolio-governance"
+    },
+    {
+      "idea_id": "deployment-gate-reliability",
+      "origin_idea_id": "portfolio-governance"
+    }
+  ]
+}

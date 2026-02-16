@@ -117,13 +117,16 @@ async def capture_runtime_metrics(request, call_next):
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
 
-    path = request.url.path
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    path = route_path if isinstance(route_path, str) and route_path.strip() else request.url.path
     if path.startswith("/api") or path.startswith("/v1"):
         try:
             runtime_service.record_event(
                 RuntimeEventCreate(
                     source="api",
                     endpoint=path,
+                    raw_endpoint=request.url.path,
                     method=request.method,
                     status_code=response.status_code,
                     runtime_ms=max(0.1, elapsed_ms),

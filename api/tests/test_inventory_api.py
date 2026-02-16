@@ -308,6 +308,13 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    (tmp_path / "idea_lineage.json").write_text(
+        json.dumps({"origin_map": {"portfolio-governance": "system-root"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_LINEAGE_MAP_PATH", str(tmp_path / "idea_lineage.json"))
     evidence_dir = tmp_path / "system_audit"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
@@ -351,18 +358,35 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        runtime_created = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "api",
+                "endpoint": "/api/ideas",
+                "method": "GET",
+                "status_code": 200,
+                "runtime_ms": 22.0,
+            },
+        )
+        assert runtime_created.status_code == 201
+
         resp = await client.get("/api/inventory/endpoint-traceability")
         assert resp.status_code == 200
         payload = resp.json()
 
     assert payload["summary"]["total_endpoints"] >= 40
-    assert payload["summary"]["missing_idea"] >= 1
+    assert payload["summary"]["missing_idea"] == 0
+    assert payload["summary"]["with_origin_idea"] == payload["summary"]["total_endpoints"]
+    assert payload["summary"]["with_usage_events"] >= 1
     assert payload["summary"]["missing_spec"] >= 1
     assert payload["context"]["spec_count"] >= payload["context"]["idea_count"]
     assert any(row["path"] == "/api/inventory/endpoint-traceability" for row in payload["items"])
 
     ideas_row = next(row for row in payload["items"] if row["path"] == "/api/ideas")
     assert ideas_row["idea"]["tracked"] is True
+    assert ideas_row["idea"]["origin_idea_id"] == "system-root"
+    assert ideas_row["usage"]["tracked"] is True
+    assert ideas_row["usage"]["event_count"] >= 1
     assert ideas_row["spec"]["tracked"] is True
     assert ideas_row["process"]["tracked"] is True
 

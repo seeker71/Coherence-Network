@@ -50,5 +50,9 @@ async def spec_process_implementation_validation_flow(
 
 
 @router.get("/inventory/endpoint-traceability")
-async def endpoint_traceability_inventory() -> dict:
-    return inventory_service.build_endpoint_traceability_inventory()
+async def endpoint_traceability_inventory(
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.build_endpoint_traceability_inventory(
+        runtime_window_seconds=runtime_window_seconds
+    )
