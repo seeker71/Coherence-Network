@@ -58,6 +58,9 @@ RESTART_FILE = os.path.join(LOG_DIR, "restart_requested.json")
 META_QUESTIONS_FILE = os.path.join(LOG_DIR, "meta_questions.json")
 META_QUESTIONS_LAST_RUN_FILE = os.path.join(LOG_DIR, "meta_questions_last_run.json")
 META_QUESTIONS_INTERVAL_SEC = 86400  # run meta-questions at most once per 24h
+MAINTAINABILITY_AUDIT_FILE = os.path.join(LOG_DIR, "maintainability_audit.json")
+MAINTAINABILITY_AUDIT_LAST_RUN_FILE = os.path.join(LOG_DIR, "maintainability_audit_last_run.json")
+MAINTAINABILITY_AUDIT_INTERVAL_SEC = 43200  # run maintainability audit at most once per 12h
 PROJECT_ROOT = os.path.dirname(_api_dir)
 
 # Priority order: 1 = highest (address first)
@@ -307,6 +310,17 @@ def _load_meta_questions() -> Optional[dict]:
     """Load meta_questions.json if present. Returns None if missing or invalid."""
     if not os.path.isfile(META_QUESTIONS_FILE):
         return None
+
+
+def _load_maintainability_audit() -> Optional[dict]:
+    if not os.path.isfile(MAINTAINABILITY_AUDIT_FILE):
+        return None
+    try:
+        with open(MAINTAINABILITY_AUDIT_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
     try:
         with open(META_QUESTIONS_FILE, encoding="utf-8") as f:
             return json.load(f)
@@ -347,6 +361,53 @@ def _run_meta_questions_if_due(log: logging.Logger) -> None:
             log.debug("Meta-questions script exited %s: %s", r.returncode, (r.stderr or r.stdout or "")[:200])
     except Exception as e:
         log.debug("Meta-questions script failed: %s", e)
+
+
+def _run_maintainability_audit_if_due(log: logging.Logger) -> Optional[dict]:
+    now_ts = time.time()
+    last_run_ts = None
+    if os.path.isfile(MAINTAINABILITY_AUDIT_LAST_RUN_FILE):
+        try:
+            with open(MAINTAINABILITY_AUDIT_LAST_RUN_FILE, encoding="utf-8") as f:
+                j = json.load(f)
+            val = j.get("at")
+            if val is not None:
+                last_run_ts = float(val)
+        except Exception:
+            pass
+    if last_run_ts is not None and (now_ts - last_run_ts) < MAINTAINABILITY_AUDIT_INTERVAL_SEC:
+        return _load_maintainability_audit()
+
+    try:
+        import subprocess
+
+        r = subprocess.run(
+            [
+                sys.executable,
+                os.path.join(os.path.dirname(__file__), "run_maintainability_audit.py"),
+                "--json",
+                "--output",
+                MAINTAINABILITY_AUDIT_FILE,
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            env=os.environ.copy(),
+        )
+        if r.returncode == 0:
+            with open(MAINTAINABILITY_AUDIT_LAST_RUN_FILE, "w", encoding="utf-8") as f:
+                json.dump({"at": now_ts}, f)
+            log.debug("Maintainability audit run completed")
+        else:
+            log.debug(
+                "Maintainability audit exited %s: %s",
+                r.returncode,
+                (r.stderr or r.stdout or "")[:200],
+            )
+    except Exception as e:
+        log.debug("Maintainability audit run failed: %s", e)
+    return _load_maintainability_audit()
 
 
 def _build_hierarchical_report(
@@ -950,6 +1011,121 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                 )
     except Exception:
         pass
+
+    # Maintainability architecture + placeholder audit (scheduled within monitor loop).
+    maintainability = _run_maintainability_audit_if_due(log)
+    if isinstance(maintainability, dict):
+        summary = maintainability.get("summary") if isinstance(maintainability.get("summary"), dict) else {}
+        baseline = maintainability.get("baseline") if isinstance(maintainability.get("baseline"), dict) else {}
+        recommended = (
+            maintainability.get("recommended_tasks")
+            if isinstance(maintainability.get("recommended_tasks"), list)
+            else []
+        )
+        risk_score = int(summary.get("risk_score") or 0)
+        severity = str(summary.get("severity") or "low").lower()
+        regression = bool(summary.get("regression"))
+        blocking_gap = bool(summary.get("blocking_gap"))
+        placeholder_count = int(summary.get("placeholder_count") or 0)
+        baseline_placeholder = int(baseline.get("max_placeholder_count") or 0)
+        placeholder_regressed = placeholder_count > baseline_placeholder
+
+        if regression or blocking_gap:
+            action = (
+                "Run maintainability cleanup before adding new features. "
+                "Review api/logs/maintainability_audit.json and execute the top ROI recommendation."
+            )
+            heal_task_id = None
+            if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "architecture_maintainability_drift" not in prev_conditions:
+                direction = (
+                    "Monitor detected maintainability drift. Refactor architecture hotspots and reduce complexity "
+                    "before new feature work. Re-run maintainability audit and update baseline only after verified improvements."
+                )
+                if recommended and isinstance(recommended[0], dict):
+                    top = recommended[0]
+                    direction = (
+                        f"{top.get('title', 'Maintainability cleanup')}: {top.get('direction', direction)} "
+                        f"(estimated_cost_hours={top.get('estimated_cost_hours')}, "
+                        f"value_to_whole={top.get('value_to_whole')}, roi_estimate={top.get('roi_estimate')})."
+                    )
+                try:
+                    resp = client.post(
+                        f"{BASE}/api/agent/tasks",
+                        json={
+                            "direction": direction,
+                            "task_type": "heal",
+                            "context": {
+                                "executor": "cursor",
+                                "monitor_condition": "architecture_maintainability_drift",
+                                "risk_score": risk_score,
+                                "severity": severity,
+                                "regression": regression,
+                            },
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 201:
+                        heal_task_id = resp.json().get("id")
+                        action = f"Created heal task {heal_task_id}. " + action
+                        log.info("Auto-fix: created heal task for architecture_maintainability_drift")
+                except Exception as e:
+                    log.warning("Auto-fix heal task failed: %s", e)
+            _add_issue(
+                data,
+                "architecture_maintainability_drift",
+                "high" if blocking_gap else "medium",
+                (
+                    f"Maintainability audit drift detected (risk_score={risk_score}, severity={severity}, "
+                    f"regression={str(regression).lower()})."
+                ),
+                action,
+            )
+            if heal_task_id:
+                data["issues"][-1]["heal_task_id"] = heal_task_id
+
+        if placeholder_regressed:
+            action = (
+                "Runtime placeholder/mock markers increased beyond baseline. "
+                "Replace with production-grade implementation or tracked backlog items."
+            )
+            heal_task_id = None
+            if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "runtime_placeholder_debt" not in prev_conditions:
+                try:
+                    resp = client.post(
+                        f"{BASE}/api/agent/tasks",
+                        json={
+                            "direction": (
+                                "Monitor detected new runtime placeholder/mock debt. Remove fake/mock/stub runtime markers "
+                                "and validate with maintainability audit."
+                            ),
+                            "task_type": "heal",
+                            "context": {
+                                "executor": "cursor",
+                                "monitor_condition": "runtime_placeholder_debt",
+                                "placeholder_count": placeholder_count,
+                                "baseline_placeholder_count": baseline_placeholder,
+                            },
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 201:
+                        heal_task_id = resp.json().get("id")
+                        action = f"Created heal task {heal_task_id}. " + action
+                        log.info("Auto-fix: created heal task for runtime_placeholder_debt")
+                except Exception as e:
+                    log.warning("Auto-fix heal task failed: %s", e)
+            _add_issue(
+                data,
+                "runtime_placeholder_debt",
+                "high",
+                (
+                    f"Runtime placeholder/mock findings increased (current={placeholder_count}, "
+                    f"baseline={baseline_placeholder})."
+                ),
+                action,
+            )
+            if heal_task_id:
+                data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Track resolved issues for effectiveness measurement; attribute to heal when we have heal_task_id
     current_conditions = {i["condition"] for i in data["issues"]}

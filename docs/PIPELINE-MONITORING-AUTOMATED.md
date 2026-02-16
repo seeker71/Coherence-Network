@@ -93,6 +93,8 @@ Response shape:
 | `api_unreachable` | high | pipeline-status request fails |
 | `metrics_unavailable` | low | GET /api/agent/metrics returns 404 |
 | `phase_6_7_not_worked` | medium | Backlog (006) has not reached Phase 6 — Phase 6/7 product-critical items not being worked; verify backlog maps to PLAN phases |
+| `architecture_maintainability_drift` | high/medium | Maintainability audit reports blocking drift or baseline regression (architecture complexity/layer health) |
+| `runtime_placeholder_debt` | high | Runtime mock/fake/stub placeholder findings increased beyond baseline |
 
 **Backlog alignment (spec 007):** GET /api/agent/effectiveness returns `plan_progress.backlog_alignment` with `phase_6_7_status` and `phase_6_7_not_worked`. The monitor flags when Phase 6/7 items are not being worked so progress toward PLAN.md goals is visible.
 
@@ -105,6 +107,8 @@ Response shape:
 | `orphan_running` | PATCH task to failed (unblock pipeline) |
 | `no_task_running` | Create heal task (when auto-fix also enabled) |
 | `repeated_failures` | Create heal task (when auto-fix also enabled) |
+| `architecture_maintainability_drift` | Create high-ROI heal task (when auto-fix also enabled) |
+| `runtime_placeholder_debt` | Create placeholder cleanup heal task (when auto-fix also enabled) |
 
 ## How to React (Agent)
 
@@ -228,3 +232,21 @@ Dependency update cadence:
   - GitHub Actions
   - Python (`/api`)
   - npm (`/web`)
+
+## Maintainability Architecture Monitor (Twice Weekly + PR Gate)
+
+To keep architecture and placeholder debt from drifting:
+
+- Scheduled workflow: `.github/workflows/maintainability-architecture-audit.yml`
+  - Runs Mondays + Thursdays
+  - Executes `api/scripts/run_maintainability_audit.py`
+  - Fails on baseline regressions or blocking architecture drift
+  - Opens/updates issue `Maintainability architecture drift detected`
+- Baseline file: `docs/system_audit/maintainability_baseline.json`
+  - PRs fail if maintainability metrics regress beyond baseline (`thread-gates.yml`)
+- Runtime monitor integration:
+  - Writes audit report to `api/logs/maintainability_audit.json`
+  - Raises monitor conditions:
+    - `architecture_maintainability_drift`
+    - `runtime_placeholder_debt`
+  - When auto-fix is enabled, monitor creates a high-ROI heal task once per new condition.
