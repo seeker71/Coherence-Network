@@ -218,6 +218,35 @@ To track newly added external tools and keep upgrade cadence:
 - Registry: `docs/system_audit/external_tools_registry.json`
 - Trigger:
   - Tuesdays + Fridays (`cron`)
+
+## Provider Readiness Contract (Every 6 Hours)
+
+To ensure provider configuration is continuously validated and failures are surfaced automatically:
+
+- Workflow: `.github/workflows/provider-readiness-contract.yml`
+- Script: `api/scripts/check_provider_readiness.py`
+- API endpoint: `GET /api/automation/usage/readiness`
+- Trigger:
+  - Every 6 hours (`cron`)
+  - Manual (`workflow_dispatch`)
+
+Contract behavior:
+1. Collect provider usage/readiness snapshots.
+2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
+3. Fail when any required provider is not configured or not healthy.
+4. Upload `provider_readiness_report.json` artifact.
+5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
+
+Required provider defaults:
+- `coherence-internal`
+- `github`
+- `openai`
+- `railway`
+- `vercel`
+
+Machine and human access:
+- Machine API: `GET /api/automation/usage/readiness`
+- Human UI: `/automation` page, section **Provider Readiness**
   - Manual run (`workflow_dispatch`)
 
 Behavior:
