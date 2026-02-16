@@ -29,6 +29,9 @@ export PIPELINE_AUTONOMOUS="${PIPELINE_AUTONOMOUS:-1}"
 export PIPELINE_AUTO_COMMIT="${PIPELINE_AUTO_COMMIT:-1}"
 export PIPELINE_AUTO_PUSH="${PIPELINE_AUTO_PUSH:-0}"
 export PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS="${PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS:-24}"
+export PR_FOLLOWTHROUGH_GUARD="${PR_FOLLOWTHROUGH_GUARD:-1}"
+export PR_STALE_MINUTES="${PR_STALE_MINUTES:-90}"
+export PR_FAIL_ON_ANY_OPEN="${PR_FAIL_ON_ANY_OPEN:-0}"
 
 _api_alive() { curl -s --max-time 5 "${BASE}/api/health" >/dev/null 2>&1; }
 _metrics_ok() { curl -s --max-time 5 -o /dev/null -w "%{http_code}" "${BASE}/api/agent/metrics" 2>/dev/null | grep -q 200; }
@@ -37,6 +40,25 @@ _write_fatal() {
   local detail="${2:-}"
   echo "{\"at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"reason\": \"$reason\", \"detail\": \"$detail\", \"recovery_attempted\": true}" > "$FATAL_FILE"
   echo "FATAL: $reason — see $FATAL_FILE"
+}
+
+_check_pr_followthrough() {
+  if [ "${PR_FOLLOWTHROUGH_GUARD}" != "1" ]; then
+    return 0
+  fi
+  local cmd=(
+    "$PYTHON" "$PROJECT_ROOT/scripts/check_pr_followthrough.py"
+    --stale-minutes "$PR_STALE_MINUTES"
+    --fail-on-stale
+    --strict
+  )
+  if [ "${PR_FAIL_ON_ANY_OPEN}" = "1" ]; then
+    cmd+=(--fail-on-open)
+  fi
+  if ! "${cmd[@]}"; then
+    _write_fatal "pr_followthrough_blocked" "Open/stale codex PRs detected; merge/close or update PRs before continuing."
+    return 1
+  fi
 }
 
 _start_api() {
@@ -50,6 +72,11 @@ echo "=== Autonomous Pipeline ==="
 echo "API: $BASE | Auto-fix: on | Auto-recover: on | Auto-commit: ${PIPELINE_AUTO_COMMIT:-0} | Auto-push: ${PIPELINE_AUTO_PUSH:-0}"
 echo "Fatal issues: $FATAL_FILE"
 echo ""
+
+echo "Checking PR follow-through gate..."
+if ! _check_pr_followthrough; then
+  exit 1
+fi
 
 # Start or reuse API
 API_PID=""
@@ -79,9 +106,12 @@ API_RESTART_COUNT=0
 WATCHDOG_RESTART_COUNT=0
 MAX_API_RESTARTS=5
 MAX_WATCHDOG_RESTARTS=10
+FOLLOWTHROUGH_CHECK_SECONDS=900
+FOLLOWTHROUGH_ELAPSED=0
 
 while true; do
   sleep 120
+  FOLLOWTHROUGH_ELAPSED=$((FOLLOWTHROUGH_ELAPSED + 120))
 
   # Check API (and metrics route: if health OK but metrics 404, restart to load new routes)
   if ! _api_alive; then
@@ -130,5 +160,13 @@ while true; do
     "$SCRIPT_DIR/run_overnight_pipeline_watchdog.sh" --hours=0 &
     WATCHDOG_PID=$!
     sleep 5
+  fi
+
+  if [ "$FOLLOWTHROUGH_ELAPSED" -ge "$FOLLOWTHROUGH_CHECK_SECONDS" ]; then
+    FOLLOWTHROUGH_ELAPSED=0
+    echo "[$(date '+%H:%M:%S')] Re-checking PR follow-through gate..."
+    if ! _check_pr_followthrough; then
+      exit 1
+    fi
   fi
 done

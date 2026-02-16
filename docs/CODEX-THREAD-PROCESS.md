@@ -25,11 +25,13 @@ Run and record:
 cd api && .venv/bin/pytest -q
 ./scripts/verify_worktree_local_web.sh
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
+python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ```
 
 Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
 - PASS only if changed specs pass the spec quality contract (when any feature spec changed).
+- PASS only if no stale open `codex/*` PR is left unattended.
 
 Worktree notes:
 - This command is the default local web validation for Codex threads.
