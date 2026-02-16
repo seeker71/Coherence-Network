@@ -82,3 +82,23 @@ class SubscriptionUpgradeEstimatorReport(BaseModel):
     estimated_current_monthly_cost_usd: float = Field(ge=0.0)
     estimated_next_monthly_cost_usd: float = Field(ge=0.0)
     estimated_monthly_upgrade_delta_usd: float = Field(ge=0.0)
+
+
+class ProviderReadinessRow(BaseModel):
+    provider: str = Field(min_length=1, max_length=120)
+    kind: str = Field(min_length=1, max_length=120)
+    status: ProviderStatus
+    required: bool = False
+    configured: bool = False
+    severity: AlertSeverity
+    missing_env: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class ProviderReadinessReport(BaseModel):
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    required_providers: list[str] = Field(default_factory=list)
+    all_required_ready: bool = False
+    blocking_issues: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+    providers: list[ProviderReadinessRow] = Field(default_factory=list)
