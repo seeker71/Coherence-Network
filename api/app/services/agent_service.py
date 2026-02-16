@@ -5,6 +5,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
@@ -42,7 +43,11 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
     TaskType.TEST: "qa-engineer",
     TaskType.IMPL: "dev-engineer",
     TaskType.REVIEW: "reviewer",
-    TaskType.HEAL: None,
+    TaskType.HEAL: "dev-engineer",
+}
+
+GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
+    TaskType.REVIEW: ["spec-guard"],
 }
 
 # Command templates: {{direction}} placeholder; uses --agent when subagent defined
@@ -111,6 +116,26 @@ def _escalation_executor_default() -> str:
     return "claude" if cheap != "claude" else "openclaw"
 
 
+def _executor_binary_name(executor: str) -> str:
+    if executor == "cursor":
+        return "agent"
+    if executor == "openclaw":
+        return "openclaw"
+    return "aider"
+
+
+def _executor_available(executor: str) -> bool:
+    return shutil.which(_executor_binary_name(executor)) is not None
+
+
+def _first_available_executor(preferred: list[str]) -> str:
+    for executor in preferred:
+        candidate = _normalize_executor(executor, default="")
+        if candidate and _executor_available(candidate):
+            return candidate
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+
+
 def _task_fingerprint(task_type: TaskType, direction: str) -> str:
     basis = f"{task_type.value}:{direction.strip().lower()}"
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()
@@ -177,6 +202,23 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
     reason = "cheap_default"
     if should_escalate:
         reason = "retry_threshold" if effective_retry_count >= retry_threshold else "failure_threshold"
+    if not _executor_available(selected):
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "openclaw"])
+        return fallback, {
+            "policy_applied": True,
+            "reason": "selected_executor_unavailable",
+            "selected_executor": selected,
+            "fallback_executor": fallback,
+            "task_fingerprint": task_fingerprint,
+            "retry_threshold": retry_threshold,
+            "failure_threshold": failure_threshold,
+            "historical_attempts": stats["attempts"],
+            "historical_failures": stats["failed"],
+            "retry_hint": retry_hint,
+            "effective_retry_count": effective_retry_count,
+            "cheap_executor": cheap,
+            "escalation_executor": escalate_to,
+        }
 
     return selected, {
         "policy_applied": True,
@@ -216,6 +258,121 @@ def _openclaw_command_template(task_type: TaskType) -> str:
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
     return template.replace("{{model}}", model)
+
+
+def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]) -> str:
+    lines: list[str] = []
+    if primary_agent:
+        lines.append(f"Role agent: {primary_agent}.")
+    if guard_agents:
+        lines.append(f"Guard agents: {', '.join(guard_agents)}.")
+    lines.append(f"Task type: {task_type.value}.")
+    lines.append("Respect role boundaries, spec scope, and acceptance criteria.")
+    lines.append(f"Direction: {direction}")
+    return " ".join(lines)
+
+
+def _agent_profiles_dir() -> Path:
+    return Path(__file__).resolve().parents[3] / ".claude" / "agents"
+
+
+def _agent_profile_names() -> list[str]:
+    root = _agent_profiles_dir()
+    if not root.exists():
+        return []
+    names: list[str] = []
+    for path in sorted(root.glob("*.md")):
+        names.append(path.stem)
+    return names
+
+
+def _integration_gaps() -> dict[str, Any]:
+    profiles = _agent_profile_names()
+    profile_set = set(profiles)
+    primary_bindings = {
+        task_type.value: (agent or "")
+        for task_type, agent in AGENT_BY_TASK_TYPE.items()
+    }
+    guard_bindings = {
+        task_type.value: list(GUARD_AGENTS_BY_TASK_TYPE.get(task_type, []))
+        for task_type in TaskType
+    }
+    bound_primary = {agent for agent in AGENT_BY_TASK_TYPE.values() if agent}
+    bound_guard = {agent for items in GUARD_AGENTS_BY_TASK_TYPE.values() for agent in items}
+    bound_agents = bound_primary.union(bound_guard)
+    missing_profile_files = sorted(agent for agent in bound_agents if agent not in profile_set)
+    unbound_profiles = sorted(name for name in profile_set if name not in bound_agents)
+    unmapped_task_types = sorted(
+        task_type.value for task_type in TaskType if not AGENT_BY_TASK_TYPE.get(task_type)
+    )
+
+    binary_checks = {
+        "aider": _executor_available("claude"),
+        "agent": _executor_available("cursor"),
+        "openclaw": _executor_available("openclaw"),
+    }
+
+    gaps: list[dict[str, str]] = []
+    for task in unmapped_task_types:
+        gaps.append(
+            {
+                "id": f"unmapped-task-type:{task}",
+                "severity": "high",
+                "message": f"Task type '{task}' has no primary role agent binding.",
+                "fix_hint": "Add role binding in AGENT_BY_TASK_TYPE.",
+            }
+        )
+    for agent in missing_profile_files:
+        gaps.append(
+            {
+                "id": f"missing-agent-profile:{agent}",
+                "severity": "high",
+                "message": f"Bound role agent profile '{agent}' is missing in .claude/agents.",
+                "fix_hint": "Add the missing agent profile file.",
+            }
+        )
+    for profile in unbound_profiles:
+        gaps.append(
+            {
+                "id": f"unbound-agent-profile:{profile}",
+                "severity": "medium",
+                "message": f"Agent profile '{profile}' exists but is not bound to any task flow.",
+                "fix_hint": "Bind it to a task type primary/guard flow or remove it.",
+            }
+        )
+    cheap = _cheap_executor_default()
+    escalate = _escalation_executor_default()
+    critical_tools: dict[str, str] = {
+        _executor_binary_name(cheap): "high",
+        _executor_binary_name(escalate): "medium",
+    }
+    for tool, present in binary_checks.items():
+        if present:
+            continue
+        severity = critical_tools.get(tool, "low")
+        gaps.append(
+            {
+                "id": f"missing-executor-binary:{tool}",
+                "severity": severity,
+                "message": f"Executor binary '{tool}' is not available in PATH.",
+                "fix_hint": f"Install '{tool}' or adjust executor policy defaults.",
+            }
+        )
+
+    return {
+        "primary_bindings": primary_bindings,
+        "guard_bindings": guard_bindings,
+        "agent_profiles": profiles,
+        "missing_profile_files": missing_profile_files,
+        "unbound_profiles": unbound_profiles,
+        "unmapped_task_types": unmapped_task_types,
+        "binary_checks": binary_checks,
+        "policy_defaults": {
+            "cheap_executor": cheap,
+            "escalation_executor": escalate,
+        },
+        "gaps": gaps,
+    }
 
 
 COMMAND_TEMPLATES: dict[TaskType, str] = {
@@ -561,6 +718,12 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if "task_fingerprint" in policy_meta:
         ctx.setdefault("task_fingerprint", policy_meta["task_fingerprint"])
     ctx["executor"] = executor
+    primary_agent = AGENT_BY_TASK_TYPE.get(data.task_type)
+    guard_agents = GUARD_AGENTS_BY_TASK_TYPE.get(data.task_type, [])
+    if primary_agent:
+        ctx["task_agent"] = primary_agent
+    if guard_agents:
+        ctx["guard_agents"] = list(guard_agents)
 
     model, tier = ROUTING[data.task_type]
     if executor == "cursor":
@@ -576,7 +739,13 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         else None
     )
     if not command:
-        command = _build_command(data.direction, data.task_type, executor=executor)
+        direction = _with_agent_roles(
+            data.direction,
+            data.task_type,
+            primary_agent=primary_agent,
+            guard_agents=guard_agents,
+        )
+        command = _build_command(direction, data.task_type, executor=executor)
         # Model override for testing (e.g. glm-4.7:cloud for better tool use)
         if ctx.get("model_override"):
             override = ctx["model_override"]
@@ -609,6 +778,25 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     _store[task_id] = task
     _save_store_to_disk()
     return task
+
+
+def get_agent_integration_status() -> dict[str, Any]:
+    """Report role-agent coverage, executor availability, and integration gaps."""
+    report = _integration_gaps()
+    gaps = report.get("gaps", [])
+    high_count = sum(1 for gap in gaps if gap.get("severity") == "high")
+    status = "healthy" if high_count == 0 else "needs_attention"
+    return {
+        "generated_at": _now().isoformat(),
+        "status": status,
+        "summary": {
+            "task_types": len(TaskType),
+            "profiles": len(report.get("agent_profiles", [])),
+            "gap_count": len(gaps),
+            "high_gap_count": high_count,
+        },
+        "integration": report,
+    }
 
 
 def get_task(task_id: str) -> Optional[dict]:
