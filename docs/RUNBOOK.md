@@ -186,10 +186,14 @@ cd api && .venv/bin/pytest -v
 Before implementation work on changed specs:
 
 ```bash
+python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
 
 This fails fast when specs are missing verification, risk/assumption, or known-gap follow-up sections.
+The preflight command also runs common branch CI/CD failure checks locally and writes optimization data to:
+- `docs/system_audit/local_cicd_preflight_latest.json`
+- `docs/system_audit/local_cicd_preflight_history.jsonl`
 
 ## Local Web Validation In Worktrees
 

@@ -22,6 +22,7 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
 Run and record:
 
 ```bash
+python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD
 cd api && .venv/bin/pytest -q
 ./scripts/verify_worktree_local_web.sh
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
@@ -32,6 +33,7 @@ Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
 - PASS only if changed specs pass the spec quality contract (when any feature spec changed).
 - PASS only if no stale open `codex/*` PR is left unattended.
+- PASS only if local CI/CD preflight catches no blocking issues.
 
 Worktree notes:
 - This command is the default local web validation for Codex threads.
@@ -114,6 +116,14 @@ CI enforcement:
 - `python3 scripts/validate_commit_evidence.py --base <sha> --head <sha> --require-changed-evidence`
 - Fails if no changed `docs/system_audit/commit_evidence_*.json` exists for the diff range.
 - Fails if changed files are not declared in `change_files`.
+
+Local CI/CD preflight:
+- `python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD`
+- Mirrors common branch CI failure checks in local order before PR creation.
+- Persists machine-readable optimization data:
+  - `docs/system_audit/local_cicd_preflight_latest.json`
+  - `docs/system_audit/local_cicd_preflight_history.jsonl`
+- Ranks recurring loss under `highest_energy_loss_steps` so teams can reduce repeated PR iteration cost.
 
 ## Merge Policy
 
