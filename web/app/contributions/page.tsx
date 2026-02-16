@@ -20,6 +20,9 @@ type Contribution = {
     raw_cost_amount?: string;
     normalized_cost_amount?: string;
     cost_estimator_version?: string;
+    cost_basis?: string;
+    cost_confidence?: number;
+    estimation_used?: boolean;
     files_changed?: number;
     lines_added?: number;
   };
@@ -184,6 +187,15 @@ function ContributionsPageContent() {
                 {cost.source === "derived" && Math.abs(cost.raw - cost.effective) >= 0.01 && (
                   <div className="text-xs text-muted-foreground">
                     raw {cost.raw.toFixed(2)} → normalized {cost.effective.toFixed(2)} (legacy-derived-v2)
+                  </div>
+                )}
+                {(c.metadata?.cost_basis || c.metadata?.cost_confidence !== undefined) && (
+                  <div className="text-xs text-muted-foreground">
+                    basis {c.metadata?.cost_basis ?? "unknown"} | confidence{" "}
+                    {typeof c.metadata?.cost_confidence === "number"
+                      ? c.metadata.cost_confidence.toFixed(2)
+                      : "n/a"}{" "}
+                    | estimation {c.metadata?.estimation_used ? "yes" : "no"}
                   </div>
                 )}
                 {commitHash && (
