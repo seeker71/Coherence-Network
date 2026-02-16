@@ -11,6 +11,7 @@ from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
 from app.routers import (
     agent,
+    automation_usage,
     assets,
     contributions,
     contributors,
@@ -95,6 +96,7 @@ app.include_router(assets.router, prefix="/v1", tags=["assets"])
 app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
 app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
+app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
