@@ -17,8 +17,16 @@ def _config_path() -> Path:
 
 
 FALLBACK_PAGES: list[dict[str, str]] = [
+    {"path": "/", "idea_id": "portfolio-governance"},
     {"path": "/portfolio", "idea_id": "portfolio-governance"},
+    {"path": "/ideas", "idea_id": "portfolio-governance"},
+    {"path": "/ideas/[idea_id]", "idea_id": "portfolio-governance"},
+    {"path": "/specs", "idea_id": "coherence-network-api-runtime"},
+    {"path": "/usage", "idea_id": "coherence-network-value-attribution"},
+    {"path": "/friction", "idea_id": "coherence-network-agent-pipeline"},
     {"path": "/gates", "idea_id": "oss-interface-alignment"},
+    {"path": "/import", "idea_id": "coherence-signal-depth"},
+    {"path": "/project/[ecosystem]/[name]", "idea_id": "coherence-signal-depth"},
     {"path": "/search", "idea_id": "coherence-signal-depth"},
     {"path": "/api-health", "idea_id": "oss-interface-alignment"},
     {"path": "/contributors", "idea_id": "portfolio-governance"},
@@ -52,4 +60,3 @@ def get_page_lineage() -> dict[str, Any]:
         "pages": items,
         "source": "config/page_lineage.json" if pages else "fallback",
     }
-
