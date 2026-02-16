@@ -1,7 +1,7 @@
 {
   "date": "2026-02-15",
   "thread_branch": "codex/20260215-walkable-flow-fixes",
-  "commit_scope": "fix public walkability runtime mismatches: expose agent router, add GET /v1/contributions, align web pages with array schemas",
+  "commit_scope": "fix public walkability runtime mismatches: expose agent router, add GET /api/contributions, align web pages with array schemas",
   "files_owned": [
     "specs/073-walkable-flow-runtime-mismatch-fixes.md",
     "api/app/main.py",
@@ -67,12 +67,12 @@
   "change_intent": "runtime_feature",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Public web UI pages load without schema mismatch; tasks page successfully reads /api/agent/tasks; contributions page successfully reads list of contributions from GET /v1/contributions.",
+    "expected_behavior_delta": "Public web UI pages load without schema mismatch; tasks page successfully reads /api/agent/tasks; contributions page successfully reads list of contributions from GET /api/contributions.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
-      "https://coherence-network-production.up.railway.app/v1/contributors",
-      "https://coherence-network-production.up.railway.app/v1/assets",
-      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network-production.up.railway.app/api/contributors",
+      "https://coherence-network-production.up.railway.app/api/assets",
+      "https://coherence-network-production.up.railway.app/api/contributions",
       "https://coherence-network.vercel.app/contributors",
       "https://coherence-network.vercel.app/assets",
       "https://coherence-network.vercel.app/contributions",
@@ -81,7 +81,7 @@
     "test_flows": [
       "web:/portfolio->navigate->/contributors,/assets,/contributions,/tasks->observe non-error render",
       "api:/api/agent/tasks->200->body.tasks array",
-      "api:/v1/contributions->200->array payload"
+      "api:/api/contributions->200->array payload"
     ]
   },
   "local_validation": {

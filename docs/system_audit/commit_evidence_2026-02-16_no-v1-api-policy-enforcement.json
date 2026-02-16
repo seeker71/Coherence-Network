@@ -1,7 +1,7 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/automation-energy-loss-audit",
-  "commit_scope": "enforce /api-only internal routing policy by migrating remaining /v1 internal references, updating templates, and adding local+CI guardrails",
+  "commit_scope": "enforce /api-only internal routing policy by migrating remaining legacy v1 internal references, updating templates, and adding local+CI guardrails",
   "files_owned": [
     ".github/workflows/auto_track_contributions.yml",
     ".github/workflows/test.yml",
@@ -53,7 +53,7 @@
       "cd api && python3.11 -m pytest -q tests/test_assets.py tests/test_contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py tests/test_runtime_api.py"
     ],
     "notes": [
-      "No internal /v1 route references detected by guard.",
+      "No internal legacy v1 route references detected by guard.",
       "Targeted API regression suite passed (50 tests)."
     ]
   },
@@ -153,7 +153,7 @@
   "change_intent": "runtime_fix",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Internal API usage is standardized to /api across code, docs, templates, and workflow scripts; CI blocks any reintroduction of internal /v1 routes.",
+    "expected_behavior_delta": "Internal API usage is standardized to /api across code, docs, templates, and workflow scripts; CI blocks any reintroduction of legacy v1 routes.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/contributors",
       "https://coherence-network-production.up.railway.app/api/assets",

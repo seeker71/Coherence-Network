@@ -42,7 +42,7 @@
   },
   "evidence_refs": [
     "cd api && /opt/homebrew/bin/pytest -q tests/test_contributions.py",
-    "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/v1/links/asset-contributor/audit'); print(r.status_code); print(r.json());\nasyncio.run(_r())\"",
+    "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/api/links/asset-contributor/audit'); print(r.status_code); print(r.json());\nasyncio.run(_r())\"",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_asset-contributor-links-coverage.json"
   ],
   "change_files": [
@@ -54,21 +54,21 @@
     "status": "pass",
     "expected_behavior_delta": "API exposes asset->contributors and contributor->assets links plus an audit endpoint that reports missing links for all assets/resources.",
     "public_endpoints": [
-      "https://coherence-network-production.up.railway.app/v1/links/asset-contributor/audit",
-      "https://coherence-network-production.up.railway.app/v1/links/assets/with-contributors",
-      "https://coherence-network-production.up.railway.app/v1/links/contributors/with-assets"
+      "https://coherence-network-production.up.railway.app/api/links/asset-contributor/audit",
+      "https://coherence-network-production.up.railway.app/api/links/assets/with-contributors",
+      "https://coherence-network-production.up.railway.app/api/links/contributors/with-assets"
     ],
     "test_flows": [
-      "create-contributor->create-asset->create-contribution->GET-/v1/links/assets/{id}/contributors",
-      "create-contributor->create-asset->create-contribution->GET-/v1/links/contributors/{id}/assets",
-      "GET-/v1/links/asset-contributor/audit->inspect-missing-link-coverage"
+      "create-contributor->create-asset->create-contribution->GET-/api/links/assets/{id}/contributors",
+      "create-contributor->create-asset->create-contribution->GET-/api/links/contributors/{id}/assets",
+      "GET-/api/links/asset-contributor/audit->inspect-missing-link-coverage"
     ]
   },
   "local_validation": {
     "status": "pass",
     "commands": [
       "cd api && /opt/homebrew/bin/pytest -q tests/test_contributions.py",
-      "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/v1/links/asset-contributor/audit'); print(r.status_code); print(r.json());\nasyncio.run(_r())\""
+      "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/api/links/asset-contributor/audit'); print(r.status_code); print(r.json());\nasyncio.run(_r())\""
     ]
   },
   "ci_validation": {

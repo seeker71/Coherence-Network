@@ -137,12 +137,12 @@
     "expected_behavior_delta": "Merged branch changes should be publicly reachable on web and API, including contributions and usage/traceability flows.",
     "public_endpoints": [
       "https://coherence-network.vercel.app/contributions",
-      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network-production.up.railway.app/api/contributions",
       "https://coherence-network-production.up.railway.app/api/inventory/process-completeness"
     ],
     "test_flows": [
       "Web /contributions renders and loads API data from production Railway endpoint.",
-      "API /v1/contributions returns persisted contribution rows (200).",
+      "API /api/contributions returns persisted contribution rows (200).",
       "API /api/inventory/process-completeness remains reachable and reports traceability checks."
     ]
   }

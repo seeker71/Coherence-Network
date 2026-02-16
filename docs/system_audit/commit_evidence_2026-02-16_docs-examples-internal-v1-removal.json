@@ -1,0 +1,91 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "remove internal legacy v1 usage from documentation/examples and normalize historical docs examples to /api while preserving external-provider versioned contracts",
+  "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "specs/TEMPLATE.md",
+    "docs/system_audit/commit_evidence_2026-02-15_walkable-flow-runtime-mismatch-fixes.json",
+    "docs/system_audit/commit_evidence_2026-02-16_asset-contributor-links-coverage.json",
+    "docs/system_audit/commit_evidence_2026-02-16_endpoint-usage-origin-lineage-release-gap-fix.json",
+    "docs/system_audit/commit_evidence_2026-02-16_flow-registry-data-linkage.json",
+    "docs/system_audit/commit_evidence_2026-02-16_legacy-commit-cost-ui-normalization.json",
+    "docs/system_audit/commit_evidence_2026-02-16_no-v1-api-policy-enforcement.json",
+    "docs/system_audit/commit_evidence_2026-02-16_normalized-commit-cost-estimator.json",
+    "docs/system_audit/runtime_surface_audit_2026-02-14.json",
+    "docs/system_audit/commit_evidence_2026-02-16_docs-examples-internal-v1-removal.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_no_v1_api_usage.py"
+    ],
+    "notes": [
+      "Internal docs/examples no longer reference legacy v1 paths for project endpoints.",
+      "Remaining versioned references in docs are external provider contracts (OpenAI/OpenRouter/Ollama)."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "n/a-docs",
+    "notes": "Documentation-only cleanup; no runtime deployment change required."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI pending"
+  },
+  "idea_ids": [
+    "idea-api-prefix-standardization"
+  ],
+  "spec_ids": [
+    "spec-template-api-prefix-guard"
+  ],
+  "task_ids": [
+    "task-remove-internal-v1-from-docs-and-examples"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "normalization",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/validate_no_v1_api_usage.py",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "specs/TEMPLATE.md"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/system_audit/commit_evidence_2026-02-15_walkable-flow-runtime-mismatch-fixes.json",
+    "docs/system_audit/commit_evidence_2026-02-16_asset-contributor-links-coverage.json",
+    "docs/system_audit/commit_evidence_2026-02-16_endpoint-usage-origin-lineage-release-gap-fix.json",
+    "docs/system_audit/commit_evidence_2026-02-16_flow-registry-data-linkage.json",
+    "docs/system_audit/commit_evidence_2026-02-16_legacy-commit-cost-ui-normalization.json",
+    "docs/system_audit/commit_evidence_2026-02-16_no-v1-api-policy-enforcement.json",
+    "docs/system_audit/commit_evidence_2026-02-16_normalized-commit-cost-estimator.json",
+    "docs/system_audit/runtime_surface_audit_2026-02-14.json",
+    "docs/system_audit/commit_evidence_2026-02-16_docs-examples-internal-v1-removal.json",
+    "specs/TEMPLATE.md"
+  ],
+  "change_intent": "docs_only"
+}

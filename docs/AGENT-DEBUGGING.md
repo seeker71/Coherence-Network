@@ -95,7 +95,7 @@ Shows: running task (model, duration), pending (wait time), recent completed (du
 
 **Live progress:** The agent runner streams task output to `api/logs/task_{id}.log` during execution. Pipeline status includes `live_tail` (last 25 lines) for the running task. Use `check_pipeline.py` or `GET /api/agent/tasks/{id}/log` to see progress without waiting for completion.
 
-**Ollama request count:** Each agent turn = 1 `POST /v1/messages`. Check Ollama/GIN logs for request count.
+**Ollama request count:** Each agent turn = 1 POST to the Anthropic-compatible messages endpoint. Check Ollama/GIN logs for request count.
 
 ### 6. Pipeline stuck
 

@@ -72,14 +72,14 @@
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/inventory/flow",
       "https://coherence-network.vercel.app/flow",
-      "https://coherence-network-production.up.railway.app/v1/contributions",
-      "https://coherence-network-production.up.railway.app/v1/assets",
-      "https://coherence-network-production.up.railway.app/v1/contributors"
+      "https://coherence-network-production.up.railway.app/api/contributions",
+      "https://coherence-network-production.up.railway.app/api/assets",
+      "https://coherence-network-production.up.railway.app/api/contributors"
     ],
     "test_flows": [
       "api:/api/inventory/flow?idea_id=portfolio-governance returns contributions.registry_contribution_count and assets.count",
       "web:/flow shows registry_contributions, registry_cost, assets count, and contributor registry_ids",
-      "api:/v1/contributions,/v1/assets,/v1/contributors remain consistent and linkable"
+      "api:/api/contributions,/api/assets,/api/contributors remain consistent and linkable"
     ]
   }
 }

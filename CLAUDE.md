@@ -30,7 +30,7 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 ## Key Conventions
 
 - API paths: `/api/{resource}/{id}`
-- Internal route versioning prefix `/v1` is disallowed; use `/api/*` only for project endpoints.
+- Internal legacy `v1` route prefix is disallowed; use `/api/*` only for project endpoints.
 - All responses: Pydantic models
 - Coherence scores: 0.0–1.0
 - Dates: ISO 8601 UTC

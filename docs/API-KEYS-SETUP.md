@@ -34,8 +34,9 @@ Test: `python scripts/test_agent_run.py --run --model glm-4.7-flash:latest "Your
 3. Add to `.env`:
    ```
    OPENROUTER_API_KEY=sk-or-...
-   OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+   OPENROUTER_BASE_URL=https://openrouter.ai/api
    ```
+4. If OpenRouter requires a versioned path for your client/runtime, use the exact base URL shown in your OpenRouter dashboard.
 
 Free models: `openrouter/free` or specific free model IDs. No per-token cost.
 
@@ -135,7 +136,7 @@ No keys needed for chat; they use your existing subscription login.
 
 # OpenRouter (free models)
 OPENROUTER_API_KEY=
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_BASE_URL=https://openrouter.ai/api
 
 # Claude
 ANTHROPIC_API_KEY=

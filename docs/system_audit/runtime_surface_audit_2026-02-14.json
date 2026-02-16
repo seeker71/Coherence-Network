@@ -50,79 +50,79 @@
       ]
     },
     {
-      "path": "/v1/assets",
+      "path": "/api/assets",
       "methods": [
         "POST"
       ]
     },
     {
-      "path": "/v1/assets",
+      "path": "/api/assets",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/assets/{asset_id}",
+      "path": "/api/assets/{asset_id}",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/assets/{asset_id}/contributions",
+      "path": "/api/assets/{asset_id}/contributions",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/contributions",
+      "path": "/api/contributions",
       "methods": [
         "POST"
       ]
     },
     {
-      "path": "/v1/contributions/github",
+      "path": "/api/contributions/github",
       "methods": [
         "POST"
       ]
     },
     {
-      "path": "/v1/contributions/github/debug",
+      "path": "/api/contributions/github/debug",
       "methods": [
         "POST"
       ]
     },
     {
-      "path": "/v1/contributions/{contribution_id}",
+      "path": "/api/contributions/{contribution_id}",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/contributors",
+      "path": "/api/contributors",
       "methods": [
         "POST"
       ]
     },
     {
-      "path": "/v1/contributors",
+      "path": "/api/contributors",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/contributors/{contributor_id}",
+      "path": "/api/contributors/{contributor_id}",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/contributors/{contributor_id}/contributions",
+      "path": "/api/contributors/{contributor_id}/contributions",
       "methods": [
         "GET"
       ]
     },
     {
-      "path": "/v1/distributions",
+      "path": "/api/distributions",
       "methods": [
         "POST"
       ]

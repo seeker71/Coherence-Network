@@ -18,7 +18,7 @@ How to get a local Ollama model working with Claude Code and actual tool use (Ed
 
 **Source:** [docs.ollama.com/api/anthropic-compatibility](https://docs.ollama.com/api/anthropic-compatibility)
 
-Ollama exposes `/v1/messages` (Anthropic Messages API). Supports: Messages, Streaming, Tools, Tool results, Thinking.
+Ollama exposes an Anthropic-compatible Messages API endpoint. Supports: Messages, Streaming, Tools, Tool results, Thinking.
 
 ### Environment variables
 
@@ -101,7 +101,7 @@ User report: *"Tools worked for me with opencode (with 64K and 128K context)"*
 
 **Source:** [GitHub ollama/ollama#13949](https://github.com/ollama/ollama/issues/13949)
 
-Claude Code sends requests to unsupported endpoints (`/v1/messages/count_tokens?beta=true`). Ollama returns 404; in some setups this can cause timeouts. Set:
+Claude Code sends requests to unsupported beta count-token endpoints. Ollama returns 404; in some setups this can cause timeouts. Set:
 
 ```bash
 export DISABLE_TELEMETRY=1

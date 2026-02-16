@@ -73,8 +73,8 @@
     "status": "pending",
     "expected_behavior_delta": "GitHub auto-tracked contribution costs are normalized and capped; web UI shows effective normalized cost with raw-to-normalized traceability.",
     "public_endpoints": [
-      "https://coherence-network-production.up.railway.app/v1/contributions",
-      "https://coherence-network-production.up.railway.app/v1/contributions/github",
+      "https://coherence-network-production.up.railway.app/api/contributions",
+      "https://coherence-network-production.up.railway.app/api/contributions/github",
       "https://coherence-network.vercel.app/contributions"
     ],
     "test_flows": [

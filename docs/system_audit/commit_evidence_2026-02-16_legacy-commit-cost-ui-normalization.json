@@ -61,7 +61,7 @@
     "expected_behavior_delta": "Contributions page shows normalized effective cost for legacy and new rows, with raw-to-normalized transparency.",
     "public_endpoints": [
       "https://coherence-network.vercel.app/contributions",
-      "https://coherence-network-production.up.railway.app/v1/contributions"
+      "https://coherence-network-production.up.railway.app/api/contributions"
     ],
     "test_flows": [
       "api-legacy-row->web-derived-normalized-cost-display",
