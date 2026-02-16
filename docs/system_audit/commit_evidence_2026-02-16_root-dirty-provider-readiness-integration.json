@@ -1,0 +1,89 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/root-dirty-cleanup-main",
+  "commit_scope": "integrate root workspace provider-readiness edits into isolated worktree and require active-provider key coverage",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-16_root-dirty-provider-readiness-integration.json"
+  ],
+  "idea_ids": [
+    "idea-provider-key-readiness-for-active-usage"
+  ],
+  "spec_ids": [
+    "spec-provider-readiness-active-usage-key-policy"
+  ],
+  "task_ids": [
+    "task-integrate-root-dirty-provider-readiness-changes"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-16_root-dirty-provider-readiness-integration.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_root-dirty-provider-readiness-integration.json"
+    ],
+    "notes": [
+      "Provider readiness now treats active runtime providers as required by default and reports runtime_task_runs usage metric."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending",
+    "notes": "No deploy verification yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation readiness treats providers observed in runtime usage as required by default and reports runtime provider task-run usage in snapshots.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "api:/api/automation/usage -> provider metrics include runtime_task_runs for active providers",
+      "api:/api/automation/usage/readiness -> active provider without key is flagged required+critical"
+    ]
+  }
+}
