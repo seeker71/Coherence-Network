@@ -123,3 +123,45 @@ async def test_subscription_estimator_reports_upgrade_cost_and_benefit(
         assert openai["next_monthly_cost_usd"] >= openai["current_monthly_cost_usd"]
         assert openai["estimated_benefit_score"] >= 0
         assert openai["estimated_roi"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_provider_readiness_reports_blocking_required_provider_gaps(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai,github")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
+    monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get("/api/automation/usage/readiness")
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["all_required_ready"] is False
+        providers = {row["provider"]: row for row in payload["providers"]}
+        assert providers["openai"]["severity"] == "critical"
+        assert providers["github"]["severity"] == "critical"
+        assert providers["coherence-internal"]["severity"] in {"info", "warning"}
+
+
+@pytest.mark.asyncio
+async def test_provider_readiness_accepts_overridden_required_provider_list(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get(
+            "/api/automation/usage/readiness",
+            params={"required_providers": "coherence-internal,openrouter"},
+        )
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["all_required_ready"] is True

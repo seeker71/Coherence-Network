@@ -13,14 +13,14 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -32,20 +32,22 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
         created = r.json()
         assert Decimal(created["cost_amount"]) == Decimal("100.00")
         assert abs(float(created["coherence_score"]) - 0.9) < 1e-9
+        assert created["metadata"]["cost_basis"] == "declared_unverified"
+        assert created["metadata"]["cost_confidence"] == 0.25
 
         contrib_id = created["id"]
 
-        g = await client.get(f"/v1/contributions/{contrib_id}")
+        g = await client.get(f"/api/contributions/{contrib_id}")
         assert g.status_code == 200
         assert g.json()["id"] == contrib_id
 
-        l = await client.get("/v1/contributions?limit=10")
+        l = await client.get("/api/contributions?limit=10")
         assert l.status_code == 200
         items = l.json()
         assert isinstance(items, list)
         assert any(i.get("id") == contrib_id for i in items)
 
-        asset = await client.get(f"/v1/assets/{asset_id}")
+        asset = await client.get(f"/api/assets/{asset_id}")
         assert Decimal(asset.json()["total_cost"]) == Decimal("100.00")
 
 
@@ -54,11 +56,11 @@ async def test_create_contribution_404s() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": "00000000-0000-0000-0000-000000000000",
                 "asset_id": asset_id,
@@ -69,11 +71,11 @@ async def test_create_contribution_404s() -> None:
         assert r.status_code == 404
         assert r.json()["detail"] == "Contributor not found"
 
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
         r2 = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": "00000000-0000-0000-0000-000000000000",
@@ -90,14 +92,14 @@ async def test_get_asset_and_contributor_contributions() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -106,11 +108,11 @@ async def test_get_asset_and_contributor_contributions() -> None:
             },
         )
 
-        ac = await client.get(f"/v1/assets/{asset_id}/contributions")
+        ac = await client.get(f"/api/assets/{asset_id}/contributions")
         assert ac.status_code == 200
         assert len(ac.json()) == 1
 
-        cc = await client.get(f"/v1/contributors/{contributor_id}/contributions")
+        cc = await client.get(f"/api/contributors/{contributor_id}/contributions")
         assert cc.status_code == 200
         assert len(cc.json()) == 1
 
@@ -120,13 +122,13 @@ async def test_create_contribution_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -143,7 +145,7 @@ async def test_github_contribution_cost_is_normalized_from_metadata() -> None:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await client.post(
-            "/v1/contributions/github",
+            "/api/contributions/github",
             json={
                 "contributor_email": "alice@coherence.network",
                 "repository": "seeker71/Coherence-Network",
@@ -158,6 +160,8 @@ async def test_github_contribution_cost_is_normalized_from_metadata() -> None:
         assert payload["metadata"]["raw_cost_amount"] == "342.50"
         assert payload["metadata"]["normalized_cost_amount"] == "0.79"
         assert payload["metadata"]["cost_estimator_version"] == "v2_normalized"
+        assert payload["metadata"]["cost_basis"] == "estimated_from_change_shape"
+        assert payload["metadata"]["estimation_used"] is True
 
 
 @pytest.mark.asyncio
@@ -166,7 +170,7 @@ async def test_github_contribution_cost_clamps_when_metadata_missing() -> None:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await client.post(
-            "/v1/contributions/github",
+            "/api/contributions/github",
             json={
                 "contributor_email": "bob@coherence.network",
                 "repository": "seeker71/Coherence-Network",
@@ -180,6 +184,55 @@ async def test_github_contribution_cost_clamps_when_metadata_missing() -> None:
         assert Decimal(payload["cost_amount"]) == Decimal("10.00")
         assert payload["metadata"]["raw_cost_amount"] == "342.50"
         assert payload["metadata"]["normalized_cost_amount"] == "10.00"
+        assert payload["metadata"]["cost_basis"] == "estimated_from_submitted_cost"
+        assert payload["metadata"]["estimation_used"] is True
+
+
+@pytest.mark.asyncio
+async def test_manual_contribution_cost_is_marked_actual_when_evidence_exists() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@coherence.network"})
+        contributor_id = c.json()["id"]
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
+        asset_id = a.json()["id"]
+
+        r = await client.post(
+            "/api/contributions",
+            json={
+                "contributor_id": contributor_id,
+                "asset_id": asset_id,
+                "cost_amount": "9.50",
+                "metadata": {"invoice_id": "inv_001"},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert payload["metadata"]["cost_basis"] == "actual_verified"
+        assert payload["metadata"]["estimation_used"] is False
+
+
+@pytest.mark.asyncio
+async def test_github_contribution_cost_marks_actual_with_verification_keys() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "verifier@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "ghi789",
+                "cost_amount": "9.50",
+                "metadata": {"invoice_id": "inv_002"},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert Decimal(payload["cost_amount"]) == Decimal("9.50")
+        assert payload["metadata"]["cost_basis"] == "actual_verified"
+        assert payload["metadata"]["estimation_used"] is False
 
 
 @pytest.mark.asyncio

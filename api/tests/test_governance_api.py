@@ -17,7 +17,7 @@ async def test_change_request_vote_applies_idea_create(
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         contributor = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
         )
         assert contributor.status_code == 201
@@ -72,7 +72,7 @@ async def test_change_request_vote_rejects_spec_update(
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         contributor = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Bob", "email": "bob@example.com"},
         )
         assert contributor.status_code == 201

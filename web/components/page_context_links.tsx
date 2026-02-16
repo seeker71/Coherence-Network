@@ -61,8 +61,8 @@ const CONTEXTS: Record<string, ContextDef> = {
     machinePaths: [
       { href: "/api/inventory/flow", label: "Flow inventory" },
       { href: "/api/inventory/system-lineage", label: "System lineage" },
-      { href: "/v1/contributors", label: "Contributors API" },
-      { href: "/v1/contributions", label: "Contributions API" },
+      { href: "/api/contributors", label: "Contributors API" },
+      { href: "/api/contributions", label: "Contributions API" },
     ],
   },
   "/ideas": {
@@ -113,21 +113,22 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/automation/usage", label: "Automation usage API" },
       { href: "/api/automation/usage/alerts", label: "Automation alerts API" },
       { href: "/api/automation/usage/snapshots", label: "Automation snapshots API" },
+      { href: "/api/automation/usage/readiness", label: "Automation readiness API" },
     ],
   },
   "/contributors": {
     ideaId: "portfolio-governance",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/v1/contributors", label: "Contributors API" },
-      { href: "/v1/contributions", label: "Contributions API" },
+      { href: "/api/contributors", label: "Contributors API" },
+      { href: "/api/contributions", label: "Contributions API" },
     ],
   },
   "/contribute": {
     ideaId: "portfolio-governance",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/v1/contributors", label: "Contributors API" },
+      { href: "/api/contributors", label: "Contributors API" },
       { href: "/api/governance/change-requests", label: "Change requests API" },
       { href: "/api/spec-registry", label: "Spec registry API" },
       { href: "/api/ideas", label: "Ideas API" },
@@ -137,16 +138,16 @@ const CONTEXTS: Record<string, ContextDef> = {
     ideaId: "coherence-network-value-attribution",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/v1/contributions", label: "Contributions API" },
-      { href: "/v1/distributions", label: "Distributions API" },
+      { href: "/api/contributions", label: "Contributions API" },
+      { href: "/api/distributions", label: "Distributions API" },
     ],
   },
   "/assets": {
     ideaId: "portfolio-governance",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/v1/assets", label: "Assets API" },
-      { href: "/v1/contributions", label: "Contributions API" },
+      { href: "/api/assets", label: "Assets API" },
+      { href: "/api/contributions", label: "Contributions API" },
     ],
   },
   "/tasks": {

@@ -51,7 +51,7 @@ function ContributorsPageContent() {
     setError(null);
     try {
       const [contributorsRes, flowRes] = await Promise.all([
-        fetch(`${API_URL}/v1/contributors`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/contributors`, { cache: "no-store" }),
         fetch(`${API_URL}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
       ]);
       const contributorsJson = await contributorsRes.json();
@@ -131,7 +131,7 @@ function ContributorsPageContent() {
       </div>
       <h1 className="text-2xl font-bold">Contributors</h1>
       <p className="text-muted-foreground">
-        Human interface for `GET /v1/contributors`.
+        Human interface for `GET /api/contributors`.
         {selectedContributorId ? (
           <>
             {" "}

@@ -47,11 +47,36 @@ type UsageAlertResponse = {
   alerts: UsageAlert[];
 };
 
-async function loadAutomationData(): Promise<{ usage: AutomationUsageResponse; alerts: UsageAlertResponse }> {
+type ProviderReadinessRow = {
+  provider: string;
+  kind: string;
+  status: string;
+  required: boolean;
+  configured: boolean;
+  severity: string;
+  missing_env: string[];
+  notes: string[];
+};
+
+type ProviderReadinessResponse = {
+  generated_at: string;
+  required_providers: string[];
+  all_required_ready: boolean;
+  blocking_issues: string[];
+  recommendations: string[];
+  providers: ProviderReadinessRow[];
+};
+
+async function loadAutomationData(): Promise<{
+  usage: AutomationUsageResponse;
+  alerts: UsageAlertResponse;
+  readiness: ProviderReadinessResponse;
+}> {
   const api = getApiBase();
-  const [usageRes, alertsRes] = await Promise.all([
+  const [usageRes, alertsRes, readinessRes] = await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
+    fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
@@ -59,14 +84,18 @@ async function loadAutomationData(): Promise<{ usage: AutomationUsageResponse; a
   if (!alertsRes.ok) {
     throw new Error(`automation alerts HTTP ${alertsRes.status}`);
   }
+  if (!readinessRes.ok) {
+    throw new Error(`automation readiness HTTP ${readinessRes.status}`);
+  }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: (await alertsRes.json()) as UsageAlertResponse,
+    readiness: (await readinessRes.json()) as ProviderReadinessResponse,
   };
 }
 
 export default async function AutomationPage() {
-  const { usage, alerts } = await loadAutomationData();
+  const { usage, alerts, readiness } = await loadAutomationData();
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
@@ -95,6 +124,41 @@ export default async function AutomationPage() {
         <p className="text-muted-foreground">
           providers {usage.tracked_providers} | unavailable {usage.unavailable_providers.length} | alerts {alerts.alerts.length}
         </p>
+        <p className="text-muted-foreground">
+          required_providers {readiness.required_providers.length} | all_required_ready {readiness.all_required_ready ? "yes" : "no"} |
+          blocking {readiness.blocking_issues.length}
+        </p>
+      </section>
+
+      <section className="rounded border p-4 space-y-3 text-sm">
+        <h2 className="font-semibold">Provider Readiness</h2>
+        {readiness.blocking_issues.length > 0 && (
+          <ul className="space-y-1 text-destructive">
+            {readiness.blocking_issues.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        )}
+        {readiness.recommendations.length > 0 && (
+          <ul className="space-y-1 text-muted-foreground">
+            {readiness.recommendations.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        )}
+        <ul className="space-y-2">
+          {readiness.providers.map((provider) => (
+            <li key={`ready-${provider.provider}`} className="rounded border p-2">
+              <p>
+                {provider.provider} | status {provider.status} | required {provider.required ? "yes" : "no"} | configured{" "}
+                {provider.configured ? "yes" : "no"} | severity {provider.severity}
+              </p>
+              {provider.missing_env.length > 0 && (
+                <p className="text-muted-foreground">missing_env {provider.missing_env.join(", ")}</p>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="rounded border p-4 space-y-3 text-sm">

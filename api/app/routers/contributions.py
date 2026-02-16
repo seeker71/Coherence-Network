@@ -12,8 +12,9 @@ from app.models.contribution import Contribution, ContributionCreate
 from app.models.contributor import Contributor, ContributorType
 from app.models.error import ErrorDetail
 from app.services.contribution_cost_service import (
+    ACTUAL_VERIFICATION_KEYS,
     ESTIMATOR_VERSION,
-    estimate_commit_cost,
+    estimate_commit_cost_with_provenance,
 )
 
 router = APIRouter()
@@ -31,6 +32,29 @@ class GitHubContribution(BaseModel):
 
 def get_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
+
+
+def _manual_cost_provenance(metadata: dict, cost_amount: Decimal) -> dict:
+    evidence_keys = [key for key in ACTUAL_VERIFICATION_KEYS if metadata.get(key)]
+    if evidence_keys:
+        return {
+            "cost_basis": "actual_verified",
+            "cost_confidence": 1.0,
+            "estimation_used": False,
+            "evidence_keys": evidence_keys,
+            "raw_cost_amount": str(cost_amount),
+            "normalized_cost_amount": str(cost_amount),
+            "cost_estimator_version": "manual_declared_v1",
+        }
+    return {
+        "cost_basis": "declared_unverified",
+        "cost_confidence": 0.25,
+        "estimation_used": False,
+        "evidence_keys": [],
+        "raw_cost_amount": str(cost_amount),
+        "normalized_cost_amount": str(cost_amount),
+        "cost_estimator_version": "manual_declared_v1",
+    }
 
 
 def calculate_coherence(contribution: ContributionCreate, store: GraphStore) -> float:
@@ -59,13 +83,14 @@ async def create_contribution(contribution: ContributionCreate, store: GraphStor
         raise HTTPException(status_code=404, detail="Asset not found")
 
     coherence = calculate_coherence(contribution, store)
+    provenance = _manual_cost_provenance(contribution.metadata, contribution.cost_amount)
 
     return store.create_contribution(
         contributor_id=contribution.contributor_id,
         asset_id=contribution.asset_id,
         cost_amount=contribution.cost_amount,
         coherence_score=coherence,
-        metadata=contribution.metadata,
+        metadata={**contribution.metadata, **provenance},
     )
 
 
@@ -147,10 +172,11 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
     coherence = calculate_coherence_from_github_metadata(payload.metadata)
     files_changed = payload.metadata.get("files_changed", 0)
     lines_added = payload.metadata.get("lines_added", 0)
-    normalized_cost = estimate_commit_cost(
+    normalized_cost, provenance = estimate_commit_cost_with_provenance(
         files_changed=files_changed,
         lines_added=lines_added,
         submitted_cost=payload.cost_amount,
+        metadata=payload.metadata,
     )
 
     # Create contribution
@@ -167,6 +193,7 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
             "raw_cost_amount": str(payload.cost_amount),
             "normalized_cost_amount": str(normalized_cost),
             "cost_estimator_version": ESTIMATOR_VERSION,
+            **provenance,
         },
     )
 
@@ -225,10 +252,11 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
         coherence = calculate_coherence_from_github_metadata(payload.metadata)
         files_changed = payload.metadata.get("files_changed", 0)
         lines_added = payload.metadata.get("lines_added", 0)
-        normalized_cost = estimate_commit_cost(
+        normalized_cost, provenance = estimate_commit_cost_with_provenance(
             files_changed=files_changed,
             lines_added=lines_added,
             submitted_cost=payload.cost_amount,
+            metadata=payload.metadata,
         )
 
         # Create contribution
@@ -245,6 +273,7 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
                 "raw_cost_amount": str(payload.cost_amount),
                 "normalized_cost_amount": str(normalized_cost),
                 "cost_estimator_version": ESTIMATOR_VERSION,
+                **provenance,
             }
         )
 
