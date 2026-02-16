@@ -500,6 +500,7 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
     tracked_task_ids: set[str] = set()
     by_executor: dict[str, dict[str, int]] = {}
     by_agent: dict[str, dict[str, int]] = {}
+    by_tool: dict[str, dict[str, int | float]] = {}
     recent_runs: list[dict[str, Any]] = []
     tracked_runs = 0
     failed_runs = 0
@@ -539,6 +540,16 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
         if status_key == "failed":
             failed_runs += 1
 
+        endpoint = _metadata_text(getattr(event, "endpoint", ""), default="unknown")
+        endpoint_norm = endpoint.lstrip("/")
+        tool_name = (
+            endpoint_norm.split("tool:", 1)[1].strip()
+            if endpoint_norm.startswith("tool:")
+            else endpoint_norm
+        )
+        if not tool_name:
+            tool_name = "unknown"
+
         if executor not in by_executor:
             by_executor[executor] = {"count": 0, "completed": 0, "failed": 0}
         by_executor[executor]["count"] += 1
@@ -549,11 +560,17 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
         by_agent[agent_id]["count"] += 1
         by_agent[agent_id][status_key] += 1
 
+        if tool_name not in by_tool:
+            by_tool[tool_name] = {"count": 0, "completed": 0, "failed": 0}
+        by_tool[tool_name]["count"] += 1
+        by_tool[tool_name][status_key] += 1
+
         recent_runs.append(
             {
                 "event_id": getattr(event, "id", ""),
                 "task_id": task_id,
-                "endpoint": getattr(event, "endpoint", ""),
+                "endpoint": endpoint,
+                "tool": tool_name,
                 "status_code": int(getattr(event, "status_code", 0)),
                 "executor": executor,
                 "agent_id": agent_id,
@@ -572,13 +589,24 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
     completed_or_failed_count = len(completed_or_failed_set)
     tracked_count = len(tracked_completed_or_failed)
     coverage_rate = 1.0 if completed_or_failed_count == 0 else round(tracked_count / completed_or_failed_count, 4)
+    success_runs = max(0, tracked_runs - failed_runs)
+    success_rate = 1.0 if tracked_runs == 0 else round(success_runs / tracked_runs, 4)
+
+    for values in by_tool.values():
+        total = int(values.get("count", 0) or 0)
+        failures = int(values.get("failed", 0) or 0)
+        successes = max(0, total - failures)
+        values["success_rate"] = 1.0 if total == 0 else round(successes / total, 4)
 
     return {
         "tracked_runs": tracked_runs,
         "failed_runs": failed_runs,
+        "success_runs": success_runs,
+        "success_rate": success_rate,
         "codex_runs": codex_runs,
         "by_executor": by_executor,
         "by_agent": by_agent,
+        "by_tool": by_tool,
         "coverage": {
             "completed_or_failed_tasks": completed_or_failed_count,
             "tracked_task_runs": tracked_count,

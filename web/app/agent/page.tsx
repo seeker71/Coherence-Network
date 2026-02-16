@@ -15,9 +15,12 @@ type AgentVisibility = {
     execution?: {
       tracked_runs: number;
       failed_runs: number;
+      success_runs: number;
+      success_rate: number;
       codex_runs: number;
       by_executor: Record<string, { count: number; completed: number; failed: number }>;
       by_agent: Record<string, { count: number; completed: number; failed: number }>;
+      by_tool: Record<string, { count: number; completed: number; failed: number; success_rate: number }>;
       coverage: {
         completed_or_failed_tasks: number;
         tracked_task_runs: number;
@@ -28,6 +31,7 @@ type AgentVisibility = {
         event_id: string;
         task_id: string;
         endpoint: string;
+        tool: string;
         status_code: number;
         executor: string;
         agent_id: string;
@@ -60,6 +64,7 @@ export default async function AgentPage() {
   const modelRows = Object.entries(data.usage.by_model).sort((a, b) => b[1].count - a[1].count);
   const executorRows = Object.entries(execution?.by_executor ?? {}).sort((a, b) => b[1].count - a[1].count);
   const agentRows = Object.entries(execution?.by_agent ?? {}).sort((a, b) => b[1].count - a[1].count);
+  const toolRows = Object.entries(execution?.by_tool ?? {}).sort((a, b) => b[1].count - a[1].count);
   const coverage = execution?.coverage;
 
   return (
@@ -145,7 +150,8 @@ export default async function AgentPage() {
         <div className="rounded border p-4 space-y-2">
           <h2 className="font-semibold">Execution by Executor</h2>
           <p className="text-muted-foreground">
-            tracked_runs {execution?.tracked_runs ?? 0} | failed_runs {execution?.failed_runs ?? 0}
+            tracked_runs {execution?.tracked_runs ?? 0} | success_runs {execution?.success_runs ?? 0} | failed_runs{" "}
+            {execution?.failed_runs ?? 0} | success_rate {((execution?.success_rate ?? 0) * 100).toFixed(1)}%
           </p>
           <ul className="space-y-1">
             {executorRows.map(([executor, row]) => (
@@ -180,6 +186,25 @@ export default async function AgentPage() {
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
+        <h2 className="font-semibold">Tool Usage (Machine + Human)</h2>
+        <p className="text-muted-foreground">
+          Tool-level count, success rate, and failures from worker runtime telemetry events.
+        </p>
+        <ul className="space-y-1">
+          {toolRows.map(([tool, row]) => (
+            <li key={tool} className="flex justify-between rounded border p-2">
+              <span>{tool}</span>
+              <span className="text-muted-foreground">
+                total {row.count} | ok {row.completed} | failed {row.failed} | success_rate{" "}
+                {(row.success_rate * 100).toFixed(1)}%
+              </span>
+            </li>
+          ))}
+          {toolRows.length === 0 && <li className="text-muted-foreground">No tool usage events yet.</li>}
+        </ul>
+      </section>
+
+      <section className="rounded border p-4 space-y-2 text-sm">
         <h2 className="font-semibold">Recent Tracked Runs</h2>
         <ul className="space-y-2">
           {(execution?.recent_runs ?? []).slice(0, 20).map((run) => (
@@ -194,7 +219,7 @@ export default async function AgentPage() {
                 {run.endpoint}
               </span>
               <span className="text-muted-foreground">
-                {run.executor} | status {run.status_code} | {run.runtime_ms.toFixed(1)}ms
+                {run.tool} | {run.executor} | status {run.status_code} | {run.runtime_ms.toFixed(1)}ms
               </span>
             </li>
           ))}
