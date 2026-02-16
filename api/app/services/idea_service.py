@@ -89,6 +89,34 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
             }
         ],
     },
+    {
+        "id": "federated-instance-aggregation",
+        "name": "Federated instance aggregation for contributor-owned deployments",
+        "description": (
+            "Allow contributors to run full or partial forks and publish verifiable telemetry back to the shared system. "
+            "This increases contributor throughput without central infrastructure bottlenecks and raises collective value."
+        ),
+        "potential_value": 128.0,
+        "actual_value": 0.0,
+        "estimated_cost": 26.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 5.0,
+        "confidence": 0.72,
+        "manifestation_status": "none",
+        "interfaces": ["machine:api", "machine:federation", "human:web", "external:forks"],
+        "open_questions": [
+            {
+                "question": "What is the minimal federation contract for cross-instance data aggregation with provenance?",
+                "value_to_whole": 34.0,
+                "estimated_cost": 6.0,
+            },
+            {
+                "question": "Which anti-duplication and trust signals are required before federated data affects ROI ranking?",
+                "value_to_whole": 31.0,
+                "estimated_cost": 5.0,
+            },
+        ],
+    },
 ]
 
 STANDING_QUESTION_TEXT = (
@@ -98,6 +126,7 @@ STANDING_QUESTION_TEXT = (
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": []}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
+REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = ("federated-instance-aggregation",)
 
 DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     "coherence-network-agent-pipeline": {
@@ -305,6 +334,35 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     )
 
 
+def _default_idea_map() -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for item in DEFAULT_IDEAS:
+        raw_id = item.get("id")
+        if isinstance(raw_id, str) and raw_id.strip():
+            out[raw_id] = item
+    return out
+
+
+def _ensure_required_system_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    existing = {idea.id for idea in ideas}
+    defaults_by_id = _default_idea_map()
+
+    for required_id in REQUIRED_SYSTEM_IDEA_IDS:
+        if required_id in existing:
+            continue
+        payload = defaults_by_id.get(required_id)
+        if not isinstance(payload, dict):
+            continue
+        try:
+            ideas.append(Idea(**payload))
+        except Exception:
+            continue
+        existing.add(required_id)
+        changed = True
+    return ideas, changed
+
+
 def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     tracked_ids = _tracked_idea_ids()
     if not tracked_ids:
@@ -357,20 +415,24 @@ def _read_ideas() -> list[Idea]:
     ideas = idea_registry_service.load_ideas()
     if not ideas:
         ideas, source = _read_legacy_file_ideas()
+        ideas, required_changed = _ensure_required_system_ideas(ideas)
         ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
         bootstrap_source = source
+        if required_changed:
+            bootstrap_source = f"{bootstrap_source}+required_system_ideas"
         if tracked_changed or source == "defaults":
-            bootstrap_source = f"{source}+derived"
+            bootstrap_source = f"{bootstrap_source}+derived"
         if standing_changed:
             bootstrap_source = f"{bootstrap_source}+standing_question"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
         _write_snapshot_file(ideas)
         return ideas
 
+    ideas, required_changed = _ensure_required_system_ideas(ideas)
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if tracked_changed or standing_changed:
+    if required_changed or tracked_changed or standing_changed:
         _write_ideas(ideas)
     else:
         path = _portfolio_path()
