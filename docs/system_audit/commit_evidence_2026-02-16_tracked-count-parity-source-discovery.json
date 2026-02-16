@@ -1,0 +1,90 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/idea-count-parity",
+  "commit_scope": "fix idea/spec count parity by discovering tracked ideas/specs from commit evidence and repository sources with source-aware inventory telemetry",
+  "files_owned": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "web/app/portfolio/page.tsx",
+    "web/app/specs/page.tsx",
+    "specs/085-tracked-count-parity-and-source-discovery.md",
+    "docs/system_audit/commit_evidence_2026-02-16_tracked-count-parity-source-discovery.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment",
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "085"
+  ],
+  "task_ids": [
+    "tracked-count-parity-source-discovery"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_tracked-count-parity-source-discovery.json"
+  ],
+  "change_files": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "web/app/portfolio/page.tsx",
+    "web/app/specs/page.tsx",
+    "specs/085-tracked-count-parity-and-source-discovery.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+      "cd web && npm ci --cache .npm-cache && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api+web"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public inventory/spec pages report tracked counts from source-of-truth discovery instead of sparse fallback counts.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/ideas",
+      "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
+      "https://coherence-network.vercel.app/portfolio",
+      "https://coherence-network.vercel.app/specs"
+    ],
+    "test_flows": [
+      "api:/ideas->derived_commit_evidence_idea_ids_included",
+      "api:/inventory/system-lineage->spec_source_and_count_reflect_repository_tracking",
+      "web:/portfolio->counts_show_portfolio_vs_tracked_ids_vs_specs",
+      "web:/specs->source_and_spec_total_render"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deployed public validation"
+  }
+}
