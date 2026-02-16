@@ -51,6 +51,8 @@ cd api && .venv/bin/python scripts/agent_runner.py --once -v
 
 **Integration coverage:** `GET /api/agent/integration` returns role-agent bindings, profile coverage, optional executor binary checks, and any remaining integration gaps.
 
+**Runtime coverage exerciser:** `POST /api/runtime/exerciser/run` performs safe real GET calls across discovered API GET routes and raises `with_usage_events` coverage over time.
+
 **Telegram:** `/tasks failed` or `/task {task_id}`
 
 ### 2. Check full output
