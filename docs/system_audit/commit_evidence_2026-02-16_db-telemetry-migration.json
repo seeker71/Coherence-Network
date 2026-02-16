@@ -76,7 +76,8 @@
     "commands": [
       "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
       "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_friction_api.py",
-      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_agent_runner_tool_failure_telemetry.py"
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/validate_spec_quality.py --base 21ac034cb5fbdddedbc4d99a01e10a703305fa8a --head HEAD"
     ]
   },
   "ci_validation": {
