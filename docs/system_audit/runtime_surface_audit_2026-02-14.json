@@ -129,14 +129,10 @@
     }
   ],
   "web_expected_paths": [
-    "/api/import/stack",
-    "/api/projects/",
-    "/api/search?q="
+    "/api/import/stack"
   ],
   "missing_for_web": [
-    "/api/import/stack",
-    "/api/projects/",
-    "/api/search?q="
+    "/api/import/stack"
   ],
   "agent_router": {
     "declared_count": 16,

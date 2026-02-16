@@ -30,6 +30,7 @@ This closes a critical gap where the web UI existed but the backing API routes r
 - `api/app/services/coherence_service.py`
 - `api/tests/test_projects_api.py`
 - `web/app/search/page.tsx`
+- `docs/system_audit/runtime_surface_audit_2026-02-14.json`
 - `docs/system_audit/runtime_drift_allowlist.json`
 - `specs/077-public-search-e2e.md`
 - `docs/system_audit/commit_evidence_2026-02-16_public-search-e2e.json`
@@ -50,4 +51,3 @@ curl -sS "https://coherence-network-production.up.railway.app/api/search?q=react
 # Web renders query state server-side (inspectable HTML)
 curl -sS "https://coherence-network.vercel.app/search?q=react" | rg -n "Search projects|result"
 ```
-

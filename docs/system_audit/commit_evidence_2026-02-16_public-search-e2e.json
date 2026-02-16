@@ -9,6 +9,7 @@
     "api/app/services/coherence_service.py",
     "api/tests/test_projects_api.py",
     "web/app/search/page.tsx",
+    "docs/system_audit/runtime_surface_audit_2026-02-14.json",
     "docs/system_audit/runtime_drift_allowlist.json",
     "docs/system_audit/commit_evidence_2026-02-16_public-search-e2e.json"
   ],
@@ -56,6 +57,7 @@
     "api/app/services/coherence_service.py",
     "api/tests/test_projects_api.py",
     "web/app/search/page.tsx",
+    "docs/system_audit/runtime_surface_audit_2026-02-14.json",
     "docs/system_audit/runtime_drift_allowlist.json"
   ],
   "change_intent": "runtime_fix",
