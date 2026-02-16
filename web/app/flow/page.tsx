@@ -161,8 +161,8 @@ async function loadDataForIdea(ideaId: string): Promise<{
   if (ideaId) flowParams.set("idea_id", ideaId);
   const [flowRes, contributorsRes, contributionsRes] = await Promise.all([
     fetch(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }),
-    fetch(`${API}/v1/contributors`, { cache: "no-store" }),
-    fetch(`${API}/v1/contributions`, { cache: "no-store" }),
+    fetch(`${API}/api/contributors`, { cache: "no-store" }),
+    fetch(`${API}/api/contributions`, { cache: "no-store" }),
   ]);
   if (!flowRes.ok) throw new Error(`flow HTTP ${flowRes.status}`);
   if (!contributorsRes.ok) throw new Error(`contributors HTTP ${contributorsRes.status}`);

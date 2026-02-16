@@ -90,11 +90,11 @@ async def reset_database(x_admin_key: str = Header(None)):
         ]
     }
 
-# Resource routers
-app.include_router(contributors.router, prefix="/v1", tags=["contributors"])
-app.include_router(assets.router, prefix="/v1", tags=["assets"])
-app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
-app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
+# Resource routers (canonical)
+app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(contributions.router, prefix="/api", tags=["contributions"])
+app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
@@ -106,6 +106,12 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+
+# Backward compatibility for legacy clients; hidden from OpenAPI.
+app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
+app.include_router(assets.router, prefix="/v1", include_in_schema=False)
+app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
+app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
 
 
 @app.middleware("http")
