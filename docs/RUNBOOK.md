@@ -235,6 +235,19 @@ If a check fails, the report includes:
 - output tail
 - suggested local remediation command
 
+## Worktree Start Gate
+
+Before starting a new task, enforce worktree-only + clean-state:
+
+```bash
+python3 scripts/ensure_worktree_start_clean.py --json
+```
+
+This gate fails when:
+- work is started in the primary repo workspace instead of a linked worktree,
+- current worktree has uncommitted local changes,
+- primary workspace still has leftover local changes from unfinished tasks.
+
 ## Cleanup Old Task Logs
 
 Task logs accumulate. To remove logs older than 7 days:
