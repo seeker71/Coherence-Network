@@ -22,8 +22,9 @@ Quick reference: spec status, test coverage, last verified.
 | 090 | ✓ | ✓ | ✓ |
 | 091 | ✓ | ✓ | ✓ |
 | 092 | ✓ | ✓ | ✓ |
+| 093 | ✓ | ✓ | ✓ |
 
-**Total:** 35 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056, 090–092).
+**Total:** 36 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056, 090–093).
 
 ## Test Verification
 
@@ -63,6 +64,7 @@ cd web && npm run build      # 11 routes
 | 090 | test_maintainability_audit_service.py, workflow gates |
 | 091 | web build + manual live refresh/link verification |
 | 092 | web build + manual refresh/version-check/nav verification |
+| 093 | web build + manual OS light/dark theme verification |
 
 ## Last Updated
 
