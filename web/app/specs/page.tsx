@@ -31,7 +31,7 @@ export default async function SpecsPage() {
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Home
         </Link>
@@ -43,6 +43,24 @@ export default async function SpecsPage() {
         </Link>
         <Link href="/usage" className="text-muted-foreground hover:text-foreground">
           Usage
+        </Link>
+        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
+          Flow
+        </Link>
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
+          Contributors
+        </Link>
+        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
+          Contributions
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
         </Link>
       </div>
 
