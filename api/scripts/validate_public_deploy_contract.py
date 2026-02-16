@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate public Railway + Vercel deployment contract against main SHA."""
+"""Validate public Railway deployment contract (API + web) against main SHA."""
 
 from __future__ import annotations
 
@@ -13,12 +13,12 @@ from app.services import release_gate_service as gates
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Validate public deployment contract (Railway API + Vercel web)."
+        description="Validate public deployment contract (Railway API + Railway web)."
     )
     parser.add_argument("--repo", default="seeker71/Coherence-Network")
     parser.add_argument("--branch", default="main")
     parser.add_argument("--api-base", default="https://coherence-network-production.up.railway.app")
-    parser.add_argument("--web-base", default="https://coherence-network.vercel.app")
+    parser.add_argument("--web-base", default="https://coherence-web-production.up.railway.app")
     parser.add_argument("--expected-sha", default="")
     parser.add_argument("--timeout", type=float, default=8.0)
     parser.add_argument("--json", action="store_true")

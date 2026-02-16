@@ -24,7 +24,7 @@ def test_evaluate_pr_gates_ready_when_required_checks_pass() -> None:
         "state": "success",
         "statuses": [{"context": "Test", "state": "success"}],
     }
-    check_runs = [{"name": "Vercel", "conclusion": "success"}]
+    check_runs = [{"name": "Deploy", "conclusion": "success"}]
     required_contexts = ["Test"]
 
     out = evaluate_pr_gates(pr, commit_status, check_runs, required_contexts)
@@ -123,10 +123,10 @@ def test_collect_rerunnable_actions_run_ids_filters_by_required_and_failure() ->
             "app": {"slug": "github-actions"},
         },
         {
-            "name": "Vercel",
+            "name": "Deploy",
             "conclusion": "failure",
-            "details_url": "https://vercel.com/build/123",
-            "app": {"slug": "vercel"},
+            "details_url": "https://example.com/build/123",
+            "app": {"slug": "other"},
         },
         {
             "name": "Test",
@@ -155,10 +155,10 @@ def test_collect_rerunnable_actions_run_ids_fallbacks_when_required_unknown() ->
             "app": {"slug": "github-actions"},
         },
         {
-            "name": "Vercel",
+            "name": "Deploy",
             "conclusion": "failure",
-            "details_url": "https://vercel.com/build/456",
-            "app": {"slug": "vercel"},
+            "details_url": "https://example.com/build/456",
+            "app": {"slug": "other"},
         },
     ]
     run_ids = collect_rerunnable_actions_run_ids([], check_runs)
@@ -184,8 +184,8 @@ def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     }
     assert "railway_health" in check_names
     assert "railway_gates_main_head" in check_names
-    assert "vercel_gates_page" in check_names
-    assert "vercel_health_proxy" in check_names
+    assert "railway_web_gates_page" in check_names
+    assert "railway_web_health_proxy" in check_names
     assert "railway_value_lineage_e2e" in check_names
     assert out["result"] in {"public_contract_passed", "blocked"}
     assert isinstance(out.get("failing_checks"), list)

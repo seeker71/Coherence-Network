@@ -47,7 +47,7 @@ Defaults:
 
 - `https://coherence-network-production.up.railway.app/api/health`
 - `https://coherence-network-production.up.railway.app/api/ideas`
-- `https://coherence-network.vercel.app/api-health`
+- `https://coherence-web-production.up.railway.app/api-health`
 
 All must return HTTP 200.
 

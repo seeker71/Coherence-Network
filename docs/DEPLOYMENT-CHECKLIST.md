@@ -114,19 +114,19 @@ The CORS `ALLOWED_ORIGINS` env var may not be set on Railway.
 3. Go to **Variables** tab
 4. Add:
    ```
-   ALLOWED_ORIGINS=https://coherence-network.vercel.app,http://localhost:3000
+   ALLOWED_ORIGINS=https://coherence-web-production.up.railway.app,http://localhost:3000
    ```
 5. Railway will auto-redeploy
 
 ### Verification
 ```bash
 # Test CORS
-curl -I -H "Origin: https://coherence-network.vercel.app" \
+curl -I -H "Origin: https://coherence-web-production.up.railway.app" \
   https://coherence-network-production.up.railway.app/api/health \
   | grep -i "access-control-allow-origin"
 
 # Should show:
-# Access-Control-Allow-Origin: https://coherence-network.vercel.app
+# Access-Control-Allow-Origin: https://coherence-web-production.up.railway.app
 ```
 
 ## Complete Setup Script (After Manual Steps)
@@ -186,7 +186,7 @@ curl -fsS https://coherence-network-production.up.railway.app/v1/contributors | 
 
 echo ""
 echo "7. CORS Check..."
-curl -I -H "Origin: https://coherence-network.vercel.app" \
+curl -I -H "Origin: https://coherence-web-production.up.railway.app" \
   https://coherence-network-production.up.railway.app/api/health 2>&1 \
   | grep -i "access-control-allow-origin"
 
@@ -205,7 +205,7 @@ Save as `scripts/verify_full_deployment.sh` and run after setup.
 ### Railway Environment Variables Needed
 ```
 DATABASE_URL=<auto-set when PostgreSQL added>
-ALLOWED_ORIGINS=https://coherence-network.vercel.app,http://localhost:3000
+ALLOWED_ORIGINS=https://coherence-web-production.up.railway.app,http://localhost:3000
 ```
 
 ### GitHub Repository Secrets Needed

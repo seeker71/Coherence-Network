@@ -207,10 +207,6 @@ RAILWAY_PROJECT_ID=
 RAILWAY_ENVIRONMENT=
 RAILWAY_SERVICE=
 
-# Vercel deploy health automation
-VERCEL_TOKEN=
-VERCEL_PROJECT_ID=
-
 # OpenClaw usage tracking
 OPENCLAW_API_KEY=
 ```

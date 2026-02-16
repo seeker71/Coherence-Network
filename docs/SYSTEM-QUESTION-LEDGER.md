@@ -94,7 +94,7 @@ Findings:
 1. **Docs/runtime drift list with exact file-by-file corrections**  
    Why open: drift is confirmed, but not fully enumerated and reconciled.
 
-2. **Production parity verification (Railway/Vercel live runtime vs local)**  
+2. **Production parity verification (Railway live runtime vs local)**  
    Why open: docs claim live endpoints, but this cycle did not perform live endpoint audit.
 
 3. **Economic value realized (actual contribution/distribution totals over time)**  

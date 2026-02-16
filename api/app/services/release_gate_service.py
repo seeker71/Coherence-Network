@@ -522,7 +522,7 @@ def evaluate_pr_to_public_report(
     branch: str,
     base: str = "main",
     api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-network.vercel.app",
+    web_base: str = "https://coherence-web-production.up.railway.app",
     wait_public: bool = False,
     timeout_seconds: int = 1200,
     poll_seconds: int = 30,
@@ -582,7 +582,7 @@ def evaluate_merged_change_contract_report(
     repository: str,
     sha: str,
     api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-network.vercel.app",
+    web_base: str = "https://coherence-web-production.up.railway.app",
     timeout_seconds: int = 1200,
     poll_seconds: int = 30,
     endpoint_urls: list[str] | None = None,
@@ -671,7 +671,7 @@ def evaluate_public_deploy_contract_report(
     repository: str = "seeker71/Coherence-Network",
     branch: str = "main",
     api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-network.vercel.app",
+    web_base: str = "https://coherence-web-production.up.railway.app",
     expected_sha: str | None = None,
     timeout: float = 8.0,
     github_token: str | None = None,
@@ -713,12 +713,12 @@ def evaluate_public_deploy_contract_report(
 
     web_gates_url = f"{report['web_base']}/gates"
     web_gates = check_http_endpoint(web_gates_url, timeout=timeout)
-    web_gates["name"] = "vercel_gates_page"
+    web_gates["name"] = "railway_web_gates_page"
     checks.append(web_gates)
 
     web_proxy_url = f"{report['web_base']}/api/health-proxy"
     web_proxy = check_http_json_endpoint(web_proxy_url, timeout=timeout)
-    web_proxy["name"] = "vercel_health_proxy"
+    web_proxy["name"] = "railway_web_health_proxy"
     if web_proxy.get("ok") and isinstance(web_proxy.get("json"), dict):
         payload = web_proxy["json"]
         api_payload = payload.get("api") if isinstance(payload.get("api"), dict) else {}
@@ -912,7 +912,7 @@ def evaluate_commit_traceability_report(
     repository: str,
     sha: str,
     api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-network.vercel.app",
+    web_base: str = "https://coherence-web-production.up.railway.app",
     github_token: str | None = None,
     timeout: float = 10.0,
 ) -> dict[str, Any]:

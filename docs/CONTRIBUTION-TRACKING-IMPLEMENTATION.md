@@ -129,7 +129,7 @@ In Railway dashboard:
 
 Check that Railway has set:
 - `DATABASE_URL` — Should be auto-populated when Postgres addon is added
-- `ALLOWED_ORIGINS` — Add this manually: `https://coherence-network.vercel.app,http://localhost:3000`
+- `ALLOWED_ORIGINS` — Add this manually: `https://coherence-web-production.up.railway.app,http://localhost:3000`
 
 ### 3. GitHub Secrets (If Not Already Set)
 

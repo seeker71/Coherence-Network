@@ -81,8 +81,8 @@ async def test_gate_public_deploy_contract_returns_real_checks() -> None:
             if isinstance(row, dict) and isinstance(row.get("name"), str)
         }
         assert "railway_health" in check_names
-        assert "vercel_gates_page" in check_names
-        assert "vercel_health_proxy" in check_names
+        assert "railway_web_gates_page" in check_names
+        assert "railway_web_health_proxy" in check_names
         assert "railway_value_lineage_e2e" in check_names
         assert data["result"] in {"public_contract_passed", "blocked"}
 

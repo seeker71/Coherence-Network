@@ -42,10 +42,9 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
     "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
-    "vercel": {"kind": "custom", "all_of": ["VERCEL_TOKEN", "VERCEL_PROJECT_ID"]},
 }
 
-_DEFAULT_REQUIRED_PROVIDERS = ("coherence-internal", "github", "openai", "railway", "vercel")
+_DEFAULT_REQUIRED_PROVIDERS = ("coherence-internal", "github", "openai", "railway")
 _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "coherence-internal",
     "openai-codex",
@@ -825,7 +824,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_config_only_snapshot("cursor"),
         _build_config_only_snapshot("openclaw"),
         _build_railway_snapshot(),
-        _build_config_only_snapshot("vercel"),
     ]
     for snapshot in providers:
         active_count = int(active_usage.get(snapshot.provider, 0))

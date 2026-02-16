@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument("--repo", default="seeker71/Coherence-Network")
     parser.add_argument("--sha", required=True, help="Merged commit SHA on main")
     parser.add_argument("--api-base", default="https://coherence-network-production.up.railway.app")
-    parser.add_argument("--web-base", default="https://coherence-network.vercel.app")
+    parser.add_argument("--web-base", default="https://coherence-web-production.up.railway.app")
     parser.add_argument("--endpoint", action="append", default=[])
     parser.add_argument("--timeout-seconds", type=int, default=1200)
     parser.add_argument("--poll-seconds", type=int, default=30)
