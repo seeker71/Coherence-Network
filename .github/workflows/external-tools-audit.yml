@@ -38,7 +38,7 @@ jobs:
 
       - name: Create or update external tools drift issue
         if: ${{ steps.audit.outputs.exit_code != '0' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -91,7 +91,7 @@ jobs:
 
       - name: Resolve external tools drift issue when audit passes
         if: ${{ steps.audit.outputs.exit_code == '0' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = 'External tools registry drift detected';
