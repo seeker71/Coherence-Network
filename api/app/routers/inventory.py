@@ -49,6 +49,19 @@ async def spec_process_implementation_validation_flow(
     )
 
 
+@router.post("/inventory/flow/next-unblock-task")
+async def next_unblock_task(
+    create_task: bool = Query(False),
+    idea_id: str | None = Query(default=None),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.next_unblock_task_from_flow(
+        create_task=create_task,
+        idea_id=idea_id,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+
+
 @router.get("/inventory/endpoint-traceability")
 async def endpoint_traceability_inventory(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),

@@ -301,6 +301,9 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
         assert row["validation"]["deploy"]["pass"] >= 1
         assert row["validation"]["e2e"]["pass"] >= 1
         assert row["contributors"]["total_unique"] >= 2
+        assert "interdependencies" in row
+        assert row["interdependencies"]["blocked"] is False
+        assert isinstance(payload["unblock_queue"], list)
 
 
 @pytest.mark.asyncio
@@ -487,3 +490,134 @@ async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
         assert listed.status_code == 200
         data = listed.json()
         assert data["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_queue(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    portfolio = {
+        "ideas": [
+            {
+                "id": "idea-high-unblock",
+                "name": "High unblock value",
+                "description": "Missing spec should block the rest.",
+                "potential_value": 120.0,
+                "actual_value": 20.0,
+                "estimated_cost": 12.0,
+                "actual_cost": 0.0,
+                "resistance_risk": 2.0,
+                "confidence": 0.9,
+                "manifestation_status": "none",
+                "interfaces": ["machine:api"],
+                "open_questions": [
+                    {
+                        "question": "How do we unblock the chain first?",
+                        "value_to_whole": 20.0,
+                        "estimated_cost": 2.0,
+                    }
+                ],
+            },
+            {
+                "id": "idea-lower-unblock",
+                "name": "Lower unblock value",
+                "description": "Also missing spec but lower weighted upside.",
+                "potential_value": 60.0,
+                "actual_value": 30.0,
+                "estimated_cost": 10.0,
+                "actual_cost": 0.0,
+                "resistance_risk": 2.0,
+                "confidence": 0.6,
+                "manifestation_status": "none",
+                "interfaces": ["machine:api"],
+                "open_questions": [],
+            },
+        ]
+    }
+    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/flow")
+        assert resp.status_code == 200
+        payload = resp.json()
+
+        assert payload["summary"]["blocked_ideas"] >= 2
+        assert payload["summary"]["queue_items"] >= 2
+        queue = payload["unblock_queue"]
+        assert len(queue) >= 2
+        assert queue[0]["unblock_priority_score"] >= queue[1]["unblock_priority_score"]
+        assert queue[0]["idea_id"] == "idea-high-unblock"
+        assert queue[0]["blocking_stage"] == "spec"
+        assert queue[0]["task_type"] == "spec"
+        assert "process" in queue[0]["downstream_blocked"]
+        assert "implementation" in queue[0]["downstream_blocked"]
+        assert "validation" in queue[0]["downstream_blocked"]
+
+        row = next(item for item in payload["items"] if item["idea_id"] == "idea-high-unblock")
+        assert row["interdependencies"]["blocked"] is True
+        assert row["interdependencies"]["blocking_stage"] == "spec"
+        assert row["interdependencies"]["upstream_required"] == []
+        assert set(row["interdependencies"]["downstream_blocked"]) >= {"process", "implementation", "validation"}
+        assert row["interdependencies"]["unblock_priority_score"] > 0
+
+
+@pytest.mark.asyncio
+async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplicate(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    (tmp_path / "ideas.json").write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "unblock-task-idea",
+                        "name": "Unblock task idea",
+                        "description": "Flow should propose a spec-first unblock task.",
+                        "potential_value": 90.0,
+                        "actual_value": 10.0,
+                        "estimated_cost": 10.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.8,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        suggest = await client.post("/api/inventory/flow/next-unblock-task")
+        assert suggest.status_code == 200
+        suggested = suggest.json()
+        assert suggested["result"] == "task_suggested"
+        assert suggested["blocking_stage"] == "spec"
+        assert suggested["task_type"] == "spec"
+        assert suggested["unblock_priority_score"] > 0
+
+        created = await client.post("/api/inventory/flow/next-unblock-task", params={"create_task": True})
+        assert created.status_code == 200
+        created_payload = created.json()
+        assert created_payload["result"] == "task_suggested"
+        assert created_payload["created_task"]["id"]
+        assert created_payload["created_task"]["task_type"] == "spec"
+
+        duplicate = await client.post("/api/inventory/flow/next-unblock-task", params={"create_task": True})
+        assert duplicate.status_code == 200
+        duplicate_payload = duplicate.json()
+        assert duplicate_payload["result"] == "task_already_active"
+        assert duplicate_payload["active_task"]["id"] == created_payload["created_task"]["id"]

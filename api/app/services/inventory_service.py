@@ -42,6 +42,20 @@ IMPLEMENTATION_REQUEST_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_FLOW_STAGE_ORDER: tuple[str, ...] = ("spec", "process", "implementation", "validation")
+_FLOW_STAGE_ESTIMATED_COST: dict[str, float] = {
+    "spec": 2.0,
+    "process": 3.0,
+    "implementation": 5.0,
+    "validation": 2.0,
+}
+_FLOW_STAGE_TASK_TYPE: dict[str, TaskType] = {
+    "spec": TaskType.SPEC,
+    "process": TaskType.SPEC,
+    "implementation": TaskType.IMPL,
+    "validation": TaskType.TEST,
+}
+
 
 def _is_implementation_request_question(question: str, answer: str | None = None) -> bool:
     text = f"{question or ''} {answer or ''}".strip()
@@ -53,6 +67,136 @@ def _is_implementation_request_question(question: str, answer: str | None = None
 def _question_fingerprint(idea_id: str, question: str) -> str:
     payload = f"{idea_id.strip().lower()}::{question.strip().lower()}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _flow_unblock_fingerprint(idea_id: str, blocking_stage: str) -> str:
+    payload = f"flow-unblock::{idea_id.strip().lower()}::{blocking_stage.strip().lower()}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _clamp_confidence(value: Any) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return max(0.0, min(numeric, 1.0))
+
+
+def _build_unblock_direction(
+    idea_id: str,
+    idea_name: str,
+    blocking_stage: str,
+    blocked_stages: list[str],
+    spec_ids: list[str],
+) -> str:
+    blocked_text = ", ".join(blocked_stages) if blocked_stages else "flow completion"
+    if blocking_stage == "spec":
+        return (
+            f"Unblock idea '{idea_id}' ({idea_name}) by adding/updating spec coverage. "
+            f"This unlocks: {blocked_text}. Define acceptance checks and link to process and implementation."
+        )
+    if blocking_stage == "process":
+        spec_hint = ", ".join(spec_ids[:5]) if spec_ids else "linked spec"
+        return (
+            f"Unblock idea '{idea_id}' ({idea_name}) by defining process and pseudocode grounded in {spec_hint}. "
+            f"This unlocks: {blocked_text}."
+        )
+    if blocking_stage == "implementation":
+        return (
+            f"Unblock idea '{idea_id}' ({idea_name}) by implementing the tracked spec/process artifacts "
+            f"and linking code references. This unlocks: {blocked_text}."
+        )
+    return (
+        f"Unblock idea '{idea_id}' ({idea_name}) by validating the current implementation "
+        "with local, CI, deploy, and e2e evidence updates."
+    )
+
+
+def _build_flow_interdependencies(
+    *,
+    idea_id: str,
+    idea_name: str,
+    spec_tracked: bool,
+    process_tracked: bool,
+    implementation_tracked: bool,
+    validation_tracked: bool,
+    spec_ids: list[str],
+    idea_value_gap: float,
+    idea_confidence: float,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    stage_tracked = {
+        "spec": bool(spec_tracked),
+        "process": bool(process_tracked),
+        "implementation": bool(implementation_tracked),
+        "validation": bool(validation_tracked),
+    }
+    missing = [stage for stage in _FLOW_STAGE_ORDER if not stage_tracked[stage]]
+    if not missing:
+        return (
+            {
+                "blocked": False,
+                "blocking_stage": None,
+                "upstream_required": [],
+                "downstream_blocked": [],
+                "estimated_unblock_cost": 0.0,
+                "estimated_unblock_value": 0.0,
+                "unblock_priority_score": 0.0,
+                "task_fingerprint": None,
+                "next_unblock_task": None,
+            },
+            None,
+        )
+
+    blocking_stage = missing[0]
+    stage_index = _FLOW_STAGE_ORDER.index(blocking_stage)
+    upstream_required = list(_FLOW_STAGE_ORDER[:stage_index])
+    downstream_blocked = [stage for stage in _FLOW_STAGE_ORDER[stage_index + 1 :] if not stage_tracked[stage]]
+    stage_cost = float(_FLOW_STAGE_ESTIMATED_COST.get(blocking_stage, 1.0))
+    confidence = _clamp_confidence(idea_confidence)
+    value_gap = max(float(idea_value_gap), 0.0)
+    unlock_multiplier = (len(downstream_blocked) + 1) / max(1.0, float(len(_FLOW_STAGE_ORDER)))
+    unlock_value = round(value_gap * confidence * unlock_multiplier, 4)
+    priority_score = _question_roi(unlock_value, stage_cost)
+    fingerprint = _flow_unblock_fingerprint(idea_id, blocking_stage)
+    direction = _build_unblock_direction(
+        idea_id=idea_id,
+        idea_name=idea_name,
+        blocking_stage=blocking_stage,
+        blocked_stages=downstream_blocked,
+        spec_ids=spec_ids,
+    )
+    task_type = _FLOW_STAGE_TASK_TYPE.get(blocking_stage, TaskType.IMPL)
+    candidate = {
+        "idea_id": idea_id,
+        "idea_name": idea_name,
+        "blocking_stage": blocking_stage,
+        "upstream_required": upstream_required,
+        "downstream_blocked": downstream_blocked,
+        "estimated_unblock_cost": stage_cost,
+        "estimated_unblock_value": unlock_value,
+        "unblock_priority_score": priority_score,
+        "task_fingerprint": fingerprint,
+        "task_type": task_type.value,
+        "direction": direction,
+    }
+
+    return (
+        {
+            "blocked": True,
+            "blocking_stage": blocking_stage,
+            "upstream_required": upstream_required,
+            "downstream_blocked": downstream_blocked,
+            "estimated_unblock_cost": stage_cost,
+            "estimated_unblock_value": unlock_value,
+            "unblock_priority_score": priority_score,
+            "task_fingerprint": fingerprint,
+            "next_unblock_task": {
+                "task_type": task_type.value,
+                "direction": direction,
+            },
+        },
+        candidate,
+    )
 
 
 def _active_impl_question_fingerprints() -> set[str]:
@@ -1066,6 +1210,16 @@ def build_spec_process_implementation_validation_flow(
 ) -> dict[str, Any]:
     portfolio = idea_service.list_ideas()
     idea_name_map = {item.id: item.name for item in portfolio.ideas}
+    idea_signal_map = {
+        item.id: {
+            "value_gap": float(item.value_gap),
+            "confidence": float(item.confidence),
+            "estimated_cost": float(item.estimated_cost),
+            "potential_value": float(item.potential_value),
+            "actual_value": float(item.actual_value),
+        }
+        for item in portfolio.ideas
+    }
 
     runtime_rows = runtime_service.summarize_by_idea(seconds=runtime_window_seconds)
     runtime_by_idea = {row.idea_id: row for row in runtime_rows}
@@ -1214,9 +1368,12 @@ def build_spec_process_implementation_validation_flow(
         flow["runtime_cost_estimate"] = float(runtime.runtime_cost_estimate)
 
     items: list[dict[str, Any]] = []
+    unblock_queue: list[dict[str, Any]] = []
+    active_task_cache: dict[str, dict[str, Any] | None] = {}
     for current_idea_id in sorted(flows.keys()):
         flow = flows[current_idea_id]
         spec_count = len(flow["_spec_ids"])
+        spec_ids = sorted(flow["_spec_ids"])
         process_tracked = bool(flow["process_evidence_count"] > 0 or flow["_task_ids"] or flow["_evidence_refs"])
         implementation_tracked = bool(flow["_lineage_ids"] or flow["_implementation_refs"])
         validation_tracked = bool(
@@ -1228,6 +1385,41 @@ def build_spec_process_implementation_validation_flow(
         )
         contributors_tracked = bool(flow["_contributors_all"])
         contributions_tracked = bool(flow["usage_events_count"] > 0 or flow["measured_value_total"] > 0)
+        idea_signals = idea_signal_map.get(
+            current_idea_id,
+            {"value_gap": 0.0, "confidence": 0.0, "estimated_cost": 0.0, "potential_value": 0.0, "actual_value": 0.0},
+        )
+        interdependencies, queue_candidate = _build_flow_interdependencies(
+            idea_id=current_idea_id,
+            idea_name=flow["idea_name"],
+            spec_tracked=spec_count > 0,
+            process_tracked=process_tracked,
+            implementation_tracked=implementation_tracked,
+            validation_tracked=validation_tracked,
+            spec_ids=spec_ids,
+            idea_value_gap=float(idea_signals.get("value_gap", 0.0)),
+            idea_confidence=float(idea_signals.get("confidence", 0.0)),
+        )
+        if queue_candidate is not None:
+            fingerprint = str(queue_candidate.get("task_fingerprint") or "")
+            active_task = active_task_cache.get(fingerprint)
+            if fingerprint and fingerprint not in active_task_cache:
+                active_task = agent_service.find_active_task_by_fingerprint(fingerprint)
+                active_task_cache[fingerprint] = active_task
+            queue_candidate["active_task"] = (
+                {
+                    "id": active_task.get("id"),
+                    "status": (
+                        active_task["status"].value
+                        if hasattr(active_task.get("status"), "value")
+                        else str(active_task.get("status"))
+                    ),
+                    "claimed_by": active_task.get("claimed_by"),
+                }
+                if isinstance(active_task, dict)
+                else None
+            )
+            unblock_queue.append(queue_candidate)
 
         items.append(
             {
@@ -1235,7 +1427,7 @@ def build_spec_process_implementation_validation_flow(
                 "idea_name": flow["idea_name"],
                 "spec": {
                     "count": spec_count,
-                    "spec_ids": sorted(flow["_spec_ids"]),
+                    "spec_ids": spec_ids,
                     "tracked": spec_count > 0,
                 },
                 "process": {
@@ -1287,8 +1479,25 @@ def build_spec_process_implementation_validation_flow(
                     "contributors": "tracked" if contributors_tracked else "missing",
                     "contributions": "tracked" if contributions_tracked else "missing",
                 },
+                "interdependencies": interdependencies,
+                "idea_signals": {
+                    "value_gap": round(float(idea_signals.get("value_gap", 0.0)), 4),
+                    "confidence": round(float(idea_signals.get("confidence", 0.0)), 4),
+                    "estimated_cost": round(float(idea_signals.get("estimated_cost", 0.0)), 4),
+                    "potential_value": round(float(idea_signals.get("potential_value", 0.0)), 4),
+                    "actual_value": round(float(idea_signals.get("actual_value", 0.0)), 4),
+                },
             }
         )
+
+    unblock_queue.sort(
+        key=lambda row: (
+            -float(row.get("unblock_priority_score") or 0.0),
+            -len(row.get("downstream_blocked") or []),
+            -float(row.get("estimated_unblock_value") or 0.0),
+            str(row.get("idea_id") or ""),
+        )
+    )
 
     summary = {
         "ideas": len(items),
@@ -1298,6 +1507,8 @@ def build_spec_process_implementation_validation_flow(
         "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
         "with_contributors": sum(1 for row in items if row["contributors"]["tracked"]),
         "with_contributions": sum(1 for row in items if row["contributions"]["tracked"]),
+        "blocked_ideas": sum(1 for row in items if row["interdependencies"]["blocked"]),
+        "queue_items": len(unblock_queue),
     }
 
     return {
@@ -1305,5 +1516,104 @@ def build_spec_process_implementation_validation_flow(
         "runtime_window_seconds": runtime_window_seconds,
         "filter": {"idea_id": idea_id},
         "summary": summary,
+        "unblock_queue": unblock_queue,
         "items": items,
     }
+
+
+def next_unblock_task_from_flow(
+    create_task: bool = False,
+    idea_id: str | None = None,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    flow = build_spec_process_implementation_validation_flow(
+        idea_id=idea_id,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+    queue = flow.get("unblock_queue")
+    if not isinstance(queue, list) or not queue:
+        return {
+            "result": "no_blocking_items",
+            "flow_summary": flow.get("summary", {}),
+            "filter": {"idea_id": idea_id},
+        }
+
+    top = queue[0] if isinstance(queue[0], dict) else None
+    if top is None:
+        return {
+            "result": "no_blocking_items",
+            "flow_summary": flow.get("summary", {}),
+            "filter": {"idea_id": idea_id},
+        }
+
+    task_fingerprint = str(top.get("task_fingerprint") or "").strip()
+    existing_active = (
+        agent_service.find_active_task_by_fingerprint(task_fingerprint)
+        if task_fingerprint
+        else None
+    )
+
+    report: dict[str, Any] = {
+        "result": "task_suggested",
+        "idea_id": str(top.get("idea_id") or ""),
+        "idea_name": str(top.get("idea_name") or ""),
+        "blocking_stage": str(top.get("blocking_stage") or ""),
+        "upstream_required": list(top.get("upstream_required") or []),
+        "downstream_blocked": list(top.get("downstream_blocked") or []),
+        "estimated_unblock_cost": float(top.get("estimated_unblock_cost") or 0.0),
+        "estimated_unblock_value": float(top.get("estimated_unblock_value") or 0.0),
+        "unblock_priority_score": float(top.get("unblock_priority_score") or 0.0),
+        "task_type": str(top.get("task_type") or TaskType.IMPL.value),
+        "direction": str(top.get("direction") or ""),
+        "task_fingerprint": task_fingerprint,
+        "flow_summary": flow.get("summary", {}),
+        "filter": {"idea_id": idea_id},
+    }
+
+    if isinstance(existing_active, dict):
+        report["active_task"] = {
+            "id": existing_active.get("id"),
+            "status": (
+                existing_active["status"].value
+                if hasattr(existing_active.get("status"), "value")
+                else str(existing_active.get("status"))
+            ),
+            "claimed_by": existing_active.get("claimed_by"),
+        }
+        if create_task:
+            report["result"] = "task_already_active"
+            return report
+
+    if not create_task:
+        return report
+
+    task_type_raw = str(top.get("task_type") or TaskType.IMPL.value)
+    try:
+        task_type = TaskType(task_type_raw)
+    except ValueError:
+        task_type = TaskType.IMPL
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction=str(top.get("direction") or ""),
+            task_type=task_type,
+            context={
+                "source": "flow_unblock_task",
+                "idea_id": str(top.get("idea_id") or ""),
+                "blocking_stage": str(top.get("blocking_stage") or ""),
+                "task_fingerprint": task_fingerprint,
+                "unblock_priority_score": float(top.get("unblock_priority_score") or 0.0),
+                "estimated_unblock_value": float(top.get("estimated_unblock_value") or 0.0),
+                "estimated_unblock_cost": float(top.get("estimated_unblock_cost") or 0.0),
+                "runtime_window_seconds": runtime_window_seconds,
+            },
+        )
+    )
+    report["created_task"] = {
+        "id": created["id"],
+        "status": created["status"].value if hasattr(created.get("status"), "value") else str(created.get("status")),
+        "task_type": (
+            created["task_type"].value if hasattr(created.get("task_type"), "value") else str(created.get("task_type"))
+        ),
+    }
+    return report

@@ -61,6 +61,24 @@ type FlowItem = {
     contributors: string;
     contributions: string;
   };
+  interdependencies: {
+    blocked: boolean;
+    blocking_stage: string | null;
+    upstream_required: string[];
+    downstream_blocked: string[];
+    estimated_unblock_cost: number;
+    estimated_unblock_value: number;
+    unblock_priority_score: number;
+    task_fingerprint: string | null;
+    next_unblock_task: { task_type: string; direction: string } | null;
+  };
+  idea_signals: {
+    value_gap: number;
+    confidence: number;
+    estimated_cost: number;
+    potential_value: number;
+    actual_value: number;
+  };
 };
 
 type FlowResponse = {
@@ -72,7 +90,23 @@ type FlowResponse = {
     with_validation: number;
     with_contributors: number;
     with_contributions: number;
+    blocked_ideas: number;
+    queue_items: number;
   };
+  unblock_queue: Array<{
+    idea_id: string;
+    idea_name: string;
+    blocking_stage: string;
+    upstream_required: string[];
+    downstream_blocked: string[];
+    estimated_unblock_cost: number;
+    estimated_unblock_value: number;
+    unblock_priority_score: number;
+    task_fingerprint: string;
+    task_type: string;
+    direction: string;
+    active_task?: { id: string; status: string; claimed_by?: string | null } | null;
+  }>;
   items: FlowItem[];
 };
 
@@ -254,6 +288,14 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
           <p className="text-muted-foreground">Contributions in registry</p>
           <p className="text-lg font-semibold">{contributions.length}</p>
         </div>
+        <div className="rounded border p-3">
+          <p className="text-muted-foreground">Blocked ideas</p>
+          <p className="text-lg font-semibold">{flow.summary.blocked_ideas}</p>
+        </div>
+        <div className="rounded border p-3">
+          <p className="text-muted-foreground">Unblock queue items</p>
+          <p className="text-lg font-semibold">{flow.summary.queue_items}</p>
+        </div>
       </section>
 
       <section className="rounded border p-4 space-y-2">
@@ -272,6 +314,45 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
               <span className="text-muted-foreground">{row.count}</span>
             </li>
           ))}
+        </ul>
+      </section>
+
+      <section className="rounded border p-4 space-y-2">
+        <h2 className="font-semibold">Unblock Priority Queue</h2>
+        <p className="text-sm text-muted-foreground">
+          Ordered by estimated unlock value per cost. Work top-down to unblock more downstream tasks.
+        </p>
+        <ul className="space-y-2 text-sm">
+          {flow.unblock_queue.slice(0, 12).map((row) => (
+            <li key={row.task_fingerprint} className="rounded border p-2 space-y-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link href={`/flow?idea_id=${encodeURIComponent(row.idea_id)}`} className="font-medium underline hover:text-foreground">
+                  {row.idea_name}
+                </Link>
+                <span className="text-xs text-muted-foreground">
+                  stage {row.blocking_stage} | priority {row.unblock_priority_score.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-muted-foreground">
+                cost {row.estimated_unblock_cost.toFixed(2)} | unlock value {row.estimated_unblock_value.toFixed(2)} |
+                blocked {row.downstream_blocked.length > 0 ? row.downstream_blocked.join(", ") : "none"}
+              </p>
+              {row.active_task ? (
+                <p className="text-muted-foreground">
+                  active task{" "}
+                  <Link href={`/tasks?task_id=${encodeURIComponent(row.active_task.id)}`} className="underline hover:text-foreground">
+                    {row.active_task.id}
+                  </Link>{" "}
+                  ({row.active_task.status})
+                </p>
+              ) : (
+                <p className="text-muted-foreground">ready to create as <code>{row.task_type}</code> task</p>
+              )}
+            </li>
+          ))}
+          {flow.unblock_queue.length === 0 && (
+            <li className="text-muted-foreground">No blockers detected in current flow scope.</li>
+          )}
         </ul>
       </section>
 
@@ -295,6 +376,11 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
               <span className="rounded border px-2 py-1">contributors: {item.chain.contributors}</span>
               <span className="rounded border px-2 py-1">contributions: {item.chain.contributions}</span>
             </div>
+            <p className="text-xs text-muted-foreground">
+              blocker {item.interdependencies.blocking_stage ?? "none"} | unblock priority{" "}
+              {item.interdependencies.unblock_priority_score.toFixed(2)} | idea value gap{" "}
+              {item.idea_signals.value_gap.toFixed(2)} | confidence {item.idea_signals.confidence.toFixed(2)}
+            </p>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 text-sm">
               <div className="rounded border p-3 space-y-1">
