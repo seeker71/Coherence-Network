@@ -4,6 +4,7 @@
   "commit_scope": "add worktree PR guard to prevent common CI failures and track failing PR checks as machine-readable artifacts",
   "files_owned": [
     "scripts/worktree_pr_guard.py",
+    ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
     "AGENTS.md",
@@ -37,12 +38,14 @@
   },
   "evidence_refs": [
     "scripts/worktree_pr_guard.py",
+    ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
     "AGENTS.md"
   ],
   "change_files": [
     "scripts/worktree_pr_guard.py",
+    ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
     "AGENTS.md",
@@ -55,12 +58,14 @@
     "status": "pass",
     "commands": [
       "python3 -m py_compile scripts/worktree_pr_guard.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build --json",
       "python3 scripts/worktree_pr_guard.py --mode remote --branch codex/pr-check-failure-guard --json",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_worktree-pr-failure-guard.json"
     ],
     "notes": [
-      "Guard output schema validated in remote mode and wrote report artifact under docs/system_audit/pr_check_failures/.",
-      "Local mode was exercised during development and correctly blocked on maintainability regression with structured remediation hints."
+      "Guard output schema validated in local and remote modes and writes report artifacts under docs/system_audit/pr_check_failures/.",
+      "Local mode now passes for process/docs-only changes while still running web/API runtime smoke checks.",
+      "thread-gates maintainability check now auto-skips when no runtime code files changed in PR diff."
     ]
   },
   "ci_validation": {

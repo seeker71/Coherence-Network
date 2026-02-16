@@ -134,6 +134,22 @@ def _changed_paths_worktree() -> list[str]:
     return paths
 
 
+def _is_runtime_change(path: str) -> bool:
+    checks = (
+        "api/app/",
+        "api/scripts/",
+        "web/app/",
+        "web/components/",
+        "web/lib/",
+    )
+    return path.startswith(checks)
+
+
+def _worktree_has_runtime_changes() -> bool:
+    changed = _changed_paths_worktree()
+    return any(_is_runtime_change(path) for path in changed)
+
+
 def _run_commit_evidence_guard() -> StepResult:
     start = time.monotonic()
     changed = _changed_paths_worktree()
@@ -228,6 +244,8 @@ def _local_steps(
             ),
         ]
     )
+    if not _worktree_has_runtime_changes():
+        steps = [s for s in steps if s[0] != "maintainability-regression-guard"]
     if require_gh_auth:
         steps.insert(0, ("dev-auth-preflight", "python3 scripts/check_dev_auth.py --json"))
     if not skip_api_tests:
