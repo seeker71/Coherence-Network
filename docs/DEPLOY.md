@@ -133,6 +133,23 @@ If a check fails:
 4. If still failing, set explicit fallback commands (`pip install -r requirements.txt` + `python -m uvicorn ...`) and redeploy.
 5. Review logs for other startup/import errors and redeploy.
 
+### G. Railway-native web auto-deploy on `main` pushes
+
+If web is hosted on Railway, configure auto-deploy directly in Railway service settings:
+
+1. Railway dashboard → select web service → **Settings** → **Source**.
+2. Confirm repository is connected to this service.
+3. Set **Branch** to `main`.
+4. Keep **Auto Deploy** enabled.
+5. If **Wait for CI** is enabled, ensure required GitHub checks are passing. Railway will skip deploys when checks are not green.
+6. In monorepo setup, set **Root Directory** to `web/`.
+7. In **Watch Paths**, include `web/**` (and optionally shared paths that affect web runtime).
+
+Verification:
+- Push a test commit that changes `web/`.
+- Railway service → **Deployments** should show a new deployment triggered from GitHub push on `main`.
+- If deploy is skipped, check Railway deployment reason and GitHub check status first.
+
 ---
 
 ## 4) Background worker services (currently disabled)
