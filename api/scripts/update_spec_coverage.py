@@ -3,10 +3,15 @@
 
 Usage:
   python scripts/update_spec_coverage.py [--dry-run] [--tests-passed]
+  python scripts/update_spec_coverage.py --validate [--strict]
+  python scripts/update_spec_coverage.py --report
 
 - Run after pytest in CI (script runs only after pytest step; CI sets CI=true).
 - Locally: pass --tests-passed to allow writes; otherwise no-op.
 - --dry-run: preview changes without writing; exit 0.
+- --validate: check for spec/implementation/test gaps; exit 1 if gaps found
+- --strict: treat warnings as errors in validation mode
+- --report: generate coverage report with gap analysis
 Additive: adds missing spec rows to SPEC-COVERAGE; never removes or changes
 existing Present/Spec'd/Tested marks. Updates STATUS.md test count and/or
 Specs Implemented / Specs Pending from SPEC-COVERAGE.
@@ -181,11 +186,164 @@ def _update_status_sections(
     return out
 
 
+def _validate_coverage(content: str, strict: bool = False) -> tuple[list[str], list[str]]:
+    """Validate spec coverage and return (errors, warnings).
+
+    Checks for:
+    - Specs marked as Spec'd but not Present (implementation missing)
+    - Specs marked as Present but not Tested (tests missing)
+    - Specs marked as Tested but not Spec'd (unlikely, but check)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for line in content.splitlines():
+        if not line.strip().startswith("|") or "| Spec |" in line or "|---" in line:
+            continue
+
+        parts = [p.strip() for p in line.split("|") if p]
+        if len(parts) < 4:
+            continue
+
+        spec_cell = parts[0]
+        present = parts[1] if len(parts) > 1 else ""
+        specd = parts[2] if len(parts) > 2 else ""
+        tested = parts[3] if len(parts) > 3 else ""
+
+        # Extract spec ID
+        m = re.match(r"^(\d{3})\s+(.+)$", spec_cell)
+        if not m and not spec_cell.startswith("PLAN"):
+            continue
+
+        spec_id = m.group(1) if m else "PLAN"
+        spec_name = m.group(2) if m else spec_cell
+
+        # Check for common gap patterns
+        # 1. Spec'd but not implemented
+        if "✓" in specd and "?" in present:
+            errors.append(f"{spec_id} {spec_name}: Spec exists but not implemented")
+
+        # 2. Implemented but not tested
+        if "✓" in present and "?" in tested:
+            warnings.append(f"{spec_id} {spec_name}: Implemented but not tested")
+
+        # 3. Tested but not spec'd (unusual - might be test-driven)
+        if "✓" in tested and "?" in specd:
+            warnings.append(f"{spec_id} {spec_name}: Tests exist but no spec (test-driven?)")
+
+        # 4. All pending (no progress)
+        if "?" in present and "?" in specd and "?" in tested:
+            # This is OK - just means it's in the backlog
+            pass
+
+    return errors, warnings
+
+
+def _generate_coverage_report(content: str, test_count: Optional[int]) -> str:
+    """Generate coverage report with statistics."""
+    total = 0
+    implemented = 0
+    tested = 0
+    pending = 0
+
+    for line in content.splitlines():
+        if not line.strip().startswith("|") or "| Spec |" in line or "|---" in line:
+            continue
+
+        parts = [p.strip() for p in line.split("|") if p]
+        if len(parts) < 4:
+            continue
+
+        spec_cell = parts[0]
+        present = parts[1] if len(parts) > 1 else ""
+        tested_cell = parts[3] if len(parts) > 3 else ""
+
+        # Skip doc-only specs
+        if "—" in present:
+            continue
+
+        total += 1
+
+        if "✓" in present:
+            implemented += 1
+
+        if "✓" in tested_cell:
+            tested += 1
+
+        if "?" in present:
+            pending += 1
+
+    impl_pct = (implemented / total * 100) if total > 0 else 0
+    test_pct = (tested / total * 100) if total > 0 else 0
+
+    report = [
+        "Spec Coverage Report",
+        "=" * 60,
+        f"Total specs: {total}",
+        f"Implemented: {implemented}/{total} ({impl_pct:.1f}%)",
+        f"Tested: {tested}/{total} ({test_pct:.1f}%)",
+        f"Pending: {pending}",
+    ]
+
+    if test_count is not None:
+        report.append(f"Total tests: {test_count}")
+
+    report.append("")
+    report.append("Progress:")
+    report.append(f"  {'█' * int(impl_pct / 2)}{' ' * (50 - int(impl_pct / 2))} {impl_pct:.1f}% implemented")
+    report.append(f"  {'█' * int(test_pct / 2)}{' ' * (50 - int(test_pct / 2))} {test_pct:.1f}% tested")
+
+    return "\n".join(report)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Add missing spec rows and update STATUS when tests pass")
     ap.add_argument("--dry-run", action="store_true", help="Preview changes without writing")
     ap.add_argument("--tests-passed", action="store_true", help="Allow writes (required when not in CI)")
+    ap.add_argument("--validate", action="store_true", help="Validate spec coverage and check for gaps")
+    ap.add_argument("--strict", action="store_true", help="Treat warnings as errors (use with --validate)")
+    ap.add_argument("--report", action="store_true", help="Generate coverage report")
     args = ap.parse_args()
+
+    # Handle validation mode
+    if args.validate or args.report:
+        if not os.path.isfile(SPEC_COVERAGE):
+            print(f"SPEC-COVERAGE not found: {SPEC_COVERAGE}")
+            return 1
+
+        with open(SPEC_COVERAGE, encoding="utf-8") as f:
+            content = f.read()
+
+        if args.report:
+            test_count = _get_test_count()
+            report = _generate_coverage_report(content, test_count)
+            print(report)
+            return 0
+
+        if args.validate:
+            errors, warnings = _validate_coverage(content, strict=args.strict)
+
+            if errors:
+                print(f"❌ {len(errors)} validation error(s):\n")
+                for err in errors:
+                    print(f"  ERROR: {err}")
+                print()
+
+            if warnings:
+                symbol = "❌" if args.strict else "⚠️"
+                print(f"{symbol} {len(warnings)} warning(s):\n")
+                for warn in warnings:
+                    print(f"  WARN: {warn}")
+                print()
+
+            if not errors and not warnings:
+                print("✅ Spec coverage validation passed - no gaps detected")
+                return 0
+
+            if errors or (args.strict and warnings):
+                return 1
+
+            return 0
 
     in_ci = os.environ.get("CI") == "true"
     if not in_ci and not args.tests_passed:
