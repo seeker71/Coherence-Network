@@ -36,6 +36,7 @@ Worktree notes:
 - This command is the default local PR failure-prevention guard for Codex threads.
 - It runs CI-parity checks and writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
 - It includes API tests, web build, local runtime route checks, spec/evidence/workflow contracts, and maintainability guard (auto-skipped when no runtime code changed).
+- Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
 
 ### Phase B: CI Validation (required before merge)
 
