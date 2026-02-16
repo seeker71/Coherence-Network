@@ -562,6 +562,82 @@ def _extract_decorated_routes(module_path: Path, decorator_owner: str) -> list[t
     return out
 
 
+def _source_path_aliases(file_path: str) -> set[str]:
+    value = str(file_path or "").replace("\\", "/").strip().lstrip("/")
+    if not value:
+        return set()
+    out = {value}
+
+    if value.startswith("api/app/"):
+        out.add(value.removeprefix("api/"))
+    elif value.startswith("app/"):
+        out.add(f"api/{value}")
+
+    marker_api = "/api/app/"
+    marker_app = "/app/"
+    if marker_api in f"/{value}":
+        suffix = f"/{value}".split(marker_api, 1)[1]
+        out.add(f"api/app/{suffix}")
+        out.add(f"app/{suffix}")
+    elif marker_app in f"/{value}":
+        suffix = f"/{value}".split(marker_app, 1)[1]
+        out.add(f"app/{suffix}")
+        out.add(f"api/app/{suffix}")
+    return {item for item in out if item}
+
+
+def _discover_api_endpoints_from_runtime() -> list[dict[str, Any]]:
+    try:
+        from fastapi.routing import APIRoute
+        from app.main import app as main_app
+    except Exception:
+        return []
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for route in main_app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        path = str(route.path or "")
+        if not (path.startswith("/api") or path.startswith("/v1")):
+            continue
+        methods = sorted(
+            method
+            for method in (route.methods or set())
+            if method in {"GET", "POST", "PUT", "PATCH", "DELETE"}
+        )
+        if not methods:
+            continue
+
+        source_files: set[str] = set()
+        code = getattr(route.endpoint, "__code__", None)
+        filename = getattr(code, "co_filename", "")
+        if isinstance(filename, str) and filename.strip():
+            source_files.update(_source_path_aliases(filename))
+
+        row = grouped.setdefault(
+            path,
+            {
+                "path": path,
+                "methods": set(),
+                "source_files": set(),
+            },
+        )
+        row["methods"].update(methods)
+        row["source_files"].update(source_files)
+
+    out: list[dict[str, Any]] = []
+    for path in sorted(grouped.keys()):
+        row = grouped[path]
+        out.append(
+            {
+                "path": path,
+                "methods": sorted(row["methods"]),
+                "source_files": sorted(row["source_files"]),
+            }
+        )
+    return out
+
+
 def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
     root = _project_root()
     router_candidates = [
@@ -596,7 +672,7 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
                 },
             )
             row["methods"].add(method)
-            row["source_files"].add(str(module_path.relative_to(root)))
+            row["source_files"].update(_source_path_aliases(str(module_path.relative_to(root))))
 
     main_path = root / "api" / "app" / "main.py"
     if not main_path.exists():
@@ -613,7 +689,7 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
             },
         )
         row["methods"].add(method)
-        row["source_files"].add(str(main_path.relative_to(root)))
+        row["source_files"].update(_source_path_aliases(str(main_path.relative_to(root))))
 
     out: list[dict[str, Any]] = []
     for path in sorted(grouped.keys()):
@@ -658,38 +734,39 @@ def _evidence_signals_by_source_file(records: list[dict[str, Any]]) -> dict[str,
         e2e_status = _normalize_validation_status((record.get("e2e_validation") or {}).get("status"))
 
         for file_path in files:
-            signal = signals.setdefault(
-                file_path,
-                {
-                    "spec_ids": set(),
-                    "task_ids": set(),
-                    "idea_ids": set(),
-                    "process_evidence_count": 0,
-                    "validation_pass_counts": {
-                        "local": 0,
-                        "ci": 0,
-                        "deploy": 0,
-                        "e2e": 0,
+            for alias in _source_path_aliases(file_path):
+                signal = signals.setdefault(
+                    alias,
+                    {
+                        "spec_ids": set(),
+                        "task_ids": set(),
+                        "idea_ids": set(),
+                        "process_evidence_count": 0,
+                        "validation_pass_counts": {
+                            "local": 0,
+                            "ci": 0,
+                            "deploy": 0,
+                            "e2e": 0,
+                        },
                     },
-                },
-            )
-            signal["spec_ids"].update(spec_ids)
-            signal["task_ids"].update(task_ids)
-            signal["idea_ids"].update(idea_ids)
-            signal["process_evidence_count"] += 1
-            if local_status == "pass":
-                signal["validation_pass_counts"]["local"] += 1
-            if ci_status == "pass":
-                signal["validation_pass_counts"]["ci"] += 1
-            if deploy_status == "pass":
-                signal["validation_pass_counts"]["deploy"] += 1
-            if e2e_status == "pass":
-                signal["validation_pass_counts"]["e2e"] += 1
+                )
+                signal["spec_ids"].update(spec_ids)
+                signal["task_ids"].update(task_ids)
+                signal["idea_ids"].update(idea_ids)
+                signal["process_evidence_count"] += 1
+                if local_status == "pass":
+                    signal["validation_pass_counts"]["local"] += 1
+                if ci_status == "pass":
+                    signal["validation_pass_counts"]["ci"] += 1
+                if deploy_status == "pass":
+                    signal["validation_pass_counts"]["deploy"] += 1
+                if e2e_status == "pass":
+                    signal["validation_pass_counts"]["e2e"] += 1
     return signals
 
 
 def build_endpoint_traceability_inventory() -> dict[str, Any]:
-    endpoints = _discover_api_endpoints_from_source()
+    endpoints = _discover_api_endpoints_from_runtime() or _discover_api_endpoints_from_source()
     canonical = route_registry_service.get_canonical_routes().get("api_routes", [])
     canonical_by_path = {
         row.get("path"): row
