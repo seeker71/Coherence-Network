@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-02-16T20:41:33.826895+00:00",
+  "repo": "seeker71/Coherence-Network",
+  "pr_number": 118,
+  "status": "pass",
+  "reason": "vercel_rate_limit_elapsed",
+  "blocked_until": null,
+  "vercel_rate_limit_hits": [
+    {
+      "name": "Vercel",
+      "bucket": "fail",
+      "description": "Deployment rate limited \u2014 retry in 12 hours.",
+      "link": "https://vercel.com/urs-muffs-projects?upgradeToPro=build-rate-limit",
+      "retry_minutes": 720,
+      "completed_at": "0001-01-01T00:00:00+00:00",
+      "blocked_until": "0001-01-01T12:00:00+00:00"
+    }
+  ],
+  "allow_rate_limited": false
+}

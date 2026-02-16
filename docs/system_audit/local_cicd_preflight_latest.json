@@ -1,41 +1,57 @@
 {
-  "generated_at": "2026-02-16T20:38:06.190539+00:00",
+  "generated_at": "2026-02-16T20:41:05.773860+00:00",
   "base_sha": "019f5f6416a2956ce05236028cfc3ba34fa17c04",
-  "head_sha": "b946d442d5ea20d8cc3bc05084020360fff5b69b",
+  "head_sha": "8c33be527ab24b422183413dfe079a0b7b1780d3",
   "changed_files": [
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
     "docs/system_audit/automation_energy_loss_report_2026-02-16.json",
     "docs/system_audit/automation_energy_loss_report_2026-02-16.md",
     "docs/system_audit/commit_evidence_2026-02-16_automation-energy-loss-audit.json",
-    "scripts/audit_automation_energy_loss.py"
+    "docs/system_audit/commit_evidence_2026-02-16_local-cicd-preflight-gate.json",
+    "docs/system_audit/local_cicd_preflight_history.jsonl",
+    "docs/system_audit/local_cicd_preflight_latest.json",
+    "scripts/audit_automation_energy_loss.py",
+    "scripts/local_cicd_preflight.py"
   ],
   "run": {
-    "started_at": "2026-02-16T20:38:05.862630+00:00",
-    "ended_at": "2026-02-16T20:38:06.190539+00:00",
+    "started_at": "2026-02-16T20:41:03.923571+00:00",
+    "ended_at": "2026-02-16T20:41:05.773860+00:00",
     "base_sha": "019f5f6416a2956ce05236028cfc3ba34fa17c04",
-    "head_sha": "b946d442d5ea20d8cc3bc05084020360fff5b69b",
-    "changed_file_count": 4,
+    "head_sha": "8c33be527ab24b422183413dfe079a0b7b1780d3",
+    "changed_file_count": 10,
     "has_api_changes": false,
     "has_web_changes": false,
-    "overall_ok": true,
-    "total_seconds": 0.328,
+    "overall_ok": false,
+    "total_seconds": 1.85,
     "steps": [
       {
-        "name": "validate_commit_evidence",
+        "name": "vercel_rate_limit_guard",
         "ok": true,
         "return_code": 0,
-        "duration_seconds": 0.048,
+        "duration_seconds": 1.526,
         "cwd": ".",
-        "command": "python3 scripts/validate_commit_evidence.py --base 019f5f6416a2956ce05236028cfc3ba34fa17c04 --head b946d442d5ea20d8cc3bc05084020360fff5b69b --require-changed-evidence",
-        "stdout_tail": "OK: evidence validation passed for /Users/ursmuff/.claude-worktrees/Coherence-Network/automation-energy-loss-audit/docs/system_audit/commit_evidence_2026-02-16_automation-energy-loss-audit.json\n",
+        "command": "python3 scripts/check_vercel_rate_limit_guard.py",
+        "stdout_tail": "Wrote /Users/ursmuff/.claude-worktrees/Coherence-Network/automation-energy-loss-audit/docs/system_audit/vercel_rate_limit_guard_latest.json\nAppended /Users/ursmuff/.claude-worktrees/Coherence-Network/automation-energy-loss-audit/docs/system_audit/vercel_rate_limit_guard_history.jsonl\nstatus=pass reason=vercel_rate_limit_elapsed\n",
+        "stderr_tail": ""
+      },
+      {
+        "name": "validate_commit_evidence",
+        "ok": false,
+        "return_code": 1,
+        "duration_seconds": 0.043,
+        "cwd": ".",
+        "command": "python3 scripts/validate_commit_evidence.py --base 019f5f6416a2956ce05236028cfc3ba34fa17c04 --head 8c33be527ab24b422183413dfe079a0b7b1780d3 --require-changed-evidence",
+        "stdout_tail": "ERROR: evidence validation failed for /Users/ursmuff/.claude-worktrees/Coherence-Network/automation-energy-loss-audit/docs/system_audit/commit_evidence_2026-02-16_automation-energy-loss-audit.json\n- change_files missing changed paths: ['docs/CODEX-THREAD-PROCESS.md', 'docs/RUNBOOK.md', 'docs/system_audit/local_cicd_preflight_history.jsonl', 'docs/system_audit/local_cicd_preflight_latest.json', 'scripts/local_cicd_preflight.py']\nERROR: evidence validation failed for /Users/ursmuff/.claude-worktrees/Coherence-Network/automation-energy-loss-audit/docs/system_audit/commit_evidence_2026-02-16_local-cicd-preflight-gate.json\n- change_files missing changed paths: ['docs/system_audit/automation_energy_loss_report_2026-02-16.json', 'docs/system_audit/automation_energy_loss_report_2026-02-16.md', 'scripts/audit_automation_energy_loss.py']\n",
         "stderr_tail": ""
       },
       {
         "name": "validate_spec_quality",
         "ok": true,
         "return_code": 0,
-        "duration_seconds": 0.043,
+        "duration_seconds": 0.042,
         "cwd": ".",
-        "command": "python3 scripts/validate_spec_quality.py --base 019f5f6416a2956ce05236028cfc3ba34fa17c04 --head b946d442d5ea20d8cc3bc05084020360fff5b69b",
+        "command": "python3 scripts/validate_spec_quality.py --base 019f5f6416a2956ce05236028cfc3ba34fa17c04 --head 8c33be527ab24b422183413dfe079a0b7b1780d3",
         "stdout_tail": "OK: no changed feature spec files detected in git range\n",
         "stderr_tail": ""
       },
@@ -53,7 +69,7 @@
         "name": "check_runtime_drift",
         "ok": true,
         "return_code": 0,
-        "duration_seconds": 0.032,
+        "duration_seconds": 0.033,
         "cwd": ".",
         "command": "python3 scripts/check_runtime_drift.py",
         "stdout_tail": "OK: runtime drift within allowlist baseline\n",
@@ -63,7 +79,7 @@
         "name": "maintainability_audit_regression",
         "ok": true,
         "return_code": 0,
-        "duration_seconds": 0.176,
+        "duration_seconds": 0.178,
         "cwd": ".",
         "command": "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
         "stdout_tail": "Maintainability Audit\n====================\nseverity: high\nrisk_score: 125\ncounts: layer_violations=0, large_modules=5, very_large_modules=3, long_functions=15, placeholders=1\nregression: no\nrecommended_tasks:\n  - runtime-placeholder-elimination: roi=14.2857 cost_h=1.4 value=20.0\n  - architecture-modularization-review: roi=9.5238 cost_h=10.5 value=100.0\n",
@@ -71,46 +87,54 @@
       }
     ]
   },
-  "history_window_runs": 2,
+  "history_window_runs": 3,
   "highest_energy_loss_steps": [
     {
       "step": "validate_commit_evidence",
-      "runs": 2,
-      "failures": 0,
-      "failure_rate": 0.0,
-      "total_seconds": 0.091,
-      "failed_seconds": 0.0
+      "runs": 3,
+      "failures": 1,
+      "failure_rate": 0.3333,
+      "total_seconds": 0.134,
+      "failed_seconds": 0.043
     },
     {
       "step": "validate_spec_quality",
-      "runs": 2,
+      "runs": 3,
       "failures": 0,
       "failure_rate": 0.0,
-      "total_seconds": 0.085,
+      "total_seconds": 0.127,
       "failed_seconds": 0.0
     },
     {
       "step": "validate_workflow_references",
-      "runs": 2,
+      "runs": 3,
       "failures": 0,
       "failure_rate": 0.0,
-      "total_seconds": 0.056,
+      "total_seconds": 0.084,
       "failed_seconds": 0.0
     },
     {
       "step": "check_runtime_drift",
-      "runs": 2,
+      "runs": 3,
       "failures": 0,
       "failure_rate": 0.0,
-      "total_seconds": 0.064,
+      "total_seconds": 0.097,
       "failed_seconds": 0.0
     },
     {
       "step": "maintainability_audit_regression",
-      "runs": 2,
+      "runs": 3,
       "failures": 0,
       "failure_rate": 0.0,
-      "total_seconds": 0.353,
+      "total_seconds": 0.531,
+      "failed_seconds": 0.0
+    },
+    {
+      "step": "vercel_rate_limit_guard",
+      "runs": 1,
+      "failures": 0,
+      "failure_rate": 0.0,
+      "total_seconds": 1.526,
       "failed_seconds": 0.0
     }
   ],

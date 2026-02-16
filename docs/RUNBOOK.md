@@ -194,6 +194,9 @@ This fails fast when specs are missing verification, risk/assumption, or known-g
 The preflight command also runs common branch CI/CD failure checks locally and writes optimization data to:
 - `docs/system_audit/local_cicd_preflight_latest.json`
 - `docs/system_audit/local_cicd_preflight_history.jsonl`
+- `docs/system_audit/vercel_rate_limit_guard_latest.json`
+- `docs/system_audit/vercel_rate_limit_guard_history.jsonl`
+When Vercel checks are rate-limited, preflight fails fast by default to prevent repeated PR iteration during cooldown.
 
 ## Local Web Validation In Worktrees
 

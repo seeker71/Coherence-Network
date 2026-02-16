@@ -135,6 +135,11 @@ def main() -> int:
     parser.add_argument("--history-limit", type=int, default=100)
     parser.add_argument("--skip-api-tests", action="store_true")
     parser.add_argument("--skip-web-build", action="store_true")
+    parser.add_argument(
+        "--allow-vercel-rate-limited",
+        action="store_true",
+        help="Allow preflight to continue even when Vercel check is rate-limited.",
+    )
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -152,6 +157,20 @@ def main() -> int:
 
     steps: list[dict[str, Any]] = []
     pipeline: list[tuple[str, list[str], Path, bool]] = [
+        (
+            "vercel_rate_limit_guard",
+            [
+                "python3",
+                "scripts/check_vercel_rate_limit_guard.py",
+                *(
+                    ["--allow-rate-limited"]
+                    if bool(args.allow_vercel_rate_limited)
+                    else []
+                ),
+            ],
+            root,
+            True,
+        ),
         (
             "validate_commit_evidence",
             [

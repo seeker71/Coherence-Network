@@ -120,9 +120,12 @@ CI enforcement:
 Local CI/CD preflight:
 - `python3 scripts/local_cicd_preflight.py --base-ref origin/main --head-ref HEAD`
 - Mirrors common branch CI failure checks in local order before PR creation.
+- Includes `vercel_rate_limit_guard` and blocks new PR iteration when Vercel cooldown is active.
 - Persists machine-readable optimization data:
   - `docs/system_audit/local_cicd_preflight_latest.json`
   - `docs/system_audit/local_cicd_preflight_history.jsonl`
+  - `docs/system_audit/vercel_rate_limit_guard_latest.json`
+  - `docs/system_audit/vercel_rate_limit_guard_history.jsonl`
 - Ranks recurring loss under `highest_energy_loss_steps` so teams can reduce repeated PR iteration cost.
 
 ## Merge Policy
