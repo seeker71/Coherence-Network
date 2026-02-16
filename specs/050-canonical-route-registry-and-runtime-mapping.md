@@ -7,7 +7,7 @@ Define and expose a canonical route set for current milestone work, and ensure r
 ## Requirements
 
 - [ ] API exposes canonical route registry for machine/human tooling.
-- [ ] Runtime mapping defaults avoid `unmapped` for standard API (`/api`, `/v1`) and web (`/`) surfaces.
+- [ ] Runtime mapping defaults avoid `unmapped` for standard API (`/api`) and web (`/`) surfaces.
 - [ ] Tests validate canonical route endpoint and default mapping behavior.
 
 ## API Contract
@@ -29,4 +29,3 @@ Returns canonical API/web routes with milestone metadata and idea linkage.
 - `api/app/services/runtime_service.py`
 - `api/tests/test_inventory_api.py`
 - `api/tests/test_runtime_api.py`
-

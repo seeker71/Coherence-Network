@@ -39,8 +39,8 @@ coherence-network/
 Requirements:
 1. api/main.py: FastAPI app with CORS, health endpoint at /health
 2. routes/health.py: Simple health check returning {"status": "healthy"}
-3. routes/contributors.py: POST /v1/contributors (create), GET /v1/contributors/{id} (read)
-4. routes/contributions.py: POST /v1/contributions (record contribution)
+3. routes/contributors.py: POST /api/contributors (create), GET /api/contributors/{id} (read)
+4. routes/contributions.py: POST /api/contributions (record contribution)
 5. middleware/auth.py: API key authentication via X-API-Key header
 6. models/contributor.py: Pydantic model with id, name, email, type (HUMAN/SYSTEM)
 7. models/contribution.py: Pydantic model with id, contributor_id, cost_amount, timestamp
@@ -148,7 +148,7 @@ Requirements:
    - Handle empty contributions (return empty dict)
 
 2. api/routes/distributions.py:
-   - POST /v1/distributions
+   - POST /api/distributions
    - Request body: {asset_id, value_amount}
    - Call distribution_engine.distribute_value()
    - Store results in value_distributions table
@@ -246,15 +246,15 @@ Requirements:
              pricing (JSONB), status, uptime_percentage, created_at
 
 2. api/routes/nodes.py:
-   - POST /v1/nodes - Register new node
+   - POST /api/nodes - Register new node
      Request: {operator_id, node_type, endpoint, pricing}
      Response: {node_id, api_key, status}
    
-   - GET /v1/nodes - List all nodes
+   - GET /api/nodes - List all nodes
      Query: ?node_type=API&status=ACTIVE&sort=price
      Response: [{node_id, operator_name, pricing, uptime, status}]
    
-   - GET /v1/nodes/{node_id}/stats - Node statistics
+   - GET /api/nodes/{node_id}/stats - Node statistics
      Response: {requests_24h, earnings_today, uptime_24h}
 
 3. services/load_balancer.py:
@@ -311,13 +311,13 @@ Requirements:
    - Smooth animations
 
 3. app.js:
-   - Fetch stats from API (GET /v1/stats)
+   - Fetch stats from API (GET /api/stats)
    - Update numbers in stats section
    - Add smooth scroll to sections
    - Animate numbers counting up
 
 4. Add new API endpoint:
-   - GET /v1/stats
+   - GET /api/stats
    - Return: {total_contributors, total_distributed, active_nodes}
 
 No frameworks - pure HTML/CSS/JS.
@@ -387,7 +387,7 @@ export NEO4J_URI="your-neo4j-uri"
 export NEO4J_PASSWORD="your-password"
 
 # Test contributor creation
-curl -X POST http://localhost:8000/v1/contributors \
+curl -X POST http://localhost:8000/api/contributors \
   -H "Content-Type: application/json" \
   -d '{"type":"HUMAN","name":"Test","email":"test@example.com"}'
 # Should return contributor with ID
@@ -396,7 +396,7 @@ curl -X POST http://localhost:8000/v1/contributors \
 ### After Prompt 3:
 ```bash
 # Test distribution
-curl -X POST http://localhost:8000/v1/distributions \
+curl -X POST http://localhost:8000/api/distributions \
   -H "Content-Type: application/json" \
   -d '{"asset_id":"uuid","value_amount":1000.00}'
 # Should return distribution breakdown
@@ -414,7 +414,7 @@ curl -X POST http://localhost:8000/webhooks/github \
 ### After Prompt 5:
 ```bash
 # Test node registration
-curl -X POST http://localhost:8000/v1/nodes \
+curl -X POST http://localhost:8000/api/nodes \
   -H "Content-Type: application/json" \
   -d '{"operator_id":"uuid","node_type":"API","endpoint":"https://node.example.com","pricing":{"api_request":0.00002}}'
 ```

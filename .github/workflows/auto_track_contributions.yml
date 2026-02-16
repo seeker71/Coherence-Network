@@ -50,7 +50,7 @@ jobs:
       - name: Record contribution
         if: env.API_URL != '' && env.API_KEY != ''
         run: |
-          curl -X POST "$API_URL/v1/contributions/github" \
+          curl -X POST "$API_URL/api/contributions/github" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $API_KEY" \
             -d '{
@@ -75,4 +75,4 @@ jobs:
           echo "✅ Contribution recorded!"
           echo "Cost: \$${{ steps.calc_cost.outputs.cost }}"
           echo "Commit: ${{ steps.commit_info.outputs.commit_hash }}"
-          echo "Verify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}"
+          echo "Verify at: https://api.coherencycoin.com/api/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}"

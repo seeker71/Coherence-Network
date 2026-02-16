@@ -32,7 +32,7 @@ Evidence:
 
 Findings:
 - Mounted routes: 21 total.
-- Mounted functional surface is `/v1/*` contribution network + `/api/health` + `/api/ready` + admin reset.
+- Mounted functional surface is `/api/*` contribution network + `/api/health` + `/api/ready` + admin reset.
 - Agent router declares 16 routes but 0 are mounted in `app.main`.
 - Web expects `/api/import/stack`, `/api/projects/*`, `/api/search`, and these are currently missing from mounted routes.
 

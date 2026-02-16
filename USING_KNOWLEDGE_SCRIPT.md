@@ -99,7 +99,7 @@ Claude: You can track contributions by documenting in a spreadsheet...
 User: How do I record my contribution?
 Claude: To record your contribution to Coherence Network, use this API:
 
-curl -X POST https://api.your-domain.com/v1/contributions \
+curl -X POST https://api.your-domain.com/api/contributions \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_id": "your-id",
@@ -198,7 +198,7 @@ git push
 
 **Pro tip**: This documentation update is also a contribution! Record it:
 ```bash
-curl -X POST https://api.your-domain.com/v1/contributions \
+curl -X POST https://api.your-domain.com/api/contributions \
   -d '{
     "event_type": "DOCUMENTATION",
     "cost_amount": 25.00,

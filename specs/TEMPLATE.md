@@ -12,6 +12,8 @@
 
 ## API Contract (if applicable)
 
+Internal API namespace is `/api` only. Do not introduce or reference internal `/v1/*` routes in new specs, tests, docs, or implementation files.
+
 ### `GET /api/resource/{id}`
 
 **Request**

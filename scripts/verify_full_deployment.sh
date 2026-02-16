@@ -13,15 +13,15 @@ curl -fsS https://coherence-network-production.up.railway.app/api/ready | jq .
 
 echo ""
 echo "3. Contributors Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/contributors | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/contributors | jq .
 
 echo ""
 echo "4. Assets Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/assets | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/assets | jq .
 
 echo ""
 echo "5. Test Contribution Creation..."
-RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
+RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_email": "deploy-test@coherence.network",
@@ -49,7 +49,7 @@ fi
 
 echo ""
 echo "6. Verify Contribution Was Saved..."
-CONTRIBUTORS=$(curl -fsS https://coherence-network-production.up.railway.app/v1/contributors)
+CONTRIBUTORS=$(curl -fsS https://coherence-network-production.up.railway.app/api/contributors)
 echo "$CONTRIBUTORS" | jq .
 CONTRIB_COUNT=$(echo "$CONTRIBUTORS" | jq 'length')
 echo "Total contributors in database: $CONTRIB_COUNT"

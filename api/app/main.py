@@ -91,10 +91,10 @@ async def reset_database(x_admin_key: str = Header(None)):
     }
 
 # Resource routers
-app.include_router(contributors.router, prefix="/v1", tags=["contributors"])
-app.include_router(assets.router, prefix="/v1", tags=["assets"])
-app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
-app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
+app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(contributions.router, prefix="/api", tags=["contributions"])
+app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
@@ -122,7 +122,7 @@ async def capture_runtime_metrics(request, call_next):
     route = request.scope.get("route")
     route_path = getattr(route, "path", None)
     path = route_path if isinstance(route_path, str) and route_path.strip() else request.url.path
-    if path.startswith("/api") or path.startswith("/v1"):
+    if path.startswith("/api") or path.startswith("/api"):
         try:
             runtime_service.record_event(
                 RuntimeEventCreate(

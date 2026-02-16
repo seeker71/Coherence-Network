@@ -1,0 +1,168 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "enforce /api-only internal routing policy by migrating remaining /v1 internal references, updating templates, and adding local+CI guardrails",
+  "files_owned": [
+    ".github/workflows/auto_track_contributions.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "COMPLETE_INTEGRATED_SYSTEM.md",
+    "USING_KNOWLEDGE_SCRIPT.md",
+    "api/app/main.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_service.py",
+    "api/tests/test_assets.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_contributor_hygiene.py",
+    "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_runtime_api.py",
+    "cursor_prompts_openrouter.md",
+    "docs/CONTRIBUTION-TRACKING-IMPLEMENTATION.md",
+    "docs/CONTRIBUTION-TRACKING-ISSUES.md",
+    "docs/DEPLOYMENT-CHECKLIST.md",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "generate_ccn_backend.sh",
+    "generate_claude_knowledge.sh",
+    "generate_repo_structure.sh",
+    "next_steps.sh",
+    "scripts/asset_tracking/physically_backed/link_tokenized_gold.sh",
+    "scripts/contributor/create_contributor.sh",
+    "scripts/local_cicd_preflight.py",
+    "scripts/validate_no_v1_api_usage.py",
+    "scripts/verify_full_deployment.sh",
+    "specs/050-canonical-route-registry-and-runtime-mapping.md",
+    "specs/072-public-walkable-flow-parity.md",
+    "specs/073-walkable-flow-runtime-mismatch-fixes.md",
+    "specs/TEMPLATE.md",
+    "web/app/assets/page.tsx",
+    "web/app/contribute/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_no_v1_api_usage.py",
+      "cd api && python3.11 -m pytest -q tests/test_assets.py tests/test_contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py tests/test_runtime_api.py"
+    ],
+    "notes": [
+      "No internal /v1 route references detected by guard.",
+      "Targeted API regression suite passed (50 tests)."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Awaiting GitHub Actions run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel",
+    "notes": "Pending after merge/deploy; this change is primarily route-prefix policy + docs/template enforcement."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deployment validation pending"
+  },
+  "idea_ids": [
+    "idea-api-prefix-standardization"
+  ],
+  "spec_ids": [
+    "spec-050-canonical-route-registry-and-runtime-mapping",
+    "spec-template-api-prefix-guard"
+  ],
+  "task_ids": [
+    "task-eliminate-internal-v1-route-usage",
+    "task-enforce-api-only-prefix-in-ci"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "process_enforcement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "guard: scripts/validate_no_v1_api_usage.py",
+    "local-preflight gate: scripts/local_cicd_preflight.py",
+    "ci gates: .github/workflows/test.yml and .github/workflows/thread-gates.yml"
+  ],
+  "change_files": [
+    ".github/workflows/auto_track_contributions.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "COMPLETE_INTEGRATED_SYSTEM.md",
+    "USING_KNOWLEDGE_SCRIPT.md",
+    "api/app/main.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_service.py",
+    "api/tests/test_assets.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_contributor_hygiene.py",
+    "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_runtime_api.py",
+    "cursor_prompts_openrouter.md",
+    "docs/CONTRIBUTION-TRACKING-IMPLEMENTATION.md",
+    "docs/CONTRIBUTION-TRACKING-ISSUES.md",
+    "docs/DEPLOYMENT-CHECKLIST.md",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-02-16_no-v1-api-policy-enforcement.json",
+    "generate_ccn_backend.sh",
+    "generate_claude_knowledge.sh",
+    "generate_repo_structure.sh",
+    "next_steps.sh",
+    "scripts/asset_tracking/physically_backed/link_tokenized_gold.sh",
+    "scripts/contributor/create_contributor.sh",
+    "scripts/local_cicd_preflight.py",
+    "scripts/validate_no_v1_api_usage.py",
+    "scripts/verify_full_deployment.sh",
+    "specs/050-canonical-route-registry-and-runtime-mapping.md",
+    "specs/072-public-walkable-flow-parity.md",
+    "specs/073-walkable-flow-runtime-mismatch-fixes.md",
+    "specs/TEMPLATE.md",
+    "web/app/assets/page.tsx",
+    "web/app/contribute/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Internal API usage is standardized to /api across code, docs, templates, and workflow scripts; CI blocks any reintroduction of internal /v1 routes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/contributors",
+      "https://coherence-network-production.up.railway.app/api/assets",
+      "https://coherence-network-production.up.railway.app/api/contributions"
+    ],
+    "test_flows": [
+      "run-validate_no_v1_api_usage->expect-pass",
+      "create/read-resource-flow-using-/api-prefix-only",
+      "thread-gates-and-test-workflows-run-prefix-policy-check"
+    ]
+  }
+}

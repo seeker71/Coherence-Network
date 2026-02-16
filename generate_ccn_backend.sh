@@ -743,10 +743,10 @@ app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
 # Default in-memory store (tests can override app.state.graph_store per test)
 app.state.graph_store = InMemoryGraphStore()
 
-app.include_router(contributors.router, prefix="/v1", tags=["contributors"])
-app.include_router(assets.router, prefix="/v1", tags=["assets"])
-app.include_router(contributions.router, prefix="/v1", tags=["contributions"])
-app.include_router(distributions.router, prefix="/v1", tags=["distributions"])
+app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(contributions.router, prefix="/api", tags=["contributions"])
+app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 PY
 
 # ------------------------------------------------------------------------------
@@ -771,18 +771,18 @@ async def test_create_get_list_contributors() -> None:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
         )
         assert resp.status_code == 201
         created = resp.json()
         cid = created["id"]
 
-        resp2 = await client.get(f"/v1/contributors/{cid}")
+        resp2 = await client.get(f"/api/contributors/{cid}")
         assert resp2.status_code == 200
         assert resp2.json()["id"] == cid
 
-        resp3 = await client.get("/v1/contributors?limit=10")
+        resp3 = await client.get("/api/contributors?limit=10")
         assert resp3.status_code == 200
         assert any(x["id"] == cid for x in resp3.json())
 
@@ -792,7 +792,7 @@ async def test_get_contributor_404() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/v1/contributors/00000000-0000-0000-0000-000000000000")
+        resp = await client.get("/api/contributors/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Contributor not found"
 
@@ -802,7 +802,7 @@ async def test_create_contributor_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "NoEmail"})
+        resp = await client.post("/api/contributors", json={"type": "HUMAN", "name": "NoEmail"})
         assert resp.status_code == 422
 PY
 
@@ -822,21 +822,21 @@ async def test_create_get_list_assets() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/assets", json={"type": "CODE", "description": "Test asset"})
+        resp = await client.post("/api/assets", json={"type": "CODE", "description": "Test asset"})
         assert resp.status_code == 201
         created = resp.json()
         aid = created["id"]
 
-        resp2 = await client.get(f"/v1/assets/{aid}")
+        resp2 = await client.get(f"/api/assets/{aid}")
         assert resp2.status_code == 200
         assert resp2.json()["id"] == aid
 
-        resp3 = await client.get("/v1/assets?limit=10")
+        resp3 = await client.get("/api/assets?limit=10")
         assert resp3.status_code == 200
         assert any(x["id"] == aid for x in resp3.json())
 
         # total_cost default
-        got = await client.get(f"/v1/assets/{aid}")
+        got = await client.get(f"/api/assets/{aid}")
         assert Decimal(got.json()["total_cost"]) == Decimal("0.00")
 
 
@@ -845,7 +845,7 @@ async def test_get_asset_404() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/v1/assets/00000000-0000-0000-0000-000000000000")
+        resp = await client.get("/api/assets/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Asset not found"
 
@@ -855,7 +855,7 @@ async def test_create_asset_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/assets", json={"type": "CODE"})
+        resp = await client.post("/api/assets", json={"type": "CODE"})
         assert resp.status_code == 422
 PY
 
@@ -875,14 +875,14 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -897,11 +897,11 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
 
         contrib_id = created["id"]
 
-        g = await client.get(f"/v1/contributions/{contrib_id}")
+        g = await client.get(f"/api/contributions/{contrib_id}")
         assert g.status_code == 200
         assert g.json()["id"] == contrib_id
 
-        asset = await client.get(f"/v1/assets/{asset_id}")
+        asset = await client.get(f"/api/assets/{asset_id}")
         assert Decimal(asset.json()["total_cost"]) == Decimal("100.00")
 
 
@@ -910,11 +910,11 @@ async def test_create_contribution_404s() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": "00000000-0000-0000-0000-000000000000",
                 "asset_id": asset_id,
@@ -925,11 +925,11 @@ async def test_create_contribution_404s() -> None:
         assert r.status_code == 404
         assert r.json()["detail"] == "Contributor not found"
 
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
         r2 = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": "00000000-0000-0000-0000-000000000000",
@@ -946,14 +946,14 @@ async def test_get_asset_and_contributor_contributions() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
 
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -962,11 +962,11 @@ async def test_get_asset_and_contributor_contributions() -> None:
             },
         )
 
-        ac = await client.get(f"/v1/assets/{asset_id}/contributions")
+        ac = await client.get(f"/api/assets/{asset_id}/contributions")
         assert ac.status_code == 200
         assert len(ac.json()) == 1
 
-        cc = await client.get(f"/v1/contributors/{contributor_id}/contributions")
+        cc = await client.get(f"/api/contributors/{contributor_id}/contributions")
         assert cc.status_code == 200
         assert len(cc.json()) == 1
 
@@ -976,13 +976,13 @@ async def test_create_contribution_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         contributor_id = c.json()["id"]
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Repo"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
 
         r = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
@@ -1009,25 +1009,25 @@ async def test_distribution_weighted_by_coherence() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp1 = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        resp1 = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
         alice_id = resp1.json()["id"]
 
-        resp2 = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "Bob", "email": "bob@example.com"})
+        resp2 = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Bob", "email": "bob@example.com"})
         bob_id = resp2.json()["id"]
 
-        resp3 = await client.post("/v1/assets", json={"type": "CODE", "description": "Test asset"})
+        resp3 = await client.post("/api/assets", json={"type": "CODE", "description": "Test asset"})
         asset_id = resp3.json()["id"]
 
         await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={"contributor_id": alice_id, "asset_id": asset_id, "cost_amount": "100.00", "metadata": {"has_tests": True, "has_docs": True}},
         )
         await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={"contributor_id": bob_id, "asset_id": asset_id, "cost_amount": "100.00", "metadata": {}},
         )
 
-        resp = await client.post("/v1/distributions", json={"asset_id": asset_id, "value_amount": "1000.00"})
+        resp = await client.post("/api/distributions", json={"asset_id": asset_id, "value_amount": "1000.00"})
         assert resp.status_code == 201
         data = resp.json()
 
@@ -1041,7 +1041,7 @@ async def test_distribution_asset_not_found_404() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/distributions", json={"asset_id": "00000000-0000-0000-0000-000000000000", "value_amount": "1.00"})
+        resp = await client.post("/api/distributions", json={"asset_id": "00000000-0000-0000-0000-000000000000", "value_amount": "1.00"})
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Asset not found"
 
@@ -1051,10 +1051,10 @@ async def test_distribution_no_contributions_returns_empty_payouts() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        a = await client.post("/v1/assets", json={"type": "CODE", "description": "Empty asset"})
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Empty asset"})
         asset_id = a.json()["id"]
 
-        resp = await client.post("/v1/distributions", json={"asset_id": asset_id, "value_amount": "10.00"})
+        resp = await client.post("/api/distributions", json={"asset_id": asset_id, "value_amount": "10.00"})
         assert resp.status_code == 201
         assert resp.json()["payouts"] == []
 
@@ -1064,7 +1064,7 @@ async def test_distribution_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/distributions", json={"asset_id": "00000000-0000-0000-0000-000000000000", "value_amount": "x"})
+        resp = await client.post("/api/distributions", json={"asset_id": "00000000-0000-0000-0000-000000000000", "value_amount": "x"})
         assert resp.status_code == 422
 PY
 

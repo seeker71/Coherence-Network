@@ -21,10 +21,10 @@ app.state.graph_store = InMemoryGraphStore()  # No persist_path parameter
 
 **Evidence:**
 ```bash
-$ curl https://coherence-network-production.up.railway.app/v1/contributors
+$ curl https://coherence-network-production.up.railway.app/api/contributors
 []  # Empty - all data lost on restart
 
-$ curl https://coherence-network-production.up.railway.app/v1/assets
+$ curl https://coherence-network-production.up.railway.app/api/assets
 []  # Empty - all data lost on restart
 ```
 
@@ -54,7 +54,7 @@ $ curl https://coherence-network-production.up.railway.app/v1/assets
 
 ### 3. ❌ No Contributors or Assets Exist
 
-Even with correct schema, POST to `/v1/contributions` would fail:
+Even with correct schema, POST to `/api/contributions` would fail:
 
 ```python
 # api/app/routers/contributions.py
@@ -105,7 +105,7 @@ def save_data():
 Create a new endpoint that accepts email and auto-creates contributor/asset:
 
 ```python
-# New endpoint: POST /v1/contributions/github
+# New endpoint: POST /api/contributions/github
 @router.post("/contributions/github")
 async def track_github_contribution(
     contributor_email: str,
@@ -177,7 +177,7 @@ Implement PostgreSQL or Neo4j adapter:
 
 **Phase 1 (Immediate):**
 1. Add JSON persistence (Option A) to stop losing data on restart
-2. Create `/v1/contributions/github` endpoint (Option B)
+2. Create `/api/contributions/github` endpoint (Option B)
 3. Update workflow to use new endpoint
 4. Verify end-to-end tracking works
 
@@ -193,11 +193,11 @@ After fixes, verify:
 
 ```bash
 # 1. Check persistence survives restart
-curl https://api.../v1/contributors
+curl https://api.../api/contributors
 # Should return data after restart
 
 # 2. Test contribution creation
-curl -X POST https://api.../v1/contributions/github \
+curl -X POST https://api.../api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_email": "test@example.com",
@@ -208,8 +208,8 @@ curl -X POST https://api.../v1/contributions/github \
   }'
 
 # 3. Verify stored
-curl https://api.../v1/contributors
-curl https://api.../v1/contributions
+curl https://api.../api/contributors
+curl https://api.../api/contributions
 ```
 
 ## Files to Modify

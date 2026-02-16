@@ -28,13 +28,13 @@ async def test_persistent_store_rejects_test_email_contributor(tmp_path: Path) -
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         blocked = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Test User", "email": "test@example.com"},
         )
         assert blocked.status_code == 422
 
         allowed = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Real User", "email": "real@coherence.network"},
         )
         assert allowed.status_code == 201

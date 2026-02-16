@@ -93,7 +93,7 @@ jobs:
           API_URL: ${{ secrets.COHERENCE_API_URL }}
           API_KEY: ${{ secrets.COHERENCE_API_KEY }}
         run: |
-          curl -X POST "$API_URL/v1/contributions" \
+          curl -X POST "$API_URL/api/contributions" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $API_KEY" \
             -d '{
@@ -117,7 +117,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.name,
-              body: '✅ Contribution recorded! Cost: $$${{ steps.calc_cost.outputs.cost }}\nVerify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}'
+              body: '✅ Contribution recorded! Cost: $$${{ steps.calc_cost.outputs.cost }}\nVerify at: https://api.coherencycoin.com/api/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}'
             })
 EOF
 
@@ -252,7 +252,7 @@ read -p "Hourly rate (USD): " RATE
 
 API_URL=${COHERENCE_API_URL:-"https://api.coherencycoin.com"}
 
-RESPONSE=$(curl -s -X POST "$API_URL/v1/contributors" \
+RESPONSE=$(curl -s -X POST "$API_URL/api/contributors" \
   -H "Content-Type: application/json" \
   -d "{
     \"type\": \"HUMAN\",
@@ -433,7 +433,7 @@ fi
 # Record asset
 API_URL=${COHERENCE_API_URL:-"https://api.coherencycoin.com"}
 
-curl -X POST "$API_URL/v1/assets/external" \
+curl -X POST "$API_URL/api/assets/external" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $COHERENCE_API_KEY" \
   -d "{

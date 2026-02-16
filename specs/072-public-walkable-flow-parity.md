@@ -14,9 +14,9 @@ ideas -> specs -> processes/routes -> implementations -> contributors/contributi
 
 ### Web
 4. Add public pages:
-   - `/contributors` (reads `GET /v1/contributors`)
-   - `/contributions` (reads `GET /v1/contributions`)
-   - `/assets` (reads `GET /v1/assets`)
+   - `/contributors` (reads `GET /api/contributors`)
+   - `/contributions` (reads `GET /api/contributions`)
+   - `/assets` (reads `GET /api/assets`)
    - `/tasks` (reads `GET /api/agent/tasks`)
 5. Add navigation links from `/portfolio` to those pages.
 

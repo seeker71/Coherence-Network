@@ -9,12 +9,12 @@ Fix public walkability mismatches discovered post-deploy:
 ## Requirements
 ### API
 1. Expose agent router under `/api` so `GET /api/agent/tasks` is publicly available.
-2. Add `GET /v1/contributions` to list contributions (read-only).
+2. Add `GET /api/contributions` to list contributions (read-only).
 3. Ensure stores implement listing contributions (in-memory + postgres).
 
 ### Web
-4. Update `/contributors`, `/assets` to accept array responses from `/v1/*`.
-5. Update `/contributions` to use the new `GET /v1/contributions`.
+4. Update `/contributors`, `/assets` to accept array responses from `/api/*`.
+5. Update `/contributions` to use the new `GET /api/contributions`.
 
 ## Implementation (Allowed Files)
 - `api/app/main.py`

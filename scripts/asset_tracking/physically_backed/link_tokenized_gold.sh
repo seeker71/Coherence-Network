@@ -53,7 +53,7 @@ fi
 # Record asset
 API_URL=${COHERENCE_API_URL:-"https://api.coherencycoin.com"}
 
-curl -X POST "$API_URL/v1/assets/external" \
+curl -X POST "$API_URL/api/assets/external" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $COHERENCE_API_KEY" \
   -d "{

@@ -37,21 +37,21 @@ async def test_system_lineage_inventory_includes_core_sections(
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         contributor = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "urs-muff", "email": "urs-muff@example.com"},
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
 
         asset = await client.post(
-            "/v1/assets",
+            "/api/assets",
             json={"type": "CODE", "description": "seeker71/Coherence-Network"},
         )
         assert asset.status_code == 201
         asset_id = asset.json()["id"]
 
         contribution = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,

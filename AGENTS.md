@@ -83,6 +83,7 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 
 ## Conventions
 
+- **API prefix standard** — Internal API routes must use `/api/*` only; `/v1/*` is disallowed for internal endpoints.
 - **Holdout tests** — `api/tests/holdout/` excluded from agent context; CI runs full suite
 - **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
 - **Spec cross-links** — specs have "See also" sections

@@ -53,7 +53,7 @@ CREATE INDEX idx_contributions_timestamp ON contributions(timestamp);
 
 ### 2. GitHub Webhook Endpoint ✅
 
-**Endpoint:** `POST /v1/contributions/github`
+**Endpoint:** `POST /api/contributions/github`
 
 **Accepts:**
 ```json
@@ -86,7 +86,7 @@ CREATE INDEX idx_contributions_timestamp ON contributions(timestamp);
 **File:** `.github/workflows/auto_track_contributions.yml`
 
 - Fixed double-execution (now only runs on push to main)
-- Updated to POST to `/v1/contributions/github`
+- Updated to POST to `/api/contributions/github`
 - Sends correct data structure matching new endpoint
 - Removed PR commenting (was causing failures)
 
@@ -160,7 +160,7 @@ curl https://coherence-network-production.up.railway.app/api/ready
 ### 2. Test GitHub Webhook Endpoint
 
 ```bash
-curl -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
+curl -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_email": "test@example.com",
@@ -180,15 +180,15 @@ curl -X POST https://coherence-network-production.up.railway.app/v1/contribution
 
 ```bash
 # List contributors
-curl https://coherence-network-production.up.railway.app/v1/contributors
+curl https://coherence-network-production.up.railway.app/api/contributors
 # Should show test@example.com contributor
 
 # List assets
-curl https://coherence-network-production.up.railway.app/v1/assets
+curl https://coherence-network-production.up.railway.app/api/assets
 # Should show Coherence-Network repository
 
 # List contributions
-curl https://coherence-network-production.up.railway.app/v1/contributions
+curl https://coherence-network-production.up.railway.app/api/contributions
 # (Once this endpoint is implemented)
 ```
 
@@ -204,12 +204,12 @@ curl https://coherence-network-production.up.railway.app/v1/contributions
 
 ```bash
 # Before restart: Record contribution
-curl -X POST .../v1/contributions/github -d '{...}'
+curl -X POST .../api/contributions/github -d '{...}'
 
 # Restart Railway service (Railway dashboard → Service → Restart)
 
 # After restart: Check data still exists
-curl .../v1/contributors
+curl .../api/contributors
 # Should still show contributors (proves database persistence)
 ```
 
@@ -252,7 +252,7 @@ Tests use InMemoryGraphStore (don't require database).
 
 ### Phase 2: API Enhancements
 1. Add authentication/API key validation
-2. Add GET /v1/contributions endpoint (list all)
+2. Add GET /api/contributions endpoint (list all)
 3. Add pagination for list endpoints
 4. Add filtering (by date, contributor, repository)
 
@@ -284,13 +284,13 @@ Tests use InMemoryGraphStore (don't require database).
 │ GitHub PR Merge                                          │
 │ ↓ triggers                                              │
 │ GitHub Actions: Auto-Track Contributions                │
-│ ↓ POST /v1/contributions/github                         │
+│ ↓ POST /api/contributions/github                         │
 └─────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────┐
 │ Railway API (FastAPI)                                    │
 │                                                          │
-│  POST /v1/contributions/github                          │
+│  POST /api/contributions/github                          │
 │    ↓                                                     │
 │  track_github_contribution()                            │
 │    1. Find/create contributor by email                  │
@@ -329,7 +329,7 @@ Tests use InMemoryGraphStore (don't require database).
 
 2. **No List Contributions Endpoint**
    - Can query by contributor or asset
-   - Should add GET /v1/contributions
+   - Should add GET /api/contributions
 
 3. **Project/Dependency Graph Not in PostgreSQL**
    - Only contribution tracking uses PostgreSQL

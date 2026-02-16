@@ -80,7 +80,7 @@ def _default_idea_map() -> dict:
             "/api/gates": "oss-interface-alignment",
             "/api/runtime": "oss-interface-alignment",
             "/api/health-proxy": "oss-interface-alignment",
-            "/v1": "portfolio-governance",
+            "/api": "portfolio-governance",
             "/api": "oss-interface-alignment",
             "/gates": "oss-interface-alignment",
             "/search": "coherence-signal-depth",
@@ -206,7 +206,7 @@ def resolve_idea_id(
 
     if normalized_endpoint.startswith("/api"):
         return "oss-interface-alignment"
-    if normalized_endpoint.startswith("/v1"):
+    if normalized_endpoint.startswith("/api"):
         return "portfolio-governance"
     if normalized_endpoint.startswith("/"):
         return "oss-interface-alignment"

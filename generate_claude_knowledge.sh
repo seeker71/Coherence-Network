@@ -317,11 +317,11 @@ cat > .claude/ARCHITECTURE.md << 'EOF'
 **File**: `api/main.py`
 
 **Endpoints**:
-- `/v1/contributors` - CRUD operations
-- `/v1/assets` - Asset management
-- `/v1/contributions` - Record contribution events
-- `/v1/distributions` - Trigger value distributions
-- `/v1/nodes` - Node operator registry
+- `/api/contributors` - CRUD operations
+- `/api/assets` - Asset management
+- `/api/contributions` - Record contribution events
+- `/api/distributions` - Trigger value distributions
+- `/api/nodes` - Node operator registry
 - `/webhooks/github` - GitHub integration
 
 **Middleware**:
@@ -332,7 +332,7 @@ cat > .claude/ARCHITECTURE.md << 'EOF'
 
 **Example**:
 ```python
-@app.post("/v1/contributions")
+@app.post("/api/contributions")
 async def create_contribution(
     event: ContributionEventCreate,
     current_user: Contributor = Depends(get_current_user)
@@ -515,11 +515,11 @@ api/
 ├── main.py              # FastAPI app
 ├── routes/
 │   ├── __init__.py
-│   ├── contributors.py  # /v1/contributors
-│   ├── assets.py        # /v1/assets
-│   ├── contributions.py # /v1/contributions
-│   ├── distributions.py # /v1/distributions
-│   ├── nodes.py         # /v1/nodes
+│   ├── contributors.py  # /api/contributors
+│   ├── assets.py        # /api/assets
+│   ├── contributions.py # /api/contributions
+│   ├── distributions.py # /api/distributions
+│   ├── nodes.py         # /api/nodes
 │   └── webhooks.py      # /webhooks/*
 └── middleware/
     ├── auth.py          # API key auth
@@ -670,7 +670,7 @@ Run automated assessment or self-assess:
 ### Step 3: Record via API
 
 ```bash
-curl -X POST https://api.your-domain.com/v1/contributions \
+curl -X POST https://api.your-domain.com/api/contributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{
@@ -712,11 +712,11 @@ If automatic estimate is wrong:
 
 ```bash
 # Get the auto-created contribution
-curl https://api.your-domain.com/v1/contributions?commit_hash=abc123 \
+curl https://api.your-domain.com/api/contributions?commit_hash=abc123 \
   -H "X-API-Key: $API_KEY"
 
 # Update with correct values
-curl -X PATCH https://api.your-domain.com/v1/contributions/event-id \
+curl -X PATCH https://api.your-domain.com/api/contributions/event-id \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{
@@ -831,7 +831,7 @@ assert coherence >= Decimal("0.9")  # Should be high
 ### Add a New Contributor
 
 ```bash
-curl -X POST https://api.your-domain.com/v1/contributors \
+curl -X POST https://api.your-domain.com/api/contributors \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY_ADMIN" \
   -d '{
@@ -845,7 +845,7 @@ curl -X POST https://api.your-domain.com/v1/contributors \
 ### Record Tool Execution
 
 ```bash
-curl -X POST https://api.your-domain.com/v1/contributions \
+curl -X POST https://api.your-domain.com/api/contributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{
@@ -866,7 +866,7 @@ curl -X POST https://api.your-domain.com/v1/contributions \
 ### Run a Distribution
 
 ```bash
-curl -X POST https://api.your-domain.com/v1/distributions \
+curl -X POST https://api.your-domain.com/api/distributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY_ADMIN" \
   -d '{
@@ -880,7 +880,7 @@ curl -X POST https://api.your-domain.com/v1/distributions \
 ### Check Your Earnings
 
 ```bash
-curl https://api.your-domain.com/v1/contributors/your-id/payouts \
+curl https://api.your-domain.com/api/contributors/your-id/payouts \
   -H "X-API-Key: $API_KEY" \
   | jq '.total_earned'
 ```
@@ -911,7 +911,7 @@ Authentication: API key in `X-API-Key` header
 
 ### Create Contributor
 
-**POST** `/v1/contributors`
+**POST** `/api/contributors`
 
 Creates a new contributor (human or system).
 
@@ -941,7 +941,7 @@ Creates a new contributor (human or system).
 
 **Example**:
 ```bash
-curl -X POST https://api.coherence-network.io/v1/contributors \
+curl -X POST https://api.coherence-network.io/api/contributors \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{"type":"HUMAN","name":"Jane","email":"jane@example.com","wallet_address":"0x..."}'
@@ -949,7 +949,7 @@ curl -X POST https://api.coherence-network.io/v1/contributors \
 
 ### Get Contributor
 
-**GET** `/v1/contributors/{contributor_id}`
+**GET** `/api/contributors/{contributor_id}`
 
 **Response**:
 ```json
@@ -966,7 +966,7 @@ curl -X POST https://api.coherence-network.io/v1/contributors \
 
 ### List Contributor Payouts
 
-**GET** `/v1/contributors/{contributor_id}/payouts`
+**GET** `/api/contributors/{contributor_id}/payouts`
 
 **Query Parameters**:
 - `status`: `PENDING|COMPLETED|FAILED`
@@ -995,7 +995,7 @@ curl -X POST https://api.coherence-network.io/v1/contributors \
 
 ### Create Asset
 
-**POST** `/v1/assets`
+**POST** `/api/assets`
 
 **Request**:
 ```json
@@ -1025,7 +1025,7 @@ curl -X POST https://api.coherence-network.io/v1/contributors \
 
 ### Get Asset Lineage
 
-**GET** `/v1/assets/{asset_id}/lineage`
+**GET** `/api/assets/{asset_id}/lineage`
 
 Returns complete contribution graph.
 
@@ -1051,7 +1051,7 @@ Returns complete contribution graph.
 
 ### Record Contribution
 
-**POST** `/v1/contributions`
+**POST** `/api/contributions`
 
 **Request**:
 ```json
@@ -1087,7 +1087,7 @@ Returns complete contribution graph.
 
 ### List Asset Contributions
 
-**GET** `/v1/assets/{asset_id}/contributions`
+**GET** `/api/assets/{asset_id}/contributions`
 
 **Response**:
 ```json
@@ -1111,7 +1111,7 @@ Returns complete contribution graph.
 
 ### Trigger Distribution
 
-**POST** `/v1/distributions`
+**POST** `/api/distributions`
 
 **Request**:
 ```json
@@ -1155,7 +1155,7 @@ Returns complete contribution graph.
 
 ### Get Distribution
 
-**GET** `/v1/distributions/{distribution_id}`
+**GET** `/api/distributions/{distribution_id}`
 
 Returns complete distribution details including audit trail.
 
@@ -1163,7 +1163,7 @@ Returns complete distribution details including audit trail.
 
 ### Register Node
 
-**POST** `/v1/nodes`
+**POST** `/api/nodes`
 
 **Request**:
 ```json
@@ -1196,7 +1196,7 @@ Returns complete distribution details including audit trail.
 
 ### List Nodes
 
-**GET** `/v1/nodes`
+**GET** `/api/nodes`
 
 **Query Parameters**:
 - `node_type`: `API|STORAGE|COMPUTE`
@@ -1814,7 +1814,7 @@ TOTAL=$(echo "$LABOR_COST + $CURSOR_COST + $COMPUTE_COST" | bc)  # $2413.19
 **Step 3**: Record contribution
 
 ```bash
-curl -X POST https://api.coherence-network.io/v1/contributions \
+curl -X POST https://api.coherence-network.io/api/contributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{
@@ -1853,7 +1853,7 @@ curl -X POST https://api.coherence-network.io/v1/contributions \
 **Scenario**: Asset generates $10,000 in value. Distribute to contributors.
 
 ```bash
-curl -X POST https://api.coherence-network.io/v1/distributions \
+curl -X POST https://api.coherence-network.io/api/distributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY_ADMIN" \
   -d '{
@@ -1890,7 +1890,7 @@ curl -X POST https://api.coherence-network.io/v1/distributions \
 **Scenario**: You have a $5/month VPS with spare capacity.
 
 ```bash
-curl -X POST https://api.coherence-network.io/v1/nodes \
+curl -X POST https://api.coherence-network.io/api/nodes \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d '{
@@ -2047,7 +2047,7 @@ cost = Decimal("100.50")
 CREATE INDEX IF NOT EXISTS idx_events_asset ON contribution_events_ledger(asset_id);
 
 -- Limit depth
-POST /v1/distributions
+POST /api/distributions
 {"max_depth": 5}  # Limit to 5 levels
 ```
 
@@ -2109,7 +2109,7 @@ cat > .claude/CURSOR_WORKFLOWS.md << 'EOF'
 Create a new FastAPI endpoint for listing all distributions with pagination.
 
 Requirements:
-- Route: GET /v1/distributions
+- Route: GET /api/distributions
 - Query params: page (int), page_size (int, max 100), status filter
 - Response: list of distributions with pagination metadata
 - Include contributor names in results

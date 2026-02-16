@@ -11,7 +11,7 @@ read -p "Hourly rate (USD): " RATE
 
 API_URL=${COHERENCE_API_URL:-"https://api.coherencycoin.com"}
 
-RESPONSE=$(curl -s -X POST "$API_URL/v1/contributors" \
+RESPONSE=$(curl -s -X POST "$API_URL/api/contributors" \
   -H "Content-Type: application/json" \
   -d "{
     \"type\": \"HUMAN\",

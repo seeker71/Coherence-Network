@@ -165,17 +165,17 @@ on:
 
 ### Public Ledger
 
-**Endpoint**: `https://api.coherencycoin.com/v1/ledger`
+**Endpoint**: `https://api.coherencycoin.com/api/ledger`
 
 ```bash
 # View all contributions
-curl https://api.coherencycoin.com/v1/ledger
+curl https://api.coherencycoin.com/api/ledger
 
 # View your contributions
-curl https://api.coherencycoin.com/v1/ledger/contributor/YOUR_ID
+curl https://api.coherencycoin.com/api/ledger/contributor/YOUR_ID
 
 # Verify specific event
-curl https://api.coherencycoin.com/v1/ledger/event/EVENT_ID/verify
+curl https://api.coherencycoin.com/api/ledger/event/EVENT_ID/verify
 ```
 
 **Everything is publicly verifiable**
@@ -355,7 +355,7 @@ curl https://api.coherencycoin.com/v1/ledger/event/EVENT_ID/verify
 
 ```bash
 # To record this contribution:
-curl -X POST https://api.coherencycoin.com/v1/contributions \
+curl -X POST https://api.coherencycoin.com/api/contributions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -d @.contribution_record.json

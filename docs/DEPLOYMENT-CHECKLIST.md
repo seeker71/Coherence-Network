@@ -4,7 +4,7 @@
 
 ✅ Code deployed to Railway
 ✅ API is responding (health check passes)
-✅ New endpoint exists (`/v1/contributions/github`)
+✅ New endpoint exists (`/api/contributions/github`)
 ❌ DATABASE_URL not configured → Internal Server Error
 ❌ GitHub secrets not configured → Workflow will skip tracking
 
@@ -45,10 +45,10 @@ railway add
 ### Verification After Adding Database
 ```bash
 # Should return empty array (no 500 error)
-curl https://coherence-network-production.up.railway.app/v1/contributors
+curl https://coherence-network-production.up.railway.app/api/contributors
 
 # Should create a contribution (201 Created)
-curl -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
+curl -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_email": "test@example.com",
@@ -149,15 +149,15 @@ curl -fsS https://coherence-network-production.up.railway.app/api/ready | jq .
 
 echo ""
 echo "3. Contributors Endpoint (should be empty array)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/contributors | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/contributors | jq .
 
 echo ""
 echo "4. Assets Endpoint (should be empty array)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/assets | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/assets | jq .
 
 echo ""
 echo "5. Test Contribution Creation..."
-RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
+RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{
     "contributor_email": "deploy-test@coherence.network",
@@ -182,7 +182,7 @@ fi
 
 echo ""
 echo "6. Verify Contribution Was Saved..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/contributors | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/contributors | jq .
 
 echo ""
 echo "7. CORS Check..."
@@ -220,10 +220,10 @@ COHERENCE_API_KEY=dev-key-temp
 curl https://coherence-network-production.up.railway.app/api/health
 
 # Database connected
-curl https://coherence-network-production.up.railway.app/v1/contributors
+curl https://coherence-network-production.up.railway.app/api/contributors
 
 # Create contribution
-curl -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
+curl -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
   -H "Content-Type: application/json" \
   -d '{"contributor_email":"test@example.com","repository":"test/repo","commit_hash":"abc","cost_amount":100,"metadata":{}}'
 ```

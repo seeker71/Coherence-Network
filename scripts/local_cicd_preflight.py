@@ -209,6 +209,7 @@ def main() -> int:
             root,
             True,
         ),
+        ("validate_no_v1_api_usage", ["python3", "scripts/validate_no_v1_api_usage.py"], root, True),
         ("validate_workflow_references", ["python3", "scripts/validate_workflow_references.py"], root, True),
         ("check_runtime_drift", ["python3", "scripts/check_runtime_drift.py"], root, True),
         (

@@ -2498,7 +2498,7 @@ def _discover_api_endpoints_from_runtime() -> list[dict[str, Any]]:
         if not isinstance(route, APIRoute):
             continue
         path = str(route.path or "")
-        if not (path.startswith("/api") or path.startswith("/v1")):
+        if not (path.startswith("/api") or path.startswith("/api")):
             continue
         methods = sorted(
             method
@@ -2561,7 +2561,7 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
         prefix = prefix_map.get(router_name, "")
         for method, subpath in _extract_decorated_routes(module_path, "router"):
             full_path = _join_path(prefix, subpath)
-            if not (full_path.startswith("/api") or full_path.startswith("/v1")):
+            if not (full_path.startswith("/api") or full_path.startswith("/api")):
                 continue
             row = grouped.setdefault(
                 full_path,
@@ -2578,7 +2578,7 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
     if not main_path.exists():
         main_path = root / "app" / "main.py"
     for method, subpath in _extract_decorated_routes(main_path, "app"):
-        if not (subpath.startswith("/api") or subpath.startswith("/v1")):
+        if not (subpath.startswith("/api") or subpath.startswith("/api")):
             continue
         row = grouped.setdefault(
             subpath,

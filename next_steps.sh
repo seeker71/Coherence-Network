@@ -272,7 +272,7 @@ ACTIONS:
 
 COMMANDS:
   # Record contribution
-  curl -X POST https://api.coherencycoin.com/v1/contributions \\
+  curl -X POST https://api.coherencycoin.com/api/contributions \\
     -H "Content-Type: application/json" \\
     -d '{"cost_amount": 450.06, ...}'
   
