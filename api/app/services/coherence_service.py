@@ -1,13 +1,16 @@
 """Coherence score computation — spec 020.
 
 Computes what we can from GraphStore. Components without data use 0.5 (neutral).
+
+Important: production store implementations may not support GitHub contributor/org lookups yet.
+This module must stay resilient (no hard dependency on optional store methods).
 """
 
-from typing import Optional, Protocol
+from __future__ import annotations
 
 from datetime import datetime
+from typing import Any, Optional, Protocol
 
-from app.adapters.graph_store import Contributor, Organization
 from app.models.project import Project
 
 
@@ -32,10 +35,12 @@ class GraphStoreWithDependents(Protocol):
     def count_dependents(self, ecosystem: str, name: str) -> int:
         ...
 
-    def get_project_contributors(self, ecosystem: str, name: str) -> list[Contributor]:
+    # Optional methods: some stores can provide richer GitHub-derived signals.
+    # When missing, coherence falls back to neutral 0.5 for those components.
+    def get_project_contributors(self, ecosystem: str, name: str) -> list[Any]:  # pragma: no cover
         ...
 
-    def get_contributor_organization(self, contributor_id: str) -> Optional[Organization]:
+    def get_contributor_organization(self, contributor_id: str) -> Optional[Any]:  # pragma: no cover
         ...
 
 
@@ -51,16 +56,21 @@ def compute_coherence(store: GraphStoreWithDependents, project: Project) -> dict
     dep_count = project.dependency_count or 0
     components["dependency_health"] = max(0.0, 1.0 - dep_count / 50.0)
 
-    # contributor_diversity and activity_cadence
-    contributors = store.get_project_contributors(project.ecosystem, project.name)
+    # contributor_diversity and activity_cadence (optional if store can provide GitHub-derived data)
+    get_project_contributors = getattr(store, "get_project_contributors", None)
+    contributors = get_project_contributors(project.ecosystem, project.name) if callable(get_project_contributors) else []
     has_github_data = len(contributors) > 0
     if has_github_data:
         # contributor_diversity using 1 - HHI
         org_to_contribs: dict[str, int] = {}
         for contrib in contributors:
-            org = store.get_contributor_organization(contrib.id)
-            org_key = org.id if org else f"{contrib.id}_individual"
-            org_to_contribs[org_key] = org_to_contribs.get(org_key, 0) + (contrib.contributions_count or 1)
+            contrib_id = getattr(contrib, "id", None) or getattr(contrib, "contributor_id", None) or "unknown"
+            get_org = getattr(store, "get_contributor_organization", None)
+            org = get_org(contrib_id) if callable(get_org) else None
+            org_id = getattr(org, "id", None) if org is not None else None
+            org_key = org_id if isinstance(org_id, str) and org_id else f"{contrib_id}_individual"
+            contributions_count = getattr(contrib, "contributions_count", None)
+            org_to_contribs[org_key] = org_to_contribs.get(org_key, 0) + (int(contributions_count) if contributions_count else 1)
         total_contribs = sum(org_to_contribs.values())
         if total_contribs > 0:
             hhi = sum((count / total_contribs) ** 2 for count in org_to_contribs.values())
@@ -72,9 +82,10 @@ def compute_coherence(store: GraphStoreWithDependents, project: Project) -> dict
         active = 0
         now = datetime.utcnow()
         for contrib in contributors:
-            if contrib.last_contribution_date:
+            last_contribution_date = getattr(contrib, "last_contribution_date", None)
+            if last_contribution_date:
                 try:
-                    last = datetime.fromisoformat(contrib.last_contribution_date)
+                    last = datetime.fromisoformat(str(last_contribution_date))
                     if (now - last).days <= 90:
                         active += 1
                 except ValueError:

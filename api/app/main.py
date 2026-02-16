@@ -20,6 +20,7 @@ from app.routers import (
     health,
     ideas,
     inventory,
+    projects,
     runtime,
     value_lineage,
 )
@@ -100,6 +101,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(projects.router, prefix="/api", tags=["projects"])
 
 
 @app.middleware("http")

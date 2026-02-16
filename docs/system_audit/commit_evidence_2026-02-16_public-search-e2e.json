@@ -1,0 +1,104 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/20260216-search-api",
+  "commit_scope": "Public search E2E: add missing /api/search + /api/projects routes and make /search?q=... server-rendered",
+  "files_owned": [
+    "specs/077-public-search-e2e.md",
+    "api/app/routers/projects.py",
+    "api/app/main.py",
+    "api/app/services/coherence_service.py",
+    "api/tests/test_projects_api.py",
+    "web/app/search/page.tsx",
+    "docs/system_audit/runtime_drift_allowlist.json",
+    "docs/system_audit/commit_evidence_2026-02-16_public-search-e2e.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "coherence-signal-depth"
+  ],
+  "spec_ids": [
+    "077"
+  ],
+  "task_ids": [
+    "public-search-e2e"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -v --ignore=tests/holdout -k 'projects_api'",
+    "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit --prefer-offline && npm run build",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "specs/077-public-search-e2e.md",
+    "api/app/routers/projects.py",
+    "api/app/main.py",
+    "api/app/services/coherence_service.py",
+    "api/tests/test_projects_api.py",
+    "web/app/search/page.tsx",
+    "docs/system_audit/runtime_drift_allowlist.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Home/header search can deep-link to /search?q=...; /search renders results count server-side; API routes /api/search and /api/projects exist (no 404) so the human E2E flow is verifiable in production.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network.vercel.app/search?q=react",
+      "https://coherence-network-production.up.railway.app/api/search?q=react",
+      "https://coherence-network-production.up.railway.app/api/projects/npm/react",
+      "https://coherence-network-production.up.railway.app/api/projects/npm/react/coherence"
+    ],
+    "test_flows": [
+      "web:/ -> submit search form -> /search?q=react renders with results count",
+      "api:GET /api/search?q=react returns JSON with keys results,total",
+      "api:GET /api/projects/npm/react returns 200 or 404 with {detail:\"Project not found\"} (contract)",
+      "api:GET /api/projects/npm/react/coherence returns 200 or 404 with {detail:\"Project not found\"} (contract)"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T00:28:51Z",
+    "environment": {
+      "python": "3.11.14",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -v --ignore=tests/holdout -k 'projects_api'",
+      "cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit --prefer-offline && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deploy validation"
+  }
+}

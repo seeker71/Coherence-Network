@@ -1,8 +1,6 @@
 {
   "known_missing_for_web": [
-    "/api/import/stack",
-    "/api/projects/",
-    "/api/search?q="
+    "/api/import/stack"
   ],
   "known_unmounted_agent_paths": [
     "/agent/effectiveness",
