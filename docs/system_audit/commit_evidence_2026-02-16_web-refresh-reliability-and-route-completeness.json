@@ -1,0 +1,110 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/web-link-refresh-hardening",
+  "commit_scope": "Harden live web refresh reliability, close stale-cache gaps, and expose complete cross-page route links from global navigation and context surfaces",
+  "files_owned": [
+    "web/components/live_updates_controller.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/search/page.tsx",
+    "specs/092-web-refresh-reliability-and-route-completeness.md",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_web-refresh-reliability-and-route-completeness.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface",
+    "coherence-network-api-runtime",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "092"
+  ],
+  "task_ids": [
+    "web-refresh-reliability-and-route-completeness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_web-refresh-reliability-and-route-completeness.json"
+  ],
+  "change_files": [
+    "web/components/live_updates_controller.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/search/page.tsx",
+    "specs/092-web-refresh-reliability-and-route-completeness.md",
+    "docs/SPEC-TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "UI refreshes immediately and on visibility/focus resume, detects web version updates more reliably, and exposes full route navigation coverage including friction/import/api-health.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network.vercel.app/friction",
+      "https://coherence-network.vercel.app/import",
+      "https://coherence-network.vercel.app/api-health",
+      "https://coherence-network.vercel.app/search"
+    ],
+    "test_flows": [
+      "web: keep page open across updates and verify live-refresh timestamp updates without manual reload",
+      "web: confirm nav/context link surfaces include friction/import/api-health routes",
+      "web: confirm query-based search refresh updates results on live refresh cycle"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T11:47:50Z",
+    "environment": {
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

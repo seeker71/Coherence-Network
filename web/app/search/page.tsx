@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
@@ -23,14 +24,15 @@ export default function SearchPage() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const runSearch = useCallback(async (rawQuery: string) => {
+    const trimmed = rawQuery.trim();
+    if (!trimmed) return;
     setStatus("loading");
     setError(null);
     try {
       const res = await fetch(
-        `${API_URL}/api/search?q=${encodeURIComponent(query.trim())}`
+        `${API_URL}/api/search?q=${encodeURIComponent(trimmed)}`,
+        { cache: "no-store" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -41,6 +43,16 @@ export default function SearchPage() {
       setError(String(e));
       setStatus("error");
     }
+  }, []);
+
+  useLiveRefresh(() => {
+    if (!query.trim()) return;
+    return runSearch(query);
+  }, { runOnMount: false });
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    await runSearch(query);
   }
 
   return (

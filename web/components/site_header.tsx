@@ -11,6 +11,7 @@ const NAV = [
   { href: "/ideas", label: "Ideas" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
+  { href: "/friction", label: "Friction" },
   { href: "/gates", label: "Gates" },
 ];
 
@@ -19,6 +20,8 @@ const SECONDARY = [
   { href: "/contributions", label: "Contributions" },
   { href: "/assets", label: "Assets" },
   { href: "/tasks", label: "Tasks" },
+  { href: "/import", label: "Import" },
+  { href: "/api-health", label: "API Health" },
 ];
 
 export default function SiteHeader() {

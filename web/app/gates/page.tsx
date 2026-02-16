@@ -24,9 +24,9 @@ export default function GatesPage() {
     setError(null);
     try {
       const [mainRes, publicRes, traceRes] = await Promise.all([
-        fetch(`${API_URL}/api/gates/main-contract`),
-        fetch(`${API_URL}/api/gates/public-deploy-contract`),
-        fetch(`${API_URL}/api/inventory/endpoint-traceability`),
+        fetch(`${API_URL}/api/gates/main-contract`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/gates/public-deploy-contract`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/inventory/endpoint-traceability`, { cache: "no-store" }),
       ]);
       const [mainJson, publicJson, traceJson] = await Promise.all([
         mainRes.json(),
@@ -54,7 +54,8 @@ export default function GatesPage() {
     setError(null);
     try {
       const res = await fetch(
-        `${API_URL}/api/gates/pr-to-public?branch=${encodeURIComponent(branch)}`
+        `${API_URL}/api/gates/pr-to-public?branch=${encodeURIComponent(branch)}`,
+        { cache: "no-store" }
       );
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
@@ -70,7 +71,7 @@ export default function GatesPage() {
     setStatus("loading");
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/gates/main-contract`);
+      const res = await fetch(`${API_URL}/api/gates/main-contract`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
       setContractReport(json);
@@ -88,7 +89,8 @@ export default function GatesPage() {
     setError(null);
     try {
       const res = await fetch(
-        `${API_URL}/api/gates/merged-contract?sha=${encodeURIComponent(sha.trim())}`
+        `${API_URL}/api/gates/merged-contract?sha=${encodeURIComponent(sha.trim())}`,
+        { cache: "no-store" }
       );
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
@@ -104,7 +106,7 @@ export default function GatesPage() {
     setStatus("loading");
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/gates/public-deploy-contract`);
+      const res = await fetch(`${API_URL}/api/gates/public-deploy-contract`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
       setPublicDeployReport(json);
@@ -119,7 +121,7 @@ export default function GatesPage() {
     setStatus("loading");
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/inventory/endpoint-traceability`);
+      const res = await fetch(`${API_URL}/api/inventory/endpoint-traceability`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
       setTraceabilityReport(json);
