@@ -115,6 +115,12 @@
       "methods": ["POST"],
       "purpose": "Upsert running external work session into persistent task inventory",
       "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/agent/visibility",
+      "methods": ["GET"],
+      "purpose": "Unified pipeline and usage visibility with remaining tracking gaps",
+      "idea_id": "coherence-network-agent-pipeline"
     }
   ],
   "web_routes": [
@@ -147,6 +153,11 @@
       "path": "/specs/[spec_id]",
       "purpose": "Human spec detail with explicit links to idea, contributors, process, and implementation",
       "idea_id": "coherence-network-api-runtime"
+    },
+    {
+      "path": "/agent",
+      "purpose": "Human visibility console for agent pipeline and usage coverage",
+      "idea_id": "coherence-network-agent-pipeline"
     }
   ]
 }

@@ -81,6 +81,9 @@ export default async function UsagePage() {
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
           Tasks
         </Link>
+        <Link href="/agent" className="text-muted-foreground hover:text-foreground">
+          Agent
+        </Link>
         <Link href="/gates" className="text-muted-foreground hover:text-foreground">
           Gates
         </Link>
