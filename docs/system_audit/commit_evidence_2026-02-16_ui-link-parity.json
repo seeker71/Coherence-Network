@@ -55,23 +55,7 @@
     "api/app/services/page_lineage_service.py",
     "api/tests/test_inventory_api.py"
   ],
-  "change_intent": "runtime_feature",
-  "e2e_validation": {
-    "status": "pending",
-    "expected_behavior_delta": "Every major page now exposes related human pages and machine API endpoints through a global context link layer, and page-lineage inventory covers all current web routes.",
-    "public_endpoints": [
-      "https://coherence-network.vercel.app/",
-      "https://coherence-network.vercel.app/ideas",
-      "https://coherence-network.vercel.app/specs",
-      "https://coherence-network.vercel.app/tasks",
-      "https://coherence-network-production.up.railway.app/api/inventory/page-lineage"
-    ],
-    "test_flows": [
-      "web:any page -> context links bar visible -> related routes navigable",
-      "web:ideas detail page -> idea-specific API link resolves",
-      "api:/api/inventory/page-lineage -> includes all mapped routes"
-    ]
-  },
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "ran_at": "2026-02-16T09:50:59Z",
