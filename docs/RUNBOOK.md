@@ -181,6 +181,26 @@ Shows: running task, pending count, recent completed, latest LLM activity.
 cd api && .venv/bin/pytest -v
 ```
 
+## Local Web Validation In Worktrees
+
+Use one command from the repo root:
+
+```bash
+./scripts/verify_worktree_local_web.sh
+```
+
+What it does:
+- Builds `web/` with a worktree-local npm cache (`.npm-cache`).
+- Starts API locally on `API_PORT` (default `18000`) and web on `WEB_PORT` (default `3100`).
+- Verifies key API routes and key human web pages return success and do not contain common runtime-error markers.
+- Shuts down both services automatically on completion or failure.
+
+Port override example:
+
+```bash
+API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+```
+
 ## Cleanup Old Task Logs
 
 Task logs accumulate. To remove logs older than 7 days:

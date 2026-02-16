@@ -46,6 +46,11 @@ cd api && uvicorn app.main:app --reload --port 8000
 # Web
 cd web && npm run dev
 
+# Local worktree web + API validation (Codex default)
+./scripts/verify_worktree_local_web.sh
+# Optional ports when running multiple worktrees:
+API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+
 # Tests (CI runs full; PM validation excludes holdout)
 cd api && pytest -v
 cd api && pytest -v --ignore=tests/holdout   # agent validation
