@@ -58,3 +58,27 @@ class UsageAlertReport(BaseModel):
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     threshold_ratio: float = Field(ge=0.0, le=1.0)
     alerts: list[UsageAlert] = Field(default_factory=list)
+
+
+class SubscriptionPlanEstimate(BaseModel):
+    provider: str = Field(min_length=1, max_length=120)
+    detected: bool = False
+    current_tier: str = Field(min_length=1, max_length=120)
+    next_tier: str = Field(min_length=1, max_length=120)
+    current_monthly_cost_usd: float = Field(ge=0.0)
+    next_monthly_cost_usd: float = Field(ge=0.0)
+    monthly_upgrade_delta_usd: float = Field(ge=0.0)
+    estimated_benefit_score: float = Field(ge=0.0)
+    estimated_roi: float = Field(ge=0.0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    assumptions: list[str] = Field(default_factory=list)
+    expected_benefits: list[str] = Field(default_factory=list)
+
+
+class SubscriptionUpgradeEstimatorReport(BaseModel):
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    plans: list[SubscriptionPlanEstimate] = Field(default_factory=list)
+    detected_subscriptions: int = Field(ge=0)
+    estimated_current_monthly_cost_usd: float = Field(ge=0.0)
+    estimated_next_monthly_cost_usd: float = Field(ge=0.0)
+    estimated_monthly_upgrade_delta_usd: float = Field(ge=0.0)

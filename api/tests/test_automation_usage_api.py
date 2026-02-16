@@ -90,3 +90,36 @@ async def test_automation_usage_snapshots_endpoint_returns_persisted_rows(
         payload = snapshots.json()
         assert payload["count"] >= 1
         assert len(payload["snapshots"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_subscription_estimator_reports_upgrade_cost_and_benefit(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "test-key")
+    monkeypatch.setenv("OPENAI_SUBSCRIPTION_TIER", "pro")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("CURSOR_CLI_MODEL", "openrouter/free")
+    monkeypatch.setenv("CURSOR_SUBSCRIPTION_TIER", "pro")
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    monkeypatch.setenv("GITHUB_SUBSCRIPTION_TIER", "free")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get("/api/automation/usage/subscription-estimator")
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["detected_subscriptions"] >= 2
+        assert payload["estimated_next_monthly_cost_usd"] >= payload["estimated_current_monthly_cost_usd"]
+        assert payload["estimated_monthly_upgrade_delta_usd"] >= 0
+        assert isinstance(payload["plans"], list)
+        assert len(payload["plans"]) >= 4
+
+        openai = next(row for row in payload["plans"] if row["provider"] == "openai")
+        assert openai["detected"] is True
+        assert openai["current_tier"] == "pro"
+        assert openai["next_tier"] == "team"
+        assert openai["next_monthly_cost_usd"] >= openai["current_monthly_cost_usd"]
+        assert openai["estimated_benefit_score"] >= 0
+        assert openai["estimated_roi"] >= 0
