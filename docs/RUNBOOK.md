@@ -211,6 +211,28 @@ Port override example:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 ```
 
+## Worktree PR Failure Guard
+
+Run before commit/push to prevent common PR check failures and track failures as artifacts:
+
+```bash
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+```
+
+Track open PR check failures (requires `GITHUB_TOKEN` or `GH_TOKEN`):
+
+```bash
+python3 scripts/worktree_pr_guard.py --mode remote --branch "$(git rev-parse --abbrev-ref HEAD)"
+```
+
+Both modes write JSON reports to:
+- `docs/system_audit/pr_check_failures/`
+
+If a check fails, the report includes:
+- failing step/check name
+- output tail
+- suggested local remediation command
+
 ## Cleanup Old Task Logs
 
 Task logs accumulate. To remove logs older than 7 days:
