@@ -327,6 +327,8 @@ _SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source
 _SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
 _EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
 _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
+_ROUTE_PROBE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "item": None, "source": "none"}
+_ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 
 
 def _project_root() -> Path:
@@ -765,19 +767,73 @@ def _route_evidence_probe_dir() -> Path:
 def _read_latest_route_evidence_probe() -> dict[str, Any] | None:
     probe_dir = _route_evidence_probe_dir()
     if not probe_dir.exists():
-        return None
-    files = sorted(probe_dir.glob("route_evidence_probe_*.json"))
-    if not files:
-        return None
-    latest = max(files, key=lambda path: path.stat().st_mtime)
+        local_payload = None
+    else:
+        files = sorted(probe_dir.glob("route_evidence_probe_*.json"))
+        if not files:
+            local_payload = None
+        else:
+            latest = max(files, key=lambda path: path.stat().st_mtime)
+            try:
+                payload = json.loads(latest.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                local_payload = None
+            else:
+                if isinstance(payload, dict):
+                    payload["_probe_file"] = str(latest)
+                    local_payload = payload
+                else:
+                    local_payload = None
+    if local_payload is not None:
+        return local_payload
+
+    now = time.time()
+    cached = _ROUTE_PROBE_DISCOVERY_CACHE.get("item")
+    if isinstance(cached, dict) and _ROUTE_PROBE_DISCOVERY_CACHE.get("expires_at", 0.0) > now:
+        return dict(cached)
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
+    remote_payload: dict[str, Any] | None = None
     try:
-        payload = json.loads(latest.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(payload, dict):
-        return None
-    payload["_probe_file"] = str(latest)
-    return payload
+        with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
+            response = client.get(list_url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+            if isinstance(rows, list):
+                probes = [
+                    row
+                    for row in rows
+                    if isinstance(row, dict)
+                    and isinstance(row.get("name"), str)
+                    and row["name"].startswith("route_evidence_probe_")
+                    and row["name"].endswith(".json")
+                ]
+                probes.sort(key=lambda row: str(row.get("name") or ""), reverse=True)
+                for row in probes[:5]:
+                    download_url = row.get("download_url")
+                    if not isinstance(download_url, str) or not download_url:
+                        continue
+                    payload_resp = client.get(download_url)
+                    if payload_resp.status_code != 200:
+                        continue
+                    try:
+                        payload = payload_resp.json()
+                    except ValueError:
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+                    payload["_probe_file"] = str(row.get("path") or row.get("name") or "github")
+                    remote_payload = payload
+                    break
+    except httpx.HTTPError:
+        remote_payload = None
+
+    _ROUTE_PROBE_DISCOVERY_CACHE["item"] = dict(remote_payload) if isinstance(remote_payload, dict) else None
+    _ROUTE_PROBE_DISCOVERY_CACHE["expires_at"] = now + _ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS
+    _ROUTE_PROBE_DISCOVERY_CACHE["source"] = "github" if remote_payload is not None else "none"
+    return remote_payload
 
 
 def _normalize_endpoint_path(value: str) -> str:
