@@ -1616,17 +1616,7 @@ def sync_process_completeness_gap_tasks(
     }
 
 
-def evaluate_asset_modularity(
-    runtime_window_seconds: int = 86400,
-    max_implementation_files: int = 5000,
-) -> dict[str, Any]:
-    ideas_response = idea_service.list_ideas()
-    specs = spec_registry_service.list_specs(limit=5000)
-    endpoint_inventory = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
-    endpoint_items = endpoint_inventory.get("items")
-    endpoint_rows = [row for row in endpoint_items if isinstance(row, dict)] if isinstance(endpoint_items, list) else []
-
-    blockers: list[dict[str, Any]] = []
+def _build_asset_source_file_map(endpoint_rows: list[dict[str, Any]]) -> dict[str, dict[str, set[str]]]:
     source_file_map: dict[str, dict[str, set[str]]] = {}
     for row in endpoint_rows:
         source_files = row.get("source_files") if isinstance(row.get("source_files"), list) else []
@@ -1646,8 +1636,12 @@ def evaluate_asset_modularity(
             if idea_id:
                 entry["idea_ids"].add(idea_id)
             entry["spec_ids"].update(spec_ids)
+    return source_file_map
 
-    for idea in ideas_response.ideas:
+
+def _collect_idea_modularity_blockers(ideas: list[Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    for idea in ideas:
         description = str(idea.description or "").strip()
         if not description:
             continue
@@ -1657,14 +1651,19 @@ def evaluate_asset_modularity(
         by_char = char_count > _ASSET_MODULARITY_LIMITS["idea_description_chars"]
         if not (by_sentence or by_char):
             continue
-        current = float(max(sentence_count, char_count))
+        metric = "description_sentences" if by_sentence else "description_chars"
+        current_value = sentence_count if by_sentence else char_count
         threshold = float(
             _ASSET_MODULARITY_LIMITS["idea_description_sentences"]
             if by_sentence
             else _ASSET_MODULARITY_LIMITS["idea_description_chars"]
         )
-        cost, value, roi = _estimate_split_effort_and_value(current, threshold, base_cost=2.0, base_value=20.0)
-        metric = "description_sentences" if by_sentence else "description_chars"
+        cost, value, roi = _estimate_split_effort_and_value(
+            current=max(sentence_count, char_count),
+            threshold=threshold,
+            base_cost=2.0,
+            base_value=20.0,
+        )
         blockers.append(
             {
                 "asset_category": "idea",
@@ -1674,25 +1673,27 @@ def evaluate_asset_modularity(
                 "spec_id": None,
                 "path": None,
                 "metric": metric,
-                "current_value": sentence_count if by_sentence else char_count,
+                "current_value": current_value,
                 "threshold": int(threshold),
-                "severity": "high" if (current / max(threshold, 1.0)) >= 1.8 else "medium",
+                "severity": "high" if (float(current_value) / max(threshold, 1.0)) >= 1.8 else "medium",
                 "estimated_split_cost_hours": cost,
                 "estimated_value_to_whole": value,
                 "estimated_roi": roi,
                 "recommended_task_type": TaskType.SPEC.value,
-                "split_plan": (
-                    "Split into parent + child ideas, each with focused scope, measurable outputs, and linked specs."
-                ),
+                "split_plan": "Split into parent + child ideas, each with focused scope and linked specs.",
                 "task_fingerprint": _asset_modularity_fingerprint(f"idea:{idea.id}:description", metric),
                 "direction": (
                     f"Split oversized idea description for '{idea.id}' into modular idea assets. "
-                    f"Current {metric}={sentence_count if by_sentence else char_count}, "
-                    f"target <= {int(threshold)}. Preserve ontology links and ROI traceability."
+                    f"Current {metric}={current_value}, target <= {int(threshold)}. "
+                    "Preserve ontology links and ROI traceability."
                 ),
             }
         )
+    return blockers
 
+
+def _collect_spec_modularity_blockers(specs: list[Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
     spec_text_fields = [
         ("summary", "spec_summary_sentences", "spec_summary_chars", "spec"),
         ("process_summary", "process_summary_sentences", "process_summary_chars", "process"),
@@ -1710,12 +1711,17 @@ def evaluate_asset_modularity(
             by_char = char_count > _ASSET_MODULARITY_LIMITS[char_key]
             if not (by_sentence or by_char):
                 continue
-            current = float(max(sentence_count, char_count))
+            metric = sentence_key if by_sentence else char_key
+            current_value = sentence_count if by_sentence else char_count
             threshold = float(_ASSET_MODULARITY_LIMITS[sentence_key] if by_sentence else _ASSET_MODULARITY_LIMITS[char_key])
             base_cost = 2.0 if category in {"spec", "process", "pseudocode"} else 3.0
             base_value = 18.0 if category in {"spec", "process", "pseudocode"} else 22.0
-            cost, value_score, roi = _estimate_split_effort_and_value(current, threshold, base_cost=base_cost, base_value=base_value)
-            metric = sentence_key.replace("_sentences", "_sentences") if by_sentence else char_key
+            cost, value, roi = _estimate_split_effort_and_value(
+                current=max(sentence_count, char_count),
+                threshold=threshold,
+                base_cost=base_cost,
+                base_value=base_value,
+            )
             blockers.append(
                 {
                     "asset_category": category,
@@ -1725,29 +1731,29 @@ def evaluate_asset_modularity(
                     "spec_id": spec.spec_id,
                     "path": f"/specs/{spec.spec_id}",
                     "metric": metric,
-                    "current_value": sentence_count if by_sentence else char_count,
+                    "current_value": current_value,
                     "threshold": int(threshold),
-                    "severity": "high" if (current / max(threshold, 1.0)) >= 1.8 else "medium",
+                    "severity": "high" if (float(current_value) / max(threshold, 1.0)) >= 1.8 else "medium",
                     "estimated_split_cost_hours": cost,
-                    "estimated_value_to_whole": value_score,
+                    "estimated_value_to_whole": value,
                     "estimated_roi": roi,
                     "recommended_task_type": TaskType.SPEC.value,
                     "split_plan": (
-                        "Break the section into linked sub-spec/process assets with explicit interfaces and validation checkpoints."
+                        "Break this section into linked sub-assets with explicit interfaces and validation checkpoints."
                     ),
-                    "task_fingerprint": _asset_modularity_fingerprint(
-                        f"spec:{spec.spec_id}:{field_name}",
-                        metric,
-                    ),
+                    "task_fingerprint": _asset_modularity_fingerprint(f"spec:{spec.spec_id}:{field_name}", metric),
                     "direction": (
                         f"Split oversized {field_name} for spec '{spec.spec_id}' into reusable modular assets. "
-                        f"Current {metric}={sentence_count if by_sentence else char_count}, target <= {int(threshold)}."
+                        f"Current {metric}={current_value}, target <= {int(threshold)}."
                     ),
                 }
             )
+    return blockers
 
-    root = _project_root()
+
+def _discover_implementation_files(root: Path, max_implementation_files: int) -> list[Path]:
     implementation_files: list[Path] = []
+    max_files = max(1, min(max_implementation_files, 20000))
     for directory in (root / "api" / "app", root / "web" / "app", root / "web" / "components"):
         if not directory.exists():
             continue
@@ -1757,11 +1763,17 @@ def evaluate_asset_modularity(
             if path.suffix.lower() not in {".py", ".ts", ".tsx", ".js", ".jsx"}:
                 continue
             implementation_files.append(path)
-            if len(implementation_files) >= max(1, min(max_implementation_files, 20000)):
-                break
-        if len(implementation_files) >= max(1, min(max_implementation_files, 20000)):
-            break
+            if len(implementation_files) >= max_files:
+                return implementation_files
+    return implementation_files
 
+
+def _collect_implementation_modularity_blockers(
+    implementation_files: list[Path],
+    root: Path,
+    source_file_map: dict[str, dict[str, set[str]]],
+) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
     line_limit = _ASSET_MODULARITY_LIMITS["implementation_file_lines"]
     for path in implementation_files:
         line_count = _safe_file_line_count(path)
@@ -1773,7 +1785,12 @@ def evaluate_asset_modularity(
         spec_ids = sorted(linked.get("spec_ids") or [])
         idea_id = idea_ids[0] if idea_ids else _TRACEABILITY_GAP_DEFAULT_IDEA_ID
         spec_id = spec_ids[0] if spec_ids else None
-        cost, value_score, roi = _estimate_split_effort_and_value(line_count, float(line_limit), base_cost=3.0, base_value=24.0)
+        cost, value, roi = _estimate_split_effort_and_value(
+            current=line_count,
+            threshold=float(line_limit),
+            base_cost=3.0,
+            base_value=24.0,
+        )
         blockers.append(
             {
                 "asset_category": "implementation",
@@ -1787,20 +1804,22 @@ def evaluate_asset_modularity(
                 "threshold": line_limit,
                 "severity": "high" if line_count >= (line_limit * 2) else "medium",
                 "estimated_split_cost_hours": cost,
-                "estimated_value_to_whole": value_score,
+                "estimated_value_to_whole": value,
                 "estimated_roi": roi,
                 "recommended_task_type": TaskType.IMPL.value,
-                "split_plan": (
-                    "Extract cohesive modules/components, keep API stable, and add explicit interfaces for reuse."
-                ),
+                "split_plan": "Extract cohesive modules/components, keep API stable, and add explicit interfaces.",
                 "task_fingerprint": _asset_modularity_fingerprint(f"implementation:{rel_path}", "line_count"),
                 "direction": (
                     f"Split oversized implementation file '{rel_path}' into smaller reusable modules. "
-                    f"Current line_count={line_count}, target <= {line_limit}. Preserve behavior and validation coverage."
+                    f"Current line_count={line_count}, target <= {line_limit}. "
+                    "Preserve behavior and validation coverage."
                 ),
             }
         )
+    return blockers
 
+
+def _sort_asset_modularity_blockers(blockers: list[dict[str, Any]]) -> None:
     blockers.sort(
         key=lambda row: (
             -float(row.get("estimated_roi") or 0.0),
@@ -1810,23 +1829,57 @@ def evaluate_asset_modularity(
         )
     )
 
+
+def _asset_modularity_summary(
+    blockers: list[dict[str, Any]],
+    ideas_count: int,
+    specs_count: int,
+    implementation_files_count: int,
+) -> dict[str, Any]:
     by_category: dict[str, int] = {}
     for row in blockers:
         category = str(row.get("asset_category") or "unknown")
         by_category[category] = by_category.get(category, 0) + 1
-
-    summary = {
-        "ideas_scanned": len(ideas_response.ideas),
-        "specs_scanned": len(specs),
-        "implementation_files_scanned": len(implementation_files),
+    return {
+        "ideas_scanned": ideas_count,
+        "specs_scanned": specs_count,
+        "implementation_files_scanned": implementation_files_count,
         "blocking_assets": len(blockers),
         "by_category": dict(sorted(by_category.items(), key=lambda item: item[0])),
     }
 
+
+def evaluate_asset_modularity(
+    runtime_window_seconds: int = 86400,
+    max_implementation_files: int = 5000,
+) -> dict[str, Any]:
+    ideas = idea_service.list_ideas().ideas
+    specs = spec_registry_service.list_specs(limit=5000)
+    endpoint_inventory = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
+    endpoint_items = endpoint_inventory.get("items")
+    endpoint_rows = [row for row in endpoint_items if isinstance(row, dict)] if isinstance(endpoint_items, list) else []
+    source_file_map = _build_asset_source_file_map(endpoint_rows)
+
+    root = _project_root()
+    implementation_files = _discover_implementation_files(root, max_implementation_files)
+    blockers = []
+    blockers.extend(_collect_idea_modularity_blockers(ideas))
+    blockers.extend(_collect_spec_modularity_blockers(specs))
+    blockers.extend(_collect_implementation_modularity_blockers(implementation_files, root, source_file_map))
+    _sort_asset_modularity_blockers(blockers)
+
+    summary = _asset_modularity_summary(
+        blockers=blockers,
+        ideas_count=len(ideas),
+        specs_count=len(specs),
+        implementation_files_count=len(implementation_files),
+    )
+
+    has_blockers = len(blockers) > 0
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "status": "pass" if len(blockers) == 0 else "fail",
-        "result": "asset_modularity_ok" if len(blockers) == 0 else "asset_modularity_drift_detected",
+        "status": "fail" if has_blockers else "pass",
+        "result": "asset_modularity_drift_detected" if has_blockers else "asset_modularity_ok",
         "runtime_window_seconds": runtime_window_seconds,
         "thresholds": _ASSET_MODULARITY_LIMITS,
         "summary": summary,
