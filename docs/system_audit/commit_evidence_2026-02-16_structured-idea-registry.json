@@ -1,0 +1,107 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/structured-tracking",
+  "commit_scope": "Move idea/spec question tracking to structured DB-backed registry with machine-inspectable storage metadata",
+  "files_owned": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/app/services/idea_registry_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/tests/test_ideas.py",
+    "config/canonical_routes.json",
+    "docs/IDEA-PORTFOLIO.md",
+    "specs/053-ideas-prioritization.md",
+    "web/app/portfolio/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-16_structured-idea-registry.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "053"
+  ],
+  "task_ids": [
+    "structured-idea-registry"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py tests/test_runtime_api.py tests/test_inventory_discovery_sources.py",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_structured-idea-registry.json"
+  ],
+  "change_files": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/app/services/idea_registry_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/tests/test_ideas.py",
+    "config/canonical_routes.json",
+    "docs/IDEA-PORTFOLIO.md",
+    "specs/053-ideas-prioritization.md",
+    "web/app/portfolio/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Ideas and open questions are now persisted in a structured registry with observable backend metadata and UI visibility of the active storage source.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/ideas/storage",
+      "https://coherence-network.vercel.app/portfolio"
+    ],
+    "test_flows": [
+      "api:/api/ideas -> verify ideas load from registry and ranking remains stable",
+      "api:/api/ideas/storage -> inspect backend, row counts, bootstrap source",
+      "web:/portfolio -> verify structured backend section displays active storage source"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T10:17:41Z",
+    "environment": {
+      "python": "3.14.3",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py tests/test_runtime_api.py tests/test_inventory_discovery_sources.py",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

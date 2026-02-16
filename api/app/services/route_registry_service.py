@@ -66,6 +66,12 @@ def _default_registry() -> dict:
                 "purpose": "Unified idea->spec->process->implementation->validation flow inventory",
                 "idea_id": "portfolio-governance",
             },
+            {
+                "path": "/api/ideas/storage",
+                "methods": ["GET"],
+                "purpose": "Idea registry storage backend and row-count inspection",
+                "idea_id": "portfolio-governance",
+            },
         ],
         "web_routes": [
             {

@@ -9,11 +9,12 @@ Portfolio-based idea tracking and prioritization using free energy scoring. Enab
 - [x] GET /api/ideas — List ideas ranked by free energy score with portfolio summary
 - [x] GET /api/ideas/{id} — Retrieve individual idea with score (404 if not found)
 - [x] PATCH /api/ideas/{id} — Update idea validation fields (404 if not found)
+- [x] GET /api/ideas/storage — Report structured storage backend and row counts
 - [x] Filter support for unvalidated ideas only
 - [x] Free energy scoring: (potential_value × confidence) / (estimated_cost + resistance_risk)
 - [x] Value gap tracking: potential_value - actual_value
 - [x] Manifestation status: none, partial, validated
-- [x] Ideas stored in JSON file (api/logs/idea_portfolio.json)
+- [x] Ideas stored in structured DB registry with machine-readable metadata
 - [x] Portfolio summary with aggregated metrics
 
 ## API Contract
@@ -177,6 +178,23 @@ Portfolio-based idea tracking and prioritization using free energy scoring. Enab
 }
 ```
 
+---
+
+### `GET /api/ideas/storage`
+
+**Purpose**: Expose current idea registry backend and counts for operator and machine inspection
+
+**Response 200**:
+```json
+{
+  "backend": "sqlite",
+  "database_url": "sqlite+pysqlite:////.../idea_portfolio.db",
+  "idea_count": 12,
+  "question_count": 26,
+  "bootstrap_source": "legacy_json+derived+standing_question"
+}
+```
+
 ## Scoring Algorithm
 
 ### Free Energy Score
@@ -258,15 +276,17 @@ IdeaUpdate:
 
 ## Storage
 
-- **Location**: `api/logs/idea_portfolio.json`
-- **Format**: JSON with `{"ideas": [...]}` structure
-- **Initialization**: Auto-creates with default ideas if file missing
-- **Environment**: Path configurable via `IDEA_PORTFOLIO_PATH` env var
+- **Primary**: Structured SQL registry tables (`idea_registry_ideas`, `idea_registry_questions`, `idea_registry_meta`)
+- **Default backend**: SQLite file derived from `IDEA_PORTFOLIO_PATH` (`.db` suffix)
+- **Production backend**: Postgres when `DATABASE_URL` (or `IDEA_REGISTRY_DATABASE_URL`) is configured
+- **Bootstrap**: Imports from legacy JSON file if present, otherwise uses defaults
+- **Compatibility**: Writes `api/logs/idea_portfolio.json` snapshot for existing tooling
 
 ## Files
 
 - `api/app/routers/ideas.py` — Route handlers (implemented)
 - `api/app/services/idea_service.py` — Portfolio service (implemented)
+- `api/app/services/idea_registry_service.py` — DB-backed structured persistence (implemented)
 - `api/app/models/idea.py` — Pydantic models (implemented)
 - `api/tests/test_ideas.py` — Test suite (implemented)
 - `specs/053-ideas-prioritization.md` — This spec
@@ -277,8 +297,9 @@ See `api/tests/test_ideas.py`:
 - [x] `test_list_ideas_returns_ranked_scores_and_summary` — List endpoint with ranking and summary
 - [x] `test_get_idea_by_id_and_404` — Get endpoint with 404 handling
 - [x] `test_patch_idea_updates_fields` — Update endpoint with persistence
+- [x] `test_ideas_storage_endpoint_reports_structured_backend` — Storage metadata endpoint and DB bootstrap validation
 
-All 3 tests passing.
+All 4 tests passing.
 
 ## Out of Scope
 

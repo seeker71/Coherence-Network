@@ -111,3 +111,79 @@ async def test_answer_idea_question_persists_answer(
         ][0]
         assert found["answer"] is not None
         assert found["measured_delta"] == 3.5
+
+
+@pytest.mark.asyncio
+async def test_ideas_storage_endpoint_reports_structured_backend(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("IDEA_REGISTRY_DATABASE_URL", raising=False)
+    monkeypatch.delenv("IDEA_REGISTRY_DB_URL", raising=False)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first_load = await client.get("/api/ideas")
+        assert first_load.status_code == 200
+        storage = await client.get("/api/ideas/storage")
+        assert storage.status_code == 200
+
+    data = storage.json()
+    assert data["backend"] == "sqlite"
+    assert data["idea_count"] >= 1
+    assert data["question_count"] >= 1
+    assert "bootstrap_source" in data
+    assert data["database_url"].startswith("sqlite")
+
+    db_path = portfolio_path.with_suffix(".db")
+    assert db_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_legacy_json_bootstraps_into_structured_registry(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "custom-db-bootstrap",
+                        "name": "Custom bootstrap idea",
+                        "description": "Legacy file import should seed DB registry.",
+                        "potential_value": 20.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 4.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.6,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [
+                            {
+                                "question": "Can legacy JSON seed DB?",
+                                "value_to_whole": 10.0,
+                                "estimated_cost": 1.0,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("IDEA_REGISTRY_DATABASE_URL", raising=False)
+    monkeypatch.delenv("IDEA_REGISTRY_DB_URL", raising=False)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        ids = [row["id"] for row in listed.json()["ideas"]]
+        assert "custom-db-bootstrap" in ids
+        storage = await client.get("/api/ideas/storage")
+        assert storage.status_code == 200
+        assert str(storage.json()["bootstrap_source"]).startswith("legacy_json")

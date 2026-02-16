@@ -57,8 +57,17 @@ interface InventoryResponse {
   };
 }
 
+interface IdeaStorageInfo {
+  backend: string;
+  database_url: string;
+  idea_count: number;
+  question_count: number;
+  bootstrap_source: string;
+}
+
 export default function PortfolioPage() {
   const [inventory, setInventory] = useState<InventoryResponse | null>(null);
+  const [storage, setStorage] = useState<IdeaStorageInfo | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>({});
@@ -69,12 +78,20 @@ export default function PortfolioPage() {
     setStatus("loading");
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(JSON.stringify(json));
-      setInventory(json);
+      const [inventoryRes, storageRes] = await Promise.all([
+        fetch(`${API_URL}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/ideas/storage`, {
+          cache: "no-store",
+        }),
+      ]);
+      const inventoryJson = await inventoryRes.json();
+      const storageJson = await storageRes.json();
+      if (!inventoryRes.ok) throw new Error(JSON.stringify(inventoryJson));
+      if (!storageRes.ok) throw new Error(JSON.stringify(storageJson));
+      setInventory(inventoryJson);
+      setStorage(storageJson);
       setStatus("ok");
     } catch (e) {
       setStatus("error");
@@ -181,6 +198,17 @@ export default function PortfolioPage() {
               <p className="text-lg font-semibold">{inventory.implementation_usage.usage_events_count}</p>
             </div>
           </section>
+
+          {storage && (
+            <section className="rounded border p-3 text-sm">
+              <p className="font-semibold">Structured tracking backend</p>
+              <p className="text-muted-foreground">
+                backend {storage.backend} | ideas {storage.idea_count} | questions {storage.question_count} | bootstrap{" "}
+                {storage.bootstrap_source}
+              </p>
+              <p className="text-xs text-muted-foreground break-all">source {storage.database_url}</p>
+            </section>
+          )}
 
           <p className="text-xs text-muted-foreground">
             spec source {inventory.specs.source} | runtime_events {inventory.tracking.runtime_events_count} | unanswered_questions{" "}
