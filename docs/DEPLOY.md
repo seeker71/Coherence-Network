@@ -150,6 +150,20 @@ Verification:
 - Railway service → **Deployments** should show a new deployment triggered from GitHub push on `main`.
 - If deploy is skipped, check Railway deployment reason and GitHub check status first.
 
+CLI diagnostic (machine-verifiable):
+
+```bash
+railway link --project <project-id> --environment production --service coherence-web --json
+railway status --json
+```
+
+In output for `coherence-web` latest deployment metadata, verify:
+- `source.repo` is `seeker71/Coherence-Network` (not `null`)
+- `meta.branch` is `main`
+- `meta.rootDirectory` is `/web` (or service has root dir set to `web/`)
+
+If `source.repo` is `null`, service is not connected to GitHub source and will not auto-deploy on repo changes.
+
 ---
 
 ## 4) Background worker services (currently disabled)
