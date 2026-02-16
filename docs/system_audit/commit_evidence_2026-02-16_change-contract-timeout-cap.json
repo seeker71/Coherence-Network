@@ -1,0 +1,60 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/change-contract-timeout-fix",
+  "commit_scope": "Cap Change Contract validation runtime to prevent long-running/stuck post-merge jobs",
+  "files_owned": [
+    ".github/workflows/change-contract.yml"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "cap-change-contract-runtime"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_workflow_references.py",
+    "gh run view 22080882110 --json status,conclusion,workflowName,createdAt,updatedAt,url,jobs"
+  ],
+  "change_files": [
+    ".github/workflows/change-contract.yml",
+    "docs/system_audit/commit_evidence_2026-02-16_change-contract-timeout-cap.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}

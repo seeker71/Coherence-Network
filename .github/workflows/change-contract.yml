@@ -44,6 +44,8 @@ jobs:
               --sha "$TARGET_SHA" \
               --min-approvals "$MIN_APPROVALS" \
               --min-unique-approvers "$MIN_UNIQUE_APPROVERS" \
+              --timeout-seconds 300 \
+              --poll-seconds 15 \
               --json > ../contract_report.json
             code=$?
             cd ..
