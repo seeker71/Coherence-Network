@@ -46,6 +46,7 @@ export default function ImportPage() {
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch(`${API_URL}/api/import/stack`, {
+        cache: "no-store",
         method: "POST",
         body: formData,
       });

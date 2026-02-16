@@ -45,8 +45,8 @@ export default function FrictionPage() {
   const load = useCallback(async () => {
     try {
       const [reportRes, eventsRes] = await Promise.all([
-        fetch(`${API_URL}/api/friction/report?window_days=7`),
-        fetch(`${API_URL}/api/friction/events?limit=20`),
+        fetch(`${API_URL}/api/friction/report?window_days=7`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/friction/events?limit=20`, { cache: "no-store" }),
       ]);
       if (!reportRes.ok || !eventsRes.ok) {
         throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}`);
