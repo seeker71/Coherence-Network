@@ -33,23 +33,56 @@ type FrictionReport = {
   top_stages: FrictionReportRow[];
 };
 
-async function loadUsage(): Promise<{ runtime: RuntimeSummaryResponse; friction: FrictionReport }> {
+type SubscriptionPlanEstimate = {
+  provider: string;
+  detected: boolean;
+  current_tier: string;
+  next_tier: string;
+  current_monthly_cost_usd: number;
+  next_monthly_cost_usd: number;
+  monthly_upgrade_delta_usd: number;
+  estimated_benefit_score: number;
+  estimated_roi: number;
+  confidence: number;
+  assumptions: string[];
+  expected_benefits: string[];
+};
+
+type SubscriptionEstimatorResponse = {
+  detected_subscriptions: number;
+  estimated_current_monthly_cost_usd: number;
+  estimated_next_monthly_cost_usd: number;
+  estimated_monthly_upgrade_delta_usd: number;
+  plans: SubscriptionPlanEstimate[];
+};
+
+async function loadUsage(): Promise<{
+  runtime: RuntimeSummaryResponse;
+  friction: FrictionReport;
+  subscriptions: SubscriptionEstimatorResponse;
+}> {
   const API = getApiBase();
-  const [rtRes, frRes] = await Promise.all([
+  const [rtRes, frRes, subRes] = await Promise.all([
     fetch(`${API}/api/runtime/ideas/summary?seconds=86400`, { cache: "no-store" }),
     fetch(`${API}/api/friction/report?window_days=7`, { cache: "no-store" }),
+    fetch(`${API}/api/automation/usage/subscription-estimator`, { cache: "no-store" }),
   ]);
   if (!rtRes.ok) throw new Error(`runtime HTTP ${rtRes.status}`);
   if (!frRes.ok) throw new Error(`friction HTTP ${frRes.status}`);
+  if (!subRes.ok) throw new Error(`subscriptions HTTP ${subRes.status}`);
   return {
     runtime: (await rtRes.json()) as RuntimeSummaryResponse,
     friction: (await frRes.json()) as FrictionReport,
+    subscriptions: (await subRes.json()) as SubscriptionEstimatorResponse,
   };
 }
 
 export default async function UsagePage() {
-  const { runtime, friction } = await loadUsage();
+  const { runtime, friction, subscriptions } = await loadUsage();
   const ideas = [...runtime.ideas].sort((a, b) => b.runtime_cost_estimate - a.runtime_cost_estimate).slice(0, 20);
+  const plans = [...subscriptions.plans]
+    .sort((a, b) => b.estimated_roi - a.estimated_roi)
+    .slice(0, 10);
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -123,6 +156,35 @@ export default async function UsagePage() {
             </ul>
           </div>
         </div>
+      </section>
+
+      <section className="rounded border p-4 space-y-2 text-sm">
+        <h2 className="font-semibold">Subscription Upgrade Estimator</h2>
+        <p className="text-muted-foreground">
+          detected {subscriptions.detected_subscriptions} | current $
+          {subscriptions.estimated_current_monthly_cost_usd.toFixed(2)} | next $
+          {subscriptions.estimated_next_monthly_cost_usd.toFixed(2)} | delta $
+          {subscriptions.estimated_monthly_upgrade_delta_usd.toFixed(2)}
+        </p>
+        <ul className="space-y-2">
+          {plans.map((plan) => (
+            <li key={plan.provider} className="rounded border p-2">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="font-medium">
+                  {plan.provider} {plan.detected ? "(detected)" : "(not detected)"}
+                </span>
+                <span className="text-muted-foreground">
+                  {plan.current_tier} → {plan.next_tier} | +${plan.monthly_upgrade_delta_usd.toFixed(2)} | ROI{" "}
+                  {plan.estimated_roi.toFixed(2)} | confidence {(plan.confidence * 100).toFixed(0)}%
+                </span>
+              </div>
+              <p className="text-muted-foreground">
+                benefit score {plan.estimated_benefit_score.toFixed(2)} |{" "}
+                {plan.expected_benefits[0] ?? "No benefit summary"}
+              </p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">

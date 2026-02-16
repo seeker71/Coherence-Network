@@ -14,6 +14,8 @@ import httpx
 from app.models.automation_usage import (
     ProviderUsageOverview,
     ProviderUsageSnapshot,
+    SubscriptionPlanEstimate,
+    SubscriptionUpgradeEstimatorReport,
     UsageAlert,
     UsageAlertReport,
     UsageMetric,
@@ -393,3 +395,159 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
                 )
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
+
+
+def _env_flag(name: str) -> bool:
+    return bool(str(os.getenv(name, "")).strip())
+
+
+def _tier_cost(provider: str, tier: str) -> float:
+    normalized_provider = provider.strip().lower()
+    normalized_tier = tier.strip().lower()
+    catalog: dict[str, dict[str, float]] = {
+        "openai": {"free": 0.0, "pro": 20.0, "team": 60.0},
+        "anthropic": {"free": 0.0, "pro": 20.0, "team": 60.0},
+        "cursor": {"free": 0.0, "pro": 20.0, "pro_plus": 40.0},
+        "github": {"free": 0.0, "team": 4.0, "enterprise": 21.0},
+    }
+    row = catalog.get(normalized_provider, {})
+    return float(row.get(normalized_tier, 0.0))
+
+
+def _next_tier(provider: str, current_tier: str) -> str:
+    normalized_provider = provider.strip().lower()
+    normalized_tier = current_tier.strip().lower()
+    ladders: dict[str, list[str]] = {
+        "openai": ["free", "pro", "team"],
+        "anthropic": ["free", "pro", "team"],
+        "cursor": ["free", "pro", "pro_plus"],
+        "github": ["free", "team", "enterprise"],
+    }
+    ladder = ladders.get(normalized_provider, ["free", "pro"])
+    if normalized_tier not in ladder:
+        return ladder[0 if len(ladder) == 1 else 1]
+    idx = ladder.index(normalized_tier)
+    if idx >= len(ladder) - 1:
+        return ladder[idx]
+    return ladder[idx + 1]
+
+
+def _subscription_plans() -> list[SubscriptionPlanEstimate]:
+    usage = collect_usage_overview(force_refresh=True)
+    provider_by_name = {row.provider.strip().lower(): row for row in usage.providers}
+
+    execution = agent_service.get_usage_summary().get("execution", {})
+    tracked_runs = float(execution.get("tracked_runs") or 0.0) if isinstance(execution, dict) else 0.0
+    failed_runs = float(execution.get("failed_runs") or 0.0) if isinstance(execution, dict) else 0.0
+    success_rate = float(execution.get("success_rate") or 0.0) if isinstance(execution, dict) else 0.0
+
+    rows: list[dict[str, Any]] = [
+        {
+            "provider": "openai",
+            "detected": _env_flag("OPENAI_ADMIN_API_KEY") or _env_flag("OPENAI_API_KEY"),
+            "current_tier": os.getenv("OPENAI_SUBSCRIPTION_TIER", "free"),
+            "benefits": [
+                "Higher token/request throughput for API workloads",
+                "Reduced queueing risk for agent execution peaks",
+            ],
+            "confidence": 0.7,
+            "benefit_weight": 1.0,
+        },
+        {
+            "provider": "anthropic",
+            "detected": _env_flag("ANTHROPIC_API_KEY"),
+            "current_tier": os.getenv("ANTHROPIC_SUBSCRIPTION_TIER", "free"),
+            "benefits": [
+                "Higher fallback capacity for escalated agent tasks",
+                "More resilient execution when primary provider is saturated",
+            ],
+            "confidence": 0.55,
+            "benefit_weight": 0.8,
+        },
+        {
+            "provider": "cursor",
+            "detected": _env_flag("CURSOR_API_KEY") or _env_flag("CURSOR_CLI_MODEL"),
+            "current_tier": os.getenv("CURSOR_SUBSCRIPTION_TIER", "pro"),
+            "benefits": [
+                "Higher agent concurrency for implementation and review loops",
+                "Lower cycle time for task completion throughput",
+            ],
+            "confidence": 0.6,
+            "benefit_weight": 0.9,
+        },
+        {
+            "provider": "github",
+            "detected": _env_flag("GITHUB_TOKEN"),
+            "current_tier": os.getenv("GITHUB_SUBSCRIPTION_TIER", "free"),
+            "benefits": [
+                "More CI minutes and stronger governance controls",
+                "Lower deployment latency under heavy PR traffic",
+            ],
+            "confidence": 0.65,
+            "benefit_weight": 0.85,
+        },
+    ]
+
+    plans: list[SubscriptionPlanEstimate] = []
+    for row in rows:
+        provider = str(row["provider"])
+        current_tier = str(row["current_tier"]).strip().lower() or "free"
+        next_tier = _next_tier(provider, current_tier)
+        current_cost = _tier_cost(provider, current_tier)
+        next_cost = _tier_cost(provider, next_tier)
+        delta = max(0.0, next_cost - current_cost)
+        provider_usage = provider_by_name.get(provider)
+        provider_health_penalty = 0.0
+        if provider_usage is not None and provider_usage.status != "ok":
+            provider_health_penalty = 0.2
+
+        # Heuristic estimator grounded in actual local pipeline metrics:
+        # throughput demand (tracked_runs), reliability pressure (failed_runs/success_rate),
+        # and provider-specific weight.
+        demand = min(10.0, max(0.0, tracked_runs / 10.0))
+        reliability_pressure = min(10.0, max(0.0, failed_runs * 2.0 + (1.0 - success_rate) * 10.0))
+        weighted_benefit = (demand * 0.55 + reliability_pressure * 0.45) * float(row["benefit_weight"])
+        weighted_benefit = max(0.0, weighted_benefit * (1.0 - provider_health_penalty))
+        roi = weighted_benefit if delta <= 0 else round(weighted_benefit / delta, 4)
+
+        assumptions = [
+            "Costs are monthly and approximate; verify against actual vendor billing.",
+            "Benefit score combines observed pipeline throughput and reliability pressure.",
+        ]
+        if provider_usage is not None:
+            assumptions.append(f"Provider status currently observed as {provider_usage.status}.")
+
+        plans.append(
+            SubscriptionPlanEstimate(
+                provider=provider,
+                detected=bool(row["detected"]),
+                current_tier=current_tier,
+                next_tier=next_tier,
+                current_monthly_cost_usd=round(current_cost, 2),
+                next_monthly_cost_usd=round(next_cost, 2),
+                monthly_upgrade_delta_usd=round(delta, 2),
+                estimated_benefit_score=round(weighted_benefit, 4),
+                estimated_roi=round(roi, 4),
+                confidence=max(0.0, min(float(row["confidence"]), 1.0)),
+                assumptions=assumptions,
+                expected_benefits=list(row["benefits"]),
+            )
+        )
+
+    plans.sort(key=lambda p: (p.estimated_roi, p.estimated_benefit_score), reverse=True)
+    return plans
+
+
+def estimate_subscription_upgrades() -> SubscriptionUpgradeEstimatorReport:
+    plans = _subscription_plans()
+    detected = [row for row in plans if row.detected]
+    current = round(sum(row.current_monthly_cost_usd for row in plans), 2)
+    nxt = round(sum(row.next_monthly_cost_usd for row in plans), 2)
+    delta = round(max(0.0, nxt - current), 2)
+    return SubscriptionUpgradeEstimatorReport(
+        plans=plans,
+        detected_subscriptions=len(detected),
+        estimated_current_monthly_cost_usd=current,
+        estimated_next_monthly_cost_usd=nxt,
+        estimated_monthly_upgrade_delta_usd=delta,
+    )

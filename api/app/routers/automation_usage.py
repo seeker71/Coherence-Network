@@ -28,3 +28,9 @@ async def get_automation_usage_snapshots(limit: int = Query(200, ge=1, le=2000))
 async def get_automation_usage_alerts(threshold_ratio: float = Query(0.2, ge=0.0, le=1.0)) -> dict:
     report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=threshold_ratio)
     return report.model_dump(mode="json")
+
+
+@router.get("/automation/usage/subscription-estimator")
+async def get_subscription_upgrade_estimator() -> dict:
+    report = automation_usage_service.estimate_subscription_upgrades()
+    return report.model_dump(mode="json")
