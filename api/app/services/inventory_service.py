@@ -493,12 +493,20 @@ def _join_path(prefix: str, subpath: str) -> str:
 
 def _router_prefix_map() -> dict[str, str]:
     out: dict[str, str] = {}
-    main_path = _project_root() / "api" / "app" / "main.py"
-    if not main_path.exists():
-        return out
-    try:
-        tree = ast.parse(main_path.read_text(encoding="utf-8"))
-    except (OSError, SyntaxError):
+    main_candidates = [
+        _project_root() / "api" / "app" / "main.py",
+        _project_root() / "app" / "main.py",
+    ]
+    tree = None
+    for candidate in main_candidates:
+        if not candidate.exists():
+            continue
+        try:
+            tree = ast.parse(candidate.read_text(encoding="utf-8"))
+            break
+        except (OSError, SyntaxError):
+            continue
+    if tree is None:
         return out
 
     for node in ast.walk(tree):
@@ -556,7 +564,17 @@ def _extract_decorated_routes(module_path: Path, decorator_owner: str) -> list[t
 
 def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
     root = _project_root()
-    routers_dir = root / "api" / "app" / "routers"
+    router_candidates = [
+        root / "api" / "app" / "routers",
+        root / "app" / "routers",
+    ]
+    routers_dir = None
+    for candidate in router_candidates:
+        if candidate.exists():
+            routers_dir = candidate
+            break
+    if routers_dir is None:
+        return []
     prefix_map = _router_prefix_map()
     grouped: dict[str, dict[str, Any]] = {}
 
@@ -581,6 +599,8 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
             row["source_files"].add(str(module_path.relative_to(root)))
 
     main_path = root / "api" / "app" / "main.py"
+    if not main_path.exists():
+        main_path = root / "app" / "main.py"
     for method, subpath in _extract_decorated_routes(main_path, "app"):
         if not (subpath.startswith("/api") or subpath.startswith("/v1")):
             continue
