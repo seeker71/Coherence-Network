@@ -49,6 +49,12 @@ def _default_registry() -> dict:
                 "idea_id": "coherence-network-agent-pipeline",
             },
             {
+                "path": "/api/runtime/usage/verification",
+                "methods": ["GET"],
+                "purpose": "Compare internal endpoint usage telemetry against public API usage telemetry and report persistent-record gaps",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
                 "path": "/api/value-lineage/links",
                 "methods": ["POST"],
                 "purpose": "Create idea/spec/implementation lineage",

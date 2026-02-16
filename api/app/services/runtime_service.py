@@ -15,7 +15,7 @@ import httpx
 from fastapi.routing import APIRoute
 
 from app.models.runtime import EndpointRuntimeSummary, IdeaRuntimeSummary, RuntimeEvent, RuntimeEventCreate
-from app.services import idea_lineage_service, route_registry_service, value_lineage_service
+from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
 
 
 def _default_events_path() -> Path:
@@ -41,6 +41,9 @@ def _runtime_cost_per_second() -> float:
 
 
 def _ensure_events_store() -> None:
+    if runtime_event_store.enabled():
+        runtime_event_store.ensure_schema()
+        return
     path = _events_path()
     if path.exists():
         return
@@ -49,6 +52,9 @@ def _ensure_events_store() -> None:
 
 
 def _read_store() -> dict:
+    if runtime_event_store.enabled():
+        rows = runtime_event_store.list_events(limit=5000)
+        return {"events": [row.model_dump(mode="json") for row in rows]}
     _ensure_events_store()
     path = _events_path()
     try:
@@ -63,6 +69,9 @@ def _read_store() -> dict:
 
 
 def _write_store(data: dict) -> None:
+    if runtime_event_store.enabled():
+        # Writes happen via record_event() for DB-backed storage.
+        return
     path = _events_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
@@ -236,13 +245,32 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
         metadata=metadata,
         runtime_cost_estimate=runtime_cost,
     )
-    data = _read_store()
-    data["events"].append(event.model_dump(mode="json"))
-    _write_store(data)
+    if runtime_event_store.enabled():
+        runtime_event_store.write_event(event)
+    else:
+        data = _read_store()
+        data["events"].append(event.model_dump(mode="json"))
+        _write_store(data)
     return event
 
 
 def list_events(limit: int = 100) -> list[RuntimeEvent]:
+    if runtime_event_store.enabled():
+        rows = runtime_event_store.list_events(limit=max(1, min(limit, 5000)))
+        out: list[RuntimeEvent] = []
+        for event in rows:
+            try:
+                if not event.raw_endpoint:
+                    event.raw_endpoint = event.endpoint
+                event.endpoint = normalize_endpoint(event.endpoint, event.method)
+                if not event.origin_idea_id:
+                    event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
+                out.append(event)
+            except Exception:
+                continue
+        out.sort(key=lambda x: x.recorded_at, reverse=True)
+        return out[: max(1, min(limit, 2000))]
+
     data = _read_store()
     out: list[RuntimeEvent] = []
     for raw in data["events"]:
@@ -330,6 +358,60 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
         )
     summaries.sort(key=lambda x: (x.runtime_cost_estimate, x.endpoint), reverse=True)
     return summaries
+
+
+def verify_internal_vs_public_usage(
+    *,
+    public_api_base: str,
+    runtime_window_seconds: int = 86400,
+    timeout_seconds: float = 8.0,
+) -> dict[str, object]:
+    window_seconds = max(60, min(runtime_window_seconds, 60 * 60 * 24 * 30))
+    internal = summarize_by_endpoint(seconds=window_seconds)
+    internal_by_endpoint = {row.endpoint: row for row in internal}
+
+    public_url = f"{public_api_base.rstrip('/')}/api/runtime/endpoints/summary"
+    public_rows: list[dict] = []
+    error = ""
+    try:
+        with httpx.Client(timeout=timeout_seconds) as client:
+            response = client.get(public_url, params={"seconds": window_seconds})
+            response.raise_for_status()
+            payload = response.json()
+        if isinstance(payload, dict) and isinstance(payload.get("endpoints"), list):
+            public_rows = [row for row in payload["endpoints"] if isinstance(row, dict)]
+        else:
+            error = "public_payload_invalid"
+    except Exception as exc:
+        error = str(exc)
+
+    public_by_endpoint: dict[str, dict] = {}
+    for row in public_rows:
+        endpoint = str(row.get("endpoint") or "").strip()
+        if endpoint:
+            public_by_endpoint[endpoint] = row
+
+    internal_only = sorted(set(internal_by_endpoint.keys()) - set(public_by_endpoint.keys()))
+    public_only = sorted(set(public_by_endpoint.keys()) - set(internal_by_endpoint.keys()))
+    overlap = sorted(set(internal_by_endpoint.keys()) & set(public_by_endpoint.keys()))
+
+    missing_public_records = [
+        endpoint for endpoint in overlap if int(public_by_endpoint[endpoint].get("event_count") or 0) <= 0
+    ]
+    pass_contract = not error and len(missing_public_records) == 0
+
+    return {
+        "runtime_window_seconds": window_seconds,
+        "public_api_base": public_api_base.rstrip("/"),
+        "pass_contract": pass_contract,
+        "error": error,
+        "internal_endpoint_count": len(internal_by_endpoint),
+        "public_endpoint_count": len(public_by_endpoint),
+        "overlap_count": len(overlap),
+        "internal_only_endpoints": internal_only,
+        "public_only_endpoints": public_only,
+        "missing_public_records": missing_public_records,
+    }
 
 
 _EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {

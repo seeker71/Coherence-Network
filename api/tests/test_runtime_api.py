@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import runtime_service
 
 
 @pytest.mark.asyncio
@@ -152,3 +154,112 @@ async def test_runtime_get_endpoint_exerciser_runs_safe_calls_and_reports_covera
         first = payload["calls"][0]
         assert str(first["path_template"]).startswith("/api/")
         assert int(first["runtime_ms"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_runtime_events_persist_to_database_when_runtime_database_url_is_set(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("RUNTIME_EVENTS_PATH", raising=False)
+    monkeypatch.setenv("RUNTIME_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'runtime.db'}")
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "api",
+                "endpoint": "/api/ideas",
+                "method": "GET",
+                "status_code": 200,
+                "runtime_ms": 12.0,
+            },
+        )
+        assert created.status_code == 201
+
+        events = await client.get("/api/runtime/events", params={"limit": 50})
+        assert events.status_code == 200
+        rows = events.json()
+        assert any(row["endpoint"] == "/api/ideas" for row in rows)
+
+
+def test_verify_internal_vs_public_usage_contract_detects_missing_public_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "endpoints": [
+                    {"endpoint": "/api/ideas", "event_count": 2},
+                    {"endpoint": "/api/runtime/events", "event_count": 0},
+                ]
+            }
+
+    class _FakeClient:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def __enter__(self) -> "_FakeClient":
+            return self
+
+        def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+            return False
+
+        def get(self, url: str, params: dict[str, Any]) -> _FakeResponse:
+            assert url.endswith("/api/runtime/endpoints/summary")
+            assert int(params["seconds"]) == 3600
+            return _FakeResponse()
+
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_endpoint",
+        lambda seconds: [  # noqa: ARG005
+            type("Row", (), {"endpoint": "/api/ideas"})(),
+            type("Row", (), {"endpoint": "/api/runtime/events"})(),
+        ],
+    )
+    monkeypatch.setattr(runtime_service.httpx, "Client", _FakeClient)
+
+    report = runtime_service.verify_internal_vs_public_usage(
+        public_api_base="https://example.test",
+        runtime_window_seconds=3600,
+        timeout_seconds=3.0,
+    )
+    assert report["pass_contract"] is False
+    assert report["missing_public_records"] == ["/api/runtime/events"]
+
+
+@pytest.mark.asyncio
+async def test_runtime_usage_verification_endpoint_exposes_contract_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        runtime_service,
+        "verify_internal_vs_public_usage",
+        lambda **kwargs: {  # noqa: ARG005
+            "pass_contract": True,
+            "internal_endpoint_count": 2,
+            "public_endpoint_count": 2,
+            "missing_public_records": [],
+            "runtime_window_seconds": 3600,
+            "public_api_base": "https://example.test",
+            "overlap_count": 2,
+            "internal_only_endpoints": [],
+            "public_only_endpoints": [],
+            "error": "",
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/runtime/usage/verification",
+            params={"public_api_base": "https://example.test", "runtime_window_seconds": 3600},
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["pass_contract"] is True
+        assert payload["missing_public_records"] == []

@@ -56,3 +56,19 @@ async def run_runtime_get_endpoint_exerciser(
         timeout_seconds=timeout_seconds,
         runtime_window_seconds=runtime_window_seconds,
     )
+
+
+@router.get("/runtime/usage/verification")
+async def verify_runtime_usage_internal_vs_public(
+    public_api_base: str = Query(
+        "https://coherence-network-production.up.railway.app",
+        description="Public API base used for external usage comparison",
+    ),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    timeout_seconds: float = Query(8.0, ge=1.0, le=60.0),
+) -> dict:
+    return runtime_service.verify_internal_vs_public_usage(
+        public_api_base=public_api_base,
+        runtime_window_seconds=runtime_window_seconds,
+        timeout_seconds=timeout_seconds,
+    )

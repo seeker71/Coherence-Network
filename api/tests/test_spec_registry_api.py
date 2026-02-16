@@ -74,3 +74,26 @@ async def test_spec_registry_create_list_update(
         assert payload["estimated_roi"] == 5.5
         assert payload["actual_roi"] == 4.0
         assert payload["updated_by_contributor_id"] == "user-2"
+
+
+@pytest.mark.asyncio
+async def test_spec_registry_uses_database_url_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'governance.db'}")
+    monkeypatch.delenv("GOVERNANCE_DATABASE_URL", raising=False)
+    monkeypatch.delenv("GOVERNANCE_DB_URL", raising=False)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": "spec-db-fallback",
+                "title": "DB fallback",
+                "summary": "Spec persists through DATABASE_URL.",
+            },
+        )
+        assert created.status_code == 201
+        listed = await client.get("/api/spec-registry")
+        assert listed.status_code == 200
+        assert any(row["spec_id"] == "spec-db-fallback" for row in listed.json())
