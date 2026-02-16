@@ -241,6 +241,8 @@ def evaluate_pr_gates(
     all_required_passed = not missing_required and not failing_required
     # When branch protection required contexts are unavailable, do not block on
     # combined_state alone (it can include non-required transient failures).
+    # If no required contexts are configured/available, do not hard-block on
+    # combined commit state because it may include non-required external checks.
     checks_green = (combined_state == "success") if required else True
     ready = (not draft) and checks_green and (all_required_passed or not required)
 
