@@ -160,6 +160,28 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
         assert isinstance(data["pages"], list)
         assert any(row.get("path") == "/portfolio" for row in data["pages"])
 
+        paths = {row["path"] for row in data["pages"] if isinstance(row.get("path"), str)}
+        expected_paths = {
+            "/",
+            "/portfolio",
+            "/ideas",
+            "/ideas/[idea_id]",
+            "/specs",
+            "/usage",
+            "/friction",
+            "/gates",
+            "/import",
+            "/project/[ecosystem]/[name]",
+            "/search",
+            "/api-health",
+            "/contributors",
+            "/contributions",
+            "/assets",
+            "/tasks",
+        }
+        assert expected_paths.issubset(paths)
+        assert len(paths) == len(data["pages"])
+
 
 @pytest.mark.asyncio
 async def test_sync_implementation_request_questions_creates_tasks_without_duplicates(
