@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import metrics_service
 
 
 @pytest.mark.asyncio
@@ -85,3 +87,76 @@ async def test_friction_report_aggregates(
     assert body["total_energy_loss"] >= 7.5
     assert isinstance(body["top_block_types"], list)
     assert body["source_file"].endswith("friction_events.jsonl")
+
+
+@pytest.mark.asyncio
+async def test_friction_entry_points_include_monitor_and_failed_cost_sources(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    events_file = tmp_path / "friction_events.jsonl"
+    monitor_file = tmp_path / "monitor_issues.json"
+    gha_file = tmp_path / "github_actions_health.json"
+    metrics_file = tmp_path / "metrics.jsonl"
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(events_file))
+    monkeypatch.setenv("MONITOR_ISSUES_PATH", str(monitor_file))
+    monkeypatch.setenv("GITHUB_ACTIONS_HEALTH_PATH", str(gha_file))
+    monkeypatch.setattr(metrics_service, "METRICS_FILE", str(metrics_file))
+
+    monitor_file.write_text(
+        json.dumps(
+            {
+                "issues": [
+                    {
+                        "id": "issue-1",
+                        "condition": "github_actions_high_failure_rate",
+                        "severity": "high",
+                        "message": "too many failed runs",
+                        "suggested_action": "https://github.com/seeker71/Coherence-Network/actions",
+                    }
+                ],
+                "last_check": "2026-02-16T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    gha_file.write_text(
+        json.dumps(
+            {
+                "available": True,
+                "repo": "seeker71/Coherence-Network",
+                "completed_runs": 12,
+                "failed_runs": 6,
+                "failure_rate": 0.5,
+                "wasted_minutes_failed": 31.2,
+                "official_records": [
+                    "https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository"
+                ],
+                "sample_failed_run_links": ["https://github.com/seeker71/Coherence-Network/actions/runs/1"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    metrics_file.write_text(
+        json.dumps(
+            {
+                "task_id": "task-1",
+                "task_type": "impl",
+                "model": "openai-codex",
+                "duration_seconds": 600.0,
+                "status": "failed",
+                "created_at": "2026-02-16T01:00:00Z",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get("/api/friction/entry-points?window_days=365&limit=50")
+
+    assert report.status_code == 200
+    body = report.json()
+    assert body["total_entry_points"] >= 2
+    keys = {row["key"] for row in body["entry_points"]}
+    assert "monitor:github_actions_high_failure_rate" in keys
+    assert "github-actions:failure-rate" in keys

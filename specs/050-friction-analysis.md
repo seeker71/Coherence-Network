@@ -9,6 +9,7 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 - [x] GET /api/friction/events — List friction events with optional status filter
 - [x] POST /api/friction/events — Record new friction event
 - [x] GET /api/friction/report — Aggregated friction report with time window
+- [x] GET /api/friction/entry-points — Unified friction entry points from monitor issues, failed-task cost, and CI failure waste
 - [x] Events stored in append-only log (api/logs/friction.jsonl)
 - [x] Supports filtering by status (pending, resolved, ignored)
 - [x] Report includes: total_events, by_status, by_category, ignored_lines
