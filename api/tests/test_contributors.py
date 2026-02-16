@@ -13,18 +13,18 @@ async def test_create_get_list_contributors() -> None:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
-            "/v1/contributors",
+            "/api/contributors",
             json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
         )
         assert resp.status_code == 201
         created = resp.json()
         cid = created["id"]
 
-        resp2 = await client.get(f"/v1/contributors/{cid}")
+        resp2 = await client.get(f"/api/contributors/{cid}")
         assert resp2.status_code == 200
         assert resp2.json()["id"] == cid
 
-        resp3 = await client.get("/v1/contributors?limit=10")
+        resp3 = await client.get("/api/contributors?limit=10")
         assert resp3.status_code == 200
         assert any(x["id"] == cid for x in resp3.json())
 
@@ -34,7 +34,7 @@ async def test_get_contributor_404() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/v1/contributors/00000000-0000-0000-0000-000000000000")
+        resp = await client.get("/api/contributors/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Contributor not found"
 
@@ -44,5 +44,5 @@ async def test_create_contributor_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/contributors", json={"type": "HUMAN", "name": "NoEmail"})
+        resp = await client.post("/api/contributors", json={"type": "HUMAN", "name": "NoEmail"})
         assert resp.status_code == 422

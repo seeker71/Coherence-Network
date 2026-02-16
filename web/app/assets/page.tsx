@@ -28,7 +28,7 @@ function AssetsPageContent() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/v1/assets`, { cache: "no-store" });
+      const res = await fetch(`${API_URL}/api/assets`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
       setRows(Array.isArray(json) ? json : []);
@@ -67,7 +67,7 @@ function AssetsPageContent() {
       </div>
       <h1 className="text-2xl font-bold">Assets</h1>
       <p className="text-muted-foreground">
-        Human interface for `GET /v1/assets`.
+        Human interface for `GET /api/assets`.
         {selectedAssetId ? (
           <>
             {" "}
