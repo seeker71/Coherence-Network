@@ -119,3 +119,65 @@ def test_inventory_uses_github_commit_evidence_when_local_missing(
     assert records[0]["idea_ids"] == ["portfolio-governance"]
     assert records[0]["spec_ids"] == ["089"]
     assert str(records[0]["_evidence_file"]).endswith("commit_evidence_remote.json")
+
+
+def test_inventory_limits_remote_commit_evidence_fetch_without_token(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    inventory_service._EVIDENCE_DISCOVERY_CACHE["expires_at"] = 0.0
+    inventory_service._EVIDENCE_DISCOVERY_CACHE["items"] = []
+
+    class FakeResponse:
+        def __init__(self, status_code: int, payload):
+            self.status_code = status_code
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            if self.status_code >= 400:
+                raise RuntimeError("http error")
+
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            self.download_calls = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url, params=None):
+            if url.endswith("/contents/docs/system_audit"):
+                rows = [
+                    {
+                        "name": f"commit_evidence_{i:03d}.json",
+                        "path": f"docs/system_audit/commit_evidence_{i:03d}.json",
+                        "download_url": f"https://example.test/evidence/{i:03d}.json",
+                    }
+                    for i in range(60)
+                ]
+                return FakeResponse(200, rows)
+            if url.startswith("https://example.test/evidence/"):
+                self.download_calls += 1
+                return FakeResponse(
+                    200,
+                    {
+                        "idea_ids": ["portfolio-governance"],
+                        "spec_ids": ["089"],
+                        "change_files": ["api/app/routers/inventory.py"],
+                    },
+                )
+            return FakeResponse(404, {"detail": "not found"})
+
+    fake_client = FakeClient()
+    monkeypatch.setattr(inventory_service.httpx, "Client", lambda *args, **kwargs: fake_client)
+
+    records = inventory_service._read_commit_evidence_records(limit=1000)
+
+    assert len(records) == 20
+    assert fake_client.download_calls == 20

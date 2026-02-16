@@ -492,12 +492,15 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
     ref = _tracking_ref()
     list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
     remote_out: list[dict[str, Any]] = []
+    has_token = bool(os.getenv("GITHUB_TOKEN"))
     try:
         with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
             response = client.get(list_url, params={"ref": ref})
             response.raise_for_status()
             rows = response.json()
             if isinstance(rows, list):
+                # Unauthenticated GitHub API calls are heavily rate-limited.
+                remote_limit = min(limit, 200 if has_token else 20)
                 evidence_rows = [
                     row
                     for row in rows
@@ -505,7 +508,9 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
                     and isinstance(row.get("name"), str)
                     and row["name"].startswith("commit_evidence_")
                     and row["name"].endswith(".json")
-                ][: max(1, min(limit, 1200))]
+                ]
+                evidence_rows.sort(key=lambda row: str(row.get("name") or ""), reverse=True)
+                evidence_rows = evidence_rows[: max(1, remote_limit)]
                 for row in evidence_rows:
                     download_url = row.get("download_url")
                     if not isinstance(download_url, str) or not download_url:
