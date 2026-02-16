@@ -57,6 +57,29 @@ def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
     assert inventory["specs"]["items"][0]["spec_id"] == "900"
 
 
+def test_inventory_does_not_emit_fake_spec_rows_when_all_sources_missing(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        inventory_service,
+        "_discover_specs_from_github",
+        lambda limit=300, timeout=8.0: [],
+    )
+    monkeypatch.setattr(idea_service, "list_tracked_idea_ids", lambda: ["portfolio-governance"])
+
+    inventory = inventory_service.build_system_lineage_inventory(runtime_window_seconds=60)
+
+    assert inventory["specs"]["count"] == 0
+    assert inventory["specs"]["source"] == "none"
+    assert inventory["specs"]["items"] == []
+
+
 def test_inventory_uses_github_commit_evidence_when_local_missing(
     monkeypatch, tmp_path: Path
 ) -> None:
