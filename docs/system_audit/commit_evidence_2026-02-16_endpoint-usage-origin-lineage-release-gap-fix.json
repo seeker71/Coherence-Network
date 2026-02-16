@@ -116,6 +116,7 @@
     "docs/MODEL-ROUTING.md",
     "docs/RUNBOOK.md",
     "docs/SPEC-QUALITY-GATE.md",
+    "docs/system_audit/maintainability_baseline.json",
     "scripts/validate_spec_quality.py",
     "scripts/verify_worktree_local_web.sh",
     "specs/TEMPLATE.md",
