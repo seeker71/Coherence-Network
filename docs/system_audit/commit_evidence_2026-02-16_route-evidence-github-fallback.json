@@ -4,7 +4,8 @@
   "commit_scope": "Enable route-evidence probe discovery from GitHub when local docs artifacts are unavailable in deployment layout",
   "files_owned": [
     "api/app/services/inventory_service.py",
-    "api/tests/test_inventory_discovery_sources.py"
+    "api/tests/test_inventory_discovery_sources.py",
+    "docs/system_audit/route_evidence_probe_latest.json"
   ],
   "local_validation": { "status": "pass" },
   "ci_validation": { "status": "pending" },
@@ -44,6 +45,7 @@
   "change_files": [
     "api/app/services/inventory_service.py",
     "api/tests/test_inventory_discovery_sources.py",
+    "docs/system_audit/route_evidence_probe_latest.json",
     "docs/system_audit/commit_evidence_2026-02-16_route-evidence-github-fallback.json"
   ],
   "change_intent": "runtime_fix",
