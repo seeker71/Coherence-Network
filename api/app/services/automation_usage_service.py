@@ -12,6 +12,8 @@ from typing import Any
 import httpx
 
 from app.models.automation_usage import (
+    ProviderReadinessReport,
+    ProviderReadinessRow,
     ProviderUsageOverview,
     ProviderUsageSnapshot,
     SubscriptionPlanEstimate,
@@ -24,6 +26,20 @@ from app.services import agent_service
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 120.0
+
+_PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
+    "coherence-internal": {"kind": "internal", "all_of": []},
+    "openai": {"kind": "openai", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
+    "github": {"kind": "github", "all_of": ["GITHUB_TOKEN", "GITHUB_BILLING_OWNER", "GITHUB_BILLING_SCOPE"]},
+    "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
+    "anthropic": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
+    "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
+    "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
+    "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
+    "vercel": {"kind": "custom", "all_of": ["VERCEL_TOKEN", "VERCEL_PROJECT_ID"]},
+}
+
+_DEFAULT_REQUIRED_PROVIDERS = ("coherence-internal", "github", "openai", "railway", "vercel")
 
 
 def _snapshots_path() -> Path:
@@ -86,6 +102,113 @@ def _metric(
         remaining=(None if remaining is None else max(0.0, float(remaining))),
         limit=(None if limit is None else max(0.0, float(limit))),
         window=window,
+    )
+
+
+def _env_present(name: str) -> bool:
+    return bool(str(os.getenv(name, "")).strip())
+
+
+def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
+    rule = _PROVIDER_CONFIG_RULES.get(provider, {})
+    all_of = [str(item) for item in (rule.get("all_of") or [])]
+    any_of = [str(item) for item in (rule.get("any_of") or [])]
+    present = [name for name in all_of + any_of if _env_present(name)]
+
+    missing: list[str] = []
+    configured = True
+    if all_of:
+        missing.extend([name for name in all_of if not _env_present(name)])
+        configured = configured and len(missing) == 0
+    if any_of:
+        any_present = any(_env_present(name) for name in any_of)
+        if not any_present:
+            missing.append(f"one_of({','.join(any_of)})")
+        configured = configured and any_present
+    return configured, missing, present
+
+
+def _required_providers_from_env() -> list[str]:
+    raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
+    out = [item.strip().lower() for item in str(raw).split(",") if item.strip()]
+    return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
+
+
+def _env_truthy(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _infer_provider_from_model(model_name: str) -> str:
+    model = model_name.strip().lower()
+    if not model:
+        return ""
+    if model.startswith("cursor/"):
+        return "cursor"
+    if model.startswith("openclaw/"):
+        return "openclaw"
+    if model.startswith("openrouter/") or "openrouter" in model:
+        return "openrouter"
+    if "claude" in model:
+        return "anthropic"
+    if model.startswith(("gpt", "o1", "o3", "o4")) or model.startswith("openai/"):
+        return "openai"
+    return ""
+
+
+def _active_provider_usage_counts() -> dict[str, int]:
+    usage = agent_service.get_usage_summary()
+    by_model = usage.get("by_model") if isinstance(usage, dict) else {}
+    execution = usage.get("execution") if isinstance(usage, dict) else {}
+    by_executor = execution.get("by_executor") if isinstance(execution, dict) else {}
+
+    counts: dict[str, int] = {}
+
+    model_rows = by_model if isinstance(by_model, dict) else {}
+    for model_name, row in model_rows.items():
+        provider = _infer_provider_from_model(str(model_name))
+        if not provider:
+            continue
+        row_count = row.get("count") if isinstance(row, dict) else 0
+        try:
+            value = int(float(row_count or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            counts[provider] = counts.get(provider, 0) + value
+
+    executor_rows = by_executor if isinstance(by_executor, dict) else {}
+    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "anthropic"}
+    for executor_name, row in executor_rows.items():
+        provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
+        if not provider:
+            continue
+        row_count = row.get("count") if isinstance(row, dict) else 0
+        try:
+            value = int(float(row_count or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            counts[provider] = max(counts.get(provider, 0), value)
+
+    return {k: v for k, v in counts.items() if v > 0}
+
+
+def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
+    rule = _PROVIDER_CONFIG_RULES.get(provider, {})
+    kind = str(rule.get("kind") or "custom")
+    configured, missing, present = _configured_env_status(provider)
+    status = "ok" if configured else "unavailable"
+    notes = (
+        [f"missing_env={','.join(missing)}"] if missing else ["configuration keys detected"]
+    )
+    return ProviderUsageSnapshot(
+        id=f"provider_{provider}_{int(time.time())}",
+        provider=provider,
+        kind=kind,  # type: ignore[arg-type]
+        status=status,  # type: ignore[arg-type]
+        notes=notes,
+        raw={"configured_env_keys": present, "missing_env_keys": missing},
     )
 
 
@@ -312,12 +435,38 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
 
 
 def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
+    active_usage = _active_provider_usage_counts()
     providers = [
         _build_internal_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
+        _build_config_only_snapshot("openrouter"),
+        _build_config_only_snapshot("anthropic"),
+        _build_config_only_snapshot("cursor"),
+        _build_config_only_snapshot("openclaw"),
+        _build_config_only_snapshot("railway"),
+        _build_config_only_snapshot("vercel"),
     ]
     for snapshot in providers:
+        active_count = int(active_usage.get(snapshot.provider, 0))
+        if active_count > 0:
+            has_metric = any(metric.id == "runtime_task_runs" for metric in snapshot.metrics)
+            if not has_metric:
+                snapshot.metrics.append(
+                    _metric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=float(active_count),
+                        window="rolling",
+                    )
+                )
+            snapshot.raw["runtime_task_runs"] = active_count
+            if snapshot.status != "ok":
+                snapshot.notes.append(
+                    "provider observed in runtime usage but key/config is missing or provider checks are failing"
+                )
+                snapshot.notes = list(dict.fromkeys(snapshot.notes))
         _store_snapshot(snapshot)
     return providers
 
@@ -395,6 +544,67 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
                 )
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
+
+
+def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+    required = [item.strip().lower() for item in (required_providers or _required_providers_from_env()) if item.strip()]
+    if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
+        active_counts = _active_provider_usage_counts()
+        for provider_name, count in active_counts.items():
+            if count > 0:
+                required.append(provider_name)
+    required_set = set(required)
+    overview = collect_usage_overview(force_refresh=force_refresh)
+    by_provider = {row.provider.strip().lower(): row for row in overview.providers}
+
+    rows: list[ProviderReadinessRow] = []
+    blocking: list[str] = []
+    recommendations: list[str] = []
+
+    for provider in sorted(set(by_provider.keys()) | set(required_set)):
+        snapshot = by_provider.get(provider)
+        configured, missing, _present = _configured_env_status(provider)
+        kind = snapshot.kind if snapshot is not None else str(_PROVIDER_CONFIG_RULES.get(provider, {}).get("kind", "custom"))
+        status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
+        is_required = provider in required_set
+
+        if is_required and (not configured or status != "ok"):
+            severity = "critical"
+            reason = f"{provider}: status={status}, configured={configured}"
+            blocking.append(reason)
+            recommendations.append(
+                f"Configure provider '{provider}' ({', '.join(missing) if missing else 'connectivity/runtime checks'}) and re-run /api/automation/usage/readiness."
+            )
+        elif (not configured) or status != "ok":
+            severity = "warning"
+        else:
+            severity = "info"
+
+        notes = list(snapshot.notes) if snapshot is not None else []
+        if missing:
+            notes.append(f"missing_env={','.join(missing)}")
+        notes = list(dict.fromkeys(notes))
+
+        rows.append(
+            ProviderReadinessRow(
+                provider=provider,
+                kind=str(kind),
+                status=status,  # type: ignore[arg-type]
+                required=is_required,
+                configured=configured,
+                severity=severity,  # type: ignore[arg-type]
+                missing_env=missing,
+                notes=notes,
+            )
+        )
+
+    return ProviderReadinessReport(
+        required_providers=sorted(required_set),
+        all_required_ready=len(blocking) == 0,
+        blocking_issues=blocking,
+        recommendations=recommendations,
+        providers=rows,
+    )
 
 
 def _env_flag(name: str) -> bool:

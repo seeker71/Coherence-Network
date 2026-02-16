@@ -202,7 +202,7 @@ including value-lineage E2E, to pass.
 If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
-- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates for up to 20 minutes before deciding pass/fail.
+- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`, default `12`) and sleep (`PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`, default `15`) plus fail-fast conditions.
 
 Machine and human access:
 - Machine API: `GET /api/gates/public-deploy-contract`
@@ -218,20 +218,6 @@ To track newly added external tools and keep upgrade cadence:
 - Registry: `docs/system_audit/external_tools_registry.json`
 - Trigger:
   - Tuesdays + Fridays (`cron`)
-  - Manual run (`workflow_dispatch`)
-
-Behavior:
-1. Discover external GitHub Actions, workflow CLI tools, and dependency ecosystems.
-2. Compare discovered set against tracked registry.
-3. Upload `external_tools_audit_report.json`.
-4. Open/update issue `External tools registry drift detected` if new tools appear.
-5. Close the issue automatically once registry is updated and audit passes.
-
-Dependency update cadence:
-- Dependabot config in `.github/dependabot.yml` runs daily for:
-  - GitHub Actions
-  - Python (`/api`)
-  - npm (`/web`)
 
 ## Workflow Reference Guard (Per PR/Push)
 
@@ -257,6 +243,7 @@ To ensure provider configuration is continuously validated and failures are surf
 Contract behavior:
 1. Collect provider usage/readiness snapshots.
 2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
+   - Providers observed in runtime usage are also required by default (`AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1`).
 3. Fail when any required provider is not configured or not healthy.
 4. Upload `provider_readiness_report.json` artifact.
 5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
@@ -271,6 +258,20 @@ Required provider defaults:
 Machine and human access:
 - Machine API: `GET /api/automation/usage/readiness`
 - Human UI: `/automation` page, section **Provider Readiness**
+  - Manual run (`workflow_dispatch`)
+
+Behavior:
+1. Discover external GitHub Actions, workflow CLI tools, and dependency ecosystems.
+2. Compare discovered set against tracked registry.
+3. Upload `external_tools_audit_report.json`.
+4. Open/update issue `External tools registry drift detected` if new tools appear.
+5. Close the issue automatically once registry is updated and audit passes.
+
+Dependency update cadence:
+- Dependabot config in `.github/dependabot.yml` runs daily for:
+  - GitHub Actions
+  - Python (`/api`)
+  - npm (`/web`)
 
 ## Maintainability Architecture Monitor (Twice Weekly + PR Gate)
 

@@ -1,0 +1,96 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/provider-key-usage-tracking",
+  "commit_scope": "Enforce API-key readiness for providers observed in runtime usage and enrich automation usage tracking with active-provider runtime metrics.",
+  "files_owned": [
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-16_provider-key-usage-tracking.json"
+  ],
+  "idea_ids": [
+    "automation-provider-usage-governance"
+  ],
+  "spec_ids": [
+    "002"
+  ],
+  "task_ids": [
+    "provider-key-usage-tracking"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_provider-key-usage-tracking.json"
+  ],
+  "change_files": [
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Providers observed in runtime execution are automatically treated as required for readiness and must have API key/config; usage snapshots now include runtime_task_runs for active providers.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network.vercel.app/automation"
+    ],
+    "test_flows": [
+      "API usage endpoint returns runtime_task_runs metric for active providers",
+      "Readiness endpoint marks active providers without key/config as required and blocking",
+      "Automation web page reflects provider readiness and usage from API"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T20:20:00Z",
+    "environment": {
+      "python": "3.11"
+    },
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

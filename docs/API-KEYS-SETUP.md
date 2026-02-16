@@ -171,3 +171,40 @@ When OpenClaw, Agent Zero, or another framework is chosen:
 4. Use Cursor as manual override unless framework has a superior interface
 
 See [AGENT-FRAMEWORKS.md](AGENT-FRAMEWORKS.md) for options.
+
+---
+
+## Provider Readiness Automation
+
+The provider readiness contract checks required provider configuration every 6 hours and raises an issue when blocking gaps exist.
+
+- API: `GET /api/automation/usage/readiness`
+- CI workflow: `.github/workflows/provider-readiness-contract.yml`
+- Required providers variable: `AUTOMATION_REQUIRED_PROVIDERS` (comma-separated)
+- Active-provider key policy: `AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1` (default)
+  - Any provider observed in runtime usage is treated as required and must have its API key/config present.
+
+Recommended secrets/vars for full readiness:
+
+```bash
+# OpenAI usage/cost
+OPENAI_ADMIN_API_KEY=
+
+# GitHub billing usage
+GITHUB_TOKEN=
+GITHUB_BILLING_OWNER=
+GITHUB_BILLING_SCOPE=org
+
+# Railway deploy health automation
+RAILWAY_TOKEN=
+RAILWAY_PROJECT_ID=
+RAILWAY_ENVIRONMENT=
+RAILWAY_SERVICE=
+
+# Vercel deploy health automation
+VERCEL_TOKEN=
+VERCEL_PROJECT_ID=
+
+# OpenClaw usage tracking
+OPENCLAW_API_KEY=
+```
