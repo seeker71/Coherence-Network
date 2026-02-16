@@ -1,0 +1,66 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/main-thread-gate-maintainability-fix",
+  "commit_scope": "prevent post-merge main thread-gates hard-fail on maintainability regression while keeping strict pre-merge enforcement on PRs",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/commit_evidence_2026-02-16_main-thread-gate-maintainability-postmerge-softfail.json"
+  ],
+  "idea_ids": [
+    "idea-mainline-gate-stability-with-strict-pr-enforcement"
+  ],
+  "spec_ids": [
+    "spec-thread-gate-main-postmerge-softfail-maintainability"
+  ],
+  "task_ids": [
+    "task-fix-main-thread-gates-maintainability-postmerge-failure"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "ci-gating",
+        "release-stability"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/thread-gates.yml"
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/commit_evidence_2026-02-16_main-thread-gate-maintainability-postmerge-softfail.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_main-thread-gate-maintainability-postmerge-softfail.json"
+    ],
+    "notes": [
+      "PR events remain strict with --fail-on-regression; push-to-main records maintainability report without hard-failing post-merge."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "main",
+    "notes": "Pending post-merge contract runs."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}
