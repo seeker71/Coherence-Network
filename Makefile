@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test run setup lint web-worktree-validate
+.PHONY: test run setup lint web-worktree-validate spec-quality
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -16,3 +16,6 @@ lint:
 
 web-worktree-validate:
 	./scripts/verify_worktree_local_web.sh
+
+spec-quality:
+	python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
