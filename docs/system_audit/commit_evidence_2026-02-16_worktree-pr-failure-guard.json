@@ -8,6 +8,7 @@
     "docs/RUNBOOK.md",
     "AGENTS.md",
     "Makefile",
+    "docs/system_audit/pr_check_failures/.gitignore",
     "docs/system_audit/commit_evidence_2026-02-16_worktree-pr-failure-guard.json"
   ],
   "idea_ids": [
@@ -46,6 +47,7 @@
     "docs/RUNBOOK.md",
     "AGENTS.md",
     "Makefile",
+    "docs/system_audit/pr_check_failures/.gitignore",
     "docs/system_audit/commit_evidence_2026-02-16_worktree-pr-failure-guard.json"
   ],
   "change_intent": "process_only",
