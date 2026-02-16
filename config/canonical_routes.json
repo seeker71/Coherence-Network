@@ -75,6 +75,18 @@
       "idea_id": "oss-interface-alignment"
     },
     {
+      "path": "/api/inventory/asset-modularity",
+      "methods": ["GET"],
+      "purpose": "Detect oversized ideas/specs/pseudocode/implementations and estimate split ROI",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/inventory/gaps/sync-asset-modularity-tasks",
+      "methods": ["POST"],
+      "purpose": "Create deduped split tasks for oversized assets to prevent modularity drift",
+      "idea_id": "coherence-network-agent-pipeline"
+    },
+    {
       "path": "/api/ideas/storage",
       "methods": ["GET"],
       "purpose": "Idea registry storage backend and row-count inspection",

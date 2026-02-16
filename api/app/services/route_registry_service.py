@@ -103,6 +103,18 @@ def _default_registry() -> dict:
                 "idea_id": "coherence-network-agent-pipeline",
             },
             {
+                "path": "/api/inventory/asset-modularity",
+                "methods": ["GET"],
+                "purpose": "Detect oversized ideas/specs/pseudocode/implementation assets and quantify split ROI",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/inventory/gaps/sync-asset-modularity-tasks",
+                "methods": ["POST"],
+                "purpose": "Create deduped tasks to split oversized assets and prevent modularity drift",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
                 "path": "/api/inventory/questions/proactive",
                 "methods": ["GET"],
                 "purpose": "Generate proactive high-ROI questions from recent change history",

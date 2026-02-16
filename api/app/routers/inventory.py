@@ -119,6 +119,28 @@ async def sync_process_gap_tasks(
     )
 
 
+@router.get("/inventory/asset-modularity")
+async def asset_modularity(
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    max_implementation_files: int = Query(5000, ge=100, le=20000),
+) -> dict:
+    return inventory_service.evaluate_asset_modularity(
+        runtime_window_seconds=runtime_window_seconds,
+        max_implementation_files=max_implementation_files,
+    )
+
+
+@router.post("/inventory/gaps/sync-asset-modularity-tasks")
+async def sync_asset_modularity_tasks(
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    max_tasks: int = Query(50, ge=1, le=500),
+) -> dict:
+    return inventory_service.sync_asset_modularity_tasks(
+        runtime_window_seconds=runtime_window_seconds,
+        max_tasks=max_tasks,
+    )
+
+
 @router.get("/inventory/flow")
 async def spec_process_implementation_validation_flow(
     request: Request,

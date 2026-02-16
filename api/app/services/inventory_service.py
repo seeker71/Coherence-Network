@@ -70,6 +70,21 @@ _PROCESS_COMPLETENESS_TASK_TYPE_BY_CHECK: dict[str, TaskType] = {
     "endpoints_have_validation_coverage": TaskType.TEST,
     "all_endpoints_have_usage_events": TaskType.TEST,
     "canonical_route_registry_complete": TaskType.IMPL,
+    "assets_are_modular_and_reusable": TaskType.SPEC,
+}
+
+_ASSET_MODULARITY_LIMITS: dict[str, int] = {
+    "idea_description_sentences": 10,
+    "idea_description_chars": 1800,
+    "spec_summary_sentences": 10,
+    "spec_summary_chars": 2000,
+    "process_summary_sentences": 10,
+    "process_summary_chars": 2000,
+    "pseudocode_summary_sentences": 10,
+    "pseudocode_summary_chars": 2200,
+    "implementation_summary_sentences": 10,
+    "implementation_summary_chars": 2200,
+    "implementation_file_lines": 450,
 }
 
 
@@ -965,6 +980,11 @@ def _usage_gap_fingerprint(path: str, method: str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _asset_modularity_fingerprint(asset_id: str, metric: str) -> str:
+    payload = f"asset-modularity::{asset_id.strip().lower()}::{metric.strip().lower()}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _all_task_fingerprints_for_source(source: str) -> set[str]:
     tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
     out: set[str] = set()
@@ -978,6 +998,31 @@ def _all_task_fingerprints_for_source(source: str) -> set[str]:
         if isinstance(fingerprint, str) and fingerprint.strip():
             out.add(fingerprint.strip())
     return out
+
+
+def _sentence_count(text: str) -> int:
+    value = str(text or "").strip()
+    if not value:
+        return 0
+    parts = [chunk for chunk in re.split(r"[.!?]+", value) if chunk.strip()]
+    return len(parts)
+
+
+def _safe_file_line_count(path: Path) -> int:
+    try:
+        return len(path.read_text(encoding="utf-8").splitlines())
+    except (OSError, UnicodeDecodeError):
+        return 0
+
+
+def _estimate_split_effort_and_value(current: float, threshold: float, base_cost: float, base_value: float) -> tuple[float, float, float]:
+    if threshold <= 0:
+        threshold = 1.0
+    over_ratio = max((float(current) / float(threshold)) - 1.0, 0.0)
+    cost = round(max(base_cost, base_cost * (1.0 + over_ratio)), 2)
+    value = round(base_value * (1.0 + min(over_ratio, 2.0)), 2)
+    roi = _question_roi(value, cost)
+    return cost, value, roi
 
 
 def _ensure_gap_idea(
@@ -1328,6 +1373,11 @@ def evaluate_process_completeness(
     missing_spec_count = int(endpoint_summary.get("missing_spec") or 0)
     missing_process_count = int(endpoint_summary.get("missing_process") or 0)
     missing_validation_count = int(endpoint_summary.get("missing_validation") or 0)
+    modularity_report = evaluate_asset_modularity(runtime_window_seconds=runtime_window_seconds)
+    modularity_summary = modularity_report.get("summary") if isinstance(modularity_report, dict) else {}
+    modularity_blocking_assets = int(
+        modularity_summary.get("blocking_assets") if isinstance(modularity_summary, dict) else 0
+    )
 
     checks: list[dict[str, Any]] = [
         {
@@ -1420,6 +1470,15 @@ def evaluate_process_completeness(
             "severity": "medium",
             "fix_hint": "Update canonical route registry config/service.",
         },
+        {
+            "id": "assets_are_modular_and_reusable",
+            "description": "Ideas/specs/pseudocode/implementations are split into maintainable reusable assets.",
+            "passed": modularity_blocking_assets == 0,
+            "current": {"blocking_assets": modularity_blocking_assets},
+            "expected": {"blocking_assets": 0},
+            "severity": "high",
+            "fix_hint": "Run /api/inventory/gaps/sync-asset-modularity-tasks and split oversized assets by ROI.",
+        },
     ]
 
     blockers = [
@@ -1455,9 +1514,11 @@ def evaluate_process_completeness(
             "ideas_total": len(ideas),
             "specs_total": len(specs),
             "endpoints_total": total_endpoints,
+            "asset_modularity_blocking_assets": modularity_blocking_assets,
         },
         "checks": checks,
         "blockers": blockers,
+        "asset_modularity": modularity_report,
     }
 
 
@@ -1552,6 +1613,295 @@ def sync_process_completeness_gap_tasks(
         "created_tasks": created_tasks,
         "process_summary": report.get("summary", {}),
         "process_auto_sync_applied": bool(report.get("auto_sync_applied")),
+    }
+
+
+def evaluate_asset_modularity(
+    runtime_window_seconds: int = 86400,
+    max_implementation_files: int = 5000,
+) -> dict[str, Any]:
+    ideas_response = idea_service.list_ideas()
+    specs = spec_registry_service.list_specs(limit=5000)
+    endpoint_inventory = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
+    endpoint_items = endpoint_inventory.get("items")
+    endpoint_rows = [row for row in endpoint_items if isinstance(row, dict)] if isinstance(endpoint_items, list) else []
+
+    blockers: list[dict[str, Any]] = []
+    source_file_map: dict[str, dict[str, set[str]]] = {}
+    for row in endpoint_rows:
+        source_files = row.get("source_files") if isinstance(row.get("source_files"), list) else []
+        idea = row.get("idea") if isinstance(row.get("idea"), dict) else {}
+        spec = row.get("spec") if isinstance(row.get("spec"), dict) else {}
+        idea_id = str(idea.get("idea_id") or "").strip()
+        spec_ids = [
+            str(item).strip()
+            for item in (spec.get("spec_ids") if isinstance(spec.get("spec_ids"), list) else [])
+            if str(item).strip()
+        ]
+        for source_file in source_files:
+            file_key = str(source_file).replace("\\", "/").strip()
+            if not file_key:
+                continue
+            entry = source_file_map.setdefault(file_key, {"idea_ids": set(), "spec_ids": set()})
+            if idea_id:
+                entry["idea_ids"].add(idea_id)
+            entry["spec_ids"].update(spec_ids)
+
+    for idea in ideas_response.ideas:
+        description = str(idea.description or "").strip()
+        if not description:
+            continue
+        sentence_count = _sentence_count(description)
+        char_count = len(description)
+        by_sentence = sentence_count > _ASSET_MODULARITY_LIMITS["idea_description_sentences"]
+        by_char = char_count > _ASSET_MODULARITY_LIMITS["idea_description_chars"]
+        if not (by_sentence or by_char):
+            continue
+        current = float(max(sentence_count, char_count))
+        threshold = float(
+            _ASSET_MODULARITY_LIMITS["idea_description_sentences"]
+            if by_sentence
+            else _ASSET_MODULARITY_LIMITS["idea_description_chars"]
+        )
+        cost, value, roi = _estimate_split_effort_and_value(current, threshold, base_cost=2.0, base_value=20.0)
+        metric = "description_sentences" if by_sentence else "description_chars"
+        blockers.append(
+            {
+                "asset_category": "idea",
+                "asset_kind": "description",
+                "asset_id": idea.id,
+                "idea_id": idea.id,
+                "spec_id": None,
+                "path": None,
+                "metric": metric,
+                "current_value": sentence_count if by_sentence else char_count,
+                "threshold": int(threshold),
+                "severity": "high" if (current / max(threshold, 1.0)) >= 1.8 else "medium",
+                "estimated_split_cost_hours": cost,
+                "estimated_value_to_whole": value,
+                "estimated_roi": roi,
+                "recommended_task_type": TaskType.SPEC.value,
+                "split_plan": (
+                    "Split into parent + child ideas, each with focused scope, measurable outputs, and linked specs."
+                ),
+                "task_fingerprint": _asset_modularity_fingerprint(f"idea:{idea.id}:description", metric),
+                "direction": (
+                    f"Split oversized idea description for '{idea.id}' into modular idea assets. "
+                    f"Current {metric}={sentence_count if by_sentence else char_count}, "
+                    f"target <= {int(threshold)}. Preserve ontology links and ROI traceability."
+                ),
+            }
+        )
+
+    spec_text_fields = [
+        ("summary", "spec_summary_sentences", "spec_summary_chars", "spec"),
+        ("process_summary", "process_summary_sentences", "process_summary_chars", "process"),
+        ("pseudocode_summary", "pseudocode_summary_sentences", "pseudocode_summary_chars", "pseudocode"),
+        ("implementation_summary", "implementation_summary_sentences", "implementation_summary_chars", "implementation"),
+    ]
+    for spec in specs:
+        for field_name, sentence_key, char_key, category in spec_text_fields:
+            value_text = str(getattr(spec, field_name) or "").strip()
+            if not value_text:
+                continue
+            sentence_count = _sentence_count(value_text)
+            char_count = len(value_text)
+            by_sentence = sentence_count > _ASSET_MODULARITY_LIMITS[sentence_key]
+            by_char = char_count > _ASSET_MODULARITY_LIMITS[char_key]
+            if not (by_sentence or by_char):
+                continue
+            current = float(max(sentence_count, char_count))
+            threshold = float(_ASSET_MODULARITY_LIMITS[sentence_key] if by_sentence else _ASSET_MODULARITY_LIMITS[char_key])
+            base_cost = 2.0 if category in {"spec", "process", "pseudocode"} else 3.0
+            base_value = 18.0 if category in {"spec", "process", "pseudocode"} else 22.0
+            cost, value_score, roi = _estimate_split_effort_and_value(current, threshold, base_cost=base_cost, base_value=base_value)
+            metric = sentence_key.replace("_sentences", "_sentences") if by_sentence else char_key
+            blockers.append(
+                {
+                    "asset_category": category,
+                    "asset_kind": field_name,
+                    "asset_id": spec.spec_id,
+                    "idea_id": str(spec.idea_id or _TRACEABILITY_GAP_DEFAULT_IDEA_ID),
+                    "spec_id": spec.spec_id,
+                    "path": f"/specs/{spec.spec_id}",
+                    "metric": metric,
+                    "current_value": sentence_count if by_sentence else char_count,
+                    "threshold": int(threshold),
+                    "severity": "high" if (current / max(threshold, 1.0)) >= 1.8 else "medium",
+                    "estimated_split_cost_hours": cost,
+                    "estimated_value_to_whole": value_score,
+                    "estimated_roi": roi,
+                    "recommended_task_type": TaskType.SPEC.value,
+                    "split_plan": (
+                        "Break the section into linked sub-spec/process assets with explicit interfaces and validation checkpoints."
+                    ),
+                    "task_fingerprint": _asset_modularity_fingerprint(
+                        f"spec:{spec.spec_id}:{field_name}",
+                        metric,
+                    ),
+                    "direction": (
+                        f"Split oversized {field_name} for spec '{spec.spec_id}' into reusable modular assets. "
+                        f"Current {metric}={sentence_count if by_sentence else char_count}, target <= {int(threshold)}."
+                    ),
+                }
+            )
+
+    root = _project_root()
+    implementation_files: list[Path] = []
+    for directory in (root / "api" / "app", root / "web" / "app", root / "web" / "components"):
+        if not directory.exists():
+            continue
+        for path in directory.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".py", ".ts", ".tsx", ".js", ".jsx"}:
+                continue
+            implementation_files.append(path)
+            if len(implementation_files) >= max(1, min(max_implementation_files, 20000)):
+                break
+        if len(implementation_files) >= max(1, min(max_implementation_files, 20000)):
+            break
+
+    line_limit = _ASSET_MODULARITY_LIMITS["implementation_file_lines"]
+    for path in implementation_files:
+        line_count = _safe_file_line_count(path)
+        if line_count <= line_limit:
+            continue
+        rel_path = path.relative_to(root).as_posix()
+        linked = source_file_map.get(rel_path) or source_file_map.get(rel_path.lstrip("/")) or {"idea_ids": set(), "spec_ids": set()}
+        idea_ids = sorted(linked.get("idea_ids") or [])
+        spec_ids = sorted(linked.get("spec_ids") or [])
+        idea_id = idea_ids[0] if idea_ids else _TRACEABILITY_GAP_DEFAULT_IDEA_ID
+        spec_id = spec_ids[0] if spec_ids else None
+        cost, value_score, roi = _estimate_split_effort_and_value(line_count, float(line_limit), base_cost=3.0, base_value=24.0)
+        blockers.append(
+            {
+                "asset_category": "implementation",
+                "asset_kind": "source_file",
+                "asset_id": rel_path,
+                "idea_id": idea_id,
+                "spec_id": spec_id,
+                "path": rel_path,
+                "metric": "line_count",
+                "current_value": line_count,
+                "threshold": line_limit,
+                "severity": "high" if line_count >= (line_limit * 2) else "medium",
+                "estimated_split_cost_hours": cost,
+                "estimated_value_to_whole": value_score,
+                "estimated_roi": roi,
+                "recommended_task_type": TaskType.IMPL.value,
+                "split_plan": (
+                    "Extract cohesive modules/components, keep API stable, and add explicit interfaces for reuse."
+                ),
+                "task_fingerprint": _asset_modularity_fingerprint(f"implementation:{rel_path}", "line_count"),
+                "direction": (
+                    f"Split oversized implementation file '{rel_path}' into smaller reusable modules. "
+                    f"Current line_count={line_count}, target <= {line_limit}. Preserve behavior and validation coverage."
+                ),
+            }
+        )
+
+    blockers.sort(
+        key=lambda row: (
+            -float(row.get("estimated_roi") or 0.0),
+            {"high": 0, "medium": 1, "low": 2}.get(str(row.get("severity") or "medium"), 3),
+            -float(row.get("current_value") or 0.0),
+            str(row.get("asset_id") or ""),
+        )
+    )
+
+    by_category: dict[str, int] = {}
+    for row in blockers:
+        category = str(row.get("asset_category") or "unknown")
+        by_category[category] = by_category.get(category, 0) + 1
+
+    summary = {
+        "ideas_scanned": len(ideas_response.ideas),
+        "specs_scanned": len(specs),
+        "implementation_files_scanned": len(implementation_files),
+        "blocking_assets": len(blockers),
+        "by_category": dict(sorted(by_category.items(), key=lambda item: item[0])),
+    }
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "status": "pass" if len(blockers) == 0 else "fail",
+        "result": "asset_modularity_ok" if len(blockers) == 0 else "asset_modularity_drift_detected",
+        "runtime_window_seconds": runtime_window_seconds,
+        "thresholds": _ASSET_MODULARITY_LIMITS,
+        "summary": summary,
+        "blockers": blockers,
+    }
+
+
+def sync_asset_modularity_tasks(
+    runtime_window_seconds: int = 86400,
+    max_tasks: int = 50,
+) -> dict[str, Any]:
+    report = evaluate_asset_modularity(runtime_window_seconds=runtime_window_seconds)
+    blockers = report.get("blockers")
+    rows = [row for row in blockers if isinstance(row, dict)] if isinstance(blockers, list) else []
+    allowed = max(1, min(max_tasks, 500))
+    known_fingerprints = _all_task_fingerprints_for_source("asset_modularity_drift")
+
+    created_tasks: list[dict[str, Any]] = []
+    skipped_existing_count = 0
+    for row in rows:
+        if len(created_tasks) >= allowed:
+            break
+        fingerprint = str(row.get("task_fingerprint") or "").strip()
+        if not fingerprint:
+            continue
+        if fingerprint in known_fingerprints:
+            skipped_existing_count += 1
+            continue
+        task_type_raw = str(row.get("recommended_task_type") or TaskType.SPEC.value)
+        try:
+            task_type = TaskType(task_type_raw)
+        except ValueError:
+            task_type = TaskType.SPEC
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction=str(row.get("direction") or "").strip(),
+                task_type=task_type,
+                context={
+                    "source": "asset_modularity_drift",
+                    "task_fingerprint": fingerprint,
+                    "asset_category": row.get("asset_category"),
+                    "asset_kind": row.get("asset_kind"),
+                    "asset_id": row.get("asset_id"),
+                    "idea_id": row.get("idea_id"),
+                    "spec_id": row.get("spec_id"),
+                    "metric": row.get("metric"),
+                    "current_value": row.get("current_value"),
+                    "threshold": row.get("threshold"),
+                    "estimated_split_cost_hours": row.get("estimated_split_cost_hours"),
+                    "estimated_value_to_whole": row.get("estimated_value_to_whole"),
+                    "estimated_roi": row.get("estimated_roi"),
+                    "runtime_window_seconds": runtime_window_seconds,
+                },
+            )
+        )
+        known_fingerprints.add(fingerprint)
+        created_tasks.append(
+            {
+                "task_id": task["id"],
+                "task_type": task_type.value,
+                "asset_category": row.get("asset_category"),
+                "asset_id": row.get("asset_id"),
+                "estimated_roi": row.get("estimated_roi"),
+            }
+        )
+
+    return {
+        "result": "asset_modularity_tasks_synced",
+        "status": report.get("status"),
+        "blockers_count": len(rows),
+        "created_count": len(created_tasks),
+        "skipped_existing_count": skipped_existing_count,
+        "created_tasks": created_tasks,
+        "summary": report.get("summary", {}),
+        "thresholds": report.get("thresholds", {}),
     }
 
 
