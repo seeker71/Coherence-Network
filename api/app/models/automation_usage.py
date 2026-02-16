@@ -12,6 +12,7 @@ ProviderKind = Literal["internal", "github", "openai", "custom"]
 ProviderStatus = Literal["ok", "degraded", "unavailable"]
 UnitType = Literal["tokens", "requests", "minutes", "usd", "tasks", "hours"]
 AlertSeverity = Literal["info", "warning", "critical"]
+DataSource = Literal["provider_api", "provider_cli", "runtime_events", "configuration_only", "unknown"]
 
 
 class UsageMetric(BaseModel):
@@ -33,6 +34,13 @@ class ProviderUsageSnapshot(BaseModel):
     metrics: list[UsageMetric] = Field(default_factory=list)
     cost_usd: float | None = Field(default=None, ge=0.0)
     capacity_tasks_per_day: float | None = Field(default=None, ge=0.0)
+    actual_current_usage: float | None = Field(default=None, ge=0.0)
+    actual_current_usage_unit: UnitType | None = None
+    usage_per_time: str | None = Field(default=None, max_length=160)
+    usage_remaining: float | None = Field(default=None, ge=0.0)
+    usage_remaining_unit: UnitType | None = None
+    official_records: list[str] = Field(default_factory=list)
+    data_source: DataSource = "unknown"
     notes: list[str] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)
 
