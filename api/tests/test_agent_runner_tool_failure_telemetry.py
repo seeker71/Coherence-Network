@@ -187,3 +187,7 @@ def test_agent_runner_runtime_event_includes_codex_execution_metadata(monkeypatc
     assert metadata["executor"] == "cursor"
     assert metadata["agent_id"] == "openai-codex"
     assert metadata["is_openai_codex"] is True
+
+
+def test_infer_executor_detects_openclaw():
+    assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"

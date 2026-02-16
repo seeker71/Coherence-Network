@@ -211,11 +211,18 @@ def _uses_cursor_cli(command: str) -> bool:
     return command.strip().startswith("agent ")
 
 
+def _uses_openclaw_cli(command: str) -> bool:
+    """True if command uses OpenClaw CLI."""
+    return command.strip().startswith("openclaw ")
+
+
 def _infer_executor(command: str, model: str) -> str:
     s = (command or "").strip()
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
+    if _uses_openclaw_cli(command) or model_value.startswith("openclaw/"):
+        return "openclaw"
     if s.startswith("aider "):
         return "aider"
     if s.startswith("claude "):
@@ -246,6 +253,10 @@ def run_one_task(
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
         log.info("task=%s using Cursor CLI with OpenRouter", task_id)
+    elif _uses_openclaw_cli(command):
+        env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
+        env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
+        log.info("task=%s using OpenClaw executor", task_id)
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
