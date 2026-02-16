@@ -766,6 +766,11 @@ async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_a
         linked_spec_payload = linked_spec.json()
         assert isinstance(linked_spec_payload["idea_id"], str)
         assert linked_spec_payload["idea_id"].strip() != ""
+        assert isinstance(linked_spec_payload["process_summary"], str)
+        assert linked_spec_payload["process_summary"].strip() != ""
+        assert isinstance(linked_spec_payload["pseudocode_summary"], str)
+        assert linked_spec_payload["pseudocode_summary"].strip() != ""
+        assert payload["updated_spec_process_pseudocode_count"] >= 1
 
         idea = await client.get(f"/api/ideas/{linked_spec_payload['idea_id']}")
         assert idea.status_code == 200

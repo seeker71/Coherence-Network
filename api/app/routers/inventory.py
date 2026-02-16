@@ -62,12 +62,14 @@ async def sync_traceability_gap_artifacts(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     max_spec_idea_links: int = Query(150, ge=1, le=1000),
     max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
+    max_spec_process_backfills: int = Query(500, ge=1, le=5000),
     max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
 ) -> dict:
     return inventory_service.sync_traceability_gap_artifacts(
         runtime_window_seconds=runtime_window_seconds,
         max_spec_idea_links=max_spec_idea_links,
         max_missing_endpoint_specs=max_missing_endpoint_specs,
+        max_spec_process_backfills=max_spec_process_backfills,
         max_usage_gap_tasks=max_usage_gap_tasks,
     )
 
