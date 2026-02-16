@@ -60,6 +60,7 @@ class AgentTaskUpdate(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running
+    worker_id: Optional[str] = Field(default=None, min_length=1, max_length=200)
 
     @field_validator("progress_pct", mode="before")
     @classmethod
@@ -87,6 +88,8 @@ class AgentTask(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None
+    claimed_by: Optional[str] = None
+    claimed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -103,6 +106,8 @@ class AgentTaskListItem(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None
+    claimed_by: Optional[str] = None
+    claimed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

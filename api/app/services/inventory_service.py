@@ -41,10 +41,14 @@ def _question_fingerprint(idea_id: str, question: str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _existing_impl_question_fingerprints() -> set[str]:
+def _active_impl_question_fingerprints() -> set[str]:
     tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
     fingerprints: set[str] = set()
     for task in tasks:
+        status = task.get("status")
+        status_value = status.value if hasattr(status, "value") else str(status)
+        if status_value not in {"pending", "running", "needs_decision"}:
+            continue
         context = task.get("context")
         if not isinstance(context, dict):
             continue
@@ -67,7 +71,7 @@ def sync_implementation_request_question_tasks() -> dict:
         key=lambda row: -float(row.get("question_roi") or 0.0),
     )
 
-    existing_fingerprints = _existing_impl_question_fingerprints()
+    existing_fingerprints = _active_impl_question_fingerprints()
     created_tasks: list[dict] = []
     skipped_existing_count = 0
     skipped_non_impl_count = 0
@@ -104,6 +108,7 @@ def sync_implementation_request_question_tasks() -> dict:
                     "idea_id": idea_id,
                     "question": question,
                     "question_fingerprint": fingerprint,
+                    "task_fingerprint": fingerprint,
                     "question_roi": float(row.get("question_roi") or 0.0),
                     "answer_roi": float(row.get("answer_roi") or 0.0),
                 },
@@ -274,8 +279,11 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
     idea_id = str(top.get("idea_id") or "unknown")
     question = str(top.get("question") or "").strip()
     answer = str(top.get("answer") or "").strip()
+    question_fingerprint = _question_fingerprint(idea_id, question)
     question_roi = float(top.get("question_roi") or 0.0)
     answer_roi = float(top.get("answer_roi") or 0.0)
+
+    existing_active = agent_service.find_active_task_by_fingerprint(question_fingerprint)
 
     direction = (
         f"Highest-ROI follow-up for idea '{idea_id}': {question} "
@@ -290,7 +298,22 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
         "answer_roi": answer_roi,
         "direction": direction,
         "implementation_request_sync": sync_report,
+        "task_fingerprint": question_fingerprint,
     }
+    if existing_active is not None:
+        report["active_task"] = {
+            "id": existing_active.get("id"),
+            "status": (
+                existing_active["status"].value
+                if hasattr(existing_active.get("status"), "value")
+                else str(existing_active.get("status"))
+            ),
+            "claimed_by": existing_active.get("claimed_by"),
+        }
+        if create_task:
+            report["result"] = "task_already_active"
+            return report
+
     if not create_task:
         return report
 
@@ -301,6 +324,9 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
             context={
                 "source": "inventory_high_roi",
                 "idea_id": idea_id,
+                "question": question,
+                "question_fingerprint": question_fingerprint,
+                "task_fingerprint": question_fingerprint,
                 "question_roi": question_roi,
                 "answer_roi": answer_roi,
             },

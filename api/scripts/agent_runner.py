@@ -13,6 +13,7 @@ Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 import argparse
 import logging
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -234,10 +235,18 @@ def run_one_task(
     env.setdefault("DISABLE_ERROR_REPORTING", "1")
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
 
+    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+
     # PATCH to running
-    r = client.patch(f"{BASE}/api/agent/tasks/{task_id}", json={"status": "running"})
+    r = client.patch(
+        f"{BASE}/api/agent/tasks/{task_id}",
+        json={"status": "running", "worker_id": worker_id},
+    )
     if r.status_code != 200:
-        log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
+        if r.status_code == 409:
+            log.info("task=%s already claimed by another worker; skipping", task_id)
+        else:
+            log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
         return True
 
     start_time = time.monotonic()

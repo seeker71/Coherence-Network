@@ -1,0 +1,89 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/task-claim-dedupe",
+  "commit_scope": "track task claim ownership and prevent ROI auto-pick duplicate work across parallel contributors",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/inventory_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_task_claims.py",
+    "api/tests/test_inventory_api.py",
+    "specs/083-task-claim-tracking-and-roi-dedupe.md",
+    "docs/system_audit/commit_evidence_2026-02-16_task-claim-tracking-roi-dedupe.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "083"
+  ],
+  "task_ids": [
+    "task-claim-tracking-roi-dedupe"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py tests/test_contributions.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_task-claim-tracking-roi-dedupe.json"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/inventory_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_task_claims.py",
+    "api/tests/test_inventory_api.py",
+    "specs/083-task-claim-tracking-and-roi-dedupe.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py tests/test_contributions.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Task starts record worker ownership and conflicting claims return 409. ROI task generation returns task_already_active when matching active work exists.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/inventory/questions/next-highest-roi-task",
+      "https://coherence-network-production.up.railway.app/api/inventory/questions/sync-implementation-tasks"
+    ],
+    "test_flows": [
+      "create-task->patch-running-with-worker_id->claimed_by-recorded",
+      "same-task-second-worker-patch-running->409-conflict",
+      "answered-question-create_task-true->task_already_active-when-active-fingerprint-exists"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}

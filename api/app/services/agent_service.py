@@ -77,6 +77,15 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 
 # In-memory store (MVP); keyed by id
 _store: dict[str, dict[str, Any]] = {}
+ACTIVE_TASK_STATUSES = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.NEEDS_DECISION}
+
+
+class TaskClaimConflictError(RuntimeError):
+    """Raised when attempting to start/claim a task already claimed by another worker."""
+
+    def __init__(self, message: str, claimed_by: str | None = None):
+        super().__init__(message)
+        self.claimed_by = claimed_by
 
 
 def _now() -> datetime:
@@ -85,6 +94,59 @@ def _now() -> datetime:
 
 def _generate_id() -> str:
     return f"task_{secrets.token_hex(8)}"
+
+
+def _status_value(status: Any) -> str:
+    return status.value if hasattr(status, "value") else str(status)
+
+
+def _is_active_status(status: Any) -> bool:
+    value = _status_value(status)
+    return value in {s.value for s in ACTIVE_TASK_STATUSES}
+
+
+def _normalize_worker_id(worker_id: str | None) -> str:
+    cleaned = (worker_id or "").strip()
+    return cleaned or "unknown"
+
+
+def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
+    now = _now()
+    claimant = _normalize_worker_id(worker_id)
+    current_status = task.get("status")
+    existing_claimant = task.get("claimed_by")
+
+    if current_status in (TaskStatus.PENDING, TaskStatus.NEEDS_DECISION):
+        task["status"] = TaskStatus.RUNNING
+        if task.get("started_at") is None:
+            task["started_at"] = now
+        if not existing_claimant:
+            task["claimed_by"] = claimant
+            task["claimed_at"] = now
+        elif existing_claimant != claimant:
+            raise TaskClaimConflictError(
+                f"Task already claimed by {existing_claimant}",
+                claimed_by=existing_claimant,
+            )
+        return
+
+    if current_status == TaskStatus.RUNNING:
+        if existing_claimant and existing_claimant != claimant:
+            raise TaskClaimConflictError(
+                f"Task already running by {existing_claimant}",
+                claimed_by=existing_claimant,
+            )
+        if not existing_claimant:
+            task["claimed_by"] = claimant
+            task["claimed_at"] = now
+        if task.get("started_at") is None:
+            task["started_at"] = now
+        return
+
+    raise TaskClaimConflictError(
+        f"Task is not claimable from status {_status_value(current_status)}",
+        claimed_by=existing_claimant,
+    )
 
 
 def _build_command(
@@ -142,6 +204,8 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "current_step": None,
         "decision_prompt": None,
         "decision": None,
+        "claimed_by": None,
+        "claimed_at": None,
         "created_at": now,
         "updated_at": None,
         "tier": tier,
@@ -181,6 +245,7 @@ def update_task(
     current_step: Optional[str] = None,
     decision_prompt: Optional[str] = None,
     decision: Optional[str] = None,
+    worker_id: Optional[str] = None,
 ) -> Optional[dict]:
     """Update task. Returns updated task or None if not found.
     When decision is present and task is needs_decision, set status→running and store decision.
@@ -189,13 +254,18 @@ def update_task(
     task = _store.get(task_id)
     if task is None:
         return None
-    if decision is not None and task.get("status") == TaskStatus.NEEDS_DECISION:
-        task["status"] = TaskStatus.RUNNING
+
+    decision_promotes_to_running = decision is not None and task.get("status") == TaskStatus.NEEDS_DECISION
+    if decision_promotes_to_running:
+        _claim_running_task(task, worker_id)
         task["decision"] = decision
+
     if status is not None:
-        task["status"] = status
-        if status == TaskStatus.RUNNING and task.get("started_at") is None:
-            task["started_at"] = _now()
+        if status == TaskStatus.RUNNING:
+            _claim_running_task(task, worker_id)
+        else:
+            task["status"] = status
+
     if output is not None:
         task["output"] = output
     if progress_pct is not None:
@@ -282,6 +352,21 @@ def get_usage_summary() -> dict[str, Any]:
     }
 
 
+def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
+    fingerprint = (task_fingerprint or "").strip()
+    if not fingerprint:
+        return None
+    for task in _store.values():
+        if not _is_active_status(task.get("status")):
+            continue
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if context.get("task_fingerprint") == fingerprint:
+            return task
+    return None
+
+
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     """Pipeline visibility: running, pending with wait times, recent completed with duration."""
     from datetime import timezone
@@ -324,6 +409,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
             "task_type": t.get("task_type"),
             "model": t.get("model"),
             "direction": (t.get("direction") or "")[:100],
+            "claimed_by": t.get("claimed_by"),
             "created_at": _ts(created),
             "updated_at": _ts(updated),
             "wait_seconds": _seconds_ago(created) if st_val == "pending" else None,

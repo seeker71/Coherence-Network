@@ -39,6 +39,8 @@ def _task_to_item(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "claimed_by": task.get("claimed_by"),
+        "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
         "updated_at": task.get("updated_at"),
     }
@@ -66,6 +68,8 @@ def _task_to_full(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "claimed_by": task.get("claimed_by"),
+        "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
         "updated_at": task.get("updated_at"),
     }
@@ -143,6 +147,7 @@ def _format_alert(task: dict) -> str:
     responses={
         400: {"description": "At least one field required", "model": ErrorDetail},
         404: {"description": "Task not found", "model": ErrorDetail},
+        409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
     },
 )
 async def update_task(
@@ -155,18 +160,23 @@ async def update_task(
     """
     if all(
         getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision")
+        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "worker_id")
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
-    task = agent_service.update_task(
-        task_id,
-        status=data.status,
-        output=data.output,
-        progress_pct=data.progress_pct,
-        current_step=data.current_step,
-        decision_prompt=data.decision_prompt,
-        decision=data.decision,
-    )
+    try:
+        task = agent_service.update_task(
+            task_id,
+            status=data.status,
+            output=data.output,
+            progress_pct=data.progress_pct,
+            current_step=data.current_step,
+            decision_prompt=data.decision_prompt,
+            decision=data.decision,
+            worker_id=data.worker_id,
+        )
+    except agent_service.TaskClaimConflictError as exc:
+        claimed = exc.claimed_by or "another worker"
+        raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     if data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):

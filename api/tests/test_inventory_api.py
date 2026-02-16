@@ -128,7 +128,7 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
             f"/api/ideas/{first['id']}/questions/answer",
             json={
                 "question": question,
-                "answer": "Apply this answer to generate next implementation task.",
+                "answer": "Apply this answer to generate next measurable task.",
                 "measured_delta": 4.0,
             },
         )
@@ -217,3 +217,43 @@ async def test_sync_implementation_request_questions_creates_tasks_without_dupli
         second = rerun.json()
         assert second["created_count"] == 0
         assert second["skipped_existing_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        ideas = await client.get("/api/ideas")
+        first = ideas.json()["ideas"][0]
+        question = first["open_questions"][0]["question"]
+        answered = await client.post(
+            f"/api/ideas/{first['id']}/questions/answer",
+            json={
+                "question": question,
+                "answer": "Implement this through a new tracked endpoint and rollout task.",
+                "measured_delta": 2.0,
+            },
+        )
+        assert answered.status_code == 200
+
+        created = await client.post(
+            "/api/inventory/questions/next-highest-roi-task",
+            params={"create_task": True},
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["result"] == "task_already_active"
+        assert payload["active_task"]["id"]
+        assert payload["active_task"]["status"] in {"pending", "running", "needs_decision"}
+
+        listed = await client.get("/api/agent/tasks")
+        assert listed.status_code == 200
+        data = listed.json()
+        assert data["total"] == 1
