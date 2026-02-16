@@ -329,7 +329,19 @@ _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    configured = os.getenv("COHERENCE_PROJECT_ROOT", "").strip()
+    if configured:
+        configured_path = Path(configured).expanduser().resolve()
+        if configured_path.exists():
+            return configured_path
+
+    source_path = Path(__file__).resolve()
+    for candidate in [source_path, *source_path.parents]:
+        has_monorepo_layout = (candidate / "api" / "app").exists()
+        has_api_service_layout = (candidate / "app").exists() and (candidate / "scripts").exists()
+        if has_monorepo_layout or has_api_service_layout:
+            return candidate
+    return source_path.parents[3]
 
 
 def _tracking_repository() -> str:
@@ -1754,7 +1766,19 @@ def _collect_spec_modularity_blockers(specs: list[Any]) -> list[dict[str, Any]]:
 def _discover_implementation_files(root: Path, max_implementation_files: int) -> list[Path]:
     implementation_files: list[Path] = []
     max_files = max(1, min(max_implementation_files, 20000))
-    for directory in (root / "api" / "app", root / "web" / "app", root / "web" / "components"):
+    seen_dirs: set[str] = set()
+    directories = (
+        root / "api" / "app",
+        root / "app",
+        root / "web" / "app",
+        root / "web" / "components",
+        root / "components",
+    )
+    for directory in directories:
+        dir_key = directory.as_posix()
+        if dir_key in seen_dirs:
+            continue
+        seen_dirs.add(dir_key)
         if not directory.exists():
             continue
         for path in directory.rglob("*"):
