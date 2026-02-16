@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getApiBase } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = getApiBase();
 
 interface IdeaQuestionRow {
   idea_id: string;
@@ -136,6 +137,15 @@ export default function PortfolioPage() {
         </Link>
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground underline">
           Tasks
+        </Link>
+        <Link href="/ideas" className="text-muted-foreground hover:text-foreground underline">
+          Ideas
+        </Link>
+        <Link href="/specs" className="text-muted-foreground hover:text-foreground underline">
+          Specs
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground underline">
+          Usage
         </Link>
       </div>
 
