@@ -1,0 +1,395 @@
+"""Provider usage adapters, normalized snapshots, and alert evaluation."""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import httpx
+
+from app.models.automation_usage import (
+    ProviderUsageOverview,
+    ProviderUsageSnapshot,
+    UsageAlert,
+    UsageAlertReport,
+    UsageMetric,
+)
+from app.services import agent_service
+
+_CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
+_CACHE_TTL_SECONDS = 120.0
+
+
+def _snapshots_path() -> Path:
+    configured = os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[2] / "logs" / "automation_usage_snapshots.json"
+
+
+def _ensure_store() -> None:
+    path = _snapshots_path()
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"snapshots": []}, indent=2), encoding="utf-8")
+
+
+def _read_store() -> list[dict[str, Any]]:
+    _ensure_store()
+    try:
+        payload = json.loads(_snapshots_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    rows = payload.get("snapshots") if isinstance(payload, dict) else []
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _write_store(rows: list[dict[str, Any]]) -> None:
+    path = _snapshots_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"snapshots": rows}, indent=2), encoding="utf-8")
+
+
+def _store_snapshot(snapshot: ProviderUsageSnapshot) -> None:
+    rows = _read_store()
+    rows.append(snapshot.model_dump(mode="json"))
+    max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+    if len(rows) > max_rows:
+        rows = rows[-max_rows:]
+    _write_store(rows)
+
+
+def _metric(
+    *,
+    id: str,
+    label: str,
+    unit: str,
+    used: float,
+    remaining: float | None = None,
+    limit: float | None = None,
+    window: str | None = None,
+) -> UsageMetric:
+    return UsageMetric(
+        id=id,
+        label=label,
+        unit=unit,  # type: ignore[arg-type]
+        used=max(0.0, float(used)),
+        remaining=(None if remaining is None else max(0.0, float(remaining))),
+        limit=(None if limit is None else max(0.0, float(limit))),
+        window=window,
+    )
+
+
+def _build_internal_snapshot() -> ProviderUsageSnapshot:
+    usage = agent_service.get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+
+    tracked_runs = float(execution.get("tracked_runs") or 0.0)
+    failed_runs = float(execution.get("failed_runs") or 0.0)
+    success_runs = float(execution.get("success_runs") or max(0.0, tracked_runs - failed_runs))
+    untracked_tasks = float(
+        ((execution.get("coverage") or {}).get("completed_or_failed_tasks") or 0.0)
+        - ((execution.get("coverage") or {}).get("tracked_task_runs") or 0.0)
+    )
+    if untracked_tasks < 0:
+        untracked_tasks = 0.0
+    success_rate = float(execution.get("success_rate") or 0.0)
+
+    metrics = [
+        _metric(id="tasks_tracked", label="Tracked task runs", unit="tasks", used=tracked_runs, window="rolling"),
+        _metric(id="tasks_failed", label="Failed task runs", unit="tasks", used=failed_runs, window="rolling"),
+        _metric(id="tasks_untracked", label="Completed/failed tasks without usage", unit="tasks", used=untracked_tasks, window="rolling"),
+    ]
+    notes = [f"Execution success rate {round(success_rate * 100.0, 2)}%"]
+
+    return ProviderUsageSnapshot(
+        id=f"provider_internal_{int(time.time())}",
+        provider="coherence-internal",
+        kind="internal",
+        status="ok",
+        metrics=metrics,
+        capacity_tasks_per_day=max(0.0, success_runs * 24.0),
+        notes=notes,
+        raw={"execution": execution},
+    )
+
+
+def _github_billing_url(owner: str, scope: str) -> str:
+    if scope == "user":
+        return f"https://api.github.com/users/{owner}/settings/billing/actions"
+    return f"https://api.github.com/orgs/{owner}/settings/billing/actions"
+
+
+def _build_github_snapshot() -> ProviderUsageSnapshot:
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    owner = os.getenv("GITHUB_BILLING_OWNER", "").strip()
+    scope = os.getenv("GITHUB_BILLING_SCOPE", "org").strip().lower()
+    if not token or not owner or scope not in {"org", "user"}:
+        return ProviderUsageSnapshot(
+            id=f"provider_github_{int(time.time())}",
+            provider="github",
+            kind="github",
+            status="unavailable",
+            notes=["Set GITHUB_TOKEN, GITHUB_BILLING_OWNER, and GITHUB_BILLING_SCOPE=org|user to enable real usage data."],
+        )
+
+    url = _github_billing_url(owner=owner, scope=scope)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    try:
+        with httpx.Client(timeout=8.0, headers=headers) as client:
+            response = client.get(url)
+            response.raise_for_status()
+            payload = response.json()
+    except Exception as exc:
+        return ProviderUsageSnapshot(
+            id=f"provider_github_{int(time.time())}",
+            provider="github",
+            kind="github",
+            status="degraded",
+            notes=[f"GitHub billing request failed: {exc}"],
+        )
+
+    included = float(payload.get("included_minutes") or 0.0)
+    used = float(payload.get("total_minutes_used") or 0.0)
+    remaining = max(0.0, included - used)
+
+    return ProviderUsageSnapshot(
+        id=f"provider_github_{int(time.time())}",
+        provider="github",
+        kind="github",
+        status="ok",
+        metrics=[
+            _metric(
+                id="actions_minutes",
+                label="GitHub Actions minutes",
+                unit="minutes",
+                used=used,
+                remaining=remaining,
+                limit=included if included > 0 else None,
+                window="monthly",
+            ),
+        ],
+        raw={
+            "included_minutes": included,
+            "total_minutes_used": used,
+            "minutes_used_breakdown": payload.get("minutes_used_breakdown"),
+        },
+    )
+
+
+def _openai_headers() -> dict[str, str]:
+    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    headers = {"Authorization": f"Bearer {api_key}"}
+    org = os.getenv("OPENAI_ORG_ID", "").strip()
+    if org:
+        headers["OpenAI-Organization"] = org
+    return headers
+
+
+def _build_openai_snapshot() -> ProviderUsageSnapshot:
+    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return ProviderUsageSnapshot(
+            id=f"provider_openai_{int(time.time())}",
+            provider="openai",
+            kind="openai",
+            status="unavailable",
+            notes=["Set OPENAI_ADMIN_API_KEY (preferred) or OPENAI_API_KEY to enable usage collection."],
+        )
+
+    now = int(time.time())
+    start_time = int(os.getenv("OPENAI_USAGE_START_TIME_UNIX", str(now - 30 * 24 * 3600)))
+    usage_url = os.getenv(
+        "OPENAI_USAGE_URL",
+        "https://api.openai.com/v1/organization/usage/completions",
+    )
+    costs_url = os.getenv("OPENAI_COSTS_URL", "https://api.openai.com/v1/organization/costs")
+    headers = _openai_headers()
+
+    usage_payload: dict[str, Any] = {}
+    cost_payload: dict[str, Any] = {}
+    usage_error = None
+    cost_error = None
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            usage_response = client.get(usage_url, params={"start_time": start_time, "end_time": now})
+            usage_response.raise_for_status()
+            usage_payload = usage_response.json() if isinstance(usage_response.json(), dict) else {}
+    except Exception as exc:
+        usage_error = str(exc)
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            costs_response = client.get(costs_url, params={"start_time": start_time, "end_time": now})
+            costs_response.raise_for_status()
+            cost_payload = costs_response.json() if isinstance(costs_response.json(), dict) else {}
+    except Exception as exc:
+        cost_error = str(exc)
+
+    records = usage_payload.get("data") if isinstance(usage_payload.get("data"), list) else []
+    input_tokens = 0.0
+    output_tokens = 0.0
+    requests = 0.0
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+        input_tokens += float(row.get("input_tokens") or 0.0)
+        output_tokens += float(row.get("output_tokens") or 0.0)
+        requests += float(row.get("num_model_requests") or row.get("requests") or 0.0)
+
+    total_cost_usd = 0.0
+    cost_rows = cost_payload.get("data") if isinstance(cost_payload.get("data"), list) else []
+    for row in cost_rows:
+        if not isinstance(row, dict):
+            continue
+        amount = row.get("amount")
+        if isinstance(amount, dict):
+            total_cost_usd += float(amount.get("value") or 0.0)
+        else:
+            total_cost_usd += float(row.get("cost") or row.get("total_cost") or 0.0)
+
+    notes: list[str] = []
+    status = "ok"
+    if usage_error and cost_error:
+        status = "degraded"
+        notes.append(f"OpenAI usage/cost fetch failed: usage={usage_error}; costs={cost_error}")
+    elif usage_error:
+        status = "degraded"
+        notes.append(f"OpenAI usage fetch failed: {usage_error}")
+    elif cost_error:
+        status = "degraded"
+        notes.append(f"OpenAI costs fetch failed: {cost_error}")
+
+    metrics = []
+    if input_tokens + output_tokens > 0:
+        metrics.append(
+            _metric(
+                id="tokens_total",
+                label="OpenAI tokens (input+output)",
+                unit="tokens",
+                used=input_tokens + output_tokens,
+                window="rolling_30d",
+            )
+        )
+    if requests > 0:
+        metrics.append(
+            _metric(
+                id="requests_total",
+                label="OpenAI model requests",
+                unit="requests",
+                used=requests,
+                window="rolling_30d",
+            )
+        )
+
+    return ProviderUsageSnapshot(
+        id=f"provider_openai_{int(time.time())}",
+        provider="openai",
+        kind="openai",
+        status=status,  # type: ignore[arg-type]
+        metrics=metrics,
+        cost_usd=round(total_cost_usd, 6) if total_cost_usd > 0 else None,
+        notes=notes,
+        raw={
+            "usage_records": len(records),
+            "cost_records": len(cost_rows),
+            "window_start_unix": start_time,
+            "window_end_unix": now,
+        },
+    )
+
+
+def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
+    providers = [
+        _build_internal_snapshot(),
+        _build_github_snapshot(),
+        _build_openai_snapshot(),
+    ]
+    for snapshot in providers:
+        _store_snapshot(snapshot)
+    return providers
+
+
+def collect_usage_overview(force_refresh: bool = False) -> ProviderUsageOverview:
+    now = time.time()
+    if (
+        not force_refresh
+        and _CACHE.get("overview") is not None
+        and float(_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return ProviderUsageOverview(**_CACHE["overview"])
+
+    providers = _collect_provider_snapshots()
+    unavailable = [p.provider for p in providers if p.status != "ok"]
+    overview = ProviderUsageOverview(
+        providers=providers,
+        unavailable_providers=unavailable,
+        tracked_providers=len(providers),
+    )
+    _CACHE["overview"] = overview.model_dump(mode="json")
+    _CACHE["expires_at"] = now + _CACHE_TTL_SECONDS
+    return overview
+
+
+def list_usage_snapshots(limit: int = 200) -> list[ProviderUsageSnapshot]:
+    rows = _read_store()
+    out: list[ProviderUsageSnapshot] = []
+    for row in rows:
+        try:
+            out.append(ProviderUsageSnapshot(**row))
+        except Exception:
+            continue
+    out.sort(key=lambda r: r.collected_at, reverse=True)
+    return out[: max(1, min(limit, 2000))]
+
+
+def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
+    ratio = max(0.0, min(float(threshold_ratio), 1.0))
+    overview = collect_usage_overview(force_refresh=True)
+
+    alerts: list[UsageAlert] = []
+    for provider in overview.providers:
+        if provider.status != "ok":
+            alerts.append(
+                UsageAlert(
+                    id=f"usage_alert_{provider.provider}_unavailable",
+                    provider=provider.provider,
+                    metric_id="provider_status",
+                    severity="warning" if provider.status == "degraded" else "critical",
+                    message=f"{provider.provider} usage provider status={provider.status}",
+                )
+            )
+
+        for metric in provider.metrics:
+            if metric.limit is None or metric.limit <= 0:
+                continue
+            if metric.remaining is None:
+                continue
+            remaining_ratio = metric.remaining / metric.limit
+            if remaining_ratio <= ratio:
+                severity = "critical" if remaining_ratio <= ratio / 2.0 else "warning"
+                alerts.append(
+                    UsageAlert(
+                        id=f"usage_alert_{provider.provider}_{metric.id}",
+                        provider=provider.provider,
+                        metric_id=metric.id,
+                        severity=severity,  # type: ignore[arg-type]
+                        message=(
+                            f"{provider.provider} {metric.label} low remaining: "
+                            f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
+                        ),
+                        remaining_ratio=round(remaining_ratio, 4),
+                    )
+                )
+
+    return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
