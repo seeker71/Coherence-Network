@@ -912,8 +912,8 @@ def _count_matching_public_references(path_template: str, reference_counts: dict
     return total
 
 
-def _probe_api_status_by_key(payload: dict[str, Any]) -> dict[tuple[str, str], int]:
-    out: dict[tuple[str, str], int] = {}
+def _probe_api_rows_by_key(payload: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+    out: dict[tuple[str, str], dict[str, Any]] = {}
     rows = payload.get("api")
     if not isinstance(rows, list):
         return out
@@ -922,18 +922,29 @@ def _probe_api_status_by_key(payload: dict[str, Any]) -> dict[tuple[str, str], i
             continue
         method = str(row.get("method") or "").strip().upper()
         path = _normalize_endpoint_path(str(row.get("path_template") or row.get("path") or ""))
-        status = row.get("status_code")
         if not method or not path:
             continue
+        status = row.get("status_code")
+        status_code = None
         try:
-            out[(method, path)] = int(status)
+            status_code = int(status)
         except (TypeError, ValueError):
-            continue
+            status_code = None
+        probe_method = str(row.get("probe_method") or ("GET" if method == "GET" else "OPTIONS")).strip().upper()
+        data_present_raw = row.get("data_present")
+        data_present = bool(data_present_raw) if isinstance(data_present_raw, bool) else None
+        probe_ok = bool(row.get("probe_ok")) if isinstance(row.get("probe_ok"), bool) else False
+        out[(method, path)] = {
+            "status_code": status_code,
+            "probe_method": probe_method,
+            "data_present": data_present,
+            "probe_ok": probe_ok,
+        }
     return out
 
 
-def _probe_web_status_by_path(payload: dict[str, Any]) -> dict[str, int]:
-    out: dict[str, int] = {}
+def _probe_web_rows_by_path(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
     rows = payload.get("web")
     if not isinstance(rows, list):
         return out
@@ -941,21 +952,42 @@ def _probe_web_status_by_path(payload: dict[str, Any]) -> dict[str, int]:
         if not isinstance(row, dict):
             continue
         path = _normalize_endpoint_path(str(row.get("path_template") or row.get("path") or ""))
-        status = row.get("status_code")
         if not path:
             continue
+        status = row.get("status_code")
+        status_code = None
         try:
-            out[path] = int(status)
+            status_code = int(status)
         except (TypeError, ValueError):
-            continue
+            status_code = None
+        data_present_raw = row.get("data_present")
+        data_present = bool(data_present_raw) if isinstance(data_present_raw, bool) else None
+        probe_ok = bool(row.get("probe_ok")) if isinstance(row.get("probe_ok"), bool) else False
+        out[path] = {
+            "status_code": status_code,
+            "data_present": data_present,
+            "probe_ok": probe_ok,
+        }
     return out
+
+
+def _api_method_expects_real_data(method: str) -> bool:
+    return str(method or "").strip().upper() == "GET"
+
+
+def _is_probe_real_data_ok(expect_real_data: bool, probe_ok: bool, data_present: bool | None) -> bool:
+    if not probe_ok:
+        return False
+    if not expect_real_data:
+        return True
+    return bool(data_present)
 
 
 def _build_api_route_evidence_items(
     api_routes: list[dict[str, Any]],
     runtime_by_endpoint: dict[str, Any],
     public_reference_counts: dict[str, int],
-    probe_api: dict[tuple[str, str], int],
+    probe_api: dict[tuple[str, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     api_items: list[dict[str, Any]] = []
     for row in api_routes:
@@ -975,17 +1007,29 @@ def _build_api_route_evidence_items(
 
         method_items: list[dict[str, Any]] = []
         has_evidence_for_route = False
+        route_missing_real_data_count = 0
         for method in methods:
-            probe_status = probe_api.get((method, path_template))
-            probe_ok = probe_status is not None and int(probe_status) < 500
-            has_evidence = runtime_event_count > 0 or public_refs > 0 or probe_ok
+            probe_row = probe_api.get((method, path_template)) or {}
+            probe_status = probe_row.get("status_code")
+            probe_ok = bool(probe_row.get("probe_ok"))
+            data_present = probe_row.get("data_present") if isinstance(probe_row.get("data_present"), bool) else None
+            expect_real_data = _api_method_expects_real_data(method)
+            probe_real_data_ok = _is_probe_real_data_ok(expect_real_data, probe_ok, data_present)
+            has_evidence = runtime_event_count > 0 or public_refs > 0 or probe_real_data_ok
+            missing_real_data = expect_real_data and probe_ok and not bool(data_present)
             if has_evidence:
                 has_evidence_for_route = True
+            if missing_real_data:
+                route_missing_real_data_count += 1
             method_items.append(
                 {
                     "method": method,
                     "probe_status_code": probe_status,
                     "probe_ok": probe_ok,
+                    "expects_real_data": expect_real_data,
+                    "probe_data_present": data_present,
+                    "probe_real_data_ok": probe_real_data_ok,
+                    "missing_real_data": missing_real_data,
                     "has_actual_evidence": has_evidence,
                 }
             )
@@ -999,6 +1043,7 @@ def _build_api_route_evidence_items(
                 "runtime_event_count": runtime_event_count,
                 "public_reference_count": public_refs,
                 "methods_evidence": method_items,
+                "missing_real_data_count": route_missing_real_data_count,
                 "has_actual_evidence": has_evidence_for_route,
             }
         )
@@ -1010,7 +1055,7 @@ def _build_web_route_evidence_items(
     web_routes: list[dict[str, Any]],
     runtime_by_endpoint: dict[str, Any],
     public_reference_counts: dict[str, int],
-    probe_web: dict[str, int],
+    probe_web: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     web_items: list[dict[str, Any]] = []
     for row in web_routes:
@@ -1022,9 +1067,14 @@ def _build_web_route_evidence_items(
         runtime_entry = runtime_by_endpoint.get(path_template)
         runtime_event_count = int(runtime_entry.event_count) if runtime_entry else 0
         public_refs = _count_matching_public_references(path_template, public_reference_counts)
-        probe_status = probe_web.get(path_template)
-        probe_ok = probe_status is not None and int(probe_status) < 500
-        has_evidence = runtime_event_count > 0 or public_refs > 0 or probe_ok
+        probe_row = probe_web.get(path_template) or {}
+        probe_status = probe_row.get("status_code")
+        probe_ok = bool(probe_row.get("probe_ok"))
+        data_present = probe_row.get("data_present") if isinstance(probe_row.get("data_present"), bool) else None
+        expect_real_data = True
+        probe_real_data_ok = _is_probe_real_data_ok(expect_real_data, probe_ok, data_present)
+        missing_real_data = expect_real_data and probe_ok and not bool(data_present)
+        has_evidence = runtime_event_count > 0 or public_refs > 0 or probe_real_data_ok
         web_items.append(
             {
                 "path": path_template,
@@ -1034,6 +1084,10 @@ def _build_web_route_evidence_items(
                 "public_reference_count": public_refs,
                 "probe_status_code": probe_status,
                 "probe_ok": probe_ok,
+                "expects_real_data": expect_real_data,
+                "probe_data_present": data_present,
+                "probe_real_data_ok": probe_real_data_ok,
+                "missing_real_data": missing_real_data,
                 "has_actual_evidence": has_evidence,
             }
         )
@@ -1044,13 +1098,17 @@ def _build_web_route_evidence_items(
 def _route_evidence_summary(api_items: list[dict[str, Any]], web_items: list[dict[str, Any]]) -> dict[str, int]:
     missing_api = sum(1 for item in api_items if not item["has_actual_evidence"])
     missing_web = sum(1 for item in web_items if not item["has_actual_evidence"])
+    missing_real_data_api = sum(int(item.get("missing_real_data_count") or 0) for item in api_items)
+    missing_real_data_web = sum(1 for item in web_items if bool(item.get("missing_real_data")))
     return {
         "api_total": len(api_items),
         "api_with_actual_evidence": len(api_items) - missing_api,
         "api_missing_actual_evidence": missing_api,
+        "api_missing_real_data": missing_real_data_api,
         "web_total": len(web_items),
         "web_with_actual_evidence": len(web_items) - missing_web,
         "web_missing_actual_evidence": missing_web,
+        "web_missing_real_data": missing_real_data_web,
     }
 
 
@@ -1063,8 +1121,8 @@ def build_route_evidence_inventory(runtime_window_seconds: int = 86400) -> dict[
     commit_records = _read_commit_evidence_records(limit=1200)
     public_reference_counts = _public_endpoint_reference_counts(commit_records)
     probe_payload = _read_latest_route_evidence_probe() or {}
-    probe_api = _probe_api_status_by_key(probe_payload)
-    probe_web = _probe_web_status_by_path(probe_payload)
+    probe_api = _probe_api_rows_by_key(probe_payload)
+    probe_web = _probe_web_rows_by_path(probe_payload)
     api_items = _build_api_route_evidence_items(api_routes, runtime_by_endpoint, public_reference_counts, probe_api)
     web_items = _build_web_route_evidence_items(web_routes, runtime_by_endpoint, public_reference_counts, probe_web)
     missing_api = [item for item in api_items if not bool(item.get("has_actual_evidence"))]
