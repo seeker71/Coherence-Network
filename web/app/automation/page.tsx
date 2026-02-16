@@ -21,6 +21,13 @@ type ProviderSnapshot = {
   metrics: UsageMetric[];
   cost_usd?: number | null;
   capacity_tasks_per_day?: number | null;
+  actual_current_usage?: number | null;
+  actual_current_usage_unit?: string | null;
+  usage_per_time?: string | null;
+  usage_remaining?: number | null;
+  usage_remaining_unit?: string | null;
+  official_records: string[];
+  data_source: string;
   notes: string[];
 };
 
@@ -234,6 +241,16 @@ export default async function AutomationPage() {
               <p className="font-medium">
                 {provider.provider} | status {provider.status} | kind {provider.kind}
               </p>
+              <p className="text-muted-foreground">
+                source {provider.data_source} | current_usage{" "}
+                {provider.actual_current_usage !== null && provider.actual_current_usage !== undefined
+                  ? `${provider.actual_current_usage} ${provider.actual_current_usage_unit ?? ""}`.trim()
+                  : "n/a"}{" "}
+                | usage_per_time {provider.usage_per_time ?? "n/a"} | remaining{" "}
+                {provider.usage_remaining !== null && provider.usage_remaining !== undefined
+                  ? `${provider.usage_remaining} ${provider.usage_remaining_unit ?? ""}`.trim()
+                  : "n/a"}
+              </p>
               <ul className="space-y-1">
                 {provider.metrics.map((metric) => (
                   <li key={`${provider.id}-${metric.id}`} className="flex justify-between">
@@ -253,6 +270,18 @@ export default async function AutomationPage() {
               <p className="text-muted-foreground">
                 cost_usd {provider.cost_usd ?? 0} | capacity_tasks_per_day {provider.capacity_tasks_per_day ?? 0}
               </p>
+              {provider.official_records.length > 0 && (
+                <ul className="space-y-1 text-muted-foreground">
+                  {provider.official_records.map((url) => (
+                    <li key={`${provider.id}-${url}`}>
+                      <a href={url} target="_blank" rel="noreferrer" className="underline">
+                        official record
+                      </a>{" "}
+                      {url}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {provider.notes.length > 0 && (
                 <ul className="space-y-1 text-muted-foreground">
                   {provider.notes.map((note) => (

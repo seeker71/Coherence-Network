@@ -117,6 +117,108 @@ def _metric(
     )
 
 
+def _default_official_records(provider: str) -> list[str]:
+    links: dict[str, list[str]] = {
+        "coherence-internal": [
+            "/api/usage",
+            "/api/automation/usage",
+        ],
+        "github": [
+            "https://docs.github.com/en/rest/rate-limit/rate-limit",
+            "https://docs.github.com/en/rest/billing/billing",
+        ],
+        "openai": [
+            "https://platform.openai.com/docs/api-reference/usage",
+            "https://platform.openai.com/docs/api-reference/costs",
+        ],
+        "openai-codex": [
+            "https://platform.openai.com/docs/api-reference/models/list",
+        ],
+        "claude": [
+            "https://docs.anthropic.com/en/api/models-list",
+        ],
+        "railway": [
+            "https://docs.railway.com/reference/public-api",
+        ],
+        "openrouter": [
+            "https://openrouter.ai/docs/api-reference/overview",
+        ],
+    }
+    return links.get(provider, [])
+
+
+def _metric_time_rate(metric: UsageMetric) -> str | None:
+    if metric.used <= 0:
+        return None
+    window = str(metric.window or "").strip().lower()
+    denom: float | None = None
+    period = ""
+    if window == "hourly":
+        denom, period = 1.0, "hour"
+    elif window == "daily":
+        denom, period = 1.0, "day"
+    elif window in {"monthly", "rolling_30d"}:
+        denom, period = 30.0, "day"
+    if not denom or not period:
+        return None
+    rate = metric.used / denom
+    return f"{round(rate, 4)} {metric.unit}/{period}"
+
+
+def _primary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
+    if not metrics:
+        return None
+    priority = {
+        "runtime_task_runs": 0,
+        "tasks_tracked": 1,
+        "requests_total": 2,
+        "tokens_total": 3,
+        "rest_requests": 4,
+        "actions_minutes": 5,
+        "api_probe": 6,
+        "models_visible": 7,
+    }
+    ordered = sorted(metrics, key=lambda item: priority.get(item.id, 20))
+    return ordered[0] if ordered else metrics[0]
+
+
+def _finalize_snapshot(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
+    metric = _primary_metric(snapshot.metrics)
+    if metric:
+        snapshot.actual_current_usage = metric.used
+        snapshot.actual_current_usage_unit = metric.unit
+        snapshot.usage_remaining = metric.remaining
+        snapshot.usage_remaining_unit = metric.unit if metric.remaining is not None else None
+        snapshot.usage_per_time = _metric_time_rate(metric)
+
+    official_records = list(snapshot.official_records)
+    raw_urls = [
+        str(value).strip()
+        for key, value in snapshot.raw.items()
+        if key.endswith("_url") and isinstance(value, str) and str(value).strip()
+    ]
+    official_records.extend(raw_urls)
+    official_records.extend(_default_official_records(snapshot.provider))
+    snapshot.official_records = list(dict.fromkeys(official_records))
+
+    if snapshot.data_source == "unknown":
+        configured_keys = snapshot.raw.get("configured_env_keys")
+        if snapshot.provider == "coherence-internal":
+            snapshot.data_source = "runtime_events"
+        elif snapshot.raw.get("probe") == "railway_cli_auth" or (
+            isinstance(configured_keys, list)
+            and any(str(item) in {"gh_auth", "railway_cli_auth"} for item in configured_keys)
+        ):
+            snapshot.data_source = "provider_cli"
+        elif any(metric.id == "runtime_task_runs" for metric in snapshot.metrics):
+            snapshot.data_source = "runtime_events"
+        elif raw_urls or any(metric.id in {"api_probe", "rest_requests", "requests_total"} for metric in snapshot.metrics):
+            snapshot.data_source = "provider_api"
+        elif isinstance(configured_keys, list):
+            snapshot.data_source = "configuration_only"
+    return snapshot
+
+
 def _env_present(name: str) -> bool:
     return bool(str(os.getenv(name, "")).strip())
 
@@ -312,6 +414,7 @@ def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
         provider=provider,
         kind=kind,  # type: ignore[arg-type]
         status=status,  # type: ignore[arg-type]
+        data_source="configuration_only",
         notes=notes,
         raw={"configured_env_keys": present, "missing_env_keys": missing},
     )
@@ -344,6 +447,7 @@ def _build_internal_snapshot() -> ProviderUsageSnapshot:
         provider="coherence-internal",
         kind="internal",
         status="ok",
+        data_source="runtime_events",
         metrics=metrics,
         capacity_tasks_per_day=max(0.0, success_runs * 24.0),
         notes=notes,
@@ -379,12 +483,13 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
     rate_payload: dict[str, Any] = {}
     billing_error = None
     rate_error = None
+    billing_url = ""
 
     if owner and scope in {"org", "user"}:
-        url = _github_billing_url(owner=owner, scope=scope)
+        billing_url = _github_billing_url(owner=owner, scope=scope)
         try:
             with httpx.Client(timeout=8.0, headers=headers) as client:
-                response = client.get(url)
+                response = client.get(billing_url)
                 response.raise_for_status()
                 billing_payload = response.json()
         except Exception as exc:
@@ -406,7 +511,9 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
             provider="github",
             kind="github",
             status="degraded",
+            data_source="provider_api",
             notes=[f"GitHub rate-limit probe failed: {rate_error}"],
+            raw={"rate_limit_url": "https://api.github.com/rate_limit", "billing_url": billing_url},
         )
 
     included = float(billing_payload.get("included_minutes") or 0.0)
@@ -451,6 +558,7 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
         provider="github",
         kind="github",
         status="ok",
+        data_source="provider_api",
         metrics=metrics,
         notes=notes,
         raw={
@@ -458,6 +566,8 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
             "total_minutes_used": used,
             "minutes_used_breakdown": billing_payload.get("minutes_used_breakdown"),
             "rate_limit": resources,
+            "rate_limit_url": "https://api.github.com/rate_limit",
+            "billing_url": billing_url,
         },
     )
 
@@ -472,6 +582,7 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
                 provider="openai-codex",
                 kind="custom",
                 status="ok",
+                data_source="runtime_events",
                 metrics=[
                     _metric(
                         id="runtime_task_runs",
@@ -489,6 +600,7 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
             provider="openai-codex",
             kind="custom",
             status="unavailable",
+            data_source="configuration_only",
             notes=["Set OPENAI_ADMIN_API_KEY or OPENAI_API_KEY to validate Codex provider access."],
         )
 
@@ -505,7 +617,9 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
             provider="openai-codex",
             kind="custom",
             status="degraded",
+            data_source="provider_api",
             notes=[f"OpenAI models probe failed: {exc}"],
+            raw={"probe_url": models_url},
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
@@ -514,6 +628,7 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         provider="openai-codex",
         kind="custom",
         status="ok",
+        data_source="provider_api",
         metrics=[
             _metric(
                 id="models_visible",
@@ -545,6 +660,7 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
                 provider="claude",
                 kind="custom",
                 status="ok",
+                data_source="runtime_events",
                 metrics=[
                     _metric(
                         id="runtime_task_runs",
@@ -562,6 +678,7 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
             provider="claude",
             kind="custom",
             status="unavailable",
+            data_source="configuration_only",
             notes=["Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN to validate Claude provider access."],
         )
 
@@ -579,6 +696,7 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
                 provider="claude",
                 kind="custom",
                 status="ok",
+                data_source="runtime_events",
                 metrics=[
                     _metric(
                         id="runtime_task_runs",
@@ -598,7 +716,9 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
             provider="claude",
             kind="custom",
             status="degraded",
+            data_source="provider_api",
             notes=[f"Claude models probe failed: {exc}"],
+            raw={"probe_url": models_url},
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
@@ -607,6 +727,7 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         provider="claude",
         kind="custom",
         status="ok",
+        data_source="provider_api",
         metrics=[
             _metric(
                 id="models_visible",
@@ -632,6 +753,7 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
                 provider="railway",
                 kind="custom",
                 status="ok",
+                data_source="provider_cli",
                 metrics=[
                     _metric(
                         id="api_probe",
@@ -649,6 +771,7 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
             provider="railway",
             kind="custom",
             status="unavailable",
+            data_source="configuration_only",
             notes=["Set RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT, and RAILWAY_SERVICE."],
         )
 
@@ -666,7 +789,9 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
             provider="railway",
             kind="custom",
             status="degraded",
+            data_source="provider_api",
             notes=[f"Railway API probe failed: {exc}"],
+            raw={"probe_url": gql_url},
         )
 
     me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
@@ -676,6 +801,7 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
         provider="railway",
         kind="custom",
         status="ok" if ok else "degraded",
+        data_source="provider_api",
         metrics=[
             _metric(
                 id="api_probe",
@@ -707,6 +833,7 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             provider="openai",
             kind="openai",
             status="unavailable",
+            data_source="configuration_only",
             notes=["Set OPENAI_ADMIN_API_KEY (preferred) or OPENAI_API_KEY to enable usage collection."],
         )
 
@@ -799,6 +926,7 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
         provider="openai",
         kind="openai",
         status=status,  # type: ignore[arg-type]
+        data_source="provider_api",
         metrics=metrics,
         cost_usd=round(total_cost_usd, 6) if total_cost_usd > 0 else None,
         notes=notes,
@@ -807,6 +935,8 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             "cost_records": len(cost_rows),
             "window_start_unix": start_time,
             "window_end_unix": now,
+            "usage_url": usage_url,
+            "costs_url": costs_url,
         },
     )
 
@@ -845,6 +975,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                     "provider observed in runtime usage but key/config is missing or provider checks are failing"
                 )
                 snapshot.notes = list(dict.fromkeys(snapshot.notes))
+        snapshot = _finalize_snapshot(snapshot)
         _store_snapshot(snapshot)
     return providers
 

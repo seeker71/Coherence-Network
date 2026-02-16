@@ -51,6 +51,11 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert "openai" in providers
         assert providers["coherence-internal"]["status"] == "ok"
         assert any(m["id"] == "tasks_tracked" for m in providers["coherence-internal"]["metrics"])
+        assert providers["coherence-internal"]["actual_current_usage"] is not None
+        assert providers["coherence-internal"]["data_source"] == "runtime_events"
+        assert len(providers["coherence-internal"]["official_records"]) >= 1
+        assert len(providers["github"]["official_records"]) >= 1
+        assert providers["github"]["data_source"] in {"configuration_only", "provider_api", "provider_cli", "unknown"}
 
 
 @pytest.mark.asyncio
