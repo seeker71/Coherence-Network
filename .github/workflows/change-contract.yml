@@ -81,7 +81,7 @@ jobs:
           exit 0
 
       - name: Upload contract report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: contract_report_${{ github.sha }}
           path: contract_report.json
