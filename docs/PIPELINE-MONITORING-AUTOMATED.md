@@ -233,6 +233,45 @@ Dependency update cadence:
   - Python (`/api`)
   - npm (`/web`)
 
+## Workflow Reference Guard (Per PR/Push)
+
+To prevent gate regressions caused by broken workflow script paths or missing requirements files:
+
+- Script: `scripts/validate_workflow_references.py`
+- Enforced in CI workflow: `.github/workflows/test.yml`
+- Contract:
+  - Any static `python ...`, `bash ...`, `./...`, and `pip install -r ...` reference in workflow `run:` blocks must resolve to an existing file (repo root or `api/` root).
+  - Missing references fail `Test` before merge.
+
+## Provider Readiness Contract (Every 6 Hours)
+
+To ensure provider configuration is continuously validated and failures are surfaced automatically:
+
+- Workflow: `.github/workflows/provider-readiness-contract.yml`
+- Script: `api/scripts/check_provider_readiness.py`
+- API endpoint: `GET /api/automation/usage/readiness`
+- Trigger:
+  - Every 6 hours (`cron`)
+  - Manual (`workflow_dispatch`)
+
+Contract behavior:
+1. Collect provider usage/readiness snapshots.
+2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
+3. Fail when any required provider is not configured or not healthy.
+4. Upload `provider_readiness_report.json` artifact.
+5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
+
+Required provider defaults:
+- `coherence-internal`
+- `github`
+- `openai`
+- `railway`
+- `vercel`
+
+Machine and human access:
+- Machine API: `GET /api/automation/usage/readiness`
+- Human UI: `/automation` page, section **Provider Readiness**
+
 ## Maintainability Architecture Monitor (Twice Weekly + PR Gate)
 
 To keep architecture and placeholder debt from drifting:

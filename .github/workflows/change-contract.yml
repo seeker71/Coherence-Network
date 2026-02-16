@@ -76,7 +76,7 @@ jobs:
           echo "collective_review_passed=$(jq -r '.collective_review.collective_review_passed // false' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "min_approvals_required=$(jq -r '.collective_review.min_approvals_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "min_unique_approvers_required=$(jq -r '.collective_review.min_unique_approvers_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
-          echo "reason=$(jq -r '.reason // \"\"' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "reason=$(jq -r '.reason // ""' contract_report.json)" >> "$GITHUB_OUTPUT"
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           exit 0
 

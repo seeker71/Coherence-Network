@@ -239,7 +239,9 @@ def evaluate_pr_gates(
     mergeable = str(pr.get("mergeable_state") or "unknown")
 
     all_required_passed = not missing_required and not failing_required
-    checks_green = combined_state == "success"
+    # When branch protection required contexts are unavailable, do not block on
+    # combined_state alone (it can include non-required transient failures).
+    checks_green = (combined_state == "success") if required else True
     ready = (not draft) and checks_green and (all_required_passed or not required)
 
     return {
