@@ -24,10 +24,12 @@ Run and record:
 ```bash
 cd api && .venv/bin/pytest -q
 ./scripts/verify_worktree_local_web.sh
+python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
 
 Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
+- PASS only if changed specs pass the spec quality contract (when any feature spec changed).
 
 Worktree notes:
 - This command is the default local web validation for Codex threads.

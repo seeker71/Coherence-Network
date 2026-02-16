@@ -38,5 +38,7 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 
 - Do not modify tests to force passing behavior.
 - Implement exactly what the spec requires.
+- For spec authoring/updates, run `python3 scripts/validate_spec_quality.py` before implementation.
+- Every changed feature spec must include explicit `Verification`, `Risks and Assumptions`, and `Known Gaps and Follow-up Tasks` sections.
 - Keep changes scoped to requested files/tasks.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.

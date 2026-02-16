@@ -204,7 +204,12 @@ def review_indicates_pass(output: str) -> bool:
 
 def build_direction(phase: str, item: str, iteration: int, last_output: str = "") -> str:
     if phase == "spec":
-        return f"Write or expand the spec for: {item}. Use specs/TEMPLATE.md. Output the spec path."
+        return (
+            f"Write or expand the spec for: {item}. Use specs/TEMPLATE.md and include explicit "
+            "Verification, Risks/Assumptions, and Known Gaps with follow-up tasks. "
+            "Run `python3 scripts/validate_spec_quality.py --file <spec-path>` before finishing. "
+            "Output the spec path."
+        )
     if phase == "impl":
         if iteration > 1:
             return f"Fix the issues (iteration {iteration}): {item}. Review feedback or test failures: {last_output[:300]}"
