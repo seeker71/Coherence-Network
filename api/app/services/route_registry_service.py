@@ -84,6 +84,12 @@ def _default_registry() -> dict:
                 "purpose": "Idea registry storage backend and row-count inspection",
                 "idea_id": "portfolio-governance",
             },
+            {
+                "path": "/api/agent/tasks/upsert-active",
+                "methods": ["POST"],
+                "purpose": "Upsert running external work session into persistent task inventory",
+                "idea_id": "portfolio-governance",
+            },
         ],
         "web_routes": [
             {

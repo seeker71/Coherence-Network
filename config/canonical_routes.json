@@ -109,6 +109,12 @@
       "methods": ["POST"],
       "purpose": "Cast yes/no vote for human/machine review of changes",
       "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/agent/tasks/upsert-active",
+      "methods": ["POST"],
+      "purpose": "Upsert running external work session into persistent task inventory",
+      "idea_id": "portfolio-governance"
     }
   ],
   "web_routes": [

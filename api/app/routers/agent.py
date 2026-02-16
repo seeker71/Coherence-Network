@@ -16,6 +16,7 @@ from app.models.agent import (
     AgentTaskCreate,
     AgentTaskList,
     AgentTaskListItem,
+    AgentTaskUpsertActive,
     AgentTaskUpdate,
     RouteResponse,
     TaskStatus,
@@ -84,6 +85,32 @@ async def create_task(data: AgentTaskCreate) -> AgentTask:
     """Submit a task and get routed model + command."""
     task = agent_service.create_task(data)
     return AgentTask(**_task_to_full(task))
+
+
+@router.post(
+    "/agent/tasks/upsert-active",
+    responses={
+        409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
+    },
+)
+async def upsert_active_task(data: AgentTaskUpsertActive) -> dict:
+    """Ensure an external work session is represented as a running task."""
+    try:
+        task, created = agent_service.upsert_active_task(
+            session_key=data.session_key,
+            direction=data.direction,
+            task_type=data.task_type,
+            worker_id=data.worker_id,
+            context=data.context if isinstance(data.context, dict) else None,
+        )
+    except agent_service.TaskClaimConflictError as exc:
+        claimed = exc.claimed_by or "another worker"
+        raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
+
+    return {
+        "created": created,
+        "task": AgentTask(**_task_to_full(task)).model_dump(mode="json"),
+    }
 
 
 @router.get("/agent/tasks")
