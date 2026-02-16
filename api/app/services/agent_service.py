@@ -1,9 +1,11 @@
 """Agent orchestration: routing and task tracking."""
 
+import json
 import os
 import re
 import secrets
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
@@ -77,6 +79,8 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 
 # In-memory store (MVP); keyed by id
 _store: dict[str, dict[str, Any]] = {}
+_store_loaded = False
+_store_loaded_path: str | None = None
 ACTIVE_TASK_STATUSES = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.NEEDS_DECISION}
 
 
@@ -86,6 +90,137 @@ class TaskClaimConflictError(RuntimeError):
     def __init__(self, message: str, claimed_by: str | None = None):
         super().__init__(message)
         self.claimed_by = claimed_by
+
+
+def _default_store_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "logs" / "agent_tasks.json"
+
+
+def _store_path() -> Path:
+    configured = os.getenv("AGENT_TASKS_PATH")
+    if configured:
+        return Path(configured)
+    return _default_store_path()
+
+
+def _persistence_enabled() -> bool:
+    configured = os.getenv("AGENT_TASKS_PERSIST")
+    if configured is not None:
+        return configured.strip().lower() not in {"0", "false", "no", "off"}
+    # Keep tests deterministic unless explicitly opted in.
+    return os.getenv("PYTEST_CURRENT_TEST") is None
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _serialize_task(task: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in task.items():
+        if isinstance(value, (TaskStatus, TaskType)):
+            out[key] = value.value
+        elif isinstance(value, datetime):
+            out[key] = value.isoformat()
+        else:
+            out[key] = value
+    return out
+
+
+def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    task_id = raw.get("id")
+    direction = raw.get("direction")
+    command = raw.get("command")
+    model = raw.get("model")
+    if not all(isinstance(v, str) and v.strip() for v in (task_id, direction, command, model)):
+        return None
+
+    task_type_raw = raw.get("task_type")
+    status_raw = raw.get("status")
+    try:
+        task_type = task_type_raw if isinstance(task_type_raw, TaskType) else TaskType(str(task_type_raw))
+        status = status_raw if isinstance(status_raw, TaskStatus) else TaskStatus(str(status_raw))
+    except ValueError:
+        return None
+
+    created_at = _parse_dt(raw.get("created_at"))
+    if created_at is None:
+        created_at = _now()
+
+    task: dict[str, Any] = {
+        "id": task_id.strip(),
+        "direction": direction.strip(),
+        "task_type": task_type,
+        "status": status,
+        "model": model.strip(),
+        "command": command.strip(),
+        "output": raw.get("output"),
+        "context": raw.get("context") if isinstance(raw.get("context"), dict) else None,
+        "progress_pct": raw.get("progress_pct"),
+        "current_step": raw.get("current_step"),
+        "decision_prompt": raw.get("decision_prompt"),
+        "decision": raw.get("decision"),
+        "claimed_by": raw.get("claimed_by"),
+        "claimed_at": _parse_dt(raw.get("claimed_at")),
+        "created_at": created_at,
+        "updated_at": _parse_dt(raw.get("updated_at")),
+        "started_at": _parse_dt(raw.get("started_at")),
+        "tier": raw.get("tier") if isinstance(raw.get("tier"), str) else "openrouter",
+    }
+    return task
+
+
+def _load_store_from_disk() -> dict[str, dict[str, Any]]:
+    if not _persistence_enabled():
+        return {}
+    path = _store_path()
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    rows = payload.get("tasks") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return {}
+    loaded: dict[str, dict[str, Any]] = {}
+    for raw in rows:
+        task = _deserialize_task(raw)
+        if not task:
+            continue
+        loaded[task["id"]] = task
+    return loaded
+
+
+def _save_store_to_disk() -> None:
+    if not _persistence_enabled():
+        return
+    path = _store_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "tasks": [_serialize_task(task) for task in _store.values()],
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _ensure_store_loaded() -> None:
+    global _store_loaded, _store_loaded_path
+    current_path = str(_store_path())
+    if _store_loaded and _store_loaded_path == current_path:
+        return
+    _store.clear()
+    _store.update(_load_store_from_disk())
+    _store_loaded = True
+    _store_loaded_path = current_path
 
 
 def _now() -> datetime:
@@ -164,6 +299,7 @@ def _build_command(
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
+    _ensure_store_loaded()
     task_id = _generate_id()
     ctx = data.context if isinstance(data.context, dict) else {}
     executor = (ctx.get("executor") or os.environ.get("AGENT_EXECUTOR_DEFAULT", "claude")).lower()
@@ -211,11 +347,13 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "tier": tier,
     }
     _store[task_id] = task
+    _save_store_to_disk()
     return task
 
 
 def get_task(task_id: str) -> Optional[dict]:
     """Get task by id."""
+    _ensure_store_loaded()
     return _store.get(task_id)
 
 
@@ -226,6 +364,7 @@ def list_tasks(
     offset: int = 0,
 ) -> tuple:
     """List tasks with optional filters. Sorted by created_at descending (newest first)."""
+    _ensure_store_loaded()
     items = list(_store.values())
     if status is not None:
         items = [t for t in items if t["status"] == status]
@@ -251,6 +390,7 @@ def update_task(
     When decision is present and task is needs_decision, set status→running and store decision.
     Note: Caller should trigger Telegram alert for needs_decision/failed (see router).
     """
+    _ensure_store_loaded()
     task = _store.get(task_id)
     if task is None:
         return None
@@ -277,11 +417,13 @@ def update_task(
     if decision is not None and task.get("decision") is None:
         task["decision"] = decision
     task["updated_at"] = _now()
+    _save_store_to_disk()
     return task
 
 
 def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
     """List tasks with status needs_decision or failed (for /attention)."""
+    _ensure_store_loaded()
     items = [
         t
         for t in _store.values()
@@ -295,6 +437,7 @@ def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
 
 def get_task_count() -> dict[str, Any]:
     """Lightweight task counts for dashboards."""
+    _ensure_store_loaded()
     items = list(_store.values())
     by_status: dict[str, int] = {}
     for t in items:
@@ -305,6 +448,7 @@ def get_task_count() -> dict[str, Any]:
 
 def get_review_summary() -> dict[str, Any]:
     """Summary of tasks needing attention (for /status and alerts)."""
+    _ensure_store_loaded()
     items = list(_store.values())
     by_status = {}
     for t in items:
@@ -334,6 +478,7 @@ def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
 
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
+    _ensure_store_loaded()
     by_model: dict[str, dict[str, Any]] = {}
     for t in _store.values():
         m = t.get("model", "unknown")
@@ -353,6 +498,7 @@ def get_usage_summary() -> dict[str, Any]:
 
 
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
+    _ensure_store_loaded()
     fingerprint = (task_fingerprint or "").strip()
     if not fingerprint:
         return None
@@ -367,8 +513,62 @@ def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | N
     return None
 
 
+def find_active_task_by_session_key(session_key: str) -> dict[str, Any] | None:
+    _ensure_store_loaded()
+    key = (session_key or "").strip()
+    if not key:
+        return None
+    for task in _store.values():
+        if not _is_active_status(task.get("status")):
+            continue
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if str(context.get("session_key") or "").strip() == key:
+            return task
+    return None
+
+
+def upsert_active_task(
+    *,
+    session_key: str,
+    direction: str,
+    task_type: TaskType,
+    worker_id: str | None = None,
+    context: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], bool]:
+    """Ensure a running task exists for a unique session key. Returns (task, created)."""
+    _ensure_store_loaded()
+    normalized_key = (session_key or "").strip()
+    if not normalized_key:
+        raise ValueError("session_key is required")
+
+    existing = find_active_task_by_session_key(normalized_key)
+    if existing is not None:
+        _claim_running_task(existing, worker_id)
+        existing["updated_at"] = _now()
+        _save_store_to_disk()
+        return existing, False
+
+    payload_context = dict(context or {})
+    payload_context["session_key"] = normalized_key
+    payload_context.setdefault("source", "external_active_session")
+    created = create_task(
+        AgentTaskCreate(
+            direction=direction,
+            task_type=task_type,
+            context=payload_context,
+        )
+    )
+    _claim_running_task(created, worker_id)
+    created["updated_at"] = _now()
+    _save_store_to_disk()
+    return created, True
+
+
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     """Pipeline visibility: running, pending with wait times, recent completed with duration."""
+    _ensure_store_loaded()
     from datetime import timezone
     now = now_utc or datetime.now(timezone.utc)
 
@@ -540,4 +740,6 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
 
 def clear_store() -> None:
     """Clear in-memory store (for testing)."""
+    _ensure_store_loaded()
     _store.clear()
+    _save_store_to_disk()
