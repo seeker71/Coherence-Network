@@ -68,7 +68,7 @@ async def test_runtime_default_mapping_avoids_unmapped_for_known_surfaces(
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        for endpoint in ("/api/health-proxy", "/api/unknown-route", "/v1/contributors", "/some-web-route"):
+        for endpoint in ("/api/health-proxy", "/api/unknown-route", "/api/contributors", "/some-web-route"):
             created = await client.post(
                 "/api/runtime/events",
                 json={

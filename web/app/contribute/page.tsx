@@ -125,7 +125,7 @@ export default function ContributePage() {
     setError(null);
     try {
       const [contributorsRes, ideasRes, specsRes, crRes] = await Promise.all([
-        fetch(`${API}/v1/contributors`, { cache: "no-store" }),
+        fetch(`${API}/api/contributors`, { cache: "no-store" }),
         fetch(`${API}/api/ideas`, { cache: "no-store" }),
         fetch(`${API}/api/spec-registry`, { cache: "no-store" }),
         fetch(`${API}/api/governance/change-requests`, { cache: "no-store" }),
@@ -191,7 +191,7 @@ export default function ContributePage() {
     setBusy("register");
     setError(null);
     try {
-      const res = await fetch(`${API}/v1/contributors`, {
+      const res = await fetch(`${API}/api/contributors`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -666,7 +666,7 @@ export default function ContributePage() {
 
       <section className="rounded border p-4 space-y-2 text-sm">
         <h2 className="font-semibold">Machine API</h2>
-        <p>Register contributor: <code>POST /v1/contributors</code></p>
+        <p>Register contributor: <code>POST /api/contributors</code></p>
         <p>Submit change request: <code>POST /api/governance/change-requests</code></p>
         <p>Vote yes/no: <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
         <p>List specs: <code>GET /api/spec-registry</code> | list queue: <code>GET /api/governance/change-requests</code></p>

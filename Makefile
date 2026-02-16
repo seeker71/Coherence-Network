@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test run setup lint web-worktree-validate spec-quality
+.PHONY: test run setup lint web-worktree-validate spec-quality pr-preflight start-gate
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -19,3 +19,9 @@ web-worktree-validate:
 
 spec-quality:
 	python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
+
+pr-preflight:
+	python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+
+start-gate:
+	python3 scripts/ensure_worktree_start_clean.py --json

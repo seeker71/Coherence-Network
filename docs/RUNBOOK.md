@@ -211,6 +211,43 @@ Port override example:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 ```
 
+## Worktree PR Failure Guard
+
+Run before commit/push to prevent common PR check failures and track failures as artifacts:
+
+```bash
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+```
+
+Track open PR check failures (requires `GITHUB_TOKEN` or `GH_TOKEN`):
+
+```bash
+python3 scripts/worktree_pr_guard.py --mode remote --branch "$(git rev-parse --abbrev-ref HEAD)"
+```
+
+Both modes write JSON reports to:
+- `docs/system_audit/pr_check_failures/`
+
+Remote/all mode also evaluates deployment freshness using latest `Public Deploy Contract` run on `main`; when that run is failed or older than the freshness window, the guard returns blocking status.
+
+If a check fails, the report includes:
+- failing step/check name
+- output tail
+- suggested local remediation command
+
+## Worktree Start Gate
+
+Before starting a new task, enforce worktree-only + clean-state:
+
+```bash
+python3 scripts/ensure_worktree_start_clean.py --json
+```
+
+This gate fails when:
+- work is started in the primary repo workspace instead of a linked worktree,
+- current worktree has uncommitted local changes,
+- primary workspace still has leftover local changes from unfinished tasks.
+
 ## Cleanup Old Task Logs
 
 Task logs accumulate. To remove logs older than 7 days:
