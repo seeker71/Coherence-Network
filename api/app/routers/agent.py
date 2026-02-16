@@ -359,6 +359,12 @@ async def get_visibility() -> dict:
     return agent_service.get_visibility_summary()
 
 
+@router.get("/agent/integration")
+async def get_agent_integration() -> dict:
+    """Role-agent integration coverage and remaining gaps."""
+    return agent_service.get_agent_integration_status()
+
+
 @router.get("/agent/fatal-issues")
 async def get_fatal_issues() -> dict:
     """Unrecoverable failures. Check when autonomous; no user interaction needed until fatal."""

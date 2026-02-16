@@ -49,6 +49,8 @@ cd api && .venv/bin/python scripts/agent_runner.py --once -v
 
 **API:** `GET /api/agent/tasks/{task_id}` or `GET /api/agent/tasks?status=failed`
 
+**Integration coverage:** `GET /api/agent/integration` returns role-agent bindings, profile coverage, optional executor binary checks, and any remaining integration gaps.
+
 **Telegram:** `/tasks failed` or `/task {task_id}`
 
 ### 2. Check full output
