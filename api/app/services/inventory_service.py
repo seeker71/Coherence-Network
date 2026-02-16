@@ -1272,6 +1272,196 @@ def sync_traceability_gap_artifacts(
     }
 
 
+def evaluate_process_completeness(
+    runtime_window_seconds: int = 86400,
+    auto_sync: bool = False,
+    max_spec_idea_links: int = 150,
+    max_missing_endpoint_specs: int = 200,
+    max_spec_process_backfills: int = 500,
+    max_usage_gap_tasks: int = 200,
+) -> dict[str, Any]:
+    sync_report: dict[str, Any] | None = None
+    if auto_sync:
+        sync_report = sync_traceability_gap_artifacts(
+            runtime_window_seconds=runtime_window_seconds,
+            max_spec_idea_links=max_spec_idea_links,
+            max_missing_endpoint_specs=max_missing_endpoint_specs,
+            max_spec_process_backfills=max_spec_process_backfills,
+            max_usage_gap_tasks=max_usage_gap_tasks,
+        )
+
+    ideas_response = idea_service.list_ideas()
+    ideas = list(ideas_response.ideas)
+    specs = spec_registry_service.list_specs(limit=5000)
+    endpoint_inventory = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
+    endpoint_summary = endpoint_inventory.get("summary", {}) if isinstance(endpoint_inventory, dict) else {}
+
+    standing_text = str(getattr(idea_service, "STANDING_QUESTION_TEXT", "")).strip()
+    standing_missing_count = 0
+    for idea in ideas:
+        if not standing_text:
+            continue
+        has_standing = any(str(q.question).strip() == standing_text for q in idea.open_questions)
+        if not has_standing:
+            standing_missing_count += 1
+
+    spec_missing_idea_link_count = sum(
+        1
+        for spec in specs
+        if not (isinstance(spec.idea_id, str) and spec.idea_id.strip())
+    )
+    spec_missing_process_or_pseudocode_count = sum(
+        1
+        for spec in specs
+        if not str(spec.process_summary or "").strip() or not str(spec.pseudocode_summary or "").strip()
+    )
+    ideas_with_specs = {
+        str(spec.idea_id).strip()
+        for spec in specs
+        if isinstance(spec.idea_id, str) and str(spec.idea_id).strip()
+    }
+    ideas_without_specs_count = sum(1 for idea in ideas if idea.id not in ideas_with_specs)
+
+    total_endpoints = int(endpoint_summary.get("total_endpoints") or 0)
+    canonical_registered = int(endpoint_summary.get("canonical_registered") or 0)
+    missing_usage_count = max(total_endpoints - int(endpoint_summary.get("with_usage_events") or 0), 0)
+    missing_idea_count = int(endpoint_summary.get("missing_idea") or 0)
+    missing_spec_count = int(endpoint_summary.get("missing_spec") or 0)
+    missing_process_count = int(endpoint_summary.get("missing_process") or 0)
+    missing_validation_count = int(endpoint_summary.get("missing_validation") or 0)
+
+    checks: list[dict[str, Any]] = [
+        {
+            "id": "ideas_have_standing_questions",
+            "description": "Every idea has the standing improvement/measurability question.",
+            "passed": standing_missing_count == 0,
+            "current": {"missing_count": standing_missing_count, "total_ideas": len(ideas)},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Run idea backfill and ensure standing question enforcement.",
+        },
+        {
+            "id": "specs_linked_to_ideas",
+            "description": "Every spec is linked to an idea.",
+            "passed": spec_missing_idea_link_count == 0,
+            "current": {"missing_count": spec_missing_idea_link_count, "total_specs": len(specs)},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Run /api/inventory/gaps/sync-traceability to auto-link missing specs.",
+        },
+        {
+            "id": "specs_have_process_and_pseudocode",
+            "description": "Every spec has process summary and pseudocode summary.",
+            "passed": spec_missing_process_or_pseudocode_count == 0,
+            "current": {"missing_count": spec_missing_process_or_pseudocode_count, "total_specs": len(specs)},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Run /api/inventory/gaps/sync-traceability to backfill process/pseudocode gaps.",
+        },
+        {
+            "id": "ideas_have_specs",
+            "description": "Every idea is represented by at least one spec.",
+            "passed": ideas_without_specs_count == 0,
+            "current": {"missing_count": ideas_without_specs_count, "total_ideas": len(ideas)},
+            "expected": {"missing_count": 0},
+            "severity": "medium",
+            "fix_hint": "Run /api/inventory/gaps/sync-traceability and add specs for strategic ideas.",
+        },
+        {
+            "id": "endpoints_have_idea_mapping",
+            "description": "All discovered endpoints map to an idea lineage.",
+            "passed": missing_idea_count == 0,
+            "current": {"missing_count": missing_idea_count, "total_endpoints": total_endpoints},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Extend canonical routes and runtime idea mapping.",
+        },
+        {
+            "id": "endpoints_have_spec_coverage",
+            "description": "All discovered endpoints are linked to at least one spec artifact.",
+            "passed": missing_spec_count == 0,
+            "current": {"missing_count": missing_spec_count, "total_endpoints": total_endpoints},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Run /api/inventory/gaps/sync-traceability to generate missing endpoint specs.",
+        },
+        {
+            "id": "endpoints_have_process_coverage",
+            "description": "All discovered endpoints have process evidence and tasks.",
+            "passed": missing_process_count == 0,
+            "current": {"missing_count": missing_process_count, "total_endpoints": total_endpoints},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Attach process evidence/task links to endpoint source files.",
+        },
+        {
+            "id": "endpoints_have_validation_coverage",
+            "description": "All discovered endpoints have validation evidence.",
+            "passed": missing_validation_count == 0,
+            "current": {"missing_count": missing_validation_count, "total_endpoints": total_endpoints},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Attach CI/deploy/e2e evidence to endpoint paths.",
+        },
+        {
+            "id": "all_endpoints_have_usage_events",
+            "description": "All discovered endpoints have at least one runtime usage event in the window.",
+            "passed": missing_usage_count == 0,
+            "current": {"missing_count": missing_usage_count, "total_endpoints": total_endpoints},
+            "expected": {"missing_count": 0},
+            "severity": "high",
+            "fix_hint": "Run real endpoint flows; usage-gap tasks should be created via traceability sync.",
+        },
+        {
+            "id": "canonical_route_registry_complete",
+            "description": "All discovered endpoints are represented in canonical route registry.",
+            "passed": total_endpoints > 0 and canonical_registered == total_endpoints,
+            "current": {"canonical_registered": canonical_registered, "total_endpoints": total_endpoints},
+            "expected": {"canonical_registered": total_endpoints},
+            "severity": "medium",
+            "fix_hint": "Update canonical route registry config/service.",
+        },
+    ]
+
+    blockers = [
+        {
+            "check_id": check["id"],
+            "severity": check["severity"],
+            "description": check["description"],
+            "current": check["current"],
+            "expected": check["expected"],
+            "fix_hint": check["fix_hint"],
+        }
+        for check in checks
+        if not bool(check["passed"])
+    ]
+    blockers.sort(key=lambda row: ({"high": 0, "medium": 1, "low": 2}.get(str(row["severity"]), 3), row["check_id"]))
+
+    passed_count = sum(1 for check in checks if bool(check["passed"]))
+    failed_count = len(checks) - passed_count
+    status = "pass" if failed_count == 0 else "fail"
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "status": status,
+        "result": "process_complete" if status == "pass" else "process_gaps_detected",
+        "auto_sync_applied": bool(auto_sync),
+        "auto_sync_report": sync_report,
+        "runtime_window_seconds": runtime_window_seconds,
+        "summary": {
+            "checks_total": len(checks),
+            "checks_passed": passed_count,
+            "checks_failed": failed_count,
+            "blockers": len(blockers),
+            "ideas_total": len(ideas),
+            "specs_total": len(specs),
+            "endpoints_total": total_endpoints,
+        },
+        "checks": checks,
+        "blockers": blockers,
+    }
+
+
 def _join_path(prefix: str, subpath: str) -> str:
     if subpath == "/":
         return prefix or "/"

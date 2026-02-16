@@ -74,6 +74,25 @@ async def sync_traceability_gap_artifacts(
     )
 
 
+@router.get("/inventory/process-completeness")
+async def process_completeness(
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    auto_sync: bool = Query(False),
+    max_spec_idea_links: int = Query(150, ge=1, le=1000),
+    max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
+    max_spec_process_backfills: int = Query(500, ge=1, le=5000),
+    max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
+) -> dict:
+    return inventory_service.evaluate_process_completeness(
+        runtime_window_seconds=runtime_window_seconds,
+        auto_sync=auto_sync,
+        max_spec_idea_links=max_spec_idea_links,
+        max_missing_endpoint_specs=max_missing_endpoint_specs,
+        max_spec_process_backfills=max_spec_process_backfills,
+        max_usage_gap_tasks=max_usage_gap_tasks,
+    )
+
+
 @router.get("/inventory/flow")
 async def spec_process_implementation_validation_flow(
     idea_id: str | None = Query(default=None),
