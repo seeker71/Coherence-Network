@@ -34,6 +34,31 @@ async def test_system_lineage_inventory_includes_core_sections(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        contributor = await client.post(
+            "/v1/contributors",
+            json={"type": "HUMAN", "name": "urs-muff", "email": "urs-muff@example.com"},
+        )
+        assert contributor.status_code == 201
+        contributor_id = contributor.json()["id"]
+
+        asset = await client.post(
+            "/v1/assets",
+            json={"type": "CODE", "description": "seeker71/Coherence-Network"},
+        )
+        assert asset.status_code == 201
+        asset_id = asset.json()["id"]
+
+        contribution = await client.post(
+            "/v1/contributions",
+            json={
+                "contributor_id": contributor_id,
+                "asset_id": asset_id,
+                "cost_amount": "1.75",
+                "metadata": {"idea_ids": ["portfolio-governance"]},
+            },
+        )
+        assert contribution.status_code == 201
+
         created = await client.post("/api/value-lineage/links", json=link_payload)
         assert created.status_code == 201
         lineage_id = created.json()["id"]
@@ -295,9 +320,13 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
         assert row["validation"]["tracked"] is True
         assert row["contributors"]["tracked"] is True
         assert row["contributions"]["tracked"] is True
+        assert row["assets"]["tracked"] is True
         assert "088" in row["spec"]["spec_ids"]
         assert row["implementation"]["lineage_link_count"] >= 1
         assert row["contributions"]["usage_events_count"] >= 1
+        assert row["contributions"]["registry_contribution_count"] >= 1
+        assert row["contributions"]["registry_total_cost"] >= 1.75
+        assert row["assets"]["count"] >= 1
         assert row["validation"]["local"]["pass"] >= 1
         assert row["validation"]["ci"]["pass"] >= 1
         assert row["validation"]["deploy"]["pass"] >= 1
