@@ -23,11 +23,17 @@ Run and record:
 
 ```bash
 cd api && .venv/bin/pytest -q
-cd web && npm run build
+./scripts/verify_worktree_local_web.sh
 ```
 
 Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
+
+Worktree notes:
+- This command is the default local web validation for Codex threads.
+- It runs API + web inside the current worktree, validates key API/web routes, and fails on runtime errors in page content.
+- Override ports when needed:
+  - `API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh`
 
 ### Phase B: CI Validation (required before merge)
 

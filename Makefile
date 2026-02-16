@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test run setup lint
+.PHONY: test run setup lint web-worktree-validate
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -13,3 +13,6 @@ setup:
 
 lint:
 	cd api && .venv/bin/ruff check . 2>/dev/null || true
+
+web-worktree-validate:
+	./scripts/verify_worktree_local_web.sh
