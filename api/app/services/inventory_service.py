@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -14,7 +15,7 @@ from typing import Any
 import httpx
 
 from app.models.agent import AgentTaskCreate, TaskType
-from app.services import agent_service, idea_service, runtime_service, value_lineage_service
+from app.services import agent_service, idea_service, route_registry_service, runtime_service, value_lineage_service
 
 
 def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
@@ -478,6 +479,339 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
         payload["_evidence_file"] = str(path)
         out.append(payload)
     return out
+
+
+def _join_path(prefix: str, subpath: str) -> str:
+    if subpath == "/":
+        return prefix or "/"
+    if not prefix:
+        return subpath
+    if prefix.endswith("/") and subpath.startswith("/"):
+        return f"{prefix[:-1]}{subpath}"
+    return f"{prefix}{subpath}"
+
+
+def _router_prefix_map() -> dict[str, str]:
+    out: dict[str, str] = {}
+    main_path = _project_root() / "api" / "app" / "main.py"
+    if not main_path.exists():
+        return out
+    try:
+        tree = ast.parse(main_path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return out
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "include_router":
+            continue
+        if not node.args:
+            continue
+        first_arg = node.args[0]
+        if (
+            not isinstance(first_arg, ast.Attribute)
+            or first_arg.attr != "router"
+            or not isinstance(first_arg.value, ast.Name)
+        ):
+            continue
+        prefix = ""
+        for keyword in node.keywords:
+            if keyword.arg != "prefix":
+                continue
+            if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
+                prefix = keyword.value.value
+        out[first_arg.value.id] = prefix
+    return out
+
+
+def _extract_decorated_routes(module_path: Path, decorator_owner: str) -> list[tuple[str, str]]:
+    try:
+        tree = ast.parse(module_path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+    out: list[tuple[str, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            if not isinstance(decorator.func, ast.Attribute):
+                continue
+            method = decorator.func.attr.lower()
+            if method not in {"get", "post", "put", "patch", "delete"}:
+                continue
+            owner = decorator.func.value
+            if not isinstance(owner, ast.Name) or owner.id != decorator_owner:
+                continue
+            if not decorator.args:
+                continue
+            first_arg = decorator.args[0]
+            if not isinstance(first_arg, ast.Constant) or not isinstance(first_arg.value, str):
+                continue
+            out.append((method.upper(), first_arg.value))
+    return out
+
+
+def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
+    root = _project_root()
+    routers_dir = root / "api" / "app" / "routers"
+    prefix_map = _router_prefix_map()
+    grouped: dict[str, dict[str, Any]] = {}
+
+    for module_path in sorted(routers_dir.glob("*.py")):
+        if module_path.name == "__init__.py":
+            continue
+        router_name = module_path.stem
+        prefix = prefix_map.get(router_name, "")
+        for method, subpath in _extract_decorated_routes(module_path, "router"):
+            full_path = _join_path(prefix, subpath)
+            if not (full_path.startswith("/api") or full_path.startswith("/v1")):
+                continue
+            row = grouped.setdefault(
+                full_path,
+                {
+                    "path": full_path,
+                    "methods": set(),
+                    "source_files": set(),
+                },
+            )
+            row["methods"].add(method)
+            row["source_files"].add(str(module_path.relative_to(root)))
+
+    main_path = root / "api" / "app" / "main.py"
+    for method, subpath in _extract_decorated_routes(main_path, "app"):
+        if not (subpath.startswith("/api") or subpath.startswith("/v1")):
+            continue
+        row = grouped.setdefault(
+            subpath,
+            {
+                "path": subpath,
+                "methods": set(),
+                "source_files": set(),
+            },
+        )
+        row["methods"].add(method)
+        row["source_files"].add(str(main_path.relative_to(root)))
+
+    out: list[dict[str, Any]] = []
+    for path in sorted(grouped.keys()):
+        row = grouped[path]
+        out.append(
+            {
+                "path": path,
+                "methods": sorted(row["methods"]),
+                "source_files": sorted(row["source_files"]),
+            }
+        )
+    return out
+
+
+def _evidence_signals_by_source_file(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    signals: dict[str, dict[str, Any]] = {}
+    for record in records:
+        raw_files = record.get("change_files")
+        if not isinstance(raw_files, list):
+            continue
+        files = [x.strip() for x in raw_files if isinstance(x, str) and x.strip()]
+        if not files:
+            continue
+        spec_ids = {
+            x.strip()
+            for x in (record.get("spec_ids") if isinstance(record.get("spec_ids"), list) else [])
+            if isinstance(x, str) and x.strip()
+        }
+        task_ids = {
+            x.strip()
+            for x in (record.get("task_ids") if isinstance(record.get("task_ids"), list) else [])
+            if isinstance(x, str) and x.strip()
+        }
+        idea_ids = {
+            x.strip()
+            for x in (record.get("idea_ids") if isinstance(record.get("idea_ids"), list) else [])
+            if isinstance(x, str) and x.strip()
+        }
+        local_status = _normalize_validation_status((record.get("local_validation") or {}).get("status"))
+        ci_status = _normalize_validation_status((record.get("ci_validation") or {}).get("status"))
+        deploy_status = _normalize_validation_status((record.get("deploy_validation") or {}).get("status"))
+        e2e_status = _normalize_validation_status((record.get("e2e_validation") or {}).get("status"))
+
+        for file_path in files:
+            signal = signals.setdefault(
+                file_path,
+                {
+                    "spec_ids": set(),
+                    "task_ids": set(),
+                    "idea_ids": set(),
+                    "process_evidence_count": 0,
+                    "validation_pass_counts": {
+                        "local": 0,
+                        "ci": 0,
+                        "deploy": 0,
+                        "e2e": 0,
+                    },
+                },
+            )
+            signal["spec_ids"].update(spec_ids)
+            signal["task_ids"].update(task_ids)
+            signal["idea_ids"].update(idea_ids)
+            signal["process_evidence_count"] += 1
+            if local_status == "pass":
+                signal["validation_pass_counts"]["local"] += 1
+            if ci_status == "pass":
+                signal["validation_pass_counts"]["ci"] += 1
+            if deploy_status == "pass":
+                signal["validation_pass_counts"]["deploy"] += 1
+            if e2e_status == "pass":
+                signal["validation_pass_counts"]["e2e"] += 1
+    return signals
+
+
+def build_endpoint_traceability_inventory() -> dict[str, Any]:
+    endpoints = _discover_api_endpoints_from_source()
+    canonical = route_registry_service.get_canonical_routes().get("api_routes", [])
+    canonical_by_path = {
+        row.get("path"): row
+        for row in canonical
+        if isinstance(row, dict) and isinstance(row.get("path"), str)
+    }
+    evidence_by_file = _evidence_signals_by_source_file(_read_commit_evidence_records(limit=1200))
+    ideas_summary = idea_service.list_ideas().summary
+    specs, spec_source = _discover_specs(limit=2000)
+
+    items: list[dict[str, Any]] = []
+    for endpoint in endpoints:
+        path = endpoint["path"]
+        methods = endpoint["methods"]
+        source_files = endpoint["source_files"]
+        canonical_row = canonical_by_path.get(path)
+        canonical_methods = []
+        canonical_idea_id = ""
+        if isinstance(canonical_row, dict):
+            raw_methods = canonical_row.get("methods")
+            if isinstance(raw_methods, list):
+                canonical_methods = sorted(
+                    [m.strip().upper() for m in raw_methods if isinstance(m, str) and m.strip()]
+                )
+            canonical_idea_id = str(canonical_row.get("idea_id") or "").strip()
+
+        spec_ids: set[str] = set()
+        task_ids: set[str] = set()
+        evidence_idea_ids: set[str] = set()
+        process_evidence_count = 0
+        validation_pass_counts = {"local": 0, "ci": 0, "deploy": 0, "e2e": 0}
+        for source_file in source_files:
+            signal = evidence_by_file.get(source_file)
+            if not signal:
+                continue
+            spec_ids.update(signal["spec_ids"])
+            task_ids.update(signal["task_ids"])
+            evidence_idea_ids.update(signal["idea_ids"])
+            process_evidence_count += int(signal["process_evidence_count"])
+            for key in validation_pass_counts:
+                validation_pass_counts[key] += int(signal["validation_pass_counts"][key])
+
+        idea_ids = set(evidence_idea_ids)
+        if canonical_idea_id:
+            idea_ids.add(canonical_idea_id)
+        idea_source = "missing"
+        if canonical_idea_id and evidence_idea_ids:
+            idea_source = "canonical+evidence"
+        elif canonical_idea_id:
+            idea_source = "canonical"
+        elif evidence_idea_ids:
+            idea_source = "evidence"
+
+        primary_idea_id = canonical_idea_id
+        if not primary_idea_id and len(idea_ids) == 1:
+            primary_idea_id = next(iter(idea_ids))
+
+        idea_tracked = len(idea_ids) > 0
+        spec_tracked = len(spec_ids) > 0
+        process_tracked = process_evidence_count > 0 or len(task_ids) > 0
+        validation_tracked = any(validation_pass_counts.values())
+        fully_traced = idea_tracked and spec_tracked and process_tracked and validation_tracked
+
+        gaps: list[str] = []
+        if not idea_tracked:
+            gaps.append("idea")
+        if not spec_tracked:
+            gaps.append("spec")
+        if not process_tracked:
+            gaps.append("process")
+        if not validation_tracked:
+            gaps.append("validation")
+        if canonical_row is None:
+            gaps.append("canonical_route")
+        elif canonical_methods and canonical_methods != methods:
+            gaps.append("canonical_method_mismatch")
+
+        items.append(
+            {
+                "path": path,
+                "methods": methods,
+                "source_files": source_files,
+                "canonical_route": {
+                    "registered": canonical_row is not None,
+                    "methods": canonical_methods,
+                    "method_match": not canonical_methods or canonical_methods == methods,
+                },
+                "idea": {
+                    "tracked": idea_tracked,
+                    "idea_id": primary_idea_id or None,
+                    "idea_ids": sorted(idea_ids),
+                    "source": idea_source,
+                },
+                "spec": {
+                    "tracked": spec_tracked,
+                    "spec_ids": sorted(spec_ids),
+                },
+                "process": {
+                    "tracked": process_tracked,
+                    "evidence_count": process_evidence_count,
+                    "task_ids": sorted(task_ids),
+                },
+                "validation": {
+                    "tracked": validation_tracked,
+                    "pass_counts": validation_pass_counts,
+                },
+                "traceability": {
+                    "fully_traced": fully_traced,
+                    "gaps": gaps,
+                },
+            }
+        )
+
+    summary = {
+        "total_endpoints": len(items),
+        "canonical_registered": sum(1 for row in items if row["canonical_route"]["registered"]),
+        "with_idea": sum(1 for row in items if row["idea"]["tracked"]),
+        "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
+        "with_process": sum(1 for row in items if row["process"]["tracked"]),
+        "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
+        "fully_traced": sum(1 for row in items if row["traceability"]["fully_traced"]),
+        "missing_idea": sum(1 for row in items if not row["idea"]["tracked"]),
+        "missing_spec": sum(1 for row in items if not row["spec"]["tracked"]),
+        "missing_process": sum(1 for row in items if not row["process"]["tracked"]),
+        "missing_validation": sum(1 for row in items if not row["validation"]["tracked"]),
+    }
+
+    missing_items = [row for row in items if not row["traceability"]["fully_traced"]]
+    missing_items.sort(key=lambda row: (len(row["traceability"]["gaps"]), row["path"]), reverse=True)
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "context": {
+            "idea_count": ideas_summary.total_ideas,
+            "spec_count": len(specs),
+            "spec_source": spec_source,
+            "canonical_route_count": len(canonical_by_path),
+        },
+        "summary": summary,
+        "top_gaps": missing_items[:25],
+        "items": items,
+    }
 
 
 def _new_flow_row(idea_id: str, idea_name: str) -> dict[str, Any]:
