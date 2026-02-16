@@ -1,0 +1,84 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "Add explicit Codex/OpenClaw functional readiness contract to agent integration API and tests",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_codex-openclaw-readiness-contract.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "002",
+    "026"
+  ],
+  "task_ids": [
+    "codex-openclaw-readiness-contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && /opt/homebrew/bin/pytest -q tests/test_agent_integration_api.py tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py",
+    "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/api/agent/integration'); d = r.json(); print(r.status_code, d.get('status'), d.get('provider_readiness',{}).get('overall_ready'), d.get('provider_readiness',{}).get('missing_required'));\nasyncio.run(_r())\"",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_codex-openclaw-readiness-contract.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "docs/AGENT-DEBUGGING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/agent/integration now returns explicit provider_readiness for codex/openclaw with overall_ready and missing_required contracts.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/integration"
+    ],
+    "test_flows": [
+      "GET-/api/agent/integration->inspect-provider_readiness->verify-codex-openclaw-ready-state"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /opt/homebrew/bin/pytest -q tests/test_agent_integration_api.py tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py",
+      "cd api && /opt/homebrew/bin/python3.11 -c \"import asyncio; from httpx import ASGITransport, AsyncClient; from app.main import app; async def _r():\n  async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as c:\n    r = await c.get('/api/agent/integration'); d = r.json(); print(r.status_code, d.get('status'), d.get('provider_readiness',{}).get('overall_ready'), d.get('provider_readiness',{}).get('missing_required'));\nasyncio.run(_r())\""
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}

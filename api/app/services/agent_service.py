@@ -375,6 +375,89 @@ def _integration_gaps() -> dict[str, Any]:
     }
 
 
+def _required_integration_ids() -> list[str]:
+    raw = os.environ.get("AGENT_REQUIRED_INTEGRATIONS", "codex,openclaw")
+    out: list[str] = []
+    for token in str(raw).split(","):
+        cleaned = token.strip().lower()
+        if cleaned and cleaned not in out:
+            out.append(cleaned)
+    return out
+
+
+def _executor_route_contract(executor: str) -> tuple[bool, list[str]]:
+    gaps: list[str] = []
+    ex = _normalize_executor(executor, default="")
+    if not ex:
+        return False, ["invalid_executor"]
+    for task_type in TaskType:
+        route = get_route(task_type, executor=ex)
+        if str(route.get("executor") or "").strip().lower() != ex:
+            gaps.append(f"route_executor_mismatch:{task_type.value}")
+        template = str(route.get("command_template") or "")
+        if "{{direction}}" not in template:
+            gaps.append(f"route_template_missing_direction:{task_type.value}")
+        model = str(route.get("model") or "")
+        if ex == "cursor" and not model.startswith("cursor/"):
+            gaps.append(f"route_model_prefix_mismatch:{task_type.value}")
+        if ex == "openclaw" and not model.startswith("openclaw/"):
+            gaps.append(f"route_model_prefix_mismatch:{task_type.value}")
+    return len(gaps) == 0, gaps
+
+
+def _provider_readiness(report: dict[str, Any]) -> dict[str, Any]:
+    binary_checks = report.get("binary_checks") if isinstance(report.get("binary_checks"), dict) else {}
+    required = _required_integration_ids()
+
+    codex_route_ok, codex_route_gaps = _executor_route_contract("cursor")
+    openclaw_route_ok, openclaw_route_gaps = _executor_route_contract("openclaw")
+
+    codex_ready = bool(binary_checks.get("agent")) and codex_route_ok
+    openclaw_ready = bool(binary_checks.get("openclaw")) and openclaw_route_ok
+
+    codex_gaps = list(codex_route_gaps)
+    if not bool(binary_checks.get("agent")):
+        codex_gaps.append("missing_binary:agent")
+
+    openclaw_gaps = list(openclaw_route_gaps)
+    if not bool(binary_checks.get("openclaw")):
+        openclaw_gaps.append("missing_binary:openclaw")
+
+    providers = {
+        "codex": {
+            "executor": "cursor",
+            "binary": "agent",
+            "binary_available": bool(binary_checks.get("agent")),
+            "route_contract_passed": codex_route_ok,
+            "route_contract_gaps": codex_route_gaps,
+            "ready": codex_ready,
+            "gaps": codex_gaps,
+        },
+        "openclaw": {
+            "executor": "openclaw",
+            "binary": "openclaw",
+            "binary_available": bool(binary_checks.get("openclaw")),
+            "route_contract_passed": openclaw_route_ok,
+            "route_contract_gaps": openclaw_route_gaps,
+            "ready": openclaw_ready,
+            "gaps": openclaw_gaps,
+        },
+    }
+
+    missing_required: list[str] = []
+    for integration_id in required:
+        provider = providers.get(integration_id)
+        if not provider or not bool(provider.get("ready")):
+            missing_required.append(integration_id)
+
+    return {
+        "required": required,
+        "providers": providers,
+        "missing_required": missing_required,
+        "overall_ready": len(missing_required) == 0,
+    }
+
+
 COMMAND_TEMPLATES: dict[TaskType, str] = {
     TaskType.SPEC: _command_template(TaskType.SPEC),
     TaskType.TEST: _command_template(TaskType.TEST),
@@ -783,19 +866,33 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
 def get_agent_integration_status() -> dict[str, Any]:
     """Report role-agent coverage, executor availability, and integration gaps."""
     report = _integration_gaps()
+    provider_readiness = _provider_readiness(report)
     gaps = report.get("gaps", [])
     high_count = sum(1 for gap in gaps if gap.get("severity") == "high")
-    status = "healthy" if high_count == 0 else "needs_attention"
+    status = "healthy" if high_count == 0 and provider_readiness.get("overall_ready") else "needs_attention"
+
+    for missing in provider_readiness.get("missing_required") or []:
+        report["gaps"].append(
+            {
+                "id": f"missing-required-integration:{missing}",
+                "severity": "high",
+                "message": f"Required integration '{missing}' is not ready.",
+                "fix_hint": "Satisfy binary + route contract checks for the required integration.",
+            }
+        )
+
+    high_count = sum(1 for gap in report.get("gaps", []) if gap.get("severity") == "high")
     return {
         "generated_at": _now().isoformat(),
         "status": status,
         "summary": {
             "task_types": len(TaskType),
             "profiles": len(report.get("agent_profiles", [])),
-            "gap_count": len(gaps),
+            "gap_count": len(report.get("gaps", [])),
             "high_gap_count": high_count,
         },
         "integration": report,
+        "provider_readiness": provider_readiness,
     }
 
 
