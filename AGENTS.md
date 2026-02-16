@@ -19,6 +19,7 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/STATUS.md` — Current implementation status, sprint progress
 - `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
 - `docs/SPEC-TRACKING.md` — Quick reference: spec status, test mapping, verification
+- `docs/SPEC-QUALITY-GATE.md` — Required quality contract for changed specs
 - `docs/REFERENCE-REPOS.md` — Reference repos (crypo-coin, living-codex); read-only context
 - `docs/PLAN.md` — Consolidated vision and roadmap
 - `docs/MODEL-ROUTING.md` — AI model cost optimization
@@ -50,6 +51,9 @@ cd web && npm run dev
 ./scripts/verify_worktree_local_web.sh
 # Optional ports when running multiple worktrees:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+
+# Spec quality gate (run when changing specs)
+python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 
 # Tests (CI runs full; PM validation excludes holdout)
 cd api && pytest -v

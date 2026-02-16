@@ -181,6 +181,16 @@ Shows: running task, pending count, recent completed, latest LLM activity.
 cd api && .venv/bin/pytest -v
 ```
 
+## Validate Changed Specs
+
+Before implementation work on changed specs:
+
+```bash
+python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
+```
+
+This fails fast when specs are missing verification, risk/assumption, or known-gap follow-up sections.
+
 ## Local Web Validation In Worktrees
 
 Use one command from the repo root:
