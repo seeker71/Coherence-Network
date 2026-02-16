@@ -21,7 +21,7 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "2")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "3")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -45,7 +45,7 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -59,7 +59,7 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
     )
 
     assert str(second["model"]).startswith("openrouter/")
-    assert str(second["command"]).startswith("aider ")
+    assert str(second["command"]).startswith("claude -p ")
     context = second.get("context") or {}
     assert context.get("executor") == "claude"
     policy = context.get("executor_policy") or {}
@@ -83,7 +83,7 @@ async def test_route_auto_executor_uses_policy_default(monkeypatch: pytest.Monke
 
 def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -107,7 +107,7 @@ def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytes
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": "/usr/bin/agent", "aider": None, "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": None, "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 

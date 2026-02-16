@@ -1,0 +1,93 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "close codex+claude+openclaw integration readiness gap by making claude first-class in provider readiness contract and enforcing default required integrations",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_integration_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_codex-claude-openclaw-readiness-closure.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_agent_integration_api.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py",
+      "cd api && /opt/homebrew/bin/python3.11 -c \"from app.services import agent_service; s=agent_service.get_agent_integration_status(); print(s['status'], s['provider_readiness']['overall_ready'], s['provider_readiness']['missing_required'])\"",
+      "which agent && which claude && which openclaw && openclaw --version"
+    ],
+    "notes": [
+      "Integration status now reports required providers as codex, claude, openclaw by default.",
+      "All three providers pass binary + route contract checks in this environment."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel",
+    "notes": "Public deployment validation pending for merged branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "idea_ids": [
+    "idea-agent-integration-readiness"
+  ],
+  "spec_ids": [
+    "spec-agent-integration-provider-readiness-contract"
+  ],
+  "task_ids": [
+    "task-close-codex-claude-openclaw-integration-gap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_executor_policy.py",
+    "GET /api/agent/integration provider_readiness"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_integration_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_codex-claude-openclaw-readiness-closure.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agent integration status now treats claude as first-class required integration alongside codex and openclaw, and reports overall readiness only when all required integrations satisfy binary and route contracts.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/integration"
+    ],
+    "test_flows": [
+      "GET-/api/agent/integration->inspect-provider_readiness.required",
+      "GET-/api/agent/integration->assert-providers.codex|claude|openclaw-have-ready-state",
+      "executor-policy-escalation-to-claude-uses-claude-command-template"
+    ]
+  }
+}

@@ -47,8 +47,8 @@ def test_review_task_includes_primary_and_guard_agents(monkeypatch: pytest.Monke
 
 
 def test_agent_integration_readiness_reports_missing_openclaw(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_REQUIRED_INTEGRATIONS", "codex,openclaw")
-    which_map = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    monkeypatch.setenv("AGENT_REQUIRED_INTEGRATIONS", "codex,claude,openclaw")
+    which_map = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: which_map.get(name))
 
     payload = agent_service.get_agent_integration_status()
@@ -56,6 +56,7 @@ def test_agent_integration_readiness_reports_missing_openclaw(monkeypatch: pytes
     providers = readiness["providers"]
 
     assert providers["codex"]["ready"] is True
+    assert providers["claude"]["ready"] is True
     assert providers["openclaw"]["ready"] is False
     assert "openclaw" in readiness["missing_required"]
     assert readiness["overall_ready"] is False
@@ -63,8 +64,8 @@ def test_agent_integration_readiness_reports_missing_openclaw(monkeypatch: pytes
 
 
 def test_agent_integration_readiness_reports_all_required_ready(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_REQUIRED_INTEGRATIONS", "codex,openclaw")
-    which_map = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    monkeypatch.setenv("AGENT_REQUIRED_INTEGRATIONS", "codex,claude,openclaw")
+    which_map = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": "/usr/bin/openclaw"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: which_map.get(name))
 
     payload = agent_service.get_agent_integration_status()
@@ -72,6 +73,7 @@ def test_agent_integration_readiness_reports_all_required_ready(monkeypatch: pyt
     providers = readiness["providers"]
 
     assert providers["codex"]["ready"] is True
+    assert providers["claude"]["ready"] is True
     assert providers["openclaw"]["ready"] is True
     assert readiness["missing_required"] == []
     assert readiness["overall_ready"] is True

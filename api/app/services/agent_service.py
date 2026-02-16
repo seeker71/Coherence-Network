@@ -52,10 +52,14 @@ GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
 
 # Command templates: {{direction}} placeholder; uses --agent when subagent defined
 # --allowedTools + --dangerously-skip-permissions required for headless (-p) so Edit runs without prompts
-# _COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
-# _COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
-_COMMAND_LOCAL_AGENT = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
-_COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
+_COMMAND_LOCAL_AGENT = os.environ.get(
+    "CLAUDE_COMMAND_TEMPLATE",
+    f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions',
+)
+_COMMAND_HEAL = os.environ.get(
+    "CLAUDE_HEAL_COMMAND_TEMPLATE",
+    f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions',
+)
 
 # Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
 _CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {
@@ -121,7 +125,7 @@ def _executor_binary_name(executor: str) -> str:
         return "agent"
     if executor == "openclaw":
         return "openclaw"
-    return "aider"
+    return "claude"
 
 
 def _executor_available(executor: str) -> bool:
@@ -307,7 +311,7 @@ def _integration_gaps() -> dict[str, Any]:
     )
 
     binary_checks = {
-        "aider": _executor_available("claude"),
+        "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
         "openclaw": _executor_available("openclaw"),
     }
@@ -376,7 +380,7 @@ def _integration_gaps() -> dict[str, Any]:
 
 
 def _required_integration_ids() -> list[str]:
-    raw = os.environ.get("AGENT_REQUIRED_INTEGRATIONS", "codex,openclaw")
+    raw = os.environ.get("AGENT_REQUIRED_INTEGRATIONS", "codex,claude,openclaw")
     out: list[str] = []
     for token in str(raw).split(","):
         cleaned = token.strip().lower()
@@ -410,14 +414,20 @@ def _provider_readiness(report: dict[str, Any]) -> dict[str, Any]:
     required = _required_integration_ids()
 
     codex_route_ok, codex_route_gaps = _executor_route_contract("cursor")
+    claude_route_ok, claude_route_gaps = _executor_route_contract("claude")
     openclaw_route_ok, openclaw_route_gaps = _executor_route_contract("openclaw")
 
     codex_ready = bool(binary_checks.get("agent")) and codex_route_ok
+    claude_ready = bool(binary_checks.get("claude")) and claude_route_ok
     openclaw_ready = bool(binary_checks.get("openclaw")) and openclaw_route_ok
 
     codex_gaps = list(codex_route_gaps)
     if not bool(binary_checks.get("agent")):
         codex_gaps.append("missing_binary:agent")
+
+    claude_gaps = list(claude_route_gaps)
+    if not bool(binary_checks.get("claude")):
+        claude_gaps.append("missing_binary:claude")
 
     openclaw_gaps = list(openclaw_route_gaps)
     if not bool(binary_checks.get("openclaw")):
@@ -432,6 +442,15 @@ def _provider_readiness(report: dict[str, Any]) -> dict[str, Any]:
             "route_contract_gaps": codex_route_gaps,
             "ready": codex_ready,
             "gaps": codex_gaps,
+        },
+        "claude": {
+            "executor": "claude",
+            "binary": "claude",
+            "binary_available": bool(binary_checks.get("claude")),
+            "route_contract_passed": claude_route_ok,
+            "route_contract_gaps": claude_route_gaps,
+            "ready": claude_ready,
+            "gaps": claude_gaps,
         },
         "openclaw": {
             "executor": "openclaw",
