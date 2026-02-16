@@ -11,6 +11,10 @@ from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution, ContributionCreate
 from app.models.contributor import Contributor, ContributorType
 from app.models.error import ErrorDetail
+from app.services.contribution_cost_service import (
+    ESTIMATOR_VERSION,
+    estimate_commit_cost,
+)
 
 router = APIRouter()
 
@@ -141,18 +145,28 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
 
     # Calculate coherence score from metadata
     coherence = calculate_coherence_from_github_metadata(payload.metadata)
+    files_changed = payload.metadata.get("files_changed", 0)
+    lines_added = payload.metadata.get("lines_added", 0)
+    normalized_cost = estimate_commit_cost(
+        files_changed=files_changed,
+        lines_added=lines_added,
+        submitted_cost=payload.cost_amount,
+    )
 
     # Create contribution
     return store.create_contribution(
         contributor_id=contributor.id,
         asset_id=asset.id,
-        cost_amount=payload.cost_amount,
+        cost_amount=normalized_cost,
         coherence_score=coherence,
         metadata={
             **payload.metadata,
             "commit_hash": payload.commit_hash,
             "repository": payload.repository,
             "contributor_email": payload.contributor_email,
+            "raw_cost_amount": str(payload.cost_amount),
+            "normalized_cost_amount": str(normalized_cost),
+            "cost_estimator_version": ESTIMATOR_VERSION,
         },
     )
 
@@ -209,18 +223,28 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
 
         # Calculate coherence
         coherence = calculate_coherence_from_github_metadata(payload.metadata)
+        files_changed = payload.metadata.get("files_changed", 0)
+        lines_added = payload.metadata.get("lines_added", 0)
+        normalized_cost = estimate_commit_cost(
+            files_changed=files_changed,
+            lines_added=lines_added,
+            submitted_cost=payload.cost_amount,
+        )
 
         # Create contribution
         contrib = store.create_contribution(
             contributor_id=contributor.id,
             asset_id=asset.id,
-            cost_amount=payload.cost_amount,
+            cost_amount=normalized_cost,
             coherence_score=coherence,
             metadata={
                 **payload.metadata,
                 "commit_hash": payload.commit_hash,
                 "repository": payload.repository,
                 "contributor_email": payload.contributor_email,
+                "raw_cost_amount": str(payload.cost_amount),
+                "normalized_cost_amount": str(normalized_cost),
+                "cost_estimator_version": ESTIMATOR_VERSION,
             }
         )
 

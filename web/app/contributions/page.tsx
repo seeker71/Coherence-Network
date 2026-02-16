@@ -13,6 +13,14 @@ type Contribution = {
   cost_amount: string;
   coherence_score: number;
   timestamp: string;
+  metadata?: {
+    commit_hash?: string;
+    raw_cost_amount?: string;
+    normalized_cost_amount?: string;
+    cost_estimator_version?: string;
+    files_changed?: number;
+    lines_added?: number;
+  };
 };
 
 export default function ContributionsPage() {
@@ -37,6 +45,22 @@ export default function ContributionsPage() {
     })();
   }, []);
 
+  const toFinite = (value: string | number | undefined): number | null => {
+    if (value === undefined) return null;
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const effectiveCost = (row: Contribution): { effective: number; raw: number; normalized: number | null } => {
+    const raw = toFinite(row.cost_amount) ?? 0;
+    const normalized = toFinite(row.metadata?.normalized_cost_amount);
+    return {
+      effective: normalized ?? raw,
+      raw,
+      normalized,
+    };
+  };
+
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
       <div className="flex gap-3">
@@ -59,13 +83,29 @@ export default function ContributionsPage() {
           <ul className="space-y-2 text-sm">
             {rows.slice(0, 100).map((c) => (
               <li key={c.id} className="rounded border p-2 space-y-1">
+                {(() => {
+                  const cost = effectiveCost(c);
+                  const commitHash = c.metadata?.commit_hash;
+                  return (
+                    <>
                 <div className="flex justify-between gap-3">
                   <span className="font-medium">{c.id}</span>
                   <span className="text-muted-foreground">{c.timestamp}</span>
                 </div>
                 <div className="text-muted-foreground">
-                  contributor {c.contributor_id} | asset {c.asset_id} | cost {c.cost_amount} | coherence {c.coherence_score}
+                  contributor {c.contributor_id} | asset {c.asset_id} | cost {cost.effective.toFixed(2)} | coherence {c.coherence_score}
                 </div>
+                {cost.normalized !== null && Math.abs(cost.raw - cost.normalized) >= 0.01 && (
+                  <div className="text-xs text-muted-foreground">
+                    raw {cost.raw.toFixed(2)} → normalized {cost.normalized.toFixed(2)} ({c.metadata?.cost_estimator_version ?? "v2"})
+                  </div>
+                )}
+                {commitHash && (
+                  <div className="text-xs text-muted-foreground">commit {commitHash.slice(0, 12)}</div>
+                )}
+                    </>
+                  );
+                })()}
               </li>
             ))}
           </ul>
