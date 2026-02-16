@@ -58,6 +58,18 @@ def test_evaluate_pr_gates_not_ready_for_draft_pr() -> None:
     assert out["draft"] is True
 
 
+def test_evaluate_pr_gates_allows_merge_when_required_contexts_unavailable() -> None:
+    pr = {"number": 104, "draft": False, "mergeable_state": "clean", "head": {"sha": "abc"}}
+    commit_status = {"state": "failure", "statuses": []}
+    check_runs = [{"name": "NonRequired", "conclusion": "failure"}]
+    required_contexts: list[str] = []
+
+    out = evaluate_pr_gates(pr, commit_status, check_runs, required_contexts)
+
+    assert out["ready_to_merge"] is True
+    assert out["required_contexts"] == []
+
+
 def test_evaluate_collective_review_gates_passes_with_approval() -> None:
     pr = {
         "number": 200,
