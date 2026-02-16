@@ -1,29 +1,21 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/asset-modularity-drift-daily",
-  "commit_scope": "Detect oversized idea/spec/pseudocode/implementation assets, generate split tasks, and enforce daily drift audit",
+  "commit_scope": "Refactor asset modularity audit into smaller helpers to pass maintainability gates while preserving drift detection behavior",
   "files_owned": [
-    "api/app/routers/inventory.py",
-    "api/app/services/inventory_service.py",
-    "api/app/services/route_registry_service.py",
-    "api/tests/test_inventory_api.py",
-    "api/scripts/run_asset_modularity_audit.py",
-    ".github/workflows/asset-modularity-drift.yml",
-    "config/canonical_routes.json"
+    "api/app/services/inventory_service.py"
   ],
   "local_validation": { "status": "pass" },
-  "ci_validation": { "status": "pass" },
-  "deploy_validation": { "status": "pass" },
-  "phase_gate": { "can_move_next_phase": true },
+  "ci_validation": { "status": "pending" },
+  "deploy_validation": { "status": "pending" },
+  "phase_gate": { "can_move_next_phase": false },
   "idea_ids": [
     "portfolio-governance",
-    "coherence-network-agent-pipeline",
     "coherence-network-api-runtime"
   ],
   "spec_ids": [
     "089-endpoint-traceability-coverage",
-    "094",
-    "002-agent-orchestration-api"
+    "094"
   ],
   "task_ids": [
     "asset-modularity-drift-daily-audit"
@@ -46,31 +38,30 @@
   },
   "evidence_refs": [
     "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q api/tests/test_inventory_api.py",
-    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/python api/scripts/run_asset_modularity_audit.py --output /tmp/asset_modularity_report.json --max-implementation-files 1500"
+    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/python api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/python api/scripts/run_asset_modularity_audit.py --json --max-implementation-files 1500"
   ],
   "change_files": [
-    "api/app/routers/inventory.py",
-    "api/app/services/inventory_service.py",
-    "api/app/services/route_registry_service.py",
-    "api/tests/test_inventory_api.py",
-    "api/scripts/run_asset_modularity_audit.py",
     ".github/workflows/asset-modularity-drift.yml",
+    "api/app/routers/inventory.py",
+    "api/app/services/route_registry_service.py",
+    "api/scripts/run_asset_modularity_audit.py",
+    "api/tests/test_inventory_api.py",
+    "api/app/services/inventory_service.py",
     "config/canonical_routes.json",
     "docs/system_audit/commit_evidence_2026-02-16_asset-modularity-drift-daily.json"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "runtime_fix",
   "e2e_validation": {
-    "status": "pass",
-    "expected_behavior_delta": "System exposes asset modularity drift detection/sync endpoints and runs daily scheduled audits to prevent oversized asset drift.",
+    "status": "pending",
+    "expected_behavior_delta": "The asset modularity drift endpoints and scheduler remain available while maintainability risk is reduced by modular helper extraction.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/inventory/asset-modularity",
-      "https://coherence-network-production.up.railway.app/api/inventory/gaps/sync-asset-modularity-tasks",
-      "https://coherence-network-production.up.railway.app/api/inventory/process-completeness"
+      "https://coherence-network-production.up.railway.app/api/inventory/gaps/sync-asset-modularity-tasks"
     ],
     "test_flows": [
-      "api:/api/inventory/asset-modularity -> inspect blockers and ROI",
-      "api:/api/inventory/gaps/sync-asset-modularity-tasks -> create deduped split tasks",
-      "gha:daily Asset Modularity Drift Audit creates issue/tasks when blocking assets exist"
+      "api:/api/inventory/asset-modularity returns blockers summary and ROI ordering",
+      "api:/api/inventory/gaps/sync-asset-modularity-tasks creates deduped tasks"
     ]
   }
 }
