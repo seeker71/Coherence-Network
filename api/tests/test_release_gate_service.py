@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import base64
+
+import httpx
+import respx
+
 from app.services.release_gate_service import (
     get_branch_head_sha,
+    get_file_content_at_ref,
     collect_rerunnable_actions_run_ids,
     evaluate_commit_traceability_report,
     evaluate_public_deploy_contract_report,
@@ -192,3 +198,39 @@ def test_evaluate_commit_traceability_report_live_shape() -> None:
     assert isinstance(traceability.get("specs"), list)
     assert isinstance(traceability.get("implementations"), list)
     assert isinstance(traceability.get("evidence_files"), list)
+
+
+@respx.mock
+def test_get_file_content_at_ref_retries_transient_5xx_then_succeeds() -> None:
+    repository = "seeker71/Coherence-Network"
+    path = "docs/system_audit/commit_evidence_sample.json"
+    ref = "main"
+    url = f"https://api.github.com/repos/{repository}/contents/{path}"
+    payload = base64.b64encode(b'{"ok": true}').decode("utf-8")
+
+    route = respx.get(url).mock(
+        side_effect=[
+            httpx.Response(502, json={"message": "bad gateway"}),
+            httpx.Response(200, json={"content": payload, "encoding": "base64"}),
+        ]
+    )
+
+    out = get_file_content_at_ref(repository=repository, path=path, ref=ref, timeout=2.0)
+
+    assert out == '{"ok": true}'
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_get_file_content_at_ref_returns_none_when_github_keeps_5xx() -> None:
+    repository = "seeker71/Coherence-Network"
+    path = "docs/system_audit/commit_evidence_sample.json"
+    ref = "main"
+    url = f"https://api.github.com/repos/{repository}/contents/{path}"
+
+    route = respx.get(url).mock(return_value=httpx.Response(502, json={"message": "bad gateway"}))
+
+    out = get_file_content_at_ref(repository=repository, path=path, ref=ref, timeout=2.0)
+
+    assert out is None
+    assert route.call_count == 3

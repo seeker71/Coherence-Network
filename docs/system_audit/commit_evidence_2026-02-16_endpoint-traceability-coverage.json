@@ -5,8 +5,10 @@
   "files_owned": [
     "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
     "api/app/services/route_registry_service.py",
     "api/tests/test_inventory_api.py",
+    "api/tests/test_release_gate_service.py",
     "config/canonical_routes.json",
     "web/app/gates/page.tsx",
     "specs/089-endpoint-traceability-coverage.md",
@@ -46,7 +48,7 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
-    "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_ideas.py",
+    "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_ideas.py tests/test_gates.py tests/test_release_gate_service.py",
     "cd web && npm run build",
     "cd api && .venv/bin/python -c \"from app.services import inventory_service; print(inventory_service.build_endpoint_traceability_inventory()['summary'])\"",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_endpoint-traceability-coverage.json"
@@ -54,8 +56,10 @@
   "change_files": [
     "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
     "api/app/services/route_registry_service.py",
     "api/tests/test_inventory_api.py",
+    "api/tests/test_release_gate_service.py",
     "config/canonical_routes.json",
     "web/app/gates/page.tsx",
     "specs/089-endpoint-traceability-coverage.md"
@@ -82,7 +86,7 @@
       "npm": "11.6.2"
     },
     "commands": [
-      "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_ideas.py",
+      "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_ideas.py tests/test_gates.py tests/test_release_gate_service.py",
       "cd web && npm run build"
     ]
   },

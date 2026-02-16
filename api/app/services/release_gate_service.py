@@ -813,9 +813,22 @@ def get_file_content_at_ref(
     quoted_path = quote(path, safe="/")
     url = f"https://api.github.com/repos/{repository}/contents/{quoted_path}"
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url, params={"ref": ref})
-        response.raise_for_status()
-        data = response.json()
+        data: dict[str, Any] | None = None
+        for attempt in range(3):
+            response = client.get(url, params={"ref": ref})
+            # Transient upstream errors (observed in CI) should not fail traceability report generation.
+            if response.status_code >= 500 and attempt < 2:
+                time.sleep(0.2 * float(attempt + 1))
+                continue
+            if response.status_code == 404:
+                return None
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError:
+                return None
+            parsed = response.json()
+            data = parsed if isinstance(parsed, dict) else None
+            break
     if not isinstance(data, dict):
         return None
     content = data.get("content")
