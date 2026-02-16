@@ -48,6 +48,10 @@ jobs:
             --base "$BASE_SHA" \
             --head "$HEAD_SHA"
 
+      - name: Validate workflow file references
+        run: |
+          python3 scripts/validate_workflow_references.py
+
       - name: Run API tests
         run: |
           cd api && pytest -v
