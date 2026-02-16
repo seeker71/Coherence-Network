@@ -81,15 +81,16 @@ async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
         payload = visibility.json()
 
         assert payload["pipeline"]["recent_completed_count"] == 2
-        assert payload["usage"]["execution"]["tracked_runs"] == 1
+        assert payload["usage"]["execution"]["tracked_runs"] == 3
         assert payload["usage"]["execution"]["success_rate"] == 1.0
-        assert payload["usage"]["execution"]["codex_runs"] == 1
+        assert payload["usage"]["execution"]["codex_runs"] == 2
         assert payload["usage"]["execution"]["by_tool"]["agent"]["count"] == 1
         assert payload["usage"]["execution"]["by_tool"]["agent"]["failed"] == 0
-        assert payload["remaining_usage"]["coverage_rate"] == 0.5
-        assert payload["remaining_usage"]["remaining_to_full_coverage"] == 1
-        assert payload["remaining_usage"]["health"] == "red"
-        assert payload["remaining_usage"]["untracked_task_ids"] == [task_two_id]
+        assert payload["usage"]["execution"]["by_tool"]["agent-task-completion"]["count"] == 2
+        assert payload["remaining_usage"]["coverage_rate"] == 1.0
+        assert payload["remaining_usage"]["remaining_to_full_coverage"] == 0
+        assert payload["remaining_usage"]["health"] == "green"
+        assert payload["remaining_usage"]["untracked_task_ids"] == []
 
 
 @pytest.mark.asyncio
@@ -149,6 +150,7 @@ async def test_agent_visibility_reports_green_when_all_completed_tasks_are_track
         assert payload["remaining_usage"]["coverage_rate"] == 1.0
         assert payload["remaining_usage"]["remaining_to_full_coverage"] == 0
         assert payload["remaining_usage"]["health"] == "green"
+        assert payload["usage"]["execution"]["by_tool"]["agent-task-completion"]["count"] == 1
 
 
 @pytest.mark.asyncio
@@ -215,13 +217,15 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
         payload = visibility.json()
         execution = payload["usage"]["execution"]
 
-        assert execution["tracked_runs"] == 2
+        assert execution["tracked_runs"] == 3
         assert execution["failed_runs"] == 1
-        assert execution["success_runs"] == 1
-        assert execution["success_rate"] == 0.5
+        assert execution["success_runs"] == 2
+        assert execution["success_rate"] == 0.6667
         assert execution["by_tool"]["agent"]["count"] == 1
         assert execution["by_tool"]["agent"]["failed"] == 0
         assert execution["by_tool"]["agent"]["success_rate"] == 1.0
+        assert execution["by_tool"]["agent-task-completion"]["count"] == 1
+        assert execution["by_tool"]["agent-task-completion"]["success_rate"] == 1.0
         assert execution["by_tool"]["pytest"]["count"] == 1
         assert execution["by_tool"]["pytest"]["failed"] == 1
         assert execution["by_tool"]["pytest"]["success_rate"] == 0.0

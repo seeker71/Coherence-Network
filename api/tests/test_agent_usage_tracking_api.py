@@ -81,14 +81,116 @@ async def test_agent_usage_includes_execution_tracking_and_codex_attribution(
         payload = usage.json()
 
         execution = payload["execution"]
-        assert execution["tracked_runs"] == 1
+        assert execution["tracked_runs"] == 3
         assert execution["failed_runs"] == 0
-        assert execution["codex_runs"] == 1
+        assert execution["success_runs"] == 3
+        assert execution["success_rate"] == 1.0
+        assert execution["codex_runs"] == 2
         assert execution["by_executor"]["cursor"]["count"] == 1
-        assert execution["by_agent"]["openai-codex"]["count"] == 1
+        assert execution["by_agent"]["openai-codex"]["count"] == 2
+        assert execution["by_tool"]["agent-task-completion"]["count"] == 2
 
         coverage = execution["coverage"]
         assert coverage["completed_or_failed_tasks"] == 2
-        assert coverage["tracked_task_runs"] == 1
-        assert coverage["coverage_rate"] == 0.5
-        assert task_two_id in coverage["untracked_task_ids"]
+        assert coverage["tracked_task_runs"] == 2
+        assert coverage["coverage_rate"] == 1.0
+        assert coverage["untracked_task_ids"] == []
+
+
+@pytest.mark.asyncio
+async def test_completed_agent_tasks_emit_repeatable_completion_tool_calls(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        task = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Complete task and track repeatable call", "task_type": "impl"},
+        )
+        assert task.status_code == 201
+        task_id = task.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openai-codex"},
+        )
+        assert running.status_code == 200
+        completed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "done"},
+        )
+        assert completed.status_code == 200
+
+        events = await client.get("/api/runtime/events", params={"limit": 200})
+        assert events.status_code == 200
+        rows = events.json()
+        completion_events = [
+            row
+            for row in rows
+            if row.get("source") == "worker"
+            and row.get("endpoint") == "/tool:agent-task-completion"
+            and (row.get("metadata") or {}).get("task_id") == task_id
+        ]
+        assert len(completion_events) == 1
+        metadata = completion_events[0]["metadata"]
+        assert metadata["tracking_kind"] == "agent_task_completion"
+        assert metadata["repeatable_tool_name"] == "agent_task_completion"
+        assert metadata["repeatable_tool_call"]
+        assert metadata["repeatable_tool_call_sha256"]
+        assert metadata["task_final_status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_completion_tracking_event_is_idempotent_per_task_and_final_status(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        task = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Avoid duplicate completion tracking", "task_type": "impl"},
+        )
+        assert task.status_code == 201
+        task_id = task.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openai-codex"},
+        )
+        assert running.status_code == 200
+        completed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "done"},
+        )
+        assert completed.status_code == 200
+        completed_again = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "still done"},
+        )
+        assert completed_again.status_code == 200
+
+        events = await client.get("/api/runtime/events", params={"limit": 200})
+        assert events.status_code == 200
+        rows = events.json()
+        completion_events = [
+            row
+            for row in rows
+            if row.get("endpoint") == "/tool:agent-task-completion"
+            and (row.get("metadata") or {}).get("task_id") == task_id
+            and (row.get("metadata") or {}).get("task_final_status") == "completed"
+        ]
+        assert len(completion_events) == 1
