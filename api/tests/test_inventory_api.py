@@ -774,6 +774,22 @@ async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_a
         assert linked_spec_payload["pseudocode_summary"].strip() != ""
         assert payload["updated_spec_process_pseudocode_count"] >= 1
 
+        if payload["created_missing_endpoint_specs_count"] > 0:
+            created = payload["created_missing_endpoint_specs"][0]
+            traceability = await client.get(
+                "/api/inventory/endpoint-traceability",
+                params={"runtime_window_seconds": 86400},
+            )
+            assert traceability.status_code == 200
+            trace_items = traceability.json()["items"]
+            row = next(
+                item
+                for item in trace_items
+                if item["path"] == created["path"]
+            )
+            assert row["spec"]["tracked"] is True
+            assert created["spec_id"] in row["spec"]["spec_ids"]
+
         idea = await client.get(f"/api/ideas/{linked_spec_payload['idea_id']}")
         assert idea.status_code == 200
 

@@ -1857,6 +1857,17 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
     evidence_by_file = _evidence_signals_by_source_file(_read_commit_evidence_records(limit=1200))
     ideas_summary = idea_service.list_ideas().summary
     specs, spec_source = _discover_specs(limit=2000)
+    registry_specs = spec_registry_service.list_specs(limit=5000)
+    discovered_spec_ids = {
+        str(row.get("spec_id") or "").strip()
+        for row in specs
+        if isinstance(row, dict) and str(row.get("spec_id") or "").strip()
+    }
+    discovered_spec_ids.update(
+        str(spec.spec_id).strip()
+        for spec in registry_specs
+        if isinstance(getattr(spec, "spec_id", None), str) and str(spec.spec_id).strip()
+    )
     usage_rows = runtime_service.summarize_by_endpoint(seconds=runtime_window_seconds)
     usage_by_endpoint = {row.endpoint: row for row in usage_rows}
 
@@ -1891,6 +1902,13 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
             process_evidence_count += int(signal["process_evidence_count"])
             for key in validation_pass_counts:
                 validation_pass_counts[key] += int(signal["validation_pass_counts"][key])
+
+        # Deterministic endpoint->spec link: if an auto-generated endpoint spec exists,
+        # treat it as a real spec link for this endpoint even without commit evidence.
+        for method in methods or ["GET"]:
+            derived_spec_id = _auto_spec_id_for_endpoint(path, method)
+            if derived_spec_id in discovered_spec_ids:
+                spec_ids.add(derived_spec_id)
 
         usage = usage_by_endpoint.get(path)
         runtime_idea_id = str(usage.idea_id if usage else "").strip()
@@ -2016,7 +2034,7 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "context": {
             "idea_count": ideas_summary.total_ideas,
-            "spec_count": len(specs),
+            "spec_count": len(discovered_spec_ids),
             "spec_source": spec_source,
             "canonical_route_count": len(canonical_by_path),
             "runtime_window_seconds": runtime_window_seconds,
