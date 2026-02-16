@@ -1,7 +1,7 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/endpoint-traceability",
-  "commit_scope": "Add endpoint-level traceability inventory for idea/spec/process/validation coverage and expose it in gates UI",
+  "commit_scope": "Add endpoint-level traceability inventory for idea/spec/process/validation coverage, expose it in gates UI, and handle deployed source-layout fallback",
   "files_owned": [
     "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
@@ -49,6 +49,7 @@
   },
   "evidence_refs": [
     "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_ideas.py tests/test_gates.py tests/test_release_gate_service.py",
+    "cd api && .venv/bin/pytest -q tests/test_inventory_api.py tests/test_release_gate_service.py",
     "cd web && npm run build",
     "cd api && .venv/bin/python -c \"from app.services import inventory_service; print(inventory_service.build_endpoint_traceability_inventory()['summary'])\"",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_endpoint-traceability-coverage.json"
@@ -79,7 +80,7 @@
   },
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-16T10:29:13Z",
+    "ran_at": "2026-02-16T10:37:06Z",
     "environment": {
       "python": "3.14.3",
       "node": "v25.2.1",
