@@ -17,6 +17,7 @@ from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
 from app.models.project import Project, ProjectSummary
+from app.services.contributor_hygiene import is_test_contributor_email
 
 Base = declarative_base()
 
@@ -71,10 +72,29 @@ class PostgresGraphStore:
         self.engine = create_engine(database_url, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
         self._ensure_tables()
+        self._purge_test_contributors()
 
     def _ensure_tables(self) -> None:
         """Create tables if they don't exist."""
         Base.metadata.create_all(bind=self.engine)
+
+    def _purge_test_contributors(self) -> int:
+        """Remove test contributors and linked contributions from persistent storage."""
+        with self._session() as session:
+            test_ids = [
+                row.id
+                for row in session.query(ContributorModel.id, ContributorModel.email).all()
+                if is_test_contributor_email(row.email)
+            ]
+            if not test_ids:
+                return 0
+            session.query(ContributionModel).filter(ContributionModel.contributor_id.in_(test_ids)).delete(
+                synchronize_session=False
+            )
+            removed = (
+                session.query(ContributorModel).filter(ContributorModel.id.in_(test_ids)).delete(synchronize_session=False)
+            )
+            return int(removed or 0)
 
     @contextmanager
     def _session(self):
@@ -96,6 +116,8 @@ class PostgresGraphStore:
             model = session.query(ContributorModel).filter_by(id=contributor_id).first()
             if not model:
                 return None
+            if is_test_contributor_email(model.email):
+                return None
             return Contributor(
                 id=model.id,
                 type=model.type,
@@ -108,9 +130,13 @@ class PostgresGraphStore:
 
     def find_contributor_by_email(self, email: str) -> Contributor | None:
         """Find contributor by email address."""
+        if is_test_contributor_email(email):
+            return None
         with self._session() as session:
             model = session.query(ContributorModel).filter_by(email=email).first()
             if not model:
+                return None
+            if is_test_contributor_email(model.email):
                 return None
             return Contributor(
                 id=model.id,
@@ -123,6 +149,8 @@ class PostgresGraphStore:
             )
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
+        if is_test_contributor_email(str(contributor.email)):
+            raise ValueError("test contributor emails are not allowed in persistent store")
         with self._session() as session:
             model = ContributorModel(
                 id=contributor.id,
@@ -145,7 +173,7 @@ class PostgresGraphStore:
                 .limit(limit)
                 .all()
             )
-            return [
+            items = [
                 Contributor(
                     id=m.id,
                     type=m.type,
@@ -157,6 +185,7 @@ class PostgresGraphStore:
                 )
                 for m in models
             ]
+            return [item for item in items if not is_test_contributor_email(str(item.email))]
 
     def get_asset(self, asset_id: UUID) -> Asset | None:
         with self._session() as session:
