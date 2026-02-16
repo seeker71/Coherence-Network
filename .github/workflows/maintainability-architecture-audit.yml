@@ -1,0 +1,129 @@
+name: Maintainability Architecture Audit
+
+on:
+  schedule:
+    - cron: "0 11 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  audit-maintainability:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run maintainability audit
+        id: audit
+        run: |
+          set +e
+          python api/scripts/run_maintainability_audit.py \
+            --json \
+            --output maintainability_audit_report.json \
+            --fail-on-regression \
+            --fail-on-blocking
+          code=$?
+          cat maintainability_audit_report.json
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload maintainability audit report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: maintainability_audit_report_${{ github.sha }}
+          path: maintainability_audit_report.json
+
+      - name: Create or update maintainability drift issue
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('maintainability_audit_report.json', 'utf8'));
+            const summary = report.summary || {};
+            const tasks = Array.isArray(report.recommended_tasks) ? report.recommended_tasks : [];
+            const title = 'Maintainability architecture drift detected';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'Automated maintainability audit detected blocking drift/regression.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Severity: ${summary.severity || 'unknown'}`,
+              `- Risk score: ${summary.risk_score ?? 'n/a'}`,
+              `- Regression: ${summary.regression ? 'yes' : 'no'}`,
+              '',
+              'Counts:',
+              `- layer_violations: ${summary.layer_violation_count ?? 0}`,
+              `- large_modules: ${summary.large_module_count ?? 0}`,
+              `- very_large_modules: ${summary.very_large_module_count ?? 0}`,
+              `- long_functions: ${summary.long_function_count ?? 0}`,
+              `- placeholders: ${summary.placeholder_count ?? 0}`,
+              '',
+              'Recommended high-ROI tasks:',
+              ...(tasks.length
+                ? tasks.slice(0, 3).map((t) =>
+                    `- \`${t.task_id}\` (roi=${t.roi_estimate}, cost_h=${t.estimated_cost_hours}, value=${t.value_to_whole}): ${t.direction}`
+                  )
+                : ['- (none)']),
+              '',
+              'Raw report:',
+              '```json',
+              JSON.stringify(report, null, 2).slice(0, 6000),
+              '```',
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Resolve maintainability drift issue when audit passes
+        if: ${{ steps.audit.outputs.exit_code == '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = 'Maintainability architecture drift detected';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length === 0) {
+              return;
+            }
+            const issue = existing.data.items[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Resolved by workflow run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}. Maintainability audit is passing.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+            });
+
+      - name: Fail when maintainability gate fails
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        run: |
+          echo "Maintainability architecture audit failed"
+          exit 1

@@ -58,6 +58,13 @@ jobs:
         run: |
           python3 scripts/check_runtime_drift.py
 
+      - name: Check maintainability regression baseline
+        run: |
+          python3 api/scripts/run_maintainability_audit.py \
+            --output maintainability_audit_report.json \
+            --fail-on-regression
+          cat maintainability_audit_report.json
+
       - name: Run API tests
         run: |
           cd api && pytest -q
