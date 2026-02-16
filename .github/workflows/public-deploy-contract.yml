@@ -87,10 +87,17 @@ jobs:
         if: ${{ steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          REVALIDATE_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || '12' }}
+          REVALIDATE_SLEEP_SECONDS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS || '15' }}
         run: |
           set +e
           code=2
-          for i in $(seq 1 40); do
+          previous_fail_sig=""
+          unchanged_fail_count=0
+          max_attempts="${REVALIDATE_MAX_ATTEMPTS:-12}"
+          sleep_seconds="${REVALIDATE_SLEEP_SECONDS:-15}"
+
+          for i in $(seq 1 "$max_attempts"); do
             cd api
             python scripts/validate_public_deploy_contract.py \
               --repo "${{ github.repository }}" \
@@ -102,7 +109,27 @@ jobs:
             if [ "$code" -eq 0 ]; then
               break
             fi
-            sleep 30
+
+            fail_sig="$(jq -c '.failing_checks // []' public_deploy_contract_report.json)"
+            vercel_only="$(jq -r '((.failing_checks // []) | length > 0 and all(.[]; startswith("vercel_")))' public_deploy_contract_report.json)"
+
+            if [ "$fail_sig" = "$previous_fail_sig" ]; then
+              unchanged_fail_count=$((unchanged_fail_count + 1))
+            else
+              unchanged_fail_count=1
+              previous_fail_sig="$fail_sig"
+            fi
+
+            if [ "$unchanged_fail_count" -ge 4 ]; then
+              echo "Fail-fast: failing_checks stable for 4 attempts (${fail_sig})."
+              break
+            fi
+            if [ "$vercel_only" = "true" ] && [ "$i" -ge 3 ]; then
+              echo "Fail-fast: only Vercel checks failing after Railway redeploy."
+              break
+            fi
+
+            sleep "$sleep_seconds"
           done
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
