@@ -5,7 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from app.models.idea import (
+    IdeaCreate,
     IdeaPortfolioResponse,
+    IdeaQuestionCreate,
     IdeaQuestionAnswerUpdate,
     IdeaStorageInfo,
     IdeaUpdate,
@@ -36,6 +38,23 @@ async def get_idea(idea_id: str) -> IdeaWithScore:
     return idea
 
 
+@router.post("/ideas", response_model=IdeaWithScore, status_code=201)
+async def create_idea(data: IdeaCreate) -> IdeaWithScore:
+    created = idea_service.create_idea(
+        idea_id=data.id,
+        name=data.name,
+        description=data.description,
+        potential_value=data.potential_value,
+        estimated_cost=data.estimated_cost,
+        confidence=data.confidence,
+        interfaces=data.interfaces,
+        open_questions=data.open_questions,
+    )
+    if created is None:
+        raise HTTPException(status_code=409, detail="Idea already exists")
+    return created
+
+
 @router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
     if all(
@@ -58,6 +77,21 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")
+    return updated
+
+
+@router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
+async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithScore:
+    updated, added = idea_service.add_question(
+        idea_id=idea_id,
+        question=data.question,
+        value_to_whole=data.value_to_whole,
+        estimated_cost=data.estimated_cost,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if not added:
+        raise HTTPException(status_code=409, detail="Question already exists for idea")
     return updated
 
 

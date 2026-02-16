@@ -16,6 +16,7 @@ const NAV = [
 ];
 
 const SECONDARY = [
+  { href: "/contribute", label: "Contribute" },
   { href: "/contributors", label: "Contributors" },
   { href: "/contributions", label: "Contributions" },
   { href: "/assets", label: "Assets" },

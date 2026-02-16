@@ -49,6 +49,53 @@ async def test_get_idea_by_id_and_404(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
 
 @pytest.mark.asyncio
+async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    create_payload = {
+        "id": "new-contributor-idea",
+        "name": "Contributor-originated idea",
+        "description": "Created through API for attribution pipeline.",
+        "potential_value": 35.0,
+        "estimated_cost": 8.0,
+        "confidence": 0.6,
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [
+            {"question": "What is the first measurable milestone?", "value_to_whole": 10.0, "estimated_cost": 2.0}
+        ],
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/ideas", json=create_payload)
+        assert created.status_code == 201
+        assert created.json()["id"] == "new-contributor-idea"
+
+        duplicate = await client.post("/api/ideas", json=create_payload)
+        assert duplicate.status_code == 409
+
+        add_question = await client.post(
+            "/api/ideas/new-contributor-idea/questions",
+            json={
+                "question": "How should this be validated publicly?",
+                "value_to_whole": 12.0,
+                "estimated_cost": 1.0,
+            },
+        )
+        assert add_question.status_code == 200
+
+        add_question_duplicate = await client.post(
+            "/api/ideas/new-contributor-idea/questions",
+            json={
+                "question": "How should this be validated publicly?",
+                "value_to_whole": 12.0,
+                "estimated_cost": 1.0,
+            },
+        )
+        assert add_question_duplicate.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))

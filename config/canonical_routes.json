@@ -67,6 +67,42 @@
       "methods": ["GET"],
       "purpose": "Idea registry storage backend and row-count inspection",
       "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/ideas",
+      "methods": ["POST"],
+      "purpose": "Create new idea entry for contributor-governed portfolio",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/ideas/{idea_id}/questions",
+      "methods": ["POST"],
+      "purpose": "Add open question to existing idea",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/spec-registry",
+      "methods": ["GET", "POST"],
+      "purpose": "List and create contributor-authored specs",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/spec-registry/{spec_id}",
+      "methods": ["GET", "PATCH"],
+      "purpose": "Inspect and update contributor-authored specs",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/governance/change-requests",
+      "methods": ["GET", "POST"],
+      "purpose": "Submit and inspect reviewable change requests",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/governance/change-requests/{change_request_id}/votes",
+      "methods": ["POST"],
+      "purpose": "Cast yes/no vote for human/machine review of changes",
+      "idea_id": "portfolio-governance"
     }
   ],
   "web_routes": [
@@ -88,6 +124,11 @@
     {
       "path": "/flow",
       "purpose": "Human flow visualization for spec-process-implementation-validation tracking",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/contribute",
+      "purpose": "Human contributor onboarding and review console",
       "idea_id": "portfolio-governance"
     }
   ]

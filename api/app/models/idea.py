@@ -22,6 +22,12 @@ class IdeaQuestion(BaseModel):
     measured_delta: Optional[float] = None
 
 
+class IdeaQuestionCreate(BaseModel):
+    question: str = Field(min_length=1)
+    value_to_whole: float = Field(ge=0.0)
+    estimated_cost: float = Field(ge=0.0)
+
+
 class Idea(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -61,6 +67,17 @@ class IdeaUpdate(BaseModel):
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
+
+
+class IdeaCreate(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    potential_value: float = Field(ge=0.0)
+    estimated_cost: float = Field(ge=0.0)
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    interfaces: list[str] = Field(default_factory=list)
+    open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):

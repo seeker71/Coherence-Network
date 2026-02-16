@@ -20,6 +20,7 @@ const SHARED_RELATED: LinkItem[] = [
   { href: "/search", label: "Search" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/flow", label: "Flow" },
+  { href: "/contribute", label: "Contribute" },
   { href: "/ideas", label: "Ideas" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
@@ -100,6 +101,16 @@ const CONTEXTS: Record<string, ContextDef> = {
     machinePaths: [
       { href: "/v1/contributors", label: "Contributors API" },
       { href: "/v1/contributions", label: "Contributions API" },
+    ],
+  },
+  "/contribute": {
+    ideaId: "portfolio-governance",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/v1/contributors", label: "Contributors API" },
+      { href: "/api/governance/change-requests", label: "Change requests API" },
+      { href: "/api/spec-registry", label: "Spec registry API" },
+      { href: "/api/ideas", label: "Ideas API" },
     ],
   },
   "/contributions": {

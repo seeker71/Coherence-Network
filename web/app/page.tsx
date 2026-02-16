@@ -83,6 +83,11 @@ const API_NAV_CARDS: Array<{ href: string; title: string; description: string }>
     description: "See how ideas, contributors, contributions, and assets connect.",
   },
   {
+    href: "/contribute",
+    title: "Contribute",
+    description: "Register, propose changes, and review with yes/no votes.",
+  },
+  {
     href: "/ideas",
     title: "Ideas",
     description: "Browse high-upside ideas and unresolved questions.",
@@ -230,7 +235,7 @@ export default async function Home() {
 
             <div className="flex flex-wrap gap-3 pt-1">
               <Button asChild>
-                <Link href="/contributors">Start Contributing</Link>
+                <Link href="/contribute">Start Contributing</Link>
               </Button>
               <Button asChild variant="secondary">
                 <Link href="/ideas">Pick a High-Upside Idea</Link>
@@ -289,11 +294,11 @@ export default async function Home() {
             <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
               <li>Register in the contributor registry and declare your role.</li>
               <li>Pick one high-upside idea or unanswered question.</li>
-              <li>Create a spec/task link so your implementation is attributable.</li>
+              <li>Submit a change request, then vote yes/no to approve and apply with attribution.</li>
             </ol>
             <div className="flex gap-2 flex-wrap">
-              <Link href="/contributors" className="text-sm underline text-muted-foreground hover:text-foreground">
-                Open contributors
+              <Link href="/contribute" className="text-sm underline text-muted-foreground hover:text-foreground">
+                Open contribution console
               </Link>
               <Link href="/portfolio" className="text-sm underline text-muted-foreground hover:text-foreground">
                 Open portfolio
