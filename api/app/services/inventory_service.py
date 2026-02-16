@@ -155,6 +155,8 @@ FALLBACK_SPECS: list[dict[str, str]] = [
 
 _SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "fallback"}
 _SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
+_EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
+_EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 
 
 def _project_root() -> Path:
@@ -465,9 +467,9 @@ def _normalize_validation_status(value: Any) -> str:
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
     evidence_dir = _commit_evidence_dir()
-    if not evidence_dir.exists():
-        return []
-    files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, min(limit, 3000))]
+    files = []
+    if evidence_dir.exists():
+        files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, min(limit, 3000))]
     out: list[dict[str, Any]] = []
     for path in files:
         try:
@@ -478,7 +480,51 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
             continue
         payload["_evidence_file"] = str(path)
         out.append(payload)
-    return out
+    if out:
+        return out
+
+    now = time.time()
+    cached = _EVIDENCE_DISCOVERY_CACHE.get("items")
+    if isinstance(cached, list) and _EVIDENCE_DISCOVERY_CACHE.get("expires_at", 0.0) > now:
+        return [item for item in cached if isinstance(item, dict)][: max(1, min(limit, 3000))]
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
+    remote_out: list[dict[str, Any]] = []
+    try:
+        with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
+            response = client.get(list_url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+            if isinstance(rows, list):
+                evidence_rows = [
+                    row
+                    for row in rows
+                    if isinstance(row, dict)
+                    and isinstance(row.get("name"), str)
+                    and row["name"].startswith("commit_evidence_")
+                    and row["name"].endswith(".json")
+                ][: max(1, min(limit, 1200))]
+                for row in evidence_rows:
+                    download_url = row.get("download_url")
+                    if not isinstance(download_url, str) or not download_url:
+                        continue
+                    payload_resp = client.get(download_url)
+                    if payload_resp.status_code != 200:
+                        continue
+                    payload = payload_resp.json()
+                    if not isinstance(payload, dict):
+                        continue
+                    payload["_evidence_file"] = str(row.get("path") or row.get("name") or "github")
+                    remote_out.append(payload)
+    except (httpx.HTTPError, ValueError, TypeError):
+        remote_out = []
+
+    _EVIDENCE_DISCOVERY_CACHE["items"] = remote_out
+    _EVIDENCE_DISCOVERY_CACHE["expires_at"] = now + _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS
+    _EVIDENCE_DISCOVERY_CACHE["source"] = "github" if remote_out else "none"
+    return remote_out
 
 
 def _join_path(prefix: str, subpath: str) -> str:
