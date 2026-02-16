@@ -793,3 +793,74 @@ async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_a
         assert rerun_payload["created_usage_gap_tasks_count"] == 0
         if payload["created_usage_gap_tasks_count"] > 0:
             assert rerun_payload["skipped_existing_usage_gap_tasks_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_process_completeness_report_has_checks_and_blockers(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get("/api/inventory/process-completeness", params={"runtime_window_seconds": 86400})
+        assert report.status_code == 200
+        payload = report.json()
+
+        assert payload["result"] in {"process_complete", "process_gaps_detected"}
+        assert payload["status"] in {"pass", "fail"}
+        assert isinstance(payload["checks"], list)
+        assert len(payload["checks"]) >= 8
+        check_ids = {row["id"] for row in payload["checks"]}
+        assert "specs_linked_to_ideas" in check_ids
+        assert "specs_have_process_and_pseudocode" in check_ids
+        assert "all_endpoints_have_usage_events" in check_ids
+        assert isinstance(payload["blockers"], list)
+        assert payload["summary"]["checks_total"] == len(payload["checks"])
+
+
+@pytest.mark.asyncio
+async def test_process_completeness_auto_sync_runs_traceability_sync(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+    agent_service._store.clear()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        seeded = await client.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": "auto-sync-process-completeness-spec",
+                "title": "Auto sync process completeness seed",
+                "summary": "Seed spec for process completeness auto-sync.",
+                "created_by_contributor_id": "user-2",
+            },
+        )
+        assert seeded.status_code == 201
+        assert seeded.json()["idea_id"] is None
+
+        report = await client.get(
+            "/api/inventory/process-completeness",
+            params={
+                "runtime_window_seconds": 86400,
+                "auto_sync": True,
+                "max_spec_idea_links": 10,
+                "max_missing_endpoint_specs": 10,
+                "max_spec_process_backfills": 20,
+                "max_usage_gap_tasks": 5,
+            },
+        )
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["auto_sync_applied"] is True
+        assert isinstance(payload["auto_sync_report"], dict)
+        assert payload["auto_sync_report"]["result"] == "traceability_gap_artifacts_synced"
+        assert payload["auto_sync_report"]["linked_specs_to_ideas_count"] >= 1

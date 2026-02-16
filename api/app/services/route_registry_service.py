@@ -79,6 +79,36 @@ def _default_registry() -> dict:
                 "idea_id": "oss-interface-alignment",
             },
             {
+                "path": "/api/inventory/gaps/sync-traceability",
+                "methods": ["POST"],
+                "purpose": "Auto-sync missing idea/spec/process/usage artifacts from endpoint gaps",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/inventory/process-completeness",
+                "methods": ["GET"],
+                "purpose": "Strict process completeness report with blockers and optional auto-sync",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/api/inventory/questions/proactive",
+                "methods": ["GET"],
+                "purpose": "Generate proactive high-ROI questions from recent change history",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/api/inventory/questions/sync-proactive",
+                "methods": ["POST"],
+                "purpose": "Sync proactive generated questions into idea question backlog",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
+                "path": "/api/inventory/flow/next-unblock-task",
+                "methods": ["POST"],
+                "purpose": "Suggest or create highest-priority flow unblock task",
+                "idea_id": "portfolio-governance",
+            },
+            {
                 "path": "/api/ideas/storage",
                 "methods": ["GET"],
                 "purpose": "Idea registry storage backend and row-count inspection",
