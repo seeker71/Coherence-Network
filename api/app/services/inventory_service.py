@@ -518,12 +518,15 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
                     payload_resp = client.get(download_url)
                     if payload_resp.status_code != 200:
                         continue
-                    payload = payload_resp.json()
+                    try:
+                        payload = payload_resp.json()
+                    except ValueError:
+                        continue
                     if not isinstance(payload, dict):
                         continue
                     payload["_evidence_file"] = str(row.get("path") or row.get("name") or "github")
                     remote_out.append(payload)
-    except (httpx.HTTPError, ValueError, TypeError):
+    except (httpx.HTTPError, TypeError):
         remote_out = []
 
     _EVIDENCE_DISCOVERY_CACHE["items"] = remote_out
