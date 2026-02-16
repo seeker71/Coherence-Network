@@ -1,0 +1,88 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "add per-worktree bootstrap/runbook and enforce readiness+doc acknowledgment before local validation",
+  "files_owned": [
+    ".gitignore",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-SETUP.md",
+    "scripts/check_worktree_bootstrap.py",
+    "scripts/local_cicd_preflight.py",
+    "scripts/worktree_bootstrap.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/worktree_bootstrap.sh",
+      "python3 scripts/check_worktree_bootstrap.py",
+      "python3 -m py_compile scripts/check_worktree_bootstrap.py scripts/local_cicd_preflight.py"
+    ],
+    "notes": [
+      "Bootstrap created api/.venv, installed API and web dependencies, and wrote .worktree-state/setup_ack.json.",
+      "Readiness guard passed after bootstrap and confirms ack/doc hash + dependency availability."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test"
+    ],
+    "notes": "Pending CI after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "n/a-process-only",
+    "notes": "Process/tooling/docs change; no runtime deployment delta expected."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI pending"
+  },
+  "idea_ids": [
+    "idea-worktree-bootstrap-readiness-contract"
+  ],
+  "spec_ids": [
+    "spec-codex-thread-process-local-readiness"
+  ],
+  "task_ids": [
+    "task-document-and-enforce-worktree-bootstrap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/WORKTREE-SETUP.md",
+    "scripts/worktree_bootstrap.sh",
+    "scripts/check_worktree_bootstrap.py",
+    "scripts/local_cicd_preflight.py"
+  ],
+  "change_files": [
+    ".gitignore",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-SETUP.md",
+    "docs/system_audit/commit_evidence_2026-02-16_worktree-bootstrap-readiness-gate.json",
+    "scripts/check_worktree_bootstrap.py",
+    "scripts/local_cicd_preflight.py",
+    "scripts/worktree_bootstrap.sh"
+  ],
+  "change_intent": "process_only"
+}

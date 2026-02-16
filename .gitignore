@@ -46,3 +46,4 @@ logs/
 api/packages/
 .aider*
 .deployment_config
+.worktree-state/

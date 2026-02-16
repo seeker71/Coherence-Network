@@ -61,6 +61,21 @@ def _npm_build_command(web_dir: Path) -> list[str]:
     return ["bash", "-lc", "npm ci && npm run build"]
 
 
+def _api_pytest_command(api_dir: Path) -> list[str]:
+    candidates = [
+        api_dir / ".venv" / "bin" / "python",
+        Path("/opt/homebrew/bin/python3.11"),
+        Path("/usr/local/bin/python3.11"),
+    ]
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
+        code, _, _ = _run([str(candidate), "-c", "import pytest"], api_dir)
+        if code == 0:
+            return [str(candidate), "-m", "pytest", "-q"]
+    return ["python3", "-m", "pytest", "-q"]
+
+
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
@@ -169,6 +184,12 @@ def main() -> int:
             True,
         ),
         (
+            "worktree_bootstrap_guard",
+            ["python3", "scripts/check_worktree_bootstrap.py"],
+            root,
+            True,
+        ),
+        (
             "vercel_rate_limit_guard",
             [
                 "python3",
@@ -244,7 +265,7 @@ def main() -> int:
             ),
         )
     if has_api_changes and not args.skip_api_tests:
-        pipeline.append(("api_pytest_quick", ["python3", "-m", "pytest", "-q"], api_dir, True))
+        pipeline.append(("api_pytest_quick", _api_pytest_command(api_dir), api_dir, True))
     if has_web_changes and not args.skip_web_build:
         pipeline.append(("web_build", _npm_build_command(web_dir), web_dir, True))
 

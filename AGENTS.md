@@ -29,6 +29,7 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
 - `docs/META-QUESTIONS.md` — Questions to validate setup, monitoring, effectiveness; catch misconfigurations
 - `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
+- `docs/WORKTREE-SETUP.md` — Required worktree bootstrap/readiness steps
 - `docs/DEPLOY.md` — Deploy checklist
 - `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
 - `specs/TEMPLATE.md` — Spec format
@@ -42,6 +43,9 @@ Spec → Test → Implement → CI → Review → Merge
 ## Commands
 
 ```bash
+# Worktree bootstrap (required once per worktree, and whenever docs/WORKTREE-SETUP.md changes)
+./scripts/worktree_bootstrap.sh
+
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
