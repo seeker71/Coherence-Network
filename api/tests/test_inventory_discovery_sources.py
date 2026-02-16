@@ -276,3 +276,57 @@ def test_route_evidence_probe_uses_github_when_local_missing(
     assert isinstance(payload, dict)
     assert payload["api"][0]["path_template"] == "/api/inventory/system-lineage"
     assert str(payload["_probe_file"]).endswith("route_evidence_probe_2026-02-16_public.json")
+
+
+def test_route_evidence_probe_uses_github_raw_latest_when_available(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
+    monkeypatch.setattr(inventory_service, "_tracking_repository", lambda: "seeker71/Coherence-Network")
+    monkeypatch.setattr(inventory_service, "_tracking_ref", lambda: "main")
+    inventory_service._ROUTE_PROBE_DISCOVERY_CACHE["expires_at"] = 0.0
+    inventory_service._ROUTE_PROBE_DISCOVERY_CACHE["item"] = None
+
+    class FakeResponse:
+        def __init__(self, status_code: int, payload):
+            self.status_code = status_code
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            if self.status_code >= 400:
+                raise RuntimeError("http error")
+
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url, params=None):
+            if "raw.githubusercontent.com" in url:
+                return FakeResponse(
+                    200,
+                    {
+                        "generated_at": "2026-02-16T00:00:00+00:00",
+                        "api": [
+                            {"path_template": "/api/inventory/system-lineage", "method": "GET", "status_code": 200}
+                        ],
+                        "web": [{"path_template": "/flow", "status_code": 200}],
+                    },
+                )
+            return FakeResponse(404, {"detail": "not found"})
+
+    monkeypatch.setattr(inventory_service.httpx, "Client", FakeClient)
+
+    payload = inventory_service._read_latest_route_evidence_probe()
+
+    assert isinstance(payload, dict)
+    assert payload["api"][0]["path_template"] == "/api/inventory/system-lineage"
+    assert payload["_probe_file"] == "docs/system_audit/route_evidence_probe_latest.json"
