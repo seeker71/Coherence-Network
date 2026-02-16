@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
+import PageContextLinks from "@/components/page_context_links";
 import SiteHeader from "@/components/site_header";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased font-sans`}>
         <RuntimeBeacon />
         <SiteHeader />
+        <PageContextLinks />
         {children}
       </body>
     </html>
