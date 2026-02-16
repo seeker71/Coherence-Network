@@ -56,6 +56,8 @@ API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 # Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
+# Tighten deploy freshness requirement if needed (default 6h):
+python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)" --deploy-success-max-age-hours 2
 
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
