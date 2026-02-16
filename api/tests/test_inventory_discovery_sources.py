@@ -55,3 +55,67 @@ def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
     assert inventory["specs"]["count"] == 1
     assert inventory["specs"]["source"] == "github"
     assert inventory["specs"]["items"][0]["spec_id"] == "900"
+
+
+def test_inventory_uses_github_commit_evidence_when_local_missing(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
+    monkeypatch.setattr(inventory_service, "_tracking_repository", lambda: "seeker71/Coherence-Network")
+    monkeypatch.setattr(inventory_service, "_tracking_ref", lambda: "main")
+    inventory_service._EVIDENCE_DISCOVERY_CACHE["expires_at"] = 0.0
+    inventory_service._EVIDENCE_DISCOVERY_CACHE["items"] = []
+
+    class FakeResponse:
+        def __init__(self, status_code: int, payload):
+            self.status_code = status_code
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            if self.status_code >= 400:
+                raise RuntimeError("http error")
+
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url, params=None):
+            if url.endswith("/contents/docs/system_audit"):
+                return FakeResponse(
+                    200,
+                    [
+                        {
+                            "name": "commit_evidence_remote.json",
+                            "path": "docs/system_audit/commit_evidence_remote.json",
+                            "download_url": "https://example.test/commit_evidence_remote.json",
+                        }
+                    ],
+                )
+            if url == "https://example.test/commit_evidence_remote.json":
+                return FakeResponse(
+                    200,
+                    {
+                        "idea_ids": ["portfolio-governance"],
+                        "spec_ids": ["089"],
+                        "change_files": ["api/app/routers/inventory.py"],
+                    },
+                )
+            return FakeResponse(404, {"detail": "not found"})
+
+    monkeypatch.setattr(inventory_service.httpx, "Client", FakeClient)
+
+    records = inventory_service._read_commit_evidence_records(limit=20)
+
+    assert len(records) == 1
+    assert records[0]["idea_ids"] == ["portfolio-governance"]
+    assert records[0]["spec_ids"] == ["089"]
+    assert str(records[0]["_evidence_file"]).endswith("commit_evidence_remote.json")
