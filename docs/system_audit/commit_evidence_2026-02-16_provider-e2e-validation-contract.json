@@ -1,0 +1,110 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/provider-e2e-validation",
+  "commit_scope": "Add provider execution validation contract (config + usage + execution evidence) for openai-codex, github, railway, and claude with API and web visibility.",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/app/services/runtime_service.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/scripts/run_provider_validation_e2e.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/provider_validation_actual_2026-02-16.json",
+    "docs/system_audit/commit_evidence_2026-02-16_provider-e2e-validation-contract.json",
+    "web/app/automation/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "014-deploy-readiness"
+  ],
+  "task_ids": [
+    "task-provider-e2e-validation-contract",
+    "task-provider-validation-ui-visibility"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/run_provider_validation_e2e.py",
+    "docs/system_audit/provider_validation_actual_2026-02-16.json",
+    "api/tests/test_automation_usage_api.py",
+    "web/app/automation/page.tsx"
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/app/services/runtime_service.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/scripts/run_provider_validation_e2e.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/provider_validation_actual_2026-02-16.json",
+    "docs/system_audit/commit_evidence_2026-02-16_provider-e2e-validation-contract.json",
+    "web/app/automation/page.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py tests/test_agent_usage_tracking_api.py",
+      "cd web && npm ci --cache .npm-cache --no-fund --no-audit && npm run build",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+web"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Provider validation contract now reports all_required_validated=true only when required providers have config/readiness and successful execution evidence.",
+    "public_endpoints": [
+      "http://127.0.0.1:8010/api/automation/usage/provider-validation/run",
+      "http://127.0.0.1:8010/api/automation/usage/provider-validation",
+      "http://127.0.0.1:8010/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "POST provider-validation/run for coherence-internal,openai-codex,github,railway,claude -> all probes ok",
+      "GET provider-validation -> all_required_validated=true and each provider successful_events>=1",
+      "GET readiness -> provider rows expose configured/status and notes used by validation contract"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and merged main deployment validation."
+  }
+}

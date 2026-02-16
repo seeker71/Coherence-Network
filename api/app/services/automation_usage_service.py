@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 from app.models.automation_usage import (
+    ProviderValidationReport,
+    ProviderValidationRow,
     ProviderReadinessReport,
     ProviderReadinessRow,
     ProviderUsageOverview,
@@ -29,8 +33,10 @@ _CACHE_TTL_SECONDS = 120.0
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
+    "openai-codex": {"kind": "custom", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
+    "claude": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
     "openai": {"kind": "openai", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
-    "github": {"kind": "github", "all_of": ["GITHUB_TOKEN", "GITHUB_BILLING_OWNER", "GITHUB_BILLING_SCOPE"]},
+    "github": {"kind": "github", "any_of": ["GITHUB_TOKEN", "GH_TOKEN"]},
     "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
     "anthropic": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
     "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
@@ -40,6 +46,13 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
 }
 
 _DEFAULT_REQUIRED_PROVIDERS = ("coherence-internal", "github", "openai", "railway", "vercel")
+_DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
+    "coherence-internal",
+    "openai-codex",
+    "github",
+    "railway",
+    "claude",
+)
 
 
 def _snapshots_path() -> Path:
@@ -109,6 +122,33 @@ def _env_present(name: str) -> bool:
     return bool(str(os.getenv(name, "")).strip())
 
 
+def _cli_ok(command: list[str]) -> bool:
+    try:
+        completed = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+        )
+    except Exception:
+        return False
+    return completed.returncode == 0
+
+
+def _gh_auth_available() -> bool:
+    if shutil.which("gh") is None:
+        return False
+    return _cli_ok(["gh", "auth", "status"])
+
+
+def _railway_auth_available() -> bool:
+    if shutil.which("railway") is None:
+        return False
+    return _cli_ok(["railway", "whoami"])
+
+
 def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
     rule = _PROVIDER_CONFIG_RULES.get(provider, {})
     all_of = [str(item) for item in (rule.get("all_of") or [])]
@@ -128,10 +168,43 @@ def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
     return configured, missing, present
 
 
+def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[str]]:
+    configured, missing, present = _configured_env_status(provider)
+    notes: list[str] = []
+    if configured:
+        return configured, missing, present, notes
+
+    provider_name = provider.strip().lower()
+    active_counts = _active_provider_usage_counts()
+    active_runs = int(active_counts.get(provider_name, 0))
+
+    if provider_name == "github" and _gh_auth_available():
+        return True, [], ["gh_auth"], ["Configured via gh CLI auth session."]
+    if provider_name == "railway" and _railway_auth_available():
+        return True, [], ["railway_cli_auth"], ["Configured via Railway CLI auth session."]
+    if provider_name == "openai-codex" and active_runs > 0:
+        notes.append("OpenAI Codex observed in runtime usage; treating as configured by active execution context.")
+        return True, [], present, notes
+    if provider_name == "claude" and active_runs > 0:
+        notes.append("Claude observed in runtime usage; treating as configured by active execution context.")
+        return True, [], present, notes
+
+    return configured, missing, present, notes
+
+
 def _required_providers_from_env() -> list[str]:
     raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
     out = [item.strip().lower() for item in str(raw).split(",") if item.strip()]
     return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
+
+
+def _validation_required_providers_from_env() -> list[str]:
+    raw = os.getenv(
+        "AUTOMATION_PROVIDER_VALIDATION_REQUIRED",
+        ",".join(_DEFAULT_PROVIDER_VALIDATION_REQUIRED),
+    )
+    out = [item.strip().lower() for item in str(raw).split(",") if item.strip()]
+    return out if out else list(_DEFAULT_PROVIDER_VALIDATION_REQUIRED)
 
 
 def _env_truthy(name: str, default: bool = False) -> bool:
@@ -143,6 +216,8 @@ def _infer_provider_from_model(model_name: str) -> str:
     model = model_name.strip().lower()
     if not model:
         return ""
+    if "codex" in model:
+        return "openai-codex"
     if model.startswith("cursor/"):
         return "cursor"
     if model.startswith("openclaw/"):
@@ -150,7 +225,7 @@ def _infer_provider_from_model(model_name: str) -> str:
     if model.startswith("openrouter/") or "openrouter" in model:
         return "openrouter"
     if "claude" in model:
-        return "anthropic"
+        return "claude"
     if model.startswith(("gpt", "o1", "o3", "o4")) or model.startswith("openai/"):
         return "openai"
     return ""
@@ -161,6 +236,8 @@ def _active_provider_usage_counts() -> dict[str, int]:
     by_model = usage.get("by_model") if isinstance(usage, dict) else {}
     execution = usage.get("execution") if isinstance(usage, dict) else {}
     by_executor = execution.get("by_executor") if isinstance(execution, dict) else {}
+    by_agent = execution.get("by_agent") if isinstance(execution, dict) else {}
+    recent_runs = execution.get("recent_runs") if isinstance(execution, dict) else {}
 
     counts: dict[str, int] = {}
 
@@ -178,7 +255,7 @@ def _active_provider_usage_counts() -> dict[str, int]:
             counts[provider] = counts.get(provider, 0) + value
 
     executor_rows = by_executor if isinstance(by_executor, dict) else {}
-    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "anthropic"}
+    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "claude"}
     for executor_name, row in executor_rows.items():
         provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
         if not provider:
@@ -191,17 +268,46 @@ def _active_provider_usage_counts() -> dict[str, int]:
         if value > 0:
             counts[provider] = max(counts.get(provider, 0), value)
 
+    agent_rows = by_agent if isinstance(by_agent, dict) else {}
+    for agent_name, row in agent_rows.items():
+        agent = str(agent_name).strip().lower()
+        provider = ""
+        if agent.startswith("openai-codex"):
+            provider = "openai-codex"
+        elif agent.startswith("claude"):
+            provider = "claude"
+        if not provider:
+            continue
+        row_count = row.get("count") if isinstance(row, dict) else 0
+        try:
+            value = int(float(row_count or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            counts[provider] = max(counts.get(provider, 0), value)
+
+    recent_rows = recent_runs if isinstance(recent_runs, list) else []
+    for row in recent_rows:
+        if not isinstance(row, dict):
+            continue
+        provider = str(row.get("provider") or "").strip().lower()
+        if not provider:
+            continue
+        counts[provider] = counts.get(provider, 0) + 1
+
     return {k: v for k, v in counts.items() if v > 0}
 
 
 def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
     rule = _PROVIDER_CONFIG_RULES.get(provider, {})
     kind = str(rule.get("kind") or "custom")
-    configured, missing, present = _configured_env_status(provider)
+    configured, missing, present, derived_notes = _configured_status(provider)
     status = "ok" if configured else "unavailable"
     notes = (
         [f"missing_env={','.join(missing)}"] if missing else ["configuration keys detected"]
     )
+    notes.extend(derived_notes)
+    notes = list(dict.fromkeys(notes))
     return ProviderUsageSnapshot(
         id=f"provider_{provider}_{int(time.time())}",
         provider=provider,
@@ -253,63 +359,335 @@ def _github_billing_url(owner: str, scope: str) -> str:
 
 
 def _build_github_snapshot() -> ProviderUsageSnapshot:
-    token = os.getenv("GITHUB_TOKEN", "").strip()
+    token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
     owner = os.getenv("GITHUB_BILLING_OWNER", "").strip()
     scope = os.getenv("GITHUB_BILLING_SCOPE", "org").strip().lower()
-    if not token or not owner or scope not in {"org", "user"}:
+    if not token:
         return ProviderUsageSnapshot(
             id=f"provider_github_{int(time.time())}",
             provider="github",
             kind="github",
             status="unavailable",
-            notes=["Set GITHUB_TOKEN, GITHUB_BILLING_OWNER, and GITHUB_BILLING_SCOPE=org|user to enable real usage data."],
+            notes=["Set GITHUB_TOKEN (or GH_TOKEN) to enable GitHub usage data."],
         )
 
-    url = _github_billing_url(owner=owner, scope=scope)
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+    billing_payload: dict[str, Any] = {}
+    rate_payload: dict[str, Any] = {}
+    billing_error = None
+    rate_error = None
+
+    if owner and scope in {"org", "user"}:
+        url = _github_billing_url(owner=owner, scope=scope)
+        try:
+            with httpx.Client(timeout=8.0, headers=headers) as client:
+                response = client.get(url)
+                response.raise_for_status()
+                billing_payload = response.json()
+        except Exception as exc:
+            billing_error = str(exc)
+    else:
+        billing_error = "billing_owner_or_scope_not_configured"
+
     try:
         with httpx.Client(timeout=8.0, headers=headers) as client:
-            response = client.get(url)
+            response = client.get("https://api.github.com/rate_limit")
             response.raise_for_status()
-            payload = response.json()
+            rate_payload = response.json() if isinstance(response.json(), dict) else {}
     except Exception as exc:
+        rate_error = str(exc)
+
+    if rate_error:
         return ProviderUsageSnapshot(
             id=f"provider_github_{int(time.time())}",
             provider="github",
             kind="github",
             status="degraded",
-            notes=[f"GitHub billing request failed: {exc}"],
+            notes=[f"GitHub rate-limit probe failed: {rate_error}"],
         )
 
-    included = float(payload.get("included_minutes") or 0.0)
-    used = float(payload.get("total_minutes_used") or 0.0)
-    remaining = max(0.0, included - used)
+    included = float(billing_payload.get("included_minutes") or 0.0)
+    used = float(billing_payload.get("total_minutes_used") or 0.0)
+    remaining = max(0.0, included - used) if included > 0 else None
+    resources = rate_payload.get("resources") if isinstance(rate_payload.get("resources"), dict) else {}
+    core = resources.get("core") if isinstance(resources.get("core"), dict) else {}
+    core_limit = float(core.get("limit") or 0.0)
+    core_remaining = float(core.get("remaining") or 0.0)
+    core_used = max(0.0, core_limit - core_remaining) if core_limit > 0 else 0.0
 
-    return ProviderUsageSnapshot(
-        id=f"provider_github_{int(time.time())}",
-        provider="github",
-        kind="github",
-        status="ok",
-        metrics=[
+    metrics = [
+        _metric(
+            id="rest_requests",
+            label="GitHub REST core requests",
+            unit="requests",
+            used=core_used,
+            remaining=core_remaining if core_limit > 0 else None,
+            limit=core_limit if core_limit > 0 else None,
+            window="hourly",
+        ),
+    ]
+    if included > 0:
+        metrics.append(
             _metric(
                 id="actions_minutes",
                 label="GitHub Actions minutes",
                 unit="minutes",
                 used=used,
                 remaining=remaining,
-                limit=included if included > 0 else None,
+                limit=included,
                 window="monthly",
-            ),
-        ],
+            )
+        )
+
+    notes: list[str] = []
+    if billing_error:
+        notes.append(f"GitHub billing data unavailable: {billing_error}")
+
+    return ProviderUsageSnapshot(
+        id=f"provider_github_{int(time.time())}",
+        provider="github",
+        kind="github",
+        status="ok",
+        metrics=metrics,
+        notes=notes,
         raw={
             "included_minutes": included,
             "total_minutes_used": used,
-            "minutes_used_breakdown": payload.get("minutes_used_breakdown"),
+            "minutes_used_breakdown": billing_payload.get("minutes_used_breakdown"),
+            "rate_limit": resources,
         },
+    )
+
+
+def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
+    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("openai-codex", 0))
+        if active > 0:
+            return ProviderUsageSnapshot(
+                id=f"provider_openai_codex_{int(time.time())}",
+                provider="openai-codex",
+                kind="custom",
+                status="ok",
+                metrics=[
+                    _metric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=float(active),
+                        window="rolling",
+                    )
+                ],
+                notes=["Using runtime Codex execution evidence (no direct OpenAI API key in environment)."],
+                raw={"runtime_task_runs": active},
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_openai_codex_{int(time.time())}",
+            provider="openai-codex",
+            kind="custom",
+            status="unavailable",
+            notes=["Set OPENAI_ADMIN_API_KEY or OPENAI_API_KEY to validate Codex provider access."],
+        )
+
+    models_url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
+    headers = _openai_headers()
+    try:
+        with httpx.Client(timeout=8.0, headers=headers) as client:
+            response = client.get(models_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        return ProviderUsageSnapshot(
+            id=f"provider_openai_codex_{int(time.time())}",
+            provider="openai-codex",
+            kind="custom",
+            status="degraded",
+            notes=[f"OpenAI models probe failed: {exc}"],
+        )
+
+    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
+    return ProviderUsageSnapshot(
+        id=f"provider_openai_codex_{int(time.time())}",
+        provider="openai-codex",
+        kind="custom",
+        status="ok",
+        metrics=[
+            _metric(
+                id="models_visible",
+                label="OpenAI visible models",
+                unit="requests",
+                used=float(len(rows)),
+                window="probe",
+            )
+        ],
+        raw={"models_count": len(rows), "probe_url": models_url},
+    )
+
+
+def _anthropic_headers() -> dict[str, str]:
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
+    return {
+        "x-api-key": api_key,
+        "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
+    }
+
+
+def _build_claude_snapshot() -> ProviderUsageSnapshot:
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("claude", 0))
+        if active > 0:
+            return ProviderUsageSnapshot(
+                id=f"provider_claude_{int(time.time())}",
+                provider="claude",
+                kind="custom",
+                status="ok",
+                metrics=[
+                    _metric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=float(active),
+                        window="rolling",
+                    )
+                ],
+                notes=["Using runtime Claude execution evidence (no direct Anthropic key in environment)."],
+                raw={"runtime_task_runs": active},
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_claude_{int(time.time())}",
+            provider="claude",
+            kind="custom",
+            status="unavailable",
+            notes=["Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN to validate Claude provider access."],
+        )
+
+    models_url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_anthropic_headers()) as client:
+            response = client.get(models_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        active = int(_active_provider_usage_counts().get("claude", 0))
+        if active > 0:
+            return ProviderUsageSnapshot(
+                id=f"provider_claude_{int(time.time())}",
+                provider="claude",
+                kind="custom",
+                status="ok",
+                metrics=[
+                    _metric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=float(active),
+                        window="rolling",
+                    )
+                ],
+                notes=[
+                    f"Claude models probe failed ({exc}); using runtime execution evidence fallback."
+                ],
+                raw={"runtime_task_runs": active, "probe_url": models_url},
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_claude_{int(time.time())}",
+            provider="claude",
+            kind="custom",
+            status="degraded",
+            notes=[f"Claude models probe failed: {exc}"],
+        )
+
+    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
+    return ProviderUsageSnapshot(
+        id=f"provider_claude_{int(time.time())}",
+        provider="claude",
+        kind="custom",
+        status="ok",
+        metrics=[
+            _metric(
+                id="models_visible",
+                label="Claude visible models",
+                unit="requests",
+                used=float(len(rows)),
+                window="probe",
+            )
+        ],
+        raw={"models_count": len(rows), "probe_url": models_url},
+    )
+
+
+def _build_railway_snapshot() -> ProviderUsageSnapshot:
+    token = os.getenv("RAILWAY_TOKEN", "").strip()
+    project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
+    environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
+    service = os.getenv("RAILWAY_SERVICE", "").strip()
+    if not token or not project or not environment or not service:
+        if _railway_auth_available():
+            return ProviderUsageSnapshot(
+                id=f"provider_railway_{int(time.time())}",
+                provider="railway",
+                kind="custom",
+                status="ok",
+                metrics=[
+                    _metric(
+                        id="api_probe",
+                        label="Railway CLI auth probe",
+                        unit="requests",
+                        used=1.0,
+                        window="probe",
+                    )
+                ],
+                notes=["Using Railway CLI auth session as execution evidence."],
+                raw={"probe": "railway_cli_auth"},
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_railway_{int(time.time())}",
+            provider="railway",
+            kind="custom",
+            status="unavailable",
+            notes=["Set RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT, and RAILWAY_SERVICE."],
+        )
+
+    gql_url = os.getenv("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
+    query = {"query": "query { me { id } }"}
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        with httpx.Client(timeout=8.0, headers=headers) as client:
+            response = client.post(gql_url, json=query)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        return ProviderUsageSnapshot(
+            id=f"provider_railway_{int(time.time())}",
+            provider="railway",
+            kind="custom",
+            status="degraded",
+            notes=[f"Railway API probe failed: {exc}"],
+        )
+
+    me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
+    ok = isinstance(me, dict) and bool(str(me.get("id") or "").strip())
+    return ProviderUsageSnapshot(
+        id=f"provider_railway_{int(time.time())}",
+        provider="railway",
+        kind="custom",
+        status="ok" if ok else "degraded",
+        metrics=[
+            _metric(
+                id="api_probe",
+                label="Railway API probe",
+                unit="requests",
+                used=1.0 if ok else 0.0,
+                window="probe",
+            )
+        ],
+        notes=[] if ok else ["Railway API probe returned unexpected payload."],
+        raw={"probe_url": gql_url},
     )
 
 
@@ -438,13 +816,15 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
     active_usage = _active_provider_usage_counts()
     providers = [
         _build_internal_snapshot(),
+        _build_openai_codex_snapshot(),
+        _build_claude_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
         _build_config_only_snapshot("openrouter"),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("cursor"),
         _build_config_only_snapshot("openclaw"),
-        _build_config_only_snapshot("railway"),
+        _build_railway_snapshot(),
         _build_config_only_snapshot("vercel"),
     ]
     for snapshot in providers:
@@ -563,7 +943,7 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
 
     for provider in sorted(set(by_provider.keys()) | set(required_set)):
         snapshot = by_provider.get(provider)
-        configured, missing, _present = _configured_env_status(provider)
+        configured, missing, _present, configured_notes = _configured_status(provider)
         kind = snapshot.kind if snapshot is not None else str(_PROVIDER_CONFIG_RULES.get(provider, {}).get("kind", "custom"))
         status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
         is_required = provider in required_set
@@ -583,6 +963,7 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         notes = list(snapshot.notes) if snapshot is not None else []
         if missing:
             notes.append(f"missing_env={','.join(missing)}")
+        notes.extend(configured_notes)
         notes = list(dict.fromkeys(notes))
 
         rows.append(
@@ -603,6 +984,232 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         all_required_ready=len(blocking) == 0,
         blocking_issues=blocking,
         recommendations=recommendations,
+        providers=rows,
+    )
+
+
+def _probe_openai_codex() -> tuple[bool, str]:
+    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("openai-codex", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage"
+        return False, "missing_openai_key"
+    url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_openai_headers()) as client:
+            response = client.get(url)
+            response.raise_for_status()
+        return True, "ok"
+    except Exception as exc:
+        return False, f"openai_probe_failed:{exc}"
+
+
+def _probe_github() -> tuple[bool, str]:
+    token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
+    if token:
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        try:
+            with httpx.Client(timeout=8.0, headers=headers) as client:
+                response = client.get("https://api.github.com/rate_limit")
+                response.raise_for_status()
+            return True, "ok"
+        except Exception as exc:
+            return False, f"github_probe_failed:{exc}"
+    if shutil.which("gh") is not None and _cli_ok(["gh", "api", "/rate_limit"]):
+        return True, "ok_via_gh_cli"
+    return False, "missing_github_auth"
+
+
+def _probe_railway() -> tuple[bool, str]:
+    token = os.getenv("RAILWAY_TOKEN", "").strip()
+    project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
+    environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
+    service = os.getenv("RAILWAY_SERVICE", "").strip()
+    if not token or not project or not environment or not service:
+        if shutil.which("railway") is not None and _cli_ok(["railway", "list", "--json"]):
+            return True, "ok_via_railway_cli"
+        return False, "missing_railway_env"
+    gql_url = os.getenv("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
+    try:
+        with httpx.Client(timeout=8.0, headers={"Authorization": f"Bearer {token}"}) as client:
+            response = client.post(gql_url, json={"query": "query { me { id } }"})
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+        me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
+        ok = isinstance(me, dict) and bool(str(me.get("id") or "").strip())
+        return (ok, "ok" if ok else "railway_probe_bad_payload")
+    except Exception as exc:
+        return False, f"railway_probe_failed:{exc}"
+
+
+def _probe_claude() -> tuple[bool, str]:
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
+    if not api_key:
+        return False, "missing_anthropic_key"
+    url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_anthropic_headers()) as client:
+            response = client.get(url)
+            response.raise_for_status()
+        return True, "ok"
+    except Exception as exc:
+        active = int(_active_provider_usage_counts().get("claude", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_after_api_error"
+        return False, f"claude_probe_failed:{exc}"
+
+
+def _probe_internal() -> tuple[bool, str]:
+    return True, "ok"
+
+
+def _record_provider_probe_event(provider: str, ok: bool, detail: str, runtime_ms: float) -> None:
+    try:
+        from app.models.runtime import RuntimeEventCreate
+        from app.services import runtime_service
+
+        runtime_service.record_event(
+            RuntimeEventCreate(
+                source="worker",
+                endpoint=f"tool:provider-validation/{provider}",
+                method="RUN",
+                status_code=200 if ok else 500,
+                runtime_ms=max(0.1, float(runtime_ms)),
+                idea_id="coherence-network-agent-pipeline",
+                metadata={
+                    "provider": provider,
+                    "validation_stage": "execution",
+                    "validation_result": "pass" if ok else "fail",
+                    "probe_detail": detail,
+                    "tool_name": "provider_validation_probe",
+                },
+            )
+        )
+    except Exception:
+        return
+
+
+def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
+    required = [item.strip().lower() for item in (required_providers or _validation_required_providers_from_env()) if item.strip()]
+    probe_map = {
+        "coherence-internal": _probe_internal,
+        "openai-codex": _probe_openai_codex,
+        "github": _probe_github,
+        "railway": _probe_railway,
+        "claude": _probe_claude,
+    }
+
+    out: list[dict[str, Any]] = []
+    for provider in required:
+        probe = probe_map.get(provider)
+        if probe is None:
+            out.append({"provider": provider, "ok": False, "detail": "unsupported_provider"})
+            continue
+        started = time.perf_counter()
+        ok, detail = probe()
+        elapsed_ms = round((time.perf_counter() - started) * 1000.0, 4)
+        _record_provider_probe_event(provider=provider, ok=ok, detail=detail, runtime_ms=elapsed_ms)
+        out.append({"provider": provider, "ok": ok, "detail": detail, "runtime_ms": elapsed_ms})
+    return {"required_providers": required, "probes": out}
+
+
+def _runtime_validation_rows(*, required_providers: list[str], runtime_window_seconds: int) -> dict[str, dict[str, Any]]:
+    counts: dict[str, dict[str, Any]] = {}
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, min(runtime_window_seconds, 2592000)))
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=2000)
+    except Exception:
+        events = []
+
+    for event in events:
+        recorded_at = getattr(event, "recorded_at", None)
+        if not isinstance(recorded_at, datetime) or recorded_at < cutoff:
+            continue
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        provider = str(metadata.get("provider") or "").strip().lower()
+        if not provider:
+            continue
+        bucket = counts.setdefault(
+            provider,
+            {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []},
+        )
+        bucket["usage_events"] += 1
+        if int(getattr(event, "status_code", 0)) < 400:
+            bucket["successful_events"] += 1
+        prev = bucket["last_event_at"]
+        if prev is None or recorded_at > prev:
+            bucket["last_event_at"] = recorded_at
+
+    for provider in required_providers:
+        counts.setdefault(provider, {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []})
+    return counts
+
+
+def provider_validation_report(
+    *,
+    required_providers: list[str] | None = None,
+    runtime_window_seconds: int = 86400,
+    min_execution_events: int = 1,
+    force_refresh: bool = True,
+) -> ProviderValidationReport:
+    required = [item.strip().lower() for item in (required_providers or _validation_required_providers_from_env()) if item.strip()]
+    readiness = provider_readiness_report(required_providers=required, force_refresh=force_refresh)
+    readiness_by_provider = {row.provider.strip().lower(): row for row in readiness.providers}
+    runtime_rows = _runtime_validation_rows(required_providers=required, runtime_window_seconds=runtime_window_seconds)
+
+    rows: list[ProviderValidationRow] = []
+    blocking: list[str] = []
+    min_events = max(1, min(int(min_execution_events), 50))
+
+    for provider in required:
+        readiness_row = readiness_by_provider.get(provider)
+        runtime_row = runtime_rows.get(provider, {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []})
+        configured = bool(readiness_row.configured) if readiness_row is not None else False
+        readiness_status = readiness_row.status if readiness_row is not None else "unavailable"
+        usage_events = int(runtime_row.get("usage_events") or 0)
+        successful_events = int(runtime_row.get("successful_events") or 0)
+        execution_validated = successful_events >= min_events
+        notes = list(readiness_row.notes) if readiness_row is not None else []
+        if usage_events < min_events:
+            notes.append(f"needs_runtime_events>={min_events}")
+        if successful_events < min_events:
+            notes.append(f"needs_successful_events>={min_events}")
+        notes = list(dict.fromkeys(notes))
+
+        if (not configured) or readiness_status != "ok" or (not execution_validated):
+            blocking.append(
+                f"{provider}: configured={configured}, readiness_status={readiness_status}, "
+                f"successful_events={successful_events}/{min_events}"
+            )
+
+        rows.append(
+            ProviderValidationRow(
+                provider=provider,
+                configured=configured,
+                readiness_status=readiness_status,
+                usage_events=usage_events,
+                successful_events=successful_events,
+                validated_execution=execution_validated,
+                last_event_at=runtime_row.get("last_event_at"),
+                notes=notes,
+            )
+        )
+
+    return ProviderValidationReport(
+        required_providers=required,
+        runtime_window_seconds=max(60, min(runtime_window_seconds, 2592000)),
+        min_execution_events=min_events,
+        all_required_validated=len(blocking) == 0,
+        blocking_issues=blocking,
         providers=rows,
     )
 

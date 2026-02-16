@@ -990,6 +990,12 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
         is_openai_codex = _metadata_bool(metadata.get("is_openai_codex")) or (
             agent_id.lower() == "openai-codex"
         )
+        provider = _metadata_text(metadata.get("provider"), default="")
+        if not provider:
+            if is_openai_codex:
+                provider = "openai-codex"
+            elif executor == "claude":
+                provider = "claude"
         if is_openai_codex:
             codex_runs += 1
 
@@ -1031,6 +1037,7 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
                 "status_code": int(getattr(event, "status_code", 0)),
                 "executor": executor,
                 "agent_id": agent_id,
+                "provider": provider,
                 "is_openai_codex": is_openai_codex,
                 "runtime_ms": float(getattr(event, "runtime_ms", 0.0)),
                 "recorded_at": (

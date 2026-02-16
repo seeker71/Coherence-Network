@@ -345,6 +345,10 @@ _EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
     "/api/inventory/endpoint-traceability": {"runtime_window_seconds": "86400"},
     "/api/inventory/system-lineage": {"runtime_window_seconds": "3600"},
     "/api/automation/usage/snapshots": {"limit": "200"},
+    "/api/automation/usage/provider-validation": {
+        "runtime_window_seconds": "86400",
+        "min_execution_events": "1",
+    },
 }
 
 

@@ -67,16 +67,41 @@ type ProviderReadinessResponse = {
   providers: ProviderReadinessRow[];
 };
 
+type ProviderValidationRow = {
+  provider: string;
+  configured: boolean;
+  readiness_status: string;
+  usage_events: number;
+  successful_events: number;
+  validated_execution: boolean;
+  last_event_at?: string | null;
+  notes: string[];
+};
+
+type ProviderValidationResponse = {
+  generated_at: string;
+  required_providers: string[];
+  runtime_window_seconds: number;
+  min_execution_events: number;
+  all_required_validated: boolean;
+  blocking_issues: string[];
+  providers: ProviderValidationRow[];
+};
+
 async function loadAutomationData(): Promise<{
   usage: AutomationUsageResponse;
   alerts: UsageAlertResponse;
   readiness: ProviderReadinessResponse;
+  validation: ProviderValidationResponse;
 }> {
   const api = getApiBase();
-  const [usageRes, alertsRes, readinessRes] = await Promise.all([
+  const [usageRes, alertsRes, readinessRes, validationRes] = await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
+    fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1&force_refresh=true`, {
+      cache: "no-store",
+    }),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
@@ -87,15 +112,19 @@ async function loadAutomationData(): Promise<{
   if (!readinessRes.ok) {
     throw new Error(`automation readiness HTTP ${readinessRes.status}`);
   }
+  if (!validationRes.ok) {
+    throw new Error(`automation provider validation HTTP ${validationRes.status}`);
+  }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: (await alertsRes.json()) as UsageAlertResponse,
     readiness: (await readinessRes.json()) as ProviderReadinessResponse,
+    validation: (await validationRes.json()) as ProviderValidationResponse,
   };
 }
 
 export default async function AutomationPage() {
-  const { usage, alerts, readiness } = await loadAutomationData();
+  const { usage, alerts, readiness, validation } = await loadAutomationData();
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
@@ -128,6 +157,42 @@ export default async function AutomationPage() {
           required_providers {readiness.required_providers.length} | all_required_ready {readiness.all_required_ready ? "yes" : "no"} |
           blocking {readiness.blocking_issues.length}
         </p>
+        <p className="text-muted-foreground">
+          validation_required {validation.required_providers.length} | all_required_validated {validation.all_required_validated ? "yes" : "no"} |
+          blocking {validation.blocking_issues.length}
+        </p>
+      </section>
+
+      <section className="rounded border p-4 space-y-3 text-sm">
+        <h2 className="font-semibold">Provider Validation Contract</h2>
+        <p className="text-muted-foreground">
+          runtime_window_seconds {validation.runtime_window_seconds} | min_execution_events {validation.min_execution_events}
+        </p>
+        {validation.blocking_issues.length > 0 && (
+          <ul className="space-y-1 text-destructive">
+            {validation.blocking_issues.map((item) => (
+              <li key={`validation-block-${item}`}>{item}</li>
+            ))}
+          </ul>
+        )}
+        <ul className="space-y-2">
+          {validation.providers.map((provider) => (
+            <li key={`validation-${provider.provider}`} className="rounded border p-2">
+              <p>
+                {provider.provider} | configured {provider.configured ? "yes" : "no"} | readiness {provider.readiness_status} | usage_events{" "}
+                {provider.usage_events} | successful_events {provider.successful_events} | validated_execution{" "}
+                {provider.validated_execution ? "yes" : "no"}
+              </p>
+              {provider.notes.length > 0 && (
+                <ul className="space-y-1 text-muted-foreground">
+                  {provider.notes.map((note) => (
+                    <li key={`validation-note-${provider.provider}-${note}`}>{note}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="rounded border p-4 space-y-3 text-sm">
