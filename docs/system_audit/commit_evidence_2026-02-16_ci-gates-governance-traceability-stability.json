@@ -40,9 +40,32 @@
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_ci-gates-governance-traceability-stability.json"
   ],
   "change_files": [
+    "api/app/main.py",
+    "api/app/models/governance.py",
+    "api/app/models/idea.py",
+    "api/app/models/spec_registry.py",
+    "api/app/routers/governance.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/spec_registry.py",
     "api/app/services/governance_service.py",
+    "api/app/services/idea_service.py",
     "api/app/services/release_gate_service.py",
-    "api/tests/test_release_gate_service.py"
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_release_gate_service.py",
+    "api/tests/test_spec_registry_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "docs/SPEC-TRACKING.md",
+    "specs/094-contributor-onboarding-and-governed-change-flow.md",
+    "web/app/contribute/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
   ],
   "change_intent": "runtime_fix",
   "e2e_validation": {
