@@ -19,6 +19,8 @@ from uuid import UUID
 from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
+from app.models.github_contributor import GitHubContributor
+from app.models.github_organization import GitHubOrganization
 from app.models.project import Project, ProjectSummary
 
 
@@ -101,6 +103,35 @@ class GraphStore(Protocol):
         """Get all contributions by a contributor."""
         ...
 
+    # ---- GitHub integration API (spec 029) ----
+    def upsert_github_contributor(self, github_contributor: GitHubContributor) -> GitHubContributor:
+        """Upsert GitHub contributor node."""
+        ...
+
+    def get_github_contributor(self, contributor_id: str) -> GitHubContributor | None:
+        """Get GitHub contributor by ID (github:login)."""
+        ...
+
+    def list_github_contributors(self, limit: int = 100) -> list[GitHubContributor]:
+        """List all GitHub contributors."""
+        ...
+
+    def upsert_github_organization(self, organization: GitHubOrganization) -> GitHubOrganization:
+        """Upsert GitHub organization node."""
+        ...
+
+    def get_github_organization(self, organization_id: str) -> GitHubOrganization | None:
+        """Get GitHub organization by ID (github:login)."""
+        ...
+
+    def add_github_contributes_to(self, contributor_id: str, ecosystem: str, project_name: str) -> None:
+        """Add CONTRIBUTES_TO edge from GitHub contributor to project."""
+        ...
+
+    def get_project_github_contributors(self, ecosystem: str, project_name: str) -> list[GitHubContributor]:
+        """Get all GitHub contributors for a project."""
+        ...
+
 
 class InMemoryGraphStore:
     """In-memory GraphStore. Optional JSON persistence for restart."""
@@ -114,6 +145,11 @@ class InMemoryGraphStore:
         self._contributors: dict[UUID, Contributor] = {}
         self._assets: dict[UUID, Asset] = {}
         self._contributions: dict[UUID, Contribution] = {}
+
+        # GitHub integration data (spec 029)
+        self._github_contributors: dict[str, GitHubContributor] = {}  # key: github:login
+        self._github_organizations: dict[str, GitHubOrganization] = {}  # key: github:login
+        self._github_contributes_to: list[tuple[str, tuple[str, str]]] = []  # (contributor_id, project_key)
 
         self._persist_path = persist_path
         if persist_path and os.path.isfile(persist_path):
@@ -146,6 +182,17 @@ class InMemoryGraphStore:
                 contribn = Contribution(**cn)
                 self._contributions[contribn.id] = contribn
 
+            # GitHub integration (spec 029)
+            for gc in data.get("github_contributors", []):
+                ghc = GitHubContributor(**gc)
+                self._github_contributors[ghc.id] = ghc
+            for go in data.get("github_organizations", []):
+                gho = GitHubOrganization(**go)
+                self._github_organizations[gho.id] = gho
+            for edge in data.get("github_contributes_to", []):
+                if len(edge) >= 2 and isinstance(edge[1], list) and len(edge[1]) >= 2:
+                    self._github_contributes_to.append((edge[0], (edge[1][0], edge[1][1])))
+
         except (json.JSONDecodeError, IOError, KeyError, ValueError):
             pass
 
@@ -163,11 +210,14 @@ class InMemoryGraphStore:
             return
         os.makedirs(os.path.dirname(self._persist_path) or ".", exist_ok=True)
         data = {
-            "projects": [p.model_dump() for p in self._projects.values()],
+            "projects": [p.model_dump(mode="json") for p in self._projects.values()],
             "edges": [[list(from_k), list(to_k)] for from_k, to_k in self._edges],
-            "contributors": [c.model_dump() for c in self._contributors.values()],
-            "assets": [a.model_dump() for a in self._assets.values()],
-            "contributions": [c.model_dump() for c in self._contributions.values()],
+            "contributors": [c.model_dump(mode="json") for c in self._contributors.values()],
+            "assets": [a.model_dump(mode="json") for a in self._assets.values()],
+            "contributions": [c.model_dump(mode="json") for c in self._contributions.values()],
+            "github_contributors": [gc.model_dump(mode="json") for gc in self._github_contributors.values()],
+            "github_organizations": [go.model_dump(mode="json") for go in self._github_organizations.values()],
+            "github_contributes_to": [[contrib_id, list(proj_k)] for contrib_id, proj_k in self._github_contributes_to],
         }
         with open(self._persist_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=0)
@@ -279,3 +329,42 @@ class InMemoryGraphStore:
         out = [c for c in self._contributions.values() if c.contributor_id == contributor_id]
         out.sort(key=lambda c: c.timestamp)
         return out
+
+    # ----------------------------
+    # GitHub integration API (spec 029)
+    # ----------------------------
+    def upsert_github_contributor(self, github_contributor: GitHubContributor) -> GitHubContributor:
+        """Upsert GitHub contributor. ID format: github:login."""
+        self._github_contributors[github_contributor.id] = github_contributor
+        return github_contributor
+
+    def get_github_contributor(self, contributor_id: str) -> GitHubContributor | None:
+        """Get GitHub contributor by ID (github:login)."""
+        return self._github_contributors.get(contributor_id)
+
+    def list_github_contributors(self, limit: int = 100) -> list[GitHubContributor]:
+        """List all GitHub contributors."""
+        items = sorted(self._github_contributors.values(), key=lambda c: c.created_at, reverse=True)
+        return items[: max(0, int(limit))]
+
+    def upsert_github_organization(self, organization: GitHubOrganization) -> GitHubOrganization:
+        """Upsert GitHub organization. ID format: github:login."""
+        self._github_organizations[organization.id] = organization
+        return organization
+
+    def get_github_organization(self, organization_id: str) -> GitHubOrganization | None:
+        """Get GitHub organization by ID (github:login)."""
+        return self._github_organizations.get(organization_id)
+
+    def add_github_contributes_to(self, contributor_id: str, ecosystem: str, project_name: str) -> None:
+        """Add CONTRIBUTES_TO edge from GitHub contributor to project."""
+        proj_key = _key(ecosystem, project_name)
+        edge = (contributor_id, proj_key)
+        if edge not in self._github_contributes_to:
+            self._github_contributes_to.append(edge)
+
+    def get_project_github_contributors(self, ecosystem: str, project_name: str) -> list[GitHubContributor]:
+        """Get all GitHub contributors for a project."""
+        proj_key = _key(ecosystem, project_name)
+        contributor_ids = [cid for cid, pk in self._github_contributes_to if pk == proj_key]
+        return [self._github_contributors[cid] for cid in contributor_ids if cid in self._github_contributors]
