@@ -17,6 +17,19 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
 
 ## Required Phase Gates
 
+### Phase 0: Start Gate (required before new task work)
+
+Run from the target worktree:
+
+```bash
+python3 scripts/ensure_worktree_start_clean.py --json
+```
+
+Gate status:
+- PASS only when running from a linked worktree (`.git` is a file, not the main repo dir).
+- PASS only when current worktree has no local changes before starting the next task.
+- PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
+
 ### Phase A: Local Validation (required before commit)
 
 Run and record:
