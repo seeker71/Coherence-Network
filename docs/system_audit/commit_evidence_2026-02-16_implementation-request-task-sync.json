@@ -1,0 +1,79 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/summary-sentence-guard",
+  "commit_scope": "auto-create impl tasks from implementation-request questions with dedup and API sync endpoint",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "specs/081-implementation-request-question-task-sync.md",
+    "docs/system_audit/commit_evidence_2026-02-16_implementation-request-task-sync.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "081"
+  ],
+  "task_ids": [
+    "implementation-request-question-sync"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_implementation-request-task-sync.json"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "specs/081-implementation-request-question-task-sync.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_inventory_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Implementation-request questions are converted into impl tasks before ROI suggestion flow, with dedup across repeated sync runs.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/questions/sync-implementation-tasks",
+      "https://coherence-network-production.up.railway.app/api/inventory/questions/next-highest-roi-task"
+    ],
+    "test_flows": [
+      "seed-implementation-question->POST-sync-implementation-tasks->task-created",
+      "rerun-sync->no-duplicate-task-created"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}

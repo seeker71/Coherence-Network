@@ -31,3 +31,8 @@ async def page_lineage() -> dict:
 @router.post("/inventory/questions/next-highest-roi-task")
 async def next_highest_roi_task(create_task: bool = Query(False)) -> dict:
     return inventory_service.next_highest_roi_task_from_answered_questions(create_task=create_task)
+
+
+@router.post("/inventory/questions/sync-implementation-tasks")
+async def sync_implementation_request_tasks() -> dict:
+    return inventory_service.sync_implementation_request_question_tasks()

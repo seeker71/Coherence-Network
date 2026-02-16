@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import agent_service
 from app.services import route_registry_service
 
 
@@ -157,3 +159,61 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
         assert "pages" in data
         assert isinstance(data["pages"], list)
         assert any(row.get("path") == "/portfolio" for row in data["pages"])
+
+
+@pytest.mark.asyncio
+async def test_sync_implementation_request_questions_creates_tasks_without_duplicates(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    portfolio = {
+        "ideas": [
+            {
+                "id": "automation-idea",
+                "name": "Automation idea",
+                "description": "Track and automate implementation requests.",
+                "potential_value": 90.0,
+                "actual_value": 0.0,
+                "estimated_cost": 10.0,
+                "actual_cost": 0.0,
+                "resistance_risk": 1.0,
+                "confidence": 0.8,
+                "manifestation_status": "partial",
+                "interfaces": ["machine:api"],
+                "open_questions": [
+                    {
+                        "question": "Can we implement public contributor registration flow?",
+                        "value_to_whole": 22.0,
+                        "estimated_cost": 2.0,
+                    },
+                    {
+                        "question": "Which indicator should we monitor next?",
+                        "value_to_whole": 10.0,
+                        "estimated_cost": 2.0,
+                    },
+                ],
+            }
+        ]
+    }
+    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/inventory/questions/sync-implementation-tasks")
+        assert created.status_code == 200
+        first = created.json()
+        assert first["result"] == "implementation_tasks_synced"
+        assert first["created_count"] == 1
+        assert first["skipped_existing_count"] == 0
+        assert first["skipped_non_impl_count"] >= 1
+        assert len(first["created_tasks"]) == 1
+
+        rerun = await client.post("/api/inventory/questions/sync-implementation-tasks")
+        assert rerun.status_code == 200
+        second = rerun.json()
+        assert second["created_count"] == 0
+        assert second["skipped_existing_count"] == 1
