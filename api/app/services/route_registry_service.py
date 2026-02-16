@@ -87,7 +87,7 @@ def _default_registry() -> dict:
             {
                 "path": "/api/inventory/route-evidence",
                 "methods": ["GET"],
-                "purpose": "Canonical API/web route evidence coverage with runtime and public proof signals",
+                "purpose": "Canonical API/web route evidence coverage with runtime and public proof signals plus explicit gap inventory",
                 "idea_id": "oss-interface-alignment",
             },
             {
