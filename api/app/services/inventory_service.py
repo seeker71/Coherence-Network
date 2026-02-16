@@ -59,6 +59,18 @@ _FLOW_STAGE_TASK_TYPE: dict[str, TaskType] = {
 }
 _TRACEABILITY_GAP_DEFAULT_IDEA_ID = "portfolio-governance"
 _TRACEABILITY_GAP_CONTRIBUTOR_ID = "openai-codex"
+_PROCESS_COMPLETENESS_TASK_TYPE_BY_CHECK: dict[str, TaskType] = {
+    "ideas_have_standing_questions": TaskType.SPEC,
+    "specs_linked_to_ideas": TaskType.SPEC,
+    "specs_have_process_and_pseudocode": TaskType.SPEC,
+    "ideas_have_specs": TaskType.SPEC,
+    "endpoints_have_idea_mapping": TaskType.IMPL,
+    "endpoints_have_spec_coverage": TaskType.SPEC,
+    "endpoints_have_process_coverage": TaskType.IMPL,
+    "endpoints_have_validation_coverage": TaskType.TEST,
+    "all_endpoints_have_usage_events": TaskType.TEST,
+    "canonical_route_registry_complete": TaskType.IMPL,
+}
 
 
 def _is_implementation_request_question(question: str, answer: str | None = None) -> bool:
@@ -1459,6 +1471,100 @@ def evaluate_process_completeness(
         },
         "checks": checks,
         "blockers": blockers,
+    }
+
+
+def _process_completeness_gap_fingerprint(check_id: str) -> str:
+    payload = f"process-completeness-gap::{check_id.strip().lower()}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sync_process_completeness_gap_tasks(
+    runtime_window_seconds: int = 86400,
+    auto_sync: bool = True,
+    max_tasks: int = 50,
+    max_spec_idea_links: int = 150,
+    max_missing_endpoint_specs: int = 200,
+    max_spec_process_backfills: int = 500,
+    max_usage_gap_tasks: int = 200,
+) -> dict[str, Any]:
+    report = evaluate_process_completeness(
+        runtime_window_seconds=runtime_window_seconds,
+        auto_sync=auto_sync,
+        max_spec_idea_links=max_spec_idea_links,
+        max_missing_endpoint_specs=max_missing_endpoint_specs,
+        max_spec_process_backfills=max_spec_process_backfills,
+        max_usage_gap_tasks=max_usage_gap_tasks,
+    )
+    blockers = report.get("blockers")
+    if not isinstance(blockers, list):
+        blockers = []
+
+    allowed = max(1, min(max_tasks, 500))
+    created_tasks: list[dict[str, Any]] = []
+    skipped_existing_count = 0
+
+    for blocker in blockers:
+        if len(created_tasks) >= allowed:
+            break
+        if not isinstance(blocker, dict):
+            continue
+        check_id = str(blocker.get("check_id") or "").strip()
+        if not check_id:
+            continue
+        fingerprint = _process_completeness_gap_fingerprint(check_id)
+        active = agent_service.find_active_task_by_fingerprint(fingerprint)
+        if active is not None:
+            skipped_existing_count += 1
+            continue
+
+        description = str(blocker.get("description") or check_id)
+        fix_hint = str(blocker.get("fix_hint") or "").strip()
+        severity = str(blocker.get("severity") or "medium").strip().lower() or "medium"
+        current = blocker.get("current")
+        expected = blocker.get("expected")
+        current_text = json.dumps(current, sort_keys=True) if isinstance(current, dict) else str(current)
+        expected_text = json.dumps(expected, sort_keys=True) if isinstance(expected, dict) else str(expected)
+
+        direction = (
+            f"Close process-completeness blocker '{check_id}' ({severity}). "
+            f"{description} Current={current_text}. Expected={expected_text}. "
+            f"Fix hint: {fix_hint}."
+        )
+        task_type = _PROCESS_COMPLETENESS_TASK_TYPE_BY_CHECK.get(check_id, TaskType.IMPL)
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction=direction,
+                task_type=task_type,
+                context={
+                    "source": "process_completeness_gap",
+                    "check_id": check_id,
+                    "severity": severity,
+                    "task_fingerprint": fingerprint,
+                    "runtime_window_seconds": runtime_window_seconds,
+                    "auto_sync": bool(auto_sync),
+                },
+            )
+        )
+        created_tasks.append(
+            {
+                "task_id": task["id"],
+                "check_id": check_id,
+                "task_type": task_type.value,
+                "severity": severity,
+            }
+        )
+
+    return {
+        "result": "process_gap_tasks_synced",
+        "status": report.get("status"),
+        "process_result": report.get("result"),
+        "blockers_count": len(blockers),
+        "created_count": len(created_tasks),
+        "skipped_existing_count": skipped_existing_count,
+        "created_tasks": created_tasks,
+        "process_summary": report.get("summary", {}),
+        "process_auto_sync_applied": bool(report.get("auto_sync_applied")),
     }
 
 

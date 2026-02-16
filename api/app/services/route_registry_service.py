@@ -91,6 +91,12 @@ def _default_registry() -> dict:
                 "idea_id": "portfolio-governance",
             },
             {
+                "path": "/api/inventory/gaps/sync-process-tasks",
+                "methods": ["POST"],
+                "purpose": "Create deduped tasks for every failing process-completeness blocker",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+            {
                 "path": "/api/inventory/questions/proactive",
                 "methods": ["GET"],
                 "purpose": "Generate proactive high-ROI questions from recent change history",

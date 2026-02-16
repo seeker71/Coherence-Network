@@ -864,3 +864,50 @@ async def test_process_completeness_auto_sync_runs_traceability_sync(
         assert isinstance(payload["auto_sync_report"], dict)
         assert payload["auto_sync_report"]["result"] == "traceability_gap_artifacts_synced"
         assert payload["auto_sync_report"]["linked_specs_to_ideas_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_sync_process_gap_tasks_creates_and_dedupes_blocker_tasks(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+    agent_service._store.clear()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post(
+            "/api/inventory/gaps/sync-process-tasks",
+            params={
+                "runtime_window_seconds": 86400,
+                "auto_sync": True,
+                "max_tasks": 20,
+                "max_spec_idea_links": 50,
+                "max_missing_endpoint_specs": 50,
+                "max_spec_process_backfills": 100,
+                "max_usage_gap_tasks": 100,
+            },
+        )
+        assert first.status_code == 200
+        first_payload = first.json()
+        assert first_payload["result"] == "process_gap_tasks_synced"
+        assert first_payload["blockers_count"] >= first_payload["created_count"]
+        assert first_payload["created_count"] >= 1
+        assert first_payload["process_auto_sync_applied"] is True
+
+        second = await client.post(
+            "/api/inventory/gaps/sync-process-tasks",
+            params={
+                "runtime_window_seconds": 86400,
+                "auto_sync": False,
+                "max_tasks": 20,
+            },
+        )
+        assert second.status_code == 200
+        second_payload = second.json()
+        assert second_payload["created_count"] == 0
+        assert second_payload["skipped_existing_count"] >= 1
