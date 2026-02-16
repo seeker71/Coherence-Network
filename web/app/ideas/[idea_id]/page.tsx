@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 
+const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
+
 type IdeaQuestion = {
   question: string;
   value_to_whole: number;
@@ -27,6 +29,40 @@ type IdeaWithScore = {
   value_gap: number;
 };
 
+type FlowItem = {
+  idea_id: string;
+  spec: { spec_ids: string[] };
+  process: {
+    task_ids: string[];
+    thread_branches: string[];
+    source_files: string[];
+  };
+  implementation: {
+    lineage_ids: string[];
+    implementation_refs: string[];
+    runtime_events_count: number;
+    runtime_total_ms: number;
+    runtime_cost_estimate: number;
+  };
+  contributors: {
+    all: string[];
+    by_role: Record<string, string[]>;
+  };
+  contributions: {
+    usage_events_count: number;
+    measured_value_total: number;
+  };
+};
+
+type FlowResponse = {
+  items: FlowItem[];
+};
+
+function toRepoHref(pathOrUrl: string): string {
+  if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
+  return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
+}
+
 async function loadIdea(ideaId: string): Promise<IdeaWithScore> {
   const API = getApiBase();
   const res = await fetch(`${API}/api/ideas/${encodeURIComponent(ideaId)}`, { cache: "no-store" });
@@ -35,10 +71,24 @@ async function loadIdea(ideaId: string): Promise<IdeaWithScore> {
   return (await res.json()) as IdeaWithScore;
 }
 
+async function loadFlowForIdea(ideaId: string): Promise<FlowItem | null> {
+  const API = getApiBase();
+  const params = new URLSearchParams({
+    runtime_window_seconds: "86400",
+    idea_id: ideaId,
+  });
+  const res = await fetch(`${API}/api/inventory/flow?${params.toString()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`flow HTTP ${res.status}`);
+  const payload = (await res.json()) as FlowResponse;
+  if (!Array.isArray(payload.items)) return null;
+  return payload.items.find((item) => item.idea_id === ideaId) ?? null;
+}
+
 export default async function IdeaDetailPage({ params }: { params: Promise<{ idea_id: string }> }) {
   const resolved = await params;
   const ideaId = decodeURIComponent(resolved.idea_id);
-  const idea = await loadIdea(ideaId);
+  const [idea, flow] = await Promise.all([loadIdea(ideaId), loadFlowForIdea(ideaId)]);
+  const apiBase = getApiBase();
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -104,6 +154,85 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         </div>
       </section>
 
+      <section className="rounded border p-4 space-y-2 text-sm">
+        <h2 className="font-semibold">Linked Spec → Process → Implementation → Contributors</h2>
+        <p className="text-muted-foreground">
+          specs{" "}
+          {flow && flow.spec.spec_ids.length > 0
+            ? flow.spec.spec_ids.map((specId, idx) => (
+                <span key={specId}>
+                  {idx > 0 ? ", " : ""}
+                  <Link href={`/specs/${encodeURIComponent(specId)}`} className="underline hover:text-foreground">
+                    {specId}
+                  </Link>
+                </span>
+              ))
+            : (
+              <Link href="/specs" className="underline hover:text-foreground">
+                missing
+              </Link>
+            )}{" "}
+          |{" "}
+          <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+            process
+          </Link>{" "}
+          |{" "}
+          <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+            implementation
+          </Link>
+        </p>
+        <p className="text-muted-foreground">
+          task_ids{" "}
+          {flow && flow.process.task_ids.length > 0
+            ? flow.process.task_ids.map((taskId, idx) => (
+                <span key={taskId}>
+                  {idx > 0 ? ", " : ""}
+                  <Link href={`/tasks?task_id=${encodeURIComponent(taskId)}`} className="underline hover:text-foreground">
+                    {taskId}
+                  </Link>
+                </span>
+              ))
+            : "-"}
+        </p>
+        <p className="text-muted-foreground">
+          implementation_refs{" "}
+          {flow && flow.implementation.implementation_refs.length > 0
+            ? flow.implementation.implementation_refs.slice(0, 8).map((ref, idx) => (
+                <span key={ref}>
+                  {idx > 0 ? ", " : ""}
+                  <a href={toRepoHref(ref)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                    {ref}
+                  </a>
+                </span>
+              ))
+            : "-"}
+        </p>
+        <p className="text-muted-foreground">
+          contributors{" "}
+          {flow && flow.contributors.all.length > 0
+            ? flow.contributors.all.slice(0, 10).map((contributorId, idx) => (
+                <span key={contributorId}>
+                  {idx > 0 ? ", " : ""}
+                  <Link
+                    href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
+                    className="underline hover:text-foreground"
+                  >
+                    {contributorId}
+                  </Link>
+                </span>
+              ))
+            : (
+              <Link href="/contributors" className="underline hover:text-foreground">
+                missing
+              </Link>
+            )}
+        </p>
+        <p className="text-muted-foreground">
+          usage_events {flow?.contributions.usage_events_count ?? 0} | measured_value {flow?.contributions.measured_value_total.toFixed(2) ?? "0.00"} |
+          runtime_events {flow?.implementation.runtime_events_count ?? 0} | runtime_ms {flow?.implementation.runtime_total_ms.toFixed(2) ?? "0.00"}
+        </p>
+      </section>
+
       <section className="rounded border p-4 space-y-3">
         <h2 className="font-semibold">Open Questions</h2>
         {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">None</p>}
@@ -132,13 +261,29 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <p className="text-muted-foreground">Use these for machine inspection and automation.</p>
         <ul className="space-y-1">
           <li>
-            <code>/api/ideas/{idea.id}</code>
+            <a href={`${apiBase}/api/ideas/${encodeURIComponent(idea.id)}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+              /api/ideas/{idea.id}
+            </a>
           </li>
           <li>
-            <code>/api/runtime/ideas/summary</code> (filter by <code>{idea.id}</code>)
+            <a
+              href={`${apiBase}/api/inventory/flow?runtime_window_seconds=86400&idea_id=${encodeURIComponent(idea.id)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              /api/inventory/flow?idea_id={idea.id}
+            </a>
           </li>
           <li>
-            <code>/api/inventory/system-lineage</code>
+            <a href={`${apiBase}/api/runtime/ideas/summary?seconds=86400`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+              /api/runtime/ideas/summary
+            </a>
+          </li>
+          <li>
+            <a href={`${apiBase}/api/inventory/system-lineage`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+              /api/inventory/system-lineage
+            </a>
           </li>
         </ul>
       </section>

@@ -130,6 +130,11 @@
       "path": "/contribute",
       "purpose": "Human contributor onboarding and review console",
       "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/specs/[spec_id]",
+      "purpose": "Human spec detail with explicit links to idea, contributors, process, and implementation",
+      "idea_id": "coherence-network-api-runtime"
     }
   ]
 }

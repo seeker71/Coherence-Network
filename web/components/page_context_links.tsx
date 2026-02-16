@@ -87,6 +87,15 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/inventory/routes/canonical", label: "Canonical routes" },
     ],
   },
+  "/specs/[spec_id]": {
+    ideaId: "coherence-network-api-runtime",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/spec-registry", label: "Spec registry API" },
+      { href: "/api/inventory/flow", label: "Flow inventory" },
+      { href: "/api/inventory/system-lineage", label: "System lineage" },
+    ],
+  },
   "/usage": {
     ideaId: "coherence-network-value-attribution",
     related: SHARED_RELATED,
@@ -192,6 +201,7 @@ const CONTEXTS: Record<string, ContextDef> = {
 
 function normalizePath(pathname: string): string {
   if (pathname.startsWith("/ideas/")) return "/ideas/[idea_id]";
+  if (pathname.startsWith("/specs/")) return "/specs/[spec_id]";
   if (pathname.startsWith("/project/")) return "/project/[ecosystem]/[name]";
   return pathname;
 }
@@ -214,6 +224,8 @@ export default function PageContextLinks() {
 
   const dynamicIdeaId =
     key === "/ideas/[idea_id]" ? decodeURIComponent(pathname.split("/")[2] || "") : "";
+  const dynamicSpecId =
+    key === "/specs/[spec_id]" ? decodeURIComponent(pathname.split("/")[2] || "") : "";
   const dynamicProjectEcosystem =
     key === "/project/[ecosystem]/[name]" ? decodeURIComponent(pathname.split("/")[2] || "") : "";
   const dynamicProjectName =
@@ -238,6 +250,12 @@ export default function PageContextLinks() {
     machine.unshift({
       href: `/api/ideas/${encodeURIComponent(dynamicIdeaId)}`,
       label: "Idea detail API",
+    });
+  }
+  if (key === "/specs/[spec_id]" && dynamicSpecId) {
+    machine.unshift({
+      href: `/api/spec-registry/${encodeURIComponent(dynamicSpecId)}`,
+      label: "Spec detail API",
     });
   }
   if (key === "/project/[ecosystem]/[name]" && dynamicProjectEcosystem && dynamicProjectName) {
