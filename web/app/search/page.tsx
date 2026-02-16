@@ -45,9 +45,18 @@ export default function SearchPage() {
 
   return (
     <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
+        </Link>
+        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
+          Portfolio
+        </Link>
+        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
+          Ideas
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
         </Link>
       </div>
       <h1 className="text-2xl font-bold mb-4">Search projects</h1>

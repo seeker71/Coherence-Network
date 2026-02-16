@@ -3,6 +3,7 @@ import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
 import PageContextLinks from "@/components/page_context_links";
 import SiteHeader from "@/components/site_header";
+import LiveUpdatesController from "@/components/live_updates_controller";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
 const spaceGrotesk = Space_Grotesk({
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased font-sans`}>
         <RuntimeBeacon />
         <SiteHeader />
+        <LiveUpdatesController />
         <PageContextLinks />
         {children}
       </body>

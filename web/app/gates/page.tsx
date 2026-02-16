@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
@@ -17,6 +18,36 @@ export default function GatesPage() {
   const [traceabilityReport, setTraceabilityReport] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const runLiveSnapshot = useCallback(async () => {
+    setStatus((prev) => (prev === "idle" ? "loading" : prev));
+    setError(null);
+    try {
+      const [mainRes, publicRes, traceRes] = await Promise.all([
+        fetch(`${API_URL}/api/gates/main-contract`),
+        fetch(`${API_URL}/api/gates/public-deploy-contract`),
+        fetch(`${API_URL}/api/inventory/endpoint-traceability`),
+      ]);
+      const [mainJson, publicJson, traceJson] = await Promise.all([
+        mainRes.json(),
+        publicRes.json(),
+        traceRes.json(),
+      ]);
+      if (!mainRes.ok) throw new Error(JSON.stringify(mainJson));
+      if (!publicRes.ok) throw new Error(JSON.stringify(publicJson));
+      if (!traceRes.ok) throw new Error(JSON.stringify(traceJson));
+      setContractReport(mainJson);
+      if (typeof mainJson.sha === "string") setSha(mainJson.sha);
+      setPublicDeployReport(publicJson);
+      setTraceabilityReport(traceJson);
+      setStatus("idle");
+    } catch (e) {
+      setStatus("error");
+      setError(String(e));
+    }
+  }, []);
+
+  useLiveRefresh(runLiveSnapshot);
 
   async function runPrGate() {
     setStatus("loading");
@@ -101,9 +132,18 @@ export default function GatesPage() {
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-6">
-      <div>
+      <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
+          Flow
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
         </Link>
       </div>
       <h1 className="text-2xl font-bold">Gate Status</h1>
@@ -147,6 +187,9 @@ export default function GatesPage() {
         <h2 className="text-lg font-semibold">Public Deploy Contract</h2>
         <Button variant="outline" onClick={runPublicDeployContract} disabled={status === "loading"}>
           Check Public Deploy Contract
+        </Button>
+        <Button variant="secondary" onClick={runLiveSnapshot} disabled={status === "loading"}>
+          Refresh All Live Reports
         </Button>
       </section>
 

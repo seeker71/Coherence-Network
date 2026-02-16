@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 
 export default function ApiHealthPage() {
@@ -45,6 +46,17 @@ export default function ApiHealthPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="mb-4 flex flex-wrap gap-3 text-sm">
+        <Link href="/" className="text-muted-foreground hover:text-foreground">
+          ← Coherence Network
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold mb-4">API Health</h1>
       <p className="mb-3 text-sm text-gray-600">
         Auto-refresh every 15s. {lastUpdated ? `Last updated: ${lastUpdated}` : "Waiting for first response..."}

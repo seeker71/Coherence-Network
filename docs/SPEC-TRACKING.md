@@ -20,6 +20,7 @@ Quick reference: spec status, test coverage, last verified.
 | 055 | ✓ | ✓ | ✓ |
 | 056 | ✓ | ✓ | ✓ |
 | 090 | ✓ | ✓ | ✓ |
+| 091 | ✓ | ✓ | ✓ |
 
 **Total:** 34 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056).
 
@@ -59,6 +60,7 @@ cd web && npm run build      # 11 routes
 | 055 | test_commit_evidence_validation.py, scripts/validate_commit_evidence.py |
 | 056 | test_release_gate_service.py, test_gates.py |
 | 090 | test_maintainability_audit_service.py, workflow gates |
+| 091 | web build + manual live refresh/link verification |
 
 ## Last Updated
 

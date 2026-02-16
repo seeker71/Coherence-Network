@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
@@ -74,8 +75,8 @@ export default function PortfolioPage() {
   const [draftDeltas, setDraftDeltas] = useState<Record<string, string>>({});
   const [submittingKey, setSubmittingKey] = useState<string | null>(null);
 
-  async function loadInventory() {
-    setStatus("loading");
+  const loadInventory = useCallback(async () => {
+    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
       const [inventoryRes, storageRes] = await Promise.all([
@@ -97,11 +98,9 @@ export default function PortfolioPage() {
       setStatus("error");
       setError(String(e));
     }
-  }
-
-  useEffect(() => {
-    void loadInventory();
   }, []);
+
+  useLiveRefresh(loadInventory);
 
   const topRuntime = useMemo(() => {
     if (!inventory) return [];
@@ -228,7 +227,11 @@ export default function PortfolioPage() {
                   <li key={key} className="rounded border p-3 space-y-2">
                     <p className="font-medium">{q.question}</p>
                     <p className="text-sm text-muted-foreground">
-                      idea: {q.idea_id} | value: {q.value_to_whole} | cost: {q.estimated_cost} | ROI:{" "}
+                      idea:{" "}
+                      <Link href={`/ideas/${encodeURIComponent(q.idea_id)}`} className="underline hover:text-foreground">
+                        {q.idea_id}
+                      </Link>{" "}
+                      | value: {q.value_to_whole} | cost: {q.estimated_cost} | ROI:{" "}
                       {roi.toFixed(2)}
                     </p>
                     <div className="flex flex-col md:flex-row gap-2">
