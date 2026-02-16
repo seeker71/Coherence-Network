@@ -52,6 +52,11 @@ cd web && npm run dev
 # Optional ports when running multiple worktrees:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 
+# PR check failure prevention + tracking (default before commit/push)
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+# Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
+python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
+
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 
