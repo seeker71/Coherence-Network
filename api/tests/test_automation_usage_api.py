@@ -156,6 +156,7 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
@@ -165,3 +166,87 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
         assert report.status_code == 200
         payload = report.json()
         assert payload["all_required_ready"] is True
+
+
+@pytest.mark.asyncio
+async def test_provider_in_active_use_requires_key_for_readiness(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "1")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
+    monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+
+    monkeypatch.setattr(
+        agent_service,
+        "get_usage_summary",
+        lambda: {
+            "by_model": {"openrouter/free": {"count": 4, "by_status": {"completed": 4}, "last_used": None}},
+            "execution": {
+                "tracked_runs": 4,
+                "failed_runs": 0,
+                "success_runs": 4,
+                "success_rate": 1.0,
+                "by_executor": {},
+                "coverage": {"completed_or_failed_tasks": 4, "tracked_task_runs": 4, "coverage_rate": 1.0},
+                "recent_runs": [],
+            },
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get(
+            "/api/automation/usage/readiness",
+            params={"required_providers": "coherence-internal", "force_refresh": True},
+        )
+        assert report.status_code == 200
+        payload = report.json()
+        providers = {row["provider"]: row for row in payload["providers"]}
+        assert payload["all_required_ready"] is False
+        assert providers["openrouter"]["required"] is True
+        assert providers["openrouter"]["severity"] == "critical"
+        assert providers["openrouter"]["configured"] is False
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_includes_runtime_task_runs_metric_for_active_provider(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
+    monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+
+    monkeypatch.setattr(
+        agent_service,
+        "get_usage_summary",
+        lambda: {
+            "by_model": {"openrouter/free": {"count": 3, "by_status": {"completed": 3}, "last_used": None}},
+            "execution": {
+                "tracked_runs": 3,
+                "failed_runs": 0,
+                "success_runs": 3,
+                "success_rate": 1.0,
+                "by_executor": {},
+                "coverage": {"completed_or_failed_tasks": 3, "tracked_task_runs": 3, "coverage_rate": 1.0},
+                "recent_runs": [],
+            },
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        usage = await client.get("/api/automation/usage", params={"force_refresh": True})
+        assert usage.status_code == 200
+        payload = usage.json()
+        providers = {row["provider"]: row for row in payload["providers"]}
+        assert "openrouter" in providers
+        assert any(metric["id"] == "runtime_task_runs" for metric in providers["openrouter"]["metrics"])
