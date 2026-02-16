@@ -203,6 +203,7 @@ If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
 - If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`, default `12`) and sleep (`PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`, default `15`) plus fail-fast conditions.
+- Web on Railway should use native Railway GitHub auto-deploy (service branch `main`, auto deploy enabled, and CI gate settings aligned).
 
 Machine and human access:
 - Machine API: `GET /api/gates/public-deploy-contract`
