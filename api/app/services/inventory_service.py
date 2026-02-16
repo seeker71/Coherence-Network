@@ -15,7 +15,14 @@ from typing import Any
 import httpx
 
 from app.models.agent import AgentTaskCreate, TaskType
-from app.services import agent_service, idea_service, route_registry_service, runtime_service, value_lineage_service
+from app.services import (
+    agent_service,
+    idea_lineage_service,
+    idea_service,
+    route_registry_service,
+    runtime_service,
+    value_lineage_service,
+)
 
 
 def _question_roi(value_to_whole: float, estimated_cost: float) -> float:
@@ -826,7 +833,7 @@ def _evidence_signals_by_source_file(records: list[dict[str, Any]]) -> dict[str,
     return signals
 
 
-def build_endpoint_traceability_inventory() -> dict[str, Any]:
+def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -> dict[str, Any]:
     endpoints = _discover_api_endpoints_from_runtime() or _discover_api_endpoints_from_source()
     canonical = route_registry_service.get_canonical_routes().get("api_routes", [])
     canonical_by_path = {
@@ -837,6 +844,8 @@ def build_endpoint_traceability_inventory() -> dict[str, Any]:
     evidence_by_file = _evidence_signals_by_source_file(_read_commit_evidence_records(limit=1200))
     ideas_summary = idea_service.list_ideas().summary
     specs, spec_source = _discover_specs(limit=2000)
+    usage_rows = runtime_service.summarize_by_endpoint(seconds=runtime_window_seconds)
+    usage_by_endpoint = {row.endpoint: row for row in usage_rows}
 
     items: list[dict[str, Any]] = []
     for endpoint in endpoints:
@@ -870,22 +879,40 @@ def build_endpoint_traceability_inventory() -> dict[str, Any]:
             for key in validation_pass_counts:
                 validation_pass_counts[key] += int(signal["validation_pass_counts"][key])
 
+        usage = usage_by_endpoint.get(path)
+        runtime_idea_id = str(usage.idea_id if usage else "").strip()
+
         idea_ids = set(evidence_idea_ids)
+        source_parts: list[str] = []
         if canonical_idea_id:
             idea_ids.add(canonical_idea_id)
-        idea_source = "missing"
-        if canonical_idea_id and evidence_idea_ids:
-            idea_source = "canonical+evidence"
-        elif canonical_idea_id:
-            idea_source = "canonical"
-        elif evidence_idea_ids:
-            idea_source = "evidence"
+            source_parts.append("canonical")
+        if evidence_idea_ids:
+            source_parts.append("evidence")
+        if runtime_idea_id:
+            idea_ids.add(runtime_idea_id)
+            source_parts.append("runtime")
 
-        primary_idea_id = canonical_idea_id
+        derived_idea_id = runtime_service.resolve_idea_id(
+            endpoint=path,
+            method=methods[0] if methods else None,
+        )
+        if derived_idea_id and derived_idea_id != "unmapped":
+            idea_ids.add(derived_idea_id)
+            if "derived" not in source_parts:
+                source_parts.append("derived")
+
+        primary_idea_id = canonical_idea_id or runtime_idea_id
         if not primary_idea_id and len(idea_ids) == 1:
             primary_idea_id = next(iter(idea_ids))
+        if not primary_idea_id and derived_idea_id and derived_idea_id != "unmapped":
+            primary_idea_id = derived_idea_id
 
-        idea_tracked = len(idea_ids) > 0
+        origin_idea_id = (
+            idea_lineage_service.resolve_origin_idea_id(primary_idea_id) if primary_idea_id else None
+        )
+        idea_source = "+".join(source_parts) if source_parts else "missing"
+        idea_tracked = bool(primary_idea_id)
         spec_tracked = len(spec_ids) > 0
         process_tracked = process_evidence_count > 0 or len(task_ids) > 0
         validation_tracked = any(validation_pass_counts.values())
@@ -918,8 +945,20 @@ def build_endpoint_traceability_inventory() -> dict[str, Any]:
                 "idea": {
                     "tracked": idea_tracked,
                     "idea_id": primary_idea_id or None,
+                    "origin_idea_id": origin_idea_id,
                     "idea_ids": sorted(idea_ids),
                     "source": idea_source,
+                },
+                "usage": {
+                    "tracked": True,
+                    "window_seconds": runtime_window_seconds,
+                    "event_count": int(usage.event_count) if usage else 0,
+                    "methods": usage.methods if usage else [],
+                    "total_runtime_ms": float(usage.total_runtime_ms) if usage else 0.0,
+                    "average_runtime_ms": float(usage.average_runtime_ms) if usage else 0.0,
+                    "runtime_cost_estimate": float(usage.runtime_cost_estimate) if usage else 0.0,
+                    "status_counts": usage.status_counts if usage else {},
+                    "by_source": usage.by_source if usage else {},
                 },
                 "spec": {
                     "tracked": spec_tracked,
@@ -945,6 +984,8 @@ def build_endpoint_traceability_inventory() -> dict[str, Any]:
         "total_endpoints": len(items),
         "canonical_registered": sum(1 for row in items if row["canonical_route"]["registered"]),
         "with_idea": sum(1 for row in items if row["idea"]["tracked"]),
+        "with_origin_idea": sum(1 for row in items if bool(row["idea"].get("origin_idea_id"))),
+        "with_usage_events": sum(1 for row in items if int(row["usage"]["event_count"]) > 0),
         "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
         "with_process": sum(1 for row in items if row["process"]["tracked"]),
         "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
@@ -965,6 +1006,7 @@ def build_endpoint_traceability_inventory() -> dict[str, Any]:
             "spec_count": len(specs),
             "spec_source": spec_source,
             "canonical_route_count": len(canonical_by_path),
+            "runtime_window_seconds": runtime_window_seconds,
         },
         "summary": summary,
         "top_gaps": missing_items[:25],

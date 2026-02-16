@@ -37,6 +37,12 @@ def _default_registry() -> dict:
                 "idea_id": "portfolio-governance",
             },
             {
+                "path": "/api/runtime/endpoints/summary",
+                "methods": ["GET"],
+                "purpose": "Runtime usage rollup by endpoint with root-idea lineage",
+                "idea_id": "portfolio-governance",
+            },
+            {
                 "path": "/api/value-lineage/links",
                 "methods": ["POST"],
                 "purpose": "Create idea/spec/implementation lineage",

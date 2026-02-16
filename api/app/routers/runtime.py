@@ -28,3 +28,11 @@ async def runtime_summary_by_idea(seconds: int = Query(3600, ge=60, le=2592000))
         "ideas": [row.model_dump(mode="json") for row in rows],
     }
 
+
+@router.get("/runtime/endpoints/summary")
+async def runtime_summary_by_endpoint(seconds: int = Query(3600, ge=60, le=2592000)) -> dict:
+    rows = runtime_service.summarize_by_endpoint(seconds=seconds)
+    return {
+        "window_seconds": seconds,
+        "endpoints": [row.model_dump(mode="json") for row in rows],
+    }
