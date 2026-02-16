@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/landing-contributor-focus",
+  "commit_scope": "redesign landing page for contributor onboarding with main-idea framing and ROI/achievement highlights",
+  "files_owned": [
+    "web/app/page.tsx",
+    "specs/082-landing-page-contributor-onboarding.md",
+    "docs/system_audit/commit_evidence_2026-02-16_landing-page-contributor-onboarding.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "082"
+  ],
+  "task_ids": [
+    "landing-page-contributor-onboarding"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm_config_cache=/Users/ursmuff/.claude-worktrees/Coherence-Network/landing-contributor-focus/.npm-cache npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_landing-page-contributor-onboarding.json"
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "specs/082-landing-page-contributor-onboarding.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm_config_cache=/Users/ursmuff/.claude-worktrees/Coherence-Network/landing-contributor-focus/.npm-cache npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Landing page now orients new contributors, highlights the main idea chain, and surfaces top estimated-upside ideas plus measurable achievements.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network-production.up.railway.app/api/ideas",
+      "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
+      "https://coherence-network-production.up.railway.app/api/runtime/ideas/summary"
+    ],
+    "test_flows": [
+      "open-root-page->see-contributor-cta-and-main-idea-section",
+      "open-root-page->see-highest-estimated-benefit-ideas-section",
+      "open-root-page->see-recent-achievements-section"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}
