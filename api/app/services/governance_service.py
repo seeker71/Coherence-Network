@@ -332,6 +332,86 @@ def create_change_request(data: ChangeRequestCreate) -> ChangeRequest:
     return request
 
 
+def _upsert_vote(session: Session, change_request_id: str, data: ChangeRequestVoteCreate) -> None:
+    existing_vote = (
+        session.query(ChangeRequestVoteRecord)
+        .filter(
+            ChangeRequestVoteRecord.change_request_id == change_request_id,
+            ChangeRequestVoteRecord.voter_id == data.voter_id,
+        )
+        .one_or_none()
+    )
+    now = datetime.utcnow()
+    if existing_vote is None:
+        session.add(
+            ChangeRequestVoteRecord(
+                id=str(uuid4()),
+                change_request_id=change_request_id,
+                voter_id=data.voter_id,
+                voter_type=data.voter_type.value,
+                decision=data.decision.value,
+                rationale=data.rationale,
+                created_at=now,
+            )
+        )
+        return
+    existing_vote.decision = data.decision.value
+    existing_vote.voter_type = data.voter_type.value
+    existing_vote.rationale = data.rationale
+    existing_vote.created_at = now
+    session.add(existing_vote)
+
+
+def _collect_vote_counts(
+    session: Session,
+    change_request_id: str,
+) -> tuple[list[ChangeRequestVoteRecord], int, int]:
+    votes = (
+        session.query(ChangeRequestVoteRecord)
+        .filter(ChangeRequestVoteRecord.change_request_id == change_request_id)
+        .all()
+    )
+    approvals = sum(1 for vote in votes if vote.decision == VoteDecision.YES.value)
+    rejections = sum(1 for vote in votes if vote.decision == VoteDecision.NO.value)
+    return votes, approvals, rejections
+
+
+def _next_status(required_approvals: int, approvals: int, rejections: int) -> ChangeRequestStatus:
+    if rejections > 0:
+        return ChangeRequestStatus.REJECTED
+    if approvals >= required_approvals:
+        return ChangeRequestStatus.APPROVED
+    return ChangeRequestStatus.OPEN
+
+
+def _apply_approved_change_request(change_request_id: str, request: ChangeRequest) -> ChangeRequest:
+    result = None
+    error = None
+    try:
+        result = _apply_change_request(request)
+    except Exception as exc:  # pragma: no cover - surfaced through response payload
+        error = str(exc)
+    with _session() as session:
+        row = session.get(ChangeRequestRecord, change_request_id)
+        if row is None:
+            return request
+        if error is None:
+            row.status = ChangeRequestStatus.APPLIED.value
+            row.applied_result_json = json.dumps(result)
+        else:
+            row.applied_result_json = json.dumps({"error": error})
+        row.updated_at = datetime.utcnow()
+        session.add(row)
+        session.flush()
+        session.refresh(row)
+        votes = (
+            session.query(ChangeRequestVoteRecord)
+            .filter(ChangeRequestVoteRecord.change_request_id == change_request_id)
+            .all()
+        )
+        return _to_model(row, votes)
+
+
 def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate) -> ChangeRequest | None:
     ensure_schema()
     with _session() as session:
@@ -339,87 +419,19 @@ def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate) -> ChangeRe
         if row is None:
             return None
 
-        existing_vote = (
-            session.query(ChangeRequestVoteRecord)
-            .filter(
-                ChangeRequestVoteRecord.change_request_id == change_request_id,
-                ChangeRequestVoteRecord.voter_id == data.voter_id,
-            )
-            .one_or_none()
-        )
-        now = datetime.utcnow()
-        if existing_vote is None:
-            session.add(
-                ChangeRequestVoteRecord(
-                    id=str(uuid4()),
-                    change_request_id=change_request_id,
-                    voter_id=data.voter_id,
-                    voter_type=data.voter_type.value,
-                    decision=data.decision.value,
-                    rationale=data.rationale,
-                    created_at=now,
-                )
-            )
-        else:
-            existing_vote.decision = data.decision.value
-            existing_vote.voter_type = data.voter_type.value
-            existing_vote.rationale = data.rationale
-            existing_vote.created_at = now
-            session.add(existing_vote)
-
+        _upsert_vote(session, change_request_id, data)
         session.flush()
-        votes = (
-            session.query(ChangeRequestVoteRecord)
-            .filter(ChangeRequestVoteRecord.change_request_id == change_request_id)
-            .all()
-        )
-        approvals = sum(1 for vote in votes if vote.decision == VoteDecision.YES.value)
-        rejections = sum(1 for vote in votes if vote.decision == VoteDecision.NO.value)
+        votes, approvals, rejections = _collect_vote_counts(session, change_request_id)
         row.approvals = approvals
         row.rejections = rejections
-
-        if rejections > 0:
-            row.status = ChangeRequestStatus.REJECTED.value
-        elif approvals >= row.required_approvals:
-            row.status = ChangeRequestStatus.APPROVED.value
-        else:
-            row.status = ChangeRequestStatus.OPEN.value
-
+        row.status = _next_status(row.required_approvals, approvals, rejections).value
         row.updated_at = datetime.utcnow()
         session.add(row)
         session.flush()
         session.refresh(row)
-
         request = _to_model(row, votes)
 
-    if (
-        request.status == ChangeRequestStatus.APPROVED
-        and request.auto_apply_on_approval
-    ):
-        result = None
-        error = None
-        try:
-            result = _apply_change_request(request)
-        except Exception as exc:  # pragma: no cover - surfaced through response payload
-            error = str(exc)
-        with _session() as session:
-            row = session.get(ChangeRequestRecord, change_request_id)
-            if row is None:
-                return request
-            if error is None:
-                row.status = ChangeRequestStatus.APPLIED.value
-                row.applied_result_json = json.dumps(result)
-            else:
-                row.applied_result_json = json.dumps({"error": error})
-            row.updated_at = datetime.utcnow()
-            session.add(row)
-            session.flush()
-            session.refresh(row)
-            votes = (
-                session.query(ChangeRequestVoteRecord)
-                .filter(ChangeRequestVoteRecord.change_request_id == change_request_id)
-                .all()
-            )
-            return _to_model(row, votes)
+    if request.status == ChangeRequestStatus.APPROVED and request.auto_apply_on_approval:
+        return _apply_approved_change_request(change_request_id, request)
 
     return get_change_request(change_request_id)
