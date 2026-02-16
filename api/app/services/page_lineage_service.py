@@ -34,6 +34,7 @@ FALLBACK_PAGES: list[dict[str, str]] = [
     {"path": "/contributions", "idea_id": "portfolio-governance"},
     {"path": "/assets", "idea_id": "portfolio-governance"},
     {"path": "/tasks", "idea_id": "coherence-network-agent-pipeline"},
+    {"path": "/agent", "idea_id": "coherence-network-agent-pipeline"},
 ]
 
 

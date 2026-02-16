@@ -181,6 +181,7 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
             "/contributions",
             "/assets",
             "/tasks",
+            "/agent",
         }
         assert expected_paths.issubset(paths)
         assert len(paths) == len(data["pages"])

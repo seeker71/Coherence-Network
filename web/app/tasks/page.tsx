@@ -68,6 +68,9 @@ function TasksPageContent() {
         <Link href="/flow" className="text-muted-foreground hover:text-foreground">
           Flow
         </Link>
+        <Link href="/agent" className="text-muted-foreground hover:text-foreground">
+          Agent
+        </Link>
         <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
           Contributors
         </Link>

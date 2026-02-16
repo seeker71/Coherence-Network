@@ -614,6 +614,57 @@ def get_usage_summary() -> dict[str, Any]:
     }
 
 
+def get_visibility_summary() -> dict[str, Any]:
+    """Combined pipeline + usage visibility with remaining tracking gap."""
+    pipeline = get_pipeline_status()
+    usage = get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    coverage = execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {}
+
+    untracked_ids = coverage.get("untracked_task_ids")
+    if not isinstance(untracked_ids, list):
+        untracked_ids = []
+    normalized_untracked_ids = [
+        str(task_id).strip() for task_id in untracked_ids if str(task_id).strip()
+    ]
+
+    coverage_rate = float(coverage.get("coverage_rate", 0.0) or 0.0)
+    remaining_to_full_coverage = len(normalized_untracked_ids)
+    if remaining_to_full_coverage == 0 and coverage_rate >= 1.0:
+        health = "green"
+    elif coverage_rate >= 0.7:
+        health = "yellow"
+    else:
+        health = "red"
+
+    running = pipeline.get("running") if isinstance(pipeline.get("running"), list) else []
+    pending = pipeline.get("pending") if isinstance(pipeline.get("pending"), list) else []
+    recent_completed = (
+        pipeline.get("recent_completed")
+        if isinstance(pipeline.get("recent_completed"), list)
+        else []
+    )
+    attention = pipeline.get("attention") if isinstance(pipeline.get("attention"), dict) else {}
+    attention_flags = attention.get("flags") if isinstance(attention.get("flags"), list) else []
+
+    return {
+        "pipeline": {
+            "running_count": len(running),
+            "pending_count": len(pending),
+            "recent_completed_count": len(recent_completed),
+            "running_by_phase": pipeline.get("running_by_phase", {}),
+            "attention_flags": attention_flags,
+        },
+        "usage": usage,
+        "remaining_usage": {
+            "coverage_rate": coverage_rate,
+            "remaining_to_full_coverage": remaining_to_full_coverage,
+            "untracked_task_ids": normalized_untracked_ids,
+            "health": health,
+        },
+    }
+
+
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
     _ensure_store_loaded()
     fingerprint = (task_fingerprint or "").strip()
