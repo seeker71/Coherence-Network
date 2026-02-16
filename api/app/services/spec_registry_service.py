@@ -57,7 +57,11 @@ def _default_sqlite_path() -> Path:
 
 
 def _database_url() -> str:
-    configured = os.getenv("GOVERNANCE_DATABASE_URL") or os.getenv("GOVERNANCE_DB_URL")
+    configured = (
+        os.getenv("GOVERNANCE_DATABASE_URL")
+        or os.getenv("GOVERNANCE_DB_URL")
+        or os.getenv("DATABASE_URL")
+    )
     if configured:
         return configured
     sqlite_path = _default_sqlite_path()
