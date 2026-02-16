@@ -26,7 +26,7 @@ from app.models.automation_usage import (
     UsageAlertReport,
     UsageMetric,
 )
-from app.services import agent_service
+from app.services import agent_service, telemetry_persistence_service
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 120.0
@@ -61,7 +61,22 @@ def _snapshots_path() -> Path:
     return Path(__file__).resolve().parents[2] / "logs" / "automation_usage_snapshots.json"
 
 
+def _use_db_snapshots() -> bool:
+    override = str(os.getenv("AUTOMATION_USAGE_USE_DB", "")).strip().lower()
+    if override in {"1", "true", "yes", "on"}:
+        return True
+    if override in {"0", "false", "no", "off"}:
+        return False
+    if os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH"):
+        return False
+    return True
+
+
 def _ensure_store() -> None:
+    if _use_db_snapshots():
+        telemetry_persistence_service.ensure_schema()
+        telemetry_persistence_service.import_automation_snapshots_from_file(_snapshots_path())
+        return
     path = _snapshots_path()
     if path.exists():
         return
@@ -70,6 +85,9 @@ def _ensure_store() -> None:
 
 
 def _read_store() -> list[dict[str, Any]]:
+    if _use_db_snapshots():
+        _ensure_store()
+        return telemetry_persistence_service.list_automation_snapshots(limit=5000)
     _ensure_store()
     try:
         payload = json.loads(_snapshots_path().read_text(encoding="utf-8"))
@@ -82,12 +100,27 @@ def _read_store() -> list[dict[str, Any]]:
 
 
 def _write_store(rows: list[dict[str, Any]]) -> None:
+    if _use_db_snapshots():
+        telemetry_persistence_service.ensure_schema()
+        max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+        # Rewrite in insertion order using append behavior.
+        for row in rows[-max_rows:]:
+            if isinstance(row, dict):
+                telemetry_persistence_service.append_automation_snapshot(row, max_rows=max_rows)
+        return
     path = _snapshots_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"snapshots": rows}, indent=2), encoding="utf-8")
 
 
 def _store_snapshot(snapshot: ProviderUsageSnapshot) -> None:
+    if _use_db_snapshots():
+        max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+        telemetry_persistence_service.append_automation_snapshot(
+            snapshot.model_dump(mode="json"),
+            max_rows=max_rows,
+        )
+        return
     rows = _read_store()
     rows.append(snapshot.model_dump(mode="json"))
     max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))

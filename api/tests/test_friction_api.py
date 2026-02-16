@@ -160,3 +160,38 @@ async def test_friction_entry_points_include_monitor_and_failed_cost_sources(
     keys = {row["key"] for row in body["entry_points"]}
     assert "monitor:github_actions_high_failure_rate" in keys
     assert "github-actions:failure-rate" in keys
+
+
+@pytest.mark.asyncio
+async def test_friction_events_bootstrap_into_db_backend(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    events_file = tmp_path / "friction_events.jsonl"
+    events_file.write_text(
+        json.dumps(
+            {
+                "id": "fric-db-1",
+                "timestamp": "2026-02-16T00:00:00Z",
+                "stage": "ci",
+                "block_type": "test_failure",
+                "severity": "high",
+                "owner": "ci",
+                "unblock_condition": "Fix failing checks",
+                "energy_loss_estimate": 4.0,
+                "cost_of_delay": 2.0,
+                "status": "open",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(events_file))
+    monkeypatch.setenv("FRICTION_USE_DB", "1")
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'telemetry.db'}")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/friction/events?limit=20")
+
+    assert listed.status_code == 200
+    ids = {row["id"] for row in listed.json()}
+    assert "fric-db-1" in ids
