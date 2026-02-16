@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.models.idea import (
     IdeaPortfolioResponse,
     IdeaQuestionAnswerUpdate,
+    IdeaStorageInfo,
     IdeaUpdate,
     IdeaWithScore,
 )
@@ -20,6 +21,11 @@ async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
 ) -> IdeaPortfolioResponse:
     return idea_service.list_ideas(only_unvalidated=only_unvalidated)
+
+
+@router.get("/ideas/storage", response_model=IdeaStorageInfo)
+async def get_idea_storage_info() -> IdeaStorageInfo:
+    return idea_service.storage_info()
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)

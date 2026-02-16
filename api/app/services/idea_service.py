@@ -15,9 +15,11 @@ from app.models.idea import (
     IdeaPortfolioResponse,
     IdeaQuestion,
     IdeaSummary,
+    IdeaStorageInfo,
     IdeaWithScore,
     ManifestationStatus,
 )
+from app.services import idea_registry_service
 
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
@@ -317,27 +319,26 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     return ideas, changed
 
 
-def _ensure_portfolio_file() -> None:
+def _write_snapshot_file(ideas: list[Idea]) -> None:
     path = _portfolio_path()
-    if os.path.isfile(path):
-        return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"ideas": DEFAULT_IDEAS}, f, indent=2)
+        json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
 
 
-def _read_ideas() -> list[Idea]:
-    _ensure_portfolio_file()
+def _read_legacy_file_ideas() -> tuple[list[Idea], str]:
     path = _portfolio_path()
+    if not os.path.isfile(path):
+        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return [Idea(**item) for item in DEFAULT_IDEAS]
+        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
 
     raw_ideas = data.get("ideas") if isinstance(data, dict) else None
     if not isinstance(raw_ideas, list):
-        return [Idea(**item) for item in DEFAULT_IDEAS]
+        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
 
     ideas: list[Idea] = []
     for item in raw_ideas:
@@ -347,19 +348,39 @@ def _read_ideas() -> list[Idea]:
             continue
     if not ideas:
         ideas = [Idea(**item) for item in DEFAULT_IDEAS]
+        return ideas, "defaults"
+    return ideas, "legacy_json"
+
+
+def _read_ideas() -> list[Idea]:
+    ideas = idea_registry_service.load_ideas()
+    if not ideas:
+        ideas, source = _read_legacy_file_ideas()
+        ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+        ideas, standing_changed = _ensure_standing_questions(ideas)
+        bootstrap_source = source
+        if tracked_changed or source == "defaults":
+            bootstrap_source = f"{source}+derived"
+        if standing_changed:
+            bootstrap_source = f"{bootstrap_source}+standing_question"
+        idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
+        _write_snapshot_file(ideas)
+        return ideas
 
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
     if tracked_changed or standing_changed:
         _write_ideas(ideas)
+    else:
+        path = _portfolio_path()
+        if not os.path.isfile(path):
+            _write_snapshot_file(ideas)
     return ideas
 
 
 def _write_ideas(ideas: list[Idea]) -> None:
-    path = _portfolio_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
+    idea_registry_service.save_ideas(ideas)
+    _write_snapshot_file(ideas)
 
 
 def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
@@ -485,3 +506,9 @@ def answer_question(
 def list_tracked_idea_ids() -> list[str]:
     """Expose tracked idea IDs (from commit evidence artifacts)."""
     return _tracked_idea_ids()
+
+
+def storage_info() -> IdeaStorageInfo:
+    """Expose idea registry storage backend and row counts for inspection."""
+    info = idea_registry_service.storage_info()
+    return IdeaStorageInfo(**info)

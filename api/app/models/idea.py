@@ -67,3 +67,11 @@ class IdeaQuestionAnswerUpdate(BaseModel):
     question: str = Field(min_length=1)
     answer: str = Field(min_length=1)
     measured_delta: Optional[float] = None
+
+
+class IdeaStorageInfo(BaseModel):
+    backend: str = Field(min_length=1)
+    database_url: str = Field(min_length=1)
+    idea_count: int = Field(ge=0)
+    question_count: int = Field(ge=0)
+    bootstrap_source: str = Field(min_length=1)
