@@ -64,9 +64,18 @@ export default function ImportPage() {
 
   return (
     <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
+        </Link>
+        <Link href="/search" className="text-muted-foreground hover:text-foreground">
+          Search
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
         </Link>
       </div>
       <h1 className="text-2xl font-bold mb-4">Import stack</h1>

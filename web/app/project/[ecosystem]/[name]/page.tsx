@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
@@ -31,45 +32,44 @@ export default function ProjectPage() {
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!ecosystem || !name) return;
-    let cancelled = false;
-    async function fetchData() {
-      try {
-        const [projRes, cohRes] = await Promise.all([
-          fetch(`${API_URL}/api/projects/${ecosystem}/${name}`),
-          fetch(`${API_URL}/api/projects/${ecosystem}/${name}/coherence`),
-        ]);
-        if (cancelled) return;
-        if (!projRes.ok) {
-          if (projRes.status === 404) setError("Project not found");
-          else setError(`HTTP ${projRes.status}`);
-          setStatus("error");
-          return;
-        }
-        const proj = await projRes.json();
-        const coh = cohRes.ok ? await cohRes.json() : null;
-        setProject(proj);
-        setCoherence(coh);
-        setStatus("ok");
-      } catch (e) {
-        if (!cancelled) {
-          setError(String(e));
-          setStatus("error");
-        }
+    try {
+      const [projRes, cohRes] = await Promise.all([
+        fetch(`${API_URL}/api/projects/${ecosystem}/${name}`),
+        fetch(`${API_URL}/api/projects/${ecosystem}/${name}/coherence`),
+      ]);
+      if (!projRes.ok) {
+        if (projRes.status === 404) setError("Project not found");
+        else setError(`HTTP ${projRes.status}`);
+        setStatus("error");
+        return;
       }
+      const proj = await projRes.json();
+      const coh = cohRes.ok ? await cohRes.json() : null;
+      setProject(proj);
+      setCoherence(coh);
+      setStatus("ok");
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+      setStatus("error");
     }
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
   }, [ecosystem, name]);
+
+  useLiveRefresh(fetchData);
 
   return (
     <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3 text-sm">
         <Link href="/search" className="text-muted-foreground hover:text-foreground">
           ← Search
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
+        </Link>
+        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
+          Ideas
         </Link>
       </div>
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}

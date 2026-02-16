@@ -53,7 +53,7 @@ export default async function UsagePage() {
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Home
         </Link>
@@ -65,6 +65,24 @@ export default async function UsagePage() {
         </Link>
         <Link href="/specs" className="text-muted-foreground hover:text-foreground">
           Specs
+        </Link>
+        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
+          Flow
+        </Link>
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
+          Contributors
+        </Link>
+        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
+          Contributions
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
         </Link>
       </div>
 
@@ -82,7 +100,9 @@ export default async function UsagePage() {
             <ul className="space-y-1">
               {friction.top_block_types.slice(0, 8).map((r) => (
                 <li key={r.key} className="flex justify-between">
-                  <span>{r.key}</span>
+                  <Link href="/friction" className="underline hover:text-foreground">
+                    {r.key}
+                  </Link>
                   <span className="text-muted-foreground">{r.count}</span>
                 </li>
               ))}
@@ -106,9 +126,11 @@ export default async function UsagePage() {
         <h2 className="font-semibold">Runtime Cost by Idea (24h)</h2>
         <p className="text-muted-foreground">window_seconds {runtime.window_seconds}</p>
         <ul className="space-y-2">
-          {ideas.map((row) => (
-            <li key={row.idea_id} className="flex justify-between rounded border p-2">
-              <span>{row.idea_id}</span>
+              {ideas.map((row) => (
+                <li key={row.idea_id} className="flex justify-between rounded border p-2">
+              <Link href={`/ideas/${encodeURIComponent(row.idea_id)}`} className="underline hover:text-foreground">
+                {row.idea_id}
+              </Link>
               <span className="text-muted-foreground">
                 events {row.event_count} | runtime {row.total_runtime_ms.toFixed(2)}ms | cost ${row.runtime_cost_estimate.toFixed(6)}
               </span>

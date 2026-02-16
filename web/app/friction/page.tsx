@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
@@ -41,41 +42,43 @@ export default function FrictionPage() {
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const [reportRes, eventsRes] = await Promise.all([
-          fetch(`${API_URL}/api/friction/report?window_days=7`),
-          fetch(`${API_URL}/api/friction/events?limit=20`),
-        ]);
-        if (!reportRes.ok || !eventsRes.ok) {
-          throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}`);
-        }
-        const reportJson = (await reportRes.json()) as FrictionReport;
-        const eventsJson = (await eventsRes.json()) as FrictionEvent[];
-        if (cancelled) return;
-        setReport(reportJson);
-        setEvents(eventsJson);
-        setStatus("ok");
-      } catch (e) {
-        if (!cancelled) {
-          setError(String(e));
-          setStatus("error");
-        }
+  const load = useCallback(async () => {
+    try {
+      const [reportRes, eventsRes] = await Promise.all([
+        fetch(`${API_URL}/api/friction/report?window_days=7`),
+        fetch(`${API_URL}/api/friction/events?limit=20`),
+      ]);
+      if (!reportRes.ok || !eventsRes.ok) {
+        throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}`);
       }
+      const reportJson = (await reportRes.json()) as FrictionReport;
+      const eventsJson = (await eventsRes.json()) as FrictionEvent[];
+      setReport(reportJson);
+      setEvents(eventsJson);
+      setStatus("ok");
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+      setStatus("error");
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useLiveRefresh(load);
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
         </Link>
       </div>
       <h1 className="text-2xl font-bold mb-3">Friction Ledger</h1>
@@ -139,8 +142,14 @@ export default function FrictionPage() {
                     <span className="text-muted-foreground">{event.status}</span>
                   </div>
                   <p className="text-muted-foreground">
-                    {event.stage} | {event.owner} | energy {event.energy_loss_estimate} | delay{" "}
-                    {event.cost_of_delay}
+                    {event.stage} |{" "}
+                    <Link
+                      href={`/contributors?contributor_id=${encodeURIComponent(event.owner)}`}
+                      className="underline hover:text-foreground"
+                    >
+                      {event.owner}
+                    </Link>{" "}
+                    | energy {event.energy_loss_estimate} | delay {event.cost_of_delay}
                   </p>
                 </li>
               ))}

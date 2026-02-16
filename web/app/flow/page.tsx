@@ -136,6 +136,21 @@ export default async function FlowPage() {
         <Link href="/usage" className="text-muted-foreground hover:text-foreground">
           Usage
         </Link>
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
+          Contributors
+        </Link>
+        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
+          Contributions
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
+        </Link>
       </div>
 
       <h1 className="text-2xl font-bold">Flow</h1>
@@ -169,7 +184,14 @@ export default async function FlowPage() {
         <ul className="space-y-1 text-sm">
           {topContributorsRows.map((row) => (
             <li key={row.contributorId} className="flex justify-between">
-              <span>{row.name}</span>
+              <span>
+                <Link
+                  href={`/contributors?contributor_id=${encodeURIComponent(row.contributorId)}`}
+                  className="underline hover:text-foreground"
+                >
+                  {row.name}
+                </Link>
+              </span>
               <span className="text-muted-foreground">{row.count}</span>
             </li>
           ))}
@@ -180,7 +202,11 @@ export default async function FlowPage() {
         {flow.items.map((item) => (
           <article key={item.idea_id} className="rounded border p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">{item.idea_name}</h2>
+              <h2 className="font-semibold">
+                <Link href={`/ideas/${encodeURIComponent(item.idea_id)}`} className="hover:underline">
+                  {item.idea_name}
+                </Link>
+              </h2>
               <span className="text-xs text-muted-foreground">{item.idea_id}</span>
             </div>
 
@@ -250,4 +276,3 @@ export default async function FlowPage() {
     </main>
   );
 }
-
