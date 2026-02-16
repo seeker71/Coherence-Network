@@ -181,6 +181,55 @@ async def test_route_evidence_inventory_reports_api_and_web_coverage(
 
 
 @pytest.mark.asyncio
+async def test_route_evidence_inventory_does_not_pass_empty_real_data_probes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_service.route_registry_service,
+        "get_canonical_routes",
+        lambda: {
+            "api_routes": [
+                {
+                    "path": "/api/inventory/system-lineage",
+                    "methods": ["GET"],
+                    "purpose": "lineage",
+                    "idea_id": "portfolio-governance",
+                }
+            ],
+            "web_routes": [],
+        },
+    )
+    monkeypatch.setattr(inventory_service.runtime_service, "summarize_by_endpoint", lambda seconds=86400: [])
+    monkeypatch.setattr(inventory_service, "_read_commit_evidence_records", lambda limit=1200: [])
+    monkeypatch.setattr(
+        inventory_service,
+        "_read_latest_route_evidence_probe",
+        lambda: {
+            "api": [
+                {
+                    "path_template": "/api/inventory/system-lineage",
+                    "method": "GET",
+                    "probe_method": "GET",
+                    "status_code": 200,
+                    "probe_ok": True,
+                    "data_present": False,
+                }
+            ],
+            "web": [],
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/route-evidence")
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["summary"]["api_total"] == 1
+        assert payload["summary"]["api_with_actual_evidence"] == 0
+        assert payload["summary"]["api_missing_actual_evidence"] == 1
+        assert payload["summary"]["api_missing_real_data"] == 1
+
+
+@pytest.mark.asyncio
 async def test_standing_question_exists_for_every_idea(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
