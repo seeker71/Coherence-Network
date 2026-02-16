@@ -624,3 +624,95 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
         duplicate_payload = duplicate.json()
         assert duplicate_payload["result"] == "task_already_active"
         assert duplicate_payload["active_task"]["id"] == created_payload["created_task"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_proactive_questions_endpoint_derives_questions_from_recent_evidence(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    (evidence_dir / "commit_evidence_2026-02-16_runtime-fix-a.json").write_text(
+        json.dumps(
+            {
+                "date": "2026-02-16",
+                "commit_scope": "fix missing idea/spec links in flow page",
+                "idea_ids": ["portfolio-governance"],
+                "change_intent": "runtime_fix",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (evidence_dir / "commit_evidence_2026-02-16_runtime-feature-b.json").write_text(
+        json.dumps(
+            {
+                "date": "2026-02-16",
+                "commit_scope": "add public validation and e2e checks for deployment",
+                "idea_ids": ["oss-interface-alignment"],
+                "change_intent": "runtime_feature",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/questions/proactive", params={"limit": 20, "top": 20})
+        assert resp.status_code == 200
+        payload = resp.json()
+
+        assert payload["summary"]["recent_records"] >= 2
+        assert payload["summary"]["candidate_questions"] >= 2
+        assert len(payload["questions"]) >= 2
+        assert any(row["idea_id"] == "portfolio-governance" for row in payload["questions"])
+        assert any("prevented" in row["question"].lower() for row in payload["questions"])
+        assert all(float(row["question_roi"]) > 0 for row in payload["questions"])
+
+
+@pytest.mark.asyncio
+async def test_sync_proactive_questions_adds_missing_questions_without_duplicates(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    (evidence_dir / "commit_evidence_2026-02-16_process-gap.json").write_text(
+        json.dumps(
+            {
+                "date": "2026-02-16",
+                "commit_scope": "manual follow-up to close missing process and implementation links",
+                "idea_ids": ["portfolio-governance"],
+                "change_intent": "runtime_fix",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/inventory/questions/sync-proactive", params={"limit": 20, "max_add": 10})
+        assert first.status_code == 200
+        first_payload = first.json()
+        assert first_payload["result"] == "proactive_questions_synced"
+        assert first_payload["created_count"] >= 1
+        assert first_payload["candidate_count"] >= first_payload["created_count"]
+
+        second = await client.post("/api/inventory/questions/sync-proactive", params={"limit": 20, "max_add": 10})
+        assert second.status_code == 200
+        second_payload = second.json()
+        assert second_payload["created_count"] == 0
+        assert second_payload["skipped_existing_count"] >= 1
+
+        idea = await client.get("/api/ideas/portfolio-governance")
+        assert idea.status_code == 200
+        questions = idea.json()["open_questions"]
+        assert any("manual follow-up" in q["question"].lower() for q in questions)

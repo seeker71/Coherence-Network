@@ -38,6 +38,25 @@ async def sync_implementation_request_tasks() -> dict:
     return inventory_service.sync_implementation_request_question_tasks()
 
 
+@router.get("/inventory/questions/proactive")
+async def proactive_questions(
+    limit: int = Query(20, ge=1, le=200),
+    top: int = Query(20, ge=1, le=200),
+) -> dict:
+    return inventory_service.derive_proactive_questions_from_recent_changes(limit=limit, top=top)
+
+
+@router.post("/inventory/questions/sync-proactive")
+async def sync_proactive_questions(
+    limit: int = Query(20, ge=1, le=200),
+    max_add: int = Query(20, ge=1, le=200),
+) -> dict:
+    return inventory_service.sync_proactive_questions_from_recent_changes(
+        limit=limit,
+        max_add=max_add,
+    )
+
+
 @router.get("/inventory/flow")
 async def spec_process_implementation_validation_flow(
     idea_id: str | None = Query(default=None),
