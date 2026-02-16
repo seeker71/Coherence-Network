@@ -4,6 +4,7 @@
   "commit_scope": "add worktree PR guard to prevent common CI failures and track failing PR checks as machine-readable artifacts",
   "files_owned": [
     "scripts/worktree_pr_guard.py",
+    "scripts/ensure_worktree_start_clean.py",
     ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
@@ -38,6 +39,7 @@
   },
   "evidence_refs": [
     "scripts/worktree_pr_guard.py",
+    "scripts/ensure_worktree_start_clean.py",
     ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
@@ -45,6 +47,7 @@
   ],
   "change_files": [
     "scripts/worktree_pr_guard.py",
+    "scripts/ensure_worktree_start_clean.py",
     ".github/workflows/thread-gates.yml",
     "docs/CODEX-THREAD-PROCESS.md",
     "docs/RUNBOOK.md",
@@ -58,6 +61,8 @@
     "status": "pass",
     "commands": [
       "python3 -m py_compile scripts/worktree_pr_guard.py",
+      "python3 -m py_compile scripts/ensure_worktree_start_clean.py",
+      "python3 scripts/ensure_worktree_start_clean.py --allow-dirty-primary --json",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build --json",
       "python3 scripts/worktree_pr_guard.py --mode remote --branch codex/pr-check-failure-guard --deploy-success-max-age-hours 6 --json",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_worktree-pr-failure-guard.json"
@@ -67,7 +72,8 @@
       "Local mode now passes for process/docs-only changes while still running web/API runtime smoke checks.",
       "thread-gates maintainability check now auto-skips when no runtime code files changed in PR diff.",
       "Remote mode now captures failing status contexts (for example Vercel rate-limit failures) and blocks progression even when required contexts are green.",
-      "Remote mode also reports latest Public Deploy Contract freshness on main to block new work when deployment validation is stale/failed."
+      "Remote mode also reports latest Public Deploy Contract freshness on main to block new work when deployment validation is stale/failed.",
+      "Start gate now enforces worktree-only execution and requires clean state before starting a new task."
     ]
   },
   "ci_validation": {
