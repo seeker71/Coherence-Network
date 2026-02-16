@@ -219,6 +219,16 @@ To track newly added external tools and keep upgrade cadence:
 - Trigger:
   - Tuesdays + Fridays (`cron`)
 
+## Workflow Reference Guard (Per PR/Push)
+
+To prevent gate regressions caused by broken workflow script paths or missing requirements files:
+
+- Script: `scripts/validate_workflow_references.py`
+- Enforced in CI workflow: `.github/workflows/test.yml`
+- Contract:
+  - Any static `python ...`, `bash ...`, `./...`, and `pip install -r ...` reference in workflow `run:` blocks must resolve to an existing file (repo root or `api/` root).
+  - Missing references fail `Test` before merge.
+
 ## Provider Readiness Contract (Every 6 Hours)
 
 To ensure provider configuration is continuously validated and failures are surfaced automatically:

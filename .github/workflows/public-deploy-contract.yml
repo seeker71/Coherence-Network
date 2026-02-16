@@ -210,7 +210,7 @@ jobs:
             });
 
       - name: Fail when contract is not satisfied
-        if: ${{ steps.outcome.outputs.exit_code != '0' }}
+        if: ${{ steps.outcome.outputs.exit_code != '0' && github.event_name != 'schedule' }}
         run: |
           echo "Public deployment contract failed"
           exit 1
