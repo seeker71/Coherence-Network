@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -34,22 +35,23 @@ async def test_system_lineage_inventory_includes_core_sections(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        unique_email = f"urs-muff+{uuid4().hex[:8]}@coherence.network"
         contributor = await client.post(
-            "/v1/contributors",
-            json={"type": "HUMAN", "name": "urs-muff", "email": "urs-muff@example.com"},
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "urs-muff", "email": unique_email},
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
 
         asset = await client.post(
-            "/v1/assets",
+            "/api/assets",
             json={"type": "CODE", "description": "seeker71/Coherence-Network"},
         )
         assert asset.status_code == 201
         asset_id = asset.json()["id"]
 
         contribution = await client.post(
-            "/v1/contributions",
+            "/api/contributions",
             json={
                 "contributor_id": contributor_id,
                 "asset_id": asset_id,
