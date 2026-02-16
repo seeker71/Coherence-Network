@@ -44,3 +44,26 @@ class FrictionReport(BaseModel):
     top_stages: list[FrictionReportRow] = Field(default_factory=list)
     source_file: str
     ignored_lines: int = Field(ge=0)
+
+
+class FrictionEntryPoint(BaseModel):
+    key: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=200)
+    severity: str = Field(min_length=1, max_length=40)
+    status: str = Field(min_length=1, max_length=40)
+    event_count: int = Field(ge=0)
+    energy_loss: float = Field(ge=0.0)
+    cost_of_delay: float = Field(ge=0.0)
+    wasted_minutes: float = Field(ge=0.0)
+    recommended_action: str = Field(min_length=1)
+    evidence_links: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+
+
+class FrictionEntryPointReport(BaseModel):
+    generated_at: datetime
+    window_days: int = Field(ge=1)
+    total_entry_points: int = Field(ge=0)
+    open_entry_points: int = Field(ge=0)
+    entry_points: list[FrictionEntryPoint] = Field(default_factory=list)
+    source_files: list[str] = Field(default_factory=list)
