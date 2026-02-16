@@ -210,6 +210,12 @@ def _default_registry() -> dict:
                 "purpose": "Historical normalized provider usage snapshots",
                 "idea_id": "coherence-network-agent-pipeline",
             },
+            {
+                "path": "/api/automation/usage/readiness",
+                "methods": ["GET"],
+                "purpose": "Provider configuration/readiness contract with blocking issues and recommendations",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
         ],
         "web_routes": [
             {

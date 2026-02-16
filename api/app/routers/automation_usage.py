@@ -34,3 +34,16 @@ async def get_automation_usage_alerts(threshold_ratio: float = Query(0.2, ge=0.0
 async def get_subscription_upgrade_estimator() -> dict:
     report = automation_usage_service.estimate_subscription_upgrades()
     return report.model_dump(mode="json")
+
+
+@router.get("/automation/usage/readiness")
+async def get_provider_readiness(
+    required_providers: str = Query("", description="Comma-separated provider ids to require"),
+    force_refresh: bool = Query(True),
+) -> dict:
+    requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
+    report = automation_usage_service.provider_readiness_report(
+        required_providers=requested or None,
+        force_refresh=force_refresh,
+    )
+    return report.model_dump(mode="json")

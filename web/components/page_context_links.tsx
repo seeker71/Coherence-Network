@@ -113,6 +113,7 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/automation/usage", label: "Automation usage API" },
       { href: "/api/automation/usage/alerts", label: "Automation alerts API" },
       { href: "/api/automation/usage/snapshots", label: "Automation snapshots API" },
+      { href: "/api/automation/usage/readiness", label: "Automation readiness API" },
     ],
   },
   "/contributors": {
