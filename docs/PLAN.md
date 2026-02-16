@@ -16,7 +16,7 @@ Deliver a reliable, continuously improving OSS intelligence platform by prioriti
 - Search and project/coherence endpoints
 - Import stack analysis workflows
 - Web/API integration for current shipped capabilities
-- Public deployment maintenance (Railway API + Vercel web)
+- Public deployment maintenance (Railway API + Railway web)
 
 ### Pipeline Delivery
 - Automated task routing and execution
@@ -34,7 +34,7 @@ Deliver a reliable, continuously improving OSS intelligence platform by prioriti
 
 - **Milestone A: Core Stability**
   - keep API + indexers stable
-  - maintain production deployment health (Railway + Vercel)
+  - maintain production deployment health (Railway (API + web))
   - reduce repeated pipeline failures
   - keep status and coverage docs accurate
 

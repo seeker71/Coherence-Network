@@ -111,8 +111,6 @@ jobs:
             fi
 
             fail_sig="$(jq -c '.failing_checks // []' public_deploy_contract_report.json)"
-            vercel_only="$(jq -r '((.failing_checks // []) | length > 0 and all(.[]; startswith("vercel_")))' public_deploy_contract_report.json)"
-
             if [ "$fail_sig" = "$previous_fail_sig" ]; then
               unchanged_fail_count=$((unchanged_fail_count + 1))
             else
@@ -122,10 +120,6 @@ jobs:
 
             if [ "$unchanged_fail_count" -ge 4 ]; then
               echo "Fail-fast: failing_checks stable for 4 attempts (${fail_sig})."
-              break
-            fi
-            if [ "$vercel_only" = "true" ] && [ "$i" -ge 3 ]; then
-              echo "Fail-fast: only Vercel checks failing after Railway redeploy."
               break
             fi
 

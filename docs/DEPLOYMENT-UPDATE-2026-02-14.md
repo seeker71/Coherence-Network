@@ -2,14 +2,14 @@
 
 ## Summary
 
-Updated project documentation and configuration to reflect the current public deployment on Railway (API) and Vercel (web).
+Updated project documentation and configuration to reflect the current public deployment on Railway (API) and Railway web (web).
 
 ## Public Deployments
 
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
 | API | Railway | https://coherence-network-production.up.railway.app | ✅ Live |
-| Web | Vercel | https://coherence-network.vercel.app | ✅ Live |
+| Web | Railway web | https://coherence-web-production.up.railway.app | ✅ Live |
 
 ## Changes Made
 
@@ -43,7 +43,7 @@ Updated project documentation and configuration to reflect the current public de
 - ✅ Added deployment verification instructions
 
 #### specs/014-deploy-readiness.md
-- ✅ Updated to reflect Railway + Vercel stack
+- ✅ Updated to reflect Railway (API + web) stack
 - ✅ Added production deployment URLs
 - ✅ Updated API contract examples
 - ✅ Added verification script reference
@@ -60,7 +60,7 @@ The CORS configuration is now in the code, but Railway needs the environment var
 4. Go to **Variables** tab
 5. Add or update:
    ```
-   ALLOWED_ORIGINS=https://coherence-network.vercel.app,http://localhost:3000
+   ALLOWED_ORIGINS=https://coherence-web-production.up.railway.app,http://localhost:3000
    ```
 6. Redeploy the service
 
@@ -77,14 +77,14 @@ Expected result after Railway update:
 ==> Railway API health
 ✅ PASS
 
-==> Vercel web root
+==> Railway web root
 ✅ PASS
 
-==> Vercel API health page
+==> Railway web API health page
 ✅ PASS
 
 ==> CORS check
-✅ PASS (Access-Control-Allow-Origin: https://coherence-network.vercel.app)
+✅ PASS (Access-Control-Allow-Origin: https://coherence-web-production.up.railway.app)
 
 Deployment verification passed
 ```
@@ -106,7 +106,7 @@ As of 2026-02-14, before Railway env update:
 - `docs/STATUS.md` — Added deployment status
 - `docs/PLAN.md` — Added deployment operations
 - `CONTRIBUTING.md` — Complete rewrite for current reality
-- `specs/014-deploy-readiness.md` — Updated for Railway/Vercel
+- `specs/014-deploy-readiness.md` — Updated for Railway
 - `docs/DEPLOYMENT-UPDATE-2026-02-14.md` — This file
 
 ## Testing

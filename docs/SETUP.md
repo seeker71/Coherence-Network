@@ -58,7 +58,7 @@ Copy `api/.env.example` to `api/.env` and fill required keys.
 
 Use the managed-hosting baseline from `docs/DEPLOY.md`:
 - API on Railway
-- Web on Vercel
+- Web on Railway
 - PostgreSQL on Neon/Supabase
 - Neo4j on AuraDB Free
 

@@ -56,12 +56,12 @@ echo "Total contributors in database: $CONTRIB_COUNT"
 
 echo ""
 echo "7. CORS Check..."
-CORS_HEADER=$(curl -sI -H "Origin: https://coherence-network.vercel.app" \
+CORS_HEADER=$(curl -sI -H "Origin: https://coherence-web-production.up.railway.app" \
   https://coherence-network-production.up.railway.app/api/health 2>&1 \
   | grep -i "access-control-allow-origin" || echo "CORS header not found")
 echo "$CORS_HEADER"
 
-if [[ "$CORS_HEADER" == *"coherence-network.vercel.app"* ]] || [[ "$CORS_HEADER" == *"*"* ]]; then
+if [[ "$CORS_HEADER" == *"coherence-web-production.up.railway.app"* ]] || [[ "$CORS_HEADER" == *"*"* ]]; then
   echo "✅ CORS configured correctly"
 else
   echo "⚠️  CORS may need configuration"

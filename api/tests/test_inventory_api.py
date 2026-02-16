@@ -165,7 +165,7 @@ async def test_route_evidence_inventory_reports_api_and_web_coverage(
                 "e2e_validation": {
                     "public_endpoints": [
                         "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
-                        "https://coherence-network.vercel.app/flow",
+                        "https://coherence-web-production.up.railway.app/flow",
                     ]
                 }
             }
@@ -366,7 +366,7 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
                     "status": "pass",
                     "expected_behavior_delta": "Flow page and endpoint reflect end-to-end tracking.",
                     "public_endpoints": [
-                        "https://coherence-network.vercel.app/flow",
+                        "https://coherence-web-production.up.railway.app/flow",
                         "https://coherence-network-production.up.railway.app/api/inventory/flow",
                     ],
                     "test_flows": ["idea->spec->process->implementation->validation visible in UI and API"],

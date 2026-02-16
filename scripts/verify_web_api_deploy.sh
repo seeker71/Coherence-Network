@@ -2,7 +2,7 @@
 set -euo pipefail
 
 API_URL="${1:-https://coherence-network-production.up.railway.app}"
-WEB_URL="${2:-https://coherence-network.vercel.app}"
+WEB_URL="${2:-https://coherence-web-production.up.railway.app}"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -28,9 +28,6 @@ check_url() {
   status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
   local server
   server="$(awk 'tolower($1) == "server:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
-  local vercel_error
-  vercel_error="$(awk 'tolower($1) == "x-vercel-error:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
-
   if [[ -z "${status}" ]]; then
     echo "FAIL: could not read HTTP status"
     return 1
@@ -49,12 +46,8 @@ check_url() {
   head -c 250 "$body_file" || true
   echo
 
-  if [[ "$status" == "404" && "$server" == "Vercel" ]]; then
-    [[ -n "$vercel_error" ]] && echo "x-vercel-error: ${vercel_error}"
-    echo "Hint: Vercel 404 usually means the domain is not assigned to the intended project"
-    echo "or no production deployment is active for that project/domain."
-    echo "Check: Project → Settings → Domains and ensure this exact hostname is attached."
-    echo "Check: Deployments → Production has a recent Ready deployment on your production branch."
+  if [[ "$status" == "404" ]]; then
+    echo "Hint: web route not found. Verify Railway web service deployment and route config."
   fi
 
   return 1
@@ -92,15 +85,15 @@ check_cors() {
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
-check_url "Vercel web root" "${WEB_URL%/}/" || fail=1
-check_url "Vercel gates page" "${WEB_URL%/}/gates" || fail=1
-check_url "Vercel API health page" "${WEB_URL%/}/api-health" || fail=1
-check_url "Vercel API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
+check_url "Railway web root" "${WEB_URL%/}/" || fail=1
+check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
+check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1
+check_url "Railway web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
 check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
 
 if [[ "$fail" -eq 0 ]]; then
   echo
-  echo "Deployment verification passed: Railway API and Vercel web are reachable and CORS is aligned."
+  echo "Deployment verification passed: Railway API and Railway web are reachable and CORS is aligned."
 else
   echo
   echo "Deployment verification failed: at least one endpoint or CORS check failed."
