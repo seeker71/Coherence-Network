@@ -349,7 +349,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 |-------------|----------------|------|
 | Script runs after pytest, updates SPEC-COVERAGE when tests pass | `api/scripts/update_spec_coverage.py` | `test_update_spec_coverage_dry_run` (test_agent, test_update_spec_coverage) |
 | Additive rows only; STATUS update (test count / specs list) | `update_spec_coverage.py` | Script tests in test_update_spec_coverage.py |
-| --dry-run, idempotent, CI step after pytest (continue-on-error) | Script, `.github/workflows/test.yml` | `test_update_spec_coverage_dry_run`, `test_ci_runs_update_spec_coverage_after_pytest` |
+| --dry-run idempotence + CI step after pytest (blocking execution; no continue-on-error) | Script, `.github/workflows/test.yml` | `test_update_spec_coverage_dry_run`, `test_ci_runs_update_spec_coverage_after_pytest` |
 
 **Files:** `api/scripts/update_spec_coverage.py`, `docs/SPEC-COVERAGE.md`, `docs/STATUS.md`, `.github/workflows/test.yml`, `api/tests/test_update_spec_coverage.py`
 
