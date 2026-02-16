@@ -13,6 +13,7 @@ import httpx
 from app.models.idea import (
     Idea,
     IdeaPortfolioResponse,
+    IdeaQuestionCreate,
     IdeaQuestion,
     IdeaSummary,
     IdeaStorageInfo,
@@ -436,6 +437,85 @@ def get_idea(idea_id: str) -> IdeaWithScore | None:
         if idea.id == idea_id:
             return _with_score(idea)
     return None
+
+
+def create_idea(
+    idea_id: str,
+    name: str,
+    description: str,
+    potential_value: float,
+    estimated_cost: float,
+    confidence: float = 0.5,
+    interfaces: list[str] | None = None,
+    open_questions: list[IdeaQuestionCreate] | None = None,
+) -> IdeaWithScore | None:
+    ideas = _read_ideas()
+    if any(existing.id == idea_id for existing in ideas):
+        return None
+
+    idea = Idea(
+        id=idea_id,
+        name=name,
+        description=description,
+        potential_value=potential_value,
+        actual_value=0.0,
+        estimated_cost=estimated_cost,
+        actual_cost=0.0,
+        resistance_risk=1.0,
+        confidence=max(0.0, min(confidence, 1.0)),
+        manifestation_status=ManifestationStatus.NONE,
+        interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
+        open_questions=[
+            IdeaQuestion(
+                question=item.question,
+                value_to_whole=item.value_to_whole,
+                estimated_cost=item.estimated_cost,
+            )
+            for item in (open_questions or [])
+        ],
+    )
+
+    ideas.append(idea)
+    ideas, _ = _ensure_standing_questions(ideas)
+    _write_ideas(ideas)
+    return _with_score(idea)
+
+
+def add_question(
+    idea_id: str,
+    question: str,
+    value_to_whole: float,
+    estimated_cost: float,
+) -> tuple[IdeaWithScore | None, bool]:
+    ideas = _read_ideas()
+    updated: Idea | None = None
+    added = False
+    normalized = question.strip().lower()
+
+    for idx, idea in enumerate(ideas):
+        if idea.id != idea_id:
+            continue
+        exists = any(q.question.strip().lower() == normalized for q in idea.open_questions)
+        if not exists:
+            idea.open_questions.append(
+                IdeaQuestion(
+                    question=question,
+                    value_to_whole=value_to_whole,
+                    estimated_cost=estimated_cost,
+                )
+            )
+            added = True
+        ideas[idx] = idea
+        updated = idea
+        break
+
+    if updated is None:
+        return None, False
+    if not added:
+        return _with_score(updated), False
+
+    _write_ideas(ideas)
+    return _with_score(updated), True
 
 
 def update_idea(
