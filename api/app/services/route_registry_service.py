@@ -85,6 +85,12 @@ def _default_registry() -> dict:
                 "idea_id": "oss-interface-alignment",
             },
             {
+                "path": "/api/inventory/route-evidence",
+                "methods": ["GET"],
+                "purpose": "Canonical API/web route evidence coverage with runtime and public proof signals",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
                 "path": "/api/inventory/gaps/sync-traceability",
                 "methods": ["POST"],
                 "purpose": "Auto-sync missing idea/spec/process/usage artifacts from endpoint gaps",
@@ -189,6 +195,16 @@ def _default_registry() -> dict:
                 "path": "/flow",
                 "purpose": "Human flow visualization for spec-process-implementation-validation tracking",
                 "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/contribute",
+                "purpose": "Human contributor onboarding and review console",
+                "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/specs/[spec_id]",
+                "purpose": "Human spec detail with links to idea, process, implementation, and usage",
+                "idea_id": "coherence-network-api-runtime",
             },
             {
                 "path": "/agent",

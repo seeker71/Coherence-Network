@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/endpoint-evidence-coverage",
+  "commit_scope": "Track canonical API and web endpoint evidence in inventory, add public route probe artifact, and close endpoint evidence gaps to zero",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/tests/test_inventory_api.py",
+    "api/scripts/run_route_evidence_probe.py",
+    "config/canonical_routes.json",
+    "docs/system_audit/route_evidence_probe_2026-02-16_public.json"
+  ],
+  "local_validation": { "status": "pass" },
+  "ci_validation": { "status": "pending" },
+  "deploy_validation": { "status": "pending" },
+  "phase_gate": { "can_move_next_phase": false },
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment",
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage",
+    "094",
+    "002-agent-orchestration-api"
+  ],
+  "task_ids": [
+    "endpoint-evidence-coverage",
+    "route-evidence-public-validation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_api.py",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && PYTHONPATH=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_route_evidence_probe.py --api-base-url https://coherence-network-production.up.railway.app --web-base-url https://coherence-network.vercel.app --output ../docs/system_audit/route_evidence_probe_2026-02-16_public.json",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && PYTHONPATH=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api ROUTE_EVIDENCE_PROBE_DIR=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/docs/system_audit /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -c \"from app.services import inventory_service; print(inventory_service.build_route_evidence_inventory()['summary'])\""
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/tests/test_inventory_api.py",
+    "api/scripts/run_route_evidence_probe.py",
+    "config/canonical_routes.json",
+    "docs/system_audit/route_evidence_probe_2026-02-16_public.json",
+    "docs/system_audit/commit_evidence_2026-02-16_route-evidence-coverage.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "System exposes per-route evidence coverage for canonical API and web routes and can prove public reachability via persisted probe artifact.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/route-evidence",
+      "https://coherence-network-production.up.railway.app/api/inventory/routes/canonical",
+      "https://coherence-network.vercel.app/flow",
+      "https://coherence-network.vercel.app/contribute"
+    ],
+    "test_flows": [
+      "api:/api/inventory/route-evidence -> summary.api_missing_actual_evidence == 0 and summary.web_missing_actual_evidence == 0",
+      "script:scripts/run_route_evidence_probe.py -> writes docs/system_audit/route_evidence_probe_2026-02-16_public.json with api/web probe rows",
+      "api:/api/inventory/routes/canonical -> includes /api/inventory/route-evidence and full web route coverage"
+    ]
+  }
+}

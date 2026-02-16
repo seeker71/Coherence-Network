@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -102,6 +103,7 @@ async def test_canonical_routes_inventory_endpoint_returns_registry() -> None:
         assert "api_routes" in data
         assert "web_routes" in data
         assert any(route["path"] == "/api/inventory/system-lineage" for route in data["api_routes"])
+        assert any(route["path"] == "/api/inventory/route-evidence" for route in data["api_routes"])
 
 
 @pytest.mark.asyncio
@@ -119,6 +121,63 @@ async def test_canonical_routes_fallback_when_config_missing(
         assert resp.status_code == 200
         data = resp.json()
         assert any(route["path"] == "/api/runtime/events" for route in data["api_routes"])
+
+
+@pytest.mark.asyncio
+async def test_route_evidence_inventory_reports_api_and_web_coverage(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probe_payload = {
+        "generated_at": "2026-02-16T00:00:00+00:00",
+        "api": [
+            {
+                "path_template": "/api/inventory/system-lineage",
+                "path": "/api/inventory/system-lineage",
+                "method": "GET",
+                "status_code": 200,
+            }
+        ],
+        "web": [
+            {
+                "path_template": "/flow",
+                "path": "/flow",
+                "status_code": 200,
+            }
+        ],
+    }
+    (tmp_path / "route_evidence_probe_2026-02-16.json").write_text(
+        json.dumps(probe_payload),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ROUTE_EVIDENCE_PROBE_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        inventory_service.runtime_service,
+        "summarize_by_endpoint",
+        lambda seconds=86400: [SimpleNamespace(endpoint="/api/inventory/system-lineage", event_count=2)],
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_read_commit_evidence_records",
+        lambda limit=1200: [
+            {
+                "e2e_validation": {
+                    "public_endpoints": [
+                        "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
+                        "https://coherence-network.vercel.app/flow",
+                    ]
+                }
+            }
+        ],
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/route-evidence")
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["summary"]["api_total"] >= 1
+        assert payload["summary"]["web_total"] >= 1
+        assert payload["summary"]["api_with_actual_evidence"] >= 1
+        assert payload["summary"]["web_with_actual_evidence"] >= 1
 
 
 @pytest.mark.asyncio
