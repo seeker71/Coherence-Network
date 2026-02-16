@@ -34,6 +34,10 @@ interface InventoryResponse {
       total_value_gap: number;
     };
   };
+  specs: {
+    count: number;
+    source: string;
+  };
   questions: {
     answered_count: number;
     unanswered_count: number;
@@ -45,6 +49,11 @@ interface InventoryResponse {
   implementation_usage: {
     lineage_links_count: number;
     usage_events_count: number;
+  };
+  tracking: {
+    tracked_idea_ids_count: number;
+    runtime_events_count: number;
+    spec_discovery_source: string;
   };
 }
 
@@ -156,22 +165,27 @@ export default function PortfolioPage() {
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded border p-3">
-              <p className="text-muted-foreground">Ideas</p>
+              <p className="text-muted-foreground">Ideas in portfolio</p>
               <p className="text-lg font-semibold">{inventory.ideas.summary.total_ideas}</p>
             </div>
             <div className="rounded border p-3">
-              <p className="text-muted-foreground">Value gap</p>
-              <p className="text-lg font-semibold">{inventory.ideas.summary.total_value_gap}</p>
+              <p className="text-muted-foreground">Tracked idea ids</p>
+              <p className="text-lg font-semibold">{inventory.tracking.tracked_idea_ids_count}</p>
             </div>
             <div className="rounded border p-3">
-              <p className="text-muted-foreground">Questions unanswered</p>
-              <p className="text-lg font-semibold">{inventory.questions.unanswered_count}</p>
+              <p className="text-muted-foreground">Specs discovered</p>
+              <p className="text-lg font-semibold">{inventory.specs.count}</p>
             </div>
             <div className="rounded border p-3">
-              <p className="text-muted-foreground">Lineage links</p>
-              <p className="text-lg font-semibold">{inventory.implementation_usage.lineage_links_count}</p>
+              <p className="text-muted-foreground">Usage events</p>
+              <p className="text-lg font-semibold">{inventory.implementation_usage.usage_events_count}</p>
             </div>
           </section>
+
+          <p className="text-xs text-muted-foreground">
+            spec source {inventory.specs.source} | runtime_events {inventory.tracking.runtime_events_count} | unanswered_questions{" "}
+            {inventory.questions.unanswered_count} | value_gap {inventory.ideas.summary.total_value_gap}
+          </p>
 
           <section className="rounded border p-4 space-y-3">
             <h2 className="font-semibold">Top Unanswered Questions (ROI-ordered)</h2>
