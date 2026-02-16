@@ -1,0 +1,73 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/automation-energy-loss-audit",
+  "commit_scope": "document live Railway web primary cutover validation and deploy-contract variable mapping",
+  "files_owned": [
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-web-live-cutover-validation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://coherence-network-production.up.railway.app https://coherence-web-production.up.railway.app https://coherence-network.vercel.app",
+      "gh variable list | rg 'PUBLIC_(API_BASE|WEB_BASE_PRIMARY|WEB_BASE_BACKUP)'"
+    ],
+    "notes": [
+      "Railway web primary domain responds for root, gates, api-health, and health-proxy.",
+      "API CORS allows Railway web primary origin after ALLOWED_ORIGINS update and API redeploy."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "checks": [
+      "thread-gates",
+      "test",
+      "public-deploy-contract"
+    ],
+    "notes": "Pending after push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway+vercel",
+    "notes": "Railway web primary live at coherence-web-production.up.railway.app; Vercel retained as backup."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI pending for documentation/process updates"
+  },
+  "idea_ids": [
+    "idea-railway-web-primary-vercel-backup"
+  ],
+  "spec_ids": [
+    "spec-public-deploy-contract-primary-backup-web"
+  ],
+  "task_ids": [
+    "task-validate-railway-web-primary-live"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "deployment",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://coherence-web-production.up.railway.app/",
+    "https://coherence-web-production.up.railway.app/gates",
+    "https://coherence-web-production.up.railway.app/api/health-proxy",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-web-live-cutover-validation.json"
+  ],
+  "change_intent": "process_only"
+}

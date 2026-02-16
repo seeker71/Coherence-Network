@@ -195,6 +195,14 @@ Behavior:
 - If primary fails and backup (`arg3`) is provided, backup is checked.
 - Contract passes when API is healthy and at least one web surface is healthy with valid CORS.
 
+### GitHub deploy contract variables
+
+Set repository variables so `.github/workflows/public-deploy-contract.yml` validates the intended surfaces:
+
+- `PUBLIC_API_BASE=https://<railway-api-domain>`
+- `PUBLIC_WEB_BASE_PRIMARY=https://<railway-web-domain>`
+- `PUBLIC_WEB_BASE_BACKUP=https://<vercel-web-domain>`
+
 ### If Vercel domain returns 404
 
 A Vercel `404` on the project domain usually means the domain is not attached to the correct project or there is no active deployment for that domain.
