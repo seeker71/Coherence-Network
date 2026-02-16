@@ -33,7 +33,9 @@ try:
 except ImportError:
     pass
 
-from app.adapters.graph_store import Contributor, InMemoryGraphStore, Organization
+from app.adapters.graph_store import InMemoryGraphStore
+from app.models.github_contributor import GitHubContributor
+from app.models.github_organization import GitHubOrganization
 from app.services.github_client import GitHubClient
 
 NPM_REGISTRY = "https://registry.npmjs.org"
@@ -166,8 +168,14 @@ def _index_one(
     owner_login = (owner_info.get("login") or "").strip()
     owner_type = (owner_info.get("type") or "").strip() or "Organization"
     if owner_login:
-        org = Organization(id=f"github:{owner_login}", login=owner_login, type=owner_type)
-        store.upsert_organization(org)
+        org = GitHubOrganization(
+            id=f"github:{owner_login}",
+            login=owner_login,
+            type=owner_type,
+            name=owner_info.get("name"),
+            avatar_url=owner_info.get("avatar_url"),
+        )
+        store.upsert_github_organization(org)
 
     # Contributors
     try:
@@ -190,26 +198,22 @@ def _index_one(
         cid = f"github:{login}"
         contributions = int(c.get("contributions") or 0)
 
-        # Check for recent commit to set last_contribution_date
-        last_date = _get_last_commit_date(gh, owner, repo, login, window_days)
+        # Check for recent commit (for future activity_cadence calculation)
+        # last_date = _get_last_commit_date(gh, owner, repo, login, window_days)
 
-        cc = Contributor(
+        cc = GitHubContributor(
             id=cid,
             source="github",
             login=login,
             name=c.get("name"),
             avatar_url=c.get("avatar_url"),
             contributions_count=contributions,
-            last_contribution_date=last_date,
         )
-        store.upsert_contributor(cc)
-        store.add_contributes_to(cid, eco, name)
-        if login.lower() in top_logins:
-            store.add_maintains(cid, eco, name)
+        store.upsert_github_contributor(cc)
+        store.add_github_contributes_to(cid, eco, name)
 
-        # MEMBER_OF: link contributor to repo owner org
-        if owner_login and login.lower() == owner_login.lower():
-            store.add_member_of(cid, f"github:{owner_login}")
+        # Note: MAINTAINS and MEMBER_OF edges deferred to future spec
+        # Top 3 contributors could be marked as maintainers in a future enhancement
 
     return True
 
