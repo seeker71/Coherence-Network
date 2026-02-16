@@ -1,9 +1,10 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/change-contract-pending-checks",
-  "commit_scope": "Prevent false-negative Change Contract failures when main checks are still in progress by deferring hard-fail for that specific transient state.",
+  "commit_scope": "Prevent false-negative Change Contract failures while main checks are still in progress, and reduce Public Deploy Contract revalidation latency with bounded retries and fail-fast conditions.",
   "files_owned": [
     ".github/workflows/change-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
     "docs/system_audit/commit_evidence_2026-02-16_change-contract-pending-main-checks.json"
   ],
   "idea_ids": [
@@ -13,7 +14,8 @@
     "002"
   ],
   "task_ids": [
-    "change-contract-pending-main-checks"
+    "change-contract-pending-main-checks",
+    "public-deploy-revalidate-latency"
   ],
   "contributors": [
     {
@@ -42,7 +44,8 @@
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_change-contract-pending-main-checks.json"
   ],
   "change_files": [
-    ".github/workflows/change-contract.yml"
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/public-deploy-contract.yml"
   ],
   "change_intent": "process_only",
   "local_validation": {
