@@ -28,6 +28,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import time
 import uuid
@@ -53,6 +54,7 @@ LOG_FILE = os.path.join(LOG_DIR, "monitor.log")
 STATUS_REPORT_FILE = os.path.join(LOG_DIR, "pipeline_status_report.json")
 STATUS_REPORT_TXT = os.path.join(LOG_DIR, "pipeline_status_report.txt")
 RESOLUTIONS_FILE = os.path.join(LOG_DIR, "monitor_resolutions.jsonl")
+GITHUB_ACTIONS_HEALTH_FILE = os.path.join(LOG_DIR, "github_actions_health.json")
 VERSION_FILE = os.path.join(LOG_DIR, "pipeline_version.json")
 RESTART_FILE = os.path.join(LOG_DIR, "restart_requested.json")
 META_QUESTIONS_FILE = os.path.join(LOG_DIR, "meta_questions.json")
@@ -74,6 +76,9 @@ MIN_TASKS_FOR_RATE = 10
 MIN_RUNNING_WHEN_PENDING = 2  # expect at least 2 tasks running when we have pending (phase coverage)
 EXPENSIVE_FAIL_LOOKBACK_SEC = int(os.environ.get("PIPELINE_EXPENSIVE_FAIL_LOOKBACK_SEC", "7200"))  # 2h
 EXPENSIVE_FAIL_THRESHOLD_SEC = float(os.environ.get("PIPELINE_EXPENSIVE_FAIL_THRESHOLD_SEC", "120"))  # 2m
+GITHUB_ACTIONS_FAIL_RATE_THRESHOLD = float(os.environ.get("GITHUB_ACTIONS_FAIL_RATE_THRESHOLD", "0.35"))
+GITHUB_ACTIONS_MIN_COMPLETED = int(os.environ.get("GITHUB_ACTIONS_MIN_COMPLETED", "8"))
+GITHUB_ACTIONS_LOOKBACK_DAYS = int(os.environ.get("GITHUB_ACTIONS_LOOKBACK_DAYS", "7"))
 
 NO_TASK_RUNNING_ACTION = """ANALYZE why no task is running:
 - agent_runner process may have died or crashed
@@ -188,6 +193,163 @@ def _runner_log_has_recent_errors() -> Tuple[bool, str]:
     except (OSError, IOError):
         pass
     return False, ""
+
+
+def _github_repo_slug() -> str:
+    repo = str(os.environ.get("GITHUB_REPOSITORY", "")).strip()
+    if repo and "/" in repo:
+        return repo
+    try:
+        import subprocess
+
+        raw = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except Exception:
+        return ""
+    url = (raw.stdout or "").strip()
+    if not url:
+        return ""
+    # Supports:
+    # - git@github.com:owner/repo.git
+    # - https://github.com/owner/repo.git
+    # - https://github.com/owner/repo
+    match = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/.]+)(?:\.git)?$", url)
+    if not match:
+        return ""
+    return f"{match.group('owner')}/{match.group('repo')}"
+
+
+def _parse_ts_iso(raw: str | None) -> datetime | None:
+    value = str(raw or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _collect_github_actions_health(log: logging.Logger) -> dict[str, Any]:
+    health: dict[str, Any] = {
+        "provider": "github-actions",
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "available": False,
+        "repo": "",
+        "lookback_days": GITHUB_ACTIONS_LOOKBACK_DAYS,
+        "completed_runs": 0,
+        "failed_runs": 0,
+        "failure_rate": 0.0,
+        "wasted_minutes_failed": 0.0,
+        "top_failed_workflows": [],
+        "sample_failed_run_links": [],
+        "official_records": [
+            "https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository",
+        ],
+        "note": "",
+    }
+    repo = _github_repo_slug()
+    health["repo"] = repo
+    if not repo:
+        health["note"] = "missing repo slug; set GITHUB_REPOSITORY=owner/repo or configure git remote origin"
+        return health
+
+    try:
+        import subprocess
+
+        probe = subprocess.run(
+            ["gh", "auth", "status"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        if probe.returncode != 0:
+            health["note"] = "gh auth not available"
+            return health
+        args = [
+            "gh",
+            "api",
+            f"repos/{repo}/actions/runs",
+            "-f",
+            "per_page=100",
+        ]
+        response = subprocess.run(
+            args,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except Exception as exc:
+        health["note"] = f"gh api failed to execute: {exc}"
+        return health
+
+    if response.returncode != 0:
+        health["note"] = f"gh api error: {(response.stderr or response.stdout or '').strip()[:200]}"
+        return health
+
+    try:
+        payload = json.loads(response.stdout or "{}")
+    except json.JSONDecodeError:
+        health["note"] = "gh api returned invalid json"
+        return health
+
+    rows = payload.get("workflow_runs") if isinstance(payload, dict) else []
+    runs = rows if isinstance(rows, list) else []
+    now = datetime.now(timezone.utc)
+    cutoff = now.timestamp() - max(1, GITHUB_ACTIONS_LOOKBACK_DAYS) * 86400
+    failed_conclusions = {"failure", "timed_out", "cancelled", "startup_failure", "stale", "action_required"}
+    completed = 0
+    failed = 0
+    wasted_seconds = 0.0
+    failed_workflow_counts: dict[str, int] = {}
+    failed_links: list[str] = []
+
+    for run in runs:
+        if not isinstance(run, dict):
+            continue
+        created_at = _parse_ts_iso(run.get("created_at"))
+        if created_at is None or created_at.timestamp() < cutoff:
+            continue
+        status = str(run.get("status") or "").strip().lower()
+        if status != "completed":
+            continue
+        completed += 1
+        conclusion = str(run.get("conclusion") or "").strip().lower()
+        if conclusion not in failed_conclusions:
+            continue
+        failed += 1
+        name = str(run.get("name") or "unknown_workflow")
+        failed_workflow_counts[name] = failed_workflow_counts.get(name, 0) + 1
+        html_url = str(run.get("html_url") or "").strip()
+        if html_url and len(failed_links) < 3:
+            failed_links.append(html_url)
+        started = _parse_ts_iso(run.get("run_started_at"))
+        updated = _parse_ts_iso(run.get("updated_at"))
+        if started and updated:
+            wasted_seconds += max(0.0, (updated - started).total_seconds())
+
+    health["available"] = True
+    health["completed_runs"] = completed
+    health["failed_runs"] = failed
+    health["failure_rate"] = round((failed / completed), 4) if completed > 0 else 0.0
+    health["wasted_minutes_failed"] = round(wasted_seconds / 60.0, 2)
+    health["top_failed_workflows"] = [
+        {"workflow": name, "failed_runs": count}
+        for name, count in sorted(failed_workflow_counts.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+    health["sample_failed_run_links"] = failed_links
+    health["official_records"].append(f"https://github.com/{repo}/actions")
+    health["official_records"].append(f"https://api.github.com/repos/{repo}/actions/runs")
+    return health
 
 
 def _load_recent_failed_task_durations(now: datetime) -> list[dict]:
@@ -980,6 +1142,75 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         _add_issue(data, "runner_log_errors", "medium", msg, action)
         if heal_task_id:
             data["issues"][-1]["heal_task_id"] = heal_task_id
+
+    # GitHub Actions failure-rate tracking: reduce wasted CI runs when failure rates spike.
+    gha_health = _collect_github_actions_health(log)
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        with open(GITHUB_ACTIONS_HEALTH_FILE, "w", encoding="utf-8") as f:
+            json.dump(gha_health, f, indent=2)
+    except Exception as ex:
+        log.debug("Could not write github actions health file: %s", ex)
+
+    if gha_health.get("available"):
+        completed_runs = int(gha_health.get("completed_runs") or 0)
+        failed_runs = int(gha_health.get("failed_runs") or 0)
+        failure_rate = float(gha_health.get("failure_rate") or 0.0)
+        if completed_runs >= GITHUB_ACTIONS_MIN_COMPLETED and failure_rate >= GITHUB_ACTIONS_FAIL_RATE_THRESHOLD:
+            wasted_minutes = float(gha_health.get("wasted_minutes_failed") or 0.0)
+            action = (
+                "Review recent failed GitHub Actions runs and fix the highest-frequency workflow first. "
+                "Reduce repeated failures before adding more CI workload."
+            )
+            links = gha_health.get("sample_failed_run_links") if isinstance(gha_health.get("sample_failed_run_links"), list) else []
+            if links:
+                action = f"{action} Runs: {' | '.join(str(url) for url in links[:3])}"
+            heal_task_id = None
+            if (
+                auto_fix
+                and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                and "github_actions_high_failure_rate" not in prev_conditions
+            ):
+                try:
+                    resp = client.post(
+                        f"{BASE}/api/agent/tasks",
+                        json={
+                            "direction": (
+                                "Monitor detected high GitHub Actions failure rate. Triage failing workflows, "
+                                "fix root causes, and re-run checks to reduce CI waste."
+                            ),
+                            "task_type": "heal",
+                            "context": {
+                                "executor": "cursor",
+                                "monitor_condition": "github_actions_high_failure_rate",
+                                "repo": gha_health.get("repo"),
+                                "completed_runs": completed_runs,
+                                "failed_runs": failed_runs,
+                                "failure_rate": failure_rate,
+                                "wasted_minutes_failed": wasted_minutes,
+                            },
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 201:
+                        heal_task_id = resp.json().get("id")
+                        action = f"Created heal task {heal_task_id}. " + action
+                        log.info("Auto-fix: created heal task for github_actions_high_failure_rate")
+                except Exception as e:
+                    log.warning("Auto-fix heal task failed: %s", e)
+            _add_issue(
+                data,
+                "github_actions_high_failure_rate",
+                "high" if failure_rate >= 0.5 else "medium",
+                (
+                    f"GitHub Actions failure rate {round(failure_rate * 100.0, 1)}% "
+                    f"({failed_runs}/{completed_runs} completed runs, "
+                    f"wasted_minutes_failed={round(wasted_minutes, 2)})."
+                ),
+                action,
+            )
+            if heal_task_id:
+                data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked (from 006, PLAN phases)
     # Also: effectiveness 404 means API has stale routes — request restart so watchdog restarts API

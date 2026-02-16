@@ -87,6 +87,7 @@ Response shape:
 | `repeated_failures` | high | 3+ consecutive failed (same phase) |
 | `low_success_rate` | medium | 7d success rate < 80% (10+ tasks) |
 | `runner_pm_not_seen` | high | PROCESSES: agent_runner not seen, PM not seen — pipeline processes down |
+| `github_actions_high_failure_rate` | medium/high | GitHub Actions completed-run failure rate above threshold (CI minutes/time waste) |
 | `output_empty` | high | Completed task has 0 chars output (capture failure or silent crash) |
 | `orphan_running` | medium | Single running task > 2h |
 | `needs_decision` | medium | PM blocked on human decision |
@@ -105,6 +106,7 @@ Response shape:
 | `stale_version` | Write restart_requested.json → watchdog restarts pipeline |
 | `runner_pm_not_seen` | Write restart_requested.json → watchdog restarts pipeline |
 | `orphan_running` | PATCH task to failed (unblock pipeline) |
+| `github_actions_high_failure_rate` | Create heal task to triage failing workflows and reduce repeat CI waste |
 | `no_task_running` | Create heal task (when auto-fix also enabled) |
 | `repeated_failures` | Create heal task (when auto-fix also enabled) |
 | `architecture_maintainability_drift` | Create high-ROI heal task (when auto-fix also enabled) |
