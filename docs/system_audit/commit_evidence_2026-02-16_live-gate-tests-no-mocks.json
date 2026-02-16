@@ -1,0 +1,71 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/real-gates-tests",
+  "commit_scope": "replace mocked gate endpoint and release-gate report tests with live integration checks",
+  "files_owned": [
+    "api/tests/test_gates.py",
+    "api/tests/test_release_gate_service.py",
+    "specs/084-live-gate-tests-without-mocks.md",
+    "docs/system_audit/commit_evidence_2026-02-16_live-gate-tests-no-mocks.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "084"
+  ],
+  "task_ids": [
+    "live-gate-tests-no-mocks"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_live-gate-tests-no-mocks.json"
+  ],
+  "change_files": [
+    "api/tests/test_gates.py",
+    "api/tests/test_release_gate_service.py",
+    "specs/084-live-gate-tests-without-mocks.md"
+  ],
+  "change_intent": "test_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}
