@@ -22,9 +22,7 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
 Run and record:
 
 ```bash
-cd api && .venv/bin/pytest -q
-./scripts/verify_worktree_local_web.sh
-python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ```
 
@@ -32,12 +30,12 @@ Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
 - PASS only if changed specs pass the spec quality contract (when any feature spec changed).
 - PASS only if no stale open `codex/*` PR is left unattended.
+- PASS only if guard does not detect evidence/workflow/reference contract failures.
 
 Worktree notes:
-- This command is the default local web validation for Codex threads.
-- It runs API + web inside the current worktree, validates key API/web routes, and fails on runtime errors in page content.
-- Override ports when needed:
-  - `API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh`
+- This command is the default local PR failure-prevention guard for Codex threads.
+- It runs CI-parity checks and writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
+- It includes API tests, web build, local runtime route checks, spec/evidence/workflow contracts, and maintainability guard.
 
 ### Phase B: CI Validation (required before merge)
 
