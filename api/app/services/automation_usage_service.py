@@ -471,6 +471,7 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
             provider="github",
             kind="github",
             status="unavailable",
+            data_source="configuration_only",
             notes=["Set GITHUB_TOKEN (or GH_TOKEN) to enable GitHub usage data."],
         )
 
