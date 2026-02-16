@@ -21,6 +21,8 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "2")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "3")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
