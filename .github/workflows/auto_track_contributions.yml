@@ -36,8 +36,14 @@ jobs:
           FILES=${{ steps.commit_info.outputs.files_changed }}
           LINES=${{ steps.commit_info.outputs.lines_added }}
 
-          # Base cost: $10 per file + $0.50 per line
-          COST=$(echo "($FILES * 10) + ($LINES * 0.5)" | bc)
+          # Normalized v2 estimator:
+          # base 0.10 + 0.15/file + 0.002/line, clamped to [0.05, 10.00]
+          COST=$(awk -v files="$FILES" -v lines="$LINES" 'BEGIN {
+            c = 0.10 + (files * 0.15) + (lines * 0.002);
+            if (c < 0.05) c = 0.05;
+            if (c > 10.00) c = 10.00;
+            printf "%.2f", c
+          }')
 
           echo "cost=$COST" >> $GITHUB_OUTPUT
 
