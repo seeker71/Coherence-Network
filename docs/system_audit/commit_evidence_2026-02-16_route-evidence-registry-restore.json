@@ -1,0 +1,67 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/endpoint-evidence-coverage",
+  "commit_scope": "Restore missing canonical API routes and refresh public route evidence artifact so route normalization and evidence coverage remain consistent",
+  "files_owned": [
+    "api/app/services/route_registry_service.py",
+    "config/canonical_routes.json",
+    "docs/system_audit/route_evidence_probe_2026-02-16_public.json"
+  ],
+  "local_validation": { "status": "pass" },
+  "ci_validation": { "status": "pending" },
+  "deploy_validation": { "status": "pending" },
+  "phase_gate": { "can_move_next_phase": false },
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage",
+    "094"
+  ],
+  "task_ids": [
+    "endpoint-evidence-coverage",
+    "route-registry-integrity"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_api.py::test_runtime_endpoint_summary_includes_origin_idea_lineage",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_api.py",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && PYTHONPATH=/Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_route_evidence_probe.py --api-base-url https://coherence-network-production.up.railway.app --web-base-url https://coherence-network.vercel.app --output ../docs/system_audit/route_evidence_probe_2026-02-16_public.json"
+  ],
+  "change_files": [
+    "api/app/services/route_registry_service.py",
+    "config/canonical_routes.json",
+    "docs/system_audit/route_evidence_probe_2026-02-16_public.json",
+    "docs/system_audit/commit_evidence_2026-02-16_route-evidence-registry-restore.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Canonical route registry includes all required templated endpoints, preserving runtime endpoint normalization and complete route evidence coverage.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/routes/canonical",
+      "https://coherence-network-production.up.railway.app/api/inventory/route-evidence"
+    ],
+    "test_flows": [
+      "api:/api/inventory/routes/canonical includes /api/spec-registry/{spec_id} and /api/inventory/route-evidence",
+      "api:/api/inventory/route-evidence reports tracked evidence for all canonical routes"
+    ]
+  }
+}
