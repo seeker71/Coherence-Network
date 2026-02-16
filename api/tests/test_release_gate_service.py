@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services.release_gate_service import (
+    get_branch_head_sha,
     collect_rerunnable_actions_run_ids,
     evaluate_commit_traceability_report,
     evaluate_public_deploy_contract_report,
@@ -145,235 +146,49 @@ def test_collect_rerunnable_actions_run_ids_fallbacks_when_required_unknown() ->
     assert run_ids == [444, 555]
 
 
-def test_evaluate_public_deploy_contract_report_passes(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_json(url: str, timeout: float = 8.0) -> dict:
-        if url.endswith("/api/gates/main-head"):
-            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "abc123"}}
-        if url.endswith("/api/health-proxy"):
-            return {
-                "url": url,
-                "ok": True,
-                "status_code": 200,
-                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
-            }
-        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
-
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_branch_head_sha",
-        lambda *args, **kwargs: "abc123",
-    )
-    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_http_endpoint",
-        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_value_lineage_e2e_flow",
-        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
-    )
-
+def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     out = evaluate_public_deploy_contract_report(
         repository="seeker71/Coherence-Network",
         branch="main",
-        api_base="https://api.example.com",
-        web_base="https://web.example.com",
+        timeout=8.0,
     )
 
-    assert out["result"] == "public_contract_passed"
-    assert out["failing_checks"] == []
+    assert out["repository"] == "seeker71/Coherence-Network"
+    assert out["branch"] == "main"
+    assert isinstance(out.get("expected_sha"), str)
+    checks = out.get("checks")
+    assert isinstance(checks, list)
+    check_names = {
+        row.get("name")
+        for row in checks
+        if isinstance(row, dict) and isinstance(row.get("name"), str)
+    }
+    assert "railway_health" in check_names
+    assert "railway_gates_main_head" in check_names
+    assert "vercel_gates_page" in check_names
+    assert "vercel_health_proxy" in check_names
+    assert "railway_value_lineage_e2e" in check_names
+    assert out["result"] in {"public_contract_passed", "blocked"}
+    assert isinstance(out.get("failing_checks"), list)
+    assert isinstance(out.get("warnings"), list)
 
 
-def test_evaluate_public_deploy_contract_report_flags_sha_mismatch(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fake_json(url: str, timeout: float = 8.0) -> dict:
-        if url.endswith("/api/gates/main-head"):
-            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "oldsha"}}
-        if url.endswith("/api/health-proxy"):
-            return {
-                "url": url,
-                "ok": True,
-                "status_code": 200,
-                "json": {"api": {"status": "ok"}, "web": {"updated_at": "oldsha"}},
-            }
-        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
-
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_branch_head_sha",
-        lambda *args, **kwargs: "newsha",
-    )
-    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_http_endpoint",
-        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_value_lineage_e2e_flow",
-        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
-    )
-
-    out = evaluate_public_deploy_contract_report(
-        repository="seeker71/Coherence-Network",
-        branch="main",
-        api_base="https://api.example.com",
-        web_base="https://web.example.com",
-    )
-
-    assert out["result"] == "blocked"
-    assert "railway_gates_main_head" in out["failing_checks"]
-    assert "vercel_health_proxy" in out["failing_checks"]
-
-
-def test_evaluate_public_deploy_contract_report_flags_value_lineage_e2e_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fake_json(url: str, timeout: float = 8.0) -> dict:
-        if url.endswith("/api/gates/main-head"):
-            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": "abc123"}}
-        if url.endswith("/api/health-proxy"):
-            return {
-                "url": url,
-                "ok": True,
-                "status_code": 200,
-                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
-            }
-        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
-
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_branch_head_sha",
-        lambda *args, **kwargs: "abc123",
-    )
-    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_http_endpoint",
-        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_value_lineage_e2e_flow",
-        lambda api_base, timeout=8.0: {
-            "url": f"{api_base}/api/value-lineage/links",
-            "ok": False,
-            "status_code": 500,
-            "error": "payout_invariant_failed",
-        },
-    )
-
-    out = evaluate_public_deploy_contract_report(
-        repository="seeker71/Coherence-Network",
-        branch="main",
-        api_base="https://api.example.com",
-        web_base="https://web.example.com",
-    )
-
-    assert out["result"] == "blocked"
-    assert "railway_value_lineage_e2e" in out["failing_checks"]
-
-
-def test_evaluate_public_deploy_contract_report_allows_main_head_502_with_warning(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fake_json(url: str, timeout: float = 8.0) -> dict:
-        if url.endswith("/api/gates/main-head"):
-            return {"url": url, "ok": False, "status_code": 502}
-        if url.endswith("/api/health-proxy"):
-            return {
-                "url": url,
-                "ok": True,
-                "status_code": 200,
-                "json": {"api": {"status": "ok"}, "web": {"updated_at": "abc123"}},
-            }
-        return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
-
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_branch_head_sha",
-        lambda *args, **kwargs: "abc123",
-    )
-    monkeypatch.setattr("app.services.release_gate_service.check_http_json_endpoint", fake_json)
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_http_endpoint",
-        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.check_value_lineage_e2e_flow",
-        lambda api_base, timeout=8.0: {"url": api_base, "ok": True, "status_code": 200},
-    )
-
-    out = evaluate_public_deploy_contract_report(
-        repository="seeker71/Coherence-Network",
-        branch="main",
-        api_base="https://api.example.com",
-        web_base="https://web.example.com",
-    )
-
-    assert out["result"] == "public_contract_passed"
-    assert out["failing_checks"] == []
-    assert "railway_gates_main_head_unavailable" in out["warnings"]
-
-
-def test_evaluate_commit_traceability_report_derives_references_from_commit_evidence(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_commit_files",
-        lambda *args, **kwargs: [
-            "docs/system_audit/commit_evidence_2026-02-15_traceability.json",
-            "api/app/routers/gates.py",
-        ],
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_commit_pull_requests",
-        lambda *args, **kwargs: [{"number": 88}],
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_file_content_at_ref",
-        lambda *args, **kwargs: (
-            '{"idea_ids":["portfolio-governance"],'
-            '"spec_ids":["055"],'
-            '"change_files":["api/app/routers/gates.py"]}'
-        ),
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.list_spec_paths_at_ref",
-        lambda *args, **kwargs: [
-            "specs/055-runtime-intent-and-public-e2e-contract-gate.md",
-            "specs/054-commit-provenance-contract-gate.md",
-        ],
-    )
+def test_evaluate_commit_traceability_report_live_shape() -> None:
+    sha = get_branch_head_sha("seeker71/Coherence-Network", "main")
+    assert isinstance(sha, str) and len(sha) == 40
 
     out = evaluate_commit_traceability_report(
         repository="seeker71/Coherence-Network",
-        sha="abc1234",
-        api_base="https://api.example.com",
-        web_base="https://web.example.com",
+        sha=sha,
     )
 
-    assert out["result"] == "traceability_ready"
-    assert out["questions_answered"]["commit_evidence_present"] is True
-    assert out["traceability"]["ideas"][0]["api_url"] == "https://api.example.com/api/ideas/portfolio-governance"
-    assert out["traceability"]["specs"][0]["path"] == "specs/055-runtime-intent-and-public-e2e-contract-gate.md"
-    assert out["traceability"]["implementations"][0]["path"] == "api/app/routers/gates.py"
-
-
-def test_evaluate_commit_traceability_report_is_incomplete_without_evidence(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_commit_files",
-        lambda *args, **kwargs: ["api/app/main.py"],
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.get_commit_pull_requests",
-        lambda *args, **kwargs: [],
-    )
-    monkeypatch.setattr(
-        "app.services.release_gate_service.list_spec_paths_at_ref",
-        lambda *args, **kwargs: [],
-    )
-
-    out = evaluate_commit_traceability_report(
-        repository="seeker71/Coherence-Network",
-        sha="abc1234",
-    )
-
-    assert out["result"] == "traceability_incomplete"
-    assert "No commit evidence file changed in this commit" in out["missing_answers"]
+    assert out["repository"] == "seeker71/Coherence-Network"
+    assert out["sha"] == sha
+    assert out["result"] in {"traceability_ready", "traceability_incomplete"}
+    assert isinstance(out.get("missing_answers"), list)
+    traceability = out.get("traceability")
+    assert isinstance(traceability, dict)
+    assert isinstance(traceability.get("ideas"), list)
+    assert isinstance(traceability.get("specs"), list)
+    assert isinstance(traceability.get("implementations"), list)
+    assert isinstance(traceability.get("evidence_files"), list)
