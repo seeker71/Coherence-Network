@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
 from app.models.runtime import RuntimeEvent, RuntimeEventCreate
 from app.services import runtime_service
@@ -36,3 +36,23 @@ async def runtime_summary_by_endpoint(seconds: int = Query(3600, ge=60, le=25920
         "window_seconds": seconds,
         "endpoints": [row.model_dump(mode="json") for row in rows],
     }
+
+
+@router.post("/runtime/exerciser/run")
+async def run_runtime_get_endpoint_exerciser(
+    request: Request,
+    cycles: int = Query(1, ge=1, le=200),
+    max_endpoints: int = Query(250, ge=1, le=2000),
+    delay_ms: int = Query(0, ge=0, le=30000),
+    timeout_seconds: float = Query(8.0, ge=1.0, le=60.0),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return await runtime_service.run_get_endpoint_exerciser(
+        app=request.app,
+        base_url=str(request.base_url),
+        cycles=cycles,
+        max_endpoints=max_endpoints,
+        delay_ms=delay_ms,
+        timeout_seconds=timeout_seconds,
+        runtime_window_seconds=runtime_window_seconds,
+    )

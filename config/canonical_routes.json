@@ -33,6 +33,12 @@
       "idea_id": "portfolio-governance"
     },
     {
+      "path": "/api/runtime/exerciser/run",
+      "methods": ["POST"],
+      "purpose": "Run safe GET endpoint exerciser to increase runtime usage coverage continuously",
+      "idea_id": "coherence-network-agent-pipeline"
+    },
+    {
       "path": "/api/value-lineage/links",
       "methods": ["POST"],
       "purpose": "Create idea/spec/implementation lineage",

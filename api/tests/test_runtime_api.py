@@ -122,3 +122,33 @@ async def test_runtime_endpoint_summary_includes_origin_idea_lineage(
         assert row["idea_id"] == "portfolio-governance"
         assert row["origin_idea_id"] == "system-root"
         assert row["event_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_runtime_get_endpoint_exerciser_runs_safe_calls_and_reports_coverage(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        run = await client.post(
+            "/api/runtime/exerciser/run",
+            params={"cycles": 1, "max_endpoints": 30, "delay_ms": 0, "timeout_seconds": 8.0},
+        )
+        assert run.status_code == 200
+        payload = run.json()
+        assert payload["result"] == "runtime_get_endpoint_exerciser_completed"
+        assert payload["summary"]["discovered_get_endpoints"] >= 1
+        assert payload["summary"]["total_calls"] >= 1
+        assert payload["coverage"]["after_with_usage_events"] >= payload["coverage"]["before_with_usage_events"]
+        assert isinstance(payload["calls"], list)
+        assert len(payload["calls"]) >= 1
+        first = payload["calls"][0]
+        assert str(first["path_template"]).startswith("/api/")
+        assert int(first["runtime_ms"]) > 0
