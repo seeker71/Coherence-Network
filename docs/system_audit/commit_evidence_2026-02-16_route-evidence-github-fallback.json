@@ -1,0 +1,60 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/route-evidence-probe-discovery",
+  "commit_scope": "Enable route-evidence probe discovery from GitHub when local docs artifacts are unavailable in deployment layout",
+  "files_owned": [
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py"
+  ],
+  "local_validation": { "status": "pass" },
+  "ci_validation": { "status": "pending" },
+  "deploy_validation": { "status": "pending" },
+  "phase_gate": { "can_move_next_phase": false },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage",
+    "094"
+  ],
+  "task_ids": [
+    "route-evidence-deploy-fallback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_discovery_sources.py tests/test_inventory_api.py",
+    "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/asset-modularity-drift-daily/api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"
+  ],
+  "change_files": [
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "docs/system_audit/commit_evidence_2026-02-16_route-evidence-github-fallback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public /api/inventory/route-evidence can use committed route probe artifacts from GitHub when local docs path is unavailable in runtime container layout.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/route-evidence"
+    ],
+    "test_flows": [
+      "api:/api/inventory/route-evidence returns probe.available=true with source_file from docs/system_audit/route_evidence_probe_*.json"
+    ]
+  }
+}
