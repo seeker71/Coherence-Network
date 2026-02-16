@@ -228,6 +228,8 @@ python3 scripts/worktree_pr_guard.py --mode remote --branch "$(git rev-parse --a
 Both modes write JSON reports to:
 - `docs/system_audit/pr_check_failures/`
 
+Remote/all mode also evaluates deployment freshness using latest `Public Deploy Contract` run on `main`; when that run is failed or older than the freshness window, the guard returns blocking status.
+
 If a check fails, the report includes:
 - failing step/check name
 - output tail

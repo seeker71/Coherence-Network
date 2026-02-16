@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = REPO_ROOT / "api"
@@ -321,6 +322,26 @@ def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | 
                 }
             )
 
+    status_context_failures: list[dict[str, Any]] = []
+    statuses = commit_status.get("statuses")
+    if isinstance(statuses, list):
+        for item in statuses:
+            if not isinstance(item, dict):
+                continue
+            state = str(item.get("state") or "").lower()
+            if state in ("success", "expected"):
+                continue
+            context = str(item.get("context") or "unknown")
+            status_context_failures.append(
+                {
+                    "context": context,
+                    "state": state or "unknown",
+                    "description": item.get("description"),
+                    "target_url": item.get("target_url"),
+                    "suggested_local_preflight": _check_run_hint(context),
+                }
+            )
+
     return {
         "status": "ok",
         "repo": repo,
@@ -334,6 +355,69 @@ def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | 
         "missing_required_contexts": gate_eval.get("missing_required_contexts"),
         "failing_required_contexts": gate_eval.get("failing_required_contexts"),
         "failing_check_runs": failures,
+        "failing_status_contexts": status_context_failures,
+    }
+
+
+def _parse_iso8601(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _collect_deployment_health(repo: str, token: str, max_age_hours: float) -> dict[str, Any]:
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/public-deploy-contract.yml/runs"
+    with httpx.Client(timeout=12.0, headers=gates._headers(token)) as client:
+        response = client.get(url, params={"branch": "main", "per_page": 10})
+        response.raise_for_status()
+        payload = response.json()
+
+    runs = payload.get("workflow_runs") if isinstance(payload, dict) else []
+    if not isinstance(runs, list) or not runs:
+        return {
+            "status": "unknown",
+            "healthy": False,
+            "message": "No Public Deploy Contract runs found on main.",
+        }
+
+    latest = None
+    for run in runs:
+        if isinstance(run, dict) and str(run.get("status")) == "completed":
+            latest = run
+            break
+    if latest is None:
+        latest = runs[0] if isinstance(runs[0], dict) else None
+    if not isinstance(latest, dict):
+        return {
+            "status": "unknown",
+            "healthy": False,
+            "message": "Could not parse latest Public Deploy Contract run.",
+        }
+
+    conclusion = str(latest.get("conclusion") or "unknown")
+    updated_at = _parse_iso8601(latest.get("updated_at"))
+    age_hours = None
+    if updated_at is not None:
+        age_hours = round((datetime.now(UTC) - updated_at.astimezone(UTC)).total_seconds() / 3600, 2)
+    healthy = conclusion == "success" and (age_hours is not None and age_hours <= max_age_hours)
+    return {
+        "status": "ok",
+        "healthy": healthy,
+        "conclusion": conclusion,
+        "max_age_hours": max_age_hours,
+        "age_hours": age_hours,
+        "run_id": latest.get("id"),
+        "run_url": latest.get("html_url"),
+        "created_at": latest.get("created_at"),
+        "updated_at": latest.get("updated_at"),
+        "message": (
+            "Latest deploy contract is healthy."
+            if healthy
+            else "Latest deploy contract is failed/stale; fix deployment before new feature work."
+        ),
     }
 
 
@@ -367,6 +451,12 @@ def main() -> int:
         default=str(REPO_ROOT / "docs" / "system_audit" / "pr_check_failures"),
     )
     parser.add_argument("--json", action="store_true", help="Print JSON report to stdout.")
+    parser.add_argument(
+        "--deploy-success-max-age-hours",
+        type=float,
+        default=6.0,
+        help="Maximum age (hours) for latest successful Public Deploy Contract run on main.",
+    )
     args = parser.parse_args()
 
     report: dict[str, Any] = {
@@ -379,6 +469,7 @@ def main() -> int:
         "mode": args.mode,
         "local_preflight": {"status": "skipped", "steps": []},
         "remote_pr_checks": {"status": "skipped"},
+        "deployment_health": {"status": "skipped"},
     }
 
     if args.mode in ("local", "all"):
@@ -429,6 +520,11 @@ def main() -> int:
                 base=args.base,
                 token=token,
             )
+            report["deployment_health"] = _collect_deployment_health(
+                repo=args.repo,
+                token=token,
+                max_age_hours=args.deploy_success_max_age_hours,
+            )
 
     blocking = False
     local_status = report["local_preflight"].get("status")
@@ -438,9 +534,18 @@ def main() -> int:
     remote = report.get("remote_pr_checks", {})
     if isinstance(remote, dict):
         if remote.get("status") == "ok":
-            if remote.get("failing_check_runs") or remote.get("missing_required_contexts") or remote.get("failing_required_contexts"):
+            if (
+                remote.get("failing_check_runs")
+                or remote.get("failing_status_contexts")
+                or remote.get("missing_required_contexts")
+                or remote.get("failing_required_contexts")
+            ):
                 blocking = True
         elif remote.get("status") == "error":
+            blocking = True
+    deploy_health = report.get("deployment_health", {})
+    if isinstance(deploy_health, dict) and deploy_health.get("status") == "ok":
+        if not bool(deploy_health.get("healthy")):
             blocking = True
 
     report["ready_for_push"] = not blocking
