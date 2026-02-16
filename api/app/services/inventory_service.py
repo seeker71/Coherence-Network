@@ -618,6 +618,13 @@ def _extract_decorated_routes(module_path: Path, decorator_owner: str) -> list[t
 
 def _source_path_aliases(file_path: str) -> set[str]:
     value = str(file_path or "").replace("\\", "/").strip().lstrip("/")
+    # Deployed runtime stacks can resolve modules under duplicated segments (e.g. app/app/routers/*).
+    while value.startswith("api/app/app/"):
+        value = value.replace("api/app/app/", "api/app/", 1)
+    while value.startswith("app/app/"):
+        value = value.replace("app/app/", "app/", 1)
+    value = value.replace("/api/app/app/", "/api/app/")
+    value = value.replace("/app/app/", "/app/")
     if not value:
         return set()
     out = {value}
