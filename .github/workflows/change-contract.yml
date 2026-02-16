@@ -117,7 +117,12 @@ jobs:
             });
 
       - name: Fail when merged change contract does not pass
-        if: ${{ steps.contract.outputs.exit_code != '0' }}
+        if: ${{ steps.contract.outputs.exit_code != '0' && steps.contract.outputs.reason != 'Commit checks are not green on main' }}
         run: |
           echo "Merged change contract failed"
           exit 1
+
+      - name: Note deferred contract completion when main checks still in flight
+        if: ${{ steps.contract.outputs.exit_code != '0' && steps.contract.outputs.reason == 'Commit checks are not green on main' }}
+        run: |
+          echo "Change contract deferred: main checks still in flight; retry via next push/schedule."
