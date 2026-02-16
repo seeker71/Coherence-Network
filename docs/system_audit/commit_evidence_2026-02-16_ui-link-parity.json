@@ -1,0 +1,101 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/ui-link-parity",
+  "commit_scope": "Global page context links + complete page-lineage mapping coverage for UI route discoverability",
+  "files_owned": [
+    "web/app/layout.tsx",
+    "web/components/page_context_links.tsx",
+    "config/page_lineage.json",
+    "api/app/services/page_lineage_service.py",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/commit_evidence_2026-02-16_ui-link-parity.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "072"
+  ],
+  "task_ids": [
+    "ui-link-parity"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "cd web && npm ci --cache .npm-cache",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_ui-link-parity.json"
+  ],
+  "change_files": [
+    "web/app/layout.tsx",
+    "web/components/page_context_links.tsx",
+    "config/page_lineage.json",
+    "api/app/services/page_lineage_service.py",
+    "api/tests/test_inventory_api.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Every major page now exposes related human pages and machine API endpoints through a global context link layer, and page-lineage inventory covers all current web routes.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network.vercel.app/ideas",
+      "https://coherence-network.vercel.app/specs",
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network-production.up.railway.app/api/inventory/page-lineage"
+    ],
+    "test_flows": [
+      "web:any page -> context links bar visible -> related routes navigable",
+      "web:ideas detail page -> idea-specific API link resolves",
+      "api:/api/inventory/page-lineage -> includes all mapped routes"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T09:50:59Z",
+    "environment": {
+      "python": "3.14.3",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_inventory_api.py",
+      "cd web && npm ci --cache .npm-cache",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}
