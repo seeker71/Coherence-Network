@@ -42,3 +42,4 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 - Every changed feature spec must include explicit `Verification`, `Risks and Assumptions`, and `Known Gaps and Follow-up Tasks` sections.
 - Keep changes scoped to requested files/tasks.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.
+- Before starting new work, previous thread work must be finished (merged and publicly validated); enforce with `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-open --fail-on-stale --strict`.

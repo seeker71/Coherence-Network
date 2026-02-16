@@ -136,6 +136,11 @@ def main() -> int:
     parser.add_argument("--skip-api-tests", action="store_true")
     parser.add_argument("--skip-web-build", action="store_true")
     parser.add_argument(
+        "--allow-unfinished-prs",
+        action="store_true",
+        help="Allow running preflight even when open/stale codex PRs exist.",
+    )
+    parser.add_argument(
         "--allow-vercel-rate-limited",
         action="store_true",
         help="Allow preflight to continue even when Vercel check is rate-limited.",
@@ -219,6 +224,24 @@ def main() -> int:
             True,
         ),
     ]
+    if not bool(args.allow_unfinished_prs):
+        pipeline.insert(
+            1,
+            (
+                "previous_work_completion_gate",
+                [
+                    "python3",
+                    "scripts/check_pr_followthrough.py",
+                    "--stale-minutes",
+                    "90",
+                    "--fail-on-open",
+                    "--fail-on-stale",
+                    "--strict",
+                ],
+                root,
+                True,
+            ),
+        )
     if has_api_changes and not args.skip_api_tests:
         pipeline.append(("api_pytest_quick", ["python3", "-m", "pytest", "-q"], api_dir, True))
     if has_web_changes and not args.skip_web_build:

@@ -12,6 +12,7 @@ Spec → Test → Implement → CI → Review → Merge
 - Tests before implementation
 - Do NOT modify tests to make implementation pass
 - Only modify files listed in spec/issue
+- Before starting any new task thread, ensure previous thread work is complete (no open/stale `codex/*` PRs; merged and publicly validated).
 
 ## Key Files
 
@@ -54,6 +55,9 @@ API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
+
+# Do not start new work while previous thread PRs are still open/stale
+python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-open --fail-on-stale --strict
 
 # Tests (CI runs full; PM validation excludes holdout)
 cd api && pytest -v
