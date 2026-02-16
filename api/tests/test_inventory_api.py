@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services import agent_service
+from app.services import inventory_service
 from app.services import route_registry_service
 
 
@@ -656,6 +657,89 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
         assert duplicate_payload["result"] == "task_already_active"
         assert duplicate_payload["active_task"]["id"] == created_payload["created_task"]["id"]
 
+
+@pytest.mark.asyncio
+async def test_asset_modularity_endpoint_returns_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        inventory_service,
+        "evaluate_asset_modularity",
+        lambda runtime_window_seconds=86400, max_implementation_files=5000: {
+            "generated_at": "2026-02-16T00:00:00+00:00",
+            "status": "fail",
+            "result": "asset_modularity_drift_detected",
+            "runtime_window_seconds": runtime_window_seconds,
+            "thresholds": {"implementation_file_lines": 450},
+            "summary": {"blocking_assets": 1, "ideas_scanned": 1, "specs_scanned": 1, "implementation_files_scanned": 1},
+            "blockers": [
+                {
+                    "asset_category": "implementation",
+                    "asset_id": "api/app/big_module.py",
+                    "metric": "line_count",
+                    "current_value": 700,
+                    "threshold": 450,
+                    "estimated_roi": 4.2,
+                }
+            ],
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/asset-modularity")
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["status"] == "fail"
+        assert payload["summary"]["blocking_assets"] == 1
+        assert payload["blockers"][0]["asset_id"] == "api/app/big_module.py"
+
+
+@pytest.mark.asyncio
+async def test_sync_asset_modularity_tasks_endpoint_creates_deduped_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_service,
+        "evaluate_asset_modularity",
+        lambda runtime_window_seconds=86400, max_implementation_files=5000: {
+            "generated_at": "2026-02-16T00:00:00+00:00",
+            "status": "fail",
+            "result": "asset_modularity_drift_detected",
+            "summary": {"blocking_assets": 1},
+            "thresholds": {"implementation_file_lines": 450},
+            "blockers": [
+                {
+                    "asset_category": "implementation",
+                    "asset_kind": "source_file",
+                    "asset_id": "api/app/big_module.py",
+                    "idea_id": "portfolio-governance",
+                    "spec_id": "089-endpoint-traceability-coverage",
+                    "metric": "line_count",
+                    "current_value": 700,
+                    "threshold": 450,
+                    "estimated_split_cost_hours": 4.0,
+                    "estimated_value_to_whole": 18.0,
+                    "estimated_roi": 4.5,
+                    "recommended_task_type": "impl",
+                    "task_fingerprint": "asset-modularity::big-module-line-count",
+                    "direction": "Split api/app/big_module.py into modular files <= 450 lines.",
+                }
+            ],
+        },
+    )
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post("/api/inventory/gaps/sync-asset-modularity-tasks", params={"max_tasks": 10})
+        assert first.status_code == 200
+        first_payload = first.json()
+        assert first_payload["result"] == "asset_modularity_tasks_synced"
+        assert first_payload["created_count"] == 1
+        assert first_payload["created_tasks"][0]["task_type"] == "impl"
+
+        second = await client.post("/api/inventory/gaps/sync-asset-modularity-tasks", params={"max_tasks": 10})
+        assert second.status_code == 200
+        second_payload = second.json()
+        assert second_payload["created_count"] == 0
+        assert second_payload["skipped_existing_count"] >= 1
 
 @pytest.mark.asyncio
 async def test_proactive_questions_endpoint_derives_questions_from_recent_evidence(
