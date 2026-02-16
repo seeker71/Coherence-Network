@@ -234,3 +234,46 @@ async def test_legacy_json_bootstraps_into_structured_registry(
         storage = await client.get("/api/ideas/storage")
         assert storage.status_code == 200
         assert str(storage.json()["bootstrap_source"]).startswith("legacy_json")
+
+
+@pytest.mark.asyncio
+async def test_required_federation_idea_is_backfilled_for_existing_portfolio(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "custom-local-only",
+                        "name": "Custom local idea",
+                        "description": "Existing portfolio should retain custom ideas while system ideas are backfilled.",
+                        "potential_value": 18.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 5.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.55,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        ideas = listed.json()["ideas"]
+        by_id = {row["id"]: row for row in ideas}
+        assert "custom-local-only" in by_id
+        assert "federated-instance-aggregation" in by_id
+        federation = by_id["federated-instance-aggregation"]
+        assert federation["manifestation_status"] == "none"
+        assert federation["potential_value"] >= 100.0
+        assert any("federation contract" in q["question"].lower() for q in federation["open_questions"])

@@ -551,12 +551,15 @@ async def test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_
         queue = payload["unblock_queue"]
         assert len(queue) >= 2
         assert queue[0]["unblock_priority_score"] >= queue[1]["unblock_priority_score"]
-        assert queue[0]["idea_id"] == "idea-high-unblock"
-        assert queue[0]["blocking_stage"] == "spec"
-        assert queue[0]["task_type"] == "spec"
-        assert "process" in queue[0]["downstream_blocked"]
-        assert "implementation" in queue[0]["downstream_blocked"]
-        assert "validation" in queue[0]["downstream_blocked"]
+        queue_by_id = {row["idea_id"]: row for row in queue}
+        assert "idea-high-unblock" in queue_by_id
+        assert "idea-lower-unblock" in queue_by_id
+        assert queue_by_id["idea-high-unblock"]["unblock_priority_score"] > queue_by_id["idea-lower-unblock"]["unblock_priority_score"]
+        assert queue_by_id["idea-high-unblock"]["blocking_stage"] == "spec"
+        assert queue_by_id["idea-high-unblock"]["task_type"] == "spec"
+        assert "process" in queue_by_id["idea-high-unblock"]["downstream_blocked"]
+        assert "implementation" in queue_by_id["idea-high-unblock"]["downstream_blocked"]
+        assert "validation" in queue_by_id["idea-high-unblock"]["downstream_blocked"]
 
         row = next(item for item in payload["items"] if item["idea_id"] == "idea-high-unblock")
         assert row["interdependencies"]["blocked"] is True
