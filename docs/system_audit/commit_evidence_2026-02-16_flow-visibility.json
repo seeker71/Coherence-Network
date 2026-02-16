@@ -1,0 +1,111 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/spec-process-flow",
+  "commit_scope": "Add unified spec->process->implementation->validation flow API and UI with contributor/contribution visibility",
+  "files_owned": [
+    "specs/088-spec-process-implementation-validation-flow.md",
+    "api/app/services/inventory_service.py",
+    "api/app/routers/inventory.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/flow/page.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "config/page_lineage.json",
+    "api/app/services/page_lineage_service.py",
+    "config/canonical_routes.json",
+    "api/app/services/route_registry_service.py",
+    "docs/system_audit/commit_evidence_2026-02-16_flow-visibility.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "088"
+  ],
+  "task_ids": [
+    "spec-process-implementation-validation-flow"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "cd web && npm ci --cache .npm-cache",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_flow-visibility.json"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/page_lineage_service.py",
+    "api/app/services/route_registry_service.py",
+    "api/tests/test_inventory_api.py",
+    "config/canonical_routes.json",
+    "config/page_lineage.json",
+    "specs/088-spec-process-implementation-validation-flow.md",
+    "web/app/flow/page.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public API and UI now expose per-idea chain tracking for spec, process, implementation, validation, contributors, and contributions.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/flow",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow"
+    ],
+    "test_flows": [
+      "web:/flow -> inspect idea chain statuses and contributor/contribution sections",
+      "api:/api/inventory/flow -> filter by idea_id and verify spec/process/implementation/validation fields",
+      "web navigation -> reach /flow from global header and context links"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T10:05:27Z",
+    "environment": {
+      "python": "3.14.3",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_inventory_api.py",
+      "cd web && npm ci --cache .npm-cache",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

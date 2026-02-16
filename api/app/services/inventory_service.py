@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import time
@@ -445,3 +446,330 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
         "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
     }
     return report
+
+
+def _commit_evidence_dir() -> Path:
+    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    if custom:
+        return Path(custom)
+    return _project_root() / "docs" / "system_audit"
+
+
+def _normalize_validation_status(value: Any) -> str:
+    status = str(value or "").strip().lower()
+    if status in {"pass", "fail", "pending"}:
+        return status
+    return "pending"
+
+
+def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+    evidence_dir = _commit_evidence_dir()
+    if not evidence_dir.exists():
+        return []
+    files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, min(limit, 3000))]
+    out: list[dict[str, Any]] = []
+    for path in files:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        payload["_evidence_file"] = str(path)
+        out.append(payload)
+    return out
+
+
+def _new_flow_row(idea_id: str, idea_name: str) -> dict[str, Any]:
+    return {
+        "idea_id": idea_id,
+        "idea_name": idea_name,
+        "_spec_ids": set(),
+        "_task_ids": set(),
+        "_thread_branches": set(),
+        "_change_intents": set(),
+        "_evidence_refs": set(),
+        "_implementation_refs": set(),
+        "_lineage_ids": set(),
+        "_source_files": set(),
+        "_public_endpoints": set(),
+        "_contributors_all": set(),
+        "_contributors_by_role": {},
+        "process_evidence_count": 0,
+        "usage_events_count": 0,
+        "measured_value_total": 0.0,
+        "runtime_events_count": 0,
+        "runtime_total_ms": 0.0,
+        "runtime_cost_estimate": 0.0,
+        "validation_counts": {
+            "local": {"pass": 0, "fail": 0, "pending": 0},
+            "ci": {"pass": 0, "fail": 0, "pending": 0},
+            "deploy": {"pass": 0, "fail": 0, "pending": 0},
+            "e2e": {"pass": 0, "fail": 0, "pending": 0},
+        },
+        "phase_gate": {"pass_count": 0, "blocked_count": 0},
+    }
+
+
+def _add_contributor(flow: dict[str, Any], contributor_id: str, roles: list[str]) -> None:
+    cid = str(contributor_id or "").strip()
+    if not cid:
+        return
+    flow["_contributors_all"].add(cid)
+    role_map = flow["_contributors_by_role"]
+    for role in roles:
+        normalized = str(role or "").strip().lower()
+        if not normalized:
+            continue
+        if normalized not in role_map:
+            role_map[normalized] = set()
+        role_map[normalized].add(cid)
+
+
+def build_spec_process_implementation_validation_flow(
+    idea_id: str | None = None,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    portfolio = idea_service.list_ideas()
+    idea_name_map = {item.id: item.name for item in portfolio.ideas}
+
+    runtime_rows = runtime_service.summarize_by_idea(seconds=runtime_window_seconds)
+    runtime_by_idea = {row.idea_id: row for row in runtime_rows}
+
+    lineage_links = value_lineage_service.list_links(limit=1000)
+    usage_events = value_lineage_service.list_usage_events(limit=5000)
+
+    usage_by_lineage_count: dict[str, int] = {}
+    usage_by_lineage_value: dict[str, float] = {}
+    for event in usage_events:
+        usage_by_lineage_count[event.lineage_id] = usage_by_lineage_count.get(event.lineage_id, 0) + 1
+        usage_by_lineage_value[event.lineage_id] = usage_by_lineage_value.get(event.lineage_id, 0.0) + float(event.value)
+
+    evidence_records = _read_commit_evidence_records(limit=800)
+
+    discovered_ids: set[str] = set(idea_name_map.keys())
+    discovered_ids.update(link.idea_id for link in lineage_links if link.idea_id)
+    for record in evidence_records:
+        raw_ids = record.get("idea_ids")
+        if isinstance(raw_ids, list):
+            for candidate in raw_ids:
+                if isinstance(candidate, str) and candidate.strip():
+                    discovered_ids.add(candidate.strip())
+
+    filtered_ids = sorted(discovered_ids)
+    if idea_id:
+        filtered_ids = [item for item in filtered_ids if item == idea_id]
+
+    flows: dict[str, dict[str, Any]] = {}
+    for current_idea_id in filtered_ids:
+        flows[current_idea_id] = _new_flow_row(
+            current_idea_id,
+            idea_name_map.get(current_idea_id, current_idea_id),
+        )
+
+    def ensure(idea_key: str) -> dict[str, Any]:
+        if idea_key not in flows:
+            flows[idea_key] = _new_flow_row(idea_key, idea_name_map.get(idea_key, idea_key))
+        return flows[idea_key]
+
+    for link in lineage_links:
+        if idea_id and link.idea_id != idea_id:
+            continue
+        flow = ensure(link.idea_id)
+        flow["_spec_ids"].add(link.spec_id)
+        flow["_lineage_ids"].add(link.id)
+        for ref in link.implementation_refs:
+            if isinstance(ref, str) and ref.strip():
+                flow["_implementation_refs"].add(ref.strip())
+        _add_contributor(flow, str(link.contributors.idea or ""), ["idea"])
+        _add_contributor(flow, str(link.contributors.spec or ""), ["spec"])
+        _add_contributor(flow, str(link.contributors.implementation or ""), ["implementation"])
+        _add_contributor(flow, str(link.contributors.review or ""), ["review"])
+        flow["usage_events_count"] += int(usage_by_lineage_count.get(link.id, 0))
+        flow["measured_value_total"] += float(usage_by_lineage_value.get(link.id, 0.0))
+
+    for record in evidence_records:
+        raw_idea_ids = record.get("idea_ids")
+        if not isinstance(raw_idea_ids, list):
+            continue
+        record_idea_ids = [
+            item.strip()
+            for item in raw_idea_ids
+            if isinstance(item, str) and item.strip() and (not idea_id or item.strip() == idea_id)
+        ]
+        if not record_idea_ids:
+            continue
+
+        raw_spec_ids = record.get("spec_ids")
+        spec_ids = [s.strip() for s in raw_spec_ids if isinstance(s, str) and s.strip()] if isinstance(raw_spec_ids, list) else []
+
+        raw_task_ids = record.get("task_ids")
+        task_ids = [s.strip() for s in raw_task_ids if isinstance(s, str) and s.strip()] if isinstance(raw_task_ids, list) else []
+
+        raw_change_files = record.get("change_files")
+        change_files = [
+            item.strip()
+            for item in raw_change_files
+            if isinstance(item, str) and item.strip()
+        ] if isinstance(raw_change_files, list) else []
+
+        raw_evidence_refs = record.get("evidence_refs")
+        evidence_refs = [
+            item.strip()
+            for item in raw_evidence_refs
+            if isinstance(item, str) and item.strip()
+        ] if isinstance(raw_evidence_refs, list) else []
+
+        contributors = record.get("contributors") if isinstance(record.get("contributors"), list) else []
+        local_status = _normalize_validation_status((record.get("local_validation") or {}).get("status"))
+        ci_status = _normalize_validation_status((record.get("ci_validation") or {}).get("status"))
+        deploy_status = _normalize_validation_status((record.get("deploy_validation") or {}).get("status"))
+        e2e_status = _normalize_validation_status((record.get("e2e_validation") or {}).get("status"))
+        phase_gate = record.get("phase_gate") if isinstance(record.get("phase_gate"), dict) else {}
+        phase_pass = bool(phase_gate.get("can_move_next_phase"))
+
+        thread_branch = str(record.get("thread_branch") or "").strip()
+        change_intent = str(record.get("change_intent") or "").strip().lower()
+        public_endpoints = (
+            record.get("e2e_validation", {}).get("public_endpoints")
+            if isinstance(record.get("e2e_validation"), dict)
+            else []
+        )
+
+        for current_idea_id in record_idea_ids:
+            flow = ensure(current_idea_id)
+            flow["process_evidence_count"] += 1
+            flow["validation_counts"]["local"][local_status] += 1
+            flow["validation_counts"]["ci"][ci_status] += 1
+            flow["validation_counts"]["deploy"][deploy_status] += 1
+            flow["validation_counts"]["e2e"][e2e_status] += 1
+            if phase_pass:
+                flow["phase_gate"]["pass_count"] += 1
+            else:
+                flow["phase_gate"]["blocked_count"] += 1
+            if thread_branch:
+                flow["_thread_branches"].add(thread_branch)
+            if change_intent:
+                flow["_change_intents"].add(change_intent)
+            for spec_id_value in spec_ids:
+                flow["_spec_ids"].add(spec_id_value)
+            for task_id_value in task_ids:
+                flow["_task_ids"].add(task_id_value)
+            for file_path in change_files:
+                flow["_source_files"].add(file_path)
+            for evidence_ref in evidence_refs:
+                flow["_evidence_refs"].add(evidence_ref)
+            if isinstance(public_endpoints, list):
+                for endpoint in public_endpoints:
+                    if isinstance(endpoint, str) and endpoint.strip():
+                        flow["_public_endpoints"].add(endpoint.strip())
+            for contributor in contributors:
+                if not isinstance(contributor, dict):
+                    continue
+                cid = str(contributor.get("contributor_id") or "").strip()
+                raw_roles = contributor.get("roles")
+                roles = [role for role in raw_roles if isinstance(role, str)] if isinstance(raw_roles, list) else []
+                _add_contributor(flow, cid, roles)
+
+    for current_idea_id, runtime in runtime_by_idea.items():
+        if idea_id and current_idea_id != idea_id:
+            continue
+        flow = ensure(current_idea_id)
+        flow["runtime_events_count"] = int(runtime.event_count)
+        flow["runtime_total_ms"] = float(runtime.total_runtime_ms)
+        flow["runtime_cost_estimate"] = float(runtime.runtime_cost_estimate)
+
+    items: list[dict[str, Any]] = []
+    for current_idea_id in sorted(flows.keys()):
+        flow = flows[current_idea_id]
+        spec_count = len(flow["_spec_ids"])
+        process_tracked = bool(flow["process_evidence_count"] > 0 or flow["_task_ids"] or flow["_evidence_refs"])
+        implementation_tracked = bool(flow["_lineage_ids"] or flow["_implementation_refs"])
+        validation_tracked = bool(
+            flow["validation_counts"]["local"]["pass"]
+            or flow["validation_counts"]["ci"]["pass"]
+            or flow["validation_counts"]["deploy"]["pass"]
+            or flow["validation_counts"]["e2e"]["pass"]
+            or flow["usage_events_count"] > 0
+        )
+        contributors_tracked = bool(flow["_contributors_all"])
+        contributions_tracked = bool(flow["usage_events_count"] > 0 or flow["measured_value_total"] > 0)
+
+        items.append(
+            {
+                "idea_id": current_idea_id,
+                "idea_name": flow["idea_name"],
+                "spec": {
+                    "count": spec_count,
+                    "spec_ids": sorted(flow["_spec_ids"]),
+                    "tracked": spec_count > 0,
+                },
+                "process": {
+                    "tracked": process_tracked,
+                    "evidence_count": flow["process_evidence_count"],
+                    "task_ids": sorted(flow["_task_ids"]),
+                    "thread_branches": sorted(flow["_thread_branches"]),
+                    "change_intents": sorted(flow["_change_intents"]),
+                    "evidence_refs": sorted(flow["_evidence_refs"]),
+                    "source_files": sorted(flow["_source_files"]),
+                },
+                "implementation": {
+                    "tracked": implementation_tracked,
+                    "lineage_link_count": len(flow["_lineage_ids"]),
+                    "lineage_ids": sorted(flow["_lineage_ids"]),
+                    "implementation_refs": sorted(flow["_implementation_refs"]),
+                    "runtime_events_count": flow["runtime_events_count"],
+                    "runtime_total_ms": round(float(flow["runtime_total_ms"]), 4),
+                    "runtime_cost_estimate": round(float(flow["runtime_cost_estimate"]), 8),
+                },
+                "validation": {
+                    "tracked": validation_tracked,
+                    "local": flow["validation_counts"]["local"],
+                    "ci": flow["validation_counts"]["ci"],
+                    "deploy": flow["validation_counts"]["deploy"],
+                    "e2e": flow["validation_counts"]["e2e"],
+                    "phase_gate": flow["phase_gate"],
+                    "public_endpoints": sorted(flow["_public_endpoints"]),
+                },
+                "contributors": {
+                    "tracked": contributors_tracked,
+                    "total_unique": len(flow["_contributors_all"]),
+                    "all": sorted(flow["_contributors_all"]),
+                    "by_role": {
+                        role: sorted(ids)
+                        for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0])
+                    },
+                },
+                "contributions": {
+                    "tracked": contributions_tracked,
+                    "usage_events_count": int(flow["usage_events_count"]),
+                    "measured_value_total": round(float(flow["measured_value_total"]), 4),
+                },
+                "chain": {
+                    "spec": "tracked" if spec_count > 0 else "missing",
+                    "process": "tracked" if process_tracked else "missing",
+                    "implementation": "tracked" if implementation_tracked else "missing",
+                    "validation": "tracked" if validation_tracked else "missing",
+                    "contributors": "tracked" if contributors_tracked else "missing",
+                    "contributions": "tracked" if contributions_tracked else "missing",
+                },
+            }
+        )
+
+    summary = {
+        "ideas": len(items),
+        "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
+        "with_process": sum(1 for row in items if row["process"]["tracked"]),
+        "with_implementation": sum(1 for row in items if row["implementation"]["tracked"]),
+        "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
+        "with_contributors": sum(1 for row in items if row["contributors"]["tracked"]),
+        "with_contributions": sum(1 for row in items if row["contributions"]["tracked"]),
+    }
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "runtime_window_seconds": runtime_window_seconds,
+        "filter": {"idea_id": idea_id},
+        "summary": summary,
+        "items": items,
+    }

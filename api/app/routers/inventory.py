@@ -36,3 +36,14 @@ async def next_highest_roi_task(create_task: bool = Query(False)) -> dict:
 @router.post("/inventory/questions/sync-implementation-tasks")
 async def sync_implementation_request_tasks() -> dict:
     return inventory_service.sync_implementation_request_question_tasks()
+
+
+@router.get("/inventory/flow")
+async def spec_process_implementation_validation_flow(
+    idea_id: str | None = Query(default=None),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.build_spec_process_implementation_validation_flow(
+        idea_id=idea_id,
+        runtime_window_seconds=runtime_window_seconds,
+    )

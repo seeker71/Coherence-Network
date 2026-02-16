@@ -164,6 +164,7 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
         expected_paths = {
             "/",
             "/portfolio",
+            "/flow",
             "/ideas",
             "/ideas/[idea_id]",
             "/specs",
@@ -181,6 +182,123 @@ async def test_page_lineage_inventory_endpoint_returns_page_to_idea_mapping() ->
         }
         assert expected_paths.issubset(paths)
         assert len(paths) == len(data["pages"])
+
+
+@pytest.mark.asyncio
+async def test_flow_inventory_endpoint_tracks_spec_process_implementation_validation(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    (evidence_dir / "commit_evidence_flow_test.json").write_text(
+        json.dumps(
+            {
+                "date": "2026-02-16",
+                "thread_branch": "codex/flow-test",
+                "commit_scope": "Flow visibility test",
+                "files_owned": ["api/app/routers/inventory.py"],
+                "idea_ids": ["portfolio-governance"],
+                "spec_ids": ["088"],
+                "task_ids": ["flow-visibility-task"],
+                "contributors": [
+                    {
+                        "contributor_id": "openai-codex",
+                        "contributor_type": "machine",
+                        "roles": ["implementation", "validation"],
+                    },
+                    {
+                        "contributor_id": "urs-muff",
+                        "contributor_type": "human",
+                        "roles": ["review"],
+                    },
+                ],
+                "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
+                "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
+                "change_files": ["api/app/routers/inventory.py", "web/app/flow/page.tsx"],
+                "change_intent": "runtime_feature",
+                "e2e_validation": {
+                    "status": "pass",
+                    "expected_behavior_delta": "Flow page and endpoint reflect end-to-end tracking.",
+                    "public_endpoints": [
+                        "https://coherence-network.vercel.app/flow",
+                        "https://coherence-network-production.up.railway.app/api/inventory/flow",
+                    ],
+                    "test_flows": ["idea->spec->process->implementation->validation visible in UI and API"],
+                },
+                "local_validation": {"status": "pass"},
+                "ci_validation": {"status": "pass"},
+                "deploy_validation": {"status": "pass"},
+                "phase_gate": {"can_move_next_phase": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    link_payload = {
+        "idea_id": "portfolio-governance",
+        "spec_id": "088",
+        "implementation_refs": ["web/app/flow/page.tsx"],
+        "contributors": {
+            "idea": "urs-muff",
+            "spec": "openai-codex",
+            "implementation": "openai-codex",
+            "review": "urs-muff",
+        },
+        "estimated_cost": 8.0,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/value-lineage/links", json=link_payload)
+        assert created.status_code == 201
+        lineage_id = created.json()["id"]
+
+        usage = await client.post(
+            f"/api/value-lineage/links/{lineage_id}/usage-events",
+            json={"source": "api", "metric": "flow_visible", "value": 5.0},
+        )
+        assert usage.status_code == 201
+
+        runtime = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "web",
+                "endpoint": "/flow",
+                "method": "GET",
+                "status_code": 200,
+                "runtime_ms": 90.0,
+                "idea_id": "portfolio-governance",
+                "metadata": {"surface": "web-ui"},
+            },
+        )
+        assert runtime.status_code == 201
+
+        flow = await client.get("/api/inventory/flow", params={"idea_id": "portfolio-governance"})
+        assert flow.status_code == 200
+        payload = flow.json()
+        assert payload["summary"]["ideas"] == 1
+        assert len(payload["items"]) == 1
+        row = payload["items"][0]
+        assert row["idea_id"] == "portfolio-governance"
+        assert row["spec"]["tracked"] is True
+        assert row["process"]["tracked"] is True
+        assert row["implementation"]["tracked"] is True
+        assert row["validation"]["tracked"] is True
+        assert row["contributors"]["tracked"] is True
+        assert row["contributions"]["tracked"] is True
+        assert "088" in row["spec"]["spec_ids"]
+        assert row["implementation"]["lineage_link_count"] >= 1
+        assert row["contributions"]["usage_events_count"] >= 1
+        assert row["validation"]["local"]["pass"] >= 1
+        assert row["validation"]["ci"]["pass"] >= 1
+        assert row["validation"]["deploy"]["pass"] >= 1
+        assert row["validation"]["e2e"]["pass"] >= 1
+        assert row["contributors"]["total_unique"] >= 2
 
 
 @pytest.mark.asyncio

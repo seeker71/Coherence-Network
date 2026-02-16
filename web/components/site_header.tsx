@@ -7,6 +7,7 @@ import { getApiBase } from "@/lib/api";
 const NAV = [
   { href: "/search", label: "Search" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/flow", label: "Flow" },
   { href: "/ideas", label: "Ideas" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
