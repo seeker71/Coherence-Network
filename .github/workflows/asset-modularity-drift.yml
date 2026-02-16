@@ -1,0 +1,129 @@
+name: Asset Modularity Drift Audit
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  audit-asset-modularity:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: |
+          cd api
+          pip install -e .
+
+      - name: Run asset modularity audit
+        id: audit
+        run: |
+          set +e
+          python api/scripts/run_asset_modularity_audit.py \
+            --json \
+            --output asset_modularity_report.json \
+            --create-tasks \
+            --max-tasks 80 \
+            --fail-on-blocking
+          code=$?
+          cat asset_modularity_report.json
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload modularity audit report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: asset_modularity_report_${{ github.sha }}
+          path: asset_modularity_report.json
+
+      - name: Create or update modularity drift issue
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('asset_modularity_report.json', 'utf8'));
+            const summary = report.summary || {};
+            const blockers = Array.isArray(report.blockers) ? report.blockers : [];
+            const title = 'Asset modularity drift detected';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'Automated asset modularity audit detected oversized assets.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Blocking assets: ${summary.blocking_assets ?? 0}`,
+              `- Ideas scanned: ${summary.ideas_scanned ?? 0}`,
+              `- Specs scanned: ${summary.specs_scanned ?? 0}`,
+              `- Implementation files scanned: ${summary.implementation_files_scanned ?? 0}`,
+              '',
+              'Top blockers (ROI-ordered):',
+              ...(blockers.length
+                ? blockers.slice(0, 10).map((b) =>
+                    `- [${b.asset_category}] \`${b.asset_id}\` metric=${b.metric} current=${b.current_value} threshold=${b.threshold} roi=${b.estimated_roi}`
+                  )
+                : ['- (none)']),
+              '',
+              'Raw report:',
+              '```json',
+              JSON.stringify(report, null, 2).slice(0, 6000),
+              '```',
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Resolve modularity drift issue when audit passes
+        if: ${{ steps.audit.outputs.exit_code == '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = 'Asset modularity drift detected';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length === 0) {
+              return;
+            }
+            const issue = existing.data.items[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Resolved by workflow run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}. Asset modularity audit is passing.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+            });
+
+      - name: Fail when modularity gate fails
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        run: |
+          echo "Asset modularity audit failed"
+          exit 1
