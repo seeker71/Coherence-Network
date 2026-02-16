@@ -51,6 +51,30 @@ class AgentTaskCreate(BaseModel):
         return v
 
 
+class AgentTaskUpsertActive(BaseModel):
+    """Request body for upserting an externally running task session."""
+
+    session_key: str = Field(..., min_length=1, max_length=200)
+    direction: str = Field(..., min_length=1, max_length=5000)
+    task_type: TaskType = TaskType.IMPL
+    worker_id: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    context: Optional[Dict[str, Any]] = None
+
+    @field_validator("session_key", mode="before")
+    @classmethod
+    def session_key_strip(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("direction", mode="before")
+    @classmethod
+    def direction_strip(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+
 class AgentTaskUpdate(BaseModel):
     """Request body for updating task status. Supports progress and decision fields (spec 003)."""
 
