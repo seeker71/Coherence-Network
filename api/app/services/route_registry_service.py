@@ -67,6 +67,12 @@ def _default_registry() -> dict:
                 "idea_id": "portfolio-governance",
             },
             {
+                "path": "/api/inventory/endpoint-traceability",
+                "methods": ["GET"],
+                "purpose": "Endpoint-level traceability coverage for idea/spec/process/validation",
+                "idea_id": "oss-interface-alignment",
+            },
+            {
                 "path": "/api/ideas/storage",
                 "methods": ["GET"],
                 "purpose": "Idea registry storage backend and row-count inspection",

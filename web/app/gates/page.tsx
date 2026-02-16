@@ -14,6 +14,7 @@ export default function GatesPage() {
   const [prReport, setPrReport] = useState<Record<string, unknown> | null>(null);
   const [contractReport, setContractReport] = useState<Record<string, unknown> | null>(null);
   const [publicDeployReport, setPublicDeployReport] = useState<Record<string, unknown> | null>(null);
+  const [traceabilityReport, setTraceabilityReport] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +84,21 @@ export default function GatesPage() {
     }
   }
 
+  async function runEndpointTraceability() {
+    setStatus("loading");
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/inventory/endpoint-traceability`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(JSON.stringify(json));
+      setTraceabilityReport(json);
+      setStatus("idle");
+    } catch (e) {
+      setStatus("error");
+      setError(String(e));
+    }
+  }
+
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-6">
       <div>
@@ -134,6 +150,16 @@ export default function GatesPage() {
         </Button>
       </section>
 
+      <section className="space-y-3 border border-border rounded-md p-4">
+        <h2 className="text-lg font-semibold">Endpoint Traceability Coverage</h2>
+        <p className="text-sm text-muted-foreground">
+          Verify every endpoint is mapped to idea, spec, process, and validation signals.
+        </p>
+        <Button variant="outline" onClick={runEndpointTraceability} disabled={status === "loading"}>
+          Check Endpoint Traceability
+        </Button>
+      </section>
+
       {status === "error" && error && (
         <p className="text-destructive">Error: {error}</p>
       )}
@@ -161,6 +187,15 @@ export default function GatesPage() {
           <h3 className="font-medium">Public Deploy Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(publicDeployReport, null, 2)}
+          </pre>
+        </section>
+      )}
+
+      {traceabilityReport && (
+        <section className="space-y-2">
+          <h3 className="font-medium">Endpoint Traceability Report</h3>
+          <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+            {JSON.stringify(traceabilityReport, null, 2)}
           </pre>
         </section>
       )}

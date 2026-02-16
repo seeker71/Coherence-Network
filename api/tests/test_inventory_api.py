@@ -302,6 +302,70 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
 
 
 @pytest.mark.asyncio
+async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    (evidence_dir / "commit_evidence_traceability_test.json").write_text(
+        json.dumps(
+            {
+                "date": "2026-02-16",
+                "thread_branch": "codex/endpoint-traceability-test",
+                "commit_scope": "Endpoint traceability inventory coverage test",
+                "files_owned": ["api/app/routers/ideas.py"],
+                "idea_ids": ["portfolio-governance"],
+                "spec_ids": ["053"],
+                "task_ids": ["endpoint-traceability-audit"],
+                "contributors": [
+                    {
+                        "contributor_id": "openai-codex",
+                        "contributor_type": "machine",
+                        "roles": ["implementation", "validation"],
+                    }
+                ],
+                "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
+                "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
+                "change_files": ["api/app/routers/ideas.py"],
+                "change_intent": "runtime_feature",
+                "e2e_validation": {
+                    "status": "pass",
+                    "expected_behavior_delta": "Endpoint coverage has explicit idea/spec/process traceability.",
+                    "public_endpoints": [
+                        "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
+                    ],
+                    "test_flows": ["api:/api/inventory/endpoint-traceability -> inspect summary and gaps"],
+                },
+                "local_validation": {"status": "pass"},
+                "ci_validation": {"status": "pass"},
+                "deploy_validation": {"status": "pass"},
+                "phase_gate": {"can_move_next_phase": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/endpoint-traceability")
+        assert resp.status_code == 200
+        payload = resp.json()
+
+    assert payload["summary"]["total_endpoints"] >= 40
+    assert payload["summary"]["missing_idea"] >= 1
+    assert payload["summary"]["missing_spec"] >= 1
+    assert payload["context"]["spec_count"] >= payload["context"]["idea_count"]
+    assert any(row["path"] == "/api/inventory/endpoint-traceability" for row in payload["items"])
+
+    ideas_row = next(row for row in payload["items"] if row["path"] == "/api/ideas")
+    assert ideas_row["idea"]["tracked"] is True
+    assert ideas_row["spec"]["tracked"] is True
+    assert ideas_row["process"]["tracked"] is True
+
+
+@pytest.mark.asyncio
 async def test_sync_implementation_request_questions_creates_tasks_without_duplicates(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
