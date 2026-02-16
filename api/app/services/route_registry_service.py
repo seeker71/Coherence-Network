@@ -126,6 +126,12 @@ def _default_registry() -> dict:
                 "purpose": "Upsert running external work session into persistent task inventory",
                 "idea_id": "portfolio-governance",
             },
+            {
+                "path": "/api/agent/visibility",
+                "methods": ["GET"],
+                "purpose": "Unified pipeline and usage visibility with remaining tracking gaps",
+                "idea_id": "coherence-network-agent-pipeline",
+            },
         ],
         "web_routes": [
             {
@@ -147,6 +153,11 @@ def _default_registry() -> dict:
                 "path": "/flow",
                 "purpose": "Human flow visualization for spec-process-implementation-validation tracking",
                 "idea_id": "portfolio-governance",
+            },
+            {
+                "path": "/agent",
+                "purpose": "Human visibility console for agent pipeline and usage coverage",
+                "idea_id": "coherence-network-agent-pipeline",
             },
         ],
     }

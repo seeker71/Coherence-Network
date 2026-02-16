@@ -18,6 +18,7 @@
     { "path": "/contributors", "idea_id": "portfolio-governance" },
     { "path": "/contributions", "idea_id": "portfolio-governance" },
     { "path": "/assets", "idea_id": "portfolio-governance" },
-    { "path": "/tasks", "idea_id": "coherence-network-agent-pipeline" }
+    { "path": "/tasks", "idea_id": "coherence-network-agent-pipeline" },
+    { "path": "/agent", "idea_id": "coherence-network-agent-pipeline" }
   ]
 }

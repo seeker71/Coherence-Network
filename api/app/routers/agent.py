@@ -353,6 +353,12 @@ async def get_usage() -> dict:
     return agent_service.get_usage_summary()
 
 
+@router.get("/agent/visibility")
+async def get_visibility() -> dict:
+    """Unified visibility for pipeline execution, usage telemetry, and remaining tracking gaps."""
+    return agent_service.get_visibility_summary()
+
+
 @router.get("/agent/fatal-issues")
 async def get_fatal_issues() -> dict:
     """Unrecoverable failures. Check when autonomous; no user interaction needed until fatal."""
