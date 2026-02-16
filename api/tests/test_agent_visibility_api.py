@@ -82,7 +82,10 @@ async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
 
         assert payload["pipeline"]["recent_completed_count"] == 2
         assert payload["usage"]["execution"]["tracked_runs"] == 1
+        assert payload["usage"]["execution"]["success_rate"] == 1.0
         assert payload["usage"]["execution"]["codex_runs"] == 1
+        assert payload["usage"]["execution"]["by_tool"]["agent"]["count"] == 1
+        assert payload["usage"]["execution"]["by_tool"]["agent"]["failed"] == 0
         assert payload["remaining_usage"]["coverage_rate"] == 0.5
         assert payload["remaining_usage"]["remaining_to_full_coverage"] == 1
         assert payload["remaining_usage"]["health"] == "red"
@@ -146,3 +149,79 @@ async def test_agent_visibility_reports_green_when_all_completed_tasks_are_track
         assert payload["remaining_usage"]["coverage_rate"] == 1.0
         assert payload["remaining_usage"]["remaining_to_full_coverage"] == 0
         assert payload["remaining_usage"]["health"] == "green"
+
+
+@pytest.mark.asyncio
+async def test_agent_visibility_exposes_tool_failures_and_success_rate(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        task = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Track tool-level success and failures", "task_type": "impl"},
+        )
+        assert task.status_code == 201
+        task_id = task.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openai-codex"},
+        )
+        assert running.status_code == 200
+        completed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "done"},
+        )
+        assert completed.status_code == 200
+
+        ok_runtime = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:agent",
+                "method": "RUN",
+                "status_code": 200,
+                "runtime_ms": 40.0,
+                "idea_id": "coherence-network-agent-pipeline",
+                "metadata": {"task_id": task_id, "executor": "cursor", "agent_id": "openai-codex"},
+            },
+        )
+        assert ok_runtime.status_code == 201
+
+        failed_runtime = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:pytest",
+                "method": "RUN",
+                "status_code": 500,
+                "runtime_ms": 22.0,
+                "idea_id": "coherence-network-agent-pipeline",
+                "metadata": {"task_id": task_id, "executor": "cursor", "agent_id": "openai-codex"},
+            },
+        )
+        assert failed_runtime.status_code == 201
+
+        visibility = await client.get("/api/agent/visibility")
+        assert visibility.status_code == 200
+        payload = visibility.json()
+        execution = payload["usage"]["execution"]
+
+        assert execution["tracked_runs"] == 2
+        assert execution["failed_runs"] == 1
+        assert execution["success_runs"] == 1
+        assert execution["success_rate"] == 0.5
+        assert execution["by_tool"]["agent"]["count"] == 1
+        assert execution["by_tool"]["agent"]["failed"] == 0
+        assert execution["by_tool"]["agent"]["success_rate"] == 1.0
+        assert execution["by_tool"]["pytest"]["count"] == 1
+        assert execution["by_tool"]["pytest"]["failed"] == 1
+        assert execution["by_tool"]["pytest"]["success_rate"] == 0.0
