@@ -1,9 +1,10 @@
 {
   "date": "2026-02-16",
   "thread_branch": "codex/evidence-parse-guard",
-  "commit_scope": "Harden remote commit-evidence discovery by skipping malformed GitHub JSON payloads per file instead of dropping the full evidence batch",
+  "commit_scope": "Normalize deployed app/app source-path aliases and harden remote commit-evidence parsing so endpoint traceability maps evidence/spec/process data in production",
   "files_owned": [
     "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py",
     "docs/system_audit/commit_evidence_2026-02-16_endpoint-traceability-parse-guard.json"
   ],
   "idea_ids": [
@@ -43,12 +44,13 @@
     "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
   ],
   "change_files": [
-    "api/app/services/inventory_service.py"
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_discovery_sources.py"
   ],
   "change_intent": "runtime_fix",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Public endpoint traceability inventory no longer collapses coverage counts to zero when one remote evidence payload is malformed.",
+    "expected_behavior_delta": "Public endpoint traceability inventory maps commit evidence to deployed route source files and no longer collapses spec/process coverage to zero.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
     ],
@@ -58,7 +60,7 @@
   },
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-16T11:06:06Z",
+    "ran_at": "2026-02-16T11:09:58Z",
     "environment": {
       "python": "3.14.3"
     },
