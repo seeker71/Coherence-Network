@@ -32,6 +32,8 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
         created = r.json()
         assert Decimal(created["cost_amount"]) == Decimal("100.00")
         assert abs(float(created["coherence_score"]) - 0.9) < 1e-9
+        assert created["metadata"]["cost_basis"] == "declared_unverified"
+        assert created["metadata"]["cost_confidence"] == 0.25
 
         contrib_id = created["id"]
 
@@ -158,6 +160,8 @@ async def test_github_contribution_cost_is_normalized_from_metadata() -> None:
         assert payload["metadata"]["raw_cost_amount"] == "342.50"
         assert payload["metadata"]["normalized_cost_amount"] == "0.79"
         assert payload["metadata"]["cost_estimator_version"] == "v2_normalized"
+        assert payload["metadata"]["cost_basis"] == "estimated_from_change_shape"
+        assert payload["metadata"]["estimation_used"] is True
 
 
 @pytest.mark.asyncio
@@ -180,6 +184,55 @@ async def test_github_contribution_cost_clamps_when_metadata_missing() -> None:
         assert Decimal(payload["cost_amount"]) == Decimal("10.00")
         assert payload["metadata"]["raw_cost_amount"] == "342.50"
         assert payload["metadata"]["normalized_cost_amount"] == "10.00"
+        assert payload["metadata"]["cost_basis"] == "estimated_from_submitted_cost"
+        assert payload["metadata"]["estimation_used"] is True
+
+
+@pytest.mark.asyncio
+async def test_manual_contribution_cost_is_marked_actual_when_evidence_exists() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@coherence.network"})
+        contributor_id = c.json()["id"]
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
+        asset_id = a.json()["id"]
+
+        r = await client.post(
+            "/api/contributions",
+            json={
+                "contributor_id": contributor_id,
+                "asset_id": asset_id,
+                "cost_amount": "9.50",
+                "metadata": {"invoice_id": "inv_001"},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert payload["metadata"]["cost_basis"] == "actual_verified"
+        assert payload["metadata"]["estimation_used"] is False
+
+
+@pytest.mark.asyncio
+async def test_github_contribution_cost_marks_actual_with_verification_keys() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "verifier@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "ghi789",
+                "cost_amount": "9.50",
+                "metadata": {"invoice_id": "inv_002"},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert Decimal(payload["cost_amount"]) == Decimal("9.50")
+        assert payload["metadata"]["cost_basis"] == "actual_verified"
+        assert payload["metadata"]["estimation_used"] is False
 
 
 @pytest.mark.asyncio
