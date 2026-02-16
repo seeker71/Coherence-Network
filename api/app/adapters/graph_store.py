@@ -22,6 +22,7 @@ from app.models.contributor import Contributor
 from app.models.github_contributor import GitHubContributor
 from app.models.github_organization import GitHubOrganization
 from app.models.project import Project, ProjectSummary
+from app.services.contributor_hygiene import is_test_contributor_email
 
 
 def _key(ecosystem: str, name: str) -> tuple[str, str]:
@@ -174,12 +175,16 @@ class InMemoryGraphStore:
             # contribution network
             for c in data.get("contributors", []):
                 contrib = Contributor(**c)
+                if is_test_contributor_email(str(contrib.email)):
+                    continue
                 self._contributors[contrib.id] = contrib
             for a in data.get("assets", []):
                 asset = Asset(**a)
                 self._assets[asset.id] = asset
             for cn in data.get("contributions", []):
                 contribn = Contribution(**cn)
+                if contribn.contributor_id not in self._contributors:
+                    continue
                 self._contributions[contribn.id] = contribn
 
             # GitHub integration (spec 029)
@@ -272,11 +277,15 @@ class InMemoryGraphStore:
         return self._contributors.get(contributor_id)
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
+        if self._persist_path and is_test_contributor_email(str(contributor.email)):
+            raise ValueError("test contributor emails are not allowed in persistent store")
         self._contributors[contributor.id] = contributor
         return contributor
 
     def list_contributors(self, limit: int = 100) -> list[Contributor]:
         items = sorted(self._contributors.values(), key=lambda c: c.created_at, reverse=True)
+        if self._persist_path:
+            items = [item for item in items if not is_test_contributor_email(str(item.email))]
         return items[: max(0, int(limit))]
 
     def get_asset(self, asset_id: UUID) -> Asset | None:

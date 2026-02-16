@@ -19,7 +19,10 @@ def get_store(request: Request) -> GraphStore:
 async def create_contributor(contributor: ContributorCreate, store: GraphStore = Depends(get_store)) -> Contributor:
     """Create a new contributor."""
     contrib = Contributor(**contributor.model_dump())
-    return store.create_contributor(contrib)
+    try:
+        return store.create_contributor(contrib)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get(

@@ -121,7 +121,10 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
             name=contributor_name,
             email=payload.contributor_email
         )
-        contributor = store.create_contributor(contributor)
+        try:
+            contributor = store.create_contributor(contributor)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Find or create asset for repository
     asset = None
