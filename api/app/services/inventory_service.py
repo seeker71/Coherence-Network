@@ -15,12 +15,14 @@ from typing import Any
 import httpx
 
 from app.models.agent import AgentTaskCreate, TaskType
+from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import (
     agent_service,
     idea_lineage_service,
     idea_service,
     route_registry_service,
     runtime_service,
+    spec_registry_service,
     value_lineage_service,
 )
 
@@ -55,6 +57,8 @@ _FLOW_STAGE_TASK_TYPE: dict[str, TaskType] = {
     "implementation": TaskType.IMPL,
     "validation": TaskType.TEST,
 }
+_TRACEABILITY_GAP_DEFAULT_IDEA_ID = "portfolio-governance"
+_TRACEABILITY_GAP_CONTRIBUTOR_ID = "openai-codex"
 
 
 def _is_implementation_request_question(question: str, answer: str | None = None) -> bool:
@@ -927,6 +931,293 @@ def sync_proactive_questions_from_recent_changes(limit: int = 20, max_add: int =
         "skipped_missing_idea_count": skipped_missing_idea_count,
         "intent_breakdown": (report.get("summary") or {}).get("intent_breakdown", {}),
         "created_questions": created,
+    }
+
+
+def _slugify_token(value: str, max_len: int = 48) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    if not slug:
+        slug = "item"
+    return slug[: max(8, max_len)]
+
+
+def _auto_idea_id_for_spec(spec_id: str) -> str:
+    slug = _slugify_token(spec_id, max_len=36)
+    fingerprint = hashlib.sha1(spec_id.encode("utf-8")).hexdigest()[:8]
+    return f"spec-origin-{slug}-{fingerprint}"
+
+
+def _auto_idea_id_for_endpoint(path: str, method: str) -> str:
+    payload = f"{method.upper()}::{path}".encode("utf-8")
+    slug = _slugify_token(path, max_len=28)
+    fingerprint = hashlib.sha1(payload).hexdigest()[:8]
+    return f"endpoint-lineage-{slug}-{fingerprint}"
+
+
+def _auto_spec_id_for_endpoint(path: str, method: str) -> str:
+    payload = f"{method.upper()}::{path}".encode("utf-8")
+    slug = _slugify_token(path, max_len=28)
+    fingerprint = hashlib.sha1(payload).hexdigest()[:8]
+    return f"auto-{method.lower()}-{slug}-{fingerprint}"
+
+
+def _usage_gap_fingerprint(path: str, method: str) -> str:
+    payload = f"endpoint-usage-gap::{method.upper()}::{path}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _all_task_fingerprints_for_source(source: str) -> set[str]:
+    tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
+    out: set[str] = set()
+    for task in tasks:
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if context.get("source") != source:
+            continue
+        fingerprint = context.get("task_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint.strip():
+            out.add(fingerprint.strip())
+    return out
+
+
+def _ensure_gap_idea(
+    idea_id: str,
+    name: str,
+    description: str,
+    potential_value: float,
+    estimated_cost: float,
+    confidence: float,
+    interfaces: list[str],
+) -> tuple[bool, bool]:
+    if idea_service.get_idea(idea_id) is not None:
+        return True, False
+    created = idea_service.create_idea(
+        idea_id=idea_id,
+        name=name,
+        description=description,
+        potential_value=max(1.0, float(potential_value)),
+        estimated_cost=max(0.5, float(estimated_cost)),
+        confidence=max(0.1, min(float(confidence), 1.0)),
+        interfaces=interfaces,
+    )
+    if created is None:
+        return idea_service.get_idea(idea_id) is not None, False
+    return True, True
+
+
+def sync_traceability_gap_artifacts(
+    runtime_window_seconds: int = 86400,
+    max_spec_idea_links: int = 150,
+    max_missing_endpoint_specs: int = 200,
+    max_usage_gap_tasks: int = 200,
+) -> dict[str, Any]:
+    traceability = build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
+    trace_items = traceability.get("items")
+    items = [row for row in trace_items if isinstance(row, dict)] if isinstance(trace_items, list) else []
+
+    specs = spec_registry_service.list_specs(limit=5000)
+    spec_map = {entry.spec_id: entry for entry in specs}
+
+    max_link = max(1, min(max_spec_idea_links, 1000))
+    max_spec_create = max(1, min(max_missing_endpoint_specs, 2000))
+    max_usage_tasks = max(1, min(max_usage_gap_tasks, 2000))
+
+    linked_specs_to_ideas: list[dict[str, Any]] = []
+    created_ideas_for_specs: list[str] = []
+    skipped_spec_idea_links_existing = 0
+
+    for spec in specs:
+        if len(linked_specs_to_ideas) >= max_link:
+            break
+        if isinstance(spec.idea_id, str) and spec.idea_id.strip():
+            skipped_spec_idea_links_existing += 1
+            continue
+
+        derived_idea_id = _auto_idea_id_for_spec(spec.spec_id)
+        ensured, created = _ensure_gap_idea(
+            idea_id=derived_idea_id,
+            name=f"Spec lineage: {spec.title}",
+            description=(
+                f"Derived from spec '{spec.spec_id}' that was missing an idea link. "
+                "Tracks ROI, implementation path, and validation ownership for this spec."
+            ),
+            potential_value=max(float(spec.potential_value), 24.0),
+            estimated_cost=max(float(spec.estimated_cost), 4.0),
+            confidence=0.62,
+            interfaces=["machine:api", "human:web", "machine:spec-registry"],
+        )
+        if created:
+            created_ideas_for_specs.append(derived_idea_id)
+        if not ensured:
+            continue
+
+        updated = spec_registry_service.update_spec(
+            spec.spec_id,
+            SpecRegistryUpdate(
+                idea_id=derived_idea_id,
+                updated_by_contributor_id=_TRACEABILITY_GAP_CONTRIBUTOR_ID,
+            ),
+        )
+        if updated is None:
+            continue
+        linked_specs_to_ideas.append(
+            {
+                "spec_id": spec.spec_id,
+                "idea_id": derived_idea_id,
+            }
+        )
+        spec_map[updated.spec_id] = updated
+
+    created_specs_for_endpoints: list[dict[str, Any]] = []
+    skipped_existing_endpoint_specs = 0
+
+    for row in items:
+        if len(created_specs_for_endpoints) >= max_spec_create:
+            break
+        spec_section = row.get("spec")
+        if isinstance(spec_section, dict) and bool(spec_section.get("tracked")):
+            continue
+
+        path = str(row.get("path") or "").strip()
+        methods_raw = row.get("methods")
+        methods = [m for m in methods_raw if isinstance(m, str) and m.strip()] if isinstance(methods_raw, list) else []
+        method = str(methods[0]).upper() if methods else "GET"
+        if not path:
+            continue
+
+        spec_id = _auto_spec_id_for_endpoint(path, method)
+        if spec_id in spec_map:
+            skipped_existing_endpoint_specs += 1
+            continue
+
+        idea_section = row.get("idea")
+        selected_idea_id = ""
+        if isinstance(idea_section, dict):
+            selected_idea_id = str(idea_section.get("idea_id") or "").strip()
+        if not selected_idea_id:
+            selected_idea_id = _auto_idea_id_for_endpoint(path, method)
+            _ensure_gap_idea(
+                idea_id=selected_idea_id,
+                name=f"Endpoint lineage: {method} {path}",
+                description=(
+                    f"Derived from endpoint '{method} {path}' that had no linked spec. "
+                    "Tracks API behavior contract, process design, and implementation evidence."
+                ),
+                potential_value=22.0,
+                estimated_cost=4.0,
+                confidence=0.58,
+                interfaces=["machine:api", "human:web", "machine:runtime"],
+            )
+        elif idea_service.get_idea(selected_idea_id) is None:
+            selected_idea_id = _TRACEABILITY_GAP_DEFAULT_IDEA_ID
+
+        created_spec = spec_registry_service.create_spec(
+            SpecRegistryCreate(
+                spec_id=spec_id,
+                title=f"Auto spec: {method} {path}",
+                summary=(
+                    f"Auto-generated from endpoint traceability because code endpoint '{method} {path}' "
+                    "had no linked spec artifact. Define acceptance tests and process/implementation evidence."
+                ),
+                idea_id=selected_idea_id or _TRACEABILITY_GAP_DEFAULT_IDEA_ID,
+                process_summary=(
+                    "Generated by traceability gap sync. Next: author process and pseudocode, then validate runtime path."
+                ),
+                created_by_contributor_id=_TRACEABILITY_GAP_CONTRIBUTOR_ID,
+                potential_value=18.0,
+                estimated_cost=3.0,
+                actual_value=0.0,
+                actual_cost=0.0,
+            )
+        )
+        if created_spec is None:
+            skipped_existing_endpoint_specs += 1
+            continue
+
+        spec_map[created_spec.spec_id] = created_spec
+        created_specs_for_endpoints.append(
+            {
+                "path": path,
+                "method": method,
+                "spec_id": created_spec.spec_id,
+                "idea_id": created_spec.idea_id,
+            }
+        )
+
+    known_usage_fingerprints = _all_task_fingerprints_for_source("endpoint_usage_gap")
+    created_usage_gap_tasks: list[dict[str, Any]] = []
+    skipped_existing_usage_gap_tasks = 0
+
+    for row in items:
+        if len(created_usage_gap_tasks) >= max_usage_tasks:
+            break
+        usage = row.get("usage")
+        event_count = int(usage.get("event_count") or 0) if isinstance(usage, dict) else 0
+        if event_count > 0:
+            continue
+
+        path = str(row.get("path") or "").strip()
+        methods_raw = row.get("methods")
+        methods = [m for m in methods_raw if isinstance(m, str) and m.strip()] if isinstance(methods_raw, list) else []
+        method = str(methods[0]).upper() if methods else "GET"
+        if not path:
+            continue
+        fingerprint = _usage_gap_fingerprint(path, method)
+        if fingerprint in known_usage_fingerprints:
+            skipped_existing_usage_gap_tasks += 1
+            continue
+
+        idea_section = row.get("idea")
+        idea_id = (
+            str(idea_section.get("idea_id") or "").strip()
+            if isinstance(idea_section, dict)
+            else ""
+        ) or _TRACEABILITY_GAP_DEFAULT_IDEA_ID
+
+        direction = (
+            f"Close endpoint usage tracking gap for {method} {path}. "
+            "Execute a real request flow (no mocks), verify /api/runtime/events records the endpoint, "
+            "and document evidence for CI/deploy/e2e gates."
+        )
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction=direction,
+                task_type=TaskType.TEST,
+                context={
+                    "source": "endpoint_usage_gap",
+                    "endpoint_path": path,
+                    "endpoint_method": method,
+                    "idea_id": idea_id,
+                    "task_fingerprint": fingerprint,
+                    "runtime_window_seconds": runtime_window_seconds,
+                },
+            )
+        )
+        known_usage_fingerprints.add(fingerprint)
+        created_usage_gap_tasks.append(
+            {
+                "task_id": task["id"],
+                "path": path,
+                "method": method,
+                "idea_id": idea_id,
+            }
+        )
+
+    return {
+        "result": "traceability_gap_artifacts_synced",
+        "runtime_window_seconds": runtime_window_seconds,
+        "traceability_summary": traceability.get("summary", {}),
+        "linked_specs_to_ideas_count": len(linked_specs_to_ideas),
+        "created_ideas_for_specs_count": len(created_ideas_for_specs),
+        "created_missing_endpoint_specs_count": len(created_specs_for_endpoints),
+        "created_usage_gap_tasks_count": len(created_usage_gap_tasks),
+        "skipped_spec_idea_links_existing_count": skipped_spec_idea_links_existing,
+        "skipped_existing_endpoint_specs_count": skipped_existing_endpoint_specs,
+        "skipped_existing_usage_gap_tasks_count": skipped_existing_usage_gap_tasks,
+        "linked_specs_to_ideas": linked_specs_to_ideas[:50],
+        "created_missing_endpoint_specs": created_specs_for_endpoints[:50],
+        "created_usage_gap_tasks": created_usage_gap_tasks[:50],
     }
 
 

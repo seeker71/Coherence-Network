@@ -716,3 +716,75 @@ async def test_sync_proactive_questions_adds_missing_questions_without_duplicate
         assert idea.status_code == 200
         questions = idea.json()["open_questions"]
         assert any("manual follow-up" in q["question"].lower() for q in questions)
+
+
+@pytest.mark.asyncio
+async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_and_usage_tasks(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        seeded = await client.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": "spec-without-idea-link",
+                "title": "Spec without idea",
+                "summary": "This spec intentionally has no idea_id to verify automatic linking.",
+                "created_by_contributor_id": "user-1",
+            },
+        )
+        assert seeded.status_code == 201
+        assert seeded.json()["idea_id"] is None
+
+        synced = await client.post(
+            "/api/inventory/gaps/sync-traceability",
+            params={
+                "runtime_window_seconds": 86400,
+                "max_spec_idea_links": 20,
+                "max_missing_endpoint_specs": 20,
+                "max_usage_gap_tasks": 2000,
+            },
+        )
+        assert synced.status_code == 200
+        payload = synced.json()
+        assert payload["result"] == "traceability_gap_artifacts_synced"
+        assert payload["traceability_summary"]["total_endpoints"] >= 1
+        assert payload["linked_specs_to_ideas_count"] >= 1
+        assert payload["created_missing_endpoint_specs_count"] >= 0
+        assert payload["created_usage_gap_tasks_count"] >= 0
+
+        linked_spec = await client.get("/api/spec-registry/spec-without-idea-link")
+        assert linked_spec.status_code == 200
+        linked_spec_payload = linked_spec.json()
+        assert isinstance(linked_spec_payload["idea_id"], str)
+        assert linked_spec_payload["idea_id"].strip() != ""
+
+        idea = await client.get(f"/api/ideas/{linked_spec_payload['idea_id']}")
+        assert idea.status_code == 200
+
+        listed_tasks = await client.get("/api/agent/tasks")
+        assert listed_tasks.status_code == 200
+        assert listed_tasks.json()["total"] >= 1
+
+        rerun = await client.post(
+            "/api/inventory/gaps/sync-traceability",
+            params={
+                "runtime_window_seconds": 86400,
+                "max_spec_idea_links": 20,
+                "max_missing_endpoint_specs": 20,
+                "max_usage_gap_tasks": 2000,
+            },
+        )
+        assert rerun.status_code == 200
+        rerun_payload = rerun.json()
+        assert rerun_payload["created_usage_gap_tasks_count"] == 0
+        if payload["created_usage_gap_tasks_count"] > 0:
+            assert rerun_payload["skipped_existing_usage_gap_tasks_count"] >= 1
