@@ -1,0 +1,71 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/merge-open-prs-validation-final",
+  "commit_scope": "Add automation readiness audit to remaining PR gates so optional unconfigured provider warnings fail locally and in thread-gates before merge.",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_thread-gates-automation-readiness.json"
+  ],
+  "idea_ids": [
+    "delivery-process-hardening"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "merge-open-prs-prepush-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning"
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation readiness regression test is part of both pre-push guard and thread-gates workflow to catch provider readiness warnings before merge.",
+    "public_endpoints": [],
+    "test_flows": [
+      "api: run targeted automation readiness test and ensure CI/guard fails on warning-level regressions"
+    ]
+  },
+  "local_validation": {
+    "status": "pending",
+    "ran_at": "2026-02-17T00:00:00Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Guard alignment change is internal process hardening; remaining open PR issues are external and unchanged by this commit."
+  }
+}
