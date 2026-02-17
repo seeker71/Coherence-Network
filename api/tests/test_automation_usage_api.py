@@ -342,7 +342,7 @@ async def test_provider_validation_contract_blocks_without_execution_events(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["coherence-internal", "openai-codex", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -391,7 +391,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["coherence-internal", "openai-codex", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -417,6 +417,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     )
     monkeypatch.setattr(automation_usage_service, "_probe_internal", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_openai_codex", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_probe_openclaw", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_github", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_railway", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_claude", lambda: (True, "ok"))
@@ -447,6 +448,80 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
             assert row["usage_events"] >= 1
             assert row["successful_events"] >= 1
             assert row["validated_execution"] is True
+
+
+@pytest.mark.asyncio
+async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    required = ["openai-codex", "openclaw"]
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report",
+        lambda **kwargs: ProviderReadinessReport(
+            required_providers=required,
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider=provider,
+                    kind="custom",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[],
+                )
+                for provider in required
+            ],
+        ),
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        event = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:agent-task-completion",
+                "method": "RUN",
+                "status_code": 200,
+                "runtime_ms": 1500.0,
+                "idea_id": "coherence-network-agent-pipeline",
+                "metadata": {
+                    "task_id": "task_openclaw_infer",
+                    "executor": "openclaw",
+                    "model": "openclaw/gpt-5.1-codex",
+                    "repeatable_tool_call": 'codex exec "demo" --json',
+                    "tracking_kind": "agent_task_completion",
+                },
+            },
+        )
+        assert event.status_code == 201
+
+        report = await client.get(
+            "/api/automation/usage/provider-validation",
+            params={
+                "required_providers": ",".join(required),
+                "runtime_window_seconds": 86400,
+                "min_execution_events": 1,
+                "force_refresh": False,
+            },
+        )
+        assert report.status_code == 200
+        payload = report.json()
+        assert payload["all_required_validated"] is True
+        rows = {row["provider"]: row for row in payload["providers"]}
+        assert rows["openai-codex"]["usage_events"] >= 1
+        assert rows["openai-codex"]["validated_execution"] is True
+        assert rows["openclaw"]["usage_events"] >= 1
+        assert rows["openclaw"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio

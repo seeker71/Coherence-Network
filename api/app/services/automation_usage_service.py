@@ -506,6 +506,17 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
     if provider_name == "openai-codex" and active_runs > 0:
         notes.append("OpenAI Codex observed in runtime usage; treating as configured by active execution context.")
         return True, [], present, notes
+    if provider_name == "openclaw" and active_runs > 0:
+        openai_key = bool(
+            os.getenv("OPENAI_ADMIN_API_KEY", "").strip()
+            or os.getenv("OPENAI_API_KEY", "").strip()
+        )
+        codex_active = int(active_counts.get("openai-codex", 0)) > 0
+        if openai_key or codex_active:
+            notes.append(
+                "OpenClaw observed with Codex/OpenAI execution context; treating as configured for runtime validation."
+            )
+            return True, [], present, notes
     if provider_name == "claude" and active_runs > 0:
         notes.append("Claude observed in runtime usage; treating as configured by active execution context.")
         return True, [], present, notes
@@ -1379,6 +1390,20 @@ def _probe_openai_codex() -> tuple[bool, str]:
         return False, f"openai_probe_failed:{exc}"
 
 
+def _probe_openclaw() -> tuple[bool, str]:
+    openclaw_key = os.getenv("OPENCLAW_API_KEY", "").strip()
+    if openclaw_key:
+        return True, "ok_via_openclaw_key"
+
+    active = _active_provider_usage_counts()
+    openclaw_active = int(active.get("openclaw", 0))
+    openai_codex_active = int(active.get("openai-codex", 0))
+    openai_ok, openai_detail = _probe_openai_codex()
+    if openai_ok and (openclaw_active > 0 or openai_codex_active > 0):
+        return True, f"ok_via_openai_codex_backend:{openai_detail}"
+    return False, "missing_openclaw_key_and_openai_codex_backend"
+
+
 def _probe_github() -> tuple[bool, str]:
     token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
     if token:
@@ -1473,6 +1498,7 @@ def run_provider_validation_probes(*, required_providers: list[str] | None = Non
     probe_map = {
         "coherence-internal": _probe_internal,
         "openai-codex": _probe_openai_codex,
+        "openclaw": _probe_openclaw,
         "github": _probe_github,
         "railway": _probe_railway,
         "claude": _probe_claude,
@@ -1495,6 +1521,31 @@ def run_provider_validation_probes(*, required_providers: list[str] | None = Non
 def _runtime_validation_rows(*, required_providers: list[str], runtime_window_seconds: int) -> dict[str, dict[str, Any]]:
     counts: dict[str, dict[str, Any]] = {}
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, min(runtime_window_seconds, 2592000)))
+
+    def _providers_for_event(metadata: dict[str, Any]) -> set[str]:
+        providers: set[str] = set()
+        explicit = str(metadata.get("provider") or "").strip().lower()
+        if explicit:
+            providers.add(explicit)
+
+        executor = str(metadata.get("executor") or "").strip().lower()
+        model = str(metadata.get("model") or "").strip()
+        worker_id = str(metadata.get("worker_id") or "").strip().lower()
+        agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
+
+        inferred = _infer_provider_from_model(model)
+        if inferred:
+            providers.add(inferred)
+        if executor == "openclaw":
+            providers.add("openclaw")
+        if worker_id.startswith("openai-codex") or agent_id.startswith("openai-codex"):
+            providers.add("openai-codex")
+        if "codex" in model.lower() or repeatable_tool_call.startswith("codex "):
+            providers.add("openai-codex")
+
+        return {item for item in providers if item}
+
     try:
         from app.services import runtime_service
 
@@ -1509,19 +1560,20 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         metadata = getattr(event, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             continue
-        provider = str(metadata.get("provider") or "").strip().lower()
-        if not provider:
+        providers = _providers_for_event(metadata)
+        if not providers:
             continue
-        bucket = counts.setdefault(
-            provider,
-            {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []},
-        )
-        bucket["usage_events"] += 1
-        if int(getattr(event, "status_code", 0)) < 400:
-            bucket["successful_events"] += 1
-        prev = bucket["last_event_at"]
-        if prev is None or recorded_at > prev:
-            bucket["last_event_at"] = recorded_at
+        for provider in providers:
+            bucket = counts.setdefault(
+                provider,
+                {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []},
+            )
+            bucket["usage_events"] += 1
+            if int(getattr(event, "status_code", 0)) < 400:
+                bucket["successful_events"] += 1
+            prev = bucket["last_event_at"]
+            if prev is None or recorded_at > prev:
+                bucket["last_event_at"] = recorded_at
 
     for provider in required_providers:
         counts.setdefault(provider, {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []})

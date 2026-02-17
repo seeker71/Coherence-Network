@@ -646,6 +646,28 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _derive_task_provider(task: dict[str, Any], executor: str) -> str:
+    model = str(task.get("model") or "").strip().lower()
+    command = str(task.get("command") or "").strip().lower()
+    worker_id = _normalize_worker_id(task.get("claimed_by")).lower()
+
+    if worker_id == "openai-codex" or worker_id.startswith("openai-codex:"):
+        return "openai-codex"
+    if "codex" in model or command.startswith("codex "):
+        return "openai-codex"
+    if model.startswith("openai/") or model.startswith(("gpt", "o1", "o3", "o4")):
+        return "openai"
+    if executor == "openclaw":
+        return "openclaw"
+    if executor == "cursor":
+        return "cursor"
+    if executor in {"claude", "aider"}:
+        return "claude"
+    if "openrouter" in model:
+        return "openrouter"
+    return "unknown"
+
+
 def _task_duration_ms(task: dict[str, Any]) -> float:
     started = task.get("started_at")
     created = task.get("created_at")
@@ -694,6 +716,7 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     command_sha = hashlib.sha256(command.encode("utf-8")).hexdigest() if command else ""
     worker_id = _normalize_worker_id(task.get("claimed_by"))
     executor = _derive_task_executor(task)
+    provider = _derive_task_provider(task, executor)
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
 
@@ -718,6 +741,9 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                     if worker_id == "openai-codex" or worker_id.startswith("openai-codex:")
                     else worker_id,
                     "executor": executor,
+                    "provider": provider,
+                    "billing_provider": provider,
+                    "is_paid_provider": provider in {"openai", "openai-codex", "claude", "cursor", "openrouter"},
                     "is_openai_codex": worker_id == "openai-codex"
                     or worker_id.startswith("openai-codex:"),
                     "tracking_kind": "agent_task_completion",
