@@ -1,0 +1,71 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/disable-vercel-pr-deploys",
+  "commit_scope": "Disable Vercel deployments on PR/non-main branches to avoid early deployment rate limits.",
+  "files_owned": [
+    "specs/105-disable-vercel-pr-deployments.md",
+    "web/vercel.json",
+    "scripts/validate_vercel_deployment_policy.py",
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "105"
+  ],
+  "task_ids": [
+    "disable-vercel-pr-deploys"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_vercel_deployment_policy.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json"
+  ],
+  "change_files": [
+    "specs/105-disable-vercel-pr-deployments.md",
+    "web/vercel.json",
+    "scripts/validate_vercel_deployment_policy.py",
+    "docs/DEPLOY.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T10:30:00Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "python3 scripts/validate_vercel_deployment_policy.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI validation"
+  }
+}
