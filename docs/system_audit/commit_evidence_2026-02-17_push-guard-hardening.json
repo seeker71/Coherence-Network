@@ -3,13 +3,20 @@
   "thread_branch": "codex/merge-open-prs-validation-final",
   "commit_scope": "Add mandatory local pre-push gate that runs worktree PR guard before push to prevent unchecked failures entering PRs.",
   "files_owned": [
+    ".githooks/pre-push",
     ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
     "Makefile",
     "docs/WORKTREE-QUICKSTART.md",
-    ".githooks/pre-push",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_service.py",
+    "docs/system_audit/commit_evidence_2026-02-17_merge-open-pr-validation.json",
+    "docs/system_audit/commit_evidence_2026-02-17_push-guard-hardening.json",
     "scripts/setup_pre_push_hook.sh",
-    "scripts/worktree_pr_guard.py",
-    "docs/system_audit/commit_evidence_2026-02-17_push-guard-hardening.json"
+    "scripts/worktree_pr_guard.py"
   ],
   "idea_ids": [
     "delivery-process-hardening"
@@ -39,17 +46,33 @@
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build"
   ],
   "change_files": [
-    "Makefile",
-    "docs/WORKTREE-QUICKSTART.md",
-    ".githooks/",
     ".githooks/pre-push",
-    "scripts/setup_pre_push_hook.sh",
-    ".github/workflows/thread-gates.yml",
     ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "Makefile",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_service.py",
     "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_service.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-02-17_merge-open-pr-validation.json",
+    "docs/system_audit/commit_evidence_2026-02-17_push-guard-hardening.json",
+    "scripts/setup_pre_push_hook.sh",
     "scripts/worktree_pr_guard.py"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Execution routing and automation usage instrumentation canary paths remain functional while preventing unreviewed readiness regressions from reaching merge.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "api: call automation readiness endpoint after openrouter/openclaw/runtime changes and verify provider contract remains consistent",
+      "api: run maintainability and pre-push guard workflows and confirm no new runtime placeholders/regressions are introduced"
+    ]
+  },
   "local_validation": {
     "status": "pass",
     "ran_at": "2026-02-17T22:58:30Z",
