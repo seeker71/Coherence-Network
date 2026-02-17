@@ -456,6 +456,7 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 _store: dict[str, dict[str, Any]] = {}
 _store_loaded = False
 _store_loaded_path: str | None = None
+_store_loaded_test_context: str | None = None
 ACTIVE_TASK_STATUSES = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.NEEDS_DECISION}
 
 
@@ -588,14 +589,25 @@ def _save_store_to_disk() -> None:
 
 
 def _ensure_store_loaded() -> None:
-    global _store_loaded, _store_loaded_path
+    global _store_loaded, _store_loaded_path, _store_loaded_test_context
     current_path = str(_store_path())
+    current_test = os.getenv("PYTEST_CURRENT_TEST")
+
+    # Keep pytest test cases isolated even within a single process:
+    # each test gets a fresh in-memory task store when persistence is off.
+    if not _persistence_enabled() and current_test and _store_loaded_test_context != current_test:
+        _store.clear()
+        _store_loaded = False
+        _store_loaded_path = None
+        _store_loaded_test_context = current_test
+
     if _store_loaded and _store_loaded_path == current_path:
         return
     _store.clear()
     _store.update(_load_store_from_disk())
     _store_loaded = True
     _store_loaded_path = current_path
+    _store_loaded_test_context = current_test
 
 
 def _now() -> datetime:

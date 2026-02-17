@@ -1,0 +1,97 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-api-coverage-verification",
+  "commit_scope": "Add a live API coverage verification dashboard in the web UI that probes real endpoints, surfaces traceability gaps, and reports explicit per-endpoint failures and skips.",
+  "files_owned": [
+    "web/app/api-coverage/page.tsx",
+    "web/app/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-17_api-coverage-verification.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "089",
+    "092"
+  ],
+  "task_ids": [
+    "api-coverage-verification-gap-closure"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "./scripts/verify_web_api_deploy.sh",
+    "cd web && npm run build"
+  ],
+  "change_files": [
+    "web/app/api-coverage/page.tsx",
+    "web/app/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Operators can verify API coverage from the UI with live endpoint traceability and GET probe pass/fail status.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability",
+      "https://coherence-network-production.up.railway.app/api/inventory/routes/canonical",
+      "https://coherence-web-production.up.railway.app/api-coverage"
+    ],
+    "test_flows": [
+      "web:/api-coverage -> load snapshot -> review probe results and top gaps",
+      "api:/api/inventory/endpoint-traceability -> summary and per-endpoint gap inspection",
+      "api:/api/inventory/routes/canonical -> route coverage inventory"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T02:21:38Z",
+    "environment": {
+      "python": "3.14.3",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-api+railway-web",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI green and deployment of this branch commit for runtime feature verification."
+  }
+}

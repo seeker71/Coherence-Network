@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import os
 import sys
 from pathlib import Path
 
@@ -64,3 +65,48 @@ else:
                 loop.close()
 
         return True
+
+
+@pytest.fixture(autouse=True)
+def _reset_service_caches_between_tests() -> None:
+    # Ensure env-driven storage paths are honored per-test and avoid cross-test
+    # leakage through module-level engine/cache state.
+    from app.services import (
+        agent_service,
+        governance_service,
+        idea_registry_service,
+        idea_service,
+        spec_registry_service,
+    )
+
+    for service in (idea_registry_service, spec_registry_service, governance_service):
+        cache = getattr(service, "_ENGINE_CACHE", None)
+        if isinstance(cache, dict):
+            engine = cache.get("engine")
+            if engine is not None:
+                try:
+                    engine.dispose()
+                except Exception:
+                    pass
+            cache["url"] = ""
+            cache["engine"] = None
+            cache["sessionmaker"] = None
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_test_context = None
+
+    idea_service._TRACKED_IDEA_CACHE["expires_at"] = 0.0
+    idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
+    idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
+
+    for key in (
+        "DATABASE_URL",
+        "IDEA_REGISTRY_DATABASE_URL",
+        "IDEA_REGISTRY_DB_URL",
+        "GOVERNANCE_DATABASE_URL",
+        "GOVERNANCE_DB_URL",
+        "IDEA_COMMIT_EVIDENCE_DIR",
+    ):
+        os.environ.pop(key, None)
