@@ -61,6 +61,7 @@ Run and record:
 
 ```bash
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ```
 
@@ -68,6 +69,7 @@ Gate status:
 - PASS only if tests/build succeed for the thread’s touched surface.
 - PASS only if changed specs pass the spec quality contract (when any feature spec changed).
 - PASS only if no stale open `codex/*` PR is left unattended.
+- PASS only if open `codex/*` PR checks are green (or auto-rerun has healed flaky failures).
 - PASS only if guard does not detect evidence/workflow/reference contract failures.
 
 Worktree notes:
