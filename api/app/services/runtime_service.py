@@ -821,18 +821,75 @@ async def run_get_endpoint_exerciser(
     timeout_seconds: float = 8.0,
     runtime_window_seconds: int = 86400,
 ) -> dict:
-    from app.services import inventory_service
-
     total_cycles = max(1, min(int(cycles), 200))
     endpoint_limit = max(1, min(int(max_endpoints), 2000))
     per_call_delay = max(0, min(int(delay_ms), 30000))
     timeout = max(1.0, min(float(timeout_seconds), 60.0))
-
-    before = inventory_service.build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
-    before_with_usage = int((before.get("summary") or {}).get("with_usage_events") or 0)
-    before_total = int((before.get("summary") or {}).get("total_endpoints") or 0)
-
     paths = _discover_get_api_paths(app)[:endpoint_limit]
+
+    before_with_usage, before_total = _exerciser_inventory_snapshot(
+        runtime_window_seconds=runtime_window_seconds
+    )
+    results, by_status = await _run_get_endpoint_exerciser_calls(
+        app=app,
+        base_url=base_url,
+        paths=paths,
+        total_cycles=total_cycles,
+        per_call_delay=per_call_delay,
+        timeout=timeout,
+    )
+    after_with_usage, after_total = _exerciser_inventory_snapshot(
+        runtime_window_seconds=runtime_window_seconds
+    )
+
+    return {
+        "result": "runtime_get_endpoint_exerciser_completed",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "config": {
+            "cycles": total_cycles,
+            "max_endpoints": endpoint_limit,
+            "delay_ms": per_call_delay,
+            "timeout_seconds": timeout,
+            "runtime_window_seconds": runtime_window_seconds,
+        },
+        "coverage": {
+            "before_with_usage_events": before_with_usage,
+            "after_with_usage_events": after_with_usage,
+            "delta_with_usage_events": after_with_usage - before_with_usage,
+            "before_total_endpoints": before_total,
+            "after_total_endpoints": after_total,
+        },
+        "summary": {
+            "discovered_get_endpoints": len(paths),
+            "total_calls": len(results),
+            "status_counts": by_status,
+            "successful_calls": sum(1 for row in results if int(row["status_code"]) < 400),
+            "failed_calls": sum(1 for row in results if int(row["status_code"]) >= 400),
+        },
+        "calls": results[:500],
+    }
+
+
+def _exerciser_inventory_snapshot(runtime_window_seconds: int) -> tuple[int, int]:
+    from app.services import inventory_service
+
+    snapshot = inventory_service.build_endpoint_traceability_inventory(
+        runtime_window_seconds=runtime_window_seconds
+    )
+    with_usage = int((snapshot.get("summary") or {}).get("with_usage_events") or 0)
+    total = int((snapshot.get("summary") or {}).get("total_endpoints") or 0)
+    return with_usage, total
+
+
+async def _run_get_endpoint_exerciser_calls(
+    *,
+    app,
+    base_url: str,
+    paths: list[str],
+    total_cycles: int,
+    per_call_delay: int,
+    timeout: float,
+) -> tuple[list[dict[str, object]], dict[str, int]]:
     results: list[dict[str, object]] = []
     by_status: dict[str, int] = {}
 
@@ -870,34 +927,4 @@ async def run_get_endpoint_exerciser(
                 results.append(row)
                 if per_call_delay > 0:
                     await asyncio.sleep(per_call_delay / 1000.0)
-
-    after = inventory_service.build_endpoint_traceability_inventory(runtime_window_seconds=runtime_window_seconds)
-    after_with_usage = int((after.get("summary") or {}).get("with_usage_events") or 0)
-    after_total = int((after.get("summary") or {}).get("total_endpoints") or 0)
-
-    return {
-        "result": "runtime_get_endpoint_exerciser_completed",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "config": {
-            "cycles": total_cycles,
-            "max_endpoints": endpoint_limit,
-            "delay_ms": per_call_delay,
-            "timeout_seconds": timeout,
-            "runtime_window_seconds": runtime_window_seconds,
-        },
-        "coverage": {
-            "before_with_usage_events": before_with_usage,
-            "after_with_usage_events": after_with_usage,
-            "delta_with_usage_events": after_with_usage - before_with_usage,
-            "before_total_endpoints": before_total,
-            "after_total_endpoints": after_total,
-        },
-        "summary": {
-            "discovered_get_endpoints": len(paths),
-            "total_calls": len(results),
-            "status_counts": by_status,
-            "successful_calls": sum(1 for row in results if int(row["status_code"]) < 400),
-            "failed_calls": sum(1 for row in results if int(row["status_code"]) >= 400),
-        },
-        "calls": results[:500],
-    }
+    return results, by_status
