@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "30 6 * * *"
   workflow_dispatch:
+    inputs:
+      strict:
+        description: "Fail the workflow when blocking modularity drift exists (default is non-blocking; issue is the alert)."
+        required: false
+        default: "false"
 
 jobs:
   audit-asset-modularity:
@@ -123,14 +128,14 @@ jobs:
             });
 
       - name: Fail when modularity gate fails
-        # Never fail scheduled runs: scheduled audits should alert via issue, not block "main CI green".
-        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT == '1' && github.event_name != 'schedule' }}
+        # This workflow is non-blocking by default; use workflow_dispatch with strict=true to make it fail.
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.audit.outputs.exit_code != '0' && inputs.strict == 'true' }}
         run: |
           echo "Asset modularity audit failed"
           exit 1
 
       - name: Non-blocking by default (issue is the alert)
-        if: ${{ steps.audit.outputs.exit_code != '0' && (vars.ASSET_MODULARITY_STRICT != '1' || github.event_name == 'schedule') }}
+        if: ${{ steps.audit.outputs.exit_code != '0' && !(github.event_name == 'workflow_dispatch' && inputs.strict == 'true') }}
         run: |
-          echo "WARNING: Asset modularity drift detected, but this run is non-blocking (set ASSET_MODULARITY_STRICT=1 and run via workflow_dispatch to fail)."
+          echo "WARNING: Asset modularity drift detected, but this run is non-blocking (run via workflow_dispatch with strict=true to fail)."
           exit 0
