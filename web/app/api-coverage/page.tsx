@@ -15,6 +15,17 @@ type EndpointTraceabilityItem = {
   usage?: {
     event_count?: number;
   };
+  web_link?: {
+    tracked?: boolean;
+    explicit_count?: number;
+    catalog_route?: string;
+    evidence?: Array<{
+      source_file?: string;
+      line?: number | null;
+      web_route?: string | null;
+      evidence_type?: string;
+    }>;
+  };
 };
 
 type TraceabilityResponse = {
@@ -22,6 +33,9 @@ type TraceabilityResponse = {
     total_endpoints?: number;
     fully_traced?: number;
     with_usage_events?: number;
+    with_web_link?: number;
+    with_explicit_web_link?: number;
+    missing_web_link?: number;
     missing_idea?: number;
     missing_spec?: number;
     missing_process?: number;
@@ -101,6 +115,11 @@ function buildProbeUrl(path: string): string {
   const qs = REQUIRED_QUERY_OVERRIDES[path];
   if (!qs) return `${API_BASE}${apiPath}`;
   return `${API_BASE}${apiPath}?${qs}`;
+}
+
+function endpointHref(path: string): string {
+  if (isStaticPath(path)) return `${API_BASE}${path}`;
+  return `${API_BASE}/docs`;
 }
 
 function scoreClass(status: ProbeResult["status"]): string {
@@ -281,6 +300,12 @@ export default function ApiCoveragePage() {
             <p className="text-muted-foreground">Canonical API routes</p>
             <p className="text-xl font-semibold">{canonical?.api_routes?.length ?? 0}</p>
           </div>
+          <div className="rounded border p-3">
+            <p className="text-muted-foreground">Endpoints with web links</p>
+            <p className="text-xl font-semibold">
+              {(traceability?.summary?.with_web_link ?? 0)}/{traceability?.summary?.total_endpoints ?? 0}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -375,6 +400,7 @@ export default function ApiCoveragePage() {
                 <th className="py-2 pr-4">Path</th>
                 <th className="py-2 pr-4">Methods</th>
                 <th className="py-2 pr-4">Traceability</th>
+                <th className="py-2 pr-4">Web Link</th>
                 <th className="py-2 pr-4">Verification</th>
                 <th className="py-2 pr-4">Notes</th>
               </tr>
@@ -384,12 +410,27 @@ export default function ApiCoveragePage() {
                 const hasGet = row.methods.includes("GET");
                 const staticGet = hasGet && isStaticPath(row.path);
                 const probe = probeByPath.get(row.path);
+                const webEvidence = row.web_link?.evidence ?? [];
+                const firstEvidence = webEvidence[0];
                 return (
-                  <tr key={`endpoint-${row.path}`} className="border-t">
-                    <td className="py-2 pr-4 font-mono">{row.path}</td>
+                  <tr key={`endpoint-${row.path}`} id={`endpoint-${encodeURIComponent(row.path)}`} className="border-t">
+                    <td className="py-2 pr-4 font-mono">
+                      <a href={endpointHref(row.path)} target="_blank" rel="noopener noreferrer" className="underline">
+                        {row.path}
+                      </a>
+                    </td>
                     <td className="py-2 pr-4">{row.methods.join(", ")}</td>
                     <td className={`py-2 pr-4 ${row.traceability?.fully_traced ? "text-emerald-700" : "text-destructive"}`}>
                       {row.traceability?.fully_traced ? "fully_traced" : "gapped"}
+                    </td>
+                    <td className={`py-2 pr-4 ${row.web_link?.tracked ? "text-emerald-700" : "text-destructive"}`}>
+                      {row.web_link?.tracked ? "linked" : "missing"}
+                      {firstEvidence?.source_file ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {firstEvidence.source_file}
+                          {typeof firstEvidence.line === "number" ? `:${firstEvidence.line}` : ""}
+                        </span>
+                      ) : null}
                     </td>
                     <td className={`py-2 pr-4 ${probe ? scoreClass(probe.status) : "text-muted-foreground"}`}>
                       {probe ? probe.status : staticGet ? "pending" : "traceability-only"}

@@ -1,0 +1,2027 @@
+{
+  "generated_at": "2026-02-17T06:25:33.496167+00:00",
+  "summary": {
+    "total_endpoints": 98,
+    "canonical_registered": 36,
+    "with_idea": 98,
+    "with_origin_idea": 98,
+    "with_usage_events": 52,
+    "with_spec": 85,
+    "with_process": 85,
+    "with_validation": 85,
+    "with_web_link": 98,
+    "with_explicit_web_link": 42,
+    "fully_traced": 85,
+    "missing_idea": 0,
+    "missing_spec": 13,
+    "missing_process": 13,
+    "missing_validation": 13,
+    "missing_web_link": 0
+  },
+  "endpoint_web_link_matrix": [
+    {
+      "path": "/api/admin/reset-database",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/effectiveness",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 161,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 171,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/fatal-issues",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/integration",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/metrics",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/monitor-issues",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/pipeline-status",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 160,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 170,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/route",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/status-report",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/tasks",
+          "source_file": "web/app/tasks/page.tsx",
+          "line": 34,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/tasks",
+          "source_file": "web/app/tasks/page.tsx",
+          "line": 80,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 159,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks/attention",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks/count",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks/upsert-active",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks/{task_id}",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/tasks/{task_id}/log",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/telegram/diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/telegram/test-send",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/telegram/webhook",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/usage",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 169,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/agent/visibility",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/agent",
+          "source_file": "web/app/agent/page.tsx",
+          "line": 54,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 168,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/assets",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/assets",
+          "source_file": "web/app/assets/page.tsx",
+          "line": 31,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/assets",
+          "source_file": "web/app/assets/page.tsx",
+          "line": 70,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 151,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/assets/{asset_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/assets/{asset_id}/contributions",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/automation",
+          "source_file": "web/app/automation/page.tsx",
+          "line": 114,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 113,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/alerts",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/automation",
+          "source_file": "web/app/automation/page.tsx",
+          "line": 115,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 114,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/provider-validation",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/automation",
+          "source_file": "web/app/automation/page.tsx",
+          "line": 117,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 117,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/provider-validation/run",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 118,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/readiness",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/automation",
+          "source_file": "web/app/automation/page.tsx",
+          "line": 116,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 116,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/snapshots",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 115,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/automation/usage/subscription-estimator",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/usage",
+          "source_file": "web/app/usage/page.tsx",
+          "line": 68,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributions",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 7,
+      "evidence": [
+        {
+          "web_route": "/contributions",
+          "source_file": "web/app/contributions/page.tsx",
+          "line": 50,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/contributions",
+          "source_file": "web/app/contributions/page.tsx",
+          "line": 124,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": "/flow",
+          "source_file": "web/app/flow/page.tsx",
+          "line": 165,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributions/github",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributions/github/debug",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributions/{contribution_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributors",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 8,
+      "evidence": [
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 128,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 194,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/contributors",
+          "source_file": "web/app/contributors/page.tsx",
+          "line": 54,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributors/{contributor_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/contributors/{contributor_id}/contributions",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/distributions",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 144,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/friction/entry-points",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/friction",
+          "source_file": "web/app/friction/page.tsx",
+          "line": 73,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/friction/events",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/friction",
+          "source_file": "web/app/friction/page.tsx",
+          "line": 72,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 188,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/friction/report",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 4,
+      "evidence": [
+        {
+          "web_route": "/friction",
+          "source_file": "web/app/friction/page.tsx",
+          "line": 71,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/usage",
+          "source_file": "web/app/usage/page.tsx",
+          "line": 67,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 106,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/commit-traceability",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 180,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/main-contract",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 27,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 74,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 178,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/main-head",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/merged-contract",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 92,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/pr-to-public",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 57,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/gates/public-deploy-contract",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 28,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 109,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 179,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/governance/change-requests",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 131,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 233,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 134,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/governance/change-requests/{change_request_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/governance/change-requests/{change_request_id}/votes",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 263,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/health",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 212,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 219,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/ideas",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 9,
+      "evidence": [
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 129,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/ideas",
+          "source_file": "web/app/ideas/page.tsx",
+          "line": 44,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/ideas",
+          "source_file": "web/app/ideas/page.tsx",
+          "line": 90,
+          "evidence_type": "literal"
+        }
+      ]
+    },
+    {
+      "path": "/api/ideas/storage",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/portfolio",
+          "source_file": "web/app/portfolio/page.tsx",
+          "line": 86,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/ideas/{idea_id}",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/ideas/[idea_id]",
+          "source_file": "web/app/ideas/[idea_id]/page.tsx",
+          "line": 68,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/ideas/[idea_id]",
+          "source_file": "web/app/ideas/[idea_id]/page.tsx",
+          "line": 264,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 275,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/ideas/{idea_id}/questions",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/ideas/{idea_id}/questions/answer",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": "/portfolio",
+          "source_file": "web/app/portfolio/page.tsx",
+          "line": 120,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/asset-modularity",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/endpoint-traceability",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": 140,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 29,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/gates",
+          "source_file": "web/app/gates/page.tsx",
+          "line": 124,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/flow",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 9,
+      "evidence": [
+        {
+          "web_route": "/contributors",
+          "source_file": "web/app/contributors/page.tsx",
+          "line": 55,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/flow",
+          "source_file": "web/app/flow/page.tsx",
+          "line": 163,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/ideas/[idea_id]",
+          "source_file": "web/app/ideas/[idea_id]/page.tsx",
+          "line": 80,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/flow/next-unblock-task",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/gaps/sync-asset-modularity-tasks",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/gaps/sync-process-tasks",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/gaps/sync-traceability",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/page-lineage",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 45,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 54,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 204,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/process-completeness",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/questions/next-highest-roi-task",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/questions/proactive",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/questions/sync-implementation-tasks",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/questions/sync-proactive",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/route-evidence",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/routes/canonical",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 3,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": 141,
+          "evidence_type": "literal"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 89,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 196,
+          "evidence_type": "link"
+        }
+      ]
+    },
+    {
+      "path": "/api/inventory/system-lineage",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 14,
+      "evidence": [
+        {
+          "web_route": "/ideas/[idea_id]",
+          "source_file": "web/app/ideas/[idea_id]/page.tsx",
+          "line": 284,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/page.tsx",
+          "source_file": "web/app/page.tsx",
+          "line": 164,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/portfolio",
+          "source_file": "web/app/portfolio/page.tsx",
+          "line": 83,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/ready",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 220,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/runtime/endpoints/summary",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/runtime/events",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/runtime/exerciser/run",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/runtime/ideas/summary",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 4,
+      "evidence": [
+        {
+          "web_route": "/ideas/[idea_id]",
+          "source_file": "web/app/ideas/[idea_id]/page.tsx",
+          "line": 279,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/page.tsx",
+          "source_file": "web/app/page.tsx",
+          "line": 176,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/usage",
+          "source_file": "web/app/usage/page.tsx",
+          "line": 66,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/runtime/usage/verification",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/spec-registry",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 5,
+      "evidence": [
+        {
+          "web_route": "/contribute",
+          "source_file": "web/app/contribute/page.tsx",
+          "line": 130,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/specs/[spec_id]",
+          "source_file": "web/app/specs/[spec_id]/page.tsx",
+          "line": 87,
+          "evidence_type": "fetch"
+        },
+        {
+          "web_route": "/specs",
+          "source_file": "web/app/specs/page.tsx",
+          "line": 94,
+          "evidence_type": "fetch"
+        }
+      ]
+    },
+    {
+      "path": "/api/spec-registry/{spec_id}",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/specs/[spec_id]",
+          "source_file": "web/app/specs/[spec_id]/page.tsx",
+          "line": 400,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 281,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/links",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/links/{lineage_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 2,
+      "evidence": [
+        {
+          "web_route": "/flow",
+          "source_file": "web/app/flow/page.tsx",
+          "line": 485,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/specs/[spec_id]",
+          "source_file": "web/app/specs/[spec_id]/page.tsx",
+          "line": 362,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/links/{lineage_id}/payout-preview",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/links/{lineage_id}/usage-events",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/links/{lineage_id}/valuation",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/value-lineage/minimum-e2e-flow",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/api/version",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 1,
+      "evidence": [
+        {
+          "web_route": null,
+          "source_file": "web/components/page_context_links.tsx",
+          "line": 221,
+          "evidence_type": "link"
+        },
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/assets",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/assets/{asset_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/assets/{asset_id}/contributions",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributions",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributions/github",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributions/github/debug",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributions/{contribution_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributors",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributors/{contributor_id}",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/contributors/{contributor_id}/contributions",
+      "methods": [
+        "GET"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    },
+    {
+      "path": "/v1/distributions",
+      "methods": [
+        "POST"
+      ],
+      "web_link_tracked": true,
+      "explicit_count": 0,
+      "evidence": [
+        {
+          "web_route": "/api-coverage",
+          "source_file": "web/app/api-coverage/page.tsx",
+          "line": null,
+          "evidence_type": "catalog"
+        }
+      ]
+    }
+  ]
+}
