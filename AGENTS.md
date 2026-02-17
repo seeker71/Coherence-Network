@@ -28,6 +28,7 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
 - `docs/META-QUESTIONS.md` — Questions to validate setup, monitoring, effectiveness; catch misconfigurations
 - `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
+- `docs/PR-CHECK-FAILURE-TRIAGE.md` — PR check failure detection, auto-retry, remediation mapping
 - `docs/DEPLOY.md` — Deploy checklist
 - `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
 - `specs/TEMPLATE.md` — Spec format
@@ -59,6 +60,9 @@ python3 scripts/ensure_worktree_start_clean.py --json
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 # Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
+# Dedicated triage for open PR check failures (+ optional auto-rerun for flaky GitHub Actions checks):
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --rerun-failed-actions --fail-on-detected
 # Tighten deploy freshness requirement if needed (default 6h):
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)" --deploy-success-max-age-hours 2
 
