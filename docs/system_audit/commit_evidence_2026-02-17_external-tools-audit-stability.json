@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/fix-external-tools-audit",
+  "commit_scope": "Fix external tools audit false positives and update the registry to match workflow actions/tools.",
+  "files_owned": [
+    "scripts/audit_external_tools.py",
+    "docs/system_audit/external_tools_registry.json",
+    "specs/106-external-tools-audit-stability.md",
+    "docs/system_audit/commit_evidence_2026-02-17_external-tools-audit-stability.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "106"
+  ],
+  "task_ids": [
+    "external-tools-audit-stability"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/audit_external_tools.py --json --fail-on-untracked",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_external-tools-audit-stability.json"
+  ],
+  "change_files": [
+    "scripts/audit_external_tools.py",
+    "docs/system_audit/external_tools_registry.json",
+    "specs/106-external-tools-audit-stability.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T09:55:00Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "python3 scripts/audit_external_tools.py --json --fail-on-untracked",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_external-tools-audit-stability.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "ci"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI validation"
+  }
+}
