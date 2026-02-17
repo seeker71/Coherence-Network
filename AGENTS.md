@@ -16,6 +16,7 @@ Spec → Test → Implement → CI → Review → Merge
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
+- `docs/WORKTREE-QUICKSTART.md` — Mandatory worktree-only startup flow and failure recovery
 - `docs/STATUS.md` — Current implementation status, sprint progress
 - `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
 - `docs/SPEC-TRACKING.md` — Quick reference: spec status, test mapping, verification
@@ -41,6 +42,9 @@ Spec → Test → Implement → CI → Review → Merge
 ## Commands
 
 ```bash
+# Mandatory first step for every thread
+python3 scripts/ensure_worktree_start_clean.py --json
+
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
