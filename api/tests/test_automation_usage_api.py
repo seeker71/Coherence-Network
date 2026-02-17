@@ -459,7 +459,8 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["openai-codex", "openclaw"]
+    # openclaw is an executor label; validation should attribute usage to the underlying provider/model.
+    required = ["openai-codex"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -520,8 +521,6 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
         rows = {row["provider"]: row for row in payload["providers"]}
         assert rows["openai-codex"]["usage_events"] >= 1
         assert rows["openai-codex"]["validated_execution"] is True
-        assert rows["openclaw"]["usage_events"] >= 1
-        assert rows["openclaw"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio

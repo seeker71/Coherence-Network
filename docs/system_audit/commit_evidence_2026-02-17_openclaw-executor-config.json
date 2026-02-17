@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/openclaw-executor-config",
+  "commit_scope": "Treat openclaw as an executor label, not a standalone provider: attribute usage to the underlying provider/model (e.g. openrouter), stop requiring OPENCLAW_API_KEY for readiness/validation, and ensure Railway config uses underlying provider keys.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-17_openclaw-executor-config.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "openclaw-executor-config"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_openclaw-executor-config.json",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Provider readiness/usage no longer implies OPENCLAW_API_KEY is required; openclaw-prefixed models attribute usage to the underlying provider/model (e.g. openrouter), and production readiness should not require openclaw as a provider.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+    ],
+    "test_flows": [
+      "api:/api/automation/usage -> verify no provider row requires OPENCLAW_API_KEY and openclaw executor runs are attributed to openrouter/openai-* providers as appropriate",
+      "api:/api/automation/usage/readiness -> verify openclaw is not required as a provider and no missing_env OPENCLAW_API_KEY recommendation is emitted"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and production endpoint verification after deploy"
+  }
+}
+
