@@ -187,7 +187,6 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
 
   const { flow, contributors, contributions } = ideaFilter ? await loadDataForIdea(ideaFilter) : await loadData();
   const contributorsById = new Map(contributors.map((c) => [c.id, c]));
-  const topBlocker = flow.unblock_queue[0] ?? null;
   const filteredItems = flow.items.filter((item) => {
     if (specFilter && !item.spec.spec_ids.includes(specFilter)) return false;
     if (contributorFilter && !item.contributors.all.includes(contributorFilter)) return false;
@@ -212,22 +211,6 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
-
-  const topBlockerPayload =
-    topBlocker == null
-      ? ""
-      : JSON.stringify(
-          {
-            direction: topBlocker.direction,
-            task_type: topBlocker.task_type,
-          },
-          null,
-          2,
-        );
-  const topBlockerCurl =
-    topBlocker == null
-      ? ""
-      : `curl -X POST ${getApiBase()}/api/agent/tasks \\\n  -H \"Content-Type: application/json\" \\\n  -d @- <<'JSON'\n${topBlockerPayload}\nJSON`;
 
   return (
     <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
@@ -344,48 +327,6 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
         </ul>
       </section>
 
-      {topBlocker && (
-        <section className="rounded border p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">Top Blocking Task</h2>
-            <span className="text-xs text-muted-foreground">
-              stage {topBlocker.blocking_stage} | priority {topBlocker.unblock_priority_score.toFixed(2)}
-            </span>
-          </div>
-          <p className="text-sm">
-            <Link
-              href={`/flow?idea_id=${encodeURIComponent(topBlocker.idea_id)}`}
-              className="font-medium underline hover:text-foreground"
-            >
-              {topBlocker.idea_name}
-            </Link>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            cost {topBlocker.estimated_unblock_cost.toFixed(2)} | unlock value {topBlocker.estimated_unblock_value.toFixed(2)} | upstream{" "}
-            {topBlocker.upstream_required.length > 0 ? topBlocker.upstream_required.join(", ") : "none"} | downstream{" "}
-            {topBlocker.downstream_blocked.length > 0 ? topBlocker.downstream_blocked.join(", ") : "none"}
-          </p>
-          {topBlocker.active_task ? (
-            <p className="text-sm text-muted-foreground">
-              active task{" "}
-              <Link href={`/tasks?task_id=${encodeURIComponent(topBlocker.active_task.id)}`} className="underline hover:text-foreground">
-                {topBlocker.active_task.id}
-              </Link>{" "}
-              ({topBlocker.active_task.status})
-            </p>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                ready to create as <code>{topBlocker.task_type}</code> task
-              </p>
-              <pre className="rounded border bg-muted/50 p-3 text-xs overflow-auto">
-                <code>{topBlockerCurl}</code>
-              </pre>
-            </div>
-          )}
-        </section>
-      )}
-
       <section className="rounded border p-4 space-y-2">
         <h2 className="font-semibold">Unblock Priority Queue</h2>
         <p className="text-sm text-muted-foreground">
@@ -415,9 +356,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                   ({row.active_task.status})
                 </p>
               ) : (
-                <p className="text-muted-foreground">
-                  ready to create as <code>{row.task_type}</code> task: <span className="font-mono">{row.direction}</span>
-                </p>
+                <p className="text-muted-foreground">ready to create as <code>{row.task_type}</code> task</p>
               )}
             </li>
           ))}
