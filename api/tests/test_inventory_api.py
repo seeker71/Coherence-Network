@@ -769,6 +769,44 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
 
 
 @pytest.mark.asyncio
+async def test_flow_inventory_counts_spec_registry_specs_for_idea(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    idea_id = "public-e2e-flow-gate-automation"
+    spec_id = "095-public-e2e-flow-gate-automation-test"
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create_spec = await client.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": spec_id,
+                "title": "Public E2E Flow Gate Automation",
+                "summary": "Spec registry spec should count for flow spec coverage.",
+                "idea_id": idea_id,
+                "process_summary": "Run profile-specific journeys and record evidence.",
+                "pseudocode_summary": "profile -> journeys -> execute -> persist -> gate",
+                "implementation_summary": "Extend gate service and API responses.",
+            },
+        )
+        assert create_spec.status_code == 201
+
+        flow = await client.get("/api/inventory/flow", params={"idea_id": idea_id})
+        assert flow.status_code == 200
+        payload = flow.json()
+        assert payload["summary"]["ideas"] == 1
+        assert payload["summary"]["with_spec"] == 1
+        row = payload["items"][0]
+        assert row["spec"]["tracked"] is True
+        assert spec_id in row["spec"]["spec_ids"]
+        assert row["process"]["tracked"] is True
+        assert row["implementation"]["tracked"] is True
+
+@pytest.mark.asyncio
 async def test_asset_modularity_endpoint_returns_report(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         inventory_service,
