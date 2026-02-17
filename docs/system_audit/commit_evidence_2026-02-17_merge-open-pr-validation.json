@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "merge-open-prs-work",
+  "commit_scope": "Merge open PRs were finalized and close the open-PR backlog; refactor agent runtime/telegram routing and summarize-usage logic to clear maintainability regressions.",
+  "files_owned": [
+    "api/app/services/runtime_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "docs/system_audit/commit_evidence_2026-02-17_merge-open-pr-validation.json"
+  ],
+  "idea_ids": [
+    "coherence-governance-maintainability"
+  ],
+  "spec_ids": [
+    "000"
+  ],
+  "task_ids": [
+    "merge-open-prs-validation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "gh pr view 181 --json state,mergedAt,mergeStateStatus,url",
+    "gh pr view 176 --json state,mergedAt,mergeStateStatus,url",
+    "gh pr view 182 --json state,mergedAt,mergeStateStatus,url",
+    "gh pr list --state open",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_audit_after3.json"
+  ],
+  "change_files": [
+    "api/app/services/runtime_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T23:00:00Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "gh pr list --state open",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_audit_after3.json"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Open PRs were all merged, and runtime/agent route refactors remain behaviorally equivalent while reducing maintainability long-function regressions.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent"
+    ],
+    "test_flows": [
+      "api: verify endpoint /api/agent endpoints and Telegram webhook command parsing still execute expected responses for status/usage/tasks/attention flows",
+      "api: run maintainability audit and confirm no long-function/risk-score regression against baseline"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "ci"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Mainline CI currently has unresolved Thread Gates/Test failures outside this branch."
+  }
+}
