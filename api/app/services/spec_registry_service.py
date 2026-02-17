@@ -261,3 +261,31 @@ def summary() -> dict[str, Any]:
     with _session() as session:
         count = int(session.query(func.count(SpecRegistryRecord.spec_id)).scalar() or 0)
     return {"count": count}
+
+
+def storage_info() -> dict[str, Any]:
+    ensure_schema()
+    url = _database_url()
+    with _session() as session:
+        count = int(session.query(func.count(SpecRegistryRecord.spec_id)).scalar() or 0)
+    backend = "postgresql" if "postgres" in url else "sqlite"
+    return {
+        "backend": backend,
+        "database_url": _redact_database_url(url),
+        "spec_count": count,
+    }
+
+
+def _redact_database_url(url: str) -> str:
+    if "@" not in url or "://" not in url:
+        return url
+    scheme, remainder = url.split("://", 1)
+    if "@" not in remainder:
+        return url
+    credentials, host = remainder.split("@", 1)
+    if ":" in credentials:
+        user = credentials.split(":", 1)[0]
+        credentials = f"{user}:***"
+    else:
+        credentials = "***"
+    return f"{scheme}://{credentials}@{host}"

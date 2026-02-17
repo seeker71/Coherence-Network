@@ -1,0 +1,99 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-endpoint-usage-metrics-audit",
+  "commit_scope": "Enforce a global persistence contract so core domain data is PostgreSQL-backed before readiness/deploy verification passes.",
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_health.py",
+    "api/tests/test_runtime_api.py",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-02-17_global-persistence-contract.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage"
+  ],
+  "task_ids": [
+    "endpoint-usage-metrics-audit"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_health.py tests/test_runtime_api.py tests/test_inventory_api.py tests/test_automation_usage_api.py",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+    "./scripts/verify_web_api_deploy.sh https://coherence-network-production.up.railway.app https://coherence-web-production.up.railway.app"
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_health.py",
+    "api/tests/test_runtime_api.py",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Readiness and deploy verification now fail when core persistence domains are not PostgreSQL-backed, preventing non-persistent runtime in production.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/ready",
+      "https://coherence-network-production.up.railway.app/api/health/persistence"
+    ],
+    "test_flows": [
+      "api: request /api/health/persistence and verify pass_contract reflects persistence backend status across ideas/specs/runtime/provider domains",
+      "deploy: run verify_web_api_deploy.sh and require persistence contract check to pass before declaring public deployment healthy"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T05:35:00Z",
+    "environment": {
+      "python": "3.14",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_health.py tests/test_runtime_api.py tests/test_inventory_api.py tests/test_automation_usage_api.py",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI rerun and post-merge public deployment verification."
+  }
+}

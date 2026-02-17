@@ -6,6 +6,8 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.services import persistence_contract_service
+
 router = APIRouter()
 
 HEALTH_VERSION = "1.0.0"
@@ -69,6 +71,16 @@ async def ready(request: Request):
     is_ready = getattr(request.app.state, "graph_store", None) is not None
     if not is_ready:
         raise HTTPException(status_code=503, detail="not ready")
+    persistence_report = persistence_contract_service.evaluate(request.app)
+    if persistence_report.get("required") and not persistence_report.get("pass_contract"):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "persistence_contract_failed",
+                "failures": persistence_report.get("failures", []),
+                "domains": persistence_report.get("domains", {}),
+            },
+        )
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
     return ReadyResponse(
@@ -79,6 +91,12 @@ async def ready(request: Request):
         uptime_seconds=up,
         uptime_human=_uptime_human(up),
     )
+
+
+@router.get("/health/persistence")
+async def persistence_contract(request: Request):
+    """Return global persistence contract status for core domain data."""
+    return persistence_contract_service.evaluate(request.app)
 
 
 @router.get("/health", response_model=HealthResponse)
