@@ -24,7 +24,7 @@ _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
 # OpenClaw models (when context.executor == "openclaw")
-_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "openrouter/free")
+_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.1-codex")
 _OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
 
 # Routing: local first; use model_override in context for cloud/claude
@@ -75,6 +75,20 @@ _OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 
 _EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+# Heuristics to detect prompts that require repository-local context.
+_REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bthis repo\b", re.IGNORECASE),
+    re.compile(r"\bthis repository\b", re.IGNORECASE),
+    re.compile(r"\bcodebase\b", re.IGNORECASE),
+    re.compile(r"\bin (?:the )?repo\b", re.IGNORECASE),
+    re.compile(r"\bAGENTS\.md\b", re.IGNORECASE),
+    re.compile(r"\bCLAUDE\.md\b", re.IGNORECASE),
+    re.compile(r"\bdocs/[A-Za-z0-9_.\-\/]+\b", re.IGNORECASE),
+    re.compile(r"\bapi/[A-Za-z0-9_.\-\/]+\b", re.IGNORECASE),
+    re.compile(r"\bweb/[A-Za-z0-9_.\-\/]+\b", re.IGNORECASE),
+    re.compile(r"`[^`]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)`", re.IGNORECASE),
+    re.compile(r"\b[A-Za-z0-9_.\-]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)\b", re.IGNORECASE),
+)
 
 
 def _int_env(name: str, default: int) -> int:
@@ -136,6 +150,33 @@ def _first_available_executor(preferred: list[str]) -> str:
     return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
 
 
+def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
+    scope_hint = str(context.get("question_scope") or context.get("scope") or "").strip().lower()
+    if scope_hint in {"repo", "repository", "codebase"}:
+        return True
+    if scope_hint in {"open", "general"}:
+        return False
+
+    text = direction.strip()
+    if not text:
+        return False
+    return any(pattern.search(text) for pattern in _REPO_SCOPE_PATTERNS)
+
+
+def _repo_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="cursor")
+    return "cursor"
+
+
+def _open_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="openclaw")
+    return "openclaw"
+
+
 def _task_fingerprint(task_type: TaskType, direction: str) -> str:
     basis = f"{task_type.value}:{direction.strip().lower()}"
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()
@@ -185,6 +226,34 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
     if not task_fingerprint:
         task_fingerprint = _task_fingerprint(task_type, direction)
         context["task_fingerprint"] = task_fingerprint
+
+    if _is_repo_scoped_question(direction, context):
+        selected = _first_available_executor([
+            _repo_question_executor_default(),
+            "cursor",
+            "claude",
+            "openclaw",
+        ])
+        return selected, {
+            "policy_applied": True,
+            "reason": "repo_scoped_question",
+            "task_fingerprint": task_fingerprint,
+            "repo_executor_preference": _repo_question_executor_default(),
+        }
+
+    selected_open = _first_available_executor([
+        _open_question_executor_default(),
+        "openclaw",
+        "cursor",
+        "claude",
+    ])
+    if selected_open == "openclaw":
+        return selected_open, {
+            "policy_applied": True,
+            "reason": "open_question_default",
+            "task_fingerprint": task_fingerprint,
+            "open_question_executor": selected_open,
+        }
 
     retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
     failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
@@ -253,7 +322,7 @@ def _openclaw_command_template(task_type: TaskType) -> str:
     model = _OPENCLAW_MODEL_BY_TYPE[task_type]
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
-        'openclaw run "{{direction}}" --model {{model}}',
+        'codex exec "{{direction}}" --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

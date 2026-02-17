@@ -39,4 +39,6 @@ async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
         assert payload["executor"] == "openclaw"
         assert payload["tier"] == "openclaw"
         assert str(payload["model"]).startswith("openclaw/")
-        assert "openclaw" in str(payload["command_template"])
+        template = str(payload["command_template"])
+        assert "{{direction}}" in template
+        assert template.startswith("openclaw ") or template.startswith("codex exec ")
