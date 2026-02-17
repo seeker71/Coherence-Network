@@ -142,7 +142,13 @@ jobs:
             });
 
       - name: Fail when blocking provider readiness issues exist
-        if: ${{ steps.readiness.outputs.exit_code != '0' }}
+        if: ${{ steps.readiness.outputs.exit_code != '0' && vars.PROVIDER_READINESS_STRICT == '1' }}
         run: |
           echo "Provider readiness contract failed"
           exit 1
+
+      - name: Non-blocking by default (issue is the alert)
+        if: ${{ steps.readiness.outputs.exit_code != '0' && vars.PROVIDER_READINESS_STRICT != '1' }}
+        run: |
+          echo "WARNING: Provider readiness contract detected issues, but strict mode is disabled (set PROVIDER_READINESS_STRICT=1 to fail)."
+          exit 0

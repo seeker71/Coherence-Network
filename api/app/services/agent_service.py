@@ -902,7 +902,64 @@ def get_agent_integration_status() -> dict[str, Any]:
 def get_task(task_id: str) -> Optional[dict]:
     """Get task by id."""
     _ensure_store_loaded()
-    return _store.get(task_id)
+    task = _store.get(task_id)
+    if task is not None:
+        return task
+    # Fallback for multi-instance deploys: tasks may not be present on this instance's local store,
+    # but completion tracking events are persisted in the runtime event store.
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=2000)
+    except Exception:
+        return None
+
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        if str(metadata.get("tracking_kind") or "").strip() != "agent_task_completion":
+            continue
+        if str(metadata.get("task_id") or "").strip() != task_id:
+            continue
+        # Minimal reconstruction for UI and diagnostics.
+        status_raw = str(metadata.get("task_final_status") or "").strip()
+        try:
+            status = TaskStatus(status_raw) if status_raw else TaskStatus.COMPLETED
+        except ValueError:
+            status = TaskStatus.COMPLETED
+        task_type_raw = str(metadata.get("task_type") or "").strip()
+        try:
+            task_type = TaskType(task_type_raw) if task_type_raw else TaskType.IMPL
+        except ValueError:
+            task_type = TaskType.IMPL
+        recorded_at = getattr(event, "recorded_at", None) or _now()
+        model = str(metadata.get("model") or "unknown").strip() or "unknown"
+        command = str(metadata.get("repeatable_tool_call") or "").strip()
+        direction = str(metadata.get("direction") or "").strip()
+        if not direction and command:
+            direction = command[:240]
+        return {
+            "id": task_id,
+            "direction": direction or "(tracked completion)",
+            "task_type": task_type,
+            "status": status,
+            "model": model,
+            "command": command or "PATCH /api/agent/tasks/{task_id}",
+            "started_at": None,
+            "output": None,
+            "context": {"source": "runtime_event_fallback"},
+            "progress_pct": 100 if status == TaskStatus.COMPLETED else None,
+            "current_step": "completed" if status == TaskStatus.COMPLETED else None,
+            "decision_prompt": None,
+            "decision": None,
+            "claimed_by": str(metadata.get("worker_id") or metadata.get("agent_id") or "unknown"),
+            "claimed_at": None,
+            "created_at": recorded_at,
+            "updated_at": recorded_at,
+            "tier": str(metadata.get("provider") or "") or "unknown",
+        }
+    return None
 
 
 def list_tasks(
@@ -914,6 +971,65 @@ def list_tasks(
     """List tasks with optional filters. Sorted by created_at descending (newest first)."""
     _ensure_store_loaded()
     items = list(_store.values())
+
+    # Include tracked completions from the runtime event store so the UI can show tasks across restarts.
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=2000)
+    except Exception:
+        events = []
+
+    seen: set[str] = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        if str(metadata.get("tracking_kind") or "").strip() != "agent_task_completion":
+            continue
+        task_id = str(metadata.get("task_id") or "").strip()
+        if not task_id or task_id in seen:
+            continue
+        status_raw = str(metadata.get("task_final_status") or "").strip()
+        try:
+            derived_status = TaskStatus(status_raw) if status_raw else TaskStatus.COMPLETED
+        except ValueError:
+            derived_status = TaskStatus.COMPLETED
+        task_type_raw = str(metadata.get("task_type") or "").strip()
+        try:
+            derived_type = TaskType(task_type_raw) if task_type_raw else TaskType.IMPL
+        except ValueError:
+            derived_type = TaskType.IMPL
+        recorded_at = getattr(event, "recorded_at", None) or _now()
+        model = str(metadata.get("model") or "unknown").strip() or "unknown"
+        command = str(metadata.get("repeatable_tool_call") or "").strip()
+        direction = str(metadata.get("direction") or "").strip()
+        if not direction and command:
+            direction = command[:240]
+        items.append(
+            {
+                "id": task_id,
+                "direction": direction or "(tracked completion)",
+                "task_type": derived_type,
+                "status": derived_status,
+                "model": model,
+                "command": command or "PATCH /api/agent/tasks/{task_id}",
+                "started_at": None,
+                "output": None,
+                "context": {"source": "runtime_event_fallback"},
+                "progress_pct": 100 if derived_status == TaskStatus.COMPLETED else None,
+                "current_step": "completed" if derived_status == TaskStatus.COMPLETED else None,
+                "decision_prompt": None,
+                "decision": None,
+                "claimed_by": str(metadata.get("worker_id") or metadata.get("agent_id") or "unknown"),
+                "claimed_at": None,
+                "created_at": recorded_at,
+                "updated_at": recorded_at,
+                "tier": str(metadata.get("provider") or "") or "unknown",
+            }
+        )
+        seen.add(task_id)
+
     if status is not None:
         items = [t for t in items if t["status"] == status]
     if task_type is not None:
