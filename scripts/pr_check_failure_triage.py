@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,10 +20,42 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 from app.services import release_gate_service as gates  # noqa: E402
+try:  # noqa: SIM105
+    from app.services import telemetry_persistence_service  # type: ignore[attr-defined]  # noqa: E402
+except Exception:  # pragma: no cover - best effort import only
+    telemetry_persistence_service = None
 
 
 def _now_utc() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _record_external_tool_usage(
+    *,
+    tool_name: str,
+    provider: str,
+    operation: str,
+    resource: str,
+    status: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if telemetry_persistence_service is None:
+        return
+    try:
+        telemetry_persistence_service.append_external_tool_usage_event(
+            {
+                "event_id": f"tool_{uuid.uuid4().hex}",
+                "occurred_at": _now_utc(),
+                "tool_name": tool_name,
+                "provider": provider,
+                "operation": operation,
+                "resource": resource,
+                "status": status,
+                "payload": payload or {},
+            }
+        )
+    except Exception:
+        return
 
 
 def _hint_for_check(name: str) -> str:
@@ -264,6 +297,20 @@ def main() -> int:
         report["summary_after_rerun"] = _short_summary(report["open_prs"])
 
     report["has_blocking_failures"] = _has_blocking_failures(report["open_prs"])
+    _record_external_tool_usage(
+        tool_name="pr-check-failure-triage",
+        provider="github-actions",
+        operation="run",
+        resource=f"{args.repo}:{args.base}:{args.head_prefix}",
+        status="error" if report["has_blocking_failures"] else "success",
+        payload={
+            "open_pr_count": len(report["open_prs"]),
+            "has_blocking_failures": report["has_blocking_failures"],
+            "rerun_requested": bool(args.rerun_failed_actions),
+            "summary": report.get("summary"),
+            "summary_after_rerun": report.get("summary_after_rerun"),
+        },
+    )
     report_path = _write_report(Path(args.output_dir), report, args.head_prefix)
     report["report_path"] = str(report_path)
 

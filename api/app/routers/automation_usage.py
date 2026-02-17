@@ -24,6 +24,20 @@ async def get_automation_usage_snapshots(limit: int = Query(200, ge=1, le=2000))
     }
 
 
+@router.get("/automation/usage/external-tools")
+async def get_external_tool_usage_events(
+    limit: int = Query(200, ge=1, le=5000),
+    provider: str = Query("", description="Optional provider filter (e.g. github-actions)"),
+    tool_name: str = Query("", description="Optional tool filter (e.g. github-api, gh-cli)"),
+) -> dict:
+    rows = automation_usage_service.list_external_tool_usage_events(
+        limit=limit,
+        provider=provider,
+        tool_name=tool_name,
+    )
+    return {"count": len(rows), "events": rows}
+
+
 @router.get("/automation/usage/alerts")
 async def get_automation_usage_alerts(threshold_ratio: float = Query(0.2, ge=0.0, le=1.0)) -> dict:
     report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=threshold_ratio)
