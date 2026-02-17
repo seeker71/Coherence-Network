@@ -75,6 +75,7 @@ _OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 
 _EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+# Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
     re.compile(r"\bthis repository\b", re.IGNORECASE),
