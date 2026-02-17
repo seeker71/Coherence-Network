@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -69,6 +70,7 @@ async def test_change_request_vote_rejects_spec_update(
 ) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
     monkeypatch.setenv("CHANGE_REQUEST_MIN_APPROVALS", "1")
+    spec_id = f"spec-reject-{uuid4().hex[:8]}"
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         contributor = await client.post(
@@ -81,7 +83,7 @@ async def test_change_request_vote_rejects_spec_update(
         seeded_spec = await client.post(
             "/api/spec-registry",
             json={
-                "spec_id": "spec-reject",
+                "spec_id": spec_id,
                 "title": "Seed spec",
                 "summary": "Seed summary",
                 "created_by_contributor_id": contributor_id,
@@ -95,7 +97,7 @@ async def test_change_request_vote_rejects_spec_update(
                 "request_type": "spec_update",
                 "title": "Attempt risky spec update",
                 "payload": {
-                    "spec_id": "spec-reject",
+                    "spec_id": spec_id,
                     "summary": "Risky summary update",
                     "updated_by_contributor_id": contributor_id,
                 },
