@@ -184,6 +184,34 @@ async def test_runtime_events_persist_to_database_when_runtime_database_url_is_s
         assert any(row["endpoint"] == "/api/ideas" for row in rows)
 
 
+@pytest.mark.asyncio
+async def test_runtime_database_summary_handles_sqlite_naive_timestamps(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("RUNTIME_EVENTS_PATH", raising=False)
+    monkeypatch.setenv("RUNTIME_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'runtime.db'}")
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "api",
+                "endpoint": "/api/health",
+                "method": "GET",
+                "status_code": 200,
+                "runtime_ms": 9.5,
+            },
+        )
+        assert created.status_code == 201
+
+        summary = await client.get("/api/runtime/endpoints/summary", params={"seconds": 3600})
+        assert summary.status_code == 200
+        endpoints = summary.json().get("endpoints", [])
+        assert any(row.get("endpoint") == "/api/health" for row in endpoints)
+
+
 def test_verify_internal_vs_public_usage_contract_detects_missing_public_records(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -56,6 +56,17 @@ def enabled() -> bool:
     return bool(_database_url()) and not bool(os.getenv("RUNTIME_EVENTS_PATH", "").strip())
 
 
+def backend_info() -> dict[str, Any]:
+    url = _database_url()
+    backend = "postgresql" if "postgres" in url else ("sqlite" if url else "none")
+    return {
+        "enabled": enabled(),
+        "backend": backend,
+        "database_url": _redact_database_url(url) if url else "",
+        "events_file_override": bool(os.getenv("RUNTIME_EVENTS_PATH", "").strip()),
+    }
+
+
 def _create_engine(url: str):
     kwargs: dict[str, Any] = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
@@ -140,6 +151,11 @@ def list_events(limit: int = 100) -> list[RuntimeEvent]:
             metadata = json.loads(row.metadata_json) if row.metadata_json else {}
         except Exception:
             metadata = {}
+        recorded_at = row.recorded_at
+        if recorded_at.tzinfo is None:
+            # SQLite commonly returns naive datetimes even when timezone=True.
+            # Normalize to UTC so summary windows can compare safely.
+            recorded_at = recorded_at.replace(tzinfo=timezone.utc)
         out.append(
             RuntimeEvent(
                 id=row.id,
@@ -153,7 +169,22 @@ def list_events(limit: int = 100) -> list[RuntimeEvent]:
                 origin_idea_id=row.origin_idea_id,
                 metadata=metadata if isinstance(metadata, dict) else {},
                 runtime_cost_estimate=float(row.runtime_cost_estimate),
-                recorded_at=row.recorded_at,
+                recorded_at=recorded_at,
             )
         )
     return out
+
+
+def _redact_database_url(url: str) -> str:
+    if "@" not in url or "://" not in url:
+        return url
+    scheme, remainder = url.split("://", 1)
+    if "@" not in remainder:
+        return url
+    credentials, host = remainder.split("@", 1)
+    if ":" in credentials:
+        user = credentials.split(":", 1)[0]
+        credentials = f"{user}:***"
+    else:
+        credentials = "***"
+    return f"{scheme}://{credentials}@{host}"
