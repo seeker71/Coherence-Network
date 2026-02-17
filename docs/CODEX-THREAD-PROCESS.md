@@ -4,6 +4,9 @@ Date: 2026-02-14
 
 Purpose: ensure each Codex thread can work independently, commit only its own scope, and advance phases only when validation gates pass.
 
+Canonical setup reference:
+- `docs/WORKTREE-QUICKSTART.md` (mandatory for every new thread)
+
 ## Core Rules
 
 1. Scope isolation
@@ -16,6 +19,22 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
    - Do not move to next phase until current phase gates pass.
 
 ## Required Phase Gates
+
+### Phase -1: Worktree Setup Gate (required before Phase 0)
+
+Non-negotiable:
+- All implementation work happens in a linked worktree branch (`codex/*`).
+- Never start implementation from the primary workspace.
+
+Minimum startup sequence:
+
+```bash
+git fetch origin main
+git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
+cd ~/.claude-worktrees/Coherence-Network/<thread-name>
+git pull --ff-only origin main
+python3 scripts/ensure_worktree_start_clean.py --json
+```
 
 ### Phase 0: Start Gate (required before new task work)
 

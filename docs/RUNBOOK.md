@@ -254,6 +254,9 @@ This gate fails when:
 - current worktree has uncommitted local changes,
 - primary workspace still has leftover local changes from unfinished tasks.
 
+For the full one-page startup flow, use:
+- `docs/WORKTREE-QUICKSTART.md`
+
 ## Telemetry Migration To DB
 
 Migrate local telemetry files (`automation_usage_snapshots.json`, `friction_events.jsonl`) into DB-backed telemetry tables:
