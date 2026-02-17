@@ -18,6 +18,7 @@ node_modules/
 .next/
 out/
 .npm
+.cache/
 
 # IDE
 .idea/

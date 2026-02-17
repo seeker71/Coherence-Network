@@ -172,6 +172,107 @@ def _changed_paths_worktree() -> list[str]:
     return paths
 
 
+def _run_rebase_freshness_guard(base_ref: str) -> StepResult:
+    start = time.monotonic()
+    branch_proc = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    branch = (branch_proc.stdout or "").strip() or "unknown-branch"
+
+    # Keep base ref current when it points to a remote tracking branch.
+    if "/" in base_ref:
+        remote, _, remote_branch = base_ref.partition("/")
+        if remote and remote_branch:
+            fetch_proc = subprocess.run(
+                ["git", "fetch", "--quiet", remote, remote_branch],
+                cwd=REPO_ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if fetch_proc.returncode != 0:
+                out = ((fetch_proc.stdout or "") + "\n" + (fetch_proc.stderr or "")).strip()
+                return StepResult(
+                    name="rebase-freshness-guard",
+                    command=f"git fetch {remote} {remote_branch} && git rebase {base_ref}",
+                    ok=False,
+                    exit_code=fetch_proc.returncode,
+                    duration_seconds=round(time.monotonic() - start, 2),
+                    output_tail=(out or f"ERROR: failed to fetch {base_ref}")[-5000:],
+                    hint=f"Run `git fetch {remote} {remote_branch}` then `git rebase {base_ref}` before push.",
+                )
+
+    base_exists = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", base_ref],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if base_exists.returncode != 0:
+        return StepResult(
+            name="rebase-freshness-guard",
+            command=f"git fetch origin main && git rebase {base_ref}",
+            ok=False,
+            exit_code=1,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=f"ERROR: base ref not found locally: {base_ref}",
+            hint=f"Fetch base ref and rebase: `git fetch origin main && git rebase {base_ref}`.",
+        )
+
+    ancestor_proc = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", base_ref, "HEAD"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if ancestor_proc.returncode == 0:
+        return StepResult(
+            name="rebase-freshness-guard",
+            command=f"git fetch origin main && git rebase {base_ref}",
+            ok=True,
+            exit_code=0,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=f"Branch `{branch}` is rebased on `{base_ref}`.",
+            hint="Branch freshness check passed.",
+        )
+
+    behind_proc = subprocess.run(
+        ["git", "rev-list", "--count", f"HEAD..{base_ref}"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    ahead_proc = subprocess.run(
+        ["git", "rev-list", "--count", f"{base_ref}..HEAD"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    behind = (behind_proc.stdout or "").strip() or "unknown"
+    ahead = (ahead_proc.stdout or "").strip() or "unknown"
+    return StepResult(
+        name="rebase-freshness-guard",
+        command=f"git fetch origin main && git rebase {base_ref}",
+        ok=False,
+        exit_code=1,
+        duration_seconds=round(time.monotonic() - start, 2),
+        output_tail=(
+            f"ERROR: branch `{branch}` is not rebased on `{base_ref}`.\n"
+            f"ahead={ahead}, behind={behind}\n"
+            f"Run: git fetch origin main && git rebase {base_ref}"
+        )[-5000:],
+        hint=f"Rebase before push: `git fetch origin main && git rebase {base_ref}`.",
+    )
+
+
 def _changed_paths_range(base_ref: str, head_ref: str = "HEAD") -> tuple[list[str], str | None]:
     proc = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACMR", base_ref, head_ref],
@@ -620,37 +721,56 @@ def main() -> int:
 
     if args.mode in ("local", "all"):
         steps: list[StepResult] = []
-        for name, command in _local_steps(
-            args.base_ref,
-            args.skip_api_tests,
-            args.skip_web_build,
-            args.require_gh_auth,
-        ):
-            step = _run_step(name, command, cwd=REPO_ROOT)
-            steps.append(step)
-            if not step.ok:
-                break
-            if step.name == "spec-quality-guard":
-                evidence_step = _run_commit_evidence_guard(args.base_ref)
-                steps.append(evidence_step)
-                if not evidence_step.ok:
+        rebase_step = _run_rebase_freshness_guard(args.base_ref)
+        steps.append(rebase_step)
+        if not rebase_step.ok:
+            report["local_preflight"] = {
+                "status": "fail",
+                "steps": [
+                    {
+                        "name": s.name,
+                        "command": s.command,
+                        "ok": s.ok,
+                        "exit_code": s.exit_code,
+                        "duration_seconds": s.duration_seconds,
+                        "hint": s.hint,
+                        "output_tail": s.output_tail,
+                    }
+                    for s in steps
+                ],
+            }
+        else:
+            for name, command in _local_steps(
+                args.base_ref,
+                args.skip_api_tests,
+                args.skip_web_build,
+                args.require_gh_auth,
+            ):
+                step = _run_step(name, command, cwd=REPO_ROOT)
+                steps.append(step)
+                if not step.ok:
                     break
-        local_ok = all(s.ok for s in steps)
-        report["local_preflight"] = {
-            "status": "pass" if local_ok else "fail",
-            "steps": [
-                {
-                    "name": s.name,
-                    "command": s.command,
-                    "ok": s.ok,
-                    "exit_code": s.exit_code,
-                    "duration_seconds": s.duration_seconds,
-                    "hint": s.hint,
-                    "output_tail": s.output_tail,
-                }
-                for s in steps
-            ],
-        }
+                if step.name == "spec-quality-guard":
+                    evidence_step = _run_commit_evidence_guard(args.base_ref)
+                    steps.append(evidence_step)
+                    if not evidence_step.ok:
+                        break
+            local_ok = all(s.ok for s in steps)
+            report["local_preflight"] = {
+                "status": "pass" if local_ok else "fail",
+                "steps": [
+                    {
+                        "name": s.name,
+                        "command": s.command,
+                        "ok": s.ok,
+                        "exit_code": s.exit_code,
+                        "duration_seconds": s.duration_seconds,
+                        "hint": s.hint,
+                        "output_tail": s.output_tail,
+                    }
+                    for s in steps
+                ],
+            }
 
     if args.mode in ("remote", "all"):
         token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
