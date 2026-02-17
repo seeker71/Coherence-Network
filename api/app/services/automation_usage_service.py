@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -163,10 +164,24 @@ def _header_float(headers: httpx.Headers, *keys: str) -> float | None:
         raw = str(headers.get(key, "")).strip()
         if not raw:
             continue
-        try:
-            return float(raw)
-        except ValueError:
-            continue
+        # Support standard rate-limit header formats like:
+        # - "1000"
+        # - "1000;w=3600" (RFC 9233)
+        # - "1000, 2000;w=60" (multiple policies; take first numeric)
+        for part in raw.split(","):
+            token = part.strip()
+            if not token:
+                continue
+            token = token.split(";", 1)[0].strip()
+            if not token:
+                continue
+            match = re.search(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)", token)
+            if not match:
+                continue
+            try:
+                return float(match.group(0))
+            except ValueError:
+                continue
     return None
 
 
@@ -700,65 +715,62 @@ def _github_billing_url(owner: str, scope: str) -> str:
     return f"https://api.github.com/orgs/{owner}/settings/billing/actions"
 
 
-def _build_github_snapshot() -> ProviderUsageSnapshot:
-    token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
-    owner = os.getenv("GITHUB_BILLING_OWNER", "").strip()
-    scope = os.getenv("GITHUB_BILLING_SCOPE", "org").strip().lower()
-    if not token:
-        return ProviderUsageSnapshot(
-            id=f"provider_github_{int(time.time())}",
-            provider="github",
-            kind="github",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set GITHUB_TOKEN (or GH_TOKEN) to enable GitHub usage data."],
-        )
+def _github_billing_urls(*, owner: str, scope: str) -> list[str]:
+    urls: list[str] = []
+    normalized_scope = scope.strip().lower()
+    if owner and normalized_scope in {"org", "user"}:
+        urls.append(_github_billing_url(owner=owner, scope=normalized_scope))
+        # If scope is wrong for the owner (or token can't access billing), GitHub often returns 404.
+        urls.append(_github_billing_url(owner=owner, scope=("org" if normalized_scope == "user" else "user")))
+    # Fallback: authenticated user's billing endpoint (works when the token belongs to the billing account).
+    urls.append("https://api.github.com/user/settings/billing/actions")
+    return list(dict.fromkeys(urls))
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    billing_payload: dict[str, Any] = {}
-    rate_payload: dict[str, Any] = {}
-    billing_error = None
-    rate_error = None
-    billing_url = ""
 
-    if owner and scope in {"org", "user"}:
-        billing_url = _github_billing_url(owner=owner, scope=scope)
+def _github_fetch_billing_payload(
+    *,
+    client: httpx.Client,
+    owner: str,
+    scope: str,
+) -> tuple[dict[str, Any], str, str | None]:
+    payload: dict[str, Any] = {}
+    url_used = ""
+    last_error: str | None = None
+
+    for url in _github_billing_urls(owner=owner, scope=scope):
         try:
-            with httpx.Client(timeout=8.0, headers=headers) as client:
-                response = client.get(billing_url)
-                response.raise_for_status()
-                billing_payload = response.json()
-        except Exception as exc:
-            billing_error = str(exc)
-    else:
-        billing_error = "billing_owner_or_scope_not_configured"
-
-    try:
-        with httpx.Client(timeout=8.0, headers=headers) as client:
-            response = client.get("https://api.github.com/rate_limit")
+            response = client.get(url)
             response.raise_for_status()
-            rate_payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        rate_error = str(exc)
+            raw = response.json()
+            if isinstance(raw, dict):
+                payload = raw
+                url_used = url
+                last_error = None
+                break
+        except httpx.HTTPStatusError as exc:
+            status = int(getattr(exc.response, "status_code", 0) or 0)
+            if status in {403, 404}:
+                last_error = f"http_{status}"
+                continue
+            last_error = str(exc)
+        except Exception as exc:
+            last_error = str(exc)
 
-    if rate_error:
-        return ProviderUsageSnapshot(
-            id=f"provider_github_{int(time.time())}",
-            provider="github",
-            kind="github",
-            status="degraded",
-            data_source="provider_api",
-            notes=[f"GitHub rate-limit probe failed: {rate_error}"],
-            raw={"rate_limit_url": "https://api.github.com/rate_limit", "billing_url": billing_url},
-        )
+    if not payload and not owner:
+        last_error = last_error or "billing_owner_or_scope_not_configured"
+    return payload, url_used, last_error
 
+
+def _github_usage_metrics_and_raw(
+    *,
+    billing_payload: dict[str, Any],
+    rate_payload: dict[str, Any],
+    billing_url: str,
+) -> tuple[list[UsageMetric], dict[str, Any]]:
     included = float(billing_payload.get("included_minutes") or 0.0)
     used = float(billing_payload.get("total_minutes_used") or 0.0)
     remaining = max(0.0, included - used) if included > 0 else None
+
     resources = rate_payload.get("resources") if isinstance(rate_payload.get("resources"), dict) else {}
     core = resources.get("core") if isinstance(resources.get("core"), dict) else {}
     core_limit = float(core.get("limit") or 0.0)
@@ -789,9 +801,82 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
             )
         )
 
+    raw = {
+        "included_minutes": included,
+        "total_minutes_used": used,
+        "minutes_used_breakdown": billing_payload.get("minutes_used_breakdown"),
+        "rate_limit": resources,
+        "rate_limit_url": "https://api.github.com/rate_limit",
+        "billing_url": billing_url,
+    }
+    return metrics, raw
+
+
+def _build_github_snapshot() -> ProviderUsageSnapshot:
+    token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
+    owner = os.getenv("GITHUB_BILLING_OWNER", "").strip()
+    scope = os.getenv("GITHUB_BILLING_SCOPE", "org").strip().lower()
+    if not token:
+        return ProviderUsageSnapshot(
+            id=f"provider_github_{int(time.time())}",
+            provider="github",
+            kind="github",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set GITHUB_TOKEN (or GH_TOKEN) to enable GitHub usage data."],
+        )
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    billing_payload: dict[str, Any] = {}
+    rate_payload: dict[str, Any] = {}
+    billing_error = None
+    rate_error = None
+    billing_url = ""
+
+    with httpx.Client(timeout=8.0, headers=headers) as client:
+        billing_payload, billing_url, billing_error = _github_fetch_billing_payload(
+            client=client,
+            owner=owner,
+            scope=scope,
+        )
+
+    try:
+        with httpx.Client(timeout=8.0, headers=headers) as client:
+            response = client.get("https://api.github.com/rate_limit")
+            response.raise_for_status()
+            rate_payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        rate_error = str(exc)
+
+    if rate_error:
+        return ProviderUsageSnapshot(
+            id=f"provider_github_{int(time.time())}",
+            provider="github",
+            kind="github",
+            status="degraded",
+            data_source="provider_api",
+            notes=[f"GitHub rate-limit probe failed: {rate_error}"],
+            raw={"rate_limit_url": "https://api.github.com/rate_limit", "billing_url": billing_url},
+        )
+
+    metrics, raw = _github_usage_metrics_and_raw(
+        billing_payload=billing_payload,
+        rate_payload=rate_payload,
+        billing_url=billing_url,
+    )
+
     notes: list[str] = []
     if billing_error:
         notes.append(f"GitHub billing data unavailable: {billing_error}")
+        if billing_error.startswith("http_404") or "404" in billing_error:
+            notes.append(
+                "GitHub billing endpoints often return 404 when the token lacks billing access for the configured owner/scope. "
+                "Set GITHUB_BILLING_OWNER + GITHUB_BILLING_SCOPE (org|user), or use a token for the billing account."
+            )
 
     return ProviderUsageSnapshot(
         id=f"provider_github_{int(time.time())}",
@@ -801,14 +886,7 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
         data_source="provider_api",
         metrics=metrics,
         notes=notes,
-        raw={
-            "included_minutes": included,
-            "total_minutes_used": used,
-            "minutes_used_breakdown": billing_payload.get("minutes_used_breakdown"),
-            "rate_limit": resources,
-            "rate_limit_url": "https://api.github.com/rate_limit",
-            "billing_url": billing_url,
-        },
+        raw=raw,
     )
 
 
@@ -857,12 +935,12 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         models_url=models_url,
         rows=rows,
         headers=response.headers,
-        request_limit_keys=("x-ratelimit-limit-requests",),
-        request_remaining_keys=("x-ratelimit-remaining-requests",),
+        request_limit_keys=("x-ratelimit-limit-requests", "ratelimit-limit-requests", "ratelimit-limit"),
+        request_remaining_keys=("x-ratelimit-remaining-requests", "ratelimit-remaining-requests", "ratelimit-remaining"),
         request_window="minute",
         request_label="OpenAI request quota",
-        token_limit_keys=("x-ratelimit-limit-tokens",),
-        token_remaining_keys=("x-ratelimit-remaining-tokens",),
+        token_limit_keys=("x-ratelimit-limit-tokens", "ratelimit-limit-tokens"),
+        token_remaining_keys=("x-ratelimit-remaining-tokens", "ratelimit-remaining-tokens"),
         token_window="minute",
         token_label="OpenAI token quota",
         rate_header_keys=(
@@ -870,6 +948,12 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
             "x-ratelimit-remaining-requests",
             "x-ratelimit-limit-tokens",
             "x-ratelimit-remaining-tokens",
+            "ratelimit-limit",
+            "ratelimit-remaining",
+            "ratelimit-limit-requests",
+            "ratelimit-remaining-requests",
+            "ratelimit-limit-tokens",
+            "ratelimit-remaining-tokens",
         ),
         no_header_note="OpenAI models probe succeeded, but no request/token remaining headers were returned.",
     )
@@ -937,12 +1021,30 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         models_url=models_url,
         rows=rows,
         headers=response.headers,
-        request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
-        request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
+        request_limit_keys=(
+            "anthropic-ratelimit-requests-limit",
+            "x-ratelimit-limit-requests",
+            "ratelimit-limit-requests",
+            "ratelimit-limit",
+        ),
+        request_remaining_keys=(
+            "anthropic-ratelimit-requests-remaining",
+            "x-ratelimit-remaining-requests",
+            "ratelimit-remaining-requests",
+            "ratelimit-remaining",
+        ),
         request_window="minute",
         request_label="Claude request quota",
-        token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
-        token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
+        token_limit_keys=(
+            "anthropic-ratelimit-tokens-limit",
+            "x-ratelimit-limit-tokens",
+            "ratelimit-limit-tokens",
+        ),
+        token_remaining_keys=(
+            "anthropic-ratelimit-tokens-remaining",
+            "x-ratelimit-remaining-tokens",
+            "ratelimit-remaining-tokens",
+        ),
         token_window="minute",
         token_label="Claude token quota",
         rate_header_keys=(
@@ -950,6 +1052,16 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
             "anthropic-ratelimit-requests-remaining",
             "anthropic-ratelimit-tokens-limit",
             "anthropic-ratelimit-tokens-remaining",
+            "x-ratelimit-limit-requests",
+            "x-ratelimit-remaining-requests",
+            "x-ratelimit-limit-tokens",
+            "x-ratelimit-remaining-tokens",
+            "ratelimit-limit",
+            "ratelimit-remaining",
+            "ratelimit-limit-requests",
+            "ratelimit-remaining-requests",
+            "ratelimit-limit-tokens",
+            "ratelimit-remaining-tokens",
         ),
         no_header_note="Claude models probe succeeded, but no request/token remaining headers were returned.",
     )
@@ -1128,12 +1240,12 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             has_model_limits = _append_rate_limit_metrics(
                 metrics=metrics,
                 headers=model_response.headers,
-                request_limit_keys=("x-ratelimit-limit-requests",),
-                request_remaining_keys=("x-ratelimit-remaining-requests",),
+                request_limit_keys=("x-ratelimit-limit-requests", "ratelimit-limit-requests", "ratelimit-limit"),
+                request_remaining_keys=("x-ratelimit-remaining-requests", "ratelimit-remaining-requests", "ratelimit-remaining"),
                 request_window="minute",
                 request_label="OpenAI request quota",
-                token_limit_keys=("x-ratelimit-limit-tokens",),
-                token_remaining_keys=("x-ratelimit-remaining-tokens",),
+                token_limit_keys=("x-ratelimit-limit-tokens", "ratelimit-limit-tokens"),
+                token_remaining_keys=("x-ratelimit-remaining-tokens", "ratelimit-remaining-tokens"),
                 token_window="minute",
                 token_label="OpenAI token quota",
             )
@@ -1321,8 +1433,8 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
     required = [item.strip().lower() for item in (required_providers or _required_providers_from_env()) if item.strip()]
+    active_counts = _active_provider_usage_counts()
     if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
-        active_counts = _active_provider_usage_counts()
         for provider_name, count in active_counts.items():
             if count > 0:
                 required.append(provider_name)
@@ -1340,6 +1452,8 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         kind = snapshot.kind if snapshot is not None else str(_PROVIDER_CONFIG_RULES.get(provider, {}).get("kind", "custom"))
         status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
         is_required = provider in required_set
+        active_count = int(active_counts.get(provider, 0))
+        has_runtime_usage = active_count > 0 or bool((snapshot.raw if snapshot is not None else {}).get("runtime_task_runs"))
 
         if is_required and (not configured or status != "ok"):
             severity = "critical"
@@ -1348,7 +1462,11 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
             recommendations.append(
                 f"Configure provider '{provider}' ({', '.join(missing) if missing else 'connectivity/runtime checks'}) and re-run /api/automation/usage/readiness."
             )
-        elif (not configured) or status != "ok":
+        elif has_runtime_usage and ((not configured) or status != "ok"):
+            # Provider observed in runtime usage but not ready.
+            severity = "warning"
+        elif configured and status != "ok":
+            # Provider configured but failing provider probe.
             severity = "warning"
         else:
             severity = "info"
