@@ -28,7 +28,7 @@ N/A - no model changes in this spec.
 
 ## Acceptance Tests
 
-- `python3 scripts/audit_external_tools.py --json --fail-on-untracked`
+- Manual validation: `python3 scripts/audit_external_tools.py --json --fail-on-untracked` exits 0 and reports `untracked` lists are empty.
 
 ## Verification
 
@@ -53,4 +53,3 @@ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evid
 ## Decision Gates (if any)
 
 None.
-
