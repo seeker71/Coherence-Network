@@ -2,6 +2,12 @@
 
 This project deploys both API and web on Railway.
 
+## Vercel Note (Disable PR Deployments)
+
+If the web app is also connected to Vercel, ensure preview deployments are disabled to avoid Vercel deployment rate limits.
+
+This repo enforces "deploy only from `main`" via `vercel.json` and `web/vercel.json` (`git.deploymentEnabled`).
+
 ## Deployment Targets
 
 - API: `https://coherence-network-production.up.railway.app`
