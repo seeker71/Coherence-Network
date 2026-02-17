@@ -45,6 +45,11 @@ jobs:
           set +e
           cd api
           REQUIRED="${AUTOMATION_PROVIDER_VALIDATION_REQUIRED:-$AUTOMATION_REQUIRED_PROVIDERS}"
+          if [ -z "${REQUIRED// /}" ]; then
+            # Keep the contract meaningful even when repo variables are unset.
+            # Default to providers that are expected to be configured in CI.
+            REQUIRED="coherence-internal,railway"
+          fi
           python scripts/check_provider_readiness.py \
             --required-providers "$REQUIRED" \
             --run-probes \

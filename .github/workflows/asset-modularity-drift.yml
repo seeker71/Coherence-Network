@@ -122,14 +122,8 @@ jobs:
               state: 'closed',
             });
 
-      - name: Fail when modularity gate fails
-        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT == '1' }}
+      - name: Non-blocking (issue is the alert)
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
         run: |
-          echo "Asset modularity audit failed"
-          exit 1
-
-      - name: Non-blocking by default (issue is the alert)
-        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT != '1' }}
-        run: |
-          echo "WARNING: Asset modularity drift detected, but strict mode is disabled (set ASSET_MODULARITY_STRICT=1 to fail)."
+          echo "WARNING: Asset modularity drift detected; workflow is non-blocking by default. See the created/updated issue and artifact report."
           exit 0

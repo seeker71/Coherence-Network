@@ -24,12 +24,25 @@ jobs:
           cd api && pip install -e ".[dev]"
 
       - name: Validate commit evidence
-        if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          # Commit evidence is required for most changes, but we intentionally exempt:
+          # - Dependabot automation (cannot author evidence files).
+          # - Pure workflow/dependency-metadata diffs (e.g. .github/, package locks).
+          if [ "${GITHUB_ACTOR:-}" = "dependabot[bot]" ]; then
+            echo "Skipping commit evidence enforcement for dependabot."
+            exit 0
+          fi
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          CHANGED="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          if [ -n "$CHANGED" ] && echo "$CHANGED" | grep -qvE '^(\\.github/|web/package-lock\\.json|web/package\\.json)$'; then
+            : "evidence required"
+          else
+            echo "Only workflow/dependency metadata changed; skipping commit evidence enforcement."
+            exit 0
           fi
           python3 scripts/validate_commit_evidence.py \
             --base "$BASE_SHA" \
