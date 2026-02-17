@@ -24,7 +24,8 @@ jobs:
           cd api && pip install -e ".[dev]"
 
       - name: Enforce commit provenance evidence
-        if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+        # Skip dependabot PRs even when a human re-runs the workflow.
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
