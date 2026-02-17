@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/flow-page-top-blocker",
+  "commit_scope": "Flow page: surface the single top unblock task with an actionable payload, and show task direction inline in the priority queue.",
+  "files_owned": [
+    "web/app/flow/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-17_flow-top-blocker-ui.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "088"
+  ],
+  "task_ids": [
+    "flow-top-blocker-ui"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm ci",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_flow-top-blocker-ui.json"
+  ],
+  "change_files": [
+    "web/app/flow/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The /flow page makes the top unblock task explicit (one clear next action) and shows task direction inline to reduce decision friction.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/flow"
+    ],
+    "test_flows": [
+      "web:/flow -> confirm Top Blocking Task section renders when unblock_queue is non-empty",
+      "web:/flow -> confirm Unblock Priority Queue rows include task direction",
+      "web:/flow?idea_id=<id> -> confirm navigation from top blocker link filters correctly"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T10:04:43Z",
+    "commands": [
+      "cd web && npm ci",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deployment validation."
+  }
+}
