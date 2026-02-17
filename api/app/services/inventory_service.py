@@ -19,7 +19,7 @@ from app.models.agent import AgentTaskCreate, TaskType
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import (
     agent_service,
-    commit_evidence_registry_service,
+    commit_evidence_service,
     idea_lineage_service,
     idea_service,
     route_registry_service,
@@ -721,26 +721,28 @@ def _normalize_validation_status(value: Any) -> str:
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
     use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
     use_db = use_db_raw in {"1", "true", "yes", "on"}
     if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
-        required_raw = str(
-            os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
-            or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
-            or ""
-        ).strip().lower()
-        required = required_raw in {"1", "true", "yes", "on"}
-        backend = commit_evidence_registry_service.backend_info().get("backend")
-        use_db = required and backend == "postgresql"
+        if db_url_configured:
+            use_db = True
+        else:
+            required_raw = str(
+                os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+                or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+                or ""
+            ).strip().lower()
+            required = required_raw in {"1", "true", "yes", "on"}
+            backend = commit_evidence_service.backend_info().get("backend")
+            use_db = required and backend == "postgresql"
     if use_db:
         try:
-            commit_evidence_registry_service.import_from_dir(_commit_evidence_dir(), limit=limit)
-            rows = commit_evidence_registry_service.list_records(limit=limit)
-            if rows:
-                return rows
+            # When explicitly configured, treat the evidence store as source of truth
+            # (including "no rows" -> []) and do not fall back to scanning local files.
+            return commit_evidence_service.list_records(limit=limit)
         except Exception:
-            # Fall back to file/GitHub reads for resiliency.
-            pass
+            return []
 
     evidence_dir = _commit_evidence_dir()
     files = []
@@ -847,6 +849,18 @@ def _latest_commit_evidence_records(limit: int = 20) -> list[dict[str, Any]]:
         reverse=True,
     )
     return sorted_rows[:requested]
+
+
+def build_commit_evidence_inventory(limit: int = 50) -> dict[str, Any]:
+    requested = max(1, min(limit, 500))
+    items = _latest_commit_evidence_records(limit=requested)
+    info = commit_evidence_service.backend_info()
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "limit": requested,
+        "storage": info,
+        "items": items,
+    }
 
 
 def _route_evidence_probe_dir() -> Path:
@@ -2695,6 +2709,115 @@ def _discover_api_endpoints_from_source() -> list[dict[str, Any]]:
     return out
 
 
+def _web_route_from_source_path(source_path: Path, web_root: Path) -> str | None:
+    try:
+        rel = source_path.relative_to(web_root).as_posix()
+    except ValueError:
+        return None
+    if not rel.startswith("app/"):
+        return None
+    if rel.startswith("app/api/"):
+        return None
+    if not rel.endswith("/page.tsx"):
+        return None
+    route = rel.removeprefix("app/").removesuffix("/page.tsx")
+    if not route:
+        return "/"
+    return f"/{route}"
+
+
+def _normalize_web_api_reference_path(raw_path: str) -> str:
+    value = str(raw_path or "").strip()
+    if not value:
+        return ""
+    if "/api/" not in value:
+        return ""
+    value = value[value.find("/api/") :]
+    value = value.split("?", 1)[0].split("#", 1)[0].strip()
+    if not value.startswith("/api/"):
+        return ""
+    value = re.sub(r"\$\{[^}]+\}", "{param}", value)
+    value = re.sub(r"\[[^\\]]+\\]", "{param}", value)
+    return _normalize_endpoint_path(value)
+
+
+def _discover_web_api_reference_evidence() -> list[dict[str, Any]]:
+    web_root = _project_root() / "web"
+    if not web_root.exists():
+        return []
+    literal_pattern = re.compile(r"""["'`][^"'`]*?/api/[^"'`]*["'`]""")
+    out: list[dict[str, Any]] = []
+    for source_path in sorted(web_root.rglob("*.tsx")):
+        rel = source_path.relative_to(_project_root()).as_posix()
+        if rel.startswith("web/app/api/"):
+            continue
+        try:
+            lines = source_path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        web_route = _web_route_from_source_path(source_path, web_root)
+        for line_no, line in enumerate(lines, start=1):
+            for match in literal_pattern.finditer(line):
+                raw = match.group(0)[1:-1]
+                normalized = _normalize_web_api_reference_path(raw)
+                if not normalized:
+                    continue
+                evidence_type = "literal"
+                if "fetch(" in line:
+                    evidence_type = "fetch"
+                elif "href" in line or "Link" in line:
+                    evidence_type = "link"
+                out.append(
+                    {
+                        "path": normalized,
+                        "source_file": rel,
+                        "line": line_no,
+                        "web_route": web_route,
+                        "evidence_type": evidence_type,
+                        "is_dynamic_reference": "{param}" in normalized,
+                    }
+                )
+    return out
+
+
+def _path_template_regex(path_template: str) -> re.Pattern[str]:
+    escaped = re.escape(path_template)
+    escaped = re.sub(r"\\\{[^{}]+\\\}", r"[^/]+", escaped)
+    return re.compile(f"^{escaped}$")
+
+
+def _catalog_evidence_entry(path: str) -> dict[str, Any]:
+    return {
+        "path": path,
+        "source_file": "web/app/api-coverage/page.tsx",
+        "line": None,
+        "web_route": "/api-coverage",
+        "evidence_type": "catalog",
+        "is_dynamic_reference": "{" in path and "}" in path,
+    }
+
+
+def _matched_web_link_evidence_for_endpoint(
+    endpoint_path: str,
+    discovered: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    is_dynamic_endpoint = "{" in endpoint_path and "}" in endpoint_path
+    path_re = _path_template_regex(endpoint_path) if is_dynamic_endpoint else None
+    explicit: list[dict[str, Any]] = []
+    for row in discovered:
+        ref_path = str(row.get("path") or "")
+        if not ref_path:
+            continue
+        if ref_path == endpoint_path:
+            explicit.append(row)
+            continue
+        if is_dynamic_endpoint and path_re and bool(row.get("is_dynamic_reference")) and path_re.fullmatch(ref_path):
+            explicit.append(row)
+    explicit.sort(key=lambda item: (str(item.get("source_file") or ""), int(item.get("line") or 0)))
+    evidence = explicit[:10] + [_catalog_evidence_entry(endpoint_path)]
+    return evidence, len(explicit)
+
+
 def _evidence_signals_by_source_file(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     signals: dict[str, dict[str, Any]] = {}
     for record in records:
@@ -2780,6 +2903,7 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
     )
     usage_rows = runtime_service.summarize_by_endpoint(seconds=runtime_window_seconds)
     usage_by_endpoint = {row.endpoint: row for row in usage_rows}
+    web_references = _discover_web_api_reference_evidence()
 
     items: list[dict[str, Any]] = []
     for endpoint in endpoints:
@@ -2884,6 +3008,9 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
             gaps.append("canonical_route")
         elif canonical_methods and canonical_methods != methods:
             gaps.append("canonical_method_mismatch")
+        web_link_evidence, explicit_web_link_count = _matched_web_link_evidence_for_endpoint(
+            path, web_references
+        )
 
         items.append(
             {
@@ -2933,6 +3060,12 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                     "fully_traced": fully_traced,
                     "gaps": gaps,
                 },
+                "web_link": {
+                    "tracked": bool(web_link_evidence),
+                    "explicit_count": explicit_web_link_count,
+                    "catalog_route": "/api-coverage",
+                    "evidence": web_link_evidence,
+                },
             }
         )
 
@@ -2945,11 +3078,14 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
         "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
         "with_process": sum(1 for row in items if row["process"]["tracked"]),
         "with_validation": sum(1 for row in items if row["validation"]["tracked"]),
+        "with_web_link": sum(1 for row in items if row["web_link"]["tracked"]),
+        "with_explicit_web_link": sum(1 for row in items if int(row["web_link"]["explicit_count"]) > 0),
         "fully_traced": sum(1 for row in items if row["traceability"]["fully_traced"]),
         "missing_idea": sum(1 for row in items if not row["idea"]["tracked"]),
         "missing_spec": sum(1 for row in items if not row["spec"]["tracked"]),
         "missing_process": sum(1 for row in items if not row["process"]["tracked"]),
         "missing_validation": sum(1 for row in items if not row["validation"]["tracked"]),
+        "missing_web_link": sum(1 for row in items if not row["web_link"]["tracked"]),
     }
 
     missing_items = [row for row in items if not row["traceability"]["fully_traced"]]

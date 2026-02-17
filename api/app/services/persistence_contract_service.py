@@ -8,7 +8,7 @@ from typing import Any
 
 from app.adapters.postgres_store import PostgresGraphStore
 from app.services import (
-    commit_evidence_registry_service,
+    commit_evidence_service,
     idea_registry_service,
     runtime_event_store,
     spec_registry_service,
@@ -85,11 +85,11 @@ def evaluate(app: Any) -> dict[str, Any]:
     if required and usage_provider_info["snapshots_path_override"]:
         failures.append("provider_usage_file_override_enabled")
 
-    commit_evidence_info = commit_evidence_registry_service.backend_info()
+    commit_evidence_info = commit_evidence_service.backend_info()
     commit_evidence_tracking = {
         "ok": commit_evidence_info.get("backend") == "postgresql",
         "backend": commit_evidence_info.get("backend"),
-        "rows": int(commit_evidence_info.get("rows") or 0),
+        "record_rows": int(commit_evidence_info.get("record_rows") or 0),
         "note": "commit evidence tracking backend",
     }
     if required and not commit_evidence_tracking["ok"]:
