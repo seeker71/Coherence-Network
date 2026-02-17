@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -52,9 +53,10 @@ async def test_get_idea_by_id_and_404(monkeypatch: pytest.MonkeyPatch, tmp_path:
 async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    idea_id = f"new-contributor-idea-{uuid4().hex[:8]}"
 
     create_payload = {
-        "id": "new-contributor-idea",
+        "id": idea_id,
         "name": "Contributor-originated idea",
         "description": "Created through API for attribution pipeline.",
         "potential_value": 35.0,
@@ -69,13 +71,13 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         created = await client.post("/api/ideas", json=create_payload)
         assert created.status_code == 201
-        assert created.json()["id"] == "new-contributor-idea"
+        assert created.json()["id"] == idea_id
 
         duplicate = await client.post("/api/ideas", json=create_payload)
         assert duplicate.status_code == 409
 
         add_question = await client.post(
-            "/api/ideas/new-contributor-idea/questions",
+            f"/api/ideas/{idea_id}/questions",
             json={
                 "question": "How should this be validated publicly?",
                 "value_to_whole": 12.0,
@@ -85,7 +87,7 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
         assert add_question.status_code == 200
 
         add_question_duplicate = await client.post(
-            "/api/ideas/new-contributor-idea/questions",
+            f"/api/ideas/{idea_id}/questions",
             json={
                 "question": "How should this be validated publicly?",
                 "value_to_whole": 12.0,

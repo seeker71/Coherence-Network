@@ -98,3 +98,29 @@ def test_agent_tasks_persist_and_reload_from_disk(
     assert total == 1
     assert rows[0]["id"] == task_id
     assert rows[0]["status"] == TaskStatus.RUNNING
+
+
+def test_agent_store_isolated_between_pytest_test_contexts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_agent_task_persistence.py::first")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_test_context = None
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="first test context task",
+            task_type=TaskType.IMPL,
+        )
+    )
+    assert created["id"]
+    rows, total = agent_service.list_tasks(limit=50, offset=0)
+    assert total == 1
+
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_agent_task_persistence.py::second")
+    rows_after, total_after = agent_service.list_tasks(limit=50, offset=0)
+    assert total_after == 0
+    assert rows_after == []
