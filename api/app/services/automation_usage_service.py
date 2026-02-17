@@ -1293,6 +1293,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_openai_snapshot(),
         _build_config_only_snapshot("openrouter"),
         _build_config_only_snapshot("anthropic"),
+        _build_config_only_snapshot("openclaw"),
         _build_config_only_snapshot("cursor"),
         _build_railway_snapshot(),
     ]

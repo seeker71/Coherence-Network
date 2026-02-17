@@ -1,0 +1,76 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/merge-open-prs-validation-final",
+  "commit_scope": "Add mandatory local pre-push gate that runs worktree PR guard before push to prevent unchecked failures entering PRs.",
+  "files_owned": [
+    ".github/workflows/test.yml",
+    "Makefile",
+    "docs/WORKTREE-QUICKSTART.md",
+    ".githooks/pre-push",
+    "scripts/setup_pre_push_hook.sh",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_push-guard-hardening.json"
+  ],
+  "idea_ids": [
+    "delivery-process-hardening"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "merge-open-prs-prepush-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make install-pre-push-hook",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build"
+  ],
+  "change_files": [
+    "Makefile",
+    "docs/WORKTREE-QUICKSTART.md",
+    ".githooks/",
+    ".githooks/pre-push",
+    "scripts/setup_pre_push_hook.sh",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/test.yml",
+    "api/app/services/automation_usage_service.py",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T22:58:30Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "make install-pre-push-hook",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "PR 187 is still carrying pre-existing CI test failure; this change updates process to prevent similar misses next time."
+  }
+}
