@@ -1,7 +1,7 @@
 {
   "date": "2026-02-17",
   "thread_branch": "codex/postgres-file-tracking-migration",
-  "commit_scope": "Migrate file-based tracking domains (commit evidence, telemetry, ideas/specs, and graph entities for assets/contributors/contributions) to PostgreSQL-backed persistence and add legacy cleanup tooling",
+  "commit_scope": "Migrate file-based tracking domains (commit evidence, telemetry, ideas/specs, and graph entities for assets/contributors/contributions) to PostgreSQL-backed persistence, add legacy cleanup tooling, and harden release gate GitHub API reads against rate limiting in tests",
   "files_owned": [
     "api/app/services/commit_evidence_registry_service.py",
     "api/app/services/metrics_service.py",
@@ -13,6 +13,7 @@
     "api/app/services/persistence_contract_service.py",
     "api/scripts/migrate_local_telemetry_to_db.py",
     "api/scripts/migrate_tracking_domains_to_postgres.py",
+    "api/app/services/release_gate_service.py",
     "api/tests/test_commit_evidence_registry_service.py",
     "api/tests/test_metrics_db_migration.py",
     "api/tests/test_inventory_api.py",
@@ -57,6 +58,7 @@
   "evidence_refs": [
     "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
     "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+    "cd api && pytest -q tests/test_gates.py",
     "cd web && npm run build",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_postgres-tracking-metrics-migration.json"
   ],
@@ -71,6 +73,7 @@
     "api/app/services/persistence_contract_service.py",
     "api/scripts/migrate_local_telemetry_to_db.py",
     "api/scripts/migrate_tracking_domains_to_postgres.py",
+    "api/app/services/release_gate_service.py",
     "api/tests/test_commit_evidence_registry_service.py",
     "api/tests/test_metrics_db_migration.py",
     "api/tests/test_inventory_api.py",
@@ -84,6 +87,7 @@
     "commands": [
       "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
       "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+      "cd api && pytest -q tests/test_gates.py",
       "cd web && npm run build"
     ]
   },
