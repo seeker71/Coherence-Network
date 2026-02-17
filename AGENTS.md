@@ -13,6 +13,28 @@ Spec → Test → Implement → CI → Review → Merge
 - Do NOT modify tests to make implementation pass
 - Only modify files listed in spec/issue
 
+## Mandatory Delivery Contract (No Exceptions)
+
+1. Worktree-only execution
+   - Never edit or run implementation commands in the primary workspace.
+   - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
+2. Start gate (required before any edits)
+   - Run: `python3 scripts/ensure_worktree_start_clean.py --json`
+   - If it fails, stop and fix blockers first.
+3. Pre-commit local gate (required)
+   - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
+   - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
+   - If either fails, do not commit.
+4. Evidence contract (required per commit)
+   - Add/update `docs/system_audit/commit_evidence_<date>_<topic>.json`.
+   - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
+5. PR + CI contract
+   - Open PR immediately after push.
+   - Monitor checks until green, or report blocker with failing check links and remediation command.
+6. Finish contract
+   - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
+   - Do not start a new task while previous task has unresolved blocking checks.
+
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
