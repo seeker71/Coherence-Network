@@ -3,10 +3,13 @@
   "thread_branch": "codex/automation-endpoint-spec-traceability",
   "commit_scope": "Link automation usage/readiness endpoints to a tracked spec and enforce endpoint->spec traceability via canonical route metadata and inventory checks.",
   "files_owned": [
+    "AGENTS.md",
     "api/app/services/inventory_service.py",
     "api/app/services/route_registry_service.py",
     "config/canonical_routes.json",
     "api/tests/test_automation_usage_api.py",
+    "scripts/verify_worktree_local_web.sh",
+    "docs/CODEX-THREAD-PROCESS.md",
     "docs/SPEC-TRACKING.md",
     "docs/SPEC-COVERAGE.md",
     "specs/100-automation-provider-usage-readiness-api.md",
@@ -52,15 +55,18 @@
     "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
   ],
   "change_files": [
+    "AGENTS.md",
     "api/app/services/inventory_service.py",
     "api/app/services/route_registry_service.py",
     "config/canonical_routes.json",
     "api/tests/test_automation_usage_api.py",
+    "scripts/verify_worktree_local_web.sh",
+    "docs/CODEX-THREAD-PROCESS.md",
     "docs/SPEC-TRACKING.md",
     "docs/SPEC-COVERAGE.md",
     "specs/100-automation-provider-usage-readiness-api.md"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "e2e_validation": {
     "status": "pending",
     "expected_behavior_delta": "Automation usage endpoints now appear as spec-tracked in endpoint traceability inventory using explicit canonical spec linkage.",
