@@ -1,0 +1,71 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-change-contract-script-endpoints",
+  "commit_scope": "Align merged-change contract validation script defaults with service defaults by removing web root probe from public endpoint checks.",
+  "files_owned": [
+    "api/scripts/validate_merged_change_contract.py",
+    "api/tests/test_validate_merged_change_contract_script.py",
+    "docs/system_audit/commit_evidence_2026-02-17_change-contract-script-remove-web-root-probe.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "050"
+  ],
+  "task_ids": [
+    "change-contract-script-remove-web-root-probe"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/pytest -q tests/test_validate_merged_change_contract_script.py tests/test_release_gate_service.py::test_merged_change_contract_default_endpoints_exclude_web_root",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_change-contract-script-remove-web-root-probe.json"
+  ],
+  "change_files": [
+    "api/scripts/validate_merged_change_contract.py",
+    "api/tests/test_validate_merged_change_contract_script.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T03:49:00Z",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_validate_merged_change_contract_script.py tests/test_release_gate_service.py::test_merged_change_contract_default_endpoints_exclude_web_root",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_change-contract-script-remove-web-root-probe.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-web+railway-api"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR and mainline CI completion."
+  }
+}
