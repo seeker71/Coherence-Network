@@ -5,6 +5,7 @@ const API_URL = getApiBase();
 
 async function recordBeaconRuntime(statusCode: number, runtimeMs: number): Promise<void> {
   try {
+    // Track beacon endpoint usage itself so web API routes are visible in runtime coverage.
     await fetch(`${API_URL}/api/runtime/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
