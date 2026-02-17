@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 class FrictionEvent(BaseModel):
     id: str = Field(min_length=1)
     timestamp: datetime
+    endpoint: Optional[str] = None
     stage: str = Field(min_length=1)
     block_type: str = Field(min_length=1)
     severity: str = Field(min_length=1)

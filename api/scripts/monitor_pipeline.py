@@ -63,6 +63,7 @@ META_QUESTIONS_INTERVAL_SEC = 86400  # run meta-questions at most once per 24h
 MAINTAINABILITY_AUDIT_FILE = os.path.join(LOG_DIR, "maintainability_audit.json")
 MAINTAINABILITY_AUDIT_LAST_RUN_FILE = os.path.join(LOG_DIR, "maintainability_audit_last_run.json")
 MAINTAINABILITY_AUDIT_INTERVAL_SEC = 43200  # run maintainability audit at most once per 12h
+PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE = os.path.join(LOG_DIR, "public_deploy_contract_block_state.json")
 PROJECT_ROOT = os.path.dirname(_api_dir)
 
 # Priority order: 1 = highest (address first)
@@ -120,6 +121,13 @@ def _setup_logging(verbose: bool = False) -> logging.Logger:
     return log
 
 
+def _env_to_int(name: str, default: int, minimum: int = 1) -> int:
+    try:
+        return max(minimum, int(os.environ.get(name, str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
 def _load_issues() -> dict:
     if not os.path.isfile(ISSUES_FILE):
         return {"issues": [], "last_check": None, "history": []}
@@ -134,6 +142,33 @@ def _save_issues(data: dict) -> None:
     os.makedirs(LOG_DIR, exist_ok=True)
     with open(ISSUES_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+def _load_public_deploy_contract_state() -> dict[str, Any]:
+    if not os.path.isfile(PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE):
+        return {}
+    try:
+        with open(PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        return {}
+    return {}
+
+
+def _save_public_deploy_contract_state(state: dict[str, Any]) -> None:
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+
+
+def _clear_public_deploy_contract_state() -> None:
+    if os.path.isfile(PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE):
+        try:
+            os.remove(PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE)
+        except OSError:
+            return
 
 
 def _get_current_git_sha() -> str:
@@ -822,6 +857,90 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     pm = status.get("project_manager") or {}
     proc = _get_pipeline_process_args()
     effectiveness = None  # filled by backlog-alignment fetch or report fetch below
+    contract_block_state = _load_public_deploy_contract_state()
+
+    # Public deploy contract health: escalate if blocked long enough to avoid burning effort on unstable releases.
+    try:
+        contract_resp = client.get(f"{BASE}/api/gates/public-deploy-contract", timeout=10)
+        if contract_resp.status_code == 200:
+            contract_payload = contract_resp.json()
+        else:
+            contract_payload = {
+                "result": "blocked",
+                "reason": f"public_deploy_contract endpoint status_code={contract_resp.status_code}",
+            }
+    except Exception as ex:
+        log.debug("Could not check public deploy contract: %s", ex)
+        contract_payload = {}
+    contract_result = str(contract_payload.get("result") or "blocked").strip().lower()
+    contract_blocked = contract_result != "public_contract_passed"
+
+    if contract_result == "public_contract_passed":
+        _clear_public_deploy_contract_state()
+    elif contract_blocked:
+        now_iso = now.isoformat()
+        blocked_since = str(contract_block_state.get("blocked_since", "")).strip()
+        if not blocked_since:
+            blocked_since = now_iso
+        contract_block_state.update(
+            blocked_since=blocked_since,
+            last_checked=now_iso,
+            last_status=contract_payload.get("result"),
+            failing_checks=contract_payload.get("failing_checks"),
+        )
+        _save_public_deploy_contract_state(contract_block_state)
+        threshold = _env_to_int("PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS", 600)
+        started_ts = _parse_ts_iso(contract_block_state.get("blocked_since"))
+        blocked_seconds = (now - started_ts).total_seconds() if started_ts else 0.0
+        if blocked_seconds >= threshold:
+            fail_checks = contract_payload.get("failing_checks") or []
+            checks_hint = ""
+            if isinstance(fail_checks, list) and fail_checks:
+                checks_hint = f" Failing checks: {', '.join(str(item) for item in fail_checks[:5])}."
+            condition = "public_deploy_contract_blocked"
+            action = (
+                "Stop rollout actions, investigate contract blockers immediately, and execute rollback/recovery plan "
+                "before resuming tasks."
+            ) + checks_hint
+            heal_task_id = None
+            can_auto_fix = (
+                auto_fix
+                and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                and condition not in prev_conditions
+            )
+            if can_auto_fix:
+                try:
+                    resp = client.post(
+                        f"{BASE}/api/agent/tasks",
+                        json={
+                            "direction": (
+                                "Monitor detected public deploy contract blocked beyond escalation threshold. "
+                                "Pause rollout, investigate failing deploy checks, and execute rollback/recovery if needed."
+                            ),
+                            "task_type": "heal",
+                            "context": {
+                                "executor": "cursor",
+                                "monitor_condition": "public_deploy_contract_blocked",
+                            },
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 201:
+                        heal_task_id = resp.json().get("id")
+                        action = f"Created heal task {heal_task_id}. " + action
+                        log.info("Auto-fix: created heal task for public_deploy_contract_blocked")
+                except Exception as e:
+                    log.warning("Auto-fix heal task failed: %s", e)
+            _add_issue(
+                data,
+                condition,
+                "high",
+                f"Public deploy contract blocked for ~{int(blocked_seconds)}s. Escalate before release proceeds. "
+                f"First check: {contract_payload.get('result', 'blocked')}.",
+                action,
+            )
+            if heal_task_id:
+                data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Runner and PM not seen: pipeline processes down — critical
     if not proc.get("runner_seen") and not proc.get("pm_seen"):

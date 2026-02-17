@@ -24,7 +24,7 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     report = gates.evaluate_public_deploy_contract_report(
         repository=args.repo,
         branch=args.branch,

@@ -133,7 +133,7 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     if not token:
         out = {"result": "blocked", "reason": "GITHUB_TOKEN is required"}
         _emit(out, as_json=args.json)

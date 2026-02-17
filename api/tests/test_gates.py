@@ -88,6 +88,40 @@ async def test_gate_public_deploy_contract_returns_real_checks() -> None:
 
 
 @pytest.mark.asyncio
+async def test_gate_public_deploy_verification_job_lifecycle(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    jobs_path = tmp_path / "public_deploy_verification_jobs.json"
+    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(jobs_path))
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("GH_TOKEN", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created_resp = await client.post(
+            "/api/gates/public-deploy-verification-jobs",
+            params={"max_attempts": 1, "timeout": 8.0, "poll_seconds": 1.0},
+        )
+        assert created_resp.status_code == 200
+        created = created_resp.json()
+        assert created["status"] == "scheduled"
+        job_id = created["job_id"]
+
+        monkeypatch.setattr(
+            "app.services.release_gate_service.evaluate_public_deploy_contract_report",
+            lambda **kwargs: {"result": "public_contract_passed", "reason": "ok"},
+        )
+
+        tick_resp = await client.post(f"/api/gates/public-deploy-verification-jobs/{job_id}/tick")
+        assert tick_resp.status_code == 200
+        ticked = tick_resp.json()
+        assert ticked["status"] == "completed"
+
+        list_resp = await client.get("/api/gates/public-deploy-verification-jobs")
+        assert list_resp.status_code == 200
+        jobs = list_resp.json()
+        listed = next(item for item in jobs if item["job_id"] == job_id)
+        assert listed["status"] == "completed"
+
+
+@pytest.mark.asyncio
 async def test_gate_commit_traceability_returns_real_report_shape() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         sha = await _get_main_head_sha(client)

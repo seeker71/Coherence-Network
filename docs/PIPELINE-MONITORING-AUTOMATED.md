@@ -94,6 +94,7 @@ Response shape:
 | `api_unreachable` | high | pipeline-status request fails |
 | `metrics_unavailable` | low | GET /api/agent/metrics returns 404 |
 | `phase_6_7_not_worked` | medium | Backlog (006) has not reached Phase 6 — Phase 6/7 product-critical items not being worked; verify backlog maps to PLAN phases |
+| `public_deploy_contract_blocked` | high | Public deployment contract blocked longer than threshold; stop rollout and escalate |
 | `architecture_maintainability_drift` | high/medium | Maintainability audit reports blocking drift or baseline regression (architecture complexity/layer health) |
 | `runtime_placeholder_debt` | high | Runtime mock/fake/stub placeholder findings increased beyond baseline |
 
@@ -111,6 +112,11 @@ Response shape:
 | `repeated_failures` | Create heal task (when auto-fix also enabled) |
 | `architecture_maintainability_drift` | Create high-ROI heal task (when auto-fix also enabled) |
 | `runtime_placeholder_debt` | Create placeholder cleanup heal task (when auto-fix also enabled) |
+
+Suggested SLA knobs for deployment resilience (non-blocking by default):
+- `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS` (default `8`)
+- `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS` (default `60`)
+- `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS` (default `600`)
 
 ## How to React (Agent)
 
@@ -204,7 +210,7 @@ including value-lineage E2E, to pass.
 If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
-- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`, default `12`) and sleep (`PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`, default `15`) plus fail-fast conditions.
+- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS`, default `8`) and sleep (`PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS`, default `60`) plus fail-fast conditions.
 - Web on Railway should use native Railway GitHub auto-deploy (service branch `main`, auto deploy enabled, and CI gate settings aligned).
 
 Machine and human access:

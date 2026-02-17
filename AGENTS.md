@@ -69,6 +69,12 @@ Spec → Test → Implement → CI → Review → Merge
 # Mandatory first step for every thread
 python3 scripts/ensure_worktree_start_clean.py --json
 
+# Worktree setup for Codex thread start
+git fetch origin main
+git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
+cd ~/.claude-worktrees/Coherence-Network/<thread-name>
+python3 scripts/ensure_worktree_start_clean.py --json
+
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
@@ -81,6 +87,9 @@ cd web && npm run dev
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 # Optional npm cache override (default is per-worktree .cache/npm):
 NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
+
+# Public production verify (required before merge/roll-forward)
+./scripts/verify_web_api_deploy.sh
 
 # Start gate (required before starting a new task)
 python3 scripts/ensure_worktree_start_clean.py --json
@@ -107,6 +116,9 @@ cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next
 cd api && .venv/bin/python scripts/run_backlog_item.py --index 5  # run single item
 cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
 
+# Optional PR → public deploy contract validation
+cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/<thread-name> --wait-public
+
 # Autonomous pipeline (one command, no interaction; fatal issues only)
 cd api && ./scripts/run_autonomous.sh
 
@@ -119,6 +131,35 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 # With auto-restart on stale version (use watchdog)
 PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 ```
+
+## Full Pipeline for Codex Work
+
+- Clone or switch into the linked worktree path for each thread before submitting task commands.
+- Keep task execution in worktree mode by running all Codex/agent commands from that worktree.
+- Start each run with a file-impact manifest to avoid context overrun:
+  - `python3 scripts/context_budget.py <files-or-globs>`
+- Cache summaries in `.cache/context_budget/summary_cache.json`.
+  - Use `--force-summaries` only when a file changes materially or cache is stale.
+- Codex/openclaw execution path is already wired for worktree mode:
+  - default command template includes `codex exec ... --model gpt-5.3-codex-spark --reasoning-effort high --worktree`.
+  - set `OPENCLAW_MODEL` to override if needed.
+- Suggested full deployment flow:
+  - `./scripts/verify_worktree_local_web.sh` (local API+web contract)
+  - `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS)
+  - For automated long-running instances, rely on `.github/workflows/public-deploy-contract.yml` (schedule + on-push) and keep `RAILWAY_*` + `GITHUB_TOKEN` secrets set so retries and reporting survive process restarts.
+- Keep cost pressure controlled:
+  - Set per-task budget inputs where possible (`max_cost_usd`, `estimated_cost_usd`) and environment budgets (`AGENT_TASK_MAX_COST_USD`).
+  - Enforce an internal rule to use <=1/3 of known 8h/week usage windows for a single loop before escalation.
+  - Treat `cost_overrun` and `paid_provider_blocked` friction events as execution blockers until explicitly reviewed.
+  - Paid-provider window settings:
+    - `PAID_TOOL_8H_LIMIT` for the rolling 8h call cap.
+    - `PAID_TOOL_WEEK_LIMIT` for the rolling 7-day call cap.
+    - `PAID_TOOL_WINDOW_BUDGET_FRACTION` for hard cap fraction (default `0.333`).
+
+- Context-budget workflow before large reads:
+  - Start each large-read session with `python3 scripts/context_budget.py --token-budget 50000 <file-globs>`.
+  - Reuse `.cache/context_budget/summary_cache.json` to choose what to open first.
+  - If a file still risks overrun, use `--force-summaries` then read minimal slices.
 
 ## Conventions
 

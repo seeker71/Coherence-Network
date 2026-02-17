@@ -88,15 +88,15 @@ jobs:
         if: ${{ steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REVALIDATE_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || '12' }}
-          REVALIDATE_SLEEP_SECONDS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS || '15' }}
+          PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || '8' }}
+          PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS || vars.PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS || '60' }}
         run: |
           set +e
           code=2
           previous_fail_sig=""
           unchanged_fail_count=0
-          max_attempts="${REVALIDATE_MAX_ATTEMPTS:-12}"
-          sleep_seconds="${REVALIDATE_SLEEP_SECONDS:-15}"
+          max_attempts="${PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS:-8}"
+          sleep_seconds="${PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS:-60}"
 
           for i in $(seq 1 "$max_attempts"); do
             cd api

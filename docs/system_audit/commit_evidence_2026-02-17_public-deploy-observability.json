@@ -1,0 +1,160 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/public-observability-deploy",
+  "commit_scope": "Add runtime and agent execution observability controls for paid-provider usage windows, friction reporting, and public deploy contract retry defaults; add context-size budget tools.",
+  "files_owned": [
+    ".github/workflows/public-deploy-contract.yml",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "api/.env.example",
+    "api/app/models/agent.py",
+    "api/app/models/friction.py",
+    "api/app/models/idea.py",
+    "api/app/models/runtime.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/gates.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/github_client.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/auto_heal_deploy_gates.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/scripts/validate_merged_change_contract.py",
+    "api/scripts/validate_pr_to_public.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_gates.py",
+    "api/tests/test_release_gate_service.py",
+    "api/tests/test_runtime_api.py",
+    "api/tests/test_runtime_event_store_precedence.py",
+    "config/canonical_routes.json",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-15_runtime-telemetry-db-precedence.json",
+    "docs/system_audit/commit_evidence_2026-02-17_public-deploy-observability.json",
+    "scripts/context_budget.py",
+    "specs/107-runtime-telemetry-db-precedence.md"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "006"
+  ],
+  "task_ids": [
+    "runtime-observability-deploy-readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5.3-codex"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. pytest -q tests/test_runtime_api.py::test_runtime_endpoint_summary_includes_paid_usage_fields tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded",
+    "python3 scripts/verify_web_api_deploy.sh",
+    "python3 api/scripts/validate_public_deploy_contract.py --json",
+    "python3 api/scripts/validate_merged_change_contract.py"
+  ],
+  "change_files": [
+    ".github/workflows/public-deploy-contract.yml",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "api/.env.example",
+    "api/app/models/agent.py",
+    "api/app/models/friction.py",
+    "api/app/models/idea.py",
+    "api/app/models/runtime.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/gates.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/github_client.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/auto_heal_deploy_gates.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/scripts/validate_merged_change_contract.py",
+    "api/scripts/validate_pr_to_public.py",
+    "api/scripts/validate_public_deploy_contract.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_gates.py",
+    "api/tests/test_release_gate_service.py",
+    "api/tests/test_runtime_api.py",
+    "api/tests/test_runtime_event_store_precedence.py",
+    "config/canonical_routes.json",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-15_runtime-telemetry-db-precedence.json",
+    "scripts/context_budget.py",
+    "specs/107-runtime-telemetry-db-precedence.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public instance should reflect paid-provider usage telemetry fields on runtime endpoint summaries and enforce usage-window budget blocks with explicit friction events.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}/execute?force_paid_providers=true",
+      "https://coherence-network-production.up.railway.app/api/friction/events"
+    ],
+    "test_flows": [
+      "POST /api/agent/tasks with openrouter model -> GET /api/agent/tasks/{id} expected failed/blocked or completed by budget policy",
+      "POST /api/runtime/events with paid tool metadata and then verify summary includes paid_tool_event_count and paid_tool_ratio",
+      "python3 api/scripts/validate_public_deploy_contract.py --json on updated public deployment"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T22:44:01Z",
+    "environment": {
+      "python": "3.14.3"
+    },
+    "commands": [
+      "cd api && PYTHONPATH=. pytest -q tests/test_runtime_api.py::test_runtime_endpoint_summary_includes_paid_usage_fields tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded",
+      "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment verification after merge to main."
+  }
+}

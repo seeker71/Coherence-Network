@@ -44,6 +44,14 @@
       "idea_id": "portfolio-governance"
     },
     {
+      "path": "/api/runtime/endpoints/attention",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Endpoint attention report for paid-provider and friction-aware prioritization",
+      "idea_id": "coherence-network-agent-pipeline"
+    },
+    {
       "path": "/api/runtime/exerciser/run",
       "methods": [
         "POST"
@@ -308,6 +316,39 @@
       ],
       "purpose": "Unified high-impact friction entry points from failures, high-cost tasks, and CI usage waste",
       "idea_id": "coherence-network-agent-pipeline"
+    },
+    {
+      "path": "/api/gates/public-deploy-contract",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Check that public API/web deployment matches branch-head expectations",
+      "idea_id": "oss-interface-alignment"
+    },
+    {
+      "path": "/api/gates/public-deploy-verification-jobs",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "purpose": "Create and list persisted public-deploy verification jobs",
+      "idea_id": "oss-interface-alignment"
+    },
+    {
+      "path": "/api/gates/public-deploy-verification-jobs/{job_id}/tick",
+      "methods": [
+        "POST"
+      ],
+      "purpose": "Manually run one persisted public-deploy verification job",
+      "idea_id": "oss-interface-alignment"
+    },
+    {
+      "path": "/api/gates/public-deploy-verification-jobs/tick",
+      "methods": [
+        "POST"
+      ],
+      "purpose": "Tick due public-deploy verification jobs for scheduled retries",
+      "idea_id": "oss-interface-alignment"
     }
   ],
   "web_routes": [
