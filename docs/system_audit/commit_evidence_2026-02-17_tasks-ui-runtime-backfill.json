@@ -1,0 +1,95 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/fix-tasks-ui-empty",
+  "commit_scope": "Fix Tasks UI emptiness across deploy restarts by backfilling agent tasks from persisted runtime completion events; adjust CI evidence enforcement to run on PRs (skip dependabot) and make scheduled contract workflows non-blocking by default.",
+  "files_owned": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/asset_value_update.yml",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_tasks_runtime_fallback.py",
+    "docs/system_audit/commit_evidence_2026-02-17_tasks-ui-runtime-backfill.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "tasks-ui-runtime-backfill"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_tasks_runtime_fallback.py tests/test_agent_usage_tracking_api.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_tasks-ui-runtime-backfill.json"
+  ],
+  "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/asset_value_update.yml",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_tasks_runtime_fallback.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Vercel /tasks can show completed agent tasks even after Railway restarts because the API lists tasks derived from persisted runtime completion events.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "api: ensure a /tool:agent-task-completion event exists for a task_id, then GET /api/agent/tasks and confirm the id is present",
+      "web: open /tasks?task_id=<id> and confirm it renders the matching task"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T08:31:00Z",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_tasks_runtime_fallback.py tests/test_agent_usage_tracking_api.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI, deployment, and web verification."
+  }
+}
+
