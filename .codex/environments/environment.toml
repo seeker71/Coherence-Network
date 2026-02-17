@@ -1,0 +1,50 @@
+name = "coherence-network"
+description = "Coherence Network enforced worktree delivery environment"
+workspace_root = "/Users/ursmuff/source/Coherence-Network"
+
+[startup]
+required = true
+commands = [
+  "python3 scripts/ensure_worktree_start_clean.py --json"
+]
+
+[validation.local]
+commands = [
+  "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+  "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+  "./scripts/verify_worktree_local_web.sh"
+]
+
+[validation.gates]
+commands = [
+  "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+  "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+  "python3 scripts/validate_workflow_references.py"
+]
+
+[validation.api]
+commands = [
+  "cd api && .venv/bin/pytest -v",
+  "cd api && .venv/bin/pytest -v --ignore=tests/holdout"
+]
+
+[validation.web]
+commands = [
+  "cd web && npm ci",
+  "cd web && npm run build"
+]
+
+[validation.pipeline]
+commands = [
+  "cd api && .venv/bin/python scripts/check_pipeline.py --json",
+  "cd api && ./scripts/ensure_effective_pipeline.sh"
+]
+
+[validation.deploy]
+commands = [
+  "./scripts/verify_full_deployment.sh",
+  "./scripts/verify_web_api_deploy.sh"
+]
+
+[policy]
+finished_definition = "A task is finished only after start gate, local gates, CI checks, deployment, and successful public verification."

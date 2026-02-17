@@ -1,0 +1,66 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/update-agent-env",
+  "commit_scope": "Align AGENTS.md and .codex environment configuration with mandatory worktree/start/pre-commit/CI+deploy follow-through contract.",
+  "files_owned": [
+    "AGENTS.md",
+    ".codex/environments/environment.toml",
+    "docs/system_audit/commit_evidence_2026-02-17_agent-and-environment-contract.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration"
+  ],
+  "task_ids": [
+    "task-align-agent-and-environment-contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "process-hardening",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "AGENTS.md",
+    ".codex/environments/environment.toml",
+    "scripts/ensure_worktree_start_clean.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/check_pr_followthrough.py"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    ".codex/environments/environment.toml",
+    "docs/system_audit/commit_evidence_2026-02-17_agent-and-environment-contract.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -c \"import tomllib; tomllib.loads(open('.codex/environments/environment.toml','rb').read().decode())\"",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_agent-and-environment-contract.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR checks and merge."
+  }
+}
