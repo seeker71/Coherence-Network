@@ -36,6 +36,14 @@ type AutomationUsageResponse = {
   providers: ProviderSnapshot[];
   unavailable_providers: string[];
   tracked_providers: number;
+  limit_coverage?: {
+    providers_considered: number;
+    providers_with_limit_metrics: number;
+    providers_with_remaining_metrics: number;
+    providers_missing_limit_metrics: string[];
+    providers_partial_limit_metrics: string[];
+    coverage_ratio: number;
+  };
 };
 
 type UsageAlert = {
@@ -168,7 +176,30 @@ export default async function AutomationPage() {
           validation_required {validation.required_providers.length} | all_required_validated {validation.all_required_validated ? "yes" : "no"} |
           blocking {validation.blocking_issues.length}
         </p>
+        {usage.limit_coverage && (
+          <p className="text-muted-foreground">
+            limit_coverage {Math.round((usage.limit_coverage.coverage_ratio ?? 0) * 100)}% | with_limit{" "}
+            {usage.limit_coverage.providers_with_limit_metrics}/{usage.limit_coverage.providers_considered} | with_remaining{" "}
+            {usage.limit_coverage.providers_with_remaining_metrics}
+          </p>
+        )}
       </section>
+
+      {usage.limit_coverage && (
+        <section className="rounded border p-4 space-y-2 text-sm">
+          <h2 className="font-semibold">Usage Limit Coverage</h2>
+          {usage.limit_coverage.providers_missing_limit_metrics.length > 0 && (
+            <p className="text-muted-foreground">
+              missing_limit_metrics {usage.limit_coverage.providers_missing_limit_metrics.join(", ")}
+            </p>
+          )}
+          {usage.limit_coverage.providers_partial_limit_metrics.length > 0 && (
+            <p className="text-muted-foreground">
+              partial_limit_metrics {usage.limit_coverage.providers_partial_limit_metrics.join(", ")}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="rounded border p-4 space-y-3 text-sm">
         <h2 className="font-semibold">Provider Validation Contract</h2>
