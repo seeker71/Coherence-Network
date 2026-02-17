@@ -1,13 +1,6 @@
 name: Auto Heal Deploy Gates
 
 on:
-  workflow_run:
-    workflows:
-      - Public Deploy Contract
-      - Change Contract
-    types: [completed]
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       sha:
@@ -15,23 +8,11 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: auto-heal-deploy-gates-${{ github.event.workflow_run.head_sha || github.sha }}
-  cancel-in-progress: true
-
 jobs:
   heal-main-checks:
     concurrency:
-      group: auto-heal-deploy-gates-job-${{ github.event.workflow_run.head_sha || github.sha }}
+      group: auto-heal-deploy-gates-job-${{ github.event.inputs.sha || github.sha }}
       cancel-in-progress: true
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.run_attempt == 1 &&
-        github.event.workflow_run.actor.login != 'github-actions[bot]' &&
-        contains(fromJSON('["failure","cancelled","timed_out","action_required","startup_failure"]'), github.event.workflow_run.conclusion)
-      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,7 +32,7 @@ jobs:
       - name: Auto-heal failed required checks
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sha || github.event.workflow_run.head_sha }}
+          TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
         run: |
           cd api
           python scripts/auto_heal_deploy_gates.py \
