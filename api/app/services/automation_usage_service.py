@@ -40,7 +40,10 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
     "anthropic": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
     "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
-    "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
+    # "openclaw" is an executor label in this repo (server-side OpenRouter or local Codex template),
+    # not a distinct provider with its own metering API. Treat it as configured when an
+    # underlying provider key is available.
+    "openclaw": {"kind": "custom", "any_of": ["OPENROUTER_API_KEY", "OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
 }
 
@@ -556,12 +559,16 @@ def _infer_provider_from_model(model_name: str) -> str:
     model = model_name.strip().lower()
     if not model:
         return ""
+    # Executors may prefix the underlying model (e.g. openclaw/openrouter/free). We want to
+    # attribute usage to the underlying provider, not the executor label.
+    if model.startswith(("openclaw/", "cursor/")):
+        model = model.split("/", 1)[1].strip()
+        if not model:
+            return ""
     if "codex" in model:
         return "openai-codex"
     if model.startswith("cursor/"):
         return "cursor"
-    if model.startswith("openclaw/"):
-        return "openclaw"
     if model.startswith("openrouter/") or "openrouter" in model:
         return "openrouter"
     if "claude" in model:
@@ -595,7 +602,9 @@ def _active_provider_usage_counts() -> dict[str, int]:
             counts[provider] = counts.get(provider, 0) + value
 
     executor_rows = by_executor if isinstance(by_executor, dict) else {}
-    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "claude"}
+    # Do not attribute executor-level aggregates (e.g. openclaw) as a standalone provider.
+    # Prefer model-based attribution for underlying providers (openrouter/openai/etc).
+    executor_provider_map = {"cursor": "cursor", "claude": "claude"}
     for executor_name, row in executor_rows.items():
         provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
         if not provider:
@@ -1173,7 +1182,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_config_only_snapshot("openrouter"),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("cursor"),
-        _build_config_only_snapshot("openclaw"),
         _build_railway_snapshot(),
     ]
     for snapshot in providers:
@@ -1403,13 +1411,16 @@ def _probe_openclaw() -> tuple[bool, str]:
     if openclaw_key:
         return True, "ok_via_openclaw_key"
 
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if openrouter_key:
+        return True, "ok_via_openrouter_key"
+
     active = _active_provider_usage_counts()
-    openclaw_active = int(active.get("openclaw", 0))
     openai_codex_active = int(active.get("openai-codex", 0))
     openai_ok, openai_detail = _probe_openai_codex()
-    if openai_ok and (openclaw_active > 0 or openai_codex_active > 0):
+    if openai_ok and openai_codex_active > 0:
         return True, f"ok_via_openai_codex_backend:{openai_detail}"
-    return False, "missing_openclaw_key_and_openai_codex_backend"
+    return False, "missing_openrouter_key_and_openai_codex_backend"
 
 
 def _probe_github() -> tuple[bool, str]:
@@ -1545,8 +1556,6 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         inferred = _infer_provider_from_model(model)
         if inferred:
             providers.add(inferred)
-        if executor == "openclaw":
-            providers.add("openclaw")
         if worker_id.startswith("openai-codex") or agent_id.startswith("openai-codex"):
             providers.add("openai-codex")
         if "codex" in model.lower() or repeatable_tool_call.startswith("codex "):
