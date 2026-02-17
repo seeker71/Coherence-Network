@@ -249,3 +249,4 @@ async def test_openclaw_openrouter_override_tracks_openrouter_provider(
         metadata = completion_events[0]["metadata"]
         assert metadata["provider"] == "openrouter"
         assert metadata["billing_provider"] == "openrouter"
+        assert metadata["is_paid_provider"] is False
