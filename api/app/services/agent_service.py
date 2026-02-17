@@ -1311,6 +1311,175 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
     }
 
 
+def _pipeline_task_status_item(
+    task: dict[str, Any], now: datetime
+) -> tuple[str, dict[str, Any]]:
+    created = task.get("created_at")
+    updated = task.get("updated_at")
+    started = task.get("started_at")
+    st = task.get("status")
+    st_val = st.value if hasattr(st, "value") else str(st)
+
+    def _ts(obj: Any) -> str:
+        return obj.isoformat() if hasattr(obj, "isoformat") else str(obj)
+
+    def _seconds_ago(ts: Any) -> int | None:
+        if ts is None:
+            return None
+        try:
+            delta = now - ts
+            return int(delta.total_seconds())
+        except Exception:
+            return None
+
+    def _duration(start_ts: Any, end_ts: Any) -> int | None:
+        if start_ts is None or end_ts is None:
+            return None
+        try:
+            delta = end_ts - start_ts
+            return int(delta.total_seconds())
+        except Exception:
+            return None
+
+    item = {
+        "id": task.get("id"),
+        "task_type": task.get("task_type"),
+        "model": task.get("model"),
+        "direction": (task.get("direction") or "")[:100],
+        "claimed_by": task.get("claimed_by"),
+        "created_at": _ts(created),
+        "updated_at": _ts(updated),
+        "wait_seconds": _seconds_ago(created) if st_val == "pending" else None,
+        "running_seconds": _seconds_ago(started) if st_val == "running" and started else None,
+        "duration_seconds": _duration(started, updated)
+        if st_val in ("completed", "failed") and started and updated
+        else None,
+    }
+    return st_val, item
+
+
+def _collect_pipeline_status_items(now: datetime) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    running: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    completed: list[dict[str, Any]] = []
+    for t in _store.values():
+        st_val, item = _pipeline_task_status_item(t, now=now)
+        if st_val == "running":
+            running.append(item)
+        elif st_val == "pending":
+            pending.append(item)
+        else:
+            completed.append(item)
+    return running, pending, completed
+
+
+def _pipeline_latest_activity(
+    running: list[dict[str, Any]],
+    completed: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    latest_request: dict[str, Any] | None = None
+    latest_response: dict[str, Any] | None = None
+
+    if running:
+        task = _store.get(running[0]["id"])
+        if task:
+            latest_request = {
+                "task_id": task.get("id"),
+                "status": "running",
+                "direction": task.get("direction"),
+                "prompt_preview": (task.get("command") or "")[:500],
+            }
+
+    if completed:
+        task = _store.get(completed[0]["id"])
+        if task:
+            if not latest_request:
+                latest_request = {
+                    "task_id": task.get("id"),
+                    "status": task.get("status"),
+                    "direction": task.get("direction"),
+                    "prompt_preview": (task.get("command") or "")[:500],
+                }
+            out = task.get("output") or ""
+            latest_response = {
+                "task_id": task.get("id"),
+                "status": task.get("status"),
+                "output_preview": out[:2000],
+                "output_len": len(out),
+            }
+
+    return latest_request, latest_response
+
+
+def _pipeline_attention_summary(
+    running: list[dict[str, Any]],
+    pending: list[dict[str, Any]],
+    completed: list[dict[str, Any]],
+) -> dict[str, Any]:
+    attention_flags: list[str] = []
+    stuck = False
+    if pending and not running:
+        wait_secs = [p.get("wait_seconds") for p in pending if p.get("wait_seconds") is not None]
+        if wait_secs and max(wait_secs) > 600:
+            stuck = True
+            attention_flags.append("stuck")
+
+    repeated_failures = False
+    if len(completed) >= 3:
+        last_three = completed[:3]
+        if all(_status_value(_store.get(c["id"]) or {}) == "failed" for c in last_three):
+            repeated_failures = True
+            attention_flags.append("repeated_failures")
+
+    output_empty = False
+    for completed_item in completed[:5]:
+        t = _store.get(completed_item["id"]) or {}
+        if len(t.get("output") or "") == 0 and _status_value(t) == "completed":
+            output_empty = True
+            attention_flags.append("output_empty")
+            break
+
+    executor_fail = False
+    for completed_item in completed[:5]:
+        t = _store.get(completed_item["id"]) or {}
+        if len(t.get("output") or "") == 0 and _status_value(t) == "failed":
+            executor_fail = True
+            attention_flags.append("executor_fail")
+            break
+
+    low_success_rate = False
+    try:
+        from app.services.metrics_service import get_aggregates
+
+        agg = get_aggregates()
+        sr = agg.get("success_rate", {}) or {}
+        total = sr.get("total", 0) or 0
+        rate = float(sr.get("rate", 0) or 0)
+        if total >= 10 and rate < 0.8:
+            low_success_rate = True
+            attention_flags.append("low_success_rate")
+    except Exception:
+        # Spec 032: when metrics unavailable, low_success_rate remains false; do not raise.
+        pass
+
+    by_phase = {"spec": 0, "impl": 0, "test": 0, "review": 0}
+    for item in running + pending:
+        task_type = item.get("task_type")
+        task_type_value = task_type.value if hasattr(task_type, "value") else str(task_type)
+        if task_type_value in by_phase:
+            by_phase[task_type_value] += 1
+
+    return {
+        "stuck": stuck,
+        "repeated_failures": repeated_failures,
+        "output_empty": output_empty,
+        "executor_fail": executor_fail,
+        "low_success_rate": low_success_rate,
+        "flags": attention_flags,
+        "by_phase": by_phase,
+    }
+
+
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
     _ensure_store_loaded()
@@ -1459,158 +1628,18 @@ def upsert_active_task(
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     """Pipeline visibility: running, pending with wait times, recent completed with duration."""
     _ensure_store_loaded()
-    from datetime import timezone
     now = now_utc or datetime.now(timezone.utc)
 
-    def _ts(obj):
-        return obj.isoformat() if hasattr(obj, "isoformat") else str(obj)
+    running, pending, completed = _collect_pipeline_status_items(now)
+    completed.sort(key=lambda x: x.get("updated_at") or x.get("created_at", ""), reverse=True)
 
-    def _seconds_ago(ts):
-        if ts is None:
-            return None
-        try:
-            delta = now - ts
-            return int(delta.total_seconds())
-        except Exception:
-            return None
-
-    def _duration(start_ts, end_ts):
-        if start_ts is None or end_ts is None:
-            return None
-        try:
-            delta = end_ts - start_ts
-            return int(delta.total_seconds())
-        except Exception:
-            return None
-
-    running = []
-    pending = []
-    completed = []
-
-    for t in _store.values():
-        st = t.get("status")
-        st_val = st.value if hasattr(st, "value") else str(st)
-        created = t.get("created_at")
-        updated = t.get("updated_at")
-        started = t.get("started_at")
-
-        item = {
-            "id": t.get("id"),
-            "task_type": t.get("task_type"),
-            "model": t.get("model"),
-            "direction": (t.get("direction") or "")[:100],
-            "claimed_by": t.get("claimed_by"),
-            "created_at": _ts(created),
-            "updated_at": _ts(updated),
-            "wait_seconds": _seconds_ago(created) if st_val == "pending" else None,
-            "running_seconds": _seconds_ago(started) if st_val == "running" and started else None,
-            "duration_seconds": _duration(started, updated) if st_val in ("completed", "failed") and started and updated else None,
-        }
-        if st_val == "running":
-            running.append(item)
-        elif st_val == "pending":
-            pending.append(item)
-        else:
-            completed.append(item)
-
-    # Most recently completed first (by completion order / updated_at per spec 032)
-    completed.sort(
-        key=lambda x: x.get("updated_at") or x.get("created_at", ""),
-        reverse=True,
-    )
-
-    # Latest request/response for visibility into actual LLM activity
-    latest_request = None
-    latest_response = None
-    if running:
-        t = _store.get(running[0]["id"])
-        if t:
-            latest_request = {
-                "task_id": t.get("id"),
-                "status": "running",
-                "direction": t.get("direction"),
-                "prompt_preview": (t.get("command") or "")[:500],
-            }
-    if completed:
-        t = _store.get(completed[0]["id"])
-        if t:
-            if not latest_request:
-                latest_request = {
-                    "task_id": t.get("id"),
-                    "status": t.get("status"),
-                    "direction": t.get("direction"),
-                    "prompt_preview": (t.get("command") or "")[:500],
-                }
-            out = t.get("output") or ""
-            latest_response = {
-                "task_id": t.get("id"),
-                "status": t.get("status"),
-                "output_preview": out[:2000],
-                "output_len": len(out),
-            }
-
-    # Attention flags (spec 027, 032: stuck, repeated_failures, low_success_rate)
-    def _status_val(task: dict) -> str:
-        """Normalize task status to string (handles TaskStatus enum or string)."""
-        s = (task or {}).get("status", "")
-        if hasattr(s, "value"):
-            return getattr(s, "value", str(s))
-        return str(s) if s else ""
-
-    attention_flags = []
-    stuck = False
-    if pending and not running:
-        wait_secs = [p.get("wait_seconds") for p in pending if p.get("wait_seconds") is not None]
-        if wait_secs and max(wait_secs) > 600:  # 10 min (spec 032)
-            stuck = True
-            attention_flags.append("stuck")
-    repeated_failures = False
-    if len(completed) >= 3:
-        last_three = completed[:3]
-        if all(_status_val(_store.get(c["id"]) or {}) == "failed" for c in last_three):
-            repeated_failures = True
-            attention_flags.append("repeated_failures")
-    output_empty = False
-    for c in completed[:5]:
-        t = _store.get(c["id"]) or {}
-        if len(t.get("output") or "") == 0 and _status_val(t) == "completed":
-            output_empty = True
-            attention_flags.append("output_empty")
-            break
-    executor_fail = False
-    for c in completed[:5]:
-        t = _store.get(c["id"]) or {}
-        if len(t.get("output") or "") == 0 and _status_val(t) == "failed":
-            executor_fail = True
-            attention_flags.append("executor_fail")
-            break
-    low_success_rate = False
-    try:
-        from app.services.metrics_service import get_aggregates
-
-        agg = get_aggregates()
-        sr = agg.get("success_rate", {}) or {}
-        total = sr.get("total", 0) or 0
-        rate = float(sr.get("rate", 0) or 0)
-        if total >= 10 and rate < 0.8:
-            low_success_rate = True
-            attention_flags.append("low_success_rate")
-    except Exception:
-        # Spec 032: when metrics unavailable, low_success_rate remains false; do not raise
-        pass
-
-    # Phase coverage: count running+pending by task_type (spec 028)
-    by_phase = {"spec": 0, "impl": 0, "test": 0, "review": 0}
-    for item in running + pending:
-        tt = item.get("task_type")
-        tt_str = tt.value if hasattr(tt, "value") else str(tt) if tt is not None else None
-        if tt_str in by_phase:
-            by_phase[tt_str] = by_phase.get(tt_str, 0) + 1
+    latest_request, latest_response = _pipeline_latest_activity(running, completed)
+    attention = _pipeline_attention_summary(running, pending, completed)
 
     return {
         "running": running[:10],
         "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
-        "running_by_phase": by_phase,
+        "running_by_phase": attention.pop("by_phase"),
         "recent_completed": [
             {**c, "output_len": len((_store.get(c["id"]) or {}).get("output") or "")}
             for c in completed[:10]
@@ -1618,12 +1647,12 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
         "latest_request": latest_request,
         "latest_response": latest_response,
         "attention": {
-            "stuck": stuck,
-            "repeated_failures": repeated_failures,
-            "output_empty": output_empty,
-            "executor_fail": executor_fail,
-            "low_success_rate": low_success_rate,
-            "flags": attention_flags,
+            "stuck": attention["stuck"],
+            "repeated_failures": attention["repeated_failures"],
+            "output_empty": attention["output_empty"],
+            "executor_fail": attention["executor_fail"],
+            "low_success_rate": attention["low_success_rate"],
+            "flags": attention["flags"],
         },
     }
 
