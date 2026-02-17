@@ -8,6 +8,9 @@ on:
 jobs:
   update-asset-values:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     
     steps:
       - name: Checkout code
@@ -86,11 +89,50 @@ jobs:
             REPORT_SCRIPT="scripts/utilities/asset_value_report.py"
             python "$REPORT_SCRIPT" > asset_value_report.md
           fi
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: asset_value_report_${{ github.sha }}
+          path: asset_value_report.md
       
-      - name: Commit report
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add asset_value_report.md
-          git commit -m "Update asset values [automated]" || echo "No changes"
-          git push
+      - name: Create or update asset value issue (non-blocking)
+        if: ${{ steps.scripts.outputs.missing_count != '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const title = 'External asset value updater scripts missing';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'Automated asset value update workflow ran, but updater scripts are missing so no external updates were performed.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              '',
+              'Expected scripts:',
+              '- `scripts/asset_tracking/update_asset_value.py`',
+              '- `scripts/utilities/asset_value_report.py`',
+              '',
+              'Report excerpt:',
+              '```md',
+              fs.readFileSync('asset_value_report.md', 'utf8').slice(0, 2000),
+              '```',
+            ].join('\\n');
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title \"${title}\"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
