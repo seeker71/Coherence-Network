@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/provider-usage-tracking",
+  "commit_scope": "Harden provider usage/readiness probes: parse RFC9233 rate-limit headers (e.g. ratelimit-limit: 1000;w=3600), broaden recognized rate-limit header keys for OpenAI/Claude probes, add GitHub billing endpoint fallbacks to reduce 404 noise, and downgrade optional unconfigured providers (e.g. openclaw) from warning to info unless observed in runtime usage.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-17_provider-usage-tracking.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "provider-usage-tracking"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_provider-usage-tracking.json"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Provider usage/readiness should show fewer false warnings (optional unconfigured providers are info), and more providers should surface request remaining/limit metrics when servers emit RFC9233-style ratelimit headers or provider-specific ratelimit keys; GitHub billing minutes should populate when accessible via configured owner/scope or authenticated user fallback.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "api:/api/automation/usage -> verify Railway/OpenAI/Claude rate-limit metrics appear when headers are present; ensure no 'no request remaining headers' note when RFC9233 headers are returned",
+      "api:/api/automation/usage/readiness -> verify optional unconfigured providers (e.g. openclaw) severity=info unless observed in runtime usage",
+      "api:/api/automation/usage -> verify GitHub billing minutes appear when token has billing access (owner/scope or /user fallback)"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and (optional) production endpoint verification for provider probes"
+  }
+}
+
