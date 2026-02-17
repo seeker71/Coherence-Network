@@ -4,7 +4,7 @@
 Require each change set to include a machine-readable provenance artifact that links changed files to idea/spec/task attribution and verifiable evidence.
 
 ## Requirements
-1. CI fails when a diff range has no changed `docs/system_audit/commit_evidence_*.json` file.
+1. CI fails when a diff range has no changed `docs/system_audit/commit_evidence_*.json` file, except for explicitly exempted automation/metadata-only change sets (for example Dependabot PRs and diffs limited to CI workflow files or dependency metadata like `web/package-lock.json`).
 2. Evidence schema must include attribution and traceability keys:
    - `idea_ids`, `spec_ids`, `task_ids`, `contributors`, `agent`, `evidence_refs`, `change_files`.
 3. CI validates changed-file coverage (`change_files` must include all non-evidence changed files).
