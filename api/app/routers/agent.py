@@ -122,6 +122,10 @@ async def execute_task(
     task_id: str,
     background_tasks: BackgroundTasks,
     x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+    force_paid_providers: bool = Query(False),
+    max_cost_usd: float | None = Query(None, ge=0.0),
+    estimated_cost_usd: float | None = Query(None, ge=0.0),
+    cost_slack_ratio: float | None = Query(None, ge=1.0),
 ) -> dict:
     """Execute a task server-side (background).
 
@@ -137,7 +141,14 @@ async def execute_task(
 
     from app.services import agent_execution_service
 
-    background_tasks.add_task(agent_execution_service.execute_task, task_id)
+    background_tasks.add_task(
+        agent_execution_service.execute_task,
+        task_id,
+        force_paid_providers=force_paid_providers,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+    )
     return {"ok": True, "task_id": task_id}
 
 
@@ -241,7 +252,7 @@ async def update_task(
     """
     if all(
         getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "worker_id")
+        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
     try:
@@ -253,6 +264,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
+            context=data.context,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:

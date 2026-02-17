@@ -42,7 +42,7 @@ def main() -> None:
     parser.add_argument("--json", action="store_true", help="Output JSON only.")
     args = parser.parse_args()
 
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     endpoints = args.endpoint or _default_endpoints(args.api_base, args.web_base)
     report = gates.evaluate_pr_to_public_report(
         repository=args.repo,

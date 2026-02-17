@@ -37,7 +37,7 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     endpoints = args.endpoint or _default_endpoints(args.api_base, args.web_base)
     report = gates.evaluate_merged_change_contract_report(
         repository=args.repo,

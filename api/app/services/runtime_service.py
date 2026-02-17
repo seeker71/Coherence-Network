@@ -7,6 +7,7 @@ import os
 import re
 import time
 import asyncio
+from typing import Any
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -14,7 +15,14 @@ from uuid import uuid4
 import httpx
 from fastapi.routing import APIRoute
 
-from app.models.runtime import EndpointRuntimeSummary, IdeaRuntimeSummary, RuntimeEvent, RuntimeEventCreate
+from app.models.runtime import (
+    EndpointAttentionReport,
+    EndpointAttentionRow,
+    EndpointRuntimeSummary,
+    IdeaRuntimeSummary,
+    RuntimeEvent,
+    RuntimeEventCreate,
+)
 from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
 
 
@@ -333,15 +341,40 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
         by_source: dict[str, int] = {}
         status_counts: dict[str, int] = {}
         idea_counts: dict[str, int] = {}
+        paid_tool_event_count = 0
+        paid_tool_failure_count = 0
+        paid_tool_runtime_ms = 0.0
+        paid_tool_runtime_cost = 0.0
+
         for event in events:
             by_source[event.source] = by_source.get(event.source, 0) + 1
             status_key = str(event.status_code)
             status_counts[status_key] = status_counts.get(status_key, 0) + 1
             idea_key = str(event.idea_id or "unmapped")
             idea_counts[idea_key] = idea_counts.get(idea_key, 0) + 1
+
+            metadata = event.metadata if isinstance(event.metadata, dict) else {}
+            if bool(metadata.get("is_paid_provider")):
+                paid_tool_event_count += 1
+                paid_tool_runtime_ms += float(event.runtime_ms or 0.0)
+                raw_runtime_cost = metadata.get("runtime_cost_usd")
+                if raw_runtime_cost is not None:
+                    try:
+                        paid_tool_runtime_cost += float(raw_runtime_cost)
+                    except (TypeError, ValueError):
+                        paid_tool_runtime_cost += float(event.runtime_cost_estimate)
+                else:
+                    paid_tool_runtime_cost += float(event.runtime_cost_estimate)
+                if event.status_code >= 400:
+                    paid_tool_failure_count += 1
+
         primary_idea_id = max(idea_counts.items(), key=lambda item: item[1])[0]
         total_runtime = round(sum(e.runtime_ms for e in events), 4)
         total_cost = round(sum(e.runtime_cost_estimate for e in events), 8)
+        paid_tool_ratio = float(paid_tool_event_count) / float(len(events)) if events else 0.0
+        paid_tool_average_runtime_ms = (
+            round((paid_tool_runtime_ms / paid_tool_event_count), 4) if paid_tool_event_count else 0.0
+        )
         summaries.append(
             EndpointRuntimeSummary(
                 endpoint=endpoint,
@@ -352,12 +385,235 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
                 total_runtime_ms=total_runtime,
                 average_runtime_ms=round(total_runtime / len(events), 4),
                 runtime_cost_estimate=total_cost,
+                paid_tool_event_count=paid_tool_event_count,
+                paid_tool_failure_count=paid_tool_failure_count,
+                paid_tool_ratio=round(paid_tool_ratio, 4),
+                paid_tool_runtime_cost=round(paid_tool_runtime_cost, 8),
+                paid_tool_average_runtime_ms=paid_tool_average_runtime_ms,
                 by_source=by_source,
                 status_counts=status_counts,
             )
         )
     summaries.sort(key=lambda x: (x.runtime_cost_estimate, x.endpoint), reverse=True)
     return summaries
+
+
+def _parse_status_code(value: str) -> int:
+    try:
+        return int(str(value))
+    except Exception:
+        return 0
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _load_idea_value_rows() -> dict[str, dict[str, float]]:
+    try:
+        from app.services import idea_service
+    except Exception:
+        return {}
+
+    rows: dict[str, dict[str, float]] = {}
+    try:
+        ideas = idea_service.list_ideas()
+    except Exception:
+        return rows
+
+    for idea in ideas.ideas:
+        rows[str(idea.id)] = {
+            "potential_value": float(idea.potential_value or 0.0),
+            "actual_value": float(idea.actual_value or 0.0),
+            "estimated_cost": float(idea.estimated_cost or 0.0),
+            "actual_cost": float(idea.actual_cost or 0.0),
+            "confidence": float(idea.confidence or 0.0),
+        }
+    return rows
+
+
+def _endpoint_friction_counts(seconds: int) -> dict[str, int]:
+    from app.services import friction_service
+
+    try:
+        events, _ignored = friction_service.load_events()
+    except Exception:
+        return {}
+
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, min(seconds, 60 * 60 * 24 * 30)))
+    counts: dict[str, int] = {}
+    for event in events:
+        if event.timestamp < cutoff:
+            continue
+        endpoint = str(getattr(event, "endpoint", "") or "").strip()
+        if not endpoint:
+            continue
+        counts[endpoint] = counts.get(endpoint, 0) + 1
+    return counts
+
+
+def _attention_reasons(
+    *,
+    success_rate: float,
+    paid_ratio: float,
+    friction_density: float,
+    value_gap: float,
+    cost_per_event: float,
+    event_count: int,
+) -> list[str]:
+    reasons: list[str] = []
+    if event_count < 5:
+        reasons.append("low_sample")
+    if success_rate < 0.90:
+        reasons.append(f"low_success_rate:{round(success_rate * 100.0, 2)}%")
+    if paid_ratio > 0.0:
+        reasons.append(f"paid_requests:{round(paid_ratio * 100.0, 2)}%")
+    if friction_density > 0.0:
+        reasons.append(f"friction_density:{round(friction_density * 100.0, 2)}%")
+    if value_gap > 1.0:
+        reasons.append(f"value_gap:{round(value_gap, 4)}")
+    if cost_per_event > 0.002:
+        reasons.append(f"cost_per_event:{round(cost_per_event, 6)}")
+    return reasons
+
+
+def summarize_endpoint_attention(
+    *,
+    seconds: int = 3600,
+    min_event_count: int = 1,
+    attention_threshold: float = 40.0,
+    limit: int | None = None,
+) -> EndpointAttentionReport:
+    window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
+    endpoint_rows = summarize_by_endpoint(seconds=window_seconds)
+    friction_by_endpoint = _endpoint_friction_counts(window_seconds)
+    idea_rows = _load_idea_value_rows()
+
+    attention_events = [e for e in list_events(limit=2000) if e.recorded_at >= (
+        datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    )]
+    by_endpoint: dict[str, list[RuntimeEvent]] = {}
+    for event in attention_events:
+        by_endpoint.setdefault(event.endpoint, []).append(event)
+
+    rows: list[EndpointAttentionRow] = []
+    for row in endpoint_rows:
+        event_count = int(row.event_count)
+        if event_count < max(1, int(min_event_count)):
+            continue
+        endpoint_events = by_endpoint.get(row.endpoint, [])
+
+        success_count = 0
+        failure_count = 0
+        for code_str, count in row.status_counts.items():
+            code = _parse_status_code(code_str)
+            if 200 <= code < 400:
+                success_count += _safe_int(count, 0)
+            else:
+                failure_count += _safe_int(count, 0)
+
+        success_rate = float(success_count) / float(event_count) if event_count else 0.0
+
+        paid_tool_event_count = 0
+        paid_tool_failure_count = 0
+        for event in endpoint_events:
+            metadata = event.metadata if isinstance(event.metadata, dict) else {}
+            if bool(metadata.get("is_paid_provider")):
+                paid_tool_event_count += 1
+                if event.status_code >= 400:
+                    paid_tool_failure_count += 1
+
+        paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
+        friction_count = int(friction_by_endpoint.get(row.endpoint, 0))
+        friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
+
+        idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
+        potential_value = _safe_float(idea_data.get("potential_value", 0.0))
+        actual_value = _safe_float(idea_data.get("actual_value", 0.0))
+        estimated_cost = _safe_float(idea_data.get("estimated_cost", 0.0))
+        actual_cost = _safe_float(idea_data.get("actual_cost", 0.0))
+        idea_confidence = _safe_float(idea_data.get("confidence", 0.0), default=0.0)
+
+        value_gap = max(potential_value - actual_value, 0.0)
+        cost_per_event = float(row.runtime_cost_estimate) / float(max(event_count, 1))
+
+        failure_score = (1.0 - success_rate) * 100.0
+        paid_score = min(paid_ratio * 60.0, 30.0)
+        cost_score = min(cost_per_event * 1000.0, 25.0)
+        friction_score = min(friction_density * 300.0, 20.0)
+        value_gap_score = min(value_gap / 5.0, 25.0)
+        sample_score = min(event_count / 20.0, 1.0) * 10.0
+        confidence = min(event_count / 20.0, 1.0) * 0.75 + 0.25 * idea_confidence
+
+        attention_score = (
+            failure_score * min(event_count / 5.0, 1.0)
+            + paid_score
+            + cost_score
+            + friction_score
+            + value_gap_score
+            + sample_score
+        )
+        needs_attention = attention_score >= attention_threshold
+
+        rows.append(
+            EndpointAttentionRow(
+                endpoint=row.endpoint,
+                methods=row.methods,
+                idea_id=row.idea_id,
+                origin_idea_id=row.origin_idea_id,
+                event_count=event_count,
+                success_count=success_count,
+                failure_count=failure_count,
+                success_rate=round(success_rate, 4),
+                runtime_cost_estimate=round(float(row.runtime_cost_estimate), 8),
+                cost_per_event=round(cost_per_event, 8),
+                paid_tool_event_count=paid_tool_event_count,
+                paid_tool_failure_count=paid_tool_failure_count,
+                paid_tool_ratio=round(paid_ratio, 4),
+                friction_event_count=friction_count,
+                friction_event_density=round(friction_density, 4),
+                potential_value=round(potential_value, 4),
+                actual_value=round(actual_value, 4),
+                estimated_cost=round(estimated_cost, 4),
+                actual_cost=round(actual_cost, 4),
+                value_gap=round(value_gap, 4),
+                attention_score=round(attention_score, 3),
+                confidence=round(max(0.0, min(confidence, 1.0)), 4),
+                needs_attention=needs_attention,
+                reasons=_attention_reasons(
+                    success_rate=success_rate,
+                    paid_ratio=paid_ratio,
+                    friction_density=friction_density,
+                    value_gap=value_gap,
+                    cost_per_event=cost_per_event,
+                    event_count=event_count,
+                ),
+            )
+        )
+
+    rows.sort(key=lambda row: row.attention_score, reverse=True)
+    if limit is not None:
+        rows = rows[: max(1, min(int(limit), len(rows), 2000))]
+
+    attention_count = sum(1 for row in rows if row.needs_attention)
+    return EndpointAttentionReport(
+        window_seconds=window_seconds,
+        attention_threshold=round(float(attention_threshold), 3),
+        min_event_count=max(1, int(min_event_count)),
+        total_endpoints=len(rows),
+        attention_count=attention_count,
+        endpoints=rows,
+    )
 
 
 def verify_internal_vs_public_usage(
@@ -422,6 +678,11 @@ _EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
     "/api/runtime/events": {"limit": "100"},
     "/api/runtime/ideas/summary": {"seconds": "3600"},
     "/api/runtime/endpoints/summary": {"seconds": "3600"},
+    "/api/runtime/endpoints/attention": {
+        "seconds": "3600",
+        "min_event_count": "1",
+        "attention_threshold": "0.0",
+    },
     "/api/inventory/process-completeness": {"runtime_window_seconds": "86400"},
     "/api/inventory/questions/proactive": {"limit": "20", "top": "20"},
     "/api/inventory/endpoint-traceability": {"runtime_window_seconds": "86400"},

@@ -102,7 +102,11 @@ def _executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
     if executor == "openclaw":
-        return "openclaw"
+        for candidate in ("openclaw", "codex"):
+            if shutil.which(candidate):
+                return candidate
+        configured = os.environ.get("OPENCLAW_EXECUTABLE")
+        return configured.strip() if configured else "openclaw"
     return "aider"
 
 
@@ -1063,6 +1067,7 @@ def update_task(
     current_step: Optional[str] = None,
     decision_prompt: Optional[str] = None,
     decision: Optional[str] = None,
+    context: Optional[dict[str, Any]] = None,
     worker_id: Optional[str] = None,
 ) -> Optional[dict]:
     """Update task. Returns updated task or None if not found.
@@ -1095,6 +1100,14 @@ def update_task(
         task["decision_prompt"] = decision_prompt
     if decision is not None and task.get("decision") is None:
         task["decision"] = decision
+    if context is not None:
+        existing = task.get("context")
+        if isinstance(existing, dict):
+            next_context = dict(existing)
+            next_context.update(context)
+        else:
+            next_context = dict(context)
+        task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
     _save_store_to_disk()
