@@ -1,0 +1,116 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/postgres-file-tracking-migration",
+  "commit_scope": "Migrate file-based tracking domains (commit evidence, telemetry, ideas/specs, and graph entities for assets/contributors/contributions) to PostgreSQL-backed persistence and add legacy cleanup tooling",
+  "files_owned": [
+    "api/app/services/commit_evidence_registry_service.py",
+    "api/app/services/metrics_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/scripts/migrate_local_telemetry_to_db.py",
+    "api/scripts/migrate_tracking_domains_to_postgres.py",
+    "api/tests/test_commit_evidence_registry_service.py",
+    "api/tests/test_metrics_db_migration.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/specs/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-17_postgres-tracking-metrics-migration.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "026-phase-1-task-metrics",
+    "050-friction-analysis",
+    "054-postgresql-migration"
+  ],
+  "task_ids": [
+    "postgres-tracking-migration"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "idea",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
+    "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_postgres-tracking-metrics-migration.json"
+  ],
+  "change_files": [
+    "api/app/services/commit_evidence_registry_service.py",
+    "api/app/services/metrics_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/scripts/migrate_local_telemetry_to_db.py",
+    "api/scripts/migrate_tracking_domains_to_postgres.py",
+    "api/tests/test_commit_evidence_registry_service.py",
+    "api/tests/test_metrics_db_migration.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/specs/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-17_postgres-tracking-metrics-migration.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
+      "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Commit-evidence, telemetry metrics, and core tracking domains are migratable into PostgreSQL with parity verification and explicit local legacy cleanup support.",
+    "public_endpoints": [
+      "/api/inventory/system-lineage",
+      "/api/inventory/endpoint-traceability",
+      "/api/health/persistence",
+      "/api/agent/metrics"
+    ],
+    "test_flows": [
+      "Run api/scripts/migrate_tracking_domains_to_postgres.py --json and verify parity_ok=true across domains.",
+      "Run api/scripts/migrate_tracking_domains_to_postgres.py --purge-local --yes --json after parity to clean legacy local files."
+    ]
+  }
+}

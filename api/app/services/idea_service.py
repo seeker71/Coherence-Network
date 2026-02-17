@@ -21,6 +21,7 @@ from app.models.idea import (
     ManifestationStatus,
 )
 from app.services import idea_registry_service
+from app.services import commit_evidence_registry_service
 
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
@@ -227,6 +228,25 @@ def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
 
 def _tracked_idea_ids_from_local(max_files: int = 400) -> list[str]:
     evidence_dir = _commit_evidence_dir()
+    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
+    use_db = use_db_raw in {"1", "true", "yes", "on"}
+    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        required_raw = str(
+            os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+            or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+            or ""
+        ).strip().lower()
+        required = required_raw in {"1", "true", "yes", "on"}
+        backend = commit_evidence_registry_service.backend_info().get("backend")
+        use_db = required and backend == "postgresql"
+    if use_db:
+        try:
+            commit_evidence_registry_service.import_from_dir(evidence_dir, limit=max_files)
+            return commit_evidence_registry_service.tracked_idea_ids(limit=max_files)
+        except Exception:
+            # Keep runtime resilient and fall back to direct file scanning.
+            pass
+
     if not evidence_dir.exists():
         return []
     out: set[str] = set()
@@ -392,6 +412,16 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
 
 
 def _write_snapshot_file(ideas: list[Idea]) -> None:
+    storage = idea_registry_service.storage_info()
+    if storage.get("backend") == "postgresql":
+        purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+        if purge_raw not in {"0", "false", "no", "off"}:
+            try:
+                Path(_portfolio_path()).unlink(missing_ok=True)
+            except OSError:
+                pass
+        return
+
     path = _portfolio_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

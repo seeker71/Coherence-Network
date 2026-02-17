@@ -75,7 +75,15 @@ def _use_db_snapshots() -> bool:
 def _ensure_store() -> None:
     if _use_db_snapshots():
         telemetry_persistence_service.ensure_schema()
-        telemetry_persistence_service.import_automation_snapshots_from_file(_snapshots_path())
+        legacy_path = _snapshots_path()
+        report = telemetry_persistence_service.import_automation_snapshots_from_file(legacy_path)
+        if int(report.get("imported") or 0) > 0:
+            purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+            if purge_raw not in {"0", "false", "no", "off"}:
+                try:
+                    legacy_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
         return
     path = _snapshots_path()
     if path.exists():

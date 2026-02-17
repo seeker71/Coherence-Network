@@ -59,7 +59,15 @@ def _parse_iso_utc(value: str) -> datetime:
 def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
     if _use_db_events():
         telemetry_persistence_service.ensure_schema()
-        telemetry_persistence_service.import_friction_events_from_file(friction_file_path())
+        legacy_path = friction_file_path()
+        report = telemetry_persistence_service.import_friction_events_from_file(legacy_path)
+        if int(report.get("imported") or 0) > 0:
+            purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+            if purge_raw not in {"0", "false", "no", "off"}:
+                try:
+                    legacy_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
         events: list[FrictionEvent] = []
         ignored = 0
         for payload in telemetry_persistence_service.list_friction_events(limit=10000):

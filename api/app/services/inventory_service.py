@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import httpx
 
@@ -19,6 +19,7 @@ from app.models.agent import AgentTaskCreate, TaskType
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import (
     agent_service,
+    commit_evidence_registry_service,
     idea_lineage_service,
     idea_service,
     route_registry_service,
@@ -340,10 +341,15 @@ def _project_root() -> Path:
             return configured_path
 
     source_path = Path(__file__).resolve()
+
+    # Prefer monorepo roots that include top-level specs/.
     for candidate in [source_path, *source_path.parents]:
-        has_monorepo_layout = (candidate / "api" / "app").exists()
-        has_api_service_layout = (candidate / "app").exists() and (candidate / "scripts").exists()
-        if has_monorepo_layout or has_api_service_layout:
+        if (candidate / "api" / "app").exists():
+            return candidate
+
+    # Fallback for API-only packaging layouts.
+    for candidate in [source_path, *source_path.parents]:
+        if (candidate / "app").exists() and (candidate / "scripts").exists():
             return candidate
     return source_path.parents[3]
 
@@ -367,6 +373,14 @@ def _github_headers() -> dict[str, str]:
     return headers
 
 
+def _idea_api_path(idea_id: str) -> str:
+    return f"/api/ideas/{quote(str(idea_id), safe='')}"
+
+
+def _spec_api_path(spec_id: str) -> str:
+    return f"/api/spec-registry/{quote(str(spec_id), safe='')}"
+
+
 def _sort_spec_items(rows: list[dict]) -> list[dict]:
     def key(row: dict) -> tuple[int, int, str]:
         spec_id = str(row.get("spec_id") or "")
@@ -375,6 +389,27 @@ def _sort_spec_items(rows: list[dict]) -> list[dict]:
         return (1, 0, spec_id)
 
     return sorted(rows, key=key)
+
+
+def _normalize_spec_item(row: dict[str, Any]) -> dict[str, Any]:
+    spec_id = str(row.get("spec_id") or "").strip()
+    path_value = str(row.get("path") or "").strip()
+    api_path = str(row.get("api_path") or "").strip()
+
+    source_path = str(row.get("source_path") or "").strip()
+    if path_value.startswith("specs/") and not source_path:
+        source_path = path_value
+
+    if not api_path and spec_id:
+        api_path = _spec_api_path(spec_id)
+
+    normalized = dict(row)
+    if api_path:
+        normalized["api_path"] = api_path
+        normalized["path"] = api_path
+    if source_path:
+        normalized["source_path"] = source_path
+    return normalized
 
 
 def _discover_specs_local(limit: int = 300) -> list[dict]:
@@ -395,11 +430,13 @@ def _discover_specs_local(limit: int = 300) -> list[dict]:
         except OSError:
             pass
         out.append(
-            {
-                "spec_id": spec_id,
-                "title": title,
-                "path": f"specs/{path.name}",
-            }
+            _normalize_spec_item(
+                {
+                    "spec_id": spec_id,
+                    "title": title,
+                    "path": f"specs/{path.name}",
+                }
+            )
         )
     return _sort_spec_items(out)
 
@@ -431,7 +468,15 @@ def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[
             stem = Path(name).stem
             spec_id = stem.split("-", 1)[0] if "-" in stem else stem
             title = stem.replace("-", " ")
-            out.append({"spec_id": spec_id, "title": title, "path": path})
+            out.append(
+                _normalize_spec_item(
+                    {
+                        "spec_id": spec_id,
+                        "title": title,
+                        "path": path,
+                    }
+                )
+            )
     except httpx.HTTPError:
         return []
 
@@ -443,12 +488,12 @@ def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[
 
 
 def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
-    local = _discover_specs_local(limit=limit)
+    local = [_normalize_spec_item(item) for item in _discover_specs_local(limit=limit)]
     # If local checkout is sparse (e.g., deployment package without root specs), use GitHub source of truth.
     if len(local) >= 5:
         return local, "local"
 
-    remote = _discover_specs_from_github(limit=limit)
+    remote = [_normalize_spec_item(item) for item in _discover_specs_from_github(limit=limit)]
     if remote:
         if local:
             by_path = {str(item.get("path")): item for item in remote}
@@ -464,16 +509,24 @@ def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
     return [], "none"
 
 
-def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
-    ideas_response = idea_service.list_ideas()
-    ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
+def _build_lineage_idea_items(ideas_response: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            **item.model_dump(mode="json"),
+            "api_path": _idea_api_path(item.id),
+        }
+        for item in ideas_response.ideas
+    ]
 
-    answered_questions: list[dict] = []
-    unanswered_questions: list[dict] = []
+
+def _build_lineage_question_rows(ideas_response: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    answered_questions: list[dict[str, Any]] = []
+    unanswered_questions: list[dict[str, Any]] = []
     for idea in ideas_response.ideas:
         for q in idea.open_questions:
             row = {
                 "idea_id": idea.id,
+                "idea_api_path": _idea_api_path(idea.id),
                 "idea_name": idea.name,
                 "question": q.question,
                 "value_to_whole": q.value_to_whole,
@@ -495,22 +548,35 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             -float(x.get("question_roi") or 0.0),
         )
     )
+    return answered_questions, unanswered_questions
 
+
+def _build_lineage_link_rows() -> tuple[list[dict[str, Any]], list[Any], list[Any]]:
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
-    link_rows = []
+    rows: list[dict[str, Any]] = []
     for link in links:
         valuation = value_lineage_service.valuation(link.id)
-        link_rows.append(
+        rows.append(
             {
                 "lineage_id": link.id,
                 "idea_id": link.idea_id,
+                "idea_api_path": _idea_api_path(link.idea_id),
                 "spec_id": link.spec_id,
+                "spec_api_path": _spec_api_path(link.spec_id),
                 "implementation_refs": link.implementation_refs,
                 "estimated_cost": link.estimated_cost,
                 "valuation": valuation.model_dump(mode="json") if valuation else None,
             }
         )
+    return rows, links, events
+
+
+def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
+    ideas_response = idea_service.list_ideas()
+    ideas = _build_lineage_idea_items(ideas_response)
+    answered_questions, unanswered_questions = _build_lineage_question_rows(ideas_response)
+    link_rows, links, events = _build_lineage_link_rows()
 
     runtime_summary = [x.model_dump(mode="json") for x in runtime_service.summarize_by_idea(runtime_window_seconds)]
     spec_items, spec_source = _discover_specs()
@@ -547,6 +613,10 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
         "tracking": {
             "tracked_idea_ids_count": len(tracked_idea_ids),
             "tracked_idea_ids": tracked_idea_ids,
+            "tracked_ideas": [
+                {"idea_id": idea_id, "api_path": _idea_api_path(idea_id)}
+                for idea_id in tracked_idea_ids
+            ],
             "spec_discovery_source": spec_source,
             "runtime_events_count": len(runtime_events),
             "commit_evidence_local_available": (_project_root() / "docs" / "system_audit").exists(),
@@ -651,6 +721,27 @@ def _normalize_validation_status(value: Any) -> str:
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
+    use_db = use_db_raw in {"1", "true", "yes", "on"}
+    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        required_raw = str(
+            os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+            or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+            or ""
+        ).strip().lower()
+        required = required_raw in {"1", "true", "yes", "on"}
+        backend = commit_evidence_registry_service.backend_info().get("backend")
+        use_db = required and backend == "postgresql"
+    if use_db:
+        try:
+            commit_evidence_registry_service.import_from_dir(_commit_evidence_dir(), limit=limit)
+            rows = commit_evidence_registry_service.list_records(limit=limit)
+            if rows:
+                return rows
+        except Exception:
+            # Fall back to file/GitHub reads for resiliency.
+            pass
+
     evidence_dir = _commit_evidence_dir()
     files = []
     if evidence_dir.exists():
@@ -2807,8 +2898,10 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                 "idea": {
                     "tracked": idea_tracked,
                     "idea_id": primary_idea_id or None,
+                    "idea_api_path": _idea_api_path(primary_idea_id) if primary_idea_id else None,
                     "origin_idea_id": origin_idea_id,
                     "idea_ids": sorted(idea_ids),
+                    "idea_api_paths": [_idea_api_path(idea_id) for idea_id in sorted(idea_ids)],
                     "source": idea_source,
                 },
                 "usage": {
@@ -2825,6 +2918,7 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                 "spec": {
                     "tracked": spec_tracked,
                     "spec_ids": sorted(spec_ids),
+                    "spec_api_paths": [_spec_api_path(spec_id) for spec_id in sorted(spec_ids)],
                 },
                 "process": {
                     "tracked": process_tracked,
