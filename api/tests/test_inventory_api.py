@@ -92,7 +92,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         assert isinstance(data["runtime"]["ideas"], list)
         assert all("question_roi" in row for row in data["questions"]["unanswered"])
         assert all(
-            isinstance(item.get("path"), str) and item["path"].startswith("specs/")
+            isinstance(item.get("path"), str) and item["path"].startswith("/api/spec-registry/")
             for item in data["specs"]["items"]
         )
 

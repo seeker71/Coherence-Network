@@ -64,6 +64,20 @@ class ExternalToolUsageEventRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class TaskMetricRecord(Base):
+    __tablename__ = "telemetry_task_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    task_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    task_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    model: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 
 
@@ -138,12 +152,14 @@ def backend_info() -> dict[str, Any]:
         external_tool_usage_events = int(
             session.query(func.count(ExternalToolUsageEventRecord.id)).scalar() or 0
         )
+        task_metrics = int(session.query(func.count(TaskMetricRecord.id)).scalar() or 0)
     return {
         "backend": backend,
         "database_url": _redact_database_url(url),
         "automation_snapshot_rows": snapshots,
         "friction_event_rows": friction_events,
         "external_tool_usage_event_rows": external_tool_usage_events,
+        "task_metric_rows": task_metrics,
     }
 
 
@@ -383,6 +399,94 @@ def import_friction_events_from_file(path: Path) -> dict[str, int]:
             skipped += 1
             continue
         append_friction_event(payload)
+        imported += 1
+    with _session() as session:
+        _meta_set(session, marker, "done")
+    return {"imported": imported, "skipped": skipped}
+
+
+def append_task_metric(payload: dict[str, Any], max_rows: int = 50000) -> None:
+    ensure_schema()
+    task_id = str(payload.get("task_id") or "")
+    task_type = str(payload.get("task_type") or "unknown")
+    model = str(payload.get("model") or "unknown")
+    status = str(payload.get("status") or "unknown")
+    occurred_at = _parse_dt(payload.get("created_at") or payload.get("occurred_at"))
+    duration_raw = payload.get("duration_seconds")
+    duration_seconds: float | None
+    if isinstance(duration_raw, (int, float)):
+        duration_seconds = float(duration_raw)
+    else:
+        duration_seconds = None
+    serialized = json.dumps(payload, default=str)
+    with _session() as session:
+        session.add(
+            TaskMetricRecord(
+                task_id=task_id,
+                task_type=task_type,
+                model=model,
+                status=status,
+                duration_seconds=duration_seconds,
+                occurred_at=occurred_at,
+                payload_json=serialized,
+            )
+        )
+        if max_rows > 0:
+            count = int(session.query(func.count(TaskMetricRecord.id)).scalar() or 0)
+            over = max(0, count - int(max_rows))
+            if over > 0:
+                stale = (
+                    session.query(TaskMetricRecord)
+                    .order_by(TaskMetricRecord.id.asc())
+                    .limit(over)
+                    .all()
+                )
+                for row in stale:
+                    session.delete(row)
+
+
+def list_task_metrics(limit: int = 10000) -> list[dict[str, Any]]:
+    ensure_schema()
+    with _session() as session:
+        rows = (
+            session.query(TaskMetricRecord)
+            .order_by(TaskMetricRecord.id.desc())
+            .limit(max(1, min(limit, 100000)))
+            .all()
+        )
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            payload = json.loads(row.payload_json)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            out.append(payload)
+    return out
+
+
+def import_task_metrics_from_file(path: Path) -> dict[str, int]:
+    ensure_schema()
+    if not path.exists():
+        return {"imported": 0, "skipped": 0}
+    marker = f"task_metrics_import::{path.resolve()}"
+    with _session() as session:
+        if _meta_get(session, marker) == "done":
+            return {"imported": 0, "skipped": 0}
+    imported = 0
+    skipped = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            skipped += 1
+            continue
+        if not isinstance(payload, dict):
+            skipped += 1
+            continue
+        append_task_metric(payload, max_rows=0)
         imported += 1
     with _session() as session:
         _meta_set(session, marker, "done")

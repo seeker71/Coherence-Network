@@ -2,12 +2,66 @@
 
 import json
 import os
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Any, List
+
+from app.services import telemetry_persistence_service
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 METRICS_FILE = os.path.join(_api_dir, "logs", "metrics.jsonl")
 WINDOW_DAYS = 7
+
+
+def _default_metrics_file() -> str:
+    return METRICS_FILE
+
+
+def _metrics_file_path() -> Path:
+    configured = os.getenv("METRICS_FILE_PATH")
+    if configured:
+        return Path(configured)
+    return Path(_default_metrics_file())
+
+
+def _is_postgres_backend() -> bool:
+    url = str(os.getenv("DATABASE_URL") or os.getenv("TELEMETRY_DATABASE_URL") or "").strip().lower()
+    return "postgres" in url
+
+
+def _use_db_metrics() -> bool:
+    override = str(os.getenv("METRICS_USE_DB", "")).strip().lower()
+    if override in {"1", "true", "yes", "on"}:
+        return True
+    if override in {"0", "false", "no", "off"}:
+        return False
+    # Default: only use DB-backed metrics in PostgreSQL deployments.
+    return _is_postgres_backend()
+
+
+def _purge_legacy_metrics_file_if_enabled(imported_from_file: bool) -> None:
+    if not imported_from_file:
+        return
+    raw = str(os.getenv("METRICS_PURGE_IMPORTED_FILE", "1")).strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return
+    path = _metrics_file_path()
+    if not path.exists():
+        return
+    try:
+        path.unlink()
+    except OSError:
+        return
+
+
+def _bootstrap_db_metrics_if_needed() -> None:
+    telemetry_persistence_service.ensure_schema()
+    imported_from_file = False
+    legacy = _metrics_file_path()
+    if legacy.exists():
+        report = telemetry_persistence_service.import_task_metrics_from_file(legacy)
+        imported_from_file = int(report.get("imported") or 0) > 0
+    _purge_legacy_metrics_file_if_enabled(imported_from_file)
 
 
 def _empty_aggregates() -> dict[str, Any]:
@@ -28,6 +82,22 @@ def record_task(
     status: str,
 ) -> None:
     """Append one task metric (JSONL). Call from agent_runner or PATCH /api/agent/tasks when status is completed/failed."""
+    if _use_db_metrics():
+        _bootstrap_db_metrics_if_needed()
+        max_rows = max(100, min(int(os.getenv("METRICS_MAX_ROWS", "50000")), 200000))
+        telemetry_persistence_service.append_task_metric(
+            {
+                "task_id": task_id,
+                "task_type": task_type,
+                "model": model,
+                "duration_seconds": duration_seconds,
+                "status": status,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            max_rows=max_rows,
+        )
+        return
+
     os.makedirs(os.path.dirname(METRICS_FILE), exist_ok=True)
     record = {
         "task_id": task_id,
@@ -43,10 +113,15 @@ def record_task(
 
 def _load_records() -> List[dict]:
     """Load all records from JSONL file."""
-    if not os.path.isfile(METRICS_FILE):
+    if _use_db_metrics():
+        _bootstrap_db_metrics_if_needed()
+        return telemetry_persistence_service.list_task_metrics(limit=100000)
+
+    file_path = _metrics_file_path()
+    if not file_path.is_file():
         return []
     records = []
-    with open(METRICS_FILE, encoding="utf-8") as f:
+    with file_path.open(encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
