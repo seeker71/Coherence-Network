@@ -47,20 +47,7 @@
     "api/scripts/validate_merged_change_contract.py",
     "api/tests/test_validate_merged_change_contract_script.py"
   ],
-  "change_intent": "runtime_fix",
-  "e2e_validation": {
-    "status": "pass",
-    "expected_behavior_delta": "Change Contract script no longer includes the flaky web root endpoint in default public validation probes.",
-    "public_endpoints": [
-      "https://coherence-network-production.up.railway.app/api/health",
-      "https://coherence-network-production.up.railway.app/api/gates/main-head",
-      "https://coherence-web-production.up.railway.app/gates",
-      "https://coherence-web-production.up.railway.app/api-health"
-    ],
-    "test_flows": [
-      "test_default_endpoints_exclude_web_root"
-    ]
-  },
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "ran_at": "2026-02-17T03:49:00Z",
