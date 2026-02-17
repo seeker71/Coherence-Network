@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -455,6 +456,7 @@ def _local_steps(
     skip_web_build: bool,
     require_gh_auth: bool,
 ) -> list[tuple[str, str]]:
+    maintainability_output = os.getenv("WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT", "maintainability_audit_report.json")
     steps: list[tuple[str, str]] = []
     workflow_check = _existing_script_command("scripts/validate_workflow_references.py")
     if workflow_check:
@@ -477,7 +479,7 @@ def _local_steps(
             ),
             (
                 "maintainability-regression-guard",
-                "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+                f"python3 api/scripts/run_maintainability_audit.py --output {shlex.quote(maintainability_output)} --fail-on-regression",
             ),
         ]
     )

@@ -487,6 +487,141 @@ def _attention_reasons(
     return reasons
 
 
+def _endpoint_attention_score(
+    *,
+    event_count: int,
+    success_rate: float,
+    paid_ratio: float,
+    friction_density: float,
+    value_gap: float,
+    cost_per_event: float,
+    attention_threshold: float,
+) -> tuple[float, bool]:
+    """Compute attention score and whether attention_threshold is exceeded."""
+    failure_score = (1.0 - success_rate) * 100.0
+    paid_score = min(paid_ratio * 60.0, 30.0)
+    cost_score = min(cost_per_event * 1000.0, 25.0)
+    friction_score = min(friction_density * 300.0, 20.0)
+    value_gap_score = min(value_gap / 5.0, 25.0)
+    sample_score = min(event_count / 20.0, 1.0) * 10.0
+
+    attention_score = (
+        failure_score * min(event_count / 5.0, 1.0)
+        + paid_score
+        + cost_score
+        + friction_score
+        + value_gap_score
+        + sample_score
+    )
+    return attention_score, attention_score >= attention_threshold
+
+
+def _endpoint_attention_status_counts(
+    row: EndpointRuntimeSummary,
+) -> tuple[int, int]:
+    success_count = 0
+    failure_count = 0
+    for code_str, count in row.status_counts.items():
+        code = _parse_status_code(code_str)
+        if 200 <= code < 400:
+            success_count += _safe_int(count, 0)
+        else:
+            failure_count += _safe_int(count, 0)
+    return success_count, failure_count
+
+
+def _endpoint_attention_paid_counts(
+    endpoint_events: list[RuntimeEvent],
+) -> tuple[int, int]:
+    paid_tool_event_count = 0
+    paid_tool_failure_count = 0
+    for event in endpoint_events:
+        metadata = event.metadata if isinstance(event.metadata, dict) else {}
+        if bool(metadata.get("is_paid_provider")):
+            paid_tool_event_count += 1
+            if event.status_code >= 400:
+                paid_tool_failure_count += 1
+    return paid_tool_event_count, paid_tool_failure_count
+
+
+def _build_endpoint_attention_row(
+    row: EndpointRuntimeSummary,
+    *,
+    min_event_count: int,
+    attention_threshold: float,
+    endpoint_events: list[RuntimeEvent],
+    friction_count: int,
+    idea_rows: dict[str, dict[str, float]],
+) -> EndpointAttentionRow | None:
+    event_count = int(row.event_count)
+    if event_count < max(1, int(min_event_count)):
+        return None
+
+    success_count, failure_count = _endpoint_attention_status_counts(row)
+
+    success_rate = float(success_count) / float(event_count) if event_count else 0.0
+
+    paid_tool_event_count, paid_tool_failure_count = _endpoint_attention_paid_counts(endpoint_events)
+
+    paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
+    friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
+
+    idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
+    potential_value = _safe_float(idea_data.get("potential_value", 0.0))
+    actual_value = _safe_float(idea_data.get("actual_value", 0.0))
+    estimated_cost = _safe_float(idea_data.get("estimated_cost", 0.0))
+    actual_cost = _safe_float(idea_data.get("actual_cost", 0.0))
+    idea_confidence = _safe_float(idea_data.get("confidence", 0.0), default=0.0)
+
+    value_gap = max(potential_value - actual_value, 0.0)
+    cost_per_event = float(row.runtime_cost_estimate) / float(max(event_count, 1))
+
+    confidence = min(event_count / 20.0, 1.0) * 0.75 + 0.25 * idea_confidence
+    attention_score, needs_attention = _endpoint_attention_score(
+        event_count=event_count,
+        success_rate=success_rate,
+        paid_ratio=paid_ratio,
+        friction_density=friction_density,
+        value_gap=value_gap,
+        cost_per_event=cost_per_event,
+        attention_threshold=attention_threshold,
+    )
+
+    return EndpointAttentionRow(
+        endpoint=row.endpoint,
+        methods=row.methods,
+        idea_id=row.idea_id,
+        origin_idea_id=row.origin_idea_id,
+        event_count=event_count,
+        success_count=success_count,
+        failure_count=failure_count,
+        success_rate=round(success_rate, 4),
+        runtime_cost_estimate=round(float(row.runtime_cost_estimate), 8),
+        cost_per_event=round(cost_per_event, 8),
+        paid_tool_event_count=paid_tool_event_count,
+        paid_tool_failure_count=paid_tool_failure_count,
+        paid_tool_ratio=round(paid_ratio, 4),
+        friction_event_count=friction_count,
+        friction_event_density=round(friction_density, 4),
+        potential_value=round(potential_value, 4),
+        actual_value=round(actual_value, 4),
+        estimated_cost=round(estimated_cost, 4),
+        actual_cost=round(actual_cost, 4),
+        value_gap=round(value_gap, 4),
+        attention_score=round(attention_score, 3),
+        confidence=round(max(0.0, min(confidence, 1.0)), 4),
+        needs_attention=needs_attention,
+        reasons=_attention_reasons(
+            success_rate=success_rate,
+            paid_ratio=paid_ratio,
+            friction_density=friction_density,
+            value_gap=value_gap,
+            cost_per_event=cost_per_event,
+            event_count=event_count,
+        ),
+    )
+
+
 def summarize_endpoint_attention(
     *,
     seconds: int = 3600,
@@ -499,107 +634,25 @@ def summarize_endpoint_attention(
     friction_by_endpoint = _endpoint_friction_counts(window_seconds)
     idea_rows = _load_idea_value_rows()
 
-    attention_events = [e for e in list_events(limit=2000) if e.recorded_at >= (
-        datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    )]
+    window_start = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    attention_events = [e for e in list_events(limit=2000) if e.recorded_at >= window_start]
     by_endpoint: dict[str, list[RuntimeEvent]] = {}
     for event in attention_events:
         by_endpoint.setdefault(event.endpoint, []).append(event)
 
     rows: list[EndpointAttentionRow] = []
     for row in endpoint_rows:
-        event_count = int(row.event_count)
-        if event_count < max(1, int(min_event_count)):
+        built = _build_endpoint_attention_row(
+            row,
+            min_event_count=min_event_count,
+            attention_threshold=attention_threshold,
+            endpoint_events=by_endpoint.get(row.endpoint, []),
+            friction_count=int(friction_by_endpoint.get(row.endpoint, 0)),
+            idea_rows=idea_rows,
+        )
+        if built is None:
             continue
-        endpoint_events = by_endpoint.get(row.endpoint, [])
-
-        success_count = 0
-        failure_count = 0
-        for code_str, count in row.status_counts.items():
-            code = _parse_status_code(code_str)
-            if 200 <= code < 400:
-                success_count += _safe_int(count, 0)
-            else:
-                failure_count += _safe_int(count, 0)
-
-        success_rate = float(success_count) / float(event_count) if event_count else 0.0
-
-        paid_tool_event_count = 0
-        paid_tool_failure_count = 0
-        for event in endpoint_events:
-            metadata = event.metadata if isinstance(event.metadata, dict) else {}
-            if bool(metadata.get("is_paid_provider")):
-                paid_tool_event_count += 1
-                if event.status_code >= 400:
-                    paid_tool_failure_count += 1
-
-        paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
-        friction_count = int(friction_by_endpoint.get(row.endpoint, 0))
-        friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
-
-        idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
-        potential_value = _safe_float(idea_data.get("potential_value", 0.0))
-        actual_value = _safe_float(idea_data.get("actual_value", 0.0))
-        estimated_cost = _safe_float(idea_data.get("estimated_cost", 0.0))
-        actual_cost = _safe_float(idea_data.get("actual_cost", 0.0))
-        idea_confidence = _safe_float(idea_data.get("confidence", 0.0), default=0.0)
-
-        value_gap = max(potential_value - actual_value, 0.0)
-        cost_per_event = float(row.runtime_cost_estimate) / float(max(event_count, 1))
-
-        failure_score = (1.0 - success_rate) * 100.0
-        paid_score = min(paid_ratio * 60.0, 30.0)
-        cost_score = min(cost_per_event * 1000.0, 25.0)
-        friction_score = min(friction_density * 300.0, 20.0)
-        value_gap_score = min(value_gap / 5.0, 25.0)
-        sample_score = min(event_count / 20.0, 1.0) * 10.0
-        confidence = min(event_count / 20.0, 1.0) * 0.75 + 0.25 * idea_confidence
-
-        attention_score = (
-            failure_score * min(event_count / 5.0, 1.0)
-            + paid_score
-            + cost_score
-            + friction_score
-            + value_gap_score
-            + sample_score
-        )
-        needs_attention = attention_score >= attention_threshold
-
-        rows.append(
-            EndpointAttentionRow(
-                endpoint=row.endpoint,
-                methods=row.methods,
-                idea_id=row.idea_id,
-                origin_idea_id=row.origin_idea_id,
-                event_count=event_count,
-                success_count=success_count,
-                failure_count=failure_count,
-                success_rate=round(success_rate, 4),
-                runtime_cost_estimate=round(float(row.runtime_cost_estimate), 8),
-                cost_per_event=round(cost_per_event, 8),
-                paid_tool_event_count=paid_tool_event_count,
-                paid_tool_failure_count=paid_tool_failure_count,
-                paid_tool_ratio=round(paid_ratio, 4),
-                friction_event_count=friction_count,
-                friction_event_density=round(friction_density, 4),
-                potential_value=round(potential_value, 4),
-                actual_value=round(actual_value, 4),
-                estimated_cost=round(estimated_cost, 4),
-                actual_cost=round(actual_cost, 4),
-                value_gap=round(value_gap, 4),
-                attention_score=round(attention_score, 3),
-                confidence=round(max(0.0, min(confidence, 1.0)), 4),
-                needs_attention=needs_attention,
-                reasons=_attention_reasons(
-                    success_rate=success_rate,
-                    paid_ratio=paid_ratio,
-                    friction_density=friction_density,
-                    value_gap=value_gap,
-                    cost_per_event=cost_per_event,
-                    event_count=event_count,
-                ),
-            )
-        )
+        rows.append(built)
 
     rows.sort(key=lambda row: row.attention_score, reverse=True)
     if limit is not None:

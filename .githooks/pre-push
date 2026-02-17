@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${SKIP_PR_GUARD:-0}" = "1" ]; then
+  echo "SKIP_PR_GUARD=1 set; skipping local pre-push PR guard."
+  exit 0
+fi
+
+REPORT_PATH="${TMPDIR:-/tmp}/coherence-maintainability-audit-${RANDOM:-0}.json"
+API_PORT="${GIT_PRE_PUSH_API_PORT:-18100}"
+WEB_PORT="${GIT_PRE_PUSH_WEB_PORT:-18101}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
+
+trap 'rm -f "$REPORT_PATH"' EXIT
+
+echo "Running local PR guard before push..."
+WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT="$REPORT_PATH" \
+  API_PORT="$API_PORT" \
+  WEB_PORT="$WEB_PORT" \
+  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
