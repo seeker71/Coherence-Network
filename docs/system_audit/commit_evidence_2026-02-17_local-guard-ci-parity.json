@@ -38,7 +38,10 @@
   ],
   "change_files": [
     "scripts/worktree_pr_guard.py",
-    "docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json"
+    "docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json",
+    ".gitignore",
+    "AGENTS.md",
+    "docs/WORKTREE-QUICKSTART.md"
   ],
   "change_intent": "process_only",
   "local_validation": {
