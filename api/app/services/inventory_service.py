@@ -720,32 +720,8 @@ def _normalize_validation_status(value: Any) -> str:
     return "pending"
 
 
-def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
-    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
-    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
-    use_db = use_db_raw in {"1", "true", "yes", "on"}
-    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
-        if db_url_configured:
-            use_db = True
-        else:
-            required_raw = str(
-                os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
-                or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
-                or ""
-            ).strip().lower()
-            required = required_raw in {"1", "true", "yes", "on"}
-            backend = commit_evidence_service.backend_info().get("backend")
-            use_db = required and backend == "postgresql"
-    if use_db:
-        try:
-            # When explicitly configured, treat the evidence store as source of truth
-            # (including "no rows" -> []) and do not fall back to scanning local files.
-            return commit_evidence_service.list_records(limit=limit)
-        except Exception:
-            return []
-
-    evidence_dir = _commit_evidence_dir()
-    files = []
+def _read_commit_evidence_records_from_files(evidence_dir: Path, limit: int) -> list[dict[str, Any]]:
+    files: list[Path] = []
     if evidence_dir.exists():
         files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, min(limit, 3000))]
     out: list[dict[str, Any]] = []
@@ -758,9 +734,10 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
             continue
         payload["_evidence_file"] = str(path)
         out.append(payload)
-    if out:
-        return out
+    return out
 
+
+def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]]:
     now = time.time()
     cached = _EVIDENCE_DISCOVERY_CACHE.get("items")
     if isinstance(cached, list) and _EVIDENCE_DISCOVERY_CACHE.get("expires_at", 0.0) > now:
@@ -811,6 +788,37 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
     _EVIDENCE_DISCOVERY_CACHE["expires_at"] = now + _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS
     _EVIDENCE_DISCOVERY_CACHE["source"] = "github" if remote_out else "none"
     return remote_out
+
+
+def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
+    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
+    use_db = use_db_raw in {"1", "true", "yes", "on"}
+    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        if db_url_configured:
+            use_db = True
+        else:
+            required_raw = str(
+                os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+                or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+                or ""
+            ).strip().lower()
+            required = required_raw in {"1", "true", "yes", "on"}
+            backend = commit_evidence_service.backend_info().get("backend")
+            use_db = required and backend == "postgresql"
+    if use_db:
+        try:
+            # When explicitly configured, treat the evidence store as source of truth
+            # (including "no rows" -> []) and do not fall back to scanning local files.
+            return commit_evidence_service.list_records(limit=limit)
+        except Exception:
+            return []
+
+    evidence_dir = _commit_evidence_dir()
+    out = _read_commit_evidence_records_from_files(evidence_dir, limit)
+    if out:
+        return out
+    return _read_commit_evidence_records_from_github(limit)
 
 
 def _parse_record_datetime(record: dict[str, Any]) -> datetime:
