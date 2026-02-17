@@ -1197,8 +1197,8 @@ def _parse_commit_evidence(
 def evaluate_commit_traceability_report(
     repository: str,
     sha: str,
-    api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-web-production.up.railway.app",
+    api_base: str = "",
+    web_base: str = "",
     github_token: str | None = None,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
@@ -1272,19 +1272,23 @@ def evaluate_commit_traceability_report(
         {
             "idea_id": idea_id,
             "api_path": f"/api/ideas/{idea_id}",
-            "api_url": f"{api_root}/api/ideas/{idea_id}",
+            "api_url": f"{api_root}/api/ideas/{idea_id}" if api_root else None,
         }
         for idea_id in sorted(idea_ids)
     ]
     specs = [
         {
             "spec_id": spec_id,
-            "path": spec_id_to_path.get(spec_id),
+            # Prefer deployment-agnostic API links; keep repo-relative source path separately.
+            "api_path": f"/api/spec-registry/{spec_id}",
+            "path": f"/api/spec-registry/{spec_id}",
+            "source_path": spec_id_to_path.get(spec_id),
             "github_url": (
                 f"{repo_url}/blob/{sha}/{spec_id_to_path[spec_id]}"
                 if spec_id_to_path.get(spec_id)
                 else None
             ),
+            "web_path": f"/specs/{spec_id}",
         }
         for spec_id in mapped_specs
     ]
@@ -1329,7 +1333,7 @@ def evaluate_commit_traceability_report(
             "api_ideas_path_template": "/api/ideas/{idea_id}",
         },
         "human_access": {
-            "web_gates_path": f"{web_root}/gates",
+            "web_gates_path": f"{web_root}/gates" if web_root else "/gates",
         },
         "result": "traceability_ready" if not missing_answers else "traceability_incomplete",
     }
