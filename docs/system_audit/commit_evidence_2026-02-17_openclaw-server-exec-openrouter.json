@@ -1,0 +1,92 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/openclaw-server-exec",
+  "commit_scope": "Add server-side agent task execution using OpenRouter free model (\"openclaw\" executor), with paid-provider enforcement, runtime event diagnostics, and optional auto-execute on task creation for the public deployed instance.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/openrouter_client.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/system_audit/commit_evidence_2026-02-17_openclaw-server-exec-openrouter.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "2",
+    "26"
+  ],
+  "task_ids": [
+    "openclaw-server-exec-openrouter"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_openclaw_executor_integration.py tests/test_agent_task_persistence.py tests/test_agent_tasks_runtime_fallback.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_openclaw-server-exec-openrouter.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/openrouter_client.py",
+    "api/tests/test_agent_execute_endpoint.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production can execute an agent task server-side using the OpenRouter free model, track completion/usage events, and render tasks in the Vercel /tasks UI.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/metrics",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "POST /api/agent/tasks with AGENT_AUTO_EXECUTE=1 set in production; confirm it completes and is visible in /tasks UI",
+      "GET /api/runtime/events and confirm tool + completion events include task_id, model, and token usage fields"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T09:17:50Z",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_openclaw_executor_integration.py tests/test_agent_task_persistence.py tests/test_agent_tasks_runtime_fallback.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_openclaw-server-exec-openrouter.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local gates, CI, deployment, and public verification."
+  }
+}

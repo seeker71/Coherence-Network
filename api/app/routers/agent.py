@@ -5,7 +5,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Body, Header, HTTPException, Query
 
 from typing import Optional
 
@@ -26,6 +26,10 @@ from app.models.error import ErrorDetail
 from app.services import agent_service
 
 router = APIRouter()
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _task_to_item(task: dict) -> dict:
@@ -81,10 +85,60 @@ def _task_to_full(task: dict) -> dict:
     status_code=201,
     responses={422: {"description": "Invalid task_type, empty direction, or validation error (detail: list of {loc, msg, type})"}},
 )
-async def create_task(data: AgentTaskCreate) -> AgentTask:
-    """Submit a task and get routed model + command."""
-    task = agent_service.create_task(data)
+async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) -> AgentTask:
+    """Submit a task and get routed model + command.
+
+    When AGENT_AUTO_EXECUTE=1, tasks are executed server-side in the background using the
+    OpenRouter free model, and completion is tracked via runtime events.
+    """
+    auto = _truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0"))
+    if auto:
+        ctx = data.context if isinstance(data.context, dict) else {}
+        patched_ctx = dict(ctx)
+        patched_ctx.setdefault("executor", "openclaw")
+        patched_ctx.setdefault("model_override", os.environ.get("AGENT_AUTO_EXECUTE_MODEL", "openrouter/free"))
+        patched = data.model_copy(update={"context": patched_ctx})
+        task = agent_service.create_task(patched)
+        try:
+            from app.services import agent_execution_service
+
+            background_tasks.add_task(agent_execution_service.execute_task, task["id"])
+        except Exception:
+            # Task creation should remain usable even if the executor module is unavailable.
+            pass
+    else:
+        task = agent_service.create_task(data)
     return AgentTask(**_task_to_full(task))
+
+
+@router.post(
+    "/agent/tasks/{task_id}/execute",
+    responses={
+        403: {"description": "Forbidden (missing or invalid execute token)", "model": ErrorDetail},
+        404: {"description": "Task not found", "model": ErrorDetail},
+    },
+)
+async def execute_task(
+    task_id: str,
+    background_tasks: BackgroundTasks,
+    x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+) -> dict:
+    """Execute a task server-side (background).
+
+    If AGENT_EXECUTE_TOKEN is set, callers must provide header X-Agent-Execute-Token.
+    """
+    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    if expected and (x_agent_execute_token or "").strip() != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    task = agent_service.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    from app.services import agent_execution_service
+
+    background_tasks.add_task(agent_execution_service.execute_task, task_id)
+    return {"ok": True, "task_id": task_id}
 
 
 @router.post(
