@@ -123,13 +123,14 @@ jobs:
             });
 
       - name: Fail when modularity gate fails
-        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT == '1' }}
+        # Never fail scheduled runs: scheduled audits should alert via issue, not block "main CI green".
+        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT == '1' && github.event_name != 'schedule' }}
         run: |
           echo "Asset modularity audit failed"
           exit 1
 
       - name: Non-blocking by default (issue is the alert)
-        if: ${{ steps.audit.outputs.exit_code != '0' && vars.ASSET_MODULARITY_STRICT != '1' }}
+        if: ${{ steps.audit.outputs.exit_code != '0' && (vars.ASSET_MODULARITY_STRICT != '1' || github.event_name == 'schedule') }}
         run: |
-          echo "WARNING: Asset modularity drift detected, but strict mode is disabled (set ASSET_MODULARITY_STRICT=1 to fail)."
+          echo "WARNING: Asset modularity drift detected, but this run is non-blocking (set ASSET_MODULARITY_STRICT=1 and run via workflow_dispatch to fail)."
           exit 0
