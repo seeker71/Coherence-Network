@@ -1,0 +1,79 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/public-e2e-flow-spec",
+  "commit_scope": "Count spec-registry linked specs in flow unblock inventory and add Public E2E Flow Gate Automation spec coverage",
+  "files_owned": [
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "specs/095-public-e2e-flow-gate-automation.md"
+  ],
+  "idea_ids": [
+    "public-e2e-flow-gate-automation"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation"
+  ],
+  "task_ids": [
+    "unblock-public-e2e-flow-gate-automation-spec-stage"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_spec_quality.py --file specs/095-public-e2e-flow-gate-automation.md",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_api.py -k 'flow_inventory_counts_spec_registry_specs_for_idea or flow_inventory_exposes_interdependencies_and_prioritizes_unblock_queue'",
+    "curl -fsS -X POST https://coherence-network-production.up.railway.app/api/spec-registry ..."
+  ],
+  "change_files": [
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "specs/095-public-e2e-flow-gate-automation.md",
+    "docs/system_audit/commit_evidence_2026-02-17_public-e2e-flow-spec-unblock.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/095-public-e2e-flow-gate-automation.md",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_inventory_api.py -k 'flow_inventory_counts_spec_registry_specs_for_idea or flow_inventory_exposes_interdependencies_and_prioritizes_unblock_queue'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Flow unblock ranking must count specs created in the spec registry for an idea, moving that idea past spec-stage blockers.",
+    "public_endpoints": [
+      "/api/spec-registry",
+      "/api/inventory/flow",
+      "/api/inventory/flow/next-unblock-task"
+    ],
+    "test_flows": [
+      "Create spec-registry entry for public-e2e-flow-gate-automation and verify /api/inventory/flow?idea_id=... reports with_spec=1.",
+      "Verify /api/inventory/flow/next-unblock-task for that idea no longer returns blocking_stage='spec'."
+    ]
+  }
+}

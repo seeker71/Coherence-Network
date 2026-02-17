@@ -2954,6 +2954,7 @@ def build_spec_process_implementation_validation_flow(
 
     runtime_rows = runtime_service.summarize_by_idea(seconds=runtime_window_seconds)
     runtime_by_idea = {row.idea_id: row for row in runtime_rows}
+    registry_specs = spec_registry_service.list_specs(limit=5000)
 
     lineage_links = value_lineage_service.list_links(limit=1000)
     usage_events = value_lineage_service.list_usage_events(limit=5000)
@@ -2997,6 +2998,11 @@ def build_spec_process_implementation_validation_flow(
 
     discovered_ids: set[str] = set(idea_name_map.keys())
     discovered_ids.update(link.idea_id for link in lineage_links if link.idea_id)
+    discovered_ids.update(
+        str(spec.idea_id).strip()
+        for spec in registry_specs
+        if isinstance(spec.idea_id, str) and str(spec.idea_id).strip()
+    )
     for record in evidence_records:
         raw_ids = record.get("idea_ids")
         if isinstance(raw_ids, list):
@@ -3035,6 +3041,21 @@ def build_spec_process_implementation_validation_flow(
         _add_contributor(flow, str(link.contributors.review or ""), ["review"])
         flow["usage_events_count"] += int(usage_by_lineage_count.get(link.id, 0))
         flow["measured_value_total"] += float(usage_by_lineage_value.get(link.id, 0.0))
+
+    for spec in registry_specs:
+        spec_idea_id = str(spec.idea_id or "").strip()
+        if not spec_idea_id:
+            continue
+        if idea_id and spec_idea_id != idea_id:
+            continue
+        flow = ensure(spec_idea_id)
+        flow["_spec_ids"].add(spec.spec_id)
+        if (spec.process_summary and str(spec.process_summary).strip()) or (
+            spec.pseudocode_summary and str(spec.pseudocode_summary).strip()
+        ):
+            flow["process_evidence_count"] += 1
+        if spec.implementation_summary and str(spec.implementation_summary).strip():
+            flow["_implementation_refs"].add(f"spec-registry:{spec.spec_id}")
 
     for record in evidence_records:
         raw_idea_ids = record.get("idea_ids")
