@@ -1,0 +1,92 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-endpoint-usage-metrics-complete",
+  "commit_scope": "Ensure canonical route registry is available in API-only deploy roots so production route-evidence can validate all API and web endpoints instead of fallback-only coverage.",
+  "files_owned": [
+    "api/app/services/route_registry_service.py",
+    "api/config/canonical_routes.json",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/commit_evidence_2026-02-17_route-registry-api-config-deploy.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage"
+  ],
+  "task_ids": [
+    "endpoint-usage-metrics-complete"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py::test_canonical_routes_inventory_endpoint_returns_registry tests/test_inventory_api.py::test_canonical_routes_fallback_when_config_missing tests/test_inventory_api.py::test_canonical_routes_uses_env_override_path tests/test_runtime_api.py::test_runtime_database_summary_handles_sqlite_naive_timestamps",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "api/app/services/route_registry_service.py",
+    "api/config/canonical_routes.json",
+    "api/tests/test_inventory_api.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production canonical routes inventory resolves full route registry in API-only deployment root; route-evidence and endpoint traceability can evaluate all declared API/web routes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/routes/canonical",
+      "https://coherence-network-production.up.railway.app/api/inventory/route-evidence",
+      "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "api:/api/inventory/routes/canonical returns non-fallback route registry with full API/web route counts",
+      "api:/api/inventory/route-evidence reports full route inventory and actual evidence coverage",
+      "api:/api/runtime/events contains persisted usage events after endpoint exercises"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T05:42:00Z",
+    "environment": {
+      "python": "3.14",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && pytest -q tests/test_inventory_api.py::test_canonical_routes_inventory_endpoint_returns_registry tests/test_inventory_api.py::test_canonical_routes_fallback_when_config_missing tests/test_inventory_api.py::test_canonical_routes_uses_env_override_path tests/test_runtime_api.py::test_runtime_database_summary_handles_sqlite_naive_timestamps"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI, merge, and production route-evidence verification."
+  }
+}
