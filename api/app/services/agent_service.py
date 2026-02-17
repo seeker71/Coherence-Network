@@ -322,7 +322,7 @@ def _openclaw_command_template(task_type: TaskType) -> str:
     model = _OPENCLAW_MODEL_BY_TYPE[task_type]
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --skip-git-repo-check --json',
+        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
@@ -856,7 +856,10 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         # Model override for testing (e.g. glm-4.7:cloud for better tool use)
         if ctx.get("model_override"):
             override = ctx["model_override"]
-            command = re.sub(r"--model\s+\S+", f"--model {override}", command)
+            if re.search(r"--model\s+\S+", command):
+                command = re.sub(r"--model\s+\S+", f"--model {override}", command)
+            else:
+                command = command.rstrip() + f" --model {override}"
             # Cloud models need ANTHROPIC_BASE_URL=https://ollama.com when using glm-5:cloud etc.
         # Headless claude needs --dangerously-skip-permissions for Edit to run
         if "claude -p" in command and "--dangerously-skip-permissions" not in command:

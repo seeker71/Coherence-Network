@@ -83,6 +83,10 @@ def _hint_for_check(name: str) -> str:
     return "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 
 
+def _parse_optional_status_contexts(raw: str) -> set[str]:
+    return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
+
+
 def _check_run_to_item(run: dict[str, Any]) -> dict[str, Any]:
     name = str(run.get("name") or "unknown")
     details_url = run.get("details_url")
@@ -114,6 +118,7 @@ def _open_pr_payload(
     base: str,
     head_prefix: str,
     token: str,
+    optional_status_contexts: set[str],
 ) -> list[dict[str, Any]]:
     pulls = gates.get_open_prs(repo, github_token=token)
     required_contexts = gates.get_required_contexts(repo, base, github_token=token) or []
@@ -140,6 +145,7 @@ def _open_pr_payload(
                 failing_check_runs.append(_check_run_to_item(run))
 
         failing_status_contexts = []
+        blocking_status_contexts = []
         statuses = commit_status.get("statuses")
         if isinstance(statuses, list):
             for status in statuses:
@@ -147,7 +153,13 @@ def _open_pr_payload(
                     continue
                 state = str(status.get("state") or "").lower()
                 if state not in {"success", "expected"}:
-                    failing_status_contexts.append(_status_to_item(status))
+                    item = _status_to_item(status)
+                    context = str(item.get("context") or "").strip().lower()
+                    is_optional = context in optional_status_contexts
+                    item["optional"] = is_optional
+                    failing_status_contexts.append(item)
+                    if not is_optional:
+                        blocking_status_contexts.append(item)
 
         rows.append(
             {
@@ -162,6 +174,7 @@ def _open_pr_payload(
                 "failing_required_contexts": eval_result.get("failing_required_contexts"),
                 "failing_check_runs": failing_check_runs,
                 "failing_status_contexts": failing_status_contexts,
+                "blocking_status_contexts": blocking_status_contexts,
             }
         )
     return rows
@@ -200,7 +213,7 @@ def _has_blocking_failures(rows: list[dict[str, Any]]) -> bool:
             continue
         if row.get("failing_check_runs"):
             return True
-        if row.get("failing_status_contexts"):
+        if row.get("blocking_status_contexts"):
             return True
         if row.get("missing_required_contexts"):
             return True
@@ -218,7 +231,7 @@ def _short_summary(rows: list[dict[str, Any]]) -> str:
             continue
         if (
             row.get("failing_check_runs")
-            or row.get("failing_status_contexts")
+            or row.get("blocking_status_contexts")
             or row.get("missing_required_contexts")
             or row.get("failing_required_contexts")
         ):
@@ -251,6 +264,11 @@ def main() -> int:
     parser.add_argument("--rerun-failed-actions", action="store_true")
     parser.add_argument("--rerun-settle-seconds", type=int, default=120)
     parser.add_argument("--poll-seconds", type=int, default=20)
+    parser.add_argument(
+        "--optional-status-contexts",
+        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
+        help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -271,7 +289,9 @@ def main() -> int:
             print(payload["summary"])
         return 2
 
-    open_prs = _open_pr_payload(args.repo, args.base, args.head_prefix, token)
+    optional_status_contexts = _parse_optional_status_contexts(args.optional_status_contexts)
+
+    open_prs = _open_pr_payload(args.repo, args.base, args.head_prefix, token, optional_status_contexts)
     report: dict[str, Any] = {
         "generated_at": _now_utc(),
         "tool": "scripts/pr_check_failure_triage.py",
@@ -282,13 +302,14 @@ def main() -> int:
         "open_prs": open_prs,
         "summary": _short_summary(open_prs),
         "auto_rerun_actions": [],
+        "optional_status_contexts": sorted(optional_status_contexts),
     }
 
     if args.rerun_failed_actions and _has_blocking_failures(open_prs):
         report["auto_rerun_actions"] = _rerun_failed_actions(args.repo, open_prs, token)
         deadline = time.time() + max(0, args.rerun_settle_seconds)
         while time.time() < deadline:
-            refreshed = _open_pr_payload(args.repo, args.base, args.head_prefix, token)
+            refreshed = _open_pr_payload(args.repo, args.base, args.head_prefix, token, optional_status_contexts)
             if not _has_blocking_failures(refreshed):
                 open_prs = refreshed
                 report["open_prs"] = refreshed

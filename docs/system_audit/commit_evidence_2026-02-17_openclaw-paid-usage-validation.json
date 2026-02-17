@@ -9,6 +9,9 @@
     "api/app/services/release_gate_service.py",
     "api/tests/test_agent_usage_tracking_api.py",
     "api/tests/test_automation_usage_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py",
     "docs/system_audit/commit_evidence_2026-02-17_openclaw-paid-usage-validation.json"
   ],
   "idea_ids": [
@@ -53,12 +56,15 @@
     "api/app/services/inventory_service.py",
     "api/app/services/release_gate_service.py",
     "api/tests/test_agent_usage_tracking_api.py",
-    "api/tests/test_automation_usage_api.py"
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py"
   ],
   "change_intent": "runtime_fix",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "OpenClaw validation supports Codex/OpenAI-backed execution; runtime completion events include provider attribution so paid-provider usage is measurable and enforceable.",
+    "expected_behavior_delta": "OpenClaw validation supports Codex/OpenAI-backed execution; runtime completion events include provider attribution so paid-provider usage is measurable and enforceable. PR guard/triage treats Vercel status context as optional by default so Railway deployment remains primary merge gate.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
       "https://coherence-network-production.up.railway.app/api/agent/usage",
@@ -73,7 +79,8 @@
     "status": "pass",
     "ran_at": "2026-02-17T05:50:00Z",
     "commands": [
-      "cd api && pytest -q tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py"
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py",
+      "python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --json"
     ]
   },
   "ci_validation": {
