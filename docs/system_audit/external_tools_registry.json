@@ -22,6 +22,8 @@
     "npm",
     "pip",
     "python",
+    "python3",
+    "printf",
     "railway",
     "sleep"
   ],
