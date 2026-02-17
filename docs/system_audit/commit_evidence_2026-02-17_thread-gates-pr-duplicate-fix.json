@@ -1,0 +1,59 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-thread-gates-no-duplicate-pr",
+  "commit_scope": "Prevent duplicate Thread Gates runs on PR branch updates by limiting push trigger scope to main/master.",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/commit_evidence_2026-02-17_thread-gates-pr-duplicate-fix.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration"
+  ],
+  "task_ids": [
+    "task-thread-gates-duplicate-pr-runs"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/thread-gates.yml",
+    "scripts/validate_workflow_references.py"
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/commit_evidence_2026-02-17_thread-gates-pr-duplicate-fix.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/pull/133"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI completion and merge."
+  }
+}
