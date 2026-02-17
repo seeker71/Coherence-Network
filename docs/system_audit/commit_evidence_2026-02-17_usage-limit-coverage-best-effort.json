@@ -36,7 +36,8 @@
   "evidence_refs": [
     "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
     "cd web && npm ci --cache /tmp/npm-codex-cache",
-    "cd web && npm run build"
+    "cd web && npm run build",
+    "cd api && python3 scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"
   ],
   "change_files": [
     "api/app/models/automation_usage.py",
@@ -51,7 +52,8 @@
     "commands": [
       "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
       "cd web && npm ci --cache /tmp/npm-codex-cache",
-      "cd web && npm run build"
+      "cd web && npm run build",
+      "cd api && python3 scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"
     ]
   },
   "ci_validation": {

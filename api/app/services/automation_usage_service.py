@@ -214,6 +214,129 @@ def _append_rate_limit_metrics(
     return found
 
 
+def _runtime_task_runs_snapshot(*, provider: str, kind: str, active_runs: int, note: str) -> ProviderUsageSnapshot:
+    return ProviderUsageSnapshot(
+        id=f"provider_{provider.replace('-', '_')}_{int(time.time())}",
+        provider=provider,
+        kind=kind,  # type: ignore[arg-type]
+        status="ok",
+        data_source="runtime_events",
+        metrics=[
+            _metric(
+                id="runtime_task_runs",
+                label="Runtime task runs",
+                unit="tasks",
+                used=float(active_runs),
+                window="rolling",
+            )
+        ],
+        notes=[note],
+        raw={"runtime_task_runs": active_runs},
+    )
+
+
+def _subset_headers(headers: httpx.Headers, keys: tuple[str, ...]) -> dict[str, str | None]:
+    return {key: headers.get(key) for key in keys}
+
+
+def _build_models_visibility_snapshot(
+    *,
+    provider: str,
+    label: str,
+    models_url: str,
+    rows: list[Any],
+    headers: httpx.Headers,
+    request_limit_keys: tuple[str, ...],
+    request_remaining_keys: tuple[str, ...],
+    request_window: str,
+    request_label: str,
+    token_limit_keys: tuple[str, ...],
+    token_remaining_keys: tuple[str, ...],
+    token_window: str,
+    token_label: str,
+    rate_header_keys: tuple[str, ...],
+    no_header_note: str,
+) -> ProviderUsageSnapshot:
+    metrics = [
+        _metric(
+            id="models_visible",
+            label=label,
+            unit="requests",
+            used=float(len(rows)),
+            window="probe",
+        )
+    ]
+    has_limit_headers = _append_rate_limit_metrics(
+        metrics=metrics,
+        headers=headers,
+        request_limit_keys=request_limit_keys,
+        request_remaining_keys=request_remaining_keys,
+        request_window=request_window,
+        request_label=request_label,
+        token_limit_keys=token_limit_keys,
+        token_remaining_keys=token_remaining_keys,
+        token_window=token_window,
+        token_label=token_label,
+    )
+    notes: list[str] = []
+    if not has_limit_headers:
+        notes.append(no_header_note)
+
+    return ProviderUsageSnapshot(
+        id=f"provider_{provider.replace('-', '_')}_{int(time.time())}",
+        provider=provider,
+        kind="custom",
+        status="ok",
+        data_source="provider_api",
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "models_count": len(rows),
+            "probe_url": models_url,
+            "rate_limit_headers": _subset_headers(headers, rate_header_keys),
+        },
+    )
+
+
+def _railway_api_probe_snapshot(*, ok: bool, response_headers: httpx.Headers, gql_url: str) -> ProviderUsageSnapshot:
+    metrics = [
+        _metric(
+            id="api_probe",
+            label="Railway API probe",
+            unit="requests",
+            used=1.0 if ok else 0.0,
+            window="probe",
+        )
+    ]
+    has_limit_headers = _append_rate_limit_metrics(
+        metrics=metrics,
+        headers=response_headers,
+        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit"),
+        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining"),
+        request_window="hourly",
+        request_label="Railway API request quota",
+    )
+    notes = [] if ok else ["Railway API probe returned unexpected payload."]
+    if ok and not has_limit_headers:
+        notes.append("Railway probe succeeded, but no request remaining headers were returned.")
+    return ProviderUsageSnapshot(
+        id=f"provider_railway_{int(time.time())}",
+        provider="railway",
+        kind="custom",
+        status="ok" if ok else "degraded",
+        data_source="provider_api",
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "probe_url": gql_url,
+            "rate_limit_headers": _subset_headers(
+                response_headers,
+                ("x-ratelimit-limit", "x-ratelimit-remaining", "ratelimit-limit", "ratelimit-remaining"),
+            ),
+        },
+    )
+
+
 def _default_official_records(provider: str) -> list[str]:
     links: dict[str, list[str]] = {
         "coherence-internal": [
@@ -675,23 +798,11 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
     if not api_key:
         active = int(_active_provider_usage_counts().get("openai-codex", 0))
         if active > 0:
-            return ProviderUsageSnapshot(
-                id=f"provider_openai_codex_{int(time.time())}",
+            return _runtime_task_runs_snapshot(
                 provider="openai-codex",
                 kind="custom",
-                status="ok",
-                data_source="runtime_events",
-                metrics=[
-                    _metric(
-                        id="runtime_task_runs",
-                        label="Runtime task runs",
-                        unit="tasks",
-                        used=float(active),
-                        window="rolling",
-                    )
-                ],
-                notes=["Using runtime Codex execution evidence (no direct OpenAI API key in environment)."],
-                raw={"runtime_task_runs": active},
+                active_runs=active,
+                note="Using runtime Codex execution evidence (no direct OpenAI API key in environment).",
             )
         return ProviderUsageSnapshot(
             id=f"provider_openai_codex_{int(time.time())}",
@@ -721,17 +832,11 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    metrics = [
-        _metric(
-            id="models_visible",
-            label="OpenAI visible models",
-            unit="requests",
-            used=float(len(rows)),
-            window="probe",
-        )
-    ]
-    has_limit_headers = _append_rate_limit_metrics(
-        metrics=metrics,
+    return _build_models_visibility_snapshot(
+        provider="openai-codex",
+        label="OpenAI visible models",
+        models_url=models_url,
+        rows=rows,
         headers=response.headers,
         request_limit_keys=("x-ratelimit-limit-requests",),
         request_remaining_keys=("x-ratelimit-remaining-requests",),
@@ -741,29 +846,13 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         token_remaining_keys=("x-ratelimit-remaining-tokens",),
         token_window="minute",
         token_label="OpenAI token quota",
-    )
-    notes: list[str] = []
-    if not has_limit_headers:
-        notes.append("OpenAI models probe succeeded, but no request/token remaining headers were returned.")
-
-    return ProviderUsageSnapshot(
-        id=f"provider_openai_codex_{int(time.time())}",
-        provider="openai-codex",
-        kind="custom",
-        status="ok",
-        data_source="provider_api",
-        metrics=metrics,
-        notes=notes,
-        raw={
-            "models_count": len(rows),
-            "probe_url": models_url,
-            "rate_limit_headers": {
-                "x-ratelimit-limit-requests": response.headers.get("x-ratelimit-limit-requests"),
-                "x-ratelimit-remaining-requests": response.headers.get("x-ratelimit-remaining-requests"),
-                "x-ratelimit-limit-tokens": response.headers.get("x-ratelimit-limit-tokens"),
-                "x-ratelimit-remaining-tokens": response.headers.get("x-ratelimit-remaining-tokens"),
-            },
-        },
+        rate_header_keys=(
+            "x-ratelimit-limit-requests",
+            "x-ratelimit-remaining-requests",
+            "x-ratelimit-limit-tokens",
+            "x-ratelimit-remaining-tokens",
+        ),
+        no_header_note="OpenAI models probe succeeded, but no request/token remaining headers were returned.",
     )
 
 
@@ -780,23 +869,11 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
     if not api_key:
         active = int(_active_provider_usage_counts().get("claude", 0))
         if active > 0:
-            return ProviderUsageSnapshot(
-                id=f"provider_claude_{int(time.time())}",
+            return _runtime_task_runs_snapshot(
                 provider="claude",
                 kind="custom",
-                status="ok",
-                data_source="runtime_events",
-                metrics=[
-                    _metric(
-                        id="runtime_task_runs",
-                        label="Runtime task runs",
-                        unit="tasks",
-                        used=float(active),
-                        window="rolling",
-                    )
-                ],
-                notes=["Using runtime Claude execution evidence (no direct Anthropic key in environment)."],
-                raw={"runtime_task_runs": active},
+                active_runs=active,
+                note="Using runtime Claude execution evidence (no direct Anthropic key in environment).",
             )
         return ProviderUsageSnapshot(
             id=f"provider_claude_{int(time.time())}",
@@ -816,26 +893,14 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
     except Exception as exc:
         active = int(_active_provider_usage_counts().get("claude", 0))
         if active > 0:
-            return ProviderUsageSnapshot(
-                id=f"provider_claude_{int(time.time())}",
+            snapshot = _runtime_task_runs_snapshot(
                 provider="claude",
                 kind="custom",
-                status="ok",
-                data_source="runtime_events",
-                metrics=[
-                    _metric(
-                        id="runtime_task_runs",
-                        label="Runtime task runs",
-                        unit="tasks",
-                        used=float(active),
-                        window="rolling",
-                    )
-                ],
-                notes=[
-                    f"Claude models probe failed ({exc}); using runtime execution evidence fallback."
-                ],
-                raw={"runtime_task_runs": active, "probe_url": models_url},
+                active_runs=active,
+                note=f"Claude models probe failed ({exc}); using runtime execution evidence fallback.",
             )
+            snapshot.raw["probe_url"] = models_url
+            return snapshot
         return ProviderUsageSnapshot(
             id=f"provider_claude_{int(time.time())}",
             provider="claude",
@@ -847,17 +912,11 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    metrics = [
-        _metric(
-            id="models_visible",
-            label="Claude visible models",
-            unit="requests",
-            used=float(len(rows)),
-            window="probe",
-        )
-    ]
-    has_limit_headers = _append_rate_limit_metrics(
-        metrics=metrics,
+    return _build_models_visibility_snapshot(
+        provider="claude",
+        label="Claude visible models",
+        models_url=models_url,
+        rows=rows,
         headers=response.headers,
         request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
         request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
@@ -867,29 +926,13 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
         token_window="minute",
         token_label="Claude token quota",
-    )
-    notes: list[str] = []
-    if not has_limit_headers:
-        notes.append("Claude models probe succeeded, but no request/token remaining headers were returned.")
-
-    return ProviderUsageSnapshot(
-        id=f"provider_claude_{int(time.time())}",
-        provider="claude",
-        kind="custom",
-        status="ok",
-        data_source="provider_api",
-        metrics=metrics,
-        notes=notes,
-        raw={
-            "models_count": len(rows),
-            "probe_url": models_url,
-            "rate_limit_headers": {
-                "anthropic-ratelimit-requests-limit": response.headers.get("anthropic-ratelimit-requests-limit"),
-                "anthropic-ratelimit-requests-remaining": response.headers.get("anthropic-ratelimit-requests-remaining"),
-                "anthropic-ratelimit-tokens-limit": response.headers.get("anthropic-ratelimit-tokens-limit"),
-                "anthropic-ratelimit-tokens-remaining": response.headers.get("anthropic-ratelimit-tokens-remaining"),
-            },
-        },
+        rate_header_keys=(
+            "anthropic-ratelimit-requests-limit",
+            "anthropic-ratelimit-requests-remaining",
+            "anthropic-ratelimit-tokens-limit",
+            "anthropic-ratelimit-tokens-remaining",
+        ),
+        no_header_note="Claude models probe succeeded, but no request/token remaining headers were returned.",
     )
 
 
@@ -948,44 +991,7 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
 
     me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
     ok = isinstance(me, dict) and bool(str(me.get("id") or "").strip())
-    metrics = [
-        _metric(
-            id="api_probe",
-            label="Railway API probe",
-            unit="requests",
-            used=1.0 if ok else 0.0,
-            window="probe",
-        )
-    ]
-    has_limit_headers = _append_rate_limit_metrics(
-        metrics=metrics,
-        headers=response.headers,
-        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit"),
-        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining"),
-        request_window="hourly",
-        request_label="Railway API request quota",
-    )
-    notes = [] if ok else ["Railway API probe returned unexpected payload."]
-    if ok and not has_limit_headers:
-        notes.append("Railway probe succeeded, but no request remaining headers were returned.")
-    return ProviderUsageSnapshot(
-        id=f"provider_railway_{int(time.time())}",
-        provider="railway",
-        kind="custom",
-        status="ok" if ok else "degraded",
-        data_source="provider_api",
-        metrics=metrics,
-        notes=notes,
-        raw={
-            "probe_url": gql_url,
-            "rate_limit_headers": {
-                "x-ratelimit-limit": response.headers.get("x-ratelimit-limit"),
-                "x-ratelimit-remaining": response.headers.get("x-ratelimit-remaining"),
-                "ratelimit-limit": response.headers.get("ratelimit-limit"),
-                "ratelimit-remaining": response.headers.get("ratelimit-remaining"),
-            },
-        },
-    )
+    return _railway_api_probe_snapshot(ok=ok, response_headers=response.headers, gql_url=gql_url)
 
 
 def _openai_headers() -> dict[str, str]:
