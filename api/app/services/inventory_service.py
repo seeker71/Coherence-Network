@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import httpx
 
@@ -326,6 +326,8 @@ def sync_implementation_request_question_tasks() -> dict:
 
 _SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
 _SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
+_EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
+_EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 _ROUTE_PROBE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "item": None, "source": "none"}
 _ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 _ROUTE_PROBE_LATEST_FILE = "route_evidence_probe_latest.json"
@@ -339,16 +341,16 @@ def _project_root() -> Path:
             return configured_path
 
     source_path = Path(__file__).resolve()
-    fallback_api_root: Path | None = None
+
+    # Prefer monorepo roots that include top-level specs/.
     for candidate in [source_path, *source_path.parents]:
-        has_monorepo_layout = (candidate / "api" / "app").exists()
-        if has_monorepo_layout:
+        if (candidate / "api" / "app").exists():
             return candidate
-        has_api_service_layout = (candidate / "app").exists() and (candidate / "scripts").exists()
-        if has_api_service_layout and fallback_api_root is None:
-            fallback_api_root = candidate
-    if fallback_api_root is not None:
-        return fallback_api_root
+
+    # Fallback for API-only packaging layouts.
+    for candidate in [source_path, *source_path.parents]:
+        if (candidate / "app").exists() and (candidate / "scripts").exists():
+            return candidate
     return source_path.parents[3]
 
 
@@ -371,6 +373,14 @@ def _github_headers() -> dict[str, str]:
     return headers
 
 
+def _idea_api_path(idea_id: str) -> str:
+    return f"/api/ideas/{quote(str(idea_id), safe='')}"
+
+
+def _spec_api_path(spec_id: str) -> str:
+    return f"/api/spec-registry/{quote(str(spec_id), safe='')}"
+
+
 def _sort_spec_items(rows: list[dict]) -> list[dict]:
     def key(row: dict) -> tuple[int, int, str]:
         spec_id = str(row.get("spec_id") or "")
@@ -379,6 +389,27 @@ def _sort_spec_items(rows: list[dict]) -> list[dict]:
         return (1, 0, spec_id)
 
     return sorted(rows, key=key)
+
+
+def _normalize_spec_item(row: dict[str, Any]) -> dict[str, Any]:
+    spec_id = str(row.get("spec_id") or "").strip()
+    path_value = str(row.get("path") or "").strip()
+    api_path = str(row.get("api_path") or "").strip()
+
+    source_path = str(row.get("source_path") or "").strip()
+    if path_value.startswith("specs/") and not source_path:
+        source_path = path_value
+
+    if not api_path and spec_id:
+        api_path = _spec_api_path(spec_id)
+
+    normalized = dict(row)
+    if api_path:
+        normalized["api_path"] = api_path
+        normalized["path"] = api_path
+    if source_path:
+        normalized["source_path"] = source_path
+    return normalized
 
 
 def _discover_specs_local(limit: int = 300) -> list[dict]:
@@ -399,11 +430,13 @@ def _discover_specs_local(limit: int = 300) -> list[dict]:
         except OSError:
             pass
         out.append(
-            {
-                "spec_id": spec_id,
-                "title": title,
-                "path": f"specs/{path.name}",
-            }
+            _normalize_spec_item(
+                {
+                    "spec_id": spec_id,
+                    "title": title,
+                    "path": f"specs/{path.name}",
+                }
+            )
         )
     return _sort_spec_items(out)
 
@@ -435,7 +468,15 @@ def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[
             stem = Path(name).stem
             spec_id = stem.split("-", 1)[0] if "-" in stem else stem
             title = stem.replace("-", " ")
-            out.append({"spec_id": spec_id, "title": title, "path": path})
+            out.append(
+                _normalize_spec_item(
+                    {
+                        "spec_id": spec_id,
+                        "title": title,
+                        "path": path,
+                    }
+                )
+            )
     except httpx.HTTPError:
         return []
 
@@ -447,12 +488,12 @@ def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[
 
 
 def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
-    local = _discover_specs_local(limit=limit)
+    local = [_normalize_spec_item(item) for item in _discover_specs_local(limit=limit)]
     # If local checkout is sparse (e.g., deployment package without root specs), use GitHub source of truth.
     if len(local) >= 5:
         return local, "local"
 
-    remote = _discover_specs_from_github(limit=limit)
+    remote = [_normalize_spec_item(item) for item in _discover_specs_from_github(limit=limit)]
     if remote:
         if local:
             by_path = {str(item.get("path")): item for item in remote}
@@ -468,32 +509,24 @@ def _discover_specs(limit: int = 300) -> tuple[list[dict], str]:
     return [], "none"
 
 
-def _system_lineage_tracking_summary(
-    tracked_idea_ids: list[str],
-    spec_source: str,
-    runtime_events_count: int,
-) -> dict[str, Any]:
-    commit_evidence_info = commit_evidence_service.backend_info()
-    return {
-        "tracked_idea_ids_count": len(tracked_idea_ids),
-        "tracked_idea_ids": tracked_idea_ids,
-        "spec_discovery_source": spec_source,
-        "runtime_events_count": runtime_events_count,
-        "commit_evidence_backend": commit_evidence_info.get("backend"),
-        "commit_evidence_records": int(commit_evidence_info.get("record_rows") or 0),
-    }
+def _build_lineage_idea_items(ideas_response: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            **item.model_dump(mode="json"),
+            "api_path": _idea_api_path(item.id),
+        }
+        for item in ideas_response.ideas
+    ]
 
 
-def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
-    ideas_response = idea_service.list_ideas()
-    ideas = [item.model_dump(mode="json") for item in ideas_response.ideas]
-
-    answered_questions: list[dict] = []
-    unanswered_questions: list[dict] = []
+def _build_lineage_question_rows(ideas_response: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    answered_questions: list[dict[str, Any]] = []
+    unanswered_questions: list[dict[str, Any]] = []
     for idea in ideas_response.ideas:
         for q in idea.open_questions:
             row = {
                 "idea_id": idea.id,
+                "idea_api_path": _idea_api_path(idea.id),
                 "idea_name": idea.name,
                 "question": q.question,
                 "value_to_whole": q.value_to_whole,
@@ -515,22 +548,35 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             -float(x.get("question_roi") or 0.0),
         )
     )
+    return answered_questions, unanswered_questions
 
+
+def _build_lineage_link_rows() -> tuple[list[dict[str, Any]], list[Any], list[Any]]:
     links = value_lineage_service.list_links(limit=300)
     events = value_lineage_service.list_usage_events(limit=1000)
-    link_rows = []
+    rows: list[dict[str, Any]] = []
     for link in links:
         valuation = value_lineage_service.valuation(link.id)
-        link_rows.append(
+        rows.append(
             {
                 "lineage_id": link.id,
                 "idea_id": link.idea_id,
+                "idea_api_path": _idea_api_path(link.idea_id),
                 "spec_id": link.spec_id,
+                "spec_api_path": _spec_api_path(link.spec_id),
                 "implementation_refs": link.implementation_refs,
                 "estimated_cost": link.estimated_cost,
                 "valuation": valuation.model_dump(mode="json") if valuation else None,
             }
         )
+    return rows, links, events
+
+
+def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
+    ideas_response = idea_service.list_ideas()
+    ideas = _build_lineage_idea_items(ideas_response)
+    answered_questions, unanswered_questions = _build_lineage_question_rows(ideas_response)
+    link_rows, links, events = _build_lineage_link_rows()
 
     runtime_summary = [x.model_dump(mode="json") for x in runtime_service.summarize_by_idea(runtime_window_seconds)]
     spec_items, spec_source = _discover_specs()
@@ -564,11 +610,17 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "window_seconds": runtime_window_seconds,
             "ideas": runtime_summary,
         },
-        "tracking": _system_lineage_tracking_summary(
-            tracked_idea_ids=tracked_idea_ids,
-            spec_source=spec_source,
-            runtime_events_count=len(runtime_events),
-        ),
+        "tracking": {
+            "tracked_idea_ids_count": len(tracked_idea_ids),
+            "tracked_idea_ids": tracked_idea_ids,
+            "tracked_ideas": [
+                {"idea_id": idea_id, "api_path": _idea_api_path(idea_id)}
+                for idea_id in tracked_idea_ids
+            ],
+            "spec_discovery_source": spec_source,
+            "runtime_events_count": len(runtime_events),
+            "commit_evidence_local_available": (_project_root() / "docs" / "system_audit").exists(),
+        },
     }
 
 
@@ -654,6 +706,13 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
     return report
 
 
+def _commit_evidence_dir() -> Path:
+    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    if custom:
+        return Path(custom)
+    return _project_root() / "docs" / "system_audit"
+
+
 def _normalize_validation_status(value: Any) -> str:
     status = str(value or "").strip().lower()
     if status in {"pass", "fail", "pending"}:
@@ -661,12 +720,105 @@ def _normalize_validation_status(value: Any) -> str:
     return "pending"
 
 
-def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+def _read_commit_evidence_records_from_files(evidence_dir: Path, limit: int) -> list[dict[str, Any]]:
+    files: list[Path] = []
+    if evidence_dir.exists():
+        files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, min(limit, 3000))]
+    out: list[dict[str, Any]] = []
+    for path in files:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        payload["_evidence_file"] = str(path)
+        out.append(payload)
+    return out
+
+
+def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]]:
+    now = time.time()
+    cached = _EVIDENCE_DISCOVERY_CACHE.get("items")
+    if isinstance(cached, list) and _EVIDENCE_DISCOVERY_CACHE.get("expires_at", 0.0) > now:
+        return [item for item in cached if isinstance(item, dict)][: max(1, min(limit, 3000))]
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
+    remote_out: list[dict[str, Any]] = []
+    has_token = bool(os.getenv("GITHUB_TOKEN"))
     try:
-        db_records = commit_evidence_service.list_records(limit=limit)
-    except Exception:
-        return []
-    return db_records
+        with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
+            response = client.get(list_url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+            if isinstance(rows, list):
+                # Unauthenticated GitHub API calls are heavily rate-limited.
+                remote_limit = min(limit, 200 if has_token else 20)
+                evidence_rows = [
+                    row
+                    for row in rows
+                    if isinstance(row, dict)
+                    and isinstance(row.get("name"), str)
+                    and row["name"].startswith("commit_evidence_")
+                    and row["name"].endswith(".json")
+                ]
+                evidence_rows.sort(key=lambda row: str(row.get("name") or ""), reverse=True)
+                evidence_rows = evidence_rows[: max(1, remote_limit)]
+                for row in evidence_rows:
+                    download_url = row.get("download_url")
+                    if not isinstance(download_url, str) or not download_url:
+                        continue
+                    payload_resp = client.get(download_url)
+                    if payload_resp.status_code != 200:
+                        continue
+                    try:
+                        payload = payload_resp.json()
+                    except ValueError:
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+                    payload["_evidence_file"] = str(row.get("path") or row.get("name") or "github")
+                    remote_out.append(payload)
+    except (httpx.HTTPError, TypeError):
+        remote_out = []
+
+    _EVIDENCE_DISCOVERY_CACHE["items"] = remote_out
+    _EVIDENCE_DISCOVERY_CACHE["expires_at"] = now + _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS
+    _EVIDENCE_DISCOVERY_CACHE["source"] = "github" if remote_out else "none"
+    return remote_out
+
+
+def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
+    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
+    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
+    use_db = use_db_raw in {"1", "true", "yes", "on"}
+    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        if db_url_configured:
+            use_db = True
+        else:
+            required_raw = str(
+                os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+                or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+                or ""
+            ).strip().lower()
+            required = required_raw in {"1", "true", "yes", "on"}
+            backend = commit_evidence_service.backend_info().get("backend")
+            use_db = required and backend == "postgresql"
+    if use_db:
+        try:
+            # When explicitly configured, treat the evidence store as source of truth
+            # (including "no rows" -> []) and do not fall back to scanning local files.
+            return commit_evidence_service.list_records(limit=limit)
+        except Exception:
+            return []
+
+    evidence_dir = _commit_evidence_dir()
+    out = _read_commit_evidence_records_from_files(evidence_dir, limit)
+    if out:
+        return out
+    return _read_commit_evidence_records_from_github(limit)
 
 
 def _parse_record_datetime(record: dict[str, Any]) -> datetime:
@@ -2593,7 +2745,7 @@ def _normalize_web_api_reference_path(raw_path: str) -> str:
     if not value.startswith("/api/"):
         return ""
     value = re.sub(r"\$\{[^}]+\}", "{param}", value)
-    value = re.sub(r"\[[^\]]+\]", "{param}", value)
+    value = re.sub(r"\[[^\\]]+\\]", "{param}", value)
     return _normalize_endpoint_path(value)
 
 
@@ -2864,7 +3016,9 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
             gaps.append("canonical_route")
         elif canonical_methods and canonical_methods != methods:
             gaps.append("canonical_method_mismatch")
-        web_link_evidence, explicit_web_link_count = _matched_web_link_evidence_for_endpoint(path, web_references)
+        web_link_evidence, explicit_web_link_count = _matched_web_link_evidence_for_endpoint(
+            path, web_references
+        )
 
         items.append(
             {
@@ -2879,8 +3033,10 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                 "idea": {
                     "tracked": idea_tracked,
                     "idea_id": primary_idea_id or None,
+                    "idea_api_path": _idea_api_path(primary_idea_id) if primary_idea_id else None,
                     "origin_idea_id": origin_idea_id,
                     "idea_ids": sorted(idea_ids),
+                    "idea_api_paths": [_idea_api_path(idea_id) for idea_id in sorted(idea_ids)],
                     "source": idea_source,
                 },
                 "usage": {
@@ -2897,6 +3053,7 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                 "spec": {
                     "tracked": spec_tracked,
                     "spec_ids": sorted(spec_ids),
+                    "spec_api_paths": [_spec_api_path(spec_id) for spec_id in sorted(spec_ids)],
                 },
                 "process": {
                     "tracked": process_tracked,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 from app.models.idea import (
@@ -301,6 +302,16 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
 
 
 def _write_snapshot_file(ideas: list[Idea]) -> None:
+    storage = idea_registry_service.storage_info()
+    if storage.get("backend") == "postgresql":
+        purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+        if purge_raw not in {"0", "false", "no", "off"}:
+            try:
+                Path(_portfolio_path()).unlink(missing_ok=True)
+            except OSError:
+                pass
+        return
+
     path = _portfolio_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

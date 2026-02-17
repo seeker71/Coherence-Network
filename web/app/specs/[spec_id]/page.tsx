@@ -9,6 +9,7 @@ type SpecItem = {
   spec_id: string;
   title: string;
   path: string;
+  api_path?: string;
 };
 
 type InventoryResponse = {
@@ -111,7 +112,6 @@ async function loadSpecContext(specId: string): Promise<{
 export default async function SpecDetailPage({ params }: { params: Promise<{ spec_id: string }> }) {
   const resolved = await params;
   const specId = decodeURIComponent(resolved.spec_id);
-  const apiBase = getApiBase();
   const { source, inventoryItem, registryItem, relatedFlow } = await loadSpecContext(specId);
 
   const ideaIds = new Set<string>();
@@ -183,12 +183,17 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
       <section className="rounded border p-4 space-y-2 text-sm">
         <h2 className="font-semibold">Spec Source</h2>
         <p className="text-muted-foreground">
-          inventory_source {source} | inventory_path {inventoryItem?.path || "-"} | registry_updated {registryItem?.updated_at || "-"}
+          inventory_source {source} | spec_api {inventoryItem?.api_path || `/api/spec-registry/${specId}`} | registry_updated {registryItem?.updated_at || "-"}
         </p>
-        {inventoryItem?.path ? (
+        {inventoryItem ? (
           <p>
-            <a href={toRepoHref(inventoryItem.path)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-              Open spec file
+            <a
+              href={inventoryItem.api_path || `/api/spec-registry/${encodeURIComponent(specId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Open spec API record
             </a>
           </p>
         ) : (
@@ -359,7 +364,7 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
                 <span key={lineageId}>
                   {idx > 0 ? ", " : ""}
                   <a
-                    href={`${apiBase}/api/value-lineage/links/${encodeURIComponent(lineageId)}`}
+                    href={`/api/value-lineage/links/${encodeURIComponent(lineageId)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-foreground"
@@ -397,17 +402,17 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
         <h2 className="font-semibold">API Links</h2>
         <ul className="space-y-1 text-muted-foreground">
           <li>
-            <a href={`${apiBase}/api/spec-registry/${encodeURIComponent(specId)}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a href={`/api/spec-registry/${encodeURIComponent(specId)}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
               /api/spec-registry/{specId}
             </a>
           </li>
           <li>
-            <a href={`${apiBase}/api/inventory/flow?runtime_window_seconds=86400`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a href="/api/inventory/flow?runtime_window_seconds=86400" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
               /api/inventory/flow
             </a>
           </li>
           <li>
-            <a href={`${apiBase}/api/inventory/system-lineage?runtime_window_seconds=86400`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a href="/api/inventory/system-lineage?runtime_window_seconds=86400" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
               /api/inventory/system-lineage
             </a>
           </li>

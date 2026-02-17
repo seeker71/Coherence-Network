@@ -89,10 +89,11 @@ def evaluate(app: Any) -> dict[str, Any]:
     commit_evidence_tracking = {
         "ok": commit_evidence_info.get("backend") == "postgresql",
         "backend": commit_evidence_info.get("backend"),
+        "record_rows": int(commit_evidence_info.get("record_rows") or 0),
         "note": "commit evidence tracking backend",
     }
     if required and not commit_evidence_tracking["ok"]:
-        failures.append("commit_evidence_not_postgresql")
+        failures.append("commit_evidence_tracking_not_postgresql")
 
     report = {
         "required": required,
