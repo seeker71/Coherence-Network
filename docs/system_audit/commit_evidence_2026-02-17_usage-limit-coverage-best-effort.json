@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/usage-limits-best-effort",
+  "commit_scope": "Best-effort provider usage-limit extraction and web reporting coverage",
+  "files_owned": [
+    "api/app/models/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "web/app/automation/page.tsx"
+  ],
+  "idea_ids": [
+    "provider-readiness-contract-automation"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task_da4d52b6325e004f"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
+    "cd web && npm ci --cache /tmp/npm-codex-cache",
+    "cd web && npm run build"
+  ],
+  "change_files": [
+    "api/app/models/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "web/app/automation/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-17_usage-limit-coverage-best-effort.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_automation_usage_api.py",
+      "cd web && npm ci --cache /tmp/npm-codex-cache",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation usage API and web UI expose best-effort limit/remaining coverage and explicit gaps for providers without limit metrics.",
+    "public_endpoints": [
+      "/api/automation/usage",
+      "/api/automation/usage/snapshots",
+      "/automation"
+    ],
+    "test_flows": [
+      "Query /api/automation/usage and verify limit_coverage summary is present.",
+      "Open /automation and verify Usage Limit Coverage section lists missing/partial providers."
+    ]
+  }
+}

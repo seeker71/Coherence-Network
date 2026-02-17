@@ -47,6 +47,9 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert usage.status_code == 200
         payload = usage.json()
         assert payload["tracked_providers"] >= 3
+        assert "limit_coverage" in payload
+        assert payload["limit_coverage"]["providers_considered"] >= 1
+        assert "providers_missing_limit_metrics" in payload["limit_coverage"]
         providers = {row["provider"]: row for row in payload["providers"]}
         assert "coherence-internal" in providers
         assert "github" in providers
