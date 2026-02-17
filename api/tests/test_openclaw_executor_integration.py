@@ -34,8 +34,8 @@ def test_create_task_openclaw_default_template_includes_model(monkeypatch: pytes
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.delenv("OPENCLAW_COMMAND_TEMPLATE", raising=False)
     monkeypatch.setattr(
-        agent_service,
-        "_OPENCLAW_MODEL_BY_TYPE",
+        agent_service.routing_service,
+        "OPENCLAW_MODEL_BY_TYPE",
         {task_type: "openrouter/free" for task_type in TaskType},
     )
     agent_service._store.clear()
@@ -83,6 +83,8 @@ async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
         assert payload["executor"] == "openclaw"
         assert payload["tier"] == "openclaw"
         assert str(payload["model"]).startswith("openclaw/")
+        assert payload["provider"] in {"openrouter", "openclaw", "openai-codex"}
+        assert isinstance(payload["is_paid_provider"], bool)
         template = str(payload["command_template"])
         assert "{{direction}}" in template
         assert template.startswith("openclaw ") or template.startswith("codex exec ")
