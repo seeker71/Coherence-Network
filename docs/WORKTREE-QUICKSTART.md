@@ -40,6 +40,13 @@ Must pass all:
 
 ## Mandatory Local Guard (before commit/push)
 
+Always rebase to latest main first:
+
+```bash
+git fetch origin main
+git rebase origin/main
+```
+
 ```bash
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
