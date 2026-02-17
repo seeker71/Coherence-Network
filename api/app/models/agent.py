@@ -151,3 +151,6 @@ class RouteResponse(BaseModel):
     command_template: str
     tier: str
     executor: Optional[str] = None  # "claude", "cursor", or "openclaw"
+    provider: Optional[str] = None
+    billing_provider: Optional[str] = None
+    is_paid_provider: Optional[bool] = None
