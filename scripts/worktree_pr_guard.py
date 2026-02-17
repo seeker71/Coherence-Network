@@ -511,7 +511,17 @@ def _check_run_hint(name: str) -> str:
     return "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 
 
-def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | None) -> dict[str, Any]:
+def _parse_optional_status_contexts(raw: str) -> set[str]:
+    return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
+
+
+def _collect_remote_pr_failures(
+    repo: str,
+    branch: str,
+    base: str,
+    token: str | None,
+    optional_status_contexts: set[str],
+) -> dict[str, Any]:
     prs = gates.get_open_prs(repo, head_branch=branch, github_token=token)
     if not prs:
         return {
@@ -559,6 +569,7 @@ def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | 
             )
 
     status_context_failures: list[dict[str, Any]] = []
+    blocking_status_context_failures: list[dict[str, Any]] = []
     statuses = commit_status.get("statuses")
     if isinstance(statuses, list):
         for item in statuses:
@@ -568,15 +579,18 @@ def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | 
             if state in ("success", "expected"):
                 continue
             context = str(item.get("context") or "unknown")
-            status_context_failures.append(
-                {
-                    "context": context,
-                    "state": state or "unknown",
-                    "description": item.get("description"),
-                    "target_url": item.get("target_url"),
-                    "suggested_local_preflight": _check_run_hint(context),
-                }
-            )
+            is_optional = context.strip().lower() in optional_status_contexts
+            row = {
+                "context": context,
+                "state": state or "unknown",
+                "description": item.get("description"),
+                "target_url": item.get("target_url"),
+                "optional": is_optional,
+                "suggested_local_preflight": _check_run_hint(context),
+            }
+            status_context_failures.append(row)
+            if not is_optional:
+                blocking_status_context_failures.append(row)
 
     return {
         "status": "ok",
@@ -592,6 +606,7 @@ def _collect_remote_pr_failures(repo: str, branch: str, base: str, token: str | 
         "failing_required_contexts": gate_eval.get("failing_required_contexts"),
         "failing_check_runs": failures,
         "failing_status_contexts": status_context_failures,
+        "blocking_status_contexts": blocking_status_context_failures,
     }
 
 
@@ -704,7 +719,14 @@ def main() -> int:
         default=6.0,
         help="Maximum age (hours) for latest successful Public Deploy Contract run on main.",
     )
+    parser.add_argument(
+        "--optional-status-contexts",
+        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
+        help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
+    )
     args = parser.parse_args()
+
+    optional_status_contexts = _parse_optional_status_contexts(args.optional_status_contexts)
 
     report: dict[str, Any] = {
         "generated_at": _utc_now(),
@@ -717,6 +739,7 @@ def main() -> int:
         "local_preflight": {"status": "skipped", "steps": []},
         "remote_pr_checks": {"status": "skipped"},
         "deployment_health": {"status": "skipped"},
+        "optional_status_contexts": sorted(optional_status_contexts),
     }
 
     if args.mode in ("local", "all"):
@@ -785,6 +808,7 @@ def main() -> int:
                 branch=args.branch,
                 base=args.base,
                 token=token,
+                optional_status_contexts=optional_status_contexts,
             )
             report["deployment_health"] = _collect_deployment_health(
                 repo=args.repo,
@@ -802,7 +826,7 @@ def main() -> int:
         if remote.get("status") == "ok":
             if (
                 remote.get("failing_check_runs")
-                or remote.get("failing_status_contexts")
+                or remote.get("blocking_status_contexts")
                 or remote.get("missing_required_contexts")
                 or remote.get("failing_required_contexts")
             ):

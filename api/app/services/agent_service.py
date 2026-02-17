@@ -322,7 +322,7 @@ def _openclaw_command_template(task_type: TaskType) -> str:
     model = _OPENCLAW_MODEL_BY_TYPE[task_type]
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --skip-git-repo-check --json',
+        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
@@ -646,6 +646,36 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _derive_task_provider(task: dict[str, Any], executor: str) -> str:
+    model = str(task.get("model") or "").strip().lower()
+    command = str(task.get("command") or "").strip().lower()
+    worker_id = _normalize_worker_id(task.get("claimed_by")).lower()
+    command_model_match = re.search(r"--model\s+([^\s]+)", command)
+    command_model = (command_model_match.group(1).strip().lower() if command_model_match else "")
+
+    if worker_id == "openai-codex" or worker_id.startswith("openai-codex:"):
+        return "openai-codex"
+    if "openrouter" in command_model:
+        return "openrouter"
+    if command_model.startswith("openai/") or command_model.startswith(("gpt", "o1", "o3", "o4")):
+        return "openai-codex" if "codex" in command_model else "openai"
+    if "openrouter" in model:
+        return "openrouter"
+    if "codex" in model:
+        return "openai-codex"
+    if model.startswith("openai/") or model.startswith(("gpt", "o1", "o3", "o4")):
+        return "openai"
+    if command.startswith("codex "):
+        return "openai-codex"
+    if executor == "openclaw":
+        return "openclaw"
+    if executor == "cursor":
+        return "cursor"
+    if executor in {"claude", "aider"}:
+        return "claude"
+    return "unknown"
+
+
 def _task_duration_ms(task: dict[str, Any]) -> float:
     started = task.get("started_at")
     created = task.get("created_at")
@@ -694,6 +724,7 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     command_sha = hashlib.sha256(command.encode("utf-8")).hexdigest() if command else ""
     worker_id = _normalize_worker_id(task.get("claimed_by"))
     executor = _derive_task_executor(task)
+    provider = _derive_task_provider(task, executor)
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
 
@@ -718,6 +749,9 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                     if worker_id == "openai-codex" or worker_id.startswith("openai-codex:")
                     else worker_id,
                     "executor": executor,
+                    "provider": provider,
+                    "billing_provider": provider,
+                    "is_paid_provider": provider in {"openai", "openai-codex", "claude", "cursor", "openrouter"},
                     "is_openai_codex": worker_id == "openai-codex"
                     or worker_id.startswith("openai-codex:"),
                     "tracking_kind": "agent_task_completion",
@@ -829,8 +863,18 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         command = _build_command(direction, data.task_type, executor=executor)
         # Model override for testing (e.g. glm-4.7:cloud for better tool use)
         if ctx.get("model_override"):
-            override = ctx["model_override"]
-            command = re.sub(r"--model\s+\S+", f"--model {override}", command)
+            override = str(ctx["model_override"]).strip()
+            if re.search(r"--model\s+\S+", command):
+                command = re.sub(r"--model\s+\S+", f"--model {override}", command)
+            else:
+                command = command.rstrip() + f" --model {override}"
+            if override:
+                if executor == "openclaw":
+                    model = f"openclaw/{override}"
+                elif executor == "cursor":
+                    model = f"cursor/{override}"
+                else:
+                    model = override
             # Cloud models need ANTHROPIC_BASE_URL=https://ollama.com when using glm-5:cloud etc.
         # Headless claude needs --dangerously-skip-permissions for Edit to run
         if "claude -p" in command and "--dangerously-skip-permissions" not in command:

@@ -125,22 +125,29 @@ def get_open_prs(
     if head_branch:
         params["head"] = f"{owner}:{head_branch}"
     url = f"https://api.github.com/repos/{repository}/pulls"
-    start = time.monotonic()
-    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url, params=params)
-        duration_ms = int((time.monotonic() - start) * 1000)
-        _record_external_tool_usage(
-            tool_name="github-api",
-            provider="github-actions",
-            operation="get_open_prs",
-            resource=f"{repository}/pulls",
-            status="success" if response.status_code < 400 else "error",
-            http_status=response.status_code,
-            duration_ms=duration_ms,
-            payload={"head_branch": head_branch, "params": params},
+    try:
+        start = time.monotonic()
+        with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+            response = client.get(url, params=params)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_open_prs",
+                resource=f"{repository}/pulls",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+                payload={"head_branch": head_branch, "params": params},
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        fallback = _gh_api_json_via_cli(
+            f"repos/{repository}/pulls",
+            params={"state": "open", "per_page": "100", **({"head": f"{owner}:{head_branch}"} if head_branch else {})},
         )
-        response.raise_for_status()
-        data = response.json()
+        data = fallback if isinstance(fallback, list) else []
     return data if isinstance(data, list) else []
 
 
@@ -355,21 +362,25 @@ def get_pull_request_reviews(
 ) -> list[dict[str, Any]]:
     """Return reviews for a pull request."""
     url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}/reviews"
-    start = time.monotonic()
-    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url)
-        duration_ms = int((time.monotonic() - start) * 1000)
-        _record_external_tool_usage(
-            tool_name="github-api",
-            provider="github-actions",
-            operation="get_pull_request_reviews",
-            resource=f"{repository}/pulls/{pr_number}/reviews",
-            status="success" if response.status_code < 400 else "error",
-            http_status=response.status_code,
-            duration_ms=duration_ms,
-        )
-        response.raise_for_status()
-        data = response.json()
+    try:
+        start = time.monotonic()
+        with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+            response = client.get(url)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_pull_request_reviews",
+                resource=f"{repository}/pulls/{pr_number}/reviews",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        fallback = _gh_api_json_via_cli(f"repos/{repository}/pulls/{pr_number}/reviews")
+        data = fallback if isinstance(fallback, list) else []
     return data if isinstance(data, list) else []
 
 
