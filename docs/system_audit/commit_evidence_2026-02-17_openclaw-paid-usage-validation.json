@@ -5,6 +5,8 @@
   "files_owned": [
     "api/app/services/agent_service.py",
     "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
     "api/tests/test_agent_usage_tracking_api.py",
     "api/tests/test_automation_usage_api.py",
     "docs/system_audit/commit_evidence_2026-02-17_openclaw-paid-usage-validation.json"
@@ -48,6 +50,8 @@
   "change_files": [
     "api/app/services/agent_service.py",
     "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
     "api/tests/test_agent_usage_tracking_api.py",
     "api/tests/test_automation_usage_api.py"
   ],
