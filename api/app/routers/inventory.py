@@ -187,3 +187,10 @@ async def route_evidence_inventory(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
     return inventory_service.build_route_evidence_inventory(runtime_window_seconds=runtime_window_seconds)
+
+
+@router.get("/inventory/commit-evidence")
+async def commit_evidence_inventory(
+    limit: int = Query(50, ge=1, le=500),
+) -> dict:
+    return inventory_service.build_commit_evidence_inventory(limit=limit)
