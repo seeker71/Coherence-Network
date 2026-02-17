@@ -1,71 +1,102 @@
 {
-  "date": "2026-02-17",
-  "thread_branch": "codex/merge-open-prs-validation-final",
-  "commit_scope": "Add automation readiness audit to remaining PR gates so optional unconfigured provider warnings fail locally and in thread-gates before merge.",
-  "files_owned": [
-    ".github/workflows/thread-gates.yml",
-    "scripts/worktree_pr_guard.py",
-    "docs/system_audit/commit_evidence_2026-02-17_thread-gates-automation-readiness.json"
-  ],
-  "idea_ids": [
-    "delivery-process-hardening"
-  ],
-  "spec_ids": [
-    "074-tool-failure-awareness"
-  ],
-  "task_ids": [
-    "merge-open-prs-prepush-guard"
-  ],
-  "contributors": [
-    {
-      "contributor_id": "openai-codex",
-      "contributor_type": "machine",
-      "roles": [
-        "implementation",
-        "validation"
-      ]
-    }
-  ],
-  "agent": {
-    "name": "OpenAI Codex",
-    "version": "gpt-5"
-  },
-  "evidence_refs": [
-    "cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning"
-  ],
-  "change_files": [
-    ".github/workflows/thread-gates.yml",
-    "scripts/worktree_pr_guard.py"
-  ],
-  "change_intent": "process_only",
-  "e2e_validation": {
-    "status": "pending",
-    "expected_behavior_delta": "Automation readiness regression test is part of both pre-push guard and thread-gates workflow to catch provider readiness warnings before merge.",
-    "public_endpoints": [],
-    "test_flows": [
-      "api: run targeted automation readiness test and ensure CI/guard fails on warning-level regressions"
-    ]
-  },
-  "local_validation": {
-    "status": "pending",
-    "ran_at": "2026-02-17T00:00:00Z",
-    "environment": {
-      "python": "3.x"
+    "date": "2026-02-17",
+    "thread_branch": "codex/public-observability-deploy-realign",
+    "commit_scope": "Add automation readiness gate in thread-gates, harden paid-provider telemetry parsing, expose top blocker guidance in flow UI, and add paid-provider guard coverage in local validation flows.",
+    "files_owned": [
+        ".github/workflows/thread-gates.yml",
+        "api/app/services/agent_execution_service.py",
+        "api/app/services/automation_usage_service.py",
+        "api/app/services/runtime_service.py",
+        "api/app/routers/agent.py",
+        "api/tests/test_automation_usage_api.py",
+        "api/tests/test_agent_execute_endpoint.py",
+        "scripts/worktree_pr_guard.py",
+        "web/app/flow/page.tsx"
+    ],
+    "idea_ids": [
+        "provider-readiness-contract-automation"
+    ],
+    "spec_ids": [
+        "100-automation-provider-usage-readiness-api",
+        "107-runtime-telemetry-db-precedence"
+    ],
+    "task_ids": [
+        "thread-gates-automation-readiness"
+    ],
+    "contributors": [
+        {
+            "contributor_id": "openai-codex",
+            "contributor_type": "machine",
+            "roles": [
+                "implementation",
+                "validation"
+            ]
+        },
+        {
+            "contributor_id": "urs-muff",
+            "contributor_type": "human",
+            "roles": [
+                "validation"
+            ]
+        }
+    ],
+    "agent": {
+        "name": "OpenAI Codex",
+        "version": "gpt-5.3-codex-spark"
     },
-    "commands": [
-      "cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning"
-    ]
-  },
-  "ci_validation": {
-    "status": "pending",
-    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
-  },
-  "deploy_validation": {
-    "status": "pending",
-    "environment": "local"
-  },
-  "phase_gate": {
-    "can_move_next_phase": false,
-    "reason": "Guard alignment change is internal process hardening; remaining open PR issues are external and unchanged by this commit."
-  }
+    "evidence_refs": [
+        "cd api && .venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys",
+        "cd api && .venv/bin/pytest -q tests/test_automation_usage_api.py::test_execute_endpoint_blocks_paid_provider_until_forced",
+        "./scripts/verify_worktree_local_web.sh",
+        "cd api && .venv/bin/ruff check app/routers/agent.py app/services/agent_execution_service.py app/services/automation_usage_service.py app/services/runtime_service.py tests/test_agent_execute_endpoint.py tests/test_automation_usage_api.py"
+    ],
+    "change_files": [
+        ".github/workflows/thread-gates.yml",
+        "api/app/services/agent_execution_service.py",
+        "api/app/services/automation_usage_service.py",
+        "api/app/services/runtime_service.py",
+        "api/app/routers/agent.py",
+        "api/tests/test_automation_usage_api.py",
+        "api/tests/test_agent_execute_endpoint.py",
+        "scripts/worktree_pr_guard.py",
+        "web/app/flow/page.tsx"
+    ],
+    "change_intent": "runtime_feature",
+    "e2e_validation": {
+        "status": "pending",
+        "expected_behavior_delta": "Automation readiness check runs in thread gates and public flow UI surfaces blocker task + command to execute next paid-provider action.",
+        "public_endpoints": [
+            "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+            "https://coherence-network-production.up.railway.app/api/agent/tasks/{id}/execute?force_paid_providers=true",
+            "https://coherence-web-production.up.railway.app/flow"
+        ],
+        "test_flows": [
+            "Create paid-provider task and confirm hard-block without force override.",
+            "Create top-blocker item from flow page and issue generated run command."
+        ]
+    },
+    "local_validation": {
+        "status": "pass",
+        "ran_at": "2026-02-17T23:50:00Z",
+        "commands": [
+            "cd api && .venv/bin/pytest -q tests/test_agent_execute_endpoint.py tests/test_automation_usage_api.py tests/test_runtime_api.py",
+            "cd api && .venv/bin/pytest -q tests/test_gates.py",
+            "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+            "./scripts/verify_worktree_local_web.sh",
+            "PYTHONPATH=api python3 api/scripts/validate_pr_to_public.py --branch codex/public-observability-deploy-realign --base main --wait-public --timeout-seconds 900 --poll-seconds 20 --json",
+            "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_post.json"
+        ]
+    },
+    "ci_validation": {
+        "status": "pending",
+        "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+    },
+    "deploy_validation": {
+        "status": "pending",
+        "environment": "railway"
+    },
+    "phase_gate": {
+        "can_move_next_phase": false,
+        "reason": "Awaiting rebase and public redeploy confirmation."
+    }
 }

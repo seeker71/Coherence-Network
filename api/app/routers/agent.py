@@ -30,8 +30,12 @@ router = APIRouter()
 router.include_router(telegram_router)
 
 
-def _truthy(value: str | None) -> bool:
-    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+def _truthy(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
 def _task_to_item(task: dict) -> dict:
@@ -124,7 +128,11 @@ async def execute_task(
     task_id: str,
     background_tasks: BackgroundTasks,
     x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
-    force_paid_providers: bool = Query(False),
+    force_paid_providers: str | None = Query(None),
+    force_paid_provider: str | None = Query(None),
+    force_allow_paid_providers: str | None = Query(None),
+    allow_paid_providers: str | None = Query(None),
+    allow_paid_provider: str | None = Query(None),
     max_cost_usd: float | None = Query(None, ge=0.0),
     estimated_cost_usd: float | None = Query(None, ge=0.0),
     cost_slack_ratio: float | None = Query(None, ge=1.0),
@@ -143,10 +151,18 @@ async def execute_task(
 
     from app.services import agent_execution_service
 
+    force_paid_override = (
+        _truthy(force_paid_providers)
+        or _truthy(force_paid_provider)
+        or _truthy(force_allow_paid_providers)
+        or _truthy(allow_paid_providers)
+        or _truthy(allow_paid_provider)
+    )
+
     background_tasks.add_task(
         agent_execution_service.execute_task,
         task_id,
-        force_paid_providers=force_paid_providers,
+        force_paid_providers=force_paid_override,
         max_cost_usd=max_cost_usd,
         estimated_cost_usd=estimated_cost_usd,
         cost_slack_ratio=cost_slack_ratio,

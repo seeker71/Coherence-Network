@@ -173,6 +173,62 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 4, "completion_tokens": 3, "total_tokens": 7},
+            {"elapsed_ms": 4, "provider_request_id": "req_paid_num", "response_id": "resp_paid_num"},
+        ),
+    )
+
+    paid_task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{paid_task['id']}/execute?force_paid_providers=1")
+        completed = await client.get(f"/api/agent/tasks/{paid_task['id']}")
+        assert completed.status_code == 200
+        completed_payload = completed.json()
+        assert completed_payload["status"] == "completed"
+        assert completed_payload["output"] == "ok"
+
+        alt_task = agent_service.create_task(
+            AgentTaskCreate(
+                direction="Assess codex route",
+                task_type=TaskType.IMPL,
+                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            )
+        )
+        await client.post(
+            f"/api/agent/tasks/{alt_task['id']}/execute?force_allow_paid_providers=true"
+        )
+        alt_completed = await client.get(f"/api/agent/tasks/{alt_task['id']}")
+        assert alt_completed.status_code == 200
+        alt_completed_payload = alt_completed.json()
+        assert alt_completed_payload["status"] == "completed"
+        assert alt_completed_payload["output"] == "ok"
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
