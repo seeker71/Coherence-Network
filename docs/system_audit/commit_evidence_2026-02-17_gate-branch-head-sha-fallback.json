@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/fix-branch-head-sha-fallback",
+  "commit_scope": "Fix main CI gate flake: resolve branch head SHA without GitHub API/gh by falling back to git ls-remote",
+  "files_owned": [
+    "api/app/services/release_gate_service.py",
+    "docs/system_audit/commit_evidence_2026-02-17_gate-branch-head-sha-fallback.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-postgresql-migration"
+  ],
+  "task_ids": [
+    "main-ci-gates-branch-sha-fallback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "GitHub Actions failing run (main): https://github.com/seeker71/Coherence-Network/actions/runs/22092324954",
+    "cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_gate-branch-head-sha-fallback.json"
+  ],
+  "change_files": [
+    "api/app/services/release_gate_service.py",
+    "docs/system_audit/commit_evidence_2026-02-17_gate-branch-head-sha-fallback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Gate endpoints that resolve main head SHA no longer fail with 502 when GitHub API is rate-limited or gh CLI is unavailable; they can use git ls-remote fallback.",
+    "public_endpoints": [
+      "/api/gates/main-head",
+      "/api/gates/public-deploy-contract",
+      "/api/gates/commit-traceability"
+    ],
+    "test_flows": [
+      "api:/api/gates/main-head -> returns 200 with sha field",
+      "api:/api/gates/public-deploy-contract -> expected_sha is non-null when branch head is resolvable"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}
