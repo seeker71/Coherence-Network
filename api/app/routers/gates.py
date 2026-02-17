@@ -116,8 +116,14 @@ async def gates_public_deploy_contract(
 async def gates_commit_traceability(
     sha: str = Query(..., min_length=7, description="Commit SHA to derive traceability from"),
     repo: str = Query("seeker71/Coherence-Network"),
-    api_base: str = Query("https://coherence-network-production.up.railway.app"),
-    web_base: str = Query("https://coherence-web-production.up.railway.app"),
+    api_base: str = Query(
+        "",
+        description="Optional absolute API base URL (if omitted, response uses only relative paths).",
+    ),
+    web_base: str = Query(
+        "",
+        description="Optional absolute web base URL (if omitted, response uses only relative paths).",
+    ),
     timeout: float = Query(10.0, ge=1.0, le=60.0),
 ) -> dict:
     return await asyncio.to_thread(
