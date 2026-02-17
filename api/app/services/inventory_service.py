@@ -2698,6 +2698,7 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
         canonical_row = canonical_by_path.get(path)
         canonical_methods = []
         canonical_idea_id = ""
+        canonical_spec_ids: set[str] = set()
         if isinstance(canonical_row, dict):
             raw_methods = canonical_row.get("methods")
             if isinstance(raw_methods, list):
@@ -2705,6 +2706,15 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
                     [m.strip().upper() for m in raw_methods if isinstance(m, str) and m.strip()]
                 )
             canonical_idea_id = str(canonical_row.get("idea_id") or "").strip()
+            raw_spec_ids = canonical_row.get("spec_ids")
+            if isinstance(raw_spec_ids, list):
+                canonical_spec_ids = {
+                    str(value).strip()
+                    for value in raw_spec_ids
+                    if isinstance(value, str) and str(value).strip()
+                }
+            elif isinstance(raw_spec_ids, str) and raw_spec_ids.strip():
+                canonical_spec_ids = {raw_spec_ids.strip()}
 
         spec_ids: set[str] = set()
         task_ids: set[str] = set()
@@ -2721,6 +2731,8 @@ def build_endpoint_traceability_inventory(runtime_window_seconds: int = 86400) -
             process_evidence_count += int(signal["process_evidence_count"])
             for key in validation_pass_counts:
                 validation_pass_counts[key] += int(signal["validation_pass_counts"][key])
+
+        spec_ids.update(canonical_spec_ids)
 
         # Deterministic endpoint->spec link: if an auto-generated endpoint spec exists,
         # treat it as a real spec link for this endpoint even without commit evidence.
