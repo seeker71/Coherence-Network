@@ -1,0 +1,64 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/local-guard-ci-parity-20260216-223325",
+  "commit_scope": "Align local PR guard commit-evidence and runtime-change checks with CI parity while preserving pre-commit worktree coverage enforcement",
+  "files_owned": [
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json"
+  ],
+  "idea_ids": [
+    "local-ci-parity"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "task_local_guard_ci_parity"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_local-guard-ci-parity.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Pending PR checks and merge verification"
+  }
+}
