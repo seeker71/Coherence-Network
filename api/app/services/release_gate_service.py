@@ -89,6 +89,34 @@ def _branch_head_sha_via_gh_cli(repository: str, branch: str) -> str | None:
     return sha if isinstance(sha, str) else None
 
 
+def _branch_head_sha_via_git_ls_remote(repository: str, branch: str) -> str | None:
+    # Works in GitHub Actions even when GitHub API is rate-limited or gh CLI is unavailable.
+    # Uses unauthenticated HTTPS; relies on git being installed in CI.
+    repo_url = f"https://github.com/{repository}.git"
+    ref = f"refs/heads/{branch}"
+    cmd = ["git", "ls-remote", repo_url, ref]
+    started = time.monotonic()
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    duration_ms = int((time.monotonic() - started) * 1000)
+    status = "success" if proc.returncode == 0 else "error"
+    _record_external_tool_usage(
+        tool_name="git",
+        provider="github-actions",
+        operation="get_branch_head_sha_git_fallback",
+        resource=f"{repository}/{ref}",
+        status=status,
+        duration_ms=duration_ms,
+        payload={"returncode": proc.returncode},
+    )
+    if proc.returncode != 0:
+        return None
+    line = (proc.stdout or "").strip().splitlines()[0] if (proc.stdout or "").strip() else ""
+    sha = line.split("\t", 1)[0].strip() if "\t" in line else line.split(" ", 1)[0].strip()
+    if not sha or len(sha) < 7:
+        return None
+    return sha
+
+
 def _gh_api_json_via_cli(path: str, *, params: dict[str, str] | None = None) -> Any:
     cmd = ["gh", "api", path]
     if params:
@@ -706,11 +734,19 @@ def get_branch_head_sha(
                 http_status=response.status_code,
                 duration_ms=duration_ms,
             )
+            if response.status_code in {403, 429}:
+                sha = _branch_head_sha_via_git_ls_remote(repository, branch)
+                if sha:
+                    return sha
+                return _branch_head_sha_via_gh_cli(repository, branch)
             response.raise_for_status()
             data = response.json()
         sha = (data.get("commit") or {}).get("sha") if isinstance(data, dict) else None
         return sha if isinstance(sha, str) else None
     except httpx.HTTPError:
+        sha = _branch_head_sha_via_git_ls_remote(repository, branch)
+        if sha:
+            return sha
         return _branch_head_sha_via_gh_cli(repository, branch)
 
 
