@@ -53,7 +53,9 @@ def _database_url() -> str:
 
 
 def enabled() -> bool:
-    return bool(_database_url()) and not bool(os.getenv("RUNTIME_EVENTS_PATH", "").strip())
+    # If a runtime database is configured, prefer DB persistence even when a JSON
+    # events path is configured (legacy/optional file store).
+    return bool(_database_url())
 
 
 def backend_info() -> dict[str, Any]:
