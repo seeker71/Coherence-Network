@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 
+from app.services import release_gate_service as gates
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
     evaluate_collective_review_gates,
@@ -239,6 +240,63 @@ def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     assert out["result"] in {"public_contract_passed", "blocked"}
     assert isinstance(out.get("failing_checks"), list)
     assert isinstance(out.get("warnings"), list)
+
+
+def test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning(monkeypatch) -> None:
+    expected_sha = "c" * 40
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
+        if url.endswith("/api/health"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"status": "ok"},
+            }
+        if url.endswith("/api/gates/main-head"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"sha": expected_sha},
+            }
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "api": {"status": "ok"},
+                    "web": {"updated_at": "unknown"},
+                },
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "public_contract_passed"
+    assert "railway_web_health_proxy" not in report.get("failing_checks", [])
+    assert "railway_web_health_proxy_unknown_sha" in report.get("warnings", [])
 
 
 def test_evaluate_commit_traceability_report_live_shape() -> None:
