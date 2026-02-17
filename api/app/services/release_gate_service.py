@@ -745,6 +745,15 @@ def evaluate_public_deploy_contract_report(
         name = check.get("name")
         if check.get("ok"):
             continue
+        if name == "railway_web_health_proxy":
+            updated_raw = str(check.get("web_updated_at") or "").strip().lower()
+            if (
+                check.get("status_code") == 200
+                and bool(check.get("api_ok"))
+                and updated_raw in {"", "unknown", "none", "n/a"}
+            ):
+                warnings.append("railway_web_health_proxy_unknown_sha")
+                continue
         if (
             name == "railway_gates_main_head"
             and check.get("status_code") in {401, 403, 502}
