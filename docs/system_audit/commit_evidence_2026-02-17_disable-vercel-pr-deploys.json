@@ -4,6 +4,7 @@
   "commit_scope": "Disable Vercel deployments on PR/non-main branches to avoid early deployment rate limits.",
   "files_owned": [
     "specs/105-disable-vercel-pr-deployments.md",
+    "vercel.json",
     "web/vercel.json",
     "scripts/validate_vercel_deployment_policy.py",
     "docs/DEPLOY.md",
@@ -47,6 +48,7 @@
   ],
   "change_files": [
     "specs/105-disable-vercel-pr-deployments.md",
+    "vercel.json",
     "web/vercel.json",
     "scripts/validate_vercel_deployment_policy.py",
     "docs/DEPLOY.md"
@@ -54,7 +56,7 @@
   "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-17T09:35:00Z",
+    "ran_at": "2026-02-17T09:40:00Z",
     "environment": {
       "python": "3.x"
     },

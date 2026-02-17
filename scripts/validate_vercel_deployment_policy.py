@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """Local guard: ensure Vercel does not auto-deploy on PR/non-main branches.
 
-This relies on Vercel project configuration via web/vercel.json:
+This repo is a monorepo. Depending on the Vercel project's configured Root Directory,
+Vercel will read either:
+
+- ./vercel.json (project root = repo root)
+- ./web/vercel.json (project root = web/)
+
+We validate both to avoid accidental regressions when the Vercel configuration changes.
+
+Policy:
   git.deploymentEnabled.main == true
   git.deploymentEnabled["*"] == false
 """
@@ -18,35 +26,51 @@ def _fail(msg: str) -> int:
     return 1
 
 
-def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
-    vercel_config_path = repo_root / "web" / "vercel.json"
-
-    if not vercel_config_path.exists():
-        return _fail(f"Missing {vercel_config_path}")
-
+def _load(path: Path):
     try:
-        data = json.loads(vercel_config_path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
-        return _fail(f"Invalid JSON in {vercel_config_path}: {e}")
+        raise ValueError(f"Invalid JSON in {path}: {e}")
+
+
+def _validate_policy(path: Path) -> None:
+    data = _load(path)
 
     git_cfg = data.get("git")
     if not isinstance(git_cfg, dict):
-        return _fail('Expected top-level "git" object in web/vercel.json')
+        raise ValueError('Expected top-level "git" object')
 
     dep_enabled = git_cfg.get("deploymentEnabled")
     if not isinstance(dep_enabled, dict):
-        return _fail('Expected "git.deploymentEnabled" object in web/vercel.json')
+        raise ValueError('Expected "git.deploymentEnabled" object')
 
-    main_enabled = dep_enabled.get("main")
-    wildcard_enabled = dep_enabled.get("*")
+    if dep_enabled.get("main") is not True:
+        raise ValueError('Expected "git.deploymentEnabled.main" to be true')
+    if dep_enabled.get("*") is not False:
+        raise ValueError('Expected "git.deploymentEnabled.\"*\"" to be false')
 
-    if main_enabled is not True:
-        return _fail('Expected "git.deploymentEnabled.main" to be true')
-    if wildcard_enabled is not False:
-        return _fail('Expected "git.deploymentEnabled.\\"*\\"" to be false')
 
-    print("OK: Vercel deployments enabled only for main.")
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    candidates = [
+        repo_root / "vercel.json",
+        repo_root / "web" / "vercel.json",
+    ]
+
+    missing = [p for p in candidates if not p.exists()]
+    if missing:
+        # Keep this strict: missing either file means the policy can silently stop applying
+        # depending on how the Vercel project is configured.
+        return _fail("Missing required Vercel config file(s): " + ", ".join(str(p) for p in missing))
+
+    for path in candidates:
+        try:
+            _validate_policy(path)
+        except Exception as e:
+            return _fail(f"{path}: {e}")
+
+    print("OK: Vercel deployments enabled only for main (root + web configs).")
     return 0
 
 

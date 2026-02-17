@@ -6,7 +6,7 @@ Prevent Vercel preview deployments from running on pull requests to avoid hittin
 
 ## Requirements
 
-- [ ] Vercel auto-deploy must be enabled only for the `main` branch.
+- [ ] Vercel auto-deploy must be enabled only for the `main` branch (repo root or `web/` root-directory configurations).
 - [ ] Non-`main` branches must not trigger Vercel deployments (including PR branches).
 - [ ] A repo-local validation command must fail if the Vercel deploy policy is misconfigured.
 
@@ -20,6 +20,7 @@ N/A - no model changes in this spec.
 
 ## Files to Create/Modify
 
+- `vercel.json`
 - `web/vercel.json`
 - `scripts/validate_vercel_deployment_policy.py`
 - `docs/DEPLOY.md`

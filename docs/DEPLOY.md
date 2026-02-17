@@ -6,7 +6,7 @@ This project deploys both API and web on Railway.
 
 If the web app is also connected to Vercel, ensure preview deployments are disabled to avoid Vercel deployment rate limits.
 
-This repo enforces "deploy only from `main`" via `web/vercel.json` (`git.deploymentEnabled`).
+This repo enforces "deploy only from `main`" via `vercel.json` and `web/vercel.json` (`git.deploymentEnabled`).
 
 ## Deployment Targets
 
