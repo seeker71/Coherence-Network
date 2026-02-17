@@ -45,14 +45,20 @@
     "GET /api/automation/usage/external-tools"
   ],
   "change_files": [
+    "api/app/routers/health.py",
     "api/app/routers/automation_usage.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/spec_registry_service.py",
     "api/app/services/automation_usage_service.py",
     "api/app/services/release_gate_service.py",
     "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_health.py",
     "api/tests/test_automation_usage_api.py",
+    "api/tests/test_runtime_api.py",
     "api/tests/test_release_gate_service.py",
     "scripts/ensure_worktree_start_clean.py",
     "scripts/pr_check_failure_triage.py",
+    "scripts/verify_web_api_deploy.sh",
     "scripts/worktree_pr_guard.py",
     "docs/system_audit/commit_evidence_2026-02-17_persistent-external-tool-usage-tracking.json"
   ],
