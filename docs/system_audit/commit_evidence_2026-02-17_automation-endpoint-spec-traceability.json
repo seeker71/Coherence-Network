@@ -66,7 +66,7 @@
     "docs/SPEC-COVERAGE.md",
     "specs/100-automation-provider-usage-readiness-api.md"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "e2e_validation": {
     "status": "pending",
     "expected_behavior_delta": "Automation usage endpoints now appear as spec-tracked in endpoint traceability inventory using explicit canonical spec linkage.",
