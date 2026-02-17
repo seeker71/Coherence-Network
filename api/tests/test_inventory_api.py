@@ -126,6 +126,39 @@ async def test_canonical_routes_fallback_when_config_missing(
 
 
 @pytest.mark.asyncio
+async def test_canonical_routes_uses_env_override_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    override = tmp_path / "canonical_routes_override.json"
+    override.write_text(
+        json.dumps(
+            {
+                "version": "override-test",
+                "milestone": "override",
+                "api_routes": [
+                    {
+                        "path": "/api/override-check",
+                        "methods": ["GET"],
+                        "purpose": "test",
+                        "idea_id": "portfolio-governance",
+                    }
+                ],
+                "web_routes": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CANONICAL_ROUTES_PATH", str(override))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/routes/canonical")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["version"] == "override-test"
+        assert any(route["path"] == "/api/override-check" for route in data["api_routes"])
+
+
+@pytest.mark.asyncio
 async def test_route_evidence_inventory_reports_api_and_web_coverage(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
