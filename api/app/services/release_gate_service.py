@@ -6,12 +6,19 @@ import base64
 import binascii
 import json
 import re
+import subprocess
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any, Optional
 from urllib.parse import quote
 
 import httpx
+
+try:  # noqa: SIM105
+    from app.services import telemetry_persistence_service
+except Exception:  # pragma: no cover - best effort import only
+    telemetry_persistence_service = None
 
 
 def _headers(github_token: str | None = None) -> dict[str, str]:
@@ -22,6 +29,89 @@ def _headers(github_token: str | None = None) -> dict[str, str]:
     if github_token:
         headers["Authorization"] = f"Bearer {github_token}"
     return headers
+
+
+def _record_external_tool_usage(
+    *,
+    tool_name: str,
+    provider: str,
+    operation: str,
+    resource: str,
+    status: str,
+    http_status: int | None = None,
+    duration_ms: int | None = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if telemetry_persistence_service is None:
+        return
+    event_payload: dict[str, Any] = {
+        "event_id": f"tool_{uuid.uuid4().hex}",
+        "occurred_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "tool_name": tool_name,
+        "provider": provider,
+        "operation": operation,
+        "resource": resource,
+        "status": status,
+        "http_status": http_status,
+        "duration_ms": duration_ms,
+        "payload": payload or {},
+    }
+    try:
+        telemetry_persistence_service.append_external_tool_usage_event(event_payload)
+    except Exception:
+        # Telemetry persistence must be best-effort and never block gate behavior.
+        return
+
+
+def _branch_head_sha_via_gh_cli(repository: str, branch: str) -> str | None:
+    cmd = ["gh", "api", f"repos/{repository}/branches/{branch}"]
+    started = time.monotonic()
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    duration_ms = int((time.monotonic() - started) * 1000)
+    status = "success" if proc.returncode == 0 else "error"
+    _record_external_tool_usage(
+        tool_name="gh-cli",
+        provider="github-actions",
+        operation="get_branch_head_sha_fallback",
+        resource=f"{repository}/branches/{branch}",
+        status=status,
+        duration_ms=duration_ms,
+        payload={"returncode": proc.returncode},
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads((proc.stdout or "").strip() or "{}")
+    except json.JSONDecodeError:
+        return None
+    commit = payload.get("commit") if isinstance(payload, dict) else None
+    sha = commit.get("sha") if isinstance(commit, dict) else None
+    return sha if isinstance(sha, str) else None
+
+
+def _gh_api_json_via_cli(path: str, *, params: dict[str, str] | None = None) -> Any:
+    cmd = ["gh", "api", path]
+    if params:
+        for key, value in params.items():
+            cmd.extend(["-f", f"{key}={value}"])
+    started = time.monotonic()
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    duration_ms = int((time.monotonic() - started) * 1000)
+    _record_external_tool_usage(
+        tool_name="gh-cli",
+        provider="github-actions",
+        operation="api_fallback_json",
+        resource=path,
+        status="success" if proc.returncode == 0 else "error",
+        duration_ms=duration_ms,
+        payload={"returncode": proc.returncode, "params": params or {}},
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        return json.loads((proc.stdout or "").strip() or "null")
+    except json.JSONDecodeError:
+        return None
 
 
 def get_open_prs(
@@ -35,8 +125,20 @@ def get_open_prs(
     if head_branch:
         params["head"] = f"{owner}:{head_branch}"
     url = f"https://api.github.com/repos/{repository}/pulls"
+    start = time.monotonic()
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         response = client.get(url, params=params)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="get_open_prs",
+            resource=f"{repository}/pulls",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+            payload={"head_branch": head_branch, "params": params},
+        )
         response.raise_for_status()
         data = response.json()
     return data if isinstance(data, list) else []
@@ -49,8 +151,19 @@ def get_commit_status(
     timeout: float = 10.0,
 ) -> dict[str, Any]:
     url = f"https://api.github.com/repos/{repository}/commits/{sha}/status"
+    start = time.monotonic()
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         response = client.get(url)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="get_commit_status",
+            resource=f"{repository}/commits/{sha}/status",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+        )
         response.raise_for_status()
         data = response.json()
     return data if isinstance(data, dict) else {}
@@ -63,8 +176,19 @@ def get_check_runs(
     timeout: float = 10.0,
 ) -> list[dict[str, Any]]:
     url = f"https://api.github.com/repos/{repository}/commits/{sha}/check-runs"
+    start = time.monotonic()
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         response = client.get(url)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="get_check_runs",
+            resource=f"{repository}/commits/{sha}/check-runs",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+        )
         response.raise_for_status()
         data = response.json()
     runs = data.get("check_runs") if isinstance(data, dict) else []
@@ -129,8 +253,19 @@ def rerun_actions_failed_jobs(
 ) -> dict[str, Any]:
     """Trigger rerun-failed-jobs for an Actions workflow run."""
     url = f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/rerun-failed-jobs"
+    start = time.monotonic()
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         response = client.post(url)
+    duration_ms = int((time.monotonic() - start) * 1000)
+    _record_external_tool_usage(
+        tool_name="github-api",
+        provider="github-actions",
+        operation="rerun_actions_failed_jobs",
+        resource=f"{repository}/actions/runs/{run_id}/rerun-failed-jobs",
+        status="success" if response.status_code == 201 else "error",
+        http_status=response.status_code,
+        duration_ms=duration_ms,
+    )
     accepted = response.status_code == 201
     return {
         "run_id": run_id,
@@ -148,8 +283,19 @@ def get_required_contexts(
     """Return required status check contexts, or None when unavailable."""
     url = f"https://api.github.com/repos/{repository}/branches/{base_branch}/protection"
     try:
+        start = time.monotonic()
         with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
             response = client.get(url)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="get_required_contexts",
+            resource=f"{repository}/branches/{base_branch}/protection",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+        )
         if response.status_code == 401 or response.status_code == 403:
             return None
         response.raise_for_status()
@@ -179,10 +325,25 @@ def get_commit_pull_requests(
     url = f"https://api.github.com/repos/{repository}/commits/{sha}/pulls"
     headers = _headers(github_token)
     headers["Accept"] = "application/vnd.github+json"
-    with httpx.Client(timeout=timeout, headers=headers) as client:
-        response = client.get(url)
-        response.raise_for_status()
-        data = response.json()
+    start = time.monotonic()
+    try:
+        with httpx.Client(timeout=timeout, headers=headers) as client:
+            response = client.get(url)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_commit_pull_requests",
+                resource=f"{repository}/commits/{sha}/pulls",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        fallback = _gh_api_json_via_cli(f"repos/{repository}/commits/{sha}/pulls")
+        data = fallback if isinstance(fallback, list) else []
     return data if isinstance(data, list) else []
 
 
@@ -194,8 +355,19 @@ def get_pull_request_reviews(
 ) -> list[dict[str, Any]]:
     """Return reviews for a pull request."""
     url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}/reviews"
+    start = time.monotonic()
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         response = client.get(url)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="get_pull_request_reviews",
+            resource=f"{repository}/pulls/{pr_number}/reviews",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+        )
         response.raise_for_status()
         data = response.json()
     return data if isinstance(data, list) else []
@@ -507,14 +679,25 @@ def get_branch_head_sha(
     """Return branch head SHA, or None if unavailable."""
     url = f"https://api.github.com/repos/{repository}/branches/{branch}"
     try:
+        start = time.monotonic()
         with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
             response = client.get(url)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_branch_head_sha",
+                resource=f"{repository}/branches/{branch}",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+            )
             response.raise_for_status()
             data = response.json()
         sha = (data.get("commit") or {}).get("sha") if isinstance(data, dict) else None
         return sha if isinstance(sha, str) else None
     except httpx.HTTPError:
-        return None
+        return _branch_head_sha_via_gh_cli(repository, branch)
 
 
 def evaluate_pr_to_public_report(
@@ -779,10 +962,25 @@ def get_commit_files(
 ) -> list[str]:
     """Return file paths changed in a commit."""
     url = f"https://api.github.com/repos/{repository}/commits/{sha}"
-    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url)
-        response.raise_for_status()
-        data = response.json()
+    start = time.monotonic()
+    try:
+        with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+            response = client.get(url)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_commit_files",
+                resource=f"{repository}/commits/{sha}",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        fallback = _gh_api_json_via_cli(f"repos/{repository}/commits/{sha}")
+        data = fallback if isinstance(fallback, dict) else {}
     files = data.get("files") if isinstance(data, dict) else []
     out: list[str] = []
     if isinstance(files, list):
@@ -800,10 +998,28 @@ def get_pull_request_files(
 ) -> list[str]:
     """Return file paths changed in a pull request."""
     url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}/files"
-    with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
-        response = client.get(url, params={"per_page": "100"})
-        response.raise_for_status()
-        data = response.json()
+    start = time.monotonic()
+    try:
+        with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+            response = client.get(url, params={"per_page": "100"})
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_pull_request_files",
+                resource=f"{repository}/pulls/{pr_number}/files",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        fallback = _gh_api_json_via_cli(
+            f"repos/{repository}/pulls/{pr_number}/files",
+            params={"per_page": "100"},
+        )
+        data = fallback if isinstance(fallback, list) else []
     out: list[str] = []
     if isinstance(data, list):
         for item in data:
@@ -825,17 +1041,41 @@ def get_file_content_at_ref(
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         data: dict[str, Any] | None = None
         for attempt in range(3):
+            start = time.monotonic()
             response = client.get(url, params={"ref": ref})
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="get_file_content_at_ref",
+                resource=f"{repository}/contents/{path}@{ref}",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+                payload={"attempt": attempt + 1},
+            )
             # Transient upstream errors (observed in CI) should not fail traceability report generation.
             if response.status_code >= 500 and attempt < 2:
                 time.sleep(0.2 * float(attempt + 1))
                 continue
             if response.status_code == 404:
                 return None
+            if response.status_code in {403, 429}:
+                fallback = _gh_api_json_via_cli(
+                    f"repos/{repository}/contents/{quoted_path}",
+                    params={"ref": ref},
+                )
+                data = fallback if isinstance(fallback, dict) else None
+                break
             try:
                 response.raise_for_status()
             except httpx.HTTPStatusError:
-                return None
+                fallback = _gh_api_json_via_cli(
+                    f"repos/{repository}/contents/{quoted_path}",
+                    params={"ref": ref},
+                )
+                data = fallback if isinstance(fallback, dict) else None
+                break
             parsed = response.json()
             data = parsed if isinstance(parsed, dict) else None
             break
@@ -863,18 +1103,42 @@ def list_spec_paths_at_ref(
     with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
         data: Any = None
         for attempt in range(3):
+            start = time.monotonic()
             response = client.get(url, params={"ref": ref})
+            duration_ms = int((time.monotonic() - start) * 1000)
+            _record_external_tool_usage(
+                tool_name="github-api",
+                provider="github-actions",
+                operation="list_spec_paths_at_ref",
+                resource=f"{repository}/contents/specs@{ref}",
+                status="success" if response.status_code < 400 else "error",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+                payload={"attempt": attempt + 1},
+            )
             if response.status_code >= 500 and attempt < 2:
                 time.sleep(0.2 * float(attempt + 1))
                 continue
             # 403/429 can happen in unauthenticated CI due GitHub API rate-limit.
             # Traceability report should still render with degraded spec linkage.
-            if response.status_code in {403, 404, 429}:
+            if response.status_code == 404:
                 return []
+            if response.status_code in {403, 429}:
+                fallback = _gh_api_json_via_cli(
+                    f"repos/{repository}/contents/specs",
+                    params={"ref": ref},
+                )
+                data = fallback
+                break
             try:
                 response.raise_for_status()
             except httpx.HTTPStatusError:
-                return []
+                fallback = _gh_api_json_via_cli(
+                    f"repos/{repository}/contents/specs",
+                    params={"ref": ref},
+                )
+                data = fallback
+                break
             data = response.json()
             break
     out: list[str] = []

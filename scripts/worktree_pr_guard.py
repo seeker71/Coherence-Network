@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,10 +26,46 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 from app.services import release_gate_service as gates  # noqa: E402
+try:  # noqa: SIM105
+    from app.services import telemetry_persistence_service  # type: ignore[attr-defined]  # noqa: E402
+except Exception:  # pragma: no cover - best effort import only
+    telemetry_persistence_service = None
 
 
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _record_external_tool_usage(
+    *,
+    tool_name: str,
+    provider: str,
+    operation: str,
+    resource: str,
+    status: str,
+    http_status: int | None = None,
+    duration_ms: int | None = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if telemetry_persistence_service is None:
+        return
+    try:
+        telemetry_persistence_service.append_external_tool_usage_event(
+            {
+                "event_id": f"tool_{uuid.uuid4().hex}",
+                "occurred_at": _utc_now(),
+                "tool_name": tool_name,
+                "provider": provider,
+                "operation": operation,
+                "resource": resource,
+                "status": status,
+                "http_status": http_status,
+                "duration_ms": duration_ms,
+                "payload": payload or {},
+            }
+        )
+    except Exception:
+        return
 
 
 def _safe_branch_name(raw: str) -> str:
@@ -370,8 +407,19 @@ def _parse_iso8601(value: str | None) -> datetime | None:
 
 def _collect_deployment_health(repo: str, token: str, max_age_hours: float) -> dict[str, Any]:
     url = f"https://api.github.com/repos/{repo}/actions/workflows/public-deploy-contract.yml/runs"
+    started = time.monotonic()
     with httpx.Client(timeout=12.0, headers=gates._headers(token)) as client:
         response = client.get(url, params={"branch": "main", "per_page": 10})
+        _record_external_tool_usage(
+            tool_name="github-api",
+            provider="github-actions",
+            operation="deployment_health_workflow_runs",
+            resource=f"{repo}/actions/workflows/public-deploy-contract.yml/runs",
+            status="success" if response.status_code < 400 else "error",
+            http_status=response.status_code,
+            duration_ms=int((time.monotonic() - started) * 1000),
+            payload={"branch": "main"},
+        )
         response.raise_for_status()
         payload = response.json()
 
@@ -553,6 +601,21 @@ def main() -> int:
         "All selected checks passed."
         if not blocking
         else "Blocking failures detected; see local_preflight/remote_pr_checks details."
+    )
+    _record_external_tool_usage(
+        tool_name="worktree-pr-guard",
+        provider="coherence-internal",
+        operation="run",
+        resource=f"mode={args.mode}",
+        status="success" if report["ready_for_push"] else "error",
+        payload={
+            "branch": args.branch,
+            "base": args.base,
+            "local_preflight_status": report["local_preflight"].get("status"),
+            "remote_pr_checks_status": report["remote_pr_checks"].get("status"),
+            "deployment_health_status": report["deployment_health"].get("status"),
+            "summary": report["summary"],
+        },
     )
 
     output_path = _write_report(Path(args.output_dir), report, args.branch)
