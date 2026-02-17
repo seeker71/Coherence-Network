@@ -1,0 +1,358 @@
+{
+  "generated_at": "2026-02-17",
+  "default_idea_id": "portfolio-governance",
+  "mappings": [
+    {
+      "spec_path": "specs/001-health-check.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/002-agent-orchestration-api.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/003-agent-telegram-decision-loop.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/004-ci-pipeline.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/005-backlog.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/005-project-manager-pipeline.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/006-overnight-backlog.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/007-meta-pipeline-backlog.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/007-sprint-0-landing.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/009-api-error-handling.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/010-request-validation.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/011-pagination.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/012-web-skeleton.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/013-logging-audit.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/014-deploy-readiness.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/015-placeholder.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/016-holdout-tests.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/017-web-ci.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/018-coherence-algorithm-spec.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/019-graph-store-abstraction.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/020-sprint-2-coherence-api.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/021-web-project-search-ui.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/023-web-import-stack-ui.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/025-requirements-txt-import.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/026-phase-1-task-metrics.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/026-pipeline-observability-and-auto-review.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/027-auto-update-framework.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/027-fully-automated-pipeline.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/028-parallel-by-phase-pipeline.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/029-github-api-integration.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/030-pipeline-full-automation.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/030-spec-coverage-update.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/031-setup-troubleshooting-venv.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/032-attention-heuristics-pipeline-status.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/033-readme-quick-start-qualify.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/034-ops-runbook.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/035-glossary.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/036-check-pipeline-hierarchical-view.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/037-post-tasks-invalid-task-type-422.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/038-post-tasks-empty-direction-422.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/039-pipeline-status-empty-state-200.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/040-project-manager-load-backlog-malformed-test.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/041-project-manager-state-file-flag-test.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/042-project-manager-reset-clears-state-test.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/043-agent-service-spec-task-type-local-model-test.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/044-agent-service-test-task-type-local-model-test.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/045-effectiveness-plan-progress-phase-6-7.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/046-agent-debugging-pipeline-stuck-task-hangs.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/047-heal-completion-issue-resolution.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/048-contributions-api.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/048-value-lineage-and-payout-attribution.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/049-distribution-engine.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/049-system-lineage-inventory-and-runtime-telemetry.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/050-canonical-route-registry-and-runtime-mapping.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/050-friction-analysis.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/051-question-answering-and-minimum-e2e-flow.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/051-release-gates.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/052-assets-api.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/052-portfolio-cockpit-ui.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/053-ideas-prioritization.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/053-standing-questions-roi-and-next-task-generation.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/054-commit-provenance-contract-gate.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/054-postgresql-migration.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/055-runtime-intent-and-public-e2e-contract-gate.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/056-commit-derived-traceability-report.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/072-public-walkable-flow-parity.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/073-walkable-flow-runtime-mismatch-fixes.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/074-tool-failure-awareness.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/075-web-ideas-specs-usage-pages.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/076-ui-alignment-overhaul.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/080-persistent-store-test-contributor-guard.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/081-implementation-request-question-task-sync.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/082-landing-page-contributor-onboarding.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/083-task-claim-tracking-and-roi-dedupe.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/084-live-gate-tests-without-mocks.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/085-tracked-count-parity-and-source-discovery.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/086-normalize-github-commit-cost-estimation.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/087-legacy-commit-cost-ui-normalization.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/088-spec-process-implementation-validation-flow.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/089-endpoint-traceability-coverage.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/090-maintainability-architecture-and-placeholder-gate.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/091-web-live-refresh-and-link-parity.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/092-web-refresh-reliability-and-route-completeness.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/093-web-theme-auto-detection.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/094-contributor-onboarding-and-governed-change-flow.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/TEMPLATE.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/sprint0-graph-foundation-indexer-api.md",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "spec_path": "specs/test-backlog-cursor.md",
+      "idea_id": "portfolio-governance"
+    }
+  ]
+}
