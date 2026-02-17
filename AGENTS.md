@@ -22,6 +22,7 @@ Spec → Test → Implement → CI → Review → Merge
    - Run: `python3 scripts/ensure_worktree_start_clean.py --json`
    - If it fails, stop and fix blockers first.
 3. Pre-commit local gate (required)
+   - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
    - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
    - If either fails, do not commit.
