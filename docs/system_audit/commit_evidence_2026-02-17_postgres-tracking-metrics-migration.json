@@ -57,6 +57,7 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
+    "cd api && pytest -q",
     "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
     "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
     "cd api && pytest -q tests/test_gates.py",
@@ -87,6 +88,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
+      "cd api && pytest -q",
       "cd api && pytest -q tests/test_commit_evidence_registry_service.py tests/test_metrics_db_migration.py tests/test_friction_api.py tests/test_automation_usage_api.py tests/test_ideas.py",
       "cd api && pytest -q tests/test_inventory_api.py tests/test_inventory_discovery_sources.py",
       "cd api && pytest -q tests/test_gates.py",
