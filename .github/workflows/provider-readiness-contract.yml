@@ -142,13 +142,14 @@ jobs:
             });
 
       - name: Fail when blocking provider readiness issues exist
-        if: ${{ steps.readiness.outputs.exit_code != '0' && vars.PROVIDER_READINESS_STRICT == '1' }}
+        # Never fail scheduled runs: scheduled contracts should alert via issue, not block "main CI green".
+        if: ${{ steps.readiness.outputs.exit_code != '0' && vars.PROVIDER_READINESS_STRICT == '1' && github.event_name != 'schedule' }}
         run: |
           echo "Provider readiness contract failed"
           exit 1
 
       - name: Non-blocking by default (issue is the alert)
-        if: ${{ steps.readiness.outputs.exit_code != '0' && vars.PROVIDER_READINESS_STRICT != '1' }}
+        if: ${{ steps.readiness.outputs.exit_code != '0' && (vars.PROVIDER_READINESS_STRICT != '1' || github.event_name == 'schedule') }}
         run: |
-          echo "WARNING: Provider readiness contract detected issues, but strict mode is disabled (set PROVIDER_READINESS_STRICT=1 to fail)."
+          echo "WARNING: Provider readiness contract detected issues, but this run is non-blocking (set PROVIDER_READINESS_STRICT=1 and run via workflow_dispatch to fail)."
           exit 0
