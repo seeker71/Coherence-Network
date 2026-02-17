@@ -10,6 +10,7 @@ from app.services import agent_service
 @pytest.mark.asyncio
 async def test_tasks_list_includes_runtime_completion_events_when_store_empty(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "1")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     agent_service._store.clear()
@@ -54,4 +55,3 @@ async def test_tasks_list_includes_runtime_completion_events_when_store_empty(tm
         assert body["id"] == task_id
         assert body["status"] == "completed"
         assert body["model"] == "openclaw/openrouter/free"
-

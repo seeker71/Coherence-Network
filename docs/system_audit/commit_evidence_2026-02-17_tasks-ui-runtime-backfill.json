@@ -74,9 +74,12 @@
   },
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-17T08:31:00Z",
+    "ran_at": "2026-02-17T08:37:29Z",
     "commands": [
-      "cd api && pytest -q tests/test_agent_tasks_runtime_fallback.py tests/test_agent_usage_tracking_api.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py"
+      "cd api && pytest -q tests/test_agent_tasks_runtime_fallback.py tests/test_agent_usage_tracking_api.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py",
+      "cd api && pytest -q tests/test_agent_task_persistence.py tests/test_agent_tasks_runtime_fallback.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ]
   },
   "ci_validation": {
@@ -92,4 +95,3 @@
     "reason": "Awaiting CI, deployment, and web verification."
   }
 }
-
