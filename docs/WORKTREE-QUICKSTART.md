@@ -40,6 +40,12 @@ Must pass all:
 
 ## Mandatory Local Guard (before commit/push)
 
+Enable local git hook enforcement once per worktree (can be done once per checkout):
+
+```bash
+make install-pre-push-hook
+```
+
 Always rebase to latest main first:
 
 ```bash
