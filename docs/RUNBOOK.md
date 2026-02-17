@@ -235,6 +235,33 @@ If a check fails, the report includes:
 - output tail
 - suggested local remediation command
 
+### PR Failure Triage Automation
+
+Run dedicated PR failure triage across open `codex/*` PRs:
+
+```bash
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
+```
+
+Auto-rerun failed GitHub Actions jobs and fail only if still blocked after retry window:
+
+```bash
+python3 scripts/pr_check_failure_triage.py \
+  --repo seeker71/Coherence-Network \
+  --base main \
+  --head-prefix codex/ \
+  --rerun-failed-actions \
+  --rerun-settle-seconds 180 \
+  --poll-seconds 20 \
+  --fail-on-detected
+```
+
+Scheduled automation runs in:
+- `.github/workflows/pr-check-failure-triage.yml`
+
+Reference:
+- `docs/PR-CHECK-FAILURE-TRIAGE.md`
+
 ## Worktree Start Gate
 
 Before starting a new task, enforce worktree-only + clean-state:

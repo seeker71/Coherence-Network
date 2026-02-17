@@ -1,0 +1,53 @@
+name: PR Check Failure Triage
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pr-check-failure-triage
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Run PR check failure triage
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/pr_check_failure_triage.py \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --head-prefix codex/ \
+            --rerun-failed-actions \
+            --rerun-settle-seconds 180 \
+            --poll-seconds 20 \
+            --fail-on-detected \
+            --json > pr-check-triage-report.json
+
+      - name: Upload triage report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-check-triage-report
+          path: |
+            pr-check-triage-report.json
+            docs/system_audit/pr_check_failures/pr_failure_triage_*.json
+          if-no-files-found: warn
