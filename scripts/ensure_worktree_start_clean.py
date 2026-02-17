@@ -8,13 +8,69 @@ import json
 import os
 import re
 import subprocess
+import sys
+import time
+import uuid
+from datetime import UTC, datetime
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+API_ROOT = REPO_ROOT / "api"
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
+
+try:  # noqa: SIM105
+    from app.services import telemetry_persistence_service  # type: ignore[attr-defined]  # noqa: E402
+except Exception:  # pragma: no cover - best effort import only
+    telemetry_persistence_service = None
+
 
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+    started = time.monotonic()
+    proc = subprocess.run(cmd, cwd=cwd, check=False, text=True, capture_output=True)
+    if cmd and cmd[0] == "gh":
+        _record_external_tool_usage(
+            tool_name="gh-cli",
+            provider="github-actions",
+            operation="subprocess",
+            resource=" ".join(cmd[1:]),
+            status="success" if proc.returncode == 0 else "error",
+            duration_ms=int((time.monotonic() - started) * 1000),
+            payload={"returncode": proc.returncode},
+        )
+    return proc
+
+
+def _record_external_tool_usage(
+    *,
+    tool_name: str,
+    provider: str,
+    operation: str,
+    resource: str,
+    status: str,
+    duration_ms: int | None = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if telemetry_persistence_service is None:
+        return
+    try:
+        telemetry_persistence_service.append_external_tool_usage_event(
+            {
+                "event_id": f"tool_{uuid.uuid4().hex}",
+                "occurred_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                "tool_name": tool_name,
+                "provider": provider,
+                "operation": operation,
+                "resource": resource,
+                "status": status,
+                "duration_ms": duration_ms,
+                "payload": payload or {},
+            }
+        )
+    except Exception:
+        return
 
 
 def _repo_root() -> Path:
@@ -32,7 +88,16 @@ def _status_lines(repo: Path) -> list[str]:
 
 
 def _gh_api_json(args: list[str], cwd: Path) -> Any:
+    started = time.monotonic()
     proc = _run(["gh", "api", "--method", "GET", *args], cwd=cwd)
+    _record_external_tool_usage(
+        tool_name="gh-cli",
+        provider="github-actions",
+        operation="api_get",
+        resource=" ".join(args),
+        status="success" if proc.returncode == 0 else "error",
+        duration_ms=int((time.monotonic() - started) * 1000),
+    )
     if proc.returncode != 0:
         raise RuntimeError((proc.stderr or proc.stdout or "gh api failed").strip())
     raw = (proc.stdout or "").strip()

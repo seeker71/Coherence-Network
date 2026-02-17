@@ -47,6 +47,23 @@ class FrictionEventRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class ExternalToolUsageEventRecord(Base):
+    __tablename__ = "telemetry_external_tool_usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    tool_name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    operation: Mapped[str] = mapped_column(String, nullable=False)
+    resource: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 
 
@@ -118,11 +135,15 @@ def backend_info() -> dict[str, Any]:
     with _session() as session:
         snapshots = int(session.query(func.count(AutomationUsageSnapshotRecord.id)).scalar() or 0)
         friction_events = int(session.query(func.count(FrictionEventRecord.id)).scalar() or 0)
+        external_tool_usage_events = int(
+            session.query(func.count(ExternalToolUsageEventRecord.id)).scalar() or 0
+        )
     return {
         "backend": backend,
         "database_url": _redact_database_url(url),
         "automation_snapshot_rows": snapshots,
         "friction_event_rows": friction_events,
+        "external_tool_usage_event_rows": external_tool_usage_events,
     }
 
 
@@ -260,6 +281,75 @@ def list_friction_events(limit: int = 1000) -> list[dict[str, Any]]:
             .limit(max(1, min(limit, 10000)))
             .all()
         )
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            payload = json.loads(row.payload_json)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            out.append(payload)
+    return out
+
+
+def append_external_tool_usage_event(payload: dict[str, Any], max_rows: int = 50000) -> None:
+    ensure_schema()
+    event_id = str(payload.get("event_id") or payload.get("id") or "")
+    tool_name = str(payload.get("tool_name") or "unknown")
+    provider = str(payload.get("provider") or "unknown")
+    operation = str(payload.get("operation") or "unknown")
+    resource_raw = payload.get("resource")
+    resource = str(resource_raw) if isinstance(resource_raw, str) else None
+    status = str(payload.get("status") or "unknown")
+    http_status_raw = payload.get("http_status")
+    duration_raw = payload.get("duration_ms")
+    occurred_at = _parse_dt(payload.get("occurred_at"))
+    serialized = json.dumps(payload, default=str)
+    http_status = int(http_status_raw) if isinstance(http_status_raw, int | float) else None
+    duration_ms = int(duration_raw) if isinstance(duration_raw, int | float) else None
+    with _session() as session:
+        session.add(
+            ExternalToolUsageEventRecord(
+                event_id=event_id,
+                tool_name=tool_name,
+                provider=provider,
+                operation=operation,
+                resource=resource,
+                status=status,
+                http_status=http_status,
+                duration_ms=duration_ms,
+                payload_json=serialized,
+                occurred_at=occurred_at,
+            )
+        )
+        if max_rows > 0:
+            count = int(session.query(func.count(ExternalToolUsageEventRecord.id)).scalar() or 0)
+            over = max(0, count - int(max_rows))
+            if over > 0:
+                stale = (
+                    session.query(ExternalToolUsageEventRecord)
+                    .order_by(ExternalToolUsageEventRecord.id.asc())
+                    .limit(over)
+                    .all()
+                )
+                for row in stale:
+                    session.delete(row)
+
+
+def list_external_tool_usage_events(
+    limit: int = 1000,
+    *,
+    provider: str | None = None,
+    tool_name: str | None = None,
+) -> list[dict[str, Any]]:
+    ensure_schema()
+    with _session() as session:
+        query = session.query(ExternalToolUsageEventRecord)
+        if provider:
+            query = query.filter(ExternalToolUsageEventRecord.provider == provider)
+        if tool_name:
+            query = query.filter(ExternalToolUsageEventRecord.tool_name == tool_name)
+        rows = query.order_by(ExternalToolUsageEventRecord.id.desc()).limit(max(1, min(limit, 20000))).all()
     out: list[dict[str, Any]] = []
     for row in rows:
         try:

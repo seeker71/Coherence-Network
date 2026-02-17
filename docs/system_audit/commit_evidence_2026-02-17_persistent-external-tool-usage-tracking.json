@@ -1,0 +1,97 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/persistent-tool-usage-20260216-221526",
+  "commit_scope": "Persist external tool usage (including GitHub Actions and gh CLI checks) into durable telemetry storage and expose query API",
+  "files_owned": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/ensure_worktree_start_clean.py",
+    "scripts/pr_check_failure_triage.py",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_persistent-external-tool-usage-tracking.json"
+  ],
+  "idea_ids": [
+    "tool-failure-awareness"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "task_persistent_external_tool_usage_tracking"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_release_gate_service.py tests/test_automation_usage_api.py",
+    "python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected",
+    "GET /api/automation/usage/external-tools"
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/spec_registry_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_health.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_runtime_api.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/ensure_worktree_start_clean.py",
+    "scripts/pr_check_failure_triage.py",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-17_persistent-external-tool-usage-tracking.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_release_gate_service.py tests/test_automation_usage_api.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_persistent-external-tool-usage-tracking.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "External tool usage events are persisted in durable telemetry storage and retrievable through API after script/service execution.",
+    "public_endpoints": [
+      "/api/automation/usage/external-tools",
+      "/api/automation/usage"
+    ],
+    "test_flows": [
+      "Run PR guard/triage scripts and verify events are queryable from telemetry backend",
+      "Run API tests covering persisted external-tool event retrieval"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy verification pending"
+  }
+}

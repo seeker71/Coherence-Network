@@ -281,6 +281,33 @@ def test_collect_rerunnable_actions_run_ids_fallbacks_when_required_unknown() ->
     assert run_ids == [444, 555]
 
 
+@respx.mock
+def test_get_open_prs_persists_external_tool_usage_event(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: list[dict] = []
+    monkeypatch.setattr(
+        "app.services.telemetry_persistence_service.append_external_tool_usage_event",
+        lambda payload: captured.append(payload),
+    )
+    route = respx.get("https://api.github.com/repos/seeker71/Coherence-Network/pulls").mock(
+        return_value=httpx.Response(
+            200,
+            json=[{"number": 12, "head": {"sha": "abc123"}, "html_url": "https://example.com/pr/12"}],
+        )
+    )
+
+    rows = gates.get_open_prs("seeker71/Coherence-Network", head_branch="codex/test", github_token="token")
+
+    assert route.called
+    assert len(rows) == 1
+    assert captured
+    event = captured[-1]
+    assert event["tool_name"] == "github-api"
+    assert event["provider"] == "github-actions"
+    assert event["operation"] == "get_open_prs"
+    assert event["status"] == "success"
+    assert event["http_status"] == 200
+
+
 def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     out = evaluate_public_deploy_contract_report(
         repository="seeker71/Coherence-Network",

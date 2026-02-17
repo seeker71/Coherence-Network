@@ -1243,6 +1243,21 @@ def list_usage_snapshots(limit: int = 200) -> list[ProviderUsageSnapshot]:
     return out[: max(1, min(limit, 2000))]
 
 
+def list_external_tool_usage_events(
+    limit: int = 200,
+    *,
+    provider: str | None = None,
+    tool_name: str | None = None,
+) -> list[dict[str, Any]]:
+    provider_value = provider.strip() if isinstance(provider, str) and provider.strip() else None
+    tool_value = tool_name.strip() if isinstance(tool_name, str) and tool_name.strip() else None
+    return telemetry_persistence_service.list_external_tool_usage_events(
+        limit=max(1, min(limit, 5000)),
+        provider=provider_value,
+        tool_name=tool_value,
+    )
+
+
 def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
     ratio = max(0.0, min(float(threshold_ratio), 1.0))
     overview = collect_usage_overview(force_refresh=True)

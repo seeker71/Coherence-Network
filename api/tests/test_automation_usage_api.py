@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.automation_usage import ProviderReadinessReport, ProviderReadinessRow
-from app.services import agent_service, automation_usage_service
+from app.services import agent_service, automation_usage_service, telemetry_persistence_service
 
 
 @pytest.mark.asyncio
@@ -140,6 +140,36 @@ async def test_automation_usage_snapshots_bootstrap_into_db_backend(
         payload = snapshots.json()
         ids = {row["id"] for row in payload["snapshots"]}
         assert "provider_bootstrap_1" in ids
+
+
+@pytest.mark.asyncio
+async def test_external_tool_usage_events_endpoint_returns_persisted_rows(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'telemetry.db'}")
+    telemetry_persistence_service.append_external_tool_usage_event(
+        {
+            "event_id": "tool_evt_1",
+            "occurred_at": "2026-02-17T00:00:00Z",
+            "tool_name": "github-api",
+            "provider": "github-actions",
+            "operation": "get_check_runs",
+            "resource": "seeker71/Coherence-Network/commits/abc/check-runs",
+            "status": "error",
+            "http_status": 500,
+        }
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/automation/usage/external-tools",
+            params={"limit": 20, "provider": "github-actions", "tool_name": "github-api"},
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["count"] >= 1
+        assert any(row.get("event_id") == "tool_evt_1" for row in payload["events"])
 
 
 @pytest.mark.asyncio
