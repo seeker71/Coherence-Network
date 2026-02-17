@@ -125,3 +125,48 @@ def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytes
     assert policy.get("reason") == "selected_executor_unavailable"
     assert policy.get("selected_executor") == "claude"
     assert policy.get("fallback_executor") == "cursor"
+
+
+def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
+    monkeypatch.setenv("AGENT_EXECUTOR_REPO_DEFAULT", "cursor")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="In this repo, which tests cover /api/agent/tasks?",
+            task_type=TaskType.IMPL,
+        )
+    )
+
+    context = task.get("context") or {}
+    policy = context.get("executor_policy") or {}
+    assert context.get("executor") == "cursor"
+    assert policy.get("reason") == "repo_scoped_question"
+    assert str(task["model"]).startswith("cursor/")
+    assert str(task["command"]).startswith("agent ")
+
+
+def test_open_question_prefers_openclaw(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "openclaw")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="What are three practical ways to reduce API latency?",
+            task_type=TaskType.IMPL,
+        )
+    )
+
+    context = task.get("context") or {}
+    policy = context.get("executor_policy") or {}
+    assert context.get("executor") == "openclaw"
+    assert policy.get("reason") == "open_question_default"
+    assert str(task["model"]).startswith("openclaw/")

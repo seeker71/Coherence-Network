@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-repo-vs-open-routing-origin",
+  "commit_scope": "Route repo-scoped questions to a repo-aware executor and open questions to OpenClaw default, with regression-safe executor integration tests.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-17_repo-open-question-routing.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration"
+  ],
+  "task_ids": [
+    "task-repo-vs-open-question-routing"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_openclaw_executor_integration.py"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-17_repo-open-question-routing.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "cd api && pytest -v",
+      "cd web && NPM_CONFIG_CACHE=.npm-cache npm ci && NPM_CONFIG_CACHE=.npm-cache npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/pull/132"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Executor policy now defaults repo-scoped prompts to repo-aware execution and open/general prompts to OpenClaw when available.",
+    "public_endpoints": [
+      "GET /api/agent/route",
+      "POST /api/agent/tasks"
+    ],
+    "test_flows": [
+      "Repo-scoped direction selects cursor executor with reason=repo_scoped_question",
+      "Open question selects openclaw executor with reason=open_question_default",
+      "OpenClaw route integration accepts codex fallback command template"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI checks and final merge."
+  }
+}
