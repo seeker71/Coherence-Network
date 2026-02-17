@@ -172,6 +172,21 @@ def _changed_paths_worktree() -> list[str]:
     return paths
 
 
+def _changed_paths_range(base_ref: str, head_ref: str = "HEAD") -> tuple[list[str], str | None]:
+    proc = subprocess.run(
+        ["git", "diff", "--name-only", "--diff-filter=ACMR", base_ref, head_ref],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "").strip() or "failed to compute changed files in diff range"
+        return [], err
+    paths = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
+    return paths, None
+
+
 def _is_runtime_change(path: str) -> bool:
     checks = (
         "api/app/",
@@ -183,42 +198,54 @@ def _is_runtime_change(path: str) -> bool:
     return path.startswith(checks)
 
 
-def _worktree_has_runtime_changes() -> bool:
-    changed = _changed_paths_worktree()
-    return any(_is_runtime_change(path) for path in changed)
+def _worktree_has_runtime_changes(base_ref: str) -> bool:
+    changed, err = _changed_paths_range(base_ref)
+    worktree_changed = _changed_paths_worktree()
+    if err:
+        # Fail-open to avoid incorrectly skipping a blocking guard on diff lookup issues.
+        return True
+    all_changed = set(changed)
+    all_changed.update(worktree_changed)
+    return any(_is_runtime_change(path) for path in all_changed)
 
 
-def _run_commit_evidence_guard() -> StepResult:
+def _run_commit_evidence_guard(base_ref: str) -> StepResult:
     start = time.monotonic()
-    changed = _changed_paths_worktree()
-    if not changed:
+    changed, diff_error = _changed_paths_range(base_ref)
+    worktree_changed = _changed_paths_worktree()
+    if diff_error:
         return StepResult(
             name="commit-evidence-guard",
-            command="python3 scripts/validate_commit_evidence.py --file <changed evidence files>",
-            ok=True,
-            exit_code=0,
-            duration_seconds=round(time.monotonic() - start, 2),
-            output_tail="No working tree changes detected; evidence guard skipped.",
-            hint="No action required.",
-        )
-
-    evidence_files = [
-        p for p in changed if re.match(r"^docs/system_audit/commit_evidence_.*\.json$", p)
-    ]
-    if not evidence_files:
-        return StepResult(
-            name="commit-evidence-guard",
-            command="python3 scripts/validate_commit_evidence.py --file <changed evidence files>",
+            command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
             ok=False,
             exit_code=1,
             duration_seconds=round(time.monotonic() - start, 2),
-            output_tail="ERROR: changed files present but no changed docs/system_audit/commit_evidence_*.json file found.",
-            hint="Add/update a commit_evidence JSON file for this change before commit.",
+            output_tail=f"ERROR: unable to compute changed files for range {base_ref}..HEAD: {diff_error}",
+            hint=f"Verify git refs are available locally (for example: git fetch origin main) and rerun with --base-ref {base_ref}.",
+        )
+
+    if not changed and not worktree_changed:
+        return StepResult(
+            name="commit-evidence-guard",
+            command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+            ok=True,
+            exit_code=0,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=f"No changed files detected in range {base_ref}..HEAD or current worktree; evidence guard skipped.",
+            hint="No action required.",
         )
 
     tails: list[str] = []
-    for evidence_file in evidence_files:
-        cmd = ["python3", "scripts/validate_commit_evidence.py", "--file", evidence_file]
+    if changed:
+        cmd = [
+            "python3",
+            "scripts/validate_commit_evidence.py",
+            "--base",
+            base_ref,
+            "--head",
+            "HEAD",
+            "--require-changed-evidence",
+        ]
         proc = subprocess.run(
             cmd,
             cwd=REPO_ROOT,
@@ -231,22 +258,93 @@ def _run_commit_evidence_guard() -> StepResult:
         if proc.returncode != 0:
             return StepResult(
                 name="commit-evidence-guard",
-                command="python3 scripts/validate_commit_evidence.py --file <changed evidence files>",
+                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
                 ok=False,
                 exit_code=proc.returncode,
                 duration_seconds=round(time.monotonic() - start, 2),
                 output_tail="\n\n".join(tails)[-5000:],
-                hint="Fix commit evidence fields to satisfy contract validation.",
+                hint="Fix commit evidence fields to satisfy CI diff-range validation.",
+            )
+
+    if worktree_changed:
+        evidence_files = sorted(
+            p for p in worktree_changed if re.match(r"^docs/system_audit/commit_evidence_.*\.json$", p)
+        )
+        if not evidence_files:
+            return StepResult(
+                name="commit-evidence-guard",
+                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                ok=False,
+                exit_code=1,
+                duration_seconds=round(time.monotonic() - start, 2),
+                output_tail="ERROR: changed files present in working tree but no changed docs/system_audit/commit_evidence_*.json file found.",
+                hint="Add/update a commit_evidence JSON file before committing.",
+            )
+
+        declared: set[str] = set()
+        for evidence_file in evidence_files:
+            cmd = ["python3", "scripts/validate_commit_evidence.py", "--file", evidence_file]
+            proc = subprocess.run(
+                cmd,
+                cwd=REPO_ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            out = f"$ {' '.join(cmd)}\n{(proc.stdout or '').strip()}\n{(proc.stderr or '').strip()}".strip()
+            tails.append(out)
+            if proc.returncode != 0:
+                return StepResult(
+                    name="commit-evidence-guard",
+                    command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                    ok=False,
+                    exit_code=proc.returncode,
+                    duration_seconds=round(time.monotonic() - start, 2),
+                    output_tail="\n\n".join(tails)[-5000:],
+                    hint="Fix commit evidence schema/required fields before commit.",
+                )
+            try:
+                payload = json.loads((REPO_ROOT / evidence_file).read_text(encoding="utf-8"))
+            except Exception as exc:  # pragma: no cover - defensive guard
+                return StepResult(
+                    name="commit-evidence-guard",
+                    command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                    ok=False,
+                    exit_code=1,
+                    duration_seconds=round(time.monotonic() - start, 2),
+                    output_tail=f"ERROR: unable to parse evidence file {evidence_file}: {exc}",
+                    hint="Fix commit evidence JSON syntax.",
+                )
+            listed = payload.get("change_files")
+            if isinstance(listed, list):
+                declared.update(str(item).strip() for item in listed if isinstance(item, str) and str(item).strip())
+
+        expected = sorted(
+            path
+            for path in worktree_changed
+            if not re.match(r"^docs/system_audit/commit_evidence_.*\.json$", path)
+        )
+        missing = [path for path in expected if path not in declared]
+        if missing:
+            tails.append(f"ERROR: worktree evidence coverage missing changed paths: {missing}")
+            return StepResult(
+                name="commit-evidence-guard",
+                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                ok=False,
+                exit_code=1,
+                duration_seconds=round(time.monotonic() - start, 2),
+                output_tail="\n\n".join(tails)[-5000:],
+                hint="Update change_files to include all changed worktree paths before commit.",
             )
 
     return StepResult(
         name="commit-evidence-guard",
-        command="python3 scripts/validate_commit_evidence.py --file <changed evidence files>",
+        command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
         ok=True,
         exit_code=0,
         duration_seconds=round(time.monotonic() - start, 2),
         output_tail="\n\n".join(tails)[-5000:],
-        hint="Commit evidence contract passed for changed evidence files.",
+        hint="Commit evidence contract passed for CI-parity and worktree coverage validation.",
     )
 
 
@@ -282,7 +380,7 @@ def _local_steps(
             ),
         ]
     )
-    if not _worktree_has_runtime_changes():
+    if not _worktree_has_runtime_changes(base_ref):
         steps = [s for s in steps if s[0] != "maintainability-regression-guard"]
     if require_gh_auth:
         steps.insert(0, ("dev-auth-preflight", "python3 scripts/check_dev_auth.py --json"))
@@ -533,7 +631,7 @@ def main() -> int:
             if not step.ok:
                 break
             if step.name == "spec-quality-guard":
-                evidence_step = _run_commit_evidence_guard()
+                evidence_step = _run_commit_evidence_guard(args.base_ref)
                 steps.append(evidence_step)
                 if not evidence_step.ok:
                     break
