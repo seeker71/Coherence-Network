@@ -82,9 +82,50 @@ check_cors() {
   return 1
 }
 
+check_persistence_contract() {
+  local url="$1"
+  local body_file="$TMP_DIR/persistence_contract.body.json"
+  local status
+
+  echo
+  echo "==> Persistence contract: ${url}"
+  status="$(curl -sS -o "$body_file" -w "%{http_code}" "$url" || true)"
+  echo "HTTP status: ${status:-unknown}"
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    echo "FAIL: persistence contract endpoint unavailable"
+    head -c 300 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    local pass required
+    pass="$(jq -r '.pass_contract // empty' "$body_file" 2>/dev/null || true)"
+    required="$(jq -r '.required // empty' "$body_file" 2>/dev/null || true)"
+    echo "required: ${required:-unknown} | pass_contract: ${pass:-unknown}"
+    if [[ "$pass" == "true" ]]; then
+      echo "PASS"
+      return 0
+    fi
+    echo "FAIL: pass_contract is not true"
+    jq '.failures // []' "$body_file" 2>/dev/null || head -c 300 "$body_file" || true
+    return 1
+  fi
+
+  if grep -q '"pass_contract"[[:space:]]*:[[:space:]]*true' "$body_file"; then
+    echo "PASS"
+    return 0
+  fi
+  echo "FAIL: pass_contract is not true"
+  head -c 300 "$body_file" || true
+  echo
+  return 1
+}
+
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
+check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
 check_url "Railway web root" "${WEB_URL%/}/" || fail=1
 check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1
