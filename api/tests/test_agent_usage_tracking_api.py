@@ -195,3 +195,57 @@ async def test_completion_tracking_event_is_idempotent_per_task_and_final_status
             and (row.get("metadata") or {}).get("task_final_status") == "completed"
         ]
         assert len(completion_events) == 1
+
+
+@pytest.mark.asyncio
+async def test_openclaw_openrouter_override_tracks_openrouter_provider(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        task = await client.post(
+            "/api/agent/tasks",
+            json={
+                "direction": "Track openrouter free path",
+                "task_type": "impl",
+                "context": {"executor": "openclaw", "model_override": "openrouter/free"},
+            },
+        )
+        assert task.status_code == 201
+        body = task.json()
+        task_id = body["id"]
+        assert body["model"] == "openclaw/openrouter/free"
+        assert "--model openrouter/free" in str(body["command"])
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openclaw-worker"},
+        )
+        assert running.status_code == 200
+        completed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "done"},
+        )
+        assert completed.status_code == 200
+
+        events = await client.get("/api/runtime/events", params={"limit": 200})
+        assert events.status_code == 200
+        rows = events.json()
+        completion_events = [
+            row
+            for row in rows
+            if row.get("endpoint") == "/tool:agent-task-completion"
+            and (row.get("metadata") or {}).get("task_id") == task_id
+        ]
+        assert len(completion_events) == 1
+        metadata = completion_events[0]["metadata"]
+        assert metadata["provider"] == "openrouter"
+        assert metadata["billing_provider"] == "openrouter"

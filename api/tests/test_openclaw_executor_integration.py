@@ -71,6 +71,7 @@ def test_create_task_openclaw_model_override_adds_model_flag(monkeypatch: pytest
     )
 
     assert "--model openrouter/free" in task["command"]
+    assert task["model"] == "openclaw/openrouter/free"
 
 
 @pytest.mark.asyncio
