@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import time
+from pathlib import Path
 from typing import Any
+
+import httpx
 
 from app.models.idea import (
     Idea,
@@ -17,7 +21,7 @@ from app.models.idea import (
     ManifestationStatus,
 )
 from app.services import idea_registry_service
-from app.services import commit_evidence_service
+from app.services import commit_evidence_registry_service
 
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
@@ -178,6 +182,36 @@ def _portfolio_path() -> str:
     return os.getenv("IDEA_PORTFOLIO_PATH", _default_portfolio_path())
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _tracking_repository() -> str:
+    return os.getenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+
+
+def _tracking_ref() -> str:
+    return os.getenv("TRACKING_REPOSITORY_REF", "main")
+
+
+def _github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _commit_evidence_dir() -> Path:
+    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    if custom:
+        return Path(custom)
+    return _repo_root() / "docs" / "system_audit"
+
+
 def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
     raw = payload.get("idea_ids")
     if not isinstance(raw, list):
@@ -192,23 +226,97 @@ def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
     return out
 
 
-def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
-    try:
-        db_rows = commit_evidence_service.list_records(limit=max(1, max_files))
-    except Exception:
-        db_rows = []
+def _tracked_idea_ids_from_local(max_files: int = 400) -> list[str]:
+    evidence_dir = _commit_evidence_dir()
+    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
+    use_db = use_db_raw in {"1", "true", "yes", "on"}
+    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        required_raw = str(
+            os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
+            or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
+            or ""
+        ).strip().lower()
+        required = required_raw in {"1", "true", "yes", "on"}
+        backend = commit_evidence_registry_service.backend_info().get("backend")
+        use_db = required and backend == "postgresql"
+    if use_db:
+        try:
+            commit_evidence_registry_service.import_from_dir(evidence_dir, limit=max_files)
+            return commit_evidence_registry_service.tracked_idea_ids(limit=max_files)
+        except Exception:
+            # Keep runtime resilient and fall back to direct file scanning.
+            pass
+
+    if not evidence_dir.exists():
+        return []
     out: set[str] = set()
-    for row in db_rows:
-        if not isinstance(row, dict):
+    files = sorted(evidence_dir.glob("commit_evidence_*.json"))[: max(1, max_files)]
+    for path in files:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
             continue
-        out.update(_idea_ids_from_payload(row))
+        if isinstance(payload, dict):
+            out.update(_idea_ids_from_payload(payload))
     return sorted(out)
+
+
+def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> list[str]:
+    now = time.time()
+    cache_key = f"{_tracking_repository()}::{_tracking_ref()}"
+    cached_ids = _TRACKED_IDEA_CACHE.get("idea_ids")
+    if (
+        isinstance(cached_ids, list)
+        and _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
+        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+    ):
+        return [x for x in cached_ids if isinstance(x, str) and x.strip()]
+
+    repository = _tracking_repository()
+    ref = _tracking_ref()
+    url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
+    out: set[str] = set()
+
+    try:
+        with httpx.Client(timeout=timeout, headers=_github_headers()) as client:
+            response = client.get(url, params={"ref": ref})
+            response.raise_for_status()
+            rows = response.json()
+            if not isinstance(rows, list):
+                return []
+            evidence_rows = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("name"), str)
+                and row["name"].startswith("commit_evidence_")
+                and row["name"].endswith(".json")
+            ][: max(1, max_files)]
+
+            for row in evidence_rows:
+                download_url = row.get("download_url")
+                if not isinstance(download_url, str) or not download_url:
+                    continue
+                payload_resp = client.get(download_url)
+                if payload_resp.status_code != 200:
+                    continue
+                payload = payload_resp.json()
+                if isinstance(payload, dict):
+                    out.update(_idea_ids_from_payload(payload))
+    except (httpx.HTTPError, ValueError, TypeError):
+        return []
+
+    result = sorted(out)
+    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
+    _TRACKED_IDEA_CACHE["idea_ids"] = result
+    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    return result
 
 
 def _should_include_default_tracked_ideas() -> bool:
     # When callers isolate ideas into a custom portfolio path (common in tests),
     # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
-    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR") or os.getenv("COMMIT_EVIDENCE_DATABASE_URL"):
+    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR"):
         return True
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
 
@@ -216,7 +324,10 @@ def _should_include_default_tracked_ideas() -> bool:
 def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
-    return _tracked_idea_ids_from_store()
+    local = _tracked_idea_ids_from_local()
+    if local:
+        return local
+    return _tracked_idea_ids_from_github()
 
 
 def _humanize_idea_id(idea_id: str) -> str:
@@ -301,6 +412,16 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
 
 
 def _write_snapshot_file(ideas: list[Idea]) -> None:
+    storage = idea_registry_service.storage_info()
+    if storage.get("backend") == "postgresql":
+        purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+        if purge_raw not in {"0", "false", "no", "off"}:
+            try:
+                Path(_portfolio_path()).unlink(missing_ok=True)
+            except OSError:
+                pass
+        return
+
     path = _portfolio_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
