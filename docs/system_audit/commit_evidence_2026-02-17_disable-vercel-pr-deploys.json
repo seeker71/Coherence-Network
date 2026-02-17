@@ -22,12 +22,18 @@
     {
       "contributor_id": "urs-muff",
       "contributor_type": "human",
-      "roles": ["direction", "review"]
+      "roles": [
+        "direction",
+        "review"
+      ]
     },
     {
       "contributor_id": "openai-codex",
       "contributor_type": "machine",
-      "roles": ["implementation", "validation"]
+      "roles": [
+        "implementation",
+        "validation"
+      ]
     }
   ],
   "agent": {
@@ -36,7 +42,8 @@
   },
   "evidence_refs": [
     "python3 scripts/validate_vercel_deployment_policy.py",
-    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json"
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
   ],
   "change_files": [
     "specs/105-disable-vercel-pr-deployments.md",
@@ -47,13 +54,14 @@
   "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-17T10:30:00Z",
+    "ran_at": "2026-02-17T09:35:00Z",
     "environment": {
       "python": "3.x"
     },
     "commands": [
       "python3 scripts/validate_vercel_deployment_policy.py",
-      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json"
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_disable-vercel-pr-deploys.json",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
     ]
   },
   "ci_validation": {
