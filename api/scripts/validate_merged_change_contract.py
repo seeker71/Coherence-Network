@@ -16,7 +16,6 @@ def _default_endpoints(api_base: str, web_base: str) -> list[str]:
         f"{api_base.rstrip('/')}/api/health",
         f"{api_base.rstrip('/')}/api/ideas",
         f"{api_base.rstrip('/')}/api/gates/main-head",
-        f"{web_base.rstrip('/')}/",
         f"{web_base.rstrip('/')}/gates",
         f"{web_base.rstrip('/')}/api-health",
     ]
