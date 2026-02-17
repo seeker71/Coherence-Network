@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/ci-unblock-workflows",
+  "commit_scope": "Unblock main CI by exempting commit-evidence enforcement for dependabot and workflow/dependency-metadata-only diffs; make provider readiness contract deterministic with a safe default required-provider set; make scheduled asset modularity drift audit non-blocking by default.",
+  "files_owned": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/asset-modularity-drift.yml",
+    "specs/054-commit-provenance-contract-gate.md",
+    "specs/104-nonblocking-monitoring-workflows.md",
+    "docs/system_audit/commit_evidence_2026-02-17_ci-workflows-unblock.json"
+  ],
+  "idea_ids": [
+    "ci-signal-health",
+    "workflow-nonblocking-audits"
+  ],
+  "spec_ids": [
+    "054",
+    "096",
+    "104"
+  ],
+  "task_ids": [
+    "ci-unblock-main-workflows-2026-02-17"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-workflows-unblock.json"
+  ],
+  "change_files": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "specs/054-commit-provenance-contract-gate.md",
+    "specs/104-nonblocking-monitoring-workflows.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T08:52:52Z",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-workflows-unblock.json",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "n/a"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local validation and CI green on main."
+  }
+}
