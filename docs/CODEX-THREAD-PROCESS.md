@@ -77,6 +77,7 @@ Worktree notes:
 - It runs CI-parity checks and writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
 - It includes API tests, web build, local runtime route checks, spec/evidence/workflow contracts, and maintainability guard (auto-skipped when no runtime code changed).
 - Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
+- If running `./scripts/verify_worktree_local_web.sh` directly, npm cache defaults to per-worktree `<worktree>/.cache/npm` (override via `NPM_CACHE=...`).
 
 ### Phase B: CI Validation (required before merge)
 
