@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-public-deploy-proxy-warning",
+  "commit_scope": "Treat unknown web health-proxy SHA as a warning so public deploy contract can pass when API health and main-head SHA checks are already green.",
+  "files_owned": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "docs/system_audit/commit_evidence_2026-02-17_public-deploy-health-proxy-unknown-warning.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "050"
+  ],
+  "task_ids": [
+    "public-deploy-health-proxy-unknown-warning"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/pytest -q tests/test_release_gate_service.py::test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape",
+    "cd api && PYTHONPATH=. .venv/bin/python scripts/validate_public_deploy_contract.py --json",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public deploy contract no longer blocks on web.updated_at=unknown when API health-proxy payload is otherwise healthy.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/gates/main-head",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "validate_public_deploy_contract_report",
+      "test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T03:30:00Z",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_release_gate_service.py::test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape",
+      "cd api && PYTHONPATH=. .venv/bin/python scripts/validate_public_deploy_contract.py --json",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-web+railway-api"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR and mainline CI completion."
+  }
+}
