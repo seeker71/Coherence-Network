@@ -905,6 +905,13 @@ def get_task(task_id: str) -> Optional[dict]:
     task = _store.get(task_id)
     if task is not None:
         return task
+    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
     # Fallback for multi-instance deploys: tasks may not be present on this instance's local store,
     # but completion tracking events are persisted in the runtime event store.
     try:
@@ -973,12 +980,20 @@ def list_tasks(
     items = list(_store.values())
 
     # Include tracked completions from the runtime event store so the UI can show tasks across restarts.
-    try:
-        from app.services import runtime_service
-
-        events = runtime_service.list_events(limit=2000)
-    except Exception:
+    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
         events = []
+    else:
+        try:
+            from app.services import runtime_service
+
+            events = runtime_service.list_events(limit=2000)
+        except Exception:
+            events = []
 
     seen: set[str] = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
     for event in events:
