@@ -50,6 +50,7 @@ class ProviderUsageOverview(BaseModel):
     providers: list[ProviderUsageSnapshot] = Field(default_factory=list)
     unavailable_providers: list[str] = Field(default_factory=list)
     tracked_providers: int = Field(ge=0)
+    limit_coverage: dict[str, Any] = Field(default_factory=dict)
 
 
 class UsageAlert(BaseModel):
