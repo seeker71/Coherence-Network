@@ -6,6 +6,7 @@ type SpecItem = {
   spec_id: string;
   title: string;
   path: string;
+  api_path?: string;
 };
 
 type InventoryResponse = {
@@ -182,7 +183,14 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                   <Link href={`/specs/${encodeURIComponent(s.spec_id)}`} className="font-medium underline hover:text-foreground">
                     Spec {s.spec_id}
                   </Link>
-                  <span className="text-muted-foreground">{s.path}</span>
+                  <a
+                    href={s.api_path ?? `/api/spec-registry/${encodeURIComponent(s.spec_id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground underline hover:text-foreground"
+                  >
+                    {s.api_path ?? `/api/spec-registry/${s.spec_id}`}
+                  </a>
                 </div>
                 <p>{s.title}</p>
                 <p className="text-xs text-muted-foreground">

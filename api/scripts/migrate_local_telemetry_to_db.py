@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from app.services import automation_usage_service, friction_service, telemetry_persistence_service
+from app.services import automation_usage_service, friction_service, metrics_service, telemetry_persistence_service
 
 
 def _count_automation_file(path: Path) -> int:
@@ -48,14 +48,22 @@ def _verify_and_migrate() -> dict[str, Any]:
 
     automation_file_before = _count_automation_file(automation_file)
     friction_file_before = _count_friction_file(friction_file)
+    metrics_file = Path(metrics_service.METRICS_FILE).resolve()
+    metrics_file_before = _count_friction_file(metrics_file)
 
     automation_import = telemetry_persistence_service.import_automation_snapshots_from_file(automation_file)
     friction_import = telemetry_persistence_service.import_friction_events_from_file(friction_file)
+    metrics_import = telemetry_persistence_service.import_task_metrics_from_file(metrics_file)
     backend = telemetry_persistence_service.backend_info()
 
     automation_db_count = int(backend.get("automation_snapshot_rows") or 0)
     friction_db_count = int(backend.get("friction_event_rows") or 0)
-    parity_ok = automation_db_count >= automation_file_before and friction_db_count >= friction_file_before
+    metrics_db_count = int(backend.get("task_metric_rows") or 0)
+    parity_ok = (
+        automation_db_count >= automation_file_before
+        and friction_db_count >= friction_file_before
+        and metrics_db_count >= metrics_file_before
+    )
 
     return {
         "backend": backend,
@@ -73,6 +81,13 @@ def _verify_and_migrate() -> dict[str, Any]:
             "skipped": int(friction_import.get("skipped") or 0),
             "db_count": friction_db_count,
         },
+        "metrics": {
+            "legacy_file": str(metrics_file),
+            "legacy_count": metrics_file_before,
+            "imported": int(metrics_import.get("imported") or 0),
+            "skipped": int(metrics_import.get("skipped") or 0),
+            "db_count": metrics_db_count,
+        },
         "parity_ok": parity_ok,
     }
 
@@ -81,7 +96,7 @@ def _purge_legacy_files(report: dict[str, Any]) -> dict[str, Any]:
     deleted: list[str] = []
     missing: list[str] = []
     failed: list[str] = []
-    for key in ("automation", "friction"):
+    for key in ("automation", "friction", "metrics"):
         row = report.get(key) if isinstance(report.get(key), dict) else {}
         path_raw = row.get("legacy_file")
         if not isinstance(path_raw, str) or not path_raw.strip():
