@@ -33,6 +33,10 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     assert str(task["command"]).startswith("agent ")
     context = task.get("context") or {}
     assert context.get("executor") == "cursor"
+    route_decision = context.get("route_decision") or {}
+    assert route_decision.get("executor") == "cursor"
+    assert route_decision.get("provider") in {"cursor", "openrouter", "openai-codex"}
+    assert "is_paid_provider" in route_decision
     policy = context.get("executor_policy") or {}
     assert policy.get("policy_applied") is True
     assert policy.get("reason") == "cheap_default"

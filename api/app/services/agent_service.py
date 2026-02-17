@@ -12,29 +12,10 @@ from typing import Any, List, Optional, Tuple
 
 from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
+from app.services import agent_routing_service as routing_service
 
-# Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
-_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "openrouter/free")  # Use OpenRouter free model as default
-_OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "openrouter/free")  # Cloud fallback using OpenRouter
-_CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")  # Claude fallback using OpenRouter
-
-# Cursor CLI models (when context.executor == "cursor") — see docs/CURSOR-CLI.md
-# Default to OpenRouter free model when using Cursor CLI
-_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
-_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
-
-# OpenClaw models (when context.executor == "openclaw")
-_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.1-codex")
-_OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
-
-# Routing: local first; use model_override in context for cloud/claude
-ROUTING: dict[TaskType, tuple[str, str]] = {
-    TaskType.SPEC: (f"openrouter/free", "openrouter"),
-    TaskType.TEST: (f"openrouter/free", "openrouter"),
-    TaskType.IMPL: (f"openrouter/free", "openrouter"),
-    TaskType.REVIEW: (f"openrouter/free", "openrouter"),
-    TaskType.HEAL: (f"openrouter/free", "openrouter"),
-}
+# Routing decisions and provider classification live in agent_routing_service.
+ROUTING = routing_service.ROUTING
 
 # Subagent mapping: task_type → Claude Code --agent name (from .claude/agents/)
 # HEAL uses default tools, no subagent
@@ -58,21 +39,8 @@ _COMMAND_LOCAL_AGENT = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 819
 _COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
 
 # Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
-_CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {
-    TaskType.SPEC: _CURSOR_MODEL_DEFAULT,
-    TaskType.TEST: _CURSOR_MODEL_DEFAULT,
-    TaskType.IMPL: _CURSOR_MODEL_DEFAULT,
-    TaskType.REVIEW: _CURSOR_MODEL_REVIEW,
-    TaskType.HEAL: _CURSOR_MODEL_REVIEW,
-}
-
-_OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
-    TaskType.SPEC: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.TEST: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
-    TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
-}
+_CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
+_OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
 _EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
 # Heuristics to detect prompts that require repository-local context.
@@ -312,21 +280,13 @@ def _command_template(task_type: TaskType) -> str:
 
 
 def _cursor_command_template(task_type: TaskType) -> str:
-    """Cursor CLI: agent "{{direction}}" --model X. Escapes direction for shell."""
-    model = _CURSOR_MODEL_BY_TYPE[task_type]
-    return f'agent "{{{{direction}}}}" --model {model}'
+    """Cursor CLI template with explicit model."""
+    return routing_service.cursor_command_template(task_type)
 
 
 def _openclaw_command_template(task_type: TaskType) -> str:
     """OpenClaw CLI template configurable via env; must include {{direction}}."""
-    model = _OPENCLAW_MODEL_BY_TYPE[task_type]
-    template = os.environ.get(
-        "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
-    )
-    if "{{direction}}" not in template:
-        template = template.strip() + ' "{{direction}}"'
-    return template.replace("{{model}}", model)
+    return routing_service.openclaw_command_template(task_type)
 
 
 def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]) -> str:
@@ -647,33 +607,13 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
 
 
 def _derive_task_provider(task: dict[str, Any], executor: str) -> str:
-    model = str(task.get("model") or "").strip().lower()
-    command = str(task.get("command") or "").strip().lower()
-    worker_id = _normalize_worker_id(task.get("claimed_by")).lower()
-    command_model_match = re.search(r"--model\s+([^\s]+)", command)
-    command_model = (command_model_match.group(1).strip().lower() if command_model_match else "")
-
-    if worker_id == "openai-codex" or worker_id.startswith("openai-codex:"):
-        return "openai-codex"
-    if "openrouter" in command_model:
-        return "openrouter"
-    if command_model.startswith("openai/") or command_model.startswith(("gpt", "o1", "o3", "o4")):
-        return "openai-codex" if "codex" in command_model else "openai"
-    if "openrouter" in model:
-        return "openrouter"
-    if "codex" in model:
-        return "openai-codex"
-    if model.startswith("openai/") or model.startswith(("gpt", "o1", "o3", "o4")):
-        return "openai"
-    if command.startswith("codex "):
-        return "openai-codex"
-    if executor == "openclaw":
-        return "openclaw"
-    if executor == "cursor":
-        return "cursor"
-    if executor in {"claude", "aider"}:
-        return "claude"
-    return "unknown"
+    provider, _billing_provider, _is_paid_provider = routing_service.classify_provider(
+        executor=executor,
+        model=str(task.get("model") or ""),
+        command=str(task.get("command") or ""),
+        worker_id=_normalize_worker_id(task.get("claimed_by")),
+    )
+    return provider
 
 
 def _task_duration_ms(task: dict[str, Any]) -> float:
@@ -724,7 +664,12 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     command_sha = hashlib.sha256(command.encode("utf-8")).hexdigest() if command else ""
     worker_id = _normalize_worker_id(task.get("claimed_by"))
     executor = _derive_task_executor(task)
-    provider = _derive_task_provider(task, executor)
+    provider, billing_provider, is_paid_provider = routing_service.classify_provider(
+        executor=executor,
+        model=str(task.get("model") or ""),
+        command=command,
+        worker_id=worker_id,
+    )
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
 
@@ -750,8 +695,8 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                     else worker_id,
                     "executor": executor,
                     "provider": provider,
-                    "billing_provider": provider,
-                    "is_paid_provider": provider in {"openai", "openai-codex", "claude", "cursor", "openrouter"},
+                    "billing_provider": billing_provider,
+                    "is_paid_provider": is_paid_provider,
                     "is_openai_codex": worker_id == "openai-codex"
                     or worker_id.startswith("openai-codex:"),
                     "tracking_kind": "agent_task_completion",
@@ -822,6 +767,66 @@ def _build_command(
     return template.replace("{{direction}}", escaped)
 
 
+def _resolve_task_route(
+    *,
+    data: AgentTaskCreate,
+    executor: str,
+    policy_meta: dict[str, Any],
+    ctx: dict[str, Any],
+    primary_agent: str | None,
+    guard_agents: list[str],
+) -> tuple[str, str, str, dict[str, Any]]:
+    route_info = routing_service.route_for_executor(
+        data.task_type,
+        executor,
+        COMMAND_TEMPLATES[data.task_type],
+    )
+    model = str(route_info["model"])
+    tier = str(route_info["tier"])
+    command = (
+        (data.context or {}).get("command_override")
+        if isinstance(data.context, dict)
+        else None
+    )
+    if not command:
+        direction = _with_agent_roles(
+            data.direction,
+            data.task_type,
+            primary_agent=primary_agent,
+            guard_agents=guard_agents,
+        )
+        command = _build_command(direction, data.task_type, executor=executor)
+        if ctx.get("model_override"):
+            override = str(ctx["model_override"]).strip()
+            command, applied_override = routing_service.apply_model_override(command, override)
+            if applied_override:
+                if executor == "openclaw":
+                    model = f"openclaw/{applied_override}"
+                elif executor == "cursor":
+                    model = f"cursor/{applied_override}"
+                else:
+                    model = applied_override
+        if "claude -p" in command and "--dangerously-skip-permissions" not in command:
+            command = command.rstrip() + " --dangerously-skip-permissions"
+    provider, billing_provider, is_paid_provider = routing_service.classify_provider(
+        executor=executor,
+        model=model,
+        command=str(command),
+        worker_id=None,
+    )
+    route_decision = {
+        "executor": executor,
+        "task_type": data.task_type.value,
+        "tier": tier,
+        "model": model,
+        "provider": provider,
+        "billing_provider": billing_provider,
+        "is_paid_provider": is_paid_provider,
+        "policy": policy_meta,
+    }
+    return model, tier, str(command), route_decision
+
+
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     _ensure_store_loaded()
@@ -840,45 +845,15 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if guard_agents:
         ctx["guard_agents"] = list(guard_agents)
 
-    model, tier = ROUTING[data.task_type]
-    if executor == "cursor":
-        model = f"cursor/{_CURSOR_MODEL_BY_TYPE[data.task_type]}"
-        tier = "cursor"
-    elif executor == "openclaw":
-        model = f"openclaw/{_OPENCLAW_MODEL_BY_TYPE[data.task_type]}"
-        tier = "openclaw"
-    # Smoke test: context.command_override runs raw bash, bypassing Claude
-    command = (
-        (data.context or {}).get("command_override")
-        if isinstance(data.context, dict)
-        else None
+    model, tier, command, route_decision = _resolve_task_route(
+        data=data,
+        executor=executor,
+        policy_meta=policy_meta,
+        ctx=ctx,
+        primary_agent=primary_agent,
+        guard_agents=guard_agents,
     )
-    if not command:
-        direction = _with_agent_roles(
-            data.direction,
-            data.task_type,
-            primary_agent=primary_agent,
-            guard_agents=guard_agents,
-        )
-        command = _build_command(direction, data.task_type, executor=executor)
-        # Model override for testing (e.g. glm-4.7:cloud for better tool use)
-        if ctx.get("model_override"):
-            override = str(ctx["model_override"]).strip()
-            if re.search(r"--model\s+\S+", command):
-                command = re.sub(r"--model\s+\S+", f"--model {override}", command)
-            else:
-                command = command.rstrip() + f" --model {override}"
-            if override:
-                if executor == "openclaw":
-                    model = f"openclaw/{override}"
-                elif executor == "cursor":
-                    model = f"cursor/{override}"
-                else:
-                    model = override
-            # Cloud models need ANTHROPIC_BASE_URL=https://ollama.com when using glm-5:cloud etc.
-        # Headless claude needs --dangerously-skip-permissions for Edit to run
-        if "claude -p" in command and "--dangerously-skip-permissions" not in command:
-            command = command.rstrip() + " --dangerously-skip-permissions"
+    ctx["route_decision"] = route_decision
     now = _now()
     task = {
         "id": task_id,
@@ -1037,25 +1012,11 @@ def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()
-    executor = _normalize_executor(executor, default="claude")
-    if executor == "cursor":
-        model = f"cursor/{_CURSOR_MODEL_BY_TYPE[task_type]}"
-        template = _cursor_command_template(task_type)
-        tier = "cursor"
-    elif executor == "openclaw":
-        model = f"openclaw/{_OPENCLAW_MODEL_BY_TYPE[task_type]}"
-        template = _openclaw_command_template(task_type)
-        tier = "openclaw"
-    else:
-        model, tier = ROUTING[task_type]
-        template = COMMAND_TEMPLATES[task_type]
-    return {
-        "task_type": task_type.value,
-        "model": model,
-        "command_template": template,
-        "tier": tier,
-        "executor": executor,
-    }
+    return routing_service.route_for_executor(
+        task_type,
+        _normalize_executor(executor, default="claude"),
+        COMMAND_TEMPLATES[task_type],
+    )
 
 
 def _metadata_text(value: Any, default: str = "unknown") -> str:
