@@ -5,7 +5,10 @@
   "files_owned": [
     "api/app/services/automation_usage_service.py",
     "api/tests/test_automation_usage_api.py",
-    "web/app/flow/page.tsx"
+    "web/app/flow/page.tsx",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/runtime_service.py"
   ],
   "idea_ids": [
     "provider-readiness-contract-automation"
@@ -40,24 +43,31 @@
     "version": "gpt-5.3-codex-spark"
   },
   "evidence_refs": [
-    "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override",
+    "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override tests/test_agent_execute_endpoint.py::test_execute_endpoint_completes_task_when_openrouter_is_stubbed tests/test_agent_execute_endpoint.py::test_execution_updates_cost_value_targets",
     "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_automation_usage_api.py::test_provider_in_active_use_requires_key_for_readiness tests/test_automation_usage_api.py::test_automation_usage_includes_runtime_task_runs_metric_for_active_provider tests/test_automation_usage_api.py::test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata",
     "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh",
-    "cd api && PYTHONPATH=. ./.venv/bin/python scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json"
+    "cd api && PYTHONPATH=. ./.venv/bin/python scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json",
+    "cd api && python3 scripts/run_maintainability_audit.py --output /tmp/maint.json --fail-on-regression"
   ],
   "change_files": [
     "api/app/services/automation_usage_service.py",
     "api/tests/test_automation_usage_api.py",
     "web/app/flow/page.tsx",
-    "docs/system_audit/commit_evidence_2026-02-17_paid-provider-override-public-deploy.json"
+    "docs/system_audit/commit_evidence_2026-02-17_paid-provider-override-public-deploy.json",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/runtime_service.py"
   ],
   "change_intent": "runtime_feature",
   "local_validation": {
     "status": "pass",
     "commands": [
       "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override",
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_runtime_api.py",
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_completes_task_when_openrouter_is_stubbed tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override",
       "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_automation_usage_api.py::test_provider_in_active_use_requires_key_for_readiness tests/test_automation_usage_api.py::test_automation_usage_includes_runtime_task_runs_metric_for_active_provider tests/test_automation_usage_api.py::test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata",
-      "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh"
+      "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh",
+      "cd api && python3 scripts/run_maintainability_audit.py --output /tmp/maint.json --fail-on-regression"
     ]
   },
   "ci_validation": {
