@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services import agent_service
+from app.services import commit_evidence_service
 from app.services import inventory_service
 from app.services import route_registry_service
 
@@ -265,6 +266,38 @@ async def test_route_evidence_inventory_does_not_pass_empty_real_data_probes(
 
 
 @pytest.mark.asyncio
+async def test_commit_evidence_inventory_uses_persistent_store_after_backfill(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {
+            "date": "2026-02-17",
+            "thread_branch": "codex/commit-evidence-postgres",
+            "commit_scope": "Backfill commit evidence into DB store",
+            "idea_ids": ["oss-interface-alignment"],
+            "spec_ids": ["089"],
+            "change_files": ["api/app/services/inventory_service.py"],
+        },
+        "memory:test",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.get("/api/inventory/commit-evidence", params={"limit": 10})
+        assert first.status_code == 200
+        first_payload = first.json()
+        assert first_payload["storage"]["record_rows"] >= 1
+        assert first_payload["items"]
+        assert any(row.get("thread_branch") == "codex/commit-evidence-postgres" for row in first_payload["items"])
+
+        second = await client.get("/api/inventory/commit-evidence", params={"limit": 10})
+        assert second.status_code == 200
+        second_payload = second.json()
+        assert second_payload["storage"]["record_rows"] >= 1
+        assert any(row.get("thread_branch") == "codex/commit-evidence-postgres" for row in second_payload["items"])
+
+
+@pytest.mark.asyncio
 async def test_standing_question_exists_for_every_idea(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -369,49 +402,46 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
-    (evidence_dir / "commit_evidence_flow_test.json").write_text(
-        json.dumps(
+    flow_evidence_payload = {
+        "date": "2026-02-16",
+        "thread_branch": "codex/flow-test",
+        "commit_scope": "Flow visibility test",
+        "files_owned": ["api/app/routers/inventory.py"],
+        "idea_ids": ["portfolio-governance"],
+        "spec_ids": ["088"],
+        "task_ids": ["flow-visibility-task"],
+        "contributors": [
             {
-                "date": "2026-02-16",
-                "thread_branch": "codex/flow-test",
-                "commit_scope": "Flow visibility test",
-                "files_owned": ["api/app/routers/inventory.py"],
-                "idea_ids": ["portfolio-governance"],
-                "spec_ids": ["088"],
-                "task_ids": ["flow-visibility-task"],
-                "contributors": [
-                    {
-                        "contributor_id": "openai-codex",
-                        "contributor_type": "machine",
-                        "roles": ["implementation", "validation"],
-                    },
-                    {
-                        "contributor_id": "urs-muff",
-                        "contributor_type": "human",
-                        "roles": ["review"],
-                    },
-                ],
-                "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
-                "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
-                "change_files": ["api/app/routers/inventory.py", "web/app/flow/page.tsx"],
-                "change_intent": "runtime_feature",
-                "e2e_validation": {
-                    "status": "pass",
-                    "expected_behavior_delta": "Flow page and endpoint reflect end-to-end tracking.",
-                    "public_endpoints": [
-                        "https://coherence-web-production.up.railway.app/flow",
-                        "https://coherence-network-production.up.railway.app/api/inventory/flow",
-                    ],
-                    "test_flows": ["idea->spec->process->implementation->validation visible in UI and API"],
-                },
-                "local_validation": {"status": "pass"},
-                "ci_validation": {"status": "pass"},
-                "deploy_validation": {"status": "pass"},
-                "phase_gate": {"can_move_next_phase": True},
-            }
-        ),
-        encoding="utf-8",
-    )
+                "contributor_id": "openai-codex",
+                "contributor_type": "machine",
+                "roles": ["implementation", "validation"],
+            },
+            {
+                "contributor_id": "urs-muff",
+                "contributor_type": "human",
+                "roles": ["review"],
+            },
+        ],
+        "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
+        "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
+        "change_files": ["api/app/routers/inventory.py", "web/app/flow/page.tsx"],
+        "change_intent": "runtime_feature",
+        "e2e_validation": {
+            "status": "pass",
+            "expected_behavior_delta": "Flow page and endpoint reflect end-to-end tracking.",
+            "public_endpoints": [
+                "https://coherence-web-production.up.railway.app/flow",
+                "https://coherence-network-production.up.railway.app/api/inventory/flow",
+            ],
+            "test_flows": ["idea->spec->process->implementation->validation visible in UI and API"],
+        },
+        "local_validation": {"status": "pass"},
+        "ci_validation": {"status": "pass"},
+        "deploy_validation": {"status": "pass"},
+        "phase_gate": {"can_move_next_phase": True},
+    }
+    (evidence_dir / "commit_evidence_flow_test.json").write_text(json.dumps(flow_evidence_payload), encoding="utf-8")
+    commit_evidence_service.upsert_record(flow_evidence_payload, "memory:flow-test")
 
     link_payload = {
         "idea_id": "portfolio-governance",
@@ -497,43 +527,40 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
-    (evidence_dir / "commit_evidence_traceability_test.json").write_text(
-        json.dumps(
+    traceability_payload = {
+        "date": "2026-02-16",
+        "thread_branch": "codex/endpoint-traceability-test",
+        "commit_scope": "Endpoint traceability inventory coverage test",
+        "files_owned": ["api/app/routers/ideas.py"],
+        "idea_ids": ["portfolio-governance"],
+        "spec_ids": ["053"],
+        "task_ids": ["endpoint-traceability-audit"],
+        "contributors": [
             {
-                "date": "2026-02-16",
-                "thread_branch": "codex/endpoint-traceability-test",
-                "commit_scope": "Endpoint traceability inventory coverage test",
-                "files_owned": ["api/app/routers/ideas.py"],
-                "idea_ids": ["portfolio-governance"],
-                "spec_ids": ["053"],
-                "task_ids": ["endpoint-traceability-audit"],
-                "contributors": [
-                    {
-                        "contributor_id": "openai-codex",
-                        "contributor_type": "machine",
-                        "roles": ["implementation", "validation"],
-                    }
-                ],
-                "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
-                "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
-                "change_files": ["api/app/routers/ideas.py"],
-                "change_intent": "runtime_feature",
-                "e2e_validation": {
-                    "status": "pass",
-                    "expected_behavior_delta": "Endpoint coverage has explicit idea/spec/process traceability.",
-                    "public_endpoints": [
-                        "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
-                    ],
-                    "test_flows": ["api:/api/inventory/endpoint-traceability -> inspect summary and gaps"],
-                },
-                "local_validation": {"status": "pass"},
-                "ci_validation": {"status": "pass"},
-                "deploy_validation": {"status": "pass"},
-                "phase_gate": {"can_move_next_phase": True},
+                "contributor_id": "openai-codex",
+                "contributor_type": "machine",
+                "roles": ["implementation", "validation"],
             }
-        ),
-        encoding="utf-8",
-    )
+        ],
+        "agent": {"name": "OpenAI Codex", "version": "gpt-5"},
+        "evidence_refs": ["pytest -q tests/test_inventory_api.py"],
+        "change_files": ["api/app/routers/ideas.py"],
+        "change_intent": "runtime_feature",
+        "e2e_validation": {
+            "status": "pass",
+            "expected_behavior_delta": "Endpoint coverage has explicit idea/spec/process traceability.",
+            "public_endpoints": [
+                "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
+            ],
+            "test_flows": ["api:/api/inventory/endpoint-traceability -> inspect summary and gaps"],
+        },
+        "local_validation": {"status": "pass"},
+        "ci_validation": {"status": "pass"},
+        "deploy_validation": {"status": "pass"},
+        "phase_gate": {"can_move_next_phase": True},
+    }
+    (evidence_dir / "commit_evidence_traceability_test.json").write_text(json.dumps(traceability_payload), encoding="utf-8")
+    commit_evidence_service.upsert_record(traceability_payload, "memory:traceability-test")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         runtime_created = await client.post(
@@ -556,6 +583,8 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     assert payload["summary"]["missing_idea"] == 0
     assert payload["summary"]["with_origin_idea"] == payload["summary"]["total_endpoints"]
     assert payload["summary"]["with_usage_events"] >= 1
+    assert payload["summary"]["with_web_link"] == payload["summary"]["total_endpoints"]
+    assert payload["summary"]["missing_web_link"] == 0
     assert payload["summary"]["missing_spec"] >= 1
     assert payload["context"]["spec_count"] >= payload["context"]["idea_count"]
     assert any(row["path"] == "/api/inventory/endpoint-traceability" for row in payload["items"])
@@ -567,6 +596,85 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     assert ideas_row["usage"]["event_count"] >= 1
     assert ideas_row["spec"]["tracked"] is True
     assert ideas_row["process"]["tracked"] is True
+    assert ideas_row["web_link"]["tracked"] is True
+    assert any(ev.get("web_route") == "/api-coverage" for ev in ideas_row["web_link"]["evidence"])
+
+
+@pytest.mark.asyncio
+async def test_endpoint_traceability_inventory_matches_explicit_web_api_links(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_service,
+        "_discover_api_endpoints_from_runtime",
+        lambda: [],
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_discover_api_endpoints_from_source",
+        lambda: [
+            {
+                "path": "/api/spec-registry/{spec_id}",
+                "methods": ["GET"],
+                "source_files": ["api/app/routers/spec_registry.py"],
+            },
+            {
+                "path": "/api/agent/monitor-issues",
+                "methods": ["GET"],
+                "source_files": ["api/app/routers/agent.py"],
+            },
+        ],
+    )
+    monkeypatch.setattr(inventory_service, "_read_commit_evidence_records", lambda limit=1200: [])
+    monkeypatch.setattr(inventory_service.runtime_service, "summarize_by_endpoint", lambda seconds=86400: [])
+    monkeypatch.setattr(
+        inventory_service.route_registry_service,
+        "get_canonical_routes",
+        lambda: {"api_routes": [], "web_routes": []},
+    )
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000: [],
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_discover_specs",
+        lambda limit=2000: ([], "none"),
+    )
+    monkeypatch.setattr(
+        inventory_service.idea_service,
+        "list_ideas",
+        lambda: SimpleNamespace(summary=SimpleNamespace(total_ideas=0)),
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_discover_web_api_reference_evidence",
+        lambda: [
+            {
+                "path": "/api/spec-registry/{param}",
+                "source_file": "web/components/page_context_links.tsx",
+                "line": 281,
+                "web_route": None,
+                "evidence_type": "link",
+                "is_dynamic_reference": True,
+            }
+        ],
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/inventory/endpoint-traceability")
+        assert resp.status_code == 200
+        payload = resp.json()
+
+    assert payload["summary"]["total_endpoints"] == 2
+    assert payload["summary"]["with_web_link"] == 2
+    assert payload["summary"]["with_explicit_web_link"] == 1
+
+    by_path = {row["path"]: row for row in payload["items"]}
+    assert by_path["/api/spec-registry/{spec_id}"]["web_link"]["explicit_count"] == 1
+    assert by_path["/api/agent/monitor-issues"]["web_link"]["explicit_count"] == 0
+    assert by_path["/api/agent/monitor-issues"]["web_link"]["tracked"] is True
 
 
 @pytest.mark.asyncio
@@ -934,28 +1042,22 @@ async def test_proactive_questions_endpoint_derives_questions_from_recent_eviden
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
-    (evidence_dir / "commit_evidence_2026-02-16_runtime-fix-a.json").write_text(
-        json.dumps(
-            {
-                "date": "2026-02-16",
-                "commit_scope": "fix missing idea/spec links in flow page",
-                "idea_ids": ["portfolio-governance"],
-                "change_intent": "runtime_fix",
-            }
-        ),
-        encoding="utf-8",
-    )
-    (evidence_dir / "commit_evidence_2026-02-16_runtime-feature-b.json").write_text(
-        json.dumps(
-            {
-                "date": "2026-02-16",
-                "commit_scope": "add public validation and e2e checks for deployment",
-                "idea_ids": ["oss-interface-alignment"],
-                "change_intent": "runtime_feature",
-            }
-        ),
-        encoding="utf-8",
-    )
+    proactive_a = {
+        "date": "2026-02-16",
+        "commit_scope": "fix missing idea/spec links in flow page",
+        "idea_ids": ["portfolio-governance"],
+        "change_intent": "runtime_fix",
+    }
+    proactive_b = {
+        "date": "2026-02-16",
+        "commit_scope": "add public validation and e2e checks for deployment",
+        "idea_ids": ["oss-interface-alignment"],
+        "change_intent": "runtime_feature",
+    }
+    (evidence_dir / "commit_evidence_2026-02-16_runtime-fix-a.json").write_text(json.dumps(proactive_a), encoding="utf-8")
+    (evidence_dir / "commit_evidence_2026-02-16_runtime-feature-b.json").write_text(json.dumps(proactive_b), encoding="utf-8")
+    commit_evidence_service.upsert_record(proactive_a, "memory:proactive-a")
+    commit_evidence_service.upsert_record(proactive_b, "memory:proactive-b")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/api/inventory/questions/proactive", params={"limit": 20, "top": 20})
@@ -982,17 +1084,14 @@ async def test_sync_proactive_questions_adds_missing_questions_without_duplicate
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
-    (evidence_dir / "commit_evidence_2026-02-16_process-gap.json").write_text(
-        json.dumps(
-            {
-                "date": "2026-02-16",
-                "commit_scope": "manual follow-up to close missing process and implementation links",
-                "idea_ids": ["portfolio-governance"],
-                "change_intent": "runtime_fix",
-            }
-        ),
-        encoding="utf-8",
-    )
+    process_gap_payload = {
+        "date": "2026-02-16",
+        "commit_scope": "manual follow-up to close missing process and implementation links",
+        "idea_ids": ["portfolio-governance"],
+        "change_intent": "runtime_fix",
+    }
+    (evidence_dir / "commit_evidence_2026-02-16_process-gap.json").write_text(json.dumps(process_gap_payload), encoding="utf-8")
+    commit_evidence_service.upsert_record(process_gap_payload, "memory:process-gap")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         first = await client.post("/api/inventory/questions/sync-proactive", params={"limit": 20, "max_add": 10})

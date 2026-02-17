@@ -1,0 +1,94 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/api-web-gap-analysis",
+  "commit_scope": "Endpoint-to-web linkage evidence and PostgreSQL-backed commit evidence tracking migration",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/tests/conftest.py",
+    "api/tests/test_health.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "web/app/api-coverage/page.tsx"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "089-endpoint-traceability-coverage"
+  ],
+  "task_ids": [
+    "api-web-gap-analysis"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "review"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_health.py tests/test_inventory_discovery_sources.py tests/test_inventory_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/tests/conftest.py",
+    "api/tests/test_health.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "api/tests/test_inventory_api.py",
+    "web/app/api-coverage/page.tsx",
+    "docs/system_audit/endpoint_web_link_matrix_2026-02-17.json",
+    "docs/system_audit/commit_evidence_2026-02-17_api-web-endpoint-linkage-evidence.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_health.py tests/test_inventory_discovery_sources.py tests/test_inventory_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Commit evidence tracking resolves through DB-backed API services (PostgreSQL in production) with fallback backfill from legacy artifacts; endpoint traceability still exposes web linkage evidence.",
+    "public_endpoints": [
+      "/api/inventory/commit-evidence",
+      "/api/inventory/endpoint-traceability",
+      "/api-coverage"
+    ],
+    "test_flows": [
+      "Call /api/inventory/commit-evidence and verify storage backend plus persisted records are returned even after legacy file removal.",
+      "Open /api-coverage and verify each endpoint row includes a clickable API/docs link.",
+      "Call /api/inventory/endpoint-traceability and verify summary includes with_web_link and missing_web_link."
+    ]
+  }
+}

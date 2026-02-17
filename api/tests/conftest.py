@@ -68,12 +68,13 @@ else:
 
 
 @pytest.fixture(autouse=True)
-def _reset_service_caches_between_tests() -> None:
+def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     # Ensure env-driven storage paths are honored per-test and avoid cross-test
     # leakage through module-level engine/cache state.
     from app.services import (
         agent_service,
         governance_service,
+        commit_evidence_service,
         idea_registry_service,
         idea_service,
         spec_registry_service,
@@ -92,6 +93,18 @@ def _reset_service_caches_between_tests() -> None:
             cache["engine"] = None
             cache["sessionmaker"] = None
 
+    evidence_cache = getattr(commit_evidence_service, "_ENGINE_CACHE", None)
+    if isinstance(evidence_cache, dict):
+        engine = evidence_cache.get("engine")
+        if engine is not None:
+            try:
+                engine.dispose()
+            except Exception:
+                pass
+        evidence_cache["url"] = ""
+        evidence_cache["engine"] = None
+        evidence_cache["sessionmaker"] = None
+
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
@@ -107,6 +120,9 @@ def _reset_service_caches_between_tests() -> None:
         "IDEA_REGISTRY_DB_URL",
         "GOVERNANCE_DATABASE_URL",
         "GOVERNANCE_DB_URL",
+        "COMMIT_EVIDENCE_DATABASE_URL",
         "IDEA_COMMIT_EVIDENCE_DIR",
     ):
         os.environ.pop(key, None)
+
+    os.environ["COMMIT_EVIDENCE_DATABASE_URL"] = f"sqlite+pysqlite:///{tmp_path / 'commit_evidence_test.db'}"

@@ -3,22 +3,19 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.services import idea_service, inventory_service
+from app.services import commit_evidence_service, idea_service, inventory_service
 
 
 def test_idea_service_derives_missing_ideas_from_commit_evidence(
     monkeypatch, tmp_path: Path
 ) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
-    evidence_dir = tmp_path / "system_audit"
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-    (evidence_dir / "commit_evidence_2026-02-16_test.json").write_text(
-        json.dumps({"idea_ids": ["derived-runtime-observability"]}),
-        encoding="utf-8",
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {"idea_ids": ["derived-runtime-observability"], "thread_branch": "codex/test"},
+        "memory:test",
     )
-
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
-    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
     listed = idea_service.list_ideas()
     idea_ids = [item.id for item in listed.ideas]
@@ -28,85 +25,30 @@ def test_idea_service_derives_missing_ideas_from_commit_evidence(
     assert "derived-runtime-observability" in idea_service.list_tracked_idea_ids()
 
 
-def test_idea_service_skips_default_tracked_ids_for_custom_portfolio_without_evidence_dir(
+def test_idea_service_includes_store_tracked_ids_when_db_is_configured(
     monkeypatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {"idea_ids": ["unexpected-local"], "thread_branch": "codex/test"},
+        "memory:test",
+    )
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
-    monkeypatch.setattr(idea_service, "_tracked_idea_ids_from_local", lambda max_files=400: ["unexpected-local"])
-    monkeypatch.setattr(
-        idea_service, "_tracked_idea_ids_from_github", lambda max_files=80, timeout=8.0: ["unexpected-remote"]
-    )
 
-    assert idea_service.list_tracked_idea_ids() == []
+    assert idea_service.list_tracked_idea_ids() == ["unexpected-local"]
 
 
-def test_idea_service_tracked_cache_is_scoped_by_repository_ref(
+def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record({"idea_ids": ["tracked-main"]}, "memory:first")
+    commit_evidence_service.upsert_record({"idea_ids": ["tracked-alt"]}, "memory:second")
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(tmp_path / "system_audit"))
-    monkeypatch.setattr(idea_service, "_tracked_idea_ids_from_local", lambda max_files=400: [])
-
-    class FakeResponse:
-        def __init__(self, status_code: int, payload):
-            self.status_code = status_code
-            self._payload = payload
-
-        def raise_for_status(self) -> None:
-            if self.status_code >= 400:
-                raise RuntimeError("http error")
-
-        def json(self):
-            return self._payload
-
-    class FakeClient:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def get(self, url, params=None):
-            if url.endswith("/contents/docs/system_audit"):
-                ref = (params or {}).get("ref")
-                if ref == "main":
-                    return FakeResponse(
-                        200,
-                        [
-                            {
-                                "name": "commit_evidence_main.json",
-                                "download_url": "https://example.test/main.json",
-                            }
-                        ],
-                    )
-                return FakeResponse(
-                    200,
-                    [
-                        {
-                            "name": "commit_evidence_alt.json",
-                            "download_url": "https://example.test/alt.json",
-                        }
-                    ],
-                )
-            if url == "https://example.test/main.json":
-                return FakeResponse(200, {"idea_ids": ["tracked-main"]})
-            if url == "https://example.test/alt.json":
-                return FakeResponse(200, {"idea_ids": ["tracked-alt"]})
-            return FakeResponse(404, {"detail": "not found"})
-
-    idea_service._TRACKED_IDEA_CACHE["expires_at"] = 0.0
-    idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
-    idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
-    monkeypatch.setattr(idea_service.httpx, "Client", lambda *args, **kwargs: FakeClient())
-    monkeypatch.setenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
-    monkeypatch.setenv("TRACKING_REPOSITORY_REF", "main")
-    first = idea_service.list_tracked_idea_ids()
-    monkeypatch.setenv("TRACKING_REPOSITORY_REF", "feature/test")
-    second = idea_service.list_tracked_idea_ids()
-
-    assert first == ["tracked-main"]
-    assert second == ["tracked-alt"]
+    tracked = idea_service.list_tracked_idea_ids()
+    assert tracked == ["tracked-alt", "tracked-main"]
 
 
 def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
@@ -161,130 +103,35 @@ def test_inventory_does_not_emit_fake_spec_rows_when_all_sources_missing(
     assert inventory["specs"]["items"] == []
 
 
-def test_inventory_uses_github_commit_evidence_when_local_missing(
+def test_inventory_reads_commit_evidence_from_store(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
-    monkeypatch.setattr(inventory_service, "_tracking_repository", lambda: "seeker71/Coherence-Network")
-    monkeypatch.setattr(inventory_service, "_tracking_ref", lambda: "main")
-    inventory_service._EVIDENCE_DISCOVERY_CACHE["expires_at"] = 0.0
-    inventory_service._EVIDENCE_DISCOVERY_CACHE["items"] = []
-
-    class FakeResponse:
-        def __init__(self, status_code: int, payload):
-            self.status_code = status_code
-            self._payload = payload
-
-        def raise_for_status(self) -> None:
-            if self.status_code >= 400:
-                raise RuntimeError("http error")
-
-        def json(self):
-            return self._payload
-
-    class FakeClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def get(self, url, params=None):
-            if url.endswith("/contents/docs/system_audit"):
-                return FakeResponse(
-                    200,
-                    [
-                        {
-                            "name": "commit_evidence_remote.json",
-                            "path": "docs/system_audit/commit_evidence_remote.json",
-                            "download_url": "https://example.test/commit_evidence_remote.json",
-                        }
-                    ],
-                )
-            if url == "https://example.test/commit_evidence_remote.json":
-                return FakeResponse(
-                    200,
-                    {
-                        "idea_ids": ["portfolio-governance"],
-                        "spec_ids": ["089"],
-                        "change_files": ["api/app/routers/inventory.py"],
-                    },
-                )
-            return FakeResponse(404, {"detail": "not found"})
-
-    monkeypatch.setattr(inventory_service.httpx, "Client", FakeClient)
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {
+            "idea_ids": ["portfolio-governance"],
+            "spec_ids": ["089"],
+            "change_files": ["api/app/routers/inventory.py"],
+        },
+        "memory:remote",
+    )
 
     records = inventory_service._read_commit_evidence_records(limit=20)
 
     assert len(records) == 1
     assert records[0]["idea_ids"] == ["portfolio-governance"]
     assert records[0]["spec_ids"] == ["089"]
-    assert str(records[0]["_evidence_file"]).endswith("commit_evidence_remote.json")
+    assert str(records[0]["_evidence_file"]) == "memory:remote"
 
 
-def test_inventory_limits_remote_commit_evidence_fetch_without_token(
+def test_inventory_commit_evidence_returns_empty_when_store_has_no_rows(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(inventory_service, "_project_root", lambda: tmp_path)
-    monkeypatch.setenv("GITHUB_TOKEN", "")
-    inventory_service._EVIDENCE_DISCOVERY_CACHE["expires_at"] = 0.0
-    inventory_service._EVIDENCE_DISCOVERY_CACHE["items"] = []
-
-    class FakeResponse:
-        def __init__(self, status_code: int, payload):
-            self.status_code = status_code
-            self._payload = payload
-
-        def raise_for_status(self) -> None:
-            if self.status_code >= 400:
-                raise RuntimeError("http error")
-
-        def json(self):
-            return self._payload
-
-    class FakeClient:
-        def __init__(self, *args, **kwargs):
-            self.download_calls = 0
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def get(self, url, params=None):
-            if url.endswith("/contents/docs/system_audit"):
-                rows = [
-                    {
-                        "name": f"commit_evidence_{i:03d}.json",
-                        "path": f"docs/system_audit/commit_evidence_{i:03d}.json",
-                        "download_url": f"https://example.test/evidence/{i:03d}.json",
-                    }
-                    for i in range(60)
-                ]
-                return FakeResponse(200, rows)
-            if url.startswith("https://example.test/evidence/"):
-                self.download_calls += 1
-                return FakeResponse(
-                    200,
-                    {
-                        "idea_ids": ["portfolio-governance"],
-                        "spec_ids": ["089"],
-                        "change_files": ["api/app/routers/inventory.py"],
-                    },
-                )
-            return FakeResponse(404, {"detail": "not found"})
-
-    fake_client = FakeClient()
-    monkeypatch.setattr(inventory_service.httpx, "Client", lambda *args, **kwargs: fake_client)
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
 
     records = inventory_service._read_commit_evidence_records(limit=1000)
 
-    assert len(records) == 20
-    assert fake_client.download_calls == 20
+    assert records == []
 
 
 def test_source_aliases_normalize_deployed_double_app_prefix() -> None:
