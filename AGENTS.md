@@ -13,6 +13,29 @@ Spec → Test → Implement → CI → Review → Merge
 - Do NOT modify tests to make implementation pass
 - Only modify files listed in spec/issue
 
+## Task Start Protocol (Required)
+
+Before any code changes in a new worktree/thread:
+
+1. Run bootstrap:
+   - `./scripts/setup_worktree_context.sh`
+   - `./scripts/run_local_ci_context.sh`
+2. Read required context:
+   - `CLAUDE.md`
+   - `docs/SPEC-TRACKING.md`
+   - `docs/SPEC-QUALITY-GATE.md`
+3. Confirm scope:
+   - Only modify files listed in the active spec/issue.
+4. Follow process order:
+   - Spec → Test → Implement → CI → Review → Merge
+5. Post-change gate:
+   - Re-run local CI-equivalent checks before handoff.
+
+Failure policy:
+
+- If bootstrap or CI gates fail, stop implementation and report the exact failing command and output.
+- Do not continue in a dirty worktree; create or switch to a clean worktree first.
+
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
@@ -51,6 +74,8 @@ cd web && npm run dev
 ./scripts/verify_worktree_local_web.sh
 # Optional ports when running multiple worktrees:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+# Optional npm cache override (default is per-worktree .cache/npm):
+NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
@@ -83,6 +108,13 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
 - **Spec cross-links** — specs have "See also" sections
 - **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
+
+## Idea Recording Policy
+
+- Every new idea must be persisted in the API registry before or alongside doc/spec updates.
+- Use `POST /api/ideas` to create ideas with full ROI fields (`potential_value`, `estimated_cost`, `resistance_risk`, `confidence`).
+- Use `PATCH /api/ideas/{idea_id}` to update measured ROI fields (`actual_value`, `actual_cost`, `resistance_risk`, `confidence`, `manifestation_status`).
+- Verify persistence with `GET /api/ideas/{idea_id}` and `GET /api/ideas`.
 
 ## Agent Orchestration API (spec 002)
 

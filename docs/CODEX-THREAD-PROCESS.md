@@ -4,6 +4,9 @@ Date: 2026-02-14
 
 Purpose: ensure each Codex thread can work independently, commit only its own scope, and advance phases only when validation gates pass.
 
+Source of truth:
+- `AGENTS.md` defines the mandatory process contract for all tasks.
+
 ## Core Rules
 
 1. Scope isolation
@@ -15,6 +18,31 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
 3. Phase gating
    - Do not move to next phase until current phase gates pass.
 
+## Task Start Protocol (Required)
+
+Before any code changes in a new worktree/thread:
+
+```bash
+./scripts/setup_worktree_context.sh
+./scripts/run_local_ci_context.sh
+```
+
+Then complete:
+1. Read required context:
+   - `CLAUDE.md`
+   - `docs/SPEC-TRACKING.md`
+   - `docs/SPEC-QUALITY-GATE.md`
+2. Confirm scope:
+   - Only modify files listed in the active spec/issue.
+3. Follow process order:
+   - Spec -> Test -> Implement -> CI -> Review -> Merge
+4. Post-change gate:
+   - Re-run local CI-equivalent checks before handoff.
+
+Failure policy:
+- If bootstrap or CI gates fail, stop implementation and report the exact failing command and output.
+- Do not continue in a dirty worktree; create or switch to a clean worktree first.
+
 ## Required Phase Gates
 
 ### Phase A: Local Validation (required before commit)
@@ -22,7 +50,7 @@ Purpose: ensure each Codex thread can work independently, commit only its own sc
 Run and record:
 
 ```bash
-cd api && .venv/bin/pytest -q
+./scripts/run_local_ci_context.sh
 ./scripts/verify_worktree_local_web.sh
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
@@ -34,8 +62,11 @@ Gate status:
 Worktree notes:
 - This command is the default local web validation for Codex threads.
 - It runs API + web inside the current worktree, validates key API/web routes, and fails on runtime errors in page content.
+- npm cache is isolated per worktree by default (`<worktree>/.cache/npm`) to avoid cross-thread cache permission collisions.
 - Override ports when needed:
   - `API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh`
+- Override npm cache when needed:
+  - `NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh`
 
 ### Phase B: CI Validation (required before merge)
 
