@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="${ROOT_DIR}/api"
 WEB_DIR="${ROOT_DIR}/web"
 TMP_DIR="$(mktemp -d)"
-NPM_CACHE="${NPM_CACHE:-${ROOT_DIR}/.npm}"
+NPM_CACHE="${NPM_CACHE:-${ROOT_DIR}/.cache/npm}"
 API_PORT="${API_PORT:-18000}"
 WEB_PORT="${WEB_PORT:-3100}"
 API_BASE="http://127.0.0.1:${API_PORT}"
@@ -14,6 +14,16 @@ API_LOG="${TMP_DIR}/api.log"
 WEB_LOG="${TMP_DIR}/web.log"
 API_PID=""
 WEB_PID=""
+
+ensure_npm_cache() {
+  mkdir -p "${NPM_CACHE}"
+  if [[ ! -w "${NPM_CACHE}" ]]; then
+    echo "npm cache directory is not writable: ${NPM_CACHE}"
+    exit 1
+  fi
+  export npm_config_cache="${NPM_CACHE}"
+  export NPM_CONFIG_CACHE="${NPM_CACHE}"
+}
 
 select_python() {
   local candidate
@@ -129,14 +139,15 @@ echo "Using Python: ${PYTHON_BIN}"
 echo "Using API base: ${API_BASE}"
 echo "Using web base: ${WEB_BASE}"
 echo "Using npm cache: ${NPM_CACHE}"
+ensure_npm_cache
 
 pushd "${WEB_DIR}" >/dev/null
-if [[ ! -d node_modules ]]; then
+if [[ ! -d node_modules || ! -x node_modules/.bin/next ]]; then
   echo "Installing web dependencies (node_modules missing)..."
-  npm_config_cache="${NPM_CACHE}" npm ci
+  npm ci
 fi
 echo "Building web app..."
-NEXT_PUBLIC_API_URL="${API_BASE}" npm_config_cache="${NPM_CACHE}" npm run build
+NEXT_PUBLIC_API_URL="${API_BASE}" npm run build
 popd >/dev/null
 
 echo "Starting API..."

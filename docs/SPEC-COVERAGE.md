@@ -63,6 +63,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 054 Commit Provenance Contract Gate | ✓ | ✓ | ✓ | CI-enforced evidence schema + diff-range changed-file coverage gate |
 | 055 Runtime Intent and Public E2E Contract Gate | ✓ | ✓ | ✓ | runtime-intent classification + runtime-diff and E2E evidence requirements |
 | 056 Commit-Derived Traceability Report | ✓ | ✓ | ✓ | derives idea/spec/implementation references from commit evidence + SHA |
+| 100 Automation Provider Usage and Readiness API | ✓ | ✓ | ✓ | automation usage/snapshots/alerts/subscription-estimator/readiness endpoints |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -498,6 +499,21 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | Next highest-ROI task suggestion and optional task creation | `routers/inventory.py`, `services/inventory_service.py` | `test_next_highest_roi_task_generation_from_answered_questions` |
 
 **Files:** `api/app/services/idea_service.py`, `api/app/services/inventory_service.py`, `api/app/routers/inventory.py`, `api/tests/test_inventory_api.py`
+
+---
+
+## Spec 100: Automation Provider Usage and Readiness API
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| GET /api/automation/usage returns normalized provider usage and capacity | `routers/automation_usage.py`, `services/automation_usage_service.py` | `test_automation_usage_endpoint_returns_normalized_providers` |
+| GET /api/automation/usage/snapshots returns persisted usage snapshots | `routers/automation_usage.py`, `services/automation_usage_service.py` | `test_automation_usage_snapshots_endpoint_returns_persisted_rows` |
+| GET /api/automation/usage/alerts returns threshold-based provider alerts | `routers/automation_usage.py`, `services/automation_usage_service.py` | `test_automation_usage_alerts_raise_on_low_remaining_ratio` |
+| GET /api/automation/usage/subscription-estimator returns upgrade cost/benefit/ROI | `routers/automation_usage.py`, `services/automation_usage_service.py` | `test_subscription_estimator_reports_upgrade_cost_and_benefit` |
+| GET /api/automation/usage/readiness returns required-provider readiness and blockers | `routers/automation_usage.py`, `services/automation_usage_service.py` | `test_provider_readiness_reports_blocking_required_provider_gaps`, `test_provider_readiness_accepts_overridden_required_provider_list`, `test_provider_in_active_use_requires_key_for_readiness` |
+| Canonical endpoints include explicit spec linkage for traceability | `config/canonical_routes.json`, `services/inventory_service.py` | `test_automation_usage_endpoints_trace_back_to_spec_100` |
+
+**Files:** `api/app/routers/automation_usage.py`, `api/app/services/automation_usage_service.py`, `api/app/services/inventory_service.py`, `config/canonical_routes.json`, `api/tests/test_automation_usage_api.py`
 
 ---
 
