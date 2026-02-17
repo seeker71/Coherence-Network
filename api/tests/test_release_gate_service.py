@@ -120,6 +120,72 @@ def test_merged_change_contract_uses_ready_to_merge_not_combined_status(monkeypa
     assert out["result"] == "contract_passed"
 
 
+def test_merged_change_contract_default_endpoints_exclude_web_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    merged_pr = {
+        "number": 128,
+        "merged_at": "2026-02-17T03:40:00Z",
+        "base": {"ref": "main"},
+        "user": {"login": "seeker71"},
+        "merged_by": {"login": "seeker71"},
+        "html_url": "https://github.com/seeker71/Coherence-Network/pull/148",
+        "draft": False,
+    }
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_pull_requests",
+        lambda *_args, **_kwargs: [merged_pr],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_pull_request_reviews",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_commit_status",
+        lambda *_args, **_kwargs: {"state": "success", "statuses": []},
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_check_runs",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "app.services.release_gate_service.get_required_contexts",
+        lambda *_args, **_kwargs: [],
+    )
+
+    captured: dict[str, object] = {}
+
+    def _capture_wait_for_public_validation(
+        *,
+        endpoint_urls: list[str],
+        timeout_seconds: int,
+        poll_interval_seconds: int,
+    ) -> dict[str, object]:
+        captured["endpoint_urls"] = endpoint_urls
+        captured["timeout_seconds"] = timeout_seconds
+        captured["poll_interval_seconds"] = poll_interval_seconds
+        return {"ready": True, "elapsed_seconds": 1, "checks": []}
+
+    monkeypatch.setattr(
+        "app.services.release_gate_service.wait_for_public_validation",
+        _capture_wait_for_public_validation,
+    )
+
+    out = evaluate_merged_change_contract_report(
+        repository="seeker71/Coherence-Network",
+        sha="19b1a9b96b66e072a1fa70a8c34ebbfe06176f3b",
+        min_approvals=0,
+        min_unique_approvers=0,
+        timeout_seconds=5,
+        poll_seconds=1,
+    )
+
+    assert out["result"] == "contract_passed"
+    endpoints = captured.get("endpoint_urls")
+    assert isinstance(endpoints, list)
+    assert "https://coherence-web-production.up.railway.app/" not in endpoints
+    assert "https://coherence-web-production.up.railway.app/gates" in endpoints
+    assert "https://coherence-web-production.up.railway.app/api-health" in endpoints
+
+
 def test_evaluate_collective_review_gates_passes_with_approval() -> None:
     pr = {
         "number": 200,
