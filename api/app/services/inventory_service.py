@@ -340,11 +340,16 @@ def _project_root() -> Path:
             return configured_path
 
     source_path = Path(__file__).resolve()
+    fallback_api_root: Path | None = None
     for candidate in [source_path, *source_path.parents]:
         has_monorepo_layout = (candidate / "api" / "app").exists()
-        has_api_service_layout = (candidate / "app").exists() and (candidate / "scripts").exists()
-        if has_monorepo_layout or has_api_service_layout:
+        if has_monorepo_layout:
             return candidate
+        has_api_service_layout = (candidate / "app").exists() and (candidate / "scripts").exists()
+        if has_api_service_layout and fallback_api_root is None:
+            fallback_api_root = candidate
+    if fallback_api_root is not None:
+        return fallback_api_root
     return source_path.parents[3]
 
 

@@ -1,0 +1,98 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/openclaw-proof-20260216-220156",
+  "commit_scope": "Enable OpenClaw provider validation on Codex-backed execution and enforce paid-provider usage attribution in runtime completion telemetry.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py",
+    "docs/system_audit/commit_evidence_2026-02-17_openclaw-paid-usage-validation.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "openclaw-paid-usage-validation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_openclaw-paid-usage-validation.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "OpenClaw validation supports Codex/OpenAI-backed execution; runtime completion events include provider attribution so paid-provider usage is measurable and enforceable. PR guard/triage treats Vercel status context as optional by default so Railway deployment remains primary merge gate.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
+      "https://coherence-network-production.up.railway.app/api/agent/usage",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "api: POST /api/automation/usage/provider-validation/run?required_providers=openclaw,openai-codex then GET provider-validation and confirm required providers validate",
+      "api: execute openclaw task lifecycle and confirm runtime completion event metadata includes provider/billing_provider"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T05:50:00Z",
+    "commands": [
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py",
+      "python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deployment validation on public Railway instance."
+  }
+}
