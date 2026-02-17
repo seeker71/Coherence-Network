@@ -232,7 +232,7 @@ jobs:
             });
 
       - name: Dispatch auto-heal workflow
-        if: ${{ steps.outcome.outputs.exit_code != '0' && github.event_name != 'schedule' }}
+        if: ${{ steps.outcome.outputs.exit_code != '0' && github.event_name == 'push' && vars.AUTO_HEAL_DEPLOY_GATES_ENABLED == '1' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
