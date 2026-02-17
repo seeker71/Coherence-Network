@@ -72,3 +72,4 @@ async def test_persistence_contract_endpoint_returns_domain_report(monkeypatch: 
         assert "domains" in payload
         assert "ideas" in payload["domains"]
         assert "specs_and_pseudocode" in payload["domains"]
+        assert "commit_evidence_tracking" in payload["domains"]
