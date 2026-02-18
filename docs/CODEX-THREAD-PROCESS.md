@@ -33,7 +33,7 @@ git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 ```
 
 ### Phase 0: Start Gate (required before new task work)
@@ -41,19 +41,17 @@ python3 scripts/ensure_worktree_start_clean.py --json
 Run from the target worktree:
 
 ```bash
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 ```
 
 Gate status:
-- PASS only when running from a linked worktree (`.git` is a file, not the main repo dir).
+- PASS only when running from a linked worktree (`.git` points to a worktree gitdir, not the primary `.git` directory).
 - PASS only when current worktree has no local changes before starting the next task.
 - PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
-- PASS only when latest `main` GitHub Actions workflow run is green.
-- PASS only when open PRs have no failing check-runs (if failures exist, fix process/gates before starting new work).
+- PASS only when current start-command checks succeed, including remote `main` workflow health and open `codex/*` PR checks.
 
-Remote CI note:
-- Start gate now queries GitHub via `gh`. Ensure `gh auth status` succeeds in your shell.
-- Emergency bypass exists (`--skip-remote-ci`) but is not recommended and should be used only for local debugging.
+Start command:
+- `make start-gate` enforces worktree-only execution, current+primary clean checks, and remote guard checks via GitHub (`gh`).
 
 ### Phase A: Local Validation (required before commit)
 
