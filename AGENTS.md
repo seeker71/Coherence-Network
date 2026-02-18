@@ -143,6 +143,7 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - Codex/openclaw execution path is already wired for worktree mode:
   - default command template includes `codex exec ... --model gpt-5.3-codex-spark --reasoning-effort high --worktree`.
   - set `OPENCLAW_MODEL` to override if needed.
+- Paid-provider override is accepted by execute endpoint as `force_paid_*` query flags or `X-Force-Paid-Providers` header.
 - Suggested full deployment flow:
   - `./scripts/verify_worktree_local_web.sh` (local API+web contract)
   - `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS)

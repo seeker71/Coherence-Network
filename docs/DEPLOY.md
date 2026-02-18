@@ -28,6 +28,12 @@ API service (`coherence-network`):
 - `NEO4J_USERNAME`
 - `NEO4J_PASSWORD`
 - `ALLOWED_ORIGINS=https://coherence-web-production.up.railway.app,http://localhost:3000`
+- `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS=8` (guard retries per deploy check loop)
+- `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS=60` (seconds between retries)
+- `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS=600` (escalate when deployment contract blocked for >10 minutes)
+- `PAID_TOOL_8H_LIMIT=300`
+- `PAID_TOOL_WEEK_LIMIT=2200`
+- `PAID_TOOL_WINDOW_BUDGET_FRACTION=0.333`
 
 Web service (`coherence-web`):
 
@@ -60,9 +66,17 @@ From repo root:
 Required repo secrets for automated redeploy:
 
 - `RAILWAY_TOKEN`
-- `RAILWAY_PROJECT_ID`
-- `RAILWAY_ENVIRONMENT`
-- `RAILWAY_SERVICE`
+ - `RAILWAY_PROJECT_ID`
+ - `RAILWAY_ENVIRONMENT`
+ - `RAILWAY_SERVICE`
+
+Optional repo variables to override deploy de-risk defaults:
+
+- `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS`
+- `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS`
+- `PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`
+- `PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`
+- `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS`
 
 ## Manual Railway Verification
 

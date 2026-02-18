@@ -313,6 +313,61 @@ async def test_execute_endpoint_accepts_case_insensitive_force_paid_query_key(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_accepts_force_paid_header_override(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
+            {"elapsed_ms": 6, "provider_request_id": "req_paid_header", "response_id": "resp_paid_header"},
+        ),
+    )
+
+    paid_task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess header override",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            f"/api/agent/tasks/{paid_task['id']}/execute",
+            headers={"X-Force-Paid-Providers": "true"},
+        )
+        completed = await client.get(f"/api/agent/tasks/{paid_task['id']}")
+        assert completed.status_code == 200
+        completed_payload = completed.json()
+        assert completed_payload["status"] == "completed"
+        assert completed_payload["output"] == "ok"
+
+        events = await client.get("/api/runtime/events?limit=50")
+        assert events.status_code == 200
+        runtime_rows = events.json()
+        summary_rows = [
+            row
+            for row in runtime_rows
+            if str(row.get("metadata", {}).get("tracking_kind")).strip() == "agent_task_execution"
+            and row.get("metadata", {}).get("task_id") == paid_task["id"]
+        ]
+        assert summary_rows, "Expected agent task execution summary event"
+        assert summary_rows[0]["metadata"]["paid_provider_override"] is True
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

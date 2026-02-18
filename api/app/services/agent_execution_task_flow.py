@@ -241,6 +241,7 @@ def _complete_success(
                     "max_cost_usd": max_cost_usd,
                     "cost_slack_ratio": cost_slack_ratio,
                     "is_paid_provider": execution_service._task_route_is_paid(task),
+                    "paid_provider_override": execution_service._paid_route_override_requested(task),
                 }
             ),
         )
@@ -288,6 +289,7 @@ def _complete_failure(
                     "usage_json": usage_json,
                     "provider_request_id": request_id or "",
                     "is_paid_provider": execution_service._task_route_is_paid(task),
+                    "paid_provider_override": execution_service._paid_route_override_requested(task),
                 }
             ),
         )
