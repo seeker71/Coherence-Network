@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from contextlib import contextmanager
 from decimal import Decimal
 from typing import Optional
@@ -71,8 +72,61 @@ class PostgresGraphStore:
 
         self.engine = create_engine(database_url, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self._cache_ttl_seconds = 30.0
+        self._cache = {
+            "contributors": {"expires_at": 0.0, "items_by_limit": {}},
+            "assets": {"expires_at": 0.0, "items_by_limit": {}},
+            "contributions": {"expires_at": 0.0, "items_by_limit": {}},
+        }
         self._ensure_tables()
         self._purge_test_contributors()
+
+    def _cache_now(self) -> float:
+        return time.time()
+
+    def _read_cached_rows(
+        self,
+        kind: str,
+        requested_limit: int,
+        model_ctor,
+    ) -> list | None:
+        cache = self._cache.get(kind, {})
+        if cache.get("expires_at", 0.0) <= self._cache_now():
+            return None
+
+        cached_maps = cache.get("items_by_limit", {})
+        best_payload: list | None = None
+        best_limit: int | None = None
+        for raw_limit, payload in cached_maps.items():
+            try:
+                cached_limit = int(raw_limit)
+            except (TypeError, ValueError):
+                continue
+            if cached_limit < requested_limit:
+                continue
+            if not isinstance(payload, list) or len(payload) < requested_limit:
+                continue
+            if best_limit is None or cached_limit < best_limit:
+                best_payload = payload
+                best_limit = cached_limit
+
+        if best_payload is None:
+            return None
+        return [model_ctor(**row) for row in best_payload[:requested_limit]]
+
+    def _write_cache_rows(self, kind: str, requested_limit: int, rows: list) -> None:
+        cache = self._cache.setdefault(kind, {})
+        serialized = [row.model_dump(mode="json") for row in rows]
+        by_limit = cache.setdefault("items_by_limit", {})
+        by_limit[requested_limit] = serialized
+        cache["expires_at"] = self._cache_now() + self._cache_ttl_seconds
+
+    def _invalidate_list_cache(self) -> None:
+        for value in self._cache.values():
+            value["expires_at"] = 0.0
+
+    def _normalize_limit(self, kind: str, limit: int, max_limit: int) -> int:
+        return max(1, min(int(limit), max_limit))
 
     def _ensure_tables(self) -> None:
         """Create tables if they don't exist."""
@@ -94,6 +148,7 @@ class PostgresGraphStore:
             removed = (
                 session.query(ContributorModel).filter(ContributorModel.id.in_(test_ids)).delete(synchronize_session=False)
             )
+            self._invalidate_list_cache()
             return int(removed or 0)
 
     @contextmanager
@@ -163,14 +218,20 @@ class PostgresGraphStore:
             )
             session.add(model)
             session.commit()
+            self._invalidate_list_cache()
             return contributor
 
     def list_contributors(self, limit: int = 100) -> list[Contributor]:
+        requested_limit = self._normalize_limit("contributors", limit, 1000)
+        cached = self._read_cached_rows("contributors", requested_limit, Contributor)
+        if cached is not None:
+            return cached
+
         with self._session() as session:
             models = (
                 session.query(ContributorModel)
                 .order_by(ContributorModel.created_at.desc())
-                .limit(limit)
+                .limit(requested_limit)
                 .all()
             )
             items = [
@@ -185,7 +246,9 @@ class PostgresGraphStore:
                 )
                 for m in models
             ]
-            return [item for item in items if not is_test_contributor_email(str(item.email))]
+            items = [item for item in items if not is_test_contributor_email(str(item.email))]
+            self._write_cache_rows("contributors", requested_limit, items)
+            return items
 
     def get_asset(self, asset_id: UUID) -> Asset | None:
         with self._session() as session:
@@ -225,12 +288,18 @@ class PostgresGraphStore:
             )
             session.add(model)
             session.commit()
+            self._invalidate_list_cache()
             return asset
 
     def list_assets(self, limit: int = 100) -> list[Asset]:
+        requested_limit = self._normalize_limit("assets", limit, 5000)
+        cached = self._read_cached_rows("assets", requested_limit, Asset)
+        if cached is not None:
+            return cached
+
         with self._session() as session:
-            models = session.query(AssetModel).order_by(AssetModel.created_at.desc()).limit(limit).all()
-            return [
+            models = session.query(AssetModel).order_by(AssetModel.created_at.desc()).limit(requested_limit).all()
+            items = [
                 Asset(
                     id=m.id,
                     type=m.type,
@@ -240,6 +309,8 @@ class PostgresGraphStore:
                 )
                 for m in models
             ]
+            self._write_cache_rows("assets", requested_limit, items)
+            return items
 
     def create_contribution(
         self,
@@ -276,6 +347,7 @@ class PostgresGraphStore:
                 asset_model.total_cost = float(current_cost + cost_amount)
 
             session.commit()
+            self._invalidate_list_cache()
             return contrib
 
     def get_contribution(self, contribution_id: UUID) -> Contribution | None:
@@ -294,14 +366,19 @@ class PostgresGraphStore:
             )
 
     def list_contributions(self, limit: int = 100) -> list[Contribution]:
+        requested_limit = self._normalize_limit("contributions", limit, 5000)
+        cached = self._read_cached_rows("contributions", requested_limit, Contribution)
+        if cached is not None:
+            return cached
+
         with self._session() as session:
             models = (
                 session.query(ContributionModel)
                 .order_by(ContributionModel.timestamp.desc())
-                .limit(limit)
+                .limit(requested_limit)
                 .all()
             )
-            return [
+            out = [
                 Contribution(
                     id=m.id,
                     contributor_id=m.contributor_id,
@@ -313,6 +390,8 @@ class PostgresGraphStore:
                 )
                 for m in models
             ]
+            self._write_cache_rows("contributions", requested_limit, out)
+            return out
 
     def get_asset_contributions(self, asset_id: UUID) -> list[Contribution]:
         with self._session() as session:

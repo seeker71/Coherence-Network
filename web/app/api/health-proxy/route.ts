@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 
 const API_URL = getApiBase();
 const WEB_STARTED_AT = new Date();
@@ -21,10 +22,10 @@ function uptimeHuman(seconds: number) {
 export async function GET() {
   const started = performance.now();
   try {
-    const upstream = await fetch(`${API_URL}/api/health`, {
-      cache: "no-store",
-    });
-    const upstreamJson = await upstream.json();
+    const upstreamJson = await fetchJsonOrNull<Record<string, unknown>>(`${API_URL}/api/health`, { cache: "no-store" }, 5000);
+    if (!upstreamJson) {
+      throw new Error("Upstream health payload unavailable");
+    }
     const up = uptimeSeconds();
     const response = NextResponse.json({
       api: upstreamJson,

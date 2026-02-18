@@ -64,8 +64,17 @@ async def gate_merged_contract(
 async def gates_main_head(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
+    timeout_seconds: float = Query(6.0, ge=1.0, le=60.0),
 ) -> dict:
-    sha = gates.get_branch_head_sha(repo, branch, github_token=_github_token())
+    try:
+        sha = gates.get_branch_head_sha(
+            repo,
+            branch,
+            github_token=_github_token(),
+            timeout=timeout_seconds,
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to resolve branch head SHA")
     if not sha:
         raise HTTPException(status_code=502, detail="Could not resolve branch head SHA")
     return {"repo": repo, "branch": branch, "sha": sha}
@@ -80,7 +89,12 @@ async def gates_main_contract(
     timeout_seconds: int = Query(1200, ge=10, le=7200),
     poll_seconds: int = Query(30, ge=1, le=300),
 ) -> dict:
-    sha = gates.get_branch_head_sha(repo, branch, github_token=_github_token())
+    sha = gates.get_branch_head_sha(
+        repo,
+        branch,
+        github_token=_github_token(),
+        timeout=8.0,
+    )
     if not sha:
         raise HTTPException(status_code=502, detail="Could not resolve branch head SHA")
     report = await asyncio.to_thread(

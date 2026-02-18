@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -40,6 +41,12 @@ class SpecRegistryRecord(Base):
 
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+_SCHEMA_INITIALIZED = False
+_LIST_SPECS_CACHE: dict[str, Any] = {
+    "expires_at": 0.0,
+    "items_by_limit": {},
+}
+_LIST_SPECS_CACHE_TTL_SECONDS = 60.0
 
 
 def _repo_root() -> Path:
@@ -109,9 +116,18 @@ def _session() -> Session:
 
 
 def ensure_schema() -> None:
+    global _SCHEMA_INITIALIZED
+    if _SCHEMA_INITIALIZED:
+        return
     engine = _engine()
     Base.metadata.create_all(bind=engine)
     _ensure_runtime_columns(engine)
+    _SCHEMA_INITIALIZED = True
+
+
+def _invalidate_spec_cache() -> None:
+    _LIST_SPECS_CACHE["expires_at"] = 0.0
+    _LIST_SPECS_CACHE["items_by_limit"] = {}
 
 
 def _ensure_runtime_columns(engine: Any) -> None:
@@ -171,15 +187,36 @@ def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
 
 
 def list_specs(limit: int = 200) -> list[SpecRegistryEntry]:
+    requested_limit = max(1, min(int(limit), 1000))
+    now = time.time()
+    cached_until = _LIST_SPECS_CACHE.get("expires_at", 0.0)
+    cached_map = _LIST_SPECS_CACHE.get("items_by_limit", {})
+    if cached_until > now and isinstance(cached_map, dict) and cached_map:
+        best_fit: list[SpecRegistryEntry] | None = None
+        for cached_limit, cached_rows in cached_map.items():
+            try:
+                cached_size = int(cached_limit)
+            except (TypeError, ValueError):
+                continue
+            if cached_size >= requested_limit and isinstance(cached_rows, list) and len(cached_rows) >= requested_limit:
+                if best_fit is None or cached_size < len(best_fit):
+                    best_fit = cached_rows
+        if best_fit is not None:
+            return [row.model_copy(deep=True) for row in best_fit[:requested_limit]]
+
     ensure_schema()
     with _session() as session:
         rows = (
             session.query(SpecRegistryRecord)
             .order_by(SpecRegistryRecord.updated_at.desc(), SpecRegistryRecord.spec_id.asc())
-            .limit(max(1, min(limit, 1000)))
+            .limit(requested_limit)
             .all()
         )
-    return [_to_model(row) for row in rows]
+    payload = [_to_model(row) for row in rows]
+    _LIST_SPECS_CACHE["expires_at"] = now + _LIST_SPECS_CACHE_TTL_SECONDS
+    cached_map[requested_limit] = payload
+    _LIST_SPECS_CACHE["items_by_limit"] = cached_map
+    return [row.model_copy(deep=True) for row in payload]
 
 
 def get_spec(spec_id: str) -> SpecRegistryEntry | None:
@@ -218,6 +255,7 @@ def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
         session.add(row)
         session.flush()
         session.refresh(row)
+    _invalidate_spec_cache()
     return _to_model(row)
 
 
@@ -253,6 +291,7 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
         session.add(row)
         session.flush()
         session.refresh(row)
+    _invalidate_spec_cache()
     return _to_model(row)
 
 
