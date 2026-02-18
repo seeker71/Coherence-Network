@@ -42,6 +42,7 @@ class SpecRegistryRecord(Base):
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 _SCHEMA_INITIALIZED = False
+_SCHEMA_INITIALIZED_URL = ""
 _LIST_SPECS_CACHE: dict[str, Any] = {
     "expires_at": 0.0,
     "items_by_limit": {},
@@ -88,12 +89,23 @@ def _engine():
     url = _database_url()
     if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
         return _ENGINE_CACHE["engine"]
+    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
+    _SCHEMA_INITIALIZED = False
+    _SCHEMA_INITIALIZED_URL = ""
+    _invalidate_spec_cache()
     engine = _create_engine(url)
     SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
     _ENGINE_CACHE["url"] = url
     _ENGINE_CACHE["engine"] = engine
     _ENGINE_CACHE["sessionmaker"] = SessionLocal
     return engine
+
+
+def _table_exists(engine: Any, table_name: str) -> bool:
+    try:
+        return table_name in inspect(engine).get_table_names()
+    except Exception:
+        return False
 
 
 def _sessionmaker():
@@ -116,13 +128,22 @@ def _session() -> Session:
 
 
 def ensure_schema() -> None:
-    global _SCHEMA_INITIALIZED
-    if _SCHEMA_INITIALIZED:
+    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
+    url = _database_url()
+    if _SCHEMA_INITIALIZED and _SCHEMA_INITIALIZED_URL == url:
+        engine = _engine()
+        if engine is not None and _table_exists(engine, "spec_registry_entries"):
+            return
+        _SCHEMA_INITIALIZED = False
+        _SCHEMA_INITIALIZED_URL = ""
+    if not url:
         return
     engine = _engine()
-    Base.metadata.create_all(bind=engine)
+    if not _table_exists(engine, "spec_registry_entries"):
+        Base.metadata.create_all(bind=engine)
     _ensure_runtime_columns(engine)
     _SCHEMA_INITIALIZED = True
+    _SCHEMA_INITIALIZED_URL = url
 
 
 def _invalidate_spec_cache() -> None:

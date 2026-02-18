@@ -219,15 +219,33 @@ def _should_include_default_tracked_ideas() -> bool:
 
 def _invalidate_ideas_cache() -> None:
     _IDEAS_CACHE["expires_at"] = 0.0
+    _IDEAS_CACHE["items"] = []
+    _IDEAS_CACHE["cache_key"] = ""
 
 
 def _cache_ideas(ideas: list[Idea]) -> None:
     _IDEAS_CACHE["items"] = [idea.model_copy(deep=True) for idea in ideas]
     _IDEAS_CACHE["expires_at"] = time.time() + _IDEAS_CACHE_TTL_SECONDS
+    _IDEAS_CACHE["cache_key"] = _ideas_cache_key()
+
+
+def _ideas_cache_key() -> str:
+    return (
+        f"{_portfolio_path()}|"
+        f"{os.getenv('IDEA_REGISTRY_DATABASE_URL','')}|"
+        f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
+        f"{os.getenv('DATABASE_URL','')}|"
+        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
+        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+    )
 
 
 def _read_ideas_cache() -> list[Idea] | None:
-    if _IDEAS_CACHE.get("expires_at", 0.0) <= time.time():
+    cache_key = _ideas_cache_key()
+    if (
+        _IDEAS_CACHE.get("cache_key") != cache_key
+        or _IDEAS_CACHE.get("expires_at", 0.0) <= time.time()
+    ):
         return None
     cached = _IDEAS_CACHE.get("items")
     if not isinstance(cached, list):
