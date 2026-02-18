@@ -4,9 +4,7 @@ workspace_root = "/Users/ursmuff/source/Coherence-Network"
 
 [setup]
 required = true
-commands = [
-  "make start-gate"
-]
+script = "make start-gate"
 
 [validation.local]
 commands = [
