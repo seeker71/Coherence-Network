@@ -132,7 +132,7 @@ check_endpoint "Web health proxy" "${WEB_URL%/}/api/health-proxy" "$TMP_DIR/heal
 fail=$((fail + $?))
 
 check_endpoint "Web /remote-ops page" "${WEB_URL%/}/remote-ops" "$TMP_DIR/remote_ops_page.html" "GET"
-fail=$((fail + $?)
+fail=$((fail + $?))
 
 if [[ "${RUN_EXEC}" == "1" ]]; then
   log ""
@@ -177,9 +177,9 @@ EOF
           -H "Content-Type: application/json")"
         if [[ "$status" == "401" || "$status" == "403" ]]; then
           log "Execute endpoint is token-protected (${status}) as expected."
-        elif require_2xx "Dispatch via pickup-and-execute without token" "$status" "$TMP_DIR/task_execute_unauth.json"; then
-          log "Pickup+execute accepted without token."
         else
+          require_2xx "Dispatch via pickup-and-execute without token" "$status" "$TMP_DIR/task_execute_unauth.json"
+          log "Unexpectedly accepted without token. This is still recorded as a smoke failure for safety."
           fail=$((fail + 1))
         fi
       fi
