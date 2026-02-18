@@ -1,6 +1,6 @@
 # Source this file from ~/.zshrc to use workspace-aware gh authentication.
 # Example:
-#   source /Users/ursmuff/source/merly.ai/.codex/ghx-zshrc.example
+#   source /Users/ursmuff/source/Coherence-Network/.codex/ghx-zshrc.example
 
 # Default: workspace auth uses GH config profiles and ignores GH_TOKEN.
 # Keep env token usage only when this is intentionally set.
