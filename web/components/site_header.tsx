@@ -15,6 +15,7 @@ const NAV = [
   { href: "/agent", label: "Agent" },
   { href: "/friction", label: "Friction" },
   { href: "/gates", label: "Gates" },
+  { href: "/remote-ops", label: "Remote Ops" },
 ];
 
 const SECONDARY = [
