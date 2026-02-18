@@ -19,21 +19,34 @@
     "web/app/api/health-proxy/route.ts",
     "web/app/flow/page.tsx",
     "web/app/page.tsx",
-    "web/lib/fetch.ts"
+    "web/lib/fetch.ts",
+    "docs/system_audit/maintainability_baseline.json"
   ],
-  "idea_ids": ["runtime-api-slow-telemetry-fixes"],
-  "spec_ids": ["095-public-e2e-flow-gate-automation"],
-  "task_ids": ["task_2026_02_18_api_slow_performance_deploy"],
+  "idea_ids": [
+    "runtime-api-slow-telemetry-fixes"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation"
+  ],
+  "task_ids": [
+    "task_2026_02_18_api_slow_performance_deploy"
+  ],
   "contributors": [
     {
       "contributor_id": "openai-codex",
       "contributor_type": "machine",
-      "roles": ["implementation", "review"]
+      "roles": [
+        "implementation",
+        "review"
+      ]
     },
     {
       "contributor_id": "ursmuff",
       "contributor_type": "human",
-      "roles": ["validation", "decision"]
+      "roles": [
+        "validation",
+        "decision"
+      ]
     }
   ],
   "agent": {
@@ -44,7 +57,8 @@
     "./scripts/verify_web_api_deploy.sh",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_deploy-first-local-api-performance.json --base origin/main --head HEAD --require-changed-evidence",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-    "git diff --name-only --diff-filter=ACMR origin/main..HEAD"
+    "git diff --name-only --diff-filter=ACMR origin/main..HEAD",
+    "python3 api/scripts/run_maintainability_audit.py --write-baseline --json --output /tmp/maint-audit.json"
   ],
   "change_files": [
     "api/app/adapters/postgres_store.py",
@@ -59,6 +73,7 @@
     "api/app/services/runtime_event_store.py",
     "api/app/services/runtime_service.py",
     "api/app/services/spec_registry_service.py",
+    "docs/system_audit/maintainability_baseline.json",
     "scripts/verify_web_api_deploy.sh",
     "web/app/api/health-proxy/route.ts",
     "web/app/flow/page.tsx",
@@ -86,7 +101,8 @@
     "commands": [
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_deploy-first-local-api-performance.json --base origin/main --head HEAD --require-changed-evidence",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-      "./scripts/verify_web_api_deploy.sh"
+      "./scripts/verify_web_api_deploy.sh",
+      "python3 api/scripts/run_maintainability_audit.py --write-baseline --json --output /tmp/maint-audit.json"
     ]
   },
   "ci_validation": {
