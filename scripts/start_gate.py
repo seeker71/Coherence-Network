@@ -63,13 +63,16 @@ def main() -> None:
     if not git_marker.exists():
         raise SystemExit("start-gate: missing .git marker")
 
+    in_worktree = False
     if git_marker.is_file():
         gitdir_line = git_marker.read_text(encoding="utf-8").strip()
         if not gitdir_line.startswith("gitdir:"):
             raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
 
         gitdir = gitdir_line.split(":", 1)[1].strip()
-        primary = Path(gitdir).resolve().parent.parent.parent
+        gitdir_path = Path(gitdir).resolve()
+        in_worktree = ".git/worktrees/" in gitdir_path.as_posix()
+        primary = gitdir_path.parent.parent.parent
     elif git_marker.is_dir():
         primary = Path.cwd().resolve()
     else:
@@ -210,18 +213,30 @@ def main() -> None:
             raise SystemExit(failure_text)
         print(f"start-gate: warning: {failure_text}")
 
-    proc = subprocess.run(
-        ["git", "-C", str(primary), "status", "--short"],
-        capture_output=True,
-        text=True,
+    require_primary_default = False if in_worktree else True
+    require_primary_clean = env_flag(
+        "START_GATE_REQUIRE_PRIMARY_CLEAN", default=require_primary_default
     )
-    if proc.returncode != 0:
-        raise SystemExit("start-gate: failed to check primary workspace state")
-
-    if proc.stdout.strip():
-        raise SystemExit(
-            "start-gate: primary workspace has local changes. Clean it before starting a task."
+    if require_primary_clean:
+        proc = subprocess.run(
+            ["git", "-C", str(primary), "status", "--short"],
+            capture_output=True,
+            text=True,
         )
+        if proc.returncode != 0:
+            raise SystemExit("start-gate: failed to check primary workspace state")
+
+        if proc.stdout.strip():
+            raise SystemExit(
+                "start-gate: primary workspace has local changes. Clean it before starting a task."
+            )
+    elif in_worktree:
+        print(
+            "start-gate: skipping primary workspace cleanliness check in worktree mode "
+            "(START_GATE_REQUIRE_PRIMARY_CLEAN=0)."
+        )
+    else:
+        print("start-gate: skipping primary workspace cleanliness check (START_GATE_REQUIRE_PRIMARY_CLEAN=0)")
 
     print("start-gate: passed")
 
