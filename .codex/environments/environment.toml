@@ -2,7 +2,7 @@ name = "coherence-network"
 description = "Coherence Network enforced worktree delivery environment"
 workspace_root = "/Users/ursmuff/source/Coherence-Network"
 
-[startup]
+[setup]
 required = true
 commands = [
   "make start-gate"
