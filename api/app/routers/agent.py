@@ -169,6 +169,7 @@ async def execute_task(
     request: Request,
     background_tasks: BackgroundTasks,
     x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+    x_force_paid_providers: Optional[str] = Header(None, alias="X-Force-Paid-Providers"),
     force_paid_providers: str | None = Query(None),
     force_paid_provider: str | None = Query(None),
     force_allow_paid_providers: str | None = Query(None),
@@ -198,13 +199,22 @@ async def execute_task(
         or _truthy(force_allow_paid_providers)
         or _truthy(allow_paid_providers)
         or _truthy(allow_paid_provider)
+        or _truthy(x_force_paid_providers)
         or _coerce_force_paid_override(request)
     )
     if force_paid_override:
         task_ctx = task.get("context")
         ctx: dict[str, object] = task_ctx if isinstance(task_ctx, dict) else {}
         if not _truthy(str(ctx.get("force_paid_providers") or "")):
-            agent_service.update_task(task_id, context={"force_paid_providers": True})
+            agent_service.update_task(
+                task_id,
+                context={
+                    "force_paid_providers": True,
+                    "force_paid_override_source": "query"
+                    if _coerce_force_paid_override(request)
+                    else "header",
+                },
+            )
 
     background_tasks.add_task(
         agent_execution_service.execute_task,
