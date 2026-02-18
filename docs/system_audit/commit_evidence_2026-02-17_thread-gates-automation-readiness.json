@@ -53,6 +53,7 @@
     ],
     "change_files": [
         ".github/workflows/thread-gates.yml",
+        ".github/workflows/test.yml",
         "api/app/services/agent_execution_service.py",
         "api/app/services/automation_usage_service.py",
         "api/app/services/runtime_service.py",
