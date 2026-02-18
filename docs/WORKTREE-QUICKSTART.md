@@ -28,15 +28,13 @@ git pull --ff-only origin main
 ## Mandatory Preflight (before edits)
 
 ```bash
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 ```
 
 Must pass all:
-- running in linked worktree (not primary workspace),
+- linked worktree (not primary workspace),
 - current worktree clean,
-- primary workspace clean,
-- latest `main` CI green,
-- no open PRs with failing checks.
+- primary workspace clean.
 
 ## Mandatory Local Guard (before commit/push)
 

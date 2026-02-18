@@ -19,7 +19,7 @@ Spec → Test → Implement → CI → Review → Merge
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
 2. Start gate (required before any edits)
-   - Run: `python3 scripts/ensure_worktree_start_clean.py --json`
+   - Run: `make start-gate`
    - If it fails, stop and fix blockers first.
 3. Pre-commit local gate (required)
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
@@ -67,13 +67,13 @@ Spec → Test → Implement → CI → Review → Merge
 
 ```bash
 # Mandatory first step for every thread
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 
 # Worktree setup for Codex thread start
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 
 # API
 cd api && uvicorn app.main:app --reload --port 8000
@@ -92,7 +92,7 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 ./scripts/verify_web_api_deploy.sh
 
 # Start gate (required before starting a new task)
-python3 scripts/ensure_worktree_start_clean.py --json
+make start-gate
 
 # PR check failure prevention + tracking (default before commit/push)
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
