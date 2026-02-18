@@ -61,7 +61,7 @@ jobs:
 
       - name: Audit automation readiness contract
         run: |
-          cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning
+          cd api && pytest -q tests/test_automation_usage_api.py::test_provider_readiness_reports_blocking_required_provider_gaps
 
       - name: Update spec coverage (blocking execution)
         run: |
