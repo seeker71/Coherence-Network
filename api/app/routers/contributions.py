@@ -108,7 +108,7 @@ async def get_contribution(contribution_id: UUID, store: GraphStore = Depends(ge
 
 
 @router.get("/contributions", response_model=list[Contribution])
-async def list_contributions(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[Contribution]:
+def list_contributions(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[Contribution]:
     """List all contributions (read-only)."""
     return store.list_contributions(limit=limit)
 
