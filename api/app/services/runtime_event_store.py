@@ -42,6 +42,7 @@ class RuntimeEventRecord(Base):
 
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+_SCHEMA_INITIALIZED = False
 
 
 def _database_url() -> str:
@@ -92,10 +93,14 @@ def _engine():
 
 
 def ensure_schema() -> None:
+    global _SCHEMA_INITIALIZED
+    if _SCHEMA_INITIALIZED:
+        return
     engine = _engine()
     if engine is None:
         return
     Base.metadata.create_all(bind=engine)
+    _SCHEMA_INITIALIZED = True
 
 
 @contextmanager
@@ -137,15 +142,16 @@ def write_event(event: RuntimeEvent) -> None:
         session.add(row)
 
 
-def list_events(limit: int = 100) -> list[RuntimeEvent]:
+def list_events(limit: int = 100, since: datetime | None = None) -> list[RuntimeEvent]:
     ensure_schema()
+    if since is not None and since.tzinfo is None:
+        since = since.replace(tzinfo=timezone.utc)
     with _session() as session:
-        rows = (
-            session.query(RuntimeEventRecord)
-            .order_by(RuntimeEventRecord.recorded_at.desc())
-            .limit(max(1, min(limit, 5000)))
-            .all()
-        )
+        query = session.query(RuntimeEventRecord)
+        if since is not None:
+            query = query.filter(RuntimeEventRecord.recorded_at >= since)
+        query = query.order_by(RuntimeEventRecord.recorded_at.desc()).limit(max(1, min(limit, 5000)))
+        rows = query.all()
 
     out: list[RuntimeEvent] = []
     for row in rows:
