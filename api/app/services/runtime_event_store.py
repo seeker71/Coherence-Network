@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine
+from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -43,6 +43,7 @@ class RuntimeEventRecord(Base):
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 _SCHEMA_INITIALIZED = False
+_SCHEMA_INITIALIZED_URL = ""
 
 
 def _database_url() -> str:
@@ -84,6 +85,9 @@ def _engine():
         return None
     if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
         return _ENGINE_CACHE["engine"]
+    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
+    _SCHEMA_INITIALIZED = False
+    _SCHEMA_INITIALIZED_URL = ""
     engine = _create_engine(url)
     SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
     _ENGINE_CACHE["url"] = url
@@ -92,15 +96,29 @@ def _engine():
     return engine
 
 
+def _table_exists(engine: Any, table_name: str) -> bool:
+    try:
+        return table_name in inspect(engine).get_table_names()
+    except Exception:
+        return False
+
+
 def ensure_schema() -> None:
-    global _SCHEMA_INITIALIZED
-    if _SCHEMA_INITIALIZED:
-        return
+    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
+    url = _database_url()
+    if _SCHEMA_INITIALIZED and _SCHEMA_INITIALIZED_URL == url:
+        engine = _engine()
+        if engine is not None and _table_exists(engine, "runtime_events"):
+            return
+        _SCHEMA_INITIALIZED = False
+        _SCHEMA_INITIALIZED_URL = ""
     engine = _engine()
-    if engine is None:
+    if engine is None or not url:
         return
-    Base.metadata.create_all(bind=engine)
+    if not _table_exists(engine, "runtime_events"):
+        Base.metadata.create_all(bind=engine)
     _SCHEMA_INITIALIZED = True
+    _SCHEMA_INITIALIZED_URL = url
 
 
 @contextmanager

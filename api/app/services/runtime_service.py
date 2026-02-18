@@ -56,6 +56,31 @@ def _runtime_cost_per_second() -> float:
     return float(os.getenv("RUNTIME_COST_PER_SECOND", "0.002"))
 
 
+def _runtime_events_store_cache_key() -> str:
+    if runtime_event_store.enabled():
+        url = (
+            os.getenv("RUNTIME_DATABASE_URL", "").strip()
+            or os.getenv("DATABASE_URL", "").strip()
+            or "<runtime-database>"
+        )
+        return f"db:{url}"
+    return f"file:{_events_path()}"
+
+
+def _runtime_events_cache_key(limit: int, since: datetime | None) -> str:
+    cutoff = "all"
+    if since is not None:
+        since_ts = int(since.timestamp())
+        cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
+    return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}"
+
+
+def _invalidate_runtime_events_cache() -> None:
+    _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
+    _RUNTIME_EVENTS_CACHE["cache_key"] = ""
+    _RUNTIME_EVENTS_CACHE["rows"] = []
+
+
 def _ensure_events_store() -> None:
     if runtime_event_store.enabled():
         runtime_event_store.ensure_schema()
@@ -267,6 +292,7 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
         data = _read_store()
         data["events"].append(event.model_dump(mode="json"))
         _write_store(data)
+    _invalidate_runtime_events_cache()
     return event
 
 
@@ -277,7 +303,7 @@ def list_events(limit: int = 100, since: datetime | None = None) -> list[Runtime
     else:
         since_ts = int(since.timestamp())
         cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
-    cache_key = f"limit={requested_limit}|cutoff={cutoff}"
+    cache_key = _runtime_events_cache_key(requested_limit, since)
     now = time.time()
     if (
         _RUNTIME_EVENTS_CACHE.get("expires_at", 0.0) > now
