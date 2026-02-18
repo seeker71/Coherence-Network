@@ -6,9 +6,13 @@
   "change_files": [
     ".githooks/pre-push",
     ".github/workflows/thread-gates.yml",
-    "docs/PR-CHECK-FAILURE-TRIAGE.md"
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override-hardened.json"
   ],
-  "change_intent": "docs_only",
+  "change_intent": "runtime_fix",
   "ci_validation": {
     "run_url": "https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml",
     "status": "pending"
@@ -53,8 +57,11 @@
   "files_owned": [
     ".githooks/pre-push",
     ".github/workflows/thread-gates.yml",
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
     "docs/PR-CHECK-FAILURE-TRIAGE.md",
-    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json"
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override-hardened.json"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
