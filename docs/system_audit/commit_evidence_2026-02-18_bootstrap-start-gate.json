@@ -1,7 +1,7 @@
 {
   "date": "2026-02-18",
   "thread_branch": "codex/fix-start-gate-bootstrap",
-  "commit_scope": "Make worktree bootstrap resilient to transient and auth-related GitHub gate failures",
+  "commit_scope": "Fix commit-evidence cache source-keying when switching commit evidence DB URLs",
   "files_owned": [
     "api/app/services/commit_evidence_service.py",
     "api/app/services/idea_service.py",
@@ -60,7 +60,8 @@
     "status": "pass",
     "commands": [
       "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "cd api && pytest -q tests/test_inventory_discovery_sources.py::test_inventory_reads_commit_evidence_from_store tests/test_inventory_discovery_sources.py::test_inventory_commit_evidence_returns_empty_when_store_has_no_rows"
     ]
   },
   "e2e_validation": {

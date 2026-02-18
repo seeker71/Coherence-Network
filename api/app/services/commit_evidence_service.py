@@ -36,6 +36,7 @@ _SCHEMA_INITIALIZED_URL = ""
 _LIST_RECORDS_CACHE: dict[str, Any] = {
     "expires_at": 0.0,
     "items": [],
+    "source_key": "",
 }
 _LIST_RECORDS_CACHE_TTL_SECONDS = 30.0
 
@@ -220,6 +221,11 @@ def bulk_upsert(records: list[dict[str, Any]]) -> int:
 def list_records(limit: int = 400) -> list[dict[str, Any]]:
     now = time.time()
     requested_limit = max(1, min(int(limit), 5000))
+    current_source = database_url()
+    cached_source = str(_LIST_RECORDS_CACHE.get("source_key", ""))
+    if cached_source != current_source:
+        _invalidate_record_cache()
+
     cached_until = _LIST_RECORDS_CACHE.get("expires_at", 0.0)
     cached_items = _LIST_RECORDS_CACHE.get("items", [])
     if cached_until > now and cached_items:
@@ -244,4 +250,5 @@ def list_records(limit: int = 400) -> list[dict[str, Any]]:
             out.append(payload)
     _LIST_RECORDS_CACHE["expires_at"] = now + _LIST_RECORDS_CACHE_TTL_SECONDS
     _LIST_RECORDS_CACHE["items"] = out
+    _LIST_RECORDS_CACHE["source_key"] = current_source
     return out
