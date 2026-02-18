@@ -16,7 +16,7 @@ def get_store(request: Request) -> GraphStore:
 
 
 @router.post("/contributors", response_model=Contributor, status_code=201)
-async def create_contributor(contributor: ContributorCreate, store: GraphStore = Depends(get_store)) -> Contributor:
+def create_contributor(contributor: ContributorCreate, store: GraphStore = Depends(get_store)) -> Contributor:
     """Create a new contributor."""
     contrib = Contributor(**contributor.model_dump())
     try:
@@ -30,7 +30,7 @@ async def create_contributor(contributor: ContributorCreate, store: GraphStore =
     response_model=Contributor,
     responses={404: {"model": ErrorDetail}},
 )
-async def get_contributor(contributor_id: UUID, store: GraphStore = Depends(get_store)) -> Contributor:
+def get_contributor(contributor_id: UUID, store: GraphStore = Depends(get_store)) -> Contributor:
     """Get contributor by ID."""
     contrib = store.get_contributor(contributor_id)
     if not contrib:
@@ -39,6 +39,6 @@ async def get_contributor(contributor_id: UUID, store: GraphStore = Depends(get_
 
 
 @router.get("/contributors", response_model=list[Contributor])
-async def list_contributors(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[Contributor]:
+def list_contributors(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[Contributor]:
     """List all contributors."""
     return store.list_contributors(limit=limit)

@@ -142,7 +142,7 @@ async def sync_asset_modularity_tasks(
 
 
 @router.get("/inventory/flow")
-async def spec_process_implementation_validation_flow(
+def spec_process_implementation_validation_flow(
     request: Request,
     idea_id: str | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
