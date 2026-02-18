@@ -26,6 +26,14 @@ from app.models.runtime import (
 from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
 
 
+_RUNTIME_EVENTS_CACHE: dict[str, Any] = {
+    "expires_at": 0.0,
+    "cache_key": "",
+    "rows": [],
+}
+_RUNTIME_EVENTS_CACHE_TTL_SECONDS = 30.0
+
+
 def _default_events_path() -> Path:
     return Path(__file__).resolve().parents[2] / "logs" / "runtime_events.json"
 
@@ -262,9 +270,24 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     return event
 
 
-def list_events(limit: int = 100) -> list[RuntimeEvent]:
+def list_events(limit: int = 100, since: datetime | None = None) -> list[RuntimeEvent]:
+    requested_limit = max(1, min(int(limit), 2000))
+    if since is None:
+        cutoff = "all"
+    else:
+        since_ts = int(since.timestamp())
+        cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
+    cache_key = f"limit={requested_limit}|cutoff={cutoff}"
+    now = time.time()
+    if (
+        _RUNTIME_EVENTS_CACHE.get("expires_at", 0.0) > now
+        and _RUNTIME_EVENTS_CACHE.get("cache_key") == cache_key
+        and isinstance(_RUNTIME_EVENTS_CACHE.get("rows"), list)
+    ):
+        return [row.model_copy(deep=True) for row in _RUNTIME_EVENTS_CACHE["rows"][:requested_limit]]
+
     if runtime_event_store.enabled():
-        rows = runtime_event_store.list_events(limit=max(1, min(limit, 5000)))
+        rows = runtime_event_store.list_events(limit=max(1, min(requested_limit, 5000)), since=since)
         out: list[RuntimeEvent] = []
         for event in rows:
             try:
@@ -277,7 +300,11 @@ def list_events(limit: int = 100) -> list[RuntimeEvent]:
             except Exception:
                 continue
         out.sort(key=lambda x: x.recorded_at, reverse=True)
-        return out[: max(1, min(limit, 2000))]
+        out = out[:requested_limit]
+        _RUNTIME_EVENTS_CACHE["expires_at"] = now + _RUNTIME_EVENTS_CACHE_TTL_SECONDS
+        _RUNTIME_EVENTS_CACHE["cache_key"] = cache_key
+        _RUNTIME_EVENTS_CACHE["rows"] = out
+        return out
 
     data = _read_store()
     out: list[RuntimeEvent] = []
@@ -293,13 +320,24 @@ def list_events(limit: int = 100) -> list[RuntimeEvent]:
         except Exception:
             continue
     out.sort(key=lambda x: x.recorded_at, reverse=True)
-    return out[: max(1, min(limit, 2000))]
+    out = out[:requested_limit]
+    _RUNTIME_EVENTS_CACHE["expires_at"] = now + _RUNTIME_EVENTS_CACHE_TTL_SECONDS
+    _RUNTIME_EVENTS_CACHE["cache_key"] = cache_key
+    _RUNTIME_EVENTS_CACHE["rows"] = out
+    return out
 
 
-def summarize_by_idea(seconds: int = 3600) -> list[IdeaRuntimeSummary]:
+def summarize_by_idea(
+    seconds: int = 3600,
+    event_limit: int = 2000,
+    event_rows: list[RuntimeEvent] | None = None,
+) -> list[IdeaRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    rows = [e for e in list_events(limit=2000) if e.recorded_at >= cutoff]
+    if event_rows is None:
+        rows = list_events(limit=max(1, min(int(event_limit), 5000)), since=cutoff)
+    else:
+        rows = [row for row in event_rows if row.recorded_at >= cutoff]
 
     grouped: dict[str, list[RuntimeEvent]] = {}
     for event in rows:
@@ -329,7 +367,7 @@ def summarize_by_idea(seconds: int = 3600) -> list[IdeaRuntimeSummary]:
 def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    rows = [e for e in list_events(limit=2000) if e.recorded_at >= cutoff]
+    rows = list_events(limit=2000, since=cutoff)
 
     grouped: dict[str, list[RuntimeEvent]] = {}
     for event in rows:
@@ -635,7 +673,7 @@ def summarize_endpoint_attention(
     idea_rows = _load_idea_value_rows()
 
     window_start = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    attention_events = [e for e in list_events(limit=2000) if e.recorded_at >= window_start]
+    attention_events = list_events(limit=2000, since=window_start)
     by_endpoint: dict[str, list[RuntimeEvent]] = {}
     for event in attention_events:
         by_endpoint.setdefault(event.endpoint, []).append(event)

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 
 type IdeaQuestion = {
   question: string;
@@ -150,37 +151,35 @@ const API_NAV_CARDS: Array<{ href: string; title: string; description: string }>
 ];
 
 async function loadIdeas(): Promise<IdeasResponse | null> {
-  try {
-    const res = await fetch(`${getApiBase()}/api/ideas`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as IdeasResponse;
-  } catch {
+  const data = await fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas`, {}, 5000);
+  if (!data) {
     return null;
   }
+  return data;
 }
 
 async function loadInventory(): Promise<InventoryResponse | null> {
-  try {
-    const res = await fetch(`${getApiBase()}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as InventoryResponse;
-  } catch {
+  const data = await fetchJsonOrNull<InventoryResponse>(
+    `${getApiBase()}/api/inventory/system-lineage?runtime_window_seconds=86400`,
+    { cache: "no-store" },
+    5000,
+  );
+  if (!data) {
     return null;
   }
+  return data;
 }
 
 async function loadRuntimeSummary(): Promise<RuntimeSummaryResponse | null> {
-  try {
-    const res = await fetch(`${getApiBase()}/api/runtime/ideas/summary?seconds=86400`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as RuntimeSummaryResponse;
-  } catch {
+  const data = await fetchJsonOrNull<RuntimeSummaryResponse>(
+    `${getApiBase()}/api/runtime/ideas/summary?seconds=86400`,
+    { cache: "no-store" },
+    5000,
+  );
+  if (!data) {
     return null;
   }
+  return data;
 }
 
 function formatNumber(value: number | undefined): string {

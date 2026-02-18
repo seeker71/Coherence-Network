@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
@@ -159,19 +160,30 @@ async function loadDataForIdea(ideaId: string): Promise<{
   const API = getApiBase();
   const flowParams = new URLSearchParams({ runtime_window_seconds: "86400" });
   if (ideaId) flowParams.set("idea_id", ideaId);
-  const [flowRes, contributorsRes, contributionsRes] = await Promise.all([
-    fetch(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }),
-    fetch(`${API}/api/contributors`, { cache: "no-store" }),
-    fetch(`${API}/api/contributions`, { cache: "no-store" }),
+  const [flowData, contributorData, contributionData] = await Promise.all([
+    fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions`, { cache: "no-store" }, 5000),
   ]);
-  if (!flowRes.ok) throw new Error(`flow HTTP ${flowRes.status}`);
-  if (!contributorsRes.ok) throw new Error(`contributors HTTP ${contributorsRes.status}`);
-  if (!contributionsRes.ok) throw new Error(`contributions HTTP ${contributionsRes.status}`);
 
   return {
-    flow: (await flowRes.json()) as FlowResponse,
-    contributors: ((await contributorsRes.json()) as Contributor[]).slice(0, 500),
-    contributions: ((await contributionsRes.json()) as Contribution[]).slice(0, 2000),
+    flow: flowData || {
+      summary: {
+        ideas: 0,
+        with_spec: 0,
+        with_process: 0,
+        with_implementation: 0,
+        with_validation: 0,
+        with_contributors: 0,
+        with_contributions: 0,
+        blocked_ideas: 0,
+        queue_items: 0,
+      },
+      unblock_queue: [],
+      items: [],
+    },
+    contributors: Array.isArray(contributorData) ? contributorData.slice(0, 500) : [],
+    contributions: Array.isArray(contributionData) ? contributionData.slice(0, 2000) : [],
   };
 }
 

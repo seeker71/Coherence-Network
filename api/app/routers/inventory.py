@@ -19,8 +19,16 @@ def get_store(request: Request) -> GraphStore:
 @router.get("/inventory/system-lineage")
 async def system_lineage_inventory(
     runtime_window_seconds: int = Query(3600, ge=60, le=2592000),
+    lineage_link_limit: int = Query(300, ge=1, le=1000),
+    usage_event_limit: int = Query(1000, ge=1, le=5000),
+    runtime_event_limit: int = Query(2000, ge=1, le=5000),
 ) -> dict:
-    return inventory_service.build_system_lineage_inventory(runtime_window_seconds=runtime_window_seconds)
+    return inventory_service.build_system_lineage_inventory(
+        runtime_window_seconds=runtime_window_seconds,
+        lineage_link_limit=lineage_link_limit,
+        usage_event_limit=usage_event_limit,
+        runtime_event_limit=runtime_event_limit,
+    )
 
 
 @router.get("/inventory/routes/canonical")
@@ -146,17 +154,30 @@ def spec_process_implementation_validation_flow(
     request: Request,
     idea_id: str | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    contributor_limit: int = Query(500, ge=1, le=10000),
+    contribution_limit: int = Query(2000, ge=1, le=20000),
+    asset_limit: int = Query(500, ge=1, le=10000),
+    spec_limit: int = Query(200, ge=1, le=2000),
+    lineage_link_limit: int = Query(300, ge=1, le=1000),
+    usage_event_limit: int = Query(1200, ge=1, le=5000),
+    commit_evidence_limit: int = Query(500, ge=1, le=3000),
+    runtime_event_limit: int = Query(2000, ge=1, le=5000),
 ) -> dict:
     store = get_store(request)
-    contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=5000)]
-    contribution_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=10000)]
-    asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=5000)]
+    contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=contributor_limit)]
+    contribution_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=contribution_limit)]
+    asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=asset_limit)]
     return inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
         runtime_window_seconds=runtime_window_seconds,
         contributor_rows=contributor_rows,
         contribution_rows=contribution_rows,
         asset_rows=asset_rows,
+        spec_registry_limit=spec_limit,
+        lineage_link_limit=lineage_link_limit,
+        usage_event_limit=usage_event_limit,
+        commit_evidence_limit=commit_evidence_limit,
+        runtime_event_limit=runtime_event_limit,
     )
 
 

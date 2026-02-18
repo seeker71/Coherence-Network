@@ -9,7 +9,15 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import Float, ForeignKey, Integer, String, Text, create_engine, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    Session,
+    mapped_column,
+    relationship,
+    selectinload,
+    sessionmaker,
+)
 from sqlalchemy.pool import NullPool
 
 from app.models.idea import Idea, IdeaQuestion, ManifestationStatus
@@ -164,15 +172,15 @@ def _load_interfaces(raw: str) -> list[str]:
 def load_ideas() -> list[Idea]:
     ensure_schema()
     with _session() as session:
-        rows = session.query(IdeaRecord).order_by(IdeaRecord.position.asc(), IdeaRecord.id.asc()).all()
+        rows = (
+            session.query(IdeaRecord)
+            .options(selectinload(IdeaRecord.questions))
+            .order_by(IdeaRecord.position.asc(), IdeaRecord.id.asc())
+            .all()
+        )
         out: list[Idea] = []
         for row in rows:
-            questions = (
-                session.query(IdeaQuestionRecord)
-                .filter(IdeaQuestionRecord.idea_id == row.id)
-                .order_by(IdeaQuestionRecord.position.asc(), IdeaQuestionRecord.id.asc())
-                .all()
-            )
+            questions = sorted(row.questions, key=lambda q: (q.position, q.id))
             out.append(
                 Idea(
                     id=row.id,

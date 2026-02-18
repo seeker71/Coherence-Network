@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +126,8 @@ STANDING_QUESTION_TEXT = (
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
 REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = ("federated-instance-aggregation",)
+_IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
+_IDEAS_CACHE_TTL_SECONDS = 180.0
 
 DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     "coherence-network-agent-pipeline": {
@@ -214,10 +217,46 @@ def _should_include_default_tracked_ideas() -> bool:
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
 
 
+def _invalidate_ideas_cache() -> None:
+    _IDEAS_CACHE["expires_at"] = 0.0
+
+
+def _cache_ideas(ideas: list[Idea]) -> None:
+    _IDEAS_CACHE["items"] = [idea.model_copy(deep=True) for idea in ideas]
+    _IDEAS_CACHE["expires_at"] = time.time() + _IDEAS_CACHE_TTL_SECONDS
+
+
+def _read_ideas_cache() -> list[Idea] | None:
+    if _IDEAS_CACHE.get("expires_at", 0.0) <= time.time():
+        return None
+    cached = _IDEAS_CACHE.get("items")
+    if not isinstance(cached, list):
+        return None
+    return [idea.model_copy(deep=True) for idea in cached]
+
+
 def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
-    return _tracked_idea_ids_from_store()
+    now = time.time()
+    cache_key = (
+        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
+        f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
+        f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
+        f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+        f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
+    )
+    if (
+        _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
+        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+    ):
+        return list(_TRACKED_IDEA_CACHE.get("idea_ids", []))
+    idea_ids = _tracked_idea_ids_from_store()
+
+    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
+    _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
+    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    return idea_ids
 
 
 def _humanize_idea_id(idea_id: str) -> str:
@@ -345,6 +384,10 @@ def _read_legacy_file_ideas() -> tuple[list[Idea], str]:
 
 
 def _read_ideas() -> list[Idea]:
+    cached = _read_ideas_cache()
+    if cached is not None:
+        return cached
+
     ideas = idea_registry_service.load_ideas()
     if not ideas:
         ideas, source = _read_legacy_file_ideas()
@@ -360,6 +403,7 @@ def _read_ideas() -> list[Idea]:
             bootstrap_source = f"{bootstrap_source}+standing_question"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
         _write_snapshot_file(ideas)
+        _cache_ideas(ideas)
         return ideas
 
     ideas, required_changed = _ensure_required_system_ideas(ideas)
@@ -371,12 +415,14 @@ def _read_ideas() -> list[Idea]:
         path = _portfolio_path()
         if not os.path.isfile(path):
             _write_snapshot_file(ideas)
+    _cache_ideas(ideas)
     return ideas
 
 
 def _write_ideas(ideas: list[Idea]) -> None:
     idea_registry_service.save_ideas(ideas)
     _write_snapshot_file(ideas)
+    _cache_ideas(ideas)
 
 
 def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
