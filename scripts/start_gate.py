@@ -46,14 +46,18 @@ def main() -> None:
     git_marker = Path(".git")
     if not git_marker.exists():
         raise SystemExit("start-gate: missing .git marker")
-    if not git_marker.is_file():
-        raise SystemExit(
-            "start-gate: expected linked worktree (.git file). Refuse to run in primary workspace."
-        )
 
-    gitdir_line = git_marker.read_text(encoding="utf-8").strip()
-    if not gitdir_line.startswith("gitdir:"):
-        raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
+    if git_marker.is_file():
+        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
+        if not gitdir_line.startswith("gitdir:"):
+            raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
+
+        gitdir = gitdir_line.split(":", 1)[1].strip()
+        primary = Path(gitdir).resolve().parent.parent.parent
+    elif git_marker.is_dir():
+        primary = Path.cwd().resolve()
+    else:
+        raise SystemExit("start-gate: unrecognized .git marker type")
 
     proc = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -62,9 +66,6 @@ def main() -> None:
         raise SystemExit(
             "start-gate: current worktree has local changes. Clean it before starting a task."
         )
-
-    gitdir = gitdir_line.split(":", 1)[1].strip()
-    primary = Path(gitdir).resolve().parent.parent.parent
 
     proc = subprocess.run(
         ["git", "config", "--get", "remote.origin.url"],
