@@ -1,0 +1,66 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "main",
+  "commit_scope": "Make worktree bootstrap resilient to transient and auth-related GitHub gate failures",
+  "files_owned": [
+    "scripts/start_gate.py",
+    ".codex/environments/environment.toml"
+  ],
+  "idea_ids": ["worktree-bootstrap-resilience"],
+  "spec_ids": ["process-bootstrap-resilience-001"],
+  "task_ids": ["task-2026-02-18-start-gate-bootstrap"],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+    "gh auth status",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_bootstrap-start-gate.json"
+  ],
+  "change_files": [
+    ".codex/environments/environment.toml",
+    "scripts/start_gate.py",
+    "docs/system_audit/commit_evidence_2026-02-18_bootstrap-start-gate.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation pending"
+  }
+}
