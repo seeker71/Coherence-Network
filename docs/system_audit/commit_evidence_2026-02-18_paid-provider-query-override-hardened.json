@@ -1,0 +1,92 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "Harden paid-provider query override parsing and persist override into task context before execution.",
+  "files_owned": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override.json",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override-hardened.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "006"
+  ],
+  "task_ids": [
+    "runtime-observability-deploy-readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5.3-codex"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_hyphenated_force_paid_query_key tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_case_insensitive_force_paid_query_key",
+    "python3 scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json",
+    "curl -sS -X POST https://coherence-network-production.up.railway.app/api/agent/tasks -H 'Content-Type: application/json' -d '{\"direction\":\"public deploy probe for paid override\", \"task_type\":\"impl\", \"context\":{\"executor\":\"openclaw\",\"model_override\":\"gpt-5.3-codex\"}}'"
+  ],
+  "change_files": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override.json",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-18T02:39:11Z",
+    "commands": [
+      "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_hyphenated_force_paid_query_key tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_case_insensitive_force_paid_query_key",
+      "python3 scripts/validate_public_deploy_contract.py --json"
+    ],
+    "environment": {
+      "python": "3.11"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "fail",
+    "environment": "railway",
+    "notes": "Main deployment has not been updated with this branch yet; public probe confirms override still blocked on current production."
+  },
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "POST /api/agent/tasks/{id}/execute?force-paid-providers=true should bypass paid-provider block and run paid task on deployed API.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{id}/execute"
+    ],
+    "test_flows": [
+      "Create paid-route task via model_override=gpt-5.3-codex",
+      "Execute task without override and confirm blocked",
+      "Execute with force-paid-query and confirm completed with paid provider execution metadata"
+    ],
+    "block_reason": "Production build under test remains an older commit that still blocks query override."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Need production deployment of this branch and rerun of e2e before moving forward."
+  }
+}

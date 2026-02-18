@@ -3,8 +3,14 @@
   "thread_branch": "codex/public-observability-deploy-realign",
   "commit_scope": "Make paid-provider override handling robust for execute query flags across deployments.",
   "files_owned": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
     "api/app/routers/agent.py",
-    "api/tests/test_agent_execute_endpoint.py"
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override.json",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override-hardened.json"
   ],
   "idea_ids": [
     "portfolio-governance"
@@ -36,8 +42,13 @@
     "python3 scripts/verify_public_deploy_contract.py --json"
   ],
   "change_files": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
     "api/app/routers/agent.py",
-    "api/tests/test_agent_execute_endpoint.py"
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_paid-provider-query-override-hardened.json",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json"
   ],
   "change_intent": "runtime_fix",
   "local_validation": {

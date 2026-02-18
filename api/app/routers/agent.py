@@ -3,7 +3,9 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
+from urllib.parse import parse_qs
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 
@@ -40,24 +42,37 @@ def _truthy(value: str | bool | None) -> bool:
 
 def _coerce_force_paid_override(request: Request) -> bool:
     """Read force-paid override flags directly from raw query values."""
-    query = request.query_params
-    if not query:
+    raw_query = request.url.query
+    if not raw_query:
         return False
 
-    query_flag_names = (
+    query_flag_names = {
         "force_paid_providers",
         "force_paid_provider",
         "force_allow_paid_providers",
         "allow_paid_providers",
         "allow_paid_provider",
-        "force-paid-providers",
-        "force-paid-provider",
-        "force-allow-paid-providers",
-        "allow-paid-providers",
-        "allow-paid-provider",
-    )
+        "force_paid",
+    }
+
+    normalized_queries = parse_qs(raw_query, keep_blank_values=True, strict_parsing=False)
+    for raw_key, raw_values in normalized_queries.items():
+        normalized_key = re.sub(r"[^a-z0-9]+", "_", raw_key.strip().lower())
+        if normalized_key not in query_flag_names:
+            continue
+        if any(raw_values):
+            if any(_truthy(raw_value) for raw_value in raw_values):
+                return True
+            continue
+        return True
+
+    query = request.query_params
     for name in query_flag_names:
         raw = query.get(name)
+        if raw is None:
+            continue
+        if raw == "":
+            return True
         if _truthy(raw):
             return True
     return False
@@ -185,6 +200,11 @@ async def execute_task(
         or _truthy(allow_paid_provider)
         or _coerce_force_paid_override(request)
     )
+    if force_paid_override:
+        task_ctx = task.get("context")
+        ctx: dict[str, object] = task_ctx if isinstance(task_ctx, dict) else {}
+        if not _truthy(str(ctx.get("force_paid_providers") or "")):
+            agent_service.update_task(task_id, context={"force_paid_providers": True})
 
     background_tasks.add_task(
         agent_execution_service.execute_task,
