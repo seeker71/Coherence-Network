@@ -100,7 +100,7 @@ def main() -> None:
     failed_prs: list[dict] = []
 
     runs_payload = run_json(
-        ["gh", "api", f"repos/{repo_slug}/actions/runs", "-f", "branch=main", "-f", "per_page=20"],
+        ["gh", "api", f"repos/{repo_slug}/actions/runs?branch=main&per_page=20"],
         required=require_gh_checks,
     )
     if runs_payload is None:
@@ -139,7 +139,7 @@ def main() -> None:
             )
 
     pulls_payload = run_json(
-        ["gh", "api", f"repos/{repo_slug}/pulls", "-f", "state=open", "-f", "per_page=50"],
+        ["gh", "api", f"repos/{repo_slug}/pulls?state=open&per_page=50"],
         required=require_gh_checks,
     )
     if pulls_payload is not None:
@@ -159,7 +159,7 @@ def main() -> None:
                 continue
 
             checks_payload = run_json(
-                ["gh", "api", f"repos/{repo_slug}/commits/{sha}/check-runs", "-f", "per_page=100"],
+                ["gh", "api", f"repos/{repo_slug}/commits/{sha}/check-runs?per_page=100"],
                 required=require_gh_checks,
             )
             if checks_payload is None:
