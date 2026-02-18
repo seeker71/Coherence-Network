@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/thread-startup-readiness",
+  "commit_scope": "Refine thread startup documentation and workspace auth sample path for demand-driven readiness flow",
+  "files_owned": [
+    ".codex/ghx-zshrc.example",
+    "docs/CODEX-THREAD-PROCESS.md"
+  ],
+  "idea_ids": [
+    "thread-runtime-ports-readiness"
+  ],
+  "spec_ids": [
+    "003-decision-loop"
+  ],
+  "task_ids": [
+    "task_2026_02_18_thread_startup_readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected",
+    "./scripts/verify_worktree_local_web.sh --thread-ports",
+    "./scripts/verify_web_api_deploy.sh",
+    "./scripts/verify_full_deployment.sh"
+  ],
+  "change_files": [
+    ".codex/environments/environment.toml",
+    ".codex/ghx-workspace-profiles.conf",
+    ".codex/ghx-zshrc.example",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/ghx.sh",
+    "scripts/start_gate.py",
+    "scripts/thread_runtime_ports.sh",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local deploy checks pass; CI validation remains pending on PR run"
+  }
+}
