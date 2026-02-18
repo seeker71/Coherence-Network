@@ -124,6 +124,21 @@ def _cache_key(*parts: object) -> str:
     return "|".join(str(part) for part in parts)
 
 
+def _inventory_environment_cache_key() -> str:
+    return "|".join(
+        [
+            f"idea_portfolio={os.getenv('IDEA_PORTFOLIO_PATH', '')}",
+            f"value_lineage={os.getenv('VALUE_LINEAGE_PATH', '')}",
+            f"runtime_events={os.getenv('RUNTIME_EVENTS_PATH', '')}",
+            f"runtime_idea_map={os.getenv('RUNTIME_IDEA_MAP_PATH', '')}",
+            f"idea_registry_db={os.getenv('IDEA_REGISTRY_DATABASE_URL', '')}|{os.getenv('IDEA_REGISTRY_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
+            f"commit_evidence_db={os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '')}|{os.getenv('DATABASE_URL', '')}",
+            f"commit_evidence_dir={os.getenv('IDEA_COMMIT_EVIDENCE_DIR', '')}",
+            f"spec_registry_db={os.getenv('GOVERNANCE_DATABASE_URL', '')}|{os.getenv('GOVERNANCE_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
+        ]
+    )
+
+
 def _read_inventory_cache(cache_name: str, key: str) -> dict[str, Any] | None:
     cache = _INVENTORY_CACHE.get(cache_name, {})
     if not isinstance(cache, dict):
@@ -668,6 +683,7 @@ def build_system_lineage_inventory(
         lineage_link_limit,
         usage_event_limit,
         runtime_event_limit,
+        _inventory_environment_cache_key(),
     )
     cached = _read_inventory_cache("system_lineage", cache_key)
     if cached is not None:
@@ -949,19 +965,25 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
             backend_url = os.getenv("DATABASE_URL", "").strip().lower()
             use_db = required and ("postgresql" in backend_url)
     if use_db:
+        source_key = f"db:{os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '').strip()}|{os.getenv('DATABASE_URL', '').strip()}"
+        now = time.time()
+        cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
+        if (
+            cached_source == source_key
+            and _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
+            and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
+        ):
+            requested_limit = max(1, min(int(limit), 5000))
+            return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
+
         try:
             # When explicitly configured, treat the evidence store as source of truth
             # (including "no rows" -> []) and do not fall back to scanning local files.
-            now = time.time()
             requested_limit = max(1, min(int(limit), 5000))
-            if (
-                _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
-                and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
-            ):
-                return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
             rows = commit_evidence_service.list_records(limit=requested_limit)
             _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
             _DB_EVIDENCE_CACHE["items"] = rows
+            _DB_EVIDENCE_CACHE["source_key"] = source_key
             return rows
         except Exception:
             return []
@@ -3356,6 +3378,7 @@ def build_spec_process_implementation_validation_flow(
         usage_event_limit,
         commit_evidence_limit,
         runtime_event_limit,
+        _inventory_environment_cache_key(),
         _row_signature(contributor_rows),
         _row_signature(contribution_rows),
         _row_signature(asset_rows),
