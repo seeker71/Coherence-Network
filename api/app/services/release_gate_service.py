@@ -877,6 +877,68 @@ def check_http_json_endpoint(url: str, timeout: float = 8.0) -> dict[str, Any]:
         return {"url": url, "ok": False, "status_code": None, "error": str(exc)}
 
 
+def check_api_execute_paid_override_header_support(api_base: str, timeout: float = 8.0) -> dict[str, Any]:
+    """Verify the execute endpoint advertises the paid-provider header override.
+
+    This is used in public deployment contract checks to distinguish stale API
+    deployments that still expose an older schema.
+    """
+    base = api_base.rstrip("/")
+    openapi_url = f"{base}/openapi.json"
+    report = check_http_json_endpoint(openapi_url, timeout=timeout)
+    report["name"] = "railway_api_execute_paid_override_header"
+
+    if not report.get("ok") or not isinstance(report.get("json"), dict):
+        report["ok"] = False
+        report["error"] = report.get("error") or "openapi_unavailable"
+        return report
+
+    payload = report.get("json")
+    if not isinstance(payload, dict):
+        report["ok"] = False
+        report["error"] = "openapi_payload_invalid"
+        return report
+
+    paths = payload.get("paths")
+    if not isinstance(paths, dict):
+        report["ok"] = False
+        report["error"] = "openapi_paths_missing"
+        return report
+
+    execute_path = paths.get("/api/agent/tasks/{task_id}/execute")
+    if not isinstance(execute_path, dict):
+        report["ok"] = False
+        report["error"] = "execute_route_missing"
+        return report
+
+    post_op = execute_path.get("post")
+    if not isinstance(post_op, dict):
+        report["ok"] = False
+        report["error"] = "execute_route_post_missing"
+        return report
+
+    parameters = post_op.get("parameters")
+    if not isinstance(parameters, list):
+        report["ok"] = False
+        report["error"] = "execute_route_parameters_missing"
+        return report
+
+    has_header_override = any(
+        isinstance(param, dict)
+        and str(param.get("in") or "").lower() == "header"
+        and str(param.get("name") or "").lower() == "x-force-paid-providers"
+        for param in parameters
+    )
+    if not has_header_override:
+        report["ok"] = False
+        report["error"] = "x-force-paid-providers_header_missing"
+        return report
+
+    report["ok"] = True
+    report["has_header_override"] = True
+    return report
+
+
 def check_value_lineage_e2e_flow(api_base: str, timeout: float = 8.0) -> dict[str, Any]:
     """Run a live public transaction check for value-lineage contract behavior."""
     base = api_base.rstrip("/")
@@ -1291,6 +1353,9 @@ def evaluate_public_deploy_contract_report(
     value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
     value_lineage_e2e["name"] = "railway_value_lineage_e2e"
     checks.append(value_lineage_e2e)
+
+    paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
+    checks.append(paid_override_header_check)
 
     report["checks"] = checks
     warnings: list[str] = []
