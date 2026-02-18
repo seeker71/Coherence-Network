@@ -5,7 +5,7 @@ workspace_root = "/Users/ursmuff/source/Coherence-Network"
 [startup]
 required = true
 commands = [
-  "python3 scripts/ensure_worktree_start_clean.py --json"
+  "make start-gate"
 ]
 
 [validation.local]
