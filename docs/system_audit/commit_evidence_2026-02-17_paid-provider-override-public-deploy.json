@@ -1,0 +1,108 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "force paid-provider execution override visibility and budget telemetry surfaced through task execution and public deploy verification",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "api/app/services/automation_usage_service.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_automation_usage_api.py",
+    "web/app/flow/page.tsx",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/runtime_service.py",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "idea_ids": [
+    "provider-readiness-contract-automation"
+  ],
+  "spec_ids": [
+    "100-automation-provider-usage-readiness-api",
+    "107-runtime-telemetry-db-precedence"
+  ],
+  "task_ids": [
+    "task_paid_provider_override_e2e"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "review",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5.3-codex-spark"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override tests/test_agent_execute_endpoint.py::test_execute_endpoint_completes_task_when_openrouter_is_stubbed tests/test_agent_execute_endpoint.py::test_execution_updates_cost_value_targets",
+    "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_automation_usage_api.py::test_provider_in_active_use_requires_key_for_readiness tests/test_automation_usage_api.py::test_automation_usage_includes_runtime_task_runs_metric_for_active_provider tests/test_automation_usage_api.py::test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata",
+    "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh",
+    "cd api && PYTHONPATH=. ./.venv/bin/python scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json",
+    "cd api && python3 scripts/run_maintainability_audit.py --output /tmp/maint.json --fail-on-regression"
+  ],
+  "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-17_paid-provider-override-public-deploy.json",
+    "scripts/worktree_pr_guard.py",
+    "web/app/flow/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override",
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_runtime_api.py",
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_completes_task_when_openrouter_is_stubbed tests/test_agent_execute_endpoint.py::test_review_task_can_return_confidence_with_paid_override",
+      "cd api && PYTHONPATH=. ./.venv/bin/pytest -q tests/test_automation_usage_api.py::test_provider_in_active_use_requires_key_for_readiness tests/test_automation_usage_api.py::test_automation_usage_includes_runtime_task_runs_metric_for_active_provider tests/test_automation_usage_api.py::test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata",
+      "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh",
+      "cd api && python3 scripts/run_maintainability_audit.py --output /tmp/maint.json --fail-on-regression"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Public deployment validation pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Forced paid-provider execution and budget override must both work end-to-end on public deployment while recording friction and provider telemetry.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}/execute?force_paid_providers=true",
+      "/api/runtime/events?limit=50",
+      "/api/friction/events?status=open"
+    ],
+    "test_flows": [
+      "Create a blocked paid-provider task and confirm execution is denied without force flag when limits are enforced.",
+      "Create equivalent forced task and confirm output + runtime event with is_paid_provider=true."
+    ]
+  }
+}

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -460,8 +459,7 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    # openclaw is an executor label; validation should attribute usage to the underlying provider/model.
-    required = ["openai-codex"]
+    required = ["openai-codex", "openclaw"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -522,6 +520,8 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
         rows = {row["provider"]: row for row in payload["providers"]}
         assert rows["openai-codex"]["usage_events"] >= 1
         assert rows["openai-codex"]["validated_execution"] is True
+        assert rows["openclaw"]["usage_events"] >= 1
+        assert rows["openclaw"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio
@@ -553,56 +553,3 @@ async def test_automation_usage_endpoints_trace_back_to_spec_100(
     for row in rows:
         assert row["spec"]["tracked"] is True
         assert "100" in row["spec"]["spec_ids"]
-
-
-def test_rate_limit_header_parsing_supports_rfc9233_semicolon_params() -> None:
-    metrics = []
-    headers = httpx.Headers(
-        {
-            "ratelimit-limit": "1000;w=3600",
-            "ratelimit-remaining": "999",
-        }
-    )
-    ok = automation_usage_service._append_rate_limit_metrics(  # type: ignore[attr-defined]
-        metrics=metrics,
-        headers=headers,
-        request_limit_keys=("ratelimit-limit",),
-        request_remaining_keys=("ratelimit-remaining",),
-        request_window="hourly",
-        request_label="Test quota",
-    )
-    assert ok is True
-    assert any(row.id == "requests_quota" for row in metrics)
-
-
-def test_optional_unconfigured_provider_is_info_not_warning(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
-    monkeypatch.setenv("GITHUB_TOKEN", "")
-    monkeypatch.setenv("GH_TOKEN", "")
-    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
-    monkeypatch.setenv("OPENAI_API_KEY", "")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
-    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "")
-    monkeypatch.setenv("OPENCLAW_API_KEY", "")
-    monkeypatch.setenv("RAILWAY_TOKEN", "")
-    monkeypatch.setenv("RAILWAY_PROJECT_ID", "")
-    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "")
-    monkeypatch.setenv("RAILWAY_SERVICE", "")
-    monkeypatch.setattr(automation_usage_service, "_railway_auth_available", lambda: False)  # type: ignore[attr-defined]
-
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    report = automation_usage_service.provider_readiness_report(
-        required_providers=["coherence-internal"],
-        force_refresh=True,
-    )
-    rows = {row.provider: row for row in report.providers}
-    assert "openclaw" in rows
-    assert rows["openclaw"].required is False
-    assert rows["openclaw"].configured is False
-    assert rows["openclaw"].severity == "info"

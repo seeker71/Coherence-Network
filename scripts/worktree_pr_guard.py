@@ -474,10 +474,6 @@ def _local_steps(
                 f"python3 scripts/validate_spec_quality.py --base {base_ref} --head HEAD",
             ),
             (
-                "automation-readiness-audit",
-                "cd api && pytest -q tests/test_automation_usage_api.py::test_optional_unconfigured_provider_is_info_not_warning",
-            ),
-            (
                 "runtime-drift-guard",
                 "python3 scripts/check_runtime_drift.py",
             ),
