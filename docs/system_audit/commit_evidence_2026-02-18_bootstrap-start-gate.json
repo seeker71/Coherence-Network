@@ -1,8 +1,14 @@
 {
   "date": "2026-02-18",
-  "thread_branch": "main",
+  "thread_branch": "codex/fix-start-gate-bootstrap",
   "commit_scope": "Make worktree bootstrap resilient to transient and auth-related GitHub gate failures",
   "files_owned": [
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
     "scripts/start_gate.py",
     ".codex/environments/environment.toml"
   ],
@@ -41,14 +47,32 @@
   "change_files": [
     ".codex/environments/environment.toml",
     "scripts/start_gate.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
     "docs/system_audit/commit_evidence_2026-02-18_bootstrap-start-gate.json"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_feature",
   "local_validation": {
     "status": "pass",
     "commands": [
       "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Runtime inventory and telemetry endpoints remain stable under cached env changes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/flow",
+      "https://coherence-network-production.up.railway.app/api/runtime/events",
+      "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
+    ],
+    "test_flows": [
+      "runtime cache invalidation updates runtime events immediately for telemetry and flow/traceability inventories"
     ]
   },
   "ci_validation": {
