@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
 import os
+import time
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
@@ -30,6 +32,10 @@ from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
+logger = logging.getLogger(__name__)
+
+
+SLOW_REQUEST_MS = float(os.getenv("API_SLOW_REQUEST_MS", "250"))
 
 # Configure CORS
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
@@ -115,11 +121,9 @@ app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
 
 
 @app.middleware("http")
-async def capture_runtime_metrics(request, call_next):
+async def capture_runtime_metrics(request: Request, call_next):
     if os.getenv("RUNTIME_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
         return await call_next(request)
-
-    import time
 
     start = time.perf_counter()
     response = await call_next(request)
@@ -129,6 +133,19 @@ async def capture_runtime_metrics(request, call_next):
     route_path = getattr(route, "path", None)
     path = route_path if isinstance(route_path, str) and route_path.strip() else request.url.path
     if path.startswith("/api") or path.startswith("/v1"):
+        if elapsed_ms >= SLOW_REQUEST_MS:
+            query = request.url.query
+            query_count = len(request.query_params)
+            logger.warning(
+                "slow_endpoint endpoint=%s duration_ms=%.2f route=%s method=%s status=%s query_count=%s query=%s",
+                path,
+                round(elapsed_ms, 2),
+                route_path or "",
+                request.method,
+                response.status_code,
+                query_count,
+                query[:200] if query else "",
+            )
         try:
             runtime_service.record_event(
                 RuntimeEventCreate(
@@ -146,3 +163,4 @@ async def capture_runtime_metrics(request, call_next):
             # Telemetry should not affect request success.
             pass
     return response
+ 
