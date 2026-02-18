@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/thread-startup-readiness",
+  "commit_scope": "Make thread-local web/API readiness verification and startup runtime allocation docs/process updates",
+  "files_owned": [
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/thread_runtime_ports.sh",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md"
+  ],
+  "idea_ids": [
+    "thread-runtime-ports-readiness"
+  ],
+  "spec_ids": [
+    "003-decision-loop"
+  ],
+  "task_ids": [
+    "task_2026_02_18_thread_startup_readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "documentation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_worktree_local_web.sh --thread-ports",
+    "./scripts/thread-runtime.sh check",
+    "./scripts/thread-runtime.sh smoke",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+  ],
+  "change_files": [
+    ".codex/environments/environment.toml",
+    ".codex/ghx-workspace-profiles.conf",
+    ".codex/ghx-zshrc.example",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-02-18_thread-startup-runtime-readiness.json",
+    "scripts/ghx.sh",
+    "scripts/start_gate.py",
+    "scripts/worktree_pr_guard.py",
+    "scripts/thread_runtime_ports.sh",
+    "scripts/verify_worktree_local_web.sh"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_worktree_local_web.sh --thread-ports",
+      "./scripts/thread-runtime.sh check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime/local gates updated but PR deploy validation not completed"
+  }
+}
