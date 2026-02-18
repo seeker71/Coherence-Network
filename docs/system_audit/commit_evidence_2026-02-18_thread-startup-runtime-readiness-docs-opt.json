@@ -45,8 +45,17 @@
     "./scripts/verify_full_deployment.sh"
   ],
   "change_files": [
+    ".codex/environments/environment.toml",
+    ".codex/ghx-workspace-profiles.conf",
     ".codex/ghx-zshrc.example",
-    "docs/CODEX-THREAD-PROCESS.md"
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/ghx.sh",
+    "scripts/start_gate.py",
+    "scripts/thread_runtime_ports.sh",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/worktree_pr_guard.py"
   ],
   "change_intent": "process_only",
   "local_validation": {
