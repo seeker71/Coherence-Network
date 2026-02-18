@@ -144,6 +144,15 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
   - default command template includes `codex exec ... --model gpt-5.3-codex-spark --reasoning-effort high --worktree`.
   - set `OPENCLAW_MODEL` to override if needed.
 - Paid-provider override is accepted by execute endpoint as `force_paid_*` query flags or `X-Force-Paid-Providers` header.
+- Public auto-execute note: `AGENT_AUTO_EXECUTE` is enabled in deployment, so paid tasks may auto-run before manual `/execute`.
+  - For deterministic smoke checks, include `"force_paid_providers": true` in create context so the auto runner inherits override.
+- Public paid-override smoke check (small verification):
+  - `API_URL=https://coherence-network-production.up.railway.app`
+  - `TASK_ID=$(curl -s -X POST "$API_URL/api/agent/tasks" -H 'Content-Type: application/json' -d '{"direction":"public paid smoke", "task_type":"impl", "context":{"executor":"openclaw","model_override":"openai/gpt-4o-mini","force_paid_providers":true}}' | jq -r '.id')`
+  - `curl -X GET "$API_URL/api/agent/tasks/$TASK_ID"`
+  - `curl "$API_URL/api/runtime/endpoints/summary?limit=20"` (look for `/tool:openrouter.chat_completion`, paid ratios/failures)
+  - `TASK_ID=$TASK_ID API_URL=$API_URL curl "$API_URL/api/runtime/events?limit=100" | jq --arg id "$TASK_ID" '.[] | select(.metadata.task_id == $id and .metadata.tracking_kind == "agent_tool_call")'`
+  - `curl "$API_URL/api/friction/events?status=open&limit=20" | jq '.[] | select(.block_type == "paid_provider_blocked")'`
 - Suggested full deployment flow:
   - `./scripts/verify_worktree_local_web.sh` (local API+web contract)
   - `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS)
