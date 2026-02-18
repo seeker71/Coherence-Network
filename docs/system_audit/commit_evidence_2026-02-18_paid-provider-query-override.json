@@ -1,0 +1,76 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "Make paid-provider override handling robust for execute query flags across deployments.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "006"
+  ],
+  "task_ids": [
+    "runtime-observability-deploy-readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5.3-codex"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_hyphenated_force_paid_query_key",
+    "python3 scripts/verify_public_deploy_contract.py --json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-18T02:20:00Z",
+    "commands": [
+      "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_until_forced tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys tests/test_agent_execute_endpoint.py::test_execute_endpoint_accepts_hyphenated_force_paid_query_key"
+    ],
+    "environment": {
+      "python": "3.11"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "POST /api/agent/tasks/{id}/execute?force_paid_providers=true should bypass paid-provider block and run for paid routes when AGENT_ALLOW_PAID_PROVIDERS is disabled.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{id}/execute"
+    ],
+    "test_flows": [
+      "Create paid-route task via model_override=openrouter/auto and execute with query override",
+      "Observe status=completed with paid usage metadata emitted"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Pending public deployment verification and CI re-run on main."
+  }
+}

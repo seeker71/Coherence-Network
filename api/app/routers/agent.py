@@ -5,7 +5,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 
 from typing import Optional
 
@@ -36,6 +36,31 @@ def _truthy(value: str | bool | None) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
+def _coerce_force_paid_override(request: Request) -> bool:
+    """Read force-paid override flags directly from raw query values."""
+    query = request.query_params
+    if not query:
+        return False
+
+    query_flag_names = (
+        "force_paid_providers",
+        "force_paid_provider",
+        "force_allow_paid_providers",
+        "allow_paid_providers",
+        "allow_paid_provider",
+        "force-paid-providers",
+        "force-paid-provider",
+        "force-allow-paid-providers",
+        "allow-paid-providers",
+        "allow-paid-provider",
+    )
+    for name in query_flag_names:
+        raw = query.get(name)
+        if _truthy(raw):
+            return True
+    return False
 
 
 def _task_to_item(task: dict) -> dict:
@@ -126,6 +151,7 @@ async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) 
 )
 async def execute_task(
     task_id: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
     force_paid_providers: str | None = Query(None),
@@ -157,6 +183,7 @@ async def execute_task(
         or _truthy(force_allow_paid_providers)
         or _truthy(allow_paid_providers)
         or _truthy(allow_paid_provider)
+        or _coerce_force_paid_override(request)
     )
 
     background_tasks.add_task(
