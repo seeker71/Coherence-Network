@@ -1,0 +1,83 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "change_files": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md"
+  ],
+  "change_intent": "docs_only",
+  "ci_validation": {
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml",
+    "status": "pending"
+  },
+  "commit_scope": "Run open-PR failure triage in pull_request thread-gates and harden pre-push hook environment so API test subprocesses can create and use temp git repos safely.",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    }
+  ],
+  "date": "2026-02-18",
+  "deploy_validation": {
+    "environment": "github-actions",
+    "status": "pending"
+  },
+  "e2e_validation": {
+    "expected_behavior_delta": "PR workflow now runs open-PR failure triage for pull_request events and blocks merge if blocking PR check failures are detected.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml"
+    ],
+    "status": "pending",
+    "test_flows": [
+      "Run gh pr checks on a test codex PR and verify failing checks are surfaced in thread-gates run."
+    ]
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "files_owned": [
+    ".githooks/pre-push",
+    ".github/workflows/thread-gates.yml",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "local_validation": {
+    "commands": [
+      "GITHUB_TOKEN=\"$(gh auth token)\" python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected --json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_pr-gates-triage-thread-checks.json --base origin/main --head HEAD --require-changed-evidence"
+    ],
+    "ran_at": "2026-02-18T02:25:00Z",
+    "status": "pass"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR merge pipeline to validate remote thread-gates pass."
+  },
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "ci-nonblocking-audits"
+  ],
+  "thread_branch": "codex/public-observability-deploy-realign"
+}

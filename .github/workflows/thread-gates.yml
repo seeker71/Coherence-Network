@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
 jobs:
   validate-thread-process:
     runs-on: ubuntu-latest
@@ -103,3 +109,14 @@ jobs:
       - name: Build web
         run: |
           cd web && npm ci && npm run build
+
+      - name: Check open PR failures (PRs only)
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/pr_check_failure_triage.py \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --head-prefix codex/ \
+            --fail-on-detected
