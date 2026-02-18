@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import copy
+import logging
 import ast
 import hashlib
 import json
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlparse
@@ -88,6 +90,82 @@ _ASSET_MODULARITY_LIMITS: dict[str, int] = {
     "implementation_summary_chars": 2200,
     "implementation_file_lines": 450,
 }
+
+logger = logging.getLogger("coherence.inventory")
+
+_INVENTORY_CACHE: dict[str, dict[str, Any]] = {
+    "system_lineage": {"expires_at": 0.0, "items": {}},
+    "flow": {"expires_at": 0.0, "items": {}},
+}
+
+
+def _inventory_cache_ttl_seconds() -> float:
+    raw = os.getenv("INVENTORY_CACHE_TTL_SECONDS", "30").strip()
+    try:
+        return max(1.0, float(raw))
+    except ValueError:
+        return 30.0
+
+
+def _inventory_timing_ms_threshold() -> float:
+    raw = os.getenv("INVENTORY_TIMING_LOG_MS", "750").strip()
+    try:
+        return max(50.0, float(raw))
+    except ValueError:
+        return 750.0
+
+
+def _inventory_timing_enabled() -> bool:
+    raw = os.getenv("INVENTORY_TIMING_ENABLED", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _cache_key(*parts: object) -> str:
+    return "|".join(str(part) for part in parts)
+
+
+def _read_inventory_cache(cache_name: str, key: str) -> dict[str, Any] | None:
+    cache = _INVENTORY_CACHE.get(cache_name, {})
+    if not isinstance(cache, dict):
+        return None
+    if cache.get("expires_at", 0.0) <= time.time():
+        return None
+    items = cache.get("items", {})
+    if not isinstance(items, dict):
+        return None
+    cached_payload = items.get(key)
+    if not isinstance(cached_payload, dict):
+        return None
+    try:
+        return copy.deepcopy(cached_payload)
+    except Exception:
+        return None
+
+
+def _write_inventory_cache(cache_name: str, key: str, payload: dict[str, Any]) -> None:
+    cache = _INVENTORY_CACHE.setdefault(cache_name, {"expires_at": 0.0, "items": {}})
+    items = cache.setdefault("items", {})
+    try:
+        items[key] = copy.deepcopy(payload)
+    except Exception:
+        items[key] = payload
+    cache["expires_at"] = time.time() + _inventory_cache_ttl_seconds()
+
+
+def _row_signature(rows: list[dict[str, Any]] | None) -> str:
+    if not isinstance(rows, list) or not rows:
+        return "rows=0"
+    first = rows[0] if isinstance(rows[0], dict) else {}
+    last = rows[-1] if isinstance(rows[-1], dict) else {}
+    if not isinstance(first, dict):
+        first = {}
+    if not isinstance(last, dict):
+        last = {}
+    return "rows=%s:first=%s:last=%s" % (
+        len(rows),
+        str(first.get("id") or "").strip(),
+        str(last.get("id") or "").strip(),
+    )
 
 
 def _is_implementation_request_question(question: str, answer: str | None = None) -> bool:
@@ -328,6 +406,8 @@ _SPEC_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source
 _SPEC_DISCOVERY_CACHE_TTL_SECONDS = 300.0
 _EVIDENCE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": [], "source": "none"}
 _EVIDENCE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
+_DB_EVIDENCE_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
+_DB_EVIDENCE_CACHE_TTL_SECONDS = 60.0
 _ROUTE_PROBE_DISCOVERY_CACHE: dict[str, Any] = {"expires_at": 0.0, "item": None, "source": "none"}
 _ROUTE_PROBE_DISCOVERY_CACHE_TTL_SECONDS = 180.0
 _ROUTE_PROBE_LATEST_FILE = "route_evidence_probe_latest.json"
@@ -551,9 +631,12 @@ def _build_lineage_question_rows(ideas_response: Any) -> tuple[list[dict[str, An
     return answered_questions, unanswered_questions
 
 
-def _build_lineage_link_rows() -> tuple[list[dict[str, Any]], list[Any], list[Any]]:
-    links = value_lineage_service.list_links(limit=300)
-    events = value_lineage_service.list_usage_events(limit=1000)
+def _build_lineage_link_rows(
+    lineage_link_limit: int = 300,
+    usage_event_limit: int = 1000,
+) -> tuple[list[dict[str, Any]], list[Any], list[Any]]:
+    links = value_lineage_service.list_links(limit=max(1, min(int(lineage_link_limit), 1000)))
+    events = value_lineage_service.list_usage_events(limit=max(1, min(int(usage_event_limit), 5000)))
     rows: list[dict[str, Any]] = []
     for link in links:
         valuation = value_lineage_service.valuation(link.id)
@@ -572,18 +655,66 @@ def _build_lineage_link_rows() -> tuple[list[dict[str, Any]], list[Any], list[An
     return rows, links, events
 
 
-def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
+def build_system_lineage_inventory(
+    runtime_window_seconds: int = 3600,
+    lineage_link_limit: int = 300,
+    usage_event_limit: int = 1000,
+    runtime_event_limit: int = 2000,
+) -> dict:
+    start_ms = time.perf_counter()
+    cache_key = _cache_key(
+        "system-lineage",
+        runtime_window_seconds,
+        lineage_link_limit,
+        usage_event_limit,
+        runtime_event_limit,
+    )
+    cached = _read_inventory_cache("system_lineage", cache_key)
+    if cached is not None:
+        if _inventory_timing_enabled():
+            logger.warning("inventory_cache_hit endpoint=system-lineage key=%s", cache_key)
+        return cached
+
+    stage_timings: dict[str, float] = {}
+    stage_start = time.perf_counter()
     ideas_response = idea_service.list_ideas()
+    stage_timings["ideas"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
     ideas = _build_lineage_idea_items(ideas_response)
     answered_questions, unanswered_questions = _build_lineage_question_rows(ideas_response)
-    link_rows, links, events = _build_lineage_link_rows()
+    stage_timings["lineage_map"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
+    link_rows, links, events = _build_lineage_link_rows(
+        lineage_link_limit=lineage_link_limit,
+        usage_event_limit=usage_event_limit,
+    )
+    stage_timings["lineage_links"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
-    runtime_summary = [x.model_dump(mode="json") for x in runtime_service.summarize_by_idea(runtime_window_seconds)]
+    runtime_cutoff = datetime.now(timezone.utc) - timedelta(
+        seconds=max(60, min(runtime_window_seconds, 60 * 60 * 24 * 30))
+    )
+    runtime_events = runtime_service.list_events(
+        limit=runtime_event_limit,
+        since=runtime_cutoff,
+    )
+    stage_timings["runtime_events"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
+    runtime_summary = [
+        x.model_dump(mode="json")
+        for x in runtime_service.summarize_by_idea(
+            seconds=runtime_window_seconds,
+            event_limit=runtime_event_limit,
+            event_rows=runtime_events,
+        )
+    ]
+    stage_timings["runtime_summary"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
     spec_items, spec_source = _discover_specs()
     tracked_idea_ids = idea_service.list_tracked_idea_ids()
-    runtime_events = runtime_service.list_events(limit=10000)
+    stage_timings["spec_discovery"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
 
-    return {
+    payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "ideas": {
             "summary": ideas_response.summary.model_dump(mode="json"),
@@ -622,6 +753,17 @@ def build_system_lineage_inventory(runtime_window_seconds: int = 3600) -> dict:
             "commit_evidence_local_available": (_project_root() / "docs" / "system_audit").exists(),
         },
     }
+    if _inventory_timing_enabled():
+        payload["_timing_ms"] = stage_timings
+    elapsed_ms = round((time.perf_counter() - start_ms) * 1000.0, 2)
+    if _inventory_timing_enabled() and elapsed_ms >= _inventory_timing_ms_threshold():
+        logger.warning(
+            "inventory_timing endpoint=system-lineage elapsed_ms=%s cache=miss details=%s",
+            elapsed_ms,
+            ", ".join(f"{k}={v}ms" for k, v in stage_timings.items()),
+        )
+    _write_inventory_cache("system_lineage", cache_key, payload)
+    return payload
 
 
 def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> dict:
@@ -804,13 +946,23 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
                 or ""
             ).strip().lower()
             required = required_raw in {"1", "true", "yes", "on"}
-            backend = commit_evidence_service.backend_info().get("backend")
-            use_db = required and backend == "postgresql"
+            backend_url = os.getenv("DATABASE_URL", "").strip().lower()
+            use_db = required and ("postgresql" in backend_url)
     if use_db:
         try:
             # When explicitly configured, treat the evidence store as source of truth
             # (including "no rows" -> []) and do not fall back to scanning local files.
-            return commit_evidence_service.list_records(limit=limit)
+            now = time.time()
+            requested_limit = max(1, min(int(limit), 5000))
+            if (
+                _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
+                and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
+            ):
+                return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
+            rows = commit_evidence_service.list_records(limit=requested_limit)
+            _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
+            _DB_EVIDENCE_CACHE["items"] = rows
+            return rows
         except Exception:
             return []
 
@@ -3188,8 +3340,37 @@ def build_spec_process_implementation_validation_flow(
     contributor_rows: list[dict[str, Any]] | None = None,
     contribution_rows: list[dict[str, Any]] | None = None,
     asset_rows: list[dict[str, Any]] | None = None,
+    spec_registry_limit: int = 500,
+    lineage_link_limit: int = 300,
+    usage_event_limit: int = 1200,
+    commit_evidence_limit: int = 500,
+    runtime_event_limit: int = 2000,
 ) -> dict[str, Any]:
+    start_ms = time.perf_counter()
+    cache_key = _cache_key(
+        "flow",
+        idea_id or "",
+        runtime_window_seconds,
+        spec_registry_limit,
+        lineage_link_limit,
+        usage_event_limit,
+        commit_evidence_limit,
+        runtime_event_limit,
+        _row_signature(contributor_rows),
+        _row_signature(contribution_rows),
+        _row_signature(asset_rows),
+    )
+    cached = _read_inventory_cache("flow", cache_key)
+    if cached is not None:
+        if _inventory_timing_enabled():
+            logger.warning("inventory_cache_hit endpoint=flow key=%s", cache_key)
+        return cached
+
+    stage_timings: dict[str, float] = {}
+    stage_start = time.perf_counter()
     portfolio = idea_service.list_ideas()
+    stage_timings["ideas"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
     idea_name_map = {item.id: item.name for item in portfolio.ideas}
     idea_signal_map = {
         item.id: {
@@ -3202,18 +3383,37 @@ def build_spec_process_implementation_validation_flow(
         for item in portfolio.ideas
     }
 
-    runtime_rows = runtime_service.summarize_by_idea(seconds=runtime_window_seconds)
+    stage_timings["idea_map"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
+    runtime_cutoff = datetime.now(timezone.utc) - timedelta(
+        seconds=max(60, min(runtime_window_seconds, 60 * 60 * 24 * 30))
+    )
+    runtime_events = runtime_service.list_events(
+        limit=runtime_event_limit,
+        since=runtime_cutoff,
+    )
+    runtime_rows = runtime_service.summarize_by_idea(
+        seconds=runtime_window_seconds,
+        event_limit=runtime_event_limit,
+        event_rows=runtime_events,
+    )
+    stage_timings["runtime_rows"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
     runtime_by_idea = {row.idea_id: row for row in runtime_rows}
-    registry_specs = spec_registry_service.list_specs(limit=5000)
+    registry_specs = spec_registry_service.list_specs(limit=max(1, min(int(spec_registry_limit), 1000)))
+    stage_timings["registry_specs"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
-    lineage_links = value_lineage_service.list_links(limit=1000)
-    usage_events = value_lineage_service.list_usage_events(limit=5000)
+    lineage_links = value_lineage_service.list_links(limit=max(1, min(int(lineage_link_limit), 1000)))
+    usage_events = value_lineage_service.list_usage_events(limit=max(1, min(int(usage_event_limit), 5000)))
 
     usage_by_lineage_count: dict[str, int] = {}
     usage_by_lineage_value: dict[str, float] = {}
     for event in usage_events:
         usage_by_lineage_count[event.lineage_id] = usage_by_lineage_count.get(event.lineage_id, 0) + 1
         usage_by_lineage_value[event.lineage_id] = usage_by_lineage_value.get(event.lineage_id, 0.0) + float(event.value)
+    stage_timings["lineage_and_usage"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     contributor_rows = contributor_rows or []
     contribution_rows = contribution_rows or []
@@ -3223,6 +3423,8 @@ def build_spec_process_implementation_validation_flow(
         for row in asset_rows
         if isinstance(row, dict) and str(row.get("id") or "").strip()
     }
+    stage_timings["contributor_input_shape"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     contributor_id_by_token: dict[str, set[str]] = {}
     for contributor in contributor_rows:
@@ -3243,8 +3445,12 @@ def build_spec_process_implementation_validation_flow(
             if not token:
                 continue
             contributor_id_by_token.setdefault(token, set()).add(contributor_id)
+    stage_timings["contributor_token_index"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
-    evidence_records = _read_commit_evidence_records(limit=800)
+    evidence_records = _read_commit_evidence_records(limit=max(1, min(int(commit_evidence_limit), 3000)))
+    stage_timings["evidence_records"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     discovered_ids: set[str] = set(idea_name_map.keys())
     discovered_ids.update(link.idea_id for link in lineage_links if link.idea_id)
@@ -3263,7 +3469,11 @@ def build_spec_process_implementation_validation_flow(
     filtered_ids = sorted(discovered_ids)
     if idea_id:
         filtered_ids = [item for item in filtered_ids if item == idea_id]
+    stage_timings["discovered_ids"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
+    # Build per-idea graph skeleton from lineage/spec/evidence and compute
+    # aggregate contribution-like counters.
     flows: dict[str, dict[str, Any]] = {}
     for current_idea_id in filtered_ids:
         flows[current_idea_id] = _new_flow_row(
@@ -3389,6 +3599,8 @@ def build_spec_process_implementation_validation_flow(
                 raw_roles = contributor.get("roles")
                 roles = [role for role in raw_roles if isinstance(role, str)] if isinstance(raw_roles, list) else []
                 _add_contributor(flow, cid, roles)
+    stage_timings["skeleton_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     for current_idea_id, runtime in runtime_by_idea.items():
         if idea_id and current_idea_id != idea_id:
@@ -3397,6 +3609,8 @@ def build_spec_process_implementation_validation_flow(
         flow["runtime_events_count"] = int(runtime.event_count)
         flow["runtime_total_ms"] = float(runtime.total_runtime_ms)
         flow["runtime_cost_estimate"] = float(runtime.runtime_cost_estimate)
+    stage_timings["runtime_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     contribution_by_id: dict[str, dict[str, Any]] = {}
     contributions_by_contributor_id: dict[str, list[dict[str, Any]]] = {}
@@ -3429,6 +3643,8 @@ def build_spec_process_implementation_validation_flow(
             asset_id = str(row.get("asset_id") or "").strip()
             if asset_id and (not known_asset_ids or asset_id in known_asset_ids):
                 flow["_asset_ids"].add(asset_id)
+    stage_timings["contribution_index"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     # Alias-based fallback: match evidence/lineage contributor handles to registry contributors.
     for flow in flows.values():
@@ -3448,6 +3664,8 @@ def build_spec_process_implementation_validation_flow(
                     asset_id = str(row.get("asset_id") or "").strip()
                     if asset_id and (not known_asset_ids or asset_id in known_asset_ids):
                         flow["_asset_ids"].add(asset_id)
+    stage_timings["contributor_alias_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     items: list[dict[str, Any]] = []
     unblock_queue: list[dict[str, Any]] = []
@@ -3602,6 +3820,8 @@ def build_spec_process_implementation_validation_flow(
             str(row.get("idea_id") or ""),
         )
     )
+    stage_timings["unblock_sort"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
     summary = {
         "ideas": len(items),
@@ -3615,8 +3835,10 @@ def build_spec_process_implementation_validation_flow(
         "blocked_ideas": sum(1 for row in items if row["interdependencies"]["blocked"]),
         "queue_items": len(unblock_queue),
     }
+    stage_timings["summary_build"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
 
-    return {
+    payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "runtime_window_seconds": runtime_window_seconds,
         "filter": {"idea_id": idea_id},
@@ -3624,6 +3846,19 @@ def build_spec_process_implementation_validation_flow(
         "unblock_queue": unblock_queue,
         "items": items,
     }
+    stage_timings["payload_build"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    if _inventory_timing_enabled():
+        payload["_timing_ms"] = stage_timings
+    elapsed_ms = round((time.perf_counter() - start_ms) * 1000.0, 2)
+    if _inventory_timing_enabled() and elapsed_ms >= _inventory_timing_ms_threshold():
+        logger.warning(
+            "inventory_timing endpoint=flow elapsed_ms=%s cache=miss key=%s details=%s",
+            elapsed_ms,
+            cache_key,
+            ", ".join(f"{k}={v}ms" for k, v in stage_timings.items()),
+        )
+    _write_inventory_cache("flow", cache_key, payload)
+    return payload
 
 
 def next_unblock_task_from_flow(

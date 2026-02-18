@@ -7,6 +7,11 @@ WEB_URL="${2:-https://coherence-web-production.up.railway.app}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
+CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
+VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
+VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
+
 check_url() {
   local name="$1"
   local url="$2"
@@ -18,7 +23,10 @@ check_url() {
   echo
   echo "==> ${name}: ${url}"
 
-  if ! curl -sS -L -D "$headers_file" -o "$body_file" "$url" >/dev/null; then
+  if ! curl -sS -L -D "$headers_file" -o "$body_file" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" >/dev/null; then
     echo "FAIL: request error"
     sed -n '1,12p' "$headers_file" 2>/dev/null || true
     return 1
@@ -61,7 +69,10 @@ check_cors() {
   echo
   echo "==> CORS check: ${api_health_url} with Origin ${web_origin}"
 
-  if ! curl -sS -D "$headers_file" -o /dev/null -H "Origin: ${web_origin}" "$api_health_url" >/dev/null; then
+  if ! curl -sS -D "$headers_file" -o /dev/null \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    -H "Origin: ${web_origin}" "$api_health_url" >/dev/null; then
     echo "FAIL: request error"
     return 1
   fi
@@ -89,7 +100,10 @@ check_persistence_contract() {
 
   echo
   echo "==> Persistence contract: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" "$url" || true)"
+  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" || true)"
   echo "HTTP status: ${status:-unknown}"
   if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
     echo "FAIL: persistence contract endpoint unavailable"
@@ -124,8 +138,18 @@ check_persistence_contract() {
 
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
-check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
-check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
+if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
+  check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
+else
+  echo
+  echo "==> Skipping Railway gates main head check (VERIFY_REQUIRE_GATES_MAIN_HEAD=0)"
+fi
+if [[ "$VERIFY_REQUIRE_PERSISTENCE_CHECK" == "1" ]]; then
+  check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
+else
+  echo
+  echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
+fi
 check_url "Railway web root" "${WEB_URL%/}/" || fail=1
 check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1

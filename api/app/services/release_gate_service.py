@@ -17,6 +17,8 @@ from urllib.parse import quote
 
 import httpx
 
+_BRANCH_HEAD_SHA_CACHE: dict[tuple[str, str], tuple[float, str]] = {}
+
 try:  # noqa: SIM105
     from app.services import telemetry_persistence_service
 except Exception:  # pragma: no cover - best effort import only
@@ -25,6 +27,47 @@ except Exception:  # pragma: no cover - best effort import only
 
 DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS = 8
 DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS = 60
+DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS = 6.0
+DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS = 45.0
+
+
+def _env_to_float(name: str, fallback: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return float(fallback)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return float(fallback)
+    if value <= 0:
+        return float(fallback)
+    return value
+
+
+def _branch_head_lookup_timeout_seconds(timeout: float) -> float:
+    configured = _env_to_float("BRANCH_HEAD_SHA_TIMEOUT_SECONDS", timeout)
+    return max(1.0, min(float(timeout), configured))
+
+
+def _run_cmd_with_timeout(cmd: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
+    try:
+        proc = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return proc
+    except subprocess.TimeoutExpired as exc:
+        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+        return subprocess.CompletedProcess(
+            cmd,
+            124,
+            stdout=stdout,
+            stderr=f"{stderr}\ncommand timeout",
+        )
 
 
 def _record_gate_friction_event(
@@ -116,6 +159,32 @@ def _write_public_deploy_verification_jobs(jobs: list[dict[str, Any]]) -> None:
 
 def _normalize_job_payload(job: dict[str, Any]) -> dict[str, Any]:
     return dict(job)
+
+
+def _branch_head_cache_ttl_seconds() -> float:
+    return _env_to_float("BRANCH_HEAD_SHA_CACHE_TTL_SECONDS", DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS)
+
+
+def _read_cached_branch_head_sha(repository: str, branch: str) -> str | None:
+    key = (repository, branch)
+    entry = _BRANCH_HEAD_SHA_CACHE.get(key)
+    if entry is None:
+        return None
+    expires_at, cached_sha = entry
+    if _now_ts() >= float(expires_at):
+        _BRANCH_HEAD_SHA_CACHE.pop(key, None)
+        return None
+    return cached_sha if isinstance(cached_sha, str) and cached_sha else None
+
+
+def _cache_branch_head_sha(repository: str, branch: str, sha: str) -> None:
+    if not isinstance(sha, str) or not sha:
+        return
+    ttl = _branch_head_cache_ttl_seconds()
+    _BRANCH_HEAD_SHA_CACHE[(repository, branch)] = (
+        _now_ts() + ttl,
+        sha,
+    )
 
 
 def _headers(github_token: str | None = None) -> dict[str, str]:
@@ -387,8 +456,9 @@ def _record_external_tool_usage(
 
 def _branch_head_sha_via_gh_cli(repository: str, branch: str) -> str | None:
     cmd = ["gh", "api", f"repos/{repository}/branches/{branch}"]
+    timeout = _branch_head_lookup_timeout_seconds(DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS)
     started = time.monotonic()
-    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    proc = _run_cmd_with_timeout(cmd, timeout=timeout)
     duration_ms = int((time.monotonic() - started) * 1000)
     status = "success" if proc.returncode == 0 else "error"
     _record_external_tool_usage(
@@ -417,8 +487,9 @@ def _branch_head_sha_via_git_ls_remote(repository: str, branch: str) -> str | No
     repo_url = f"https://github.com/{repository}.git"
     ref = f"refs/heads/{branch}"
     cmd = ["git", "ls-remote", repo_url, ref]
+    timeout = _branch_head_lookup_timeout_seconds(DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS)
     started = time.monotonic()
-    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    proc = _run_cmd_with_timeout(cmd, timeout=timeout)
     duration_ms = int((time.monotonic() - started) * 1000)
     status = "success" if proc.returncode == 0 else "error"
     _record_external_tool_usage(
@@ -444,8 +515,9 @@ def _gh_api_json_via_cli(path: str, *, params: dict[str, str] | None = None) -> 
     if params:
         for key, value in params.items():
             cmd.extend(["-f", f"{key}={value}"])
+    timeout = _branch_head_lookup_timeout_seconds(DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS)
     started = time.monotonic()
-    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    proc = _run_cmd_with_timeout(cmd, timeout=timeout)
     duration_ms = int((time.monotonic() - started) * 1000)
     _record_external_tool_usage(
         tool_name="gh-cli",
@@ -1103,10 +1175,15 @@ def get_branch_head_sha(
     timeout: float = 10.0,
 ) -> str | None:
     """Return branch head SHA, or None if unavailable."""
+    effective_timeout = _branch_head_lookup_timeout_seconds(timeout)
+    cached = _read_cached_branch_head_sha(repository, branch)
+    if cached:
+        return cached
+
     url = f"https://api.github.com/repos/{repository}/branches/{branch}"
     try:
         start = time.monotonic()
-        with httpx.Client(timeout=timeout, headers=_headers(github_token)) as client:
+        with httpx.Client(timeout=effective_timeout, headers=_headers(github_token)) as client:
             response = client.get(url)
             duration_ms = int((time.monotonic() - start) * 1000)
             _record_external_tool_usage(
@@ -1121,17 +1198,26 @@ def get_branch_head_sha(
             if response.status_code in {403, 429}:
                 sha = _branch_head_sha_via_git_ls_remote(repository, branch)
                 if sha:
+                    _cache_branch_head_sha(repository, branch, sha)
                     return sha
                 return _branch_head_sha_via_gh_cli(repository, branch)
             response.raise_for_status()
             data = response.json()
         sha = (data.get("commit") or {}).get("sha") if isinstance(data, dict) else None
-        return sha if isinstance(sha, str) else None
-    except httpx.HTTPError:
+        if isinstance(sha, str) and sha:
+            _cache_branch_head_sha(repository, branch, sha)
+            return sha
+        return None
+    except (httpx.HTTPError, ValueError, TypeError):
         sha = _branch_head_sha_via_git_ls_remote(repository, branch)
         if sha:
+            _cache_branch_head_sha(repository, branch, sha)
             return sha
-        return _branch_head_sha_via_gh_cli(repository, branch)
+        sha = _branch_head_sha_via_gh_cli(repository, branch)
+        if sha:
+            _cache_branch_head_sha(repository, branch, sha)
+            return sha
+        return None
 
 
 def evaluate_pr_to_public_report(
@@ -1303,6 +1389,7 @@ def evaluate_public_deploy_contract_report(
         repository,
         branch,
         github_token=github_token,
+        timeout=timeout,
     )
     report["expected_sha"] = target_sha
     if not isinstance(target_sha, str) or not target_sha:
@@ -1375,7 +1462,14 @@ def evaluate_public_deploy_contract_report(
                 continue
         if (
             name == "railway_gates_main_head"
-            and check.get("status_code") in {401, 403, 502}
+            and (
+                check.get("status_code") in {401, 403, 502}
+                or (
+                    check.get("status_code") is None
+                    and isinstance(check.get("error"), str)
+                    and "timeout" in check.get("error", "").lower()
+                )
+            )
         ):
             warnings.append("railway_gates_main_head_unavailable")
             continue

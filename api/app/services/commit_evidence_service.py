@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,12 @@ class CommitEvidenceRecord(Base):
 
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+_SCHEMA_INITIALIZED = False
+_LIST_RECORDS_CACHE: dict[str, Any] = {
+    "expires_at": 0.0,
+    "items": [],
+}
+_LIST_RECORDS_CACHE_TTL_SECONDS = 30.0
 
 
 def _repo_root() -> Path:
@@ -89,8 +96,17 @@ def _session() -> Session:
 
 
 def ensure_schema() -> None:
+    global _SCHEMA_INITIALIZED
+    if _SCHEMA_INITIALIZED:
+        return
     engine = _engine()
     Base.metadata.create_all(bind=engine)
+    _SCHEMA_INITIALIZED = True
+
+
+def _invalidate_record_cache() -> None:
+    _LIST_RECORDS_CACHE["expires_at"] = 0.0
+    _LIST_RECORDS_CACHE["items"] = []
 
 
 def _redact_database_url(url: str) -> str:
@@ -166,6 +182,7 @@ def upsert_record(payload: dict[str, Any], source_file: str = "") -> None:
             row.payload_json = serialized
             row.updated_at = now
             session.add(row)
+    _invalidate_record_cache()
 
 
 def bulk_upsert(records: list[dict[str, Any]]) -> int:
@@ -175,16 +192,24 @@ def bulk_upsert(records: list[dict[str, Any]]) -> int:
             continue
         upsert_record(row, str(row.get("_evidence_file") or ""))
         imported += 1
+    _invalidate_record_cache()
     return imported
 
 
 def list_records(limit: int = 400) -> list[dict[str, Any]]:
+    now = time.time()
+    requested_limit = max(1, min(int(limit), 5000))
+    cached_until = _LIST_RECORDS_CACHE.get("expires_at", 0.0)
+    cached_items = _LIST_RECORDS_CACHE.get("items", [])
+    if cached_until > now and cached_items:
+        return cached_items[:requested_limit]
+
     ensure_schema()
     with _session() as session:
         rows = (
             session.query(CommitEvidenceRecord)
             .order_by(CommitEvidenceRecord.updated_at.desc(), CommitEvidenceRecord.id.desc())
-            .limit(max(1, min(limit, 5000)))
+            .limit(requested_limit)
             .all()
         )
     out: list[dict[str, Any]] = []
@@ -196,4 +221,6 @@ def list_records(limit: int = 400) -> list[dict[str, Any]]:
         if isinstance(payload, dict):
             payload["_evidence_file"] = str(payload.get("_evidence_file") or row.source_file or "")
             out.append(payload)
+    _LIST_RECORDS_CACHE["expires_at"] = now + _LIST_RECORDS_CACHE_TTL_SECONDS
+    _LIST_RECORDS_CACHE["items"] = out
     return out
