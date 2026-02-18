@@ -4,7 +4,7 @@ workspace_root = "/Users/ursmuff/source/Coherence-Network"
 
 [setup]
 required = true
-script = 'if gh auth status >/dev/null 2>&1; then START_GATE_ENFORCE_REMOTE_FAILURES=0 START_GATE_REQUIRE_PRIMARY_CLEAN=0 make start-gate; else START_GATE_REQUIRE_GH=0 START_GATE_REQUIRE_PRIMARY_CLEAN=0 make start-gate; fi'
+script = 'if GHX_IGNORE_ENV_TOKEN=1 ./scripts/ghx.sh auth status >/dev/null 2>&1; then START_GATE_ENFORCE_REMOTE_FAILURES=0 START_GATE_REQUIRE_PRIMARY_CLEAN=0 make start-gate; else START_GATE_REQUIRE_GH=0 START_GATE_REQUIRE_PRIMARY_CLEAN=0 make start-gate; fi'
 
 [validation.local]
 commands = [
