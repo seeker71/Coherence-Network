@@ -54,6 +54,10 @@ git rebase origin/main
 ```bash
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
+# optional explicit startup (for manual end-to-end contract check)
+THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
+# optional smoke/e2e (run only when pushing runtime-impactful changes)
+./scripts/thread-runtime.sh run-e2e
 ```
 
 Optional remote/deploy gate check:
@@ -88,6 +92,15 @@ gh api -X DELETE repos/seeker71/Coherence-Network/git/refs/heads/codex/<thread-n
 - maintainability gate fail: run
   - `python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression`
   and refactor before re-push.
+
+If running parallel threads, isolate runtime ports with:
+
+```bash
+THREAD_RUNTIME_API_BASE_PORT=18100 THREAD_RUNTIME_WEB_BASE_PORT=3110 ./scripts/verify_worktree_local_web.sh
+THREAD_RUNTIME_API_BASE_PORT=18200 THREAD_RUNTIME_WEB_BASE_PORT=3120 ./scripts/verify_worktree_local_web.sh
+```
+
+`verify_worktree_local_web.sh` will auto-allocate the first available pair near each base so active threads can run concurrently.
 
 ## Close Thread
 

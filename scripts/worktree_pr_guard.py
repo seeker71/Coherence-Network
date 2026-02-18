@@ -491,7 +491,7 @@ def _local_steps(
         steps.append(("api-tests", "cd api && pytest -q"))
     if not skip_web_build:
         steps.append(("web-build", "cd web && npm ci && npm run build"))
-    steps.append(("worktree-runtime-web-guard", "./scripts/verify_worktree_local_web.sh"))
+    steps.append(("worktree-runtime-web-guard", "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"))
     return steps
 
 

@@ -61,19 +61,30 @@ Run and record:
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
+./scripts/thread-runtime.sh check
 ```
 
 Gate status:
-- PASS only if tests/build succeed for the thread’s touched surface.
-- PASS only if changed specs pass the spec quality contract (when any feature spec changed).
+- PASS for local command set above.
+- PASS for runtime branches only when `thread-runtime.sh run-e2e` is run and passes if runtime-surface files changed.
 - PASS only if no stale open `codex/*` PR is left unattended.
 - PASS only if open `codex/*` PR checks are green (or auto-rerun has healed flaky failures).
 - PASS only if guard does not detect evidence/workflow/reference contract failures.
 
+Optional runtime smoke (only when runtime-surface files under `api/` or `web/` changed):
+
+```bash
+./scripts/thread-runtime.sh run-e2e
+```
+
 Worktree notes:
 - This command is the default local PR failure-prevention guard for Codex threads.
-- It runs CI-parity checks and writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
-- It includes API tests, web build, local runtime route checks, spec/evidence/workflow contracts, and maintainability guard (auto-skipped when no runtime code changed).
+- `./scripts/verify_worktree_local_web.sh` is readiness-first by default (it validates existing local API/web services).
+- Start services intentionally with `THREAD_RUNTIME_START_SERVERS=1` only when needed.
+- `./scripts/verify_worktree_local_web.sh --thread-ports` prints current thread-runtime port usage across active threads.
+- Thread runtime defaults to per-thread deterministic base ports using `THREAD_RUNTIME_API_BASE_PORT` / `THREAD_RUNTIME_WEB_BASE_PORT`.
+- It writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
+- `thread-runtime.sh run-e2e` does runtime API smoke against the active local API and is cache-aware.
 - Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
 - If running `./scripts/verify_worktree_local_web.sh` directly, npm cache defaults to per-worktree `<worktree>/.cache/npm` (override via `NPM_CACHE=...`).
 

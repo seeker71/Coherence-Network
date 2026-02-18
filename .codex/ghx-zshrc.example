@@ -1,0 +1,153 @@
+# Source this file from ~/.zshrc to use workspace-aware gh authentication.
+# Example:
+#   source /Users/ursmuff/source/Coherence-Network/.codex/ghx-zshrc.example
+
+# Default: workspace auth uses GH config profiles and ignores GH_TOKEN.
+# Keep env token usage only when this is intentionally set.
+if [[ -z "${GHX_PRESERVE_ENV_TOKEN:-}" ]]; then
+  export GHX_IGNORE_ENV_TOKEN=1
+fi
+
+if [[ -z "${GHX_REPLACE_GH:-}" ]]; then
+  export GHX_REPLACE_GH=1
+fi
+
+__ghx_workspace_root() {
+  local path="${1:-$PWD}"
+  local root
+
+  root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$root" ]]; then
+    path="$root"
+  fi
+
+  while [[ "$path" != "/" ]]; do
+    if [[ -f "$path/.codex/ghx-workspace-profiles.example" || -f "$path/.codex/ghx-workspace-profiles.conf" ]]; then
+      echo "$path"
+      return 0
+    fi
+
+    local parent="${path%/*}"
+    if [[ "$parent" == "$path" ]]; then
+      break
+    fi
+
+    parent="${parent:-/}"
+    if [[ "$parent" == "$path" ]]; then
+      break
+    fi
+    path="$parent"
+  done
+}
+
+__ghx_workspace_profile() {
+  local workspace_root="${1:-$(__ghx_workspace_root)}"
+  local workspace_name=""
+  local map_file=""
+  local map_workspace=""
+  local map_profile=""
+  local profile=""
+
+  if [[ -z "$workspace_root" ]]; then
+    return 1
+  fi
+
+  workspace_name="$(basename "$workspace_root")"
+  map_file="${workspace_root}/.codex/ghx-workspace-profiles.conf"
+
+  if [[ -f "$map_file" ]]; then
+    while IFS= read -r mapping_line; do
+      mapping_line="${mapping_line%%#*}"
+      [[ -z "$mapping_line" ]] && continue
+      map_workspace="${mapping_line%%:*}"
+      map_profile="${mapping_line#*:}"
+      map_workspace="$(printf '%s' "$map_workspace" | tr -d '[:space:]')"
+      map_profile="$(printf '%s' "$map_profile" | tr -d '[:space:]')"
+      if [[ -n "$map_workspace" && "$workspace_name" == "$map_workspace" ]]; then
+        profile="$map_profile"
+        break
+      fi
+    done < "$map_file"
+  fi
+
+  if [[ -n "$profile" ]]; then
+    printf '%s\n' "$profile"
+    return 0
+  fi
+
+  case "$workspace_name" in
+    merly.ai|merly_ai|merlyai|Merly.Ai)
+      printf 'merly-ai\n'
+      return 0
+      ;;
+    Coherence-Network|coherence-network|coherence_network|coherence-network-codex|seeker71-workspace)
+      printf 'seeker71\n'
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+__ghx_git_config_dir() {
+  local profile
+  profile="$(__ghx_workspace_profile)"
+
+  case "$profile" in
+    merly-ai)
+      printf '%s\n' "$HOME/.config/gh-merly-ai"
+      return 0
+      ;;
+    seeker71)
+      printf '%s\n' "$HOME/.config/gh-seeker71"
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+ghx() {
+  local workspace_root
+  workspace_root="$(__ghx_workspace_root)"
+
+  if [[ -n "$workspace_root" && -x "$workspace_root/scripts/ghx.sh" ]]; then
+    "$workspace_root/scripts/ghx.sh" "$@"
+    return $?
+  fi
+
+  gh "$@"
+}
+
+alias ghx-local='ghx'
+alias ghp='ghx'
+
+if (( ${+aliases[git]} )); then
+  unalias git
+fi
+
+git() {
+  local gh_config_dir
+  local gh_credential_helper
+  gh_config_dir="$(__ghx_git_config_dir)"
+  if [[ -n "$gh_config_dir" ]]; then
+    gh_credential_helper="!GH_CONFIG_DIR=$gh_config_dir /opt/homebrew/bin/gh auth git-credential"
+    env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN \
+      GH_CONFIG_DIR="$gh_config_dir" command git \
+      -c "credential.helper=" \
+      -c "credential.https://github.com.helper=$gh_credential_helper" \
+      "$@"
+  else
+    command git "$@"
+  fi
+}
+
+# To route standard gh commands through workspace-aware auth, set this to 1:
+#   export GHX_REPLACE_GH=1
+if [[ "${GHX_REPLACE_GH:-0}" == "1" ]]; then
+  if (( ${+aliases[gh]} )); then
+    unalias gh
+  fi
+
+  alias gh='ghx'
+fi
