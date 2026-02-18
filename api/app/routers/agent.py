@@ -40,6 +40,25 @@ def _truthy(value: str | bool | None) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
+def _require_execute_token(
+    route_name: str,
+    x_agent_execute_token: Optional[str],
+    *,
+    require_when_token_not_configured: bool,
+) -> None:
+    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    if expected:
+        if (x_agent_execute_token or "").strip() != expected:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return
+    if require_when_token_not_configured:
+        logger.warning(
+            "%s called without AGENT_EXECUTE_TOKEN configured; denying execution request",
+            route_name,
+        )
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 def _coerce_force_paid_override(request: Request) -> bool:
     """Read force-paid override flags directly from raw query values."""
     raw_query = request.url.query
@@ -204,9 +223,11 @@ async def execute_task(
 
     If AGENT_EXECUTE_TOKEN is set, callers must provide header X-Agent-Execute-Token.
     """
-    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
-    if expected and (x_agent_execute_token or "").strip() != expected:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    _require_execute_token(
+        "execute_task",
+        x_agent_execute_token,
+        require_when_token_not_configured=False,
+    )
 
     task = agent_service.get_task(task_id)
     if task is None:
@@ -273,9 +294,11 @@ async def pickup_and_execute_task(
     cost_slack_ratio: float | None = Query(None, ge=1.0),
 ) -> dict:
     """Pick a pending task (oldest-first fallback) and execute it via Codex/API worker flow."""
-    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
-    if expected and (x_agent_execute_token or "").strip() != expected:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    _require_execute_token(
+        "pickup_and_execute_task",
+        x_agent_execute_token,
+        require_when_token_not_configured=True,
+    )
 
     if task_id:
         task = agent_service.get_task(task_id)
