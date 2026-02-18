@@ -61,6 +61,7 @@ Run and record:
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
+./scripts/thread-runtime.sh run-e2e
 ```
 
 Gate status:
@@ -72,6 +73,10 @@ Gate status:
 
 Worktree notes:
 - This command is the default local PR failure-prevention guard for Codex threads.
+- `./scripts/verify_worktree_local_web.sh` is readiness-first by default (it validates existing local API/web services).
+- Start services intentionally with `THREAD_RUNTIME_START_SERVERS=1` only when needed.
+- `./scripts/verify_worktree_local_web.sh --thread-ports` prints current thread-runtime port usage across active threads.
+- Thread runtime defaults to per-thread deterministic base ports using `THREAD_RUNTIME_API_BASE_PORT` / `THREAD_RUNTIME_WEB_BASE_PORT`.
 - It runs CI-parity checks and writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
 - It includes API tests, web build, local runtime route checks, spec/evidence/workflow contracts, and maintainability guard (auto-skipped when no runtime code changed).
 - Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.

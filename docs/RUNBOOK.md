@@ -200,15 +200,18 @@ Use one command from the repo root:
 ```
 
 What it does:
-- Builds `web/` with a worktree-local npm cache (`.npm-cache`).
-- Starts API locally on `API_PORT` (default `18000`) and web on `WEB_PORT` (default `3100`).
+- Validates route readiness for currently running API/web services on thread-aware ports.
+- By default, it does not start services.
+- Start services on demand with `THREAD_RUNTIME_START_SERVERS=1` or `--start`.
+- Records and allocates thread-aware ports so multiple linked worktrees can run independently.
 - Verifies key API routes and key human web pages return success and do not contain common runtime-error markers.
-- Shuts down both services automatically on completion or failure.
+- Shuts down only the services it started for this invocation.
 
 Port override example:
 
 ```bash
-API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+THREAD_RUNTIME_API_BASE_PORT=18100 THREAD_RUNTIME_WEB_BASE_PORT=3110 ./scripts/verify_worktree_local_web.sh
+THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
 ```
 
 ## Worktree PR Failure Guard
