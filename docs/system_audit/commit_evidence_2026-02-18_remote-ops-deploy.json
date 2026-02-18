@@ -1,0 +1,84 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/remote-ops-deploy-20260218",
+  "commit_scope": "Add remote ops web controls and API pickup-execute endpoint integration; add deployment smoke verification for production",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx",
+    "scripts/verify_remote_ops_smoke.sh",
+    "web/app/remote-ops/page.tsx"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-remote-ops-deploy-2026-02-18"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_web_api_deploy.sh",
+    "./scripts/verify_remote_ops_smoke.sh",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx",
+    "scripts/verify_remote_ops_smoke.sh",
+    "web/app/remote-ops/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_remote_ops_smoke.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production",
+    "notes": "Pending merge to main and redeploy via Railway auto-deploy from main."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Remote ops page is served from production web, API pending-task and pickup-and-execute flows are reachable, and execute token is validated from UI to backend.",
+    "public_endpoints": [
+      "https://coherence-web-production.up.railway.app/remote-ops",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/pickup-and-execute",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-web-production.up.railway.app/api-health",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "Verify /remote-ops returns HTTP 200 and displays queue/pending/health panels.",
+      "Create a task, call pickup-and-execute with execute token, and verify task state transitions to executed/completed flow.",
+      "Run ./scripts/verify_remote_ops_smoke.sh against production and ensure no failing checks."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR merge and public deployment contract to pass with new web/API route in production."
+  }
+}

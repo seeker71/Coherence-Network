@@ -78,6 +78,27 @@ def _coerce_force_paid_override(request: Request) -> bool:
     return False
 
 
+def _force_paid_override(
+    request: Request,
+    x_force_paid_providers: str | None = None,
+    force_paid_providers: str | None = None,
+    force_paid_provider: str | None = None,
+    force_allow_paid_providers: str | None = None,
+    allow_paid_providers: str | None = None,
+    allow_paid_provider: str | None = None,
+) -> bool:
+    """Read execute-time paid override from raw query, headers, and compatibility flags."""
+    return (
+        _truthy(x_force_paid_providers)
+        or _truthy(force_paid_providers)
+        or _truthy(force_paid_provider)
+        or _truthy(force_allow_paid_providers)
+        or _truthy(allow_paid_providers)
+        or _truthy(allow_paid_provider)
+        or _coerce_force_paid_override(request)
+    )
+
+
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
     return {
@@ -193,14 +214,14 @@ async def execute_task(
 
     from app.services import agent_execution_service
 
-    force_paid_override = (
-        _truthy(force_paid_providers)
-        or _truthy(force_paid_provider)
-        or _truthy(force_allow_paid_providers)
-        or _truthy(allow_paid_providers)
-        or _truthy(allow_paid_provider)
-        or _truthy(x_force_paid_providers)
-        or _coerce_force_paid_override(request)
+    force_paid_override = _force_paid_override(
+        request,
+        x_force_paid_providers=x_force_paid_providers,
+        force_paid_providers=force_paid_providers,
+        force_paid_provider=force_paid_provider,
+        force_allow_paid_providers=force_allow_paid_providers,
+        allow_paid_providers=allow_paid_providers,
+        allow_paid_provider=allow_paid_provider,
     )
     if force_paid_override:
         task_ctx = task.get("context")
@@ -225,6 +246,83 @@ async def execute_task(
         cost_slack_ratio=cost_slack_ratio,
     )
     return {"ok": True, "task_id": task_id}
+
+
+@router.post(
+    "/agent/tasks/pickup-and-execute",
+    responses={
+        403: {"description": "Forbidden (missing or invalid execute token)", "model": ErrorDetail},
+        404: {"description": "No pending task found", "model": ErrorDetail},
+        409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
+    },
+)
+async def pickup_and_execute_task(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    task_id: Optional[str] = Query(None),
+    task_type: Optional[TaskType] = Query(None),
+    x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+    x_force_paid_providers: Optional[str] = Header(None, alias="X-Force-Paid-Providers"),
+    force_paid_providers: str | None = Query(None),
+    force_paid_provider: str | None = Query(None),
+    force_allow_paid_providers: str | None = Query(None),
+    allow_paid_providers: str | None = Query(None),
+    allow_paid_provider: str | None = Query(None),
+    max_cost_usd: float | None = Query(None, ge=0.0),
+    estimated_cost_usd: float | None = Query(None, ge=0.0),
+    cost_slack_ratio: float | None = Query(None, ge=1.0),
+) -> dict:
+    """Pick a pending task (oldest-first fallback) and execute it via Codex/API worker flow."""
+    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    if expected and (x_agent_execute_token or "").strip() != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if task_id:
+        task = agent_service.get_task(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+    else:
+        pending, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
+        if not pending:
+            return {"ok": False, "picked": False, "reason": "No pending tasks"}
+        task = pending[-1]
+
+    task_ctx = task.get("context")
+    selected_task_id = str(task.get("id") or "").strip()
+    if not selected_task_id:
+        raise HTTPException(status_code=404, detail="Task id missing")
+
+    force_paid_override = _force_paid_override(
+        request,
+        x_force_paid_providers=x_force_paid_providers,
+        force_paid_providers=force_paid_providers,
+        force_paid_provider=force_paid_provider,
+        force_allow_paid_providers=force_allow_paid_providers,
+        allow_paid_providers=allow_paid_providers,
+        allow_paid_provider=allow_paid_provider,
+    )
+    if force_paid_override:
+        ctx: dict[str, object] = task_ctx if isinstance(task_ctx, dict) else {}
+        if not _truthy(str(ctx.get("force_paid_providers") or "")):
+            agent_service.update_task(
+                selected_task_id,
+                context={
+                    "force_paid_providers": True,
+                    "force_paid_override_source": "query",
+                },
+            )
+
+    from app.services import agent_execution_service
+
+    background_tasks.add_task(
+        agent_execution_service.execute_task,
+        selected_task_id,
+        force_paid_providers=force_paid_override,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+    )
+    return {"ok": True, "picked": True, "task": _task_to_item(task)}
 
 
 @router.post(
