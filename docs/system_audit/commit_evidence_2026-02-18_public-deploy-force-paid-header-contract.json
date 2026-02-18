@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "Tighten public deploy contract to verify execute paid-provider header support and force paid override endpoint schema is present before contract passes.",
+  "files_owned": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-deploy-contract-hardening-2026-02-18"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json"
+  ],
+  "change_files": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 -m py_compile api/app/services/release_gate_service.py api/tests/test_release_gate_service.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public contract now validates the X-Force-Paid-Providers execute override header in openapi before reporting pass.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/openapi.json",
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/gates/main-head",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "Run public deploy contract report and confirm it fails while production still serves old execute schema.",
+      "Merge this contract-hardening change so redeploy validates corrected endpoint schema."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and post-merge public deployment validation still pending."
+  }
+}
