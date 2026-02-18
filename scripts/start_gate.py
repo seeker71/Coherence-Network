@@ -8,6 +8,13 @@ import os
 from pathlib import Path
 
 
+def env_flag(name: str, *, default: bool = True) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return str(value).strip().lower() not in {"0", "false", "no", "off"}
+
+
 def run_json(cmd: list[str], *, required: bool = True) -> dict | None:
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -44,7 +51,8 @@ def main() -> None:
     if shutil.which("gh") is None:
         raise SystemExit("start-gate: required command not found: gh")
 
-    require_gh_checks = os.environ.get("START_GATE_REQUIRE_GH", "1") != "0"
+    require_gh_checks = env_flag("START_GATE_REQUIRE_GH", default=True)
+    enforce_remote_failures = env_flag("START_GATE_ENFORCE_REMOTE_FAILURES", default=True)
 
     if require_gh_checks:
         run_command(["gh", "auth", "status"])
@@ -111,7 +119,9 @@ def main() -> None:
             run for run in runs if isinstance(run, dict) and str(run.get("status") or "") == "completed"
         ]
         if not completed:
-            raise SystemExit("start-gate: no completed main workflow runs found")
+            if enforce_remote_failures:
+                raise SystemExit("start-gate: no completed main workflow runs found")
+            print("start-gate: warning: no completed main workflow runs found")
 
         latest_by_workflow: dict[str, dict] = {}
         for run in completed:
@@ -134,9 +144,11 @@ def main() -> None:
             failures_text = ", ".join(
                 f'{item["name"]}={item["conclusion"]} ({item["html_url"]})' for item in failures
             )
-            raise SystemExit(
-                f"start-gate: latest main workflow failures detected: {failures_text}"
-            )
+            if enforce_remote_failures:
+                raise SystemExit(
+                    f"start-gate: latest main workflow failures detected: {failures_text}"
+                )
+            print(f"start-gate: warning: ignoring remote main workflow failures (non-blocking mode): {failures_text}")
 
     pulls_payload = run_json(
         ["gh", "api", f"repos/{repo_slug}/pulls?state=open&per_page=50"],
@@ -190,10 +202,13 @@ def main() -> None:
 
     if failed_prs:
         first = failed_prs[0]
-        raise SystemExit(
+        failure_text = (
             "start-gate: open PR check failures detected. "
             f"Example: PR #{first['number']} {first['title']} ({first['url']})"
         )
+        if enforce_remote_failures:
+            raise SystemExit(failure_text)
+        print(f"start-gate: warning: {failure_text}")
 
     proc = subprocess.run(
         ["git", "-C", str(primary), "status", "--short"],
