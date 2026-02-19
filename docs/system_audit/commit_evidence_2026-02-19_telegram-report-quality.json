@@ -1,0 +1,102 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/telegram-report-content-20260219",
+  "commit_scope": "Improve Telegram report quality and inspectability: richer report text, action hints, timestamps, and diagnostics summary/report logs.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_adapter.py",
+    "api/app/services/telegram_diagnostics.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_telegram_diagnostics_api.py",
+    "docs/system_audit/commit_evidence_2026-02-19_telegram-report-quality.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-19-telegram-report-quality"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_telegram_diagnostics_api.py",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_telegram_diagnostics_api.py tests/test_gates.py",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /status,/tasks,/attention,/railway head,/railway status,/railway schedule,/railway verify,/railway jobs,/railway tick due (captured report text)",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /status with invalid TELEGRAM_BOT_TOKEN (diagnostics summary + report_log + send_results timestamps verified)",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_adapter.py",
+    "api/app/services/telegram_diagnostics.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_telegram_diagnostics_api.py"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_telegram_diagnostics_api.py",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_telegram_diagnostics_api.py tests/test_gates.py",
+      "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI webhook smoke scripts for report text quality and diagnostics inspectability",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Telegram reports now include clearer status context (checked timestamps, severity/action hints, next steps) and diagnostics now include summary counters plus report logs for inspection.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/webhook"
+    ],
+    "test_flows": [
+      "POST /api/agent/telegram/webhook with /status,/tasks,/attention",
+      "POST /api/agent/telegram/webhook with /railway status,/railway verify,/railway tick due",
+      "GET /api/agent/telegram/diagnostics and inspect summary/report_log/send_results ts_iso"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit/push and CI/deploy completion."
+  }
+}

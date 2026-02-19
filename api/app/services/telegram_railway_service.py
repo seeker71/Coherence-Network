@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from app.services import release_gate_service
@@ -46,6 +47,10 @@ def _inline_code_list(values: list[Any], *, limit: int = 6) -> str:
     return out
 
 
+def _now_utc_label() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def railway_help_reply() -> str:
     return (
         "*Railway commands*\n"
@@ -67,6 +72,7 @@ def _format_status_reply(report: dict[str, Any]) -> str:
     warnings = report.get("warnings")
     reply = (
         "*Railway status*\n"
+        f"Checked: `{_now_utc_label()}`\n"
         f"Repository: `{report.get('repository', _DEFAULT_REPOSITORY)}`\n"
         f"Branch: `{report.get('branch', _DEFAULT_BRANCH)}`\n"
         f"Result: `{result}`\n"
@@ -78,13 +84,24 @@ def _format_status_reply(report: dict[str, Any]) -> str:
         reply += f"\nWarnings: {_inline_code_list(warnings)}"
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
+    if result == "public_contract_passed":
+        reply += "\nNext: `/railway schedule 8` to monitor future deploy checks"
+    else:
+        reply += "\nNext: `/railway verify` to create+run a verification job"
     return reply
 
 
 def _format_jobs_reply(jobs: list[dict[str, Any]]) -> str:
     if not jobs:
-        return "*Railway jobs*\nNo verification jobs found."
-    reply = f"*Railway jobs* ({len(jobs)} total)\n"
+        return (
+            "*Railway jobs*\n"
+            f"Checked: `{_now_utc_label()}`\n"
+            "No verification jobs found."
+        )
+    reply = (
+        f"*Railway jobs* ({len(jobs)} total)\n"
+        f"Checked: `{_now_utc_label()}`"
+    )
     latest = list(reversed(jobs))[:_JOB_LIST_LIMIT]
     for job in latest:
         job_id = str(job.get("job_id") or "?")
@@ -116,6 +133,7 @@ def _format_verify_reply(created: dict[str, Any], ticked: dict[str, Any]) -> str
     )
     reply = (
         "*Railway verify*\n"
+        f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
         f"Attempts: `{attempts}/{max_attempts or '?'}`\n"
@@ -123,6 +141,12 @@ def _format_verify_reply(created: dict[str, Any], ticked: dict[str, Any]) -> str
     )
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
+    if status == "retrying":
+        reply += f"\nNext: `/railway tick {job_id}`"
+    elif status == "failed":
+        reply += f"\nNext: inspect `/railway status` then retry `/railway tick {job_id}`"
+    elif status == "completed":
+        reply += "\nNext: `/railway status`"
     return reply
 
 
@@ -146,6 +170,7 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
     )
     reply = (
         "*Railway tick*\n"
+        f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
         f"Attempts: `{attempts}/{max_attempts or '?'}`\n"
@@ -153,6 +178,12 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
     )
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
+    if status == "retrying":
+        reply += f"\nNext: `/railway tick {job_id}`"
+    elif status == "failed":
+        reply += "\nNext: `/railway status` and `/railway verify`"
+    elif status == "completed":
+        reply += "\nNext: `/railway jobs`"
     return reply
 
 
@@ -160,8 +191,15 @@ def _format_tick_many_reply(result: dict[str, Any], *, due_only: bool) -> str:
     jobs = result.get("jobs") if isinstance(result.get("jobs"), list) else []
     mode = "due" if due_only else "all"
     if not jobs:
-        return f"*Railway tick {mode}*\nNo jobs were updated."
-    reply = f"*Railway tick {mode}* ({len(jobs)} updated)\n"
+        return (
+            f"*Railway tick {mode}*\n"
+            f"Checked: `{_now_utc_label()}`\n"
+            "No jobs were updated."
+        )
+    reply = (
+        f"*Railway tick {mode}* ({len(jobs)} updated)\n"
+        f"Checked: `{_now_utc_label()}`"
+    )
     for job in jobs[:_JOB_LIST_LIMIT]:
         job_id = str(job.get("job_id") or "?")
         status = str(job.get("status") or "unknown")
@@ -174,6 +212,7 @@ def _format_tick_many_reply(result: dict[str, Any], *, due_only: bool) -> str:
             else "unknown"
         )
         reply += f"\n`{job_id}` {status} ({attempts}/{max_attempts or '?'}) `{result_name}`"
+    reply += "\nNext: `/railway jobs`"
     return reply
 
 
@@ -184,9 +223,11 @@ def _format_schedule_reply(created: dict[str, Any]) -> str:
     max_attempts = int(created.get("max_attempts") or 0)
     return (
         "*Railway schedule*\n"
+        f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
-        f"Attempts: `{attempts}/{max_attempts or '?'}`"
+        f"Attempts: `{attempts}/{max_attempts or '?'}`\n"
+        "Next: `/railway tick due`"
     )
 
 
