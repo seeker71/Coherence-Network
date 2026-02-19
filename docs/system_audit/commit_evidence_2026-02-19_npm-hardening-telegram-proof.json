@@ -1,11 +1,12 @@
 {
   "date": "2026-02-19",
   "thread_branch": "codex/telegram-deploy-proof",
-  "commit_scope": "Harden npm install flows with --allow-git=none and extend agent manifest provenance with code references; validate deploy and Telegram reporting paths.",
+  "commit_scope": "Harden npm install flows with --allow-git=none, extend agent manifest provenance with code references, and stabilize PM/orchestration pipeline output contract used by guard tests.",
   "files_owned": [
     ".github/workflows/test.yml",
     ".github/workflows/thread-gates.yml",
     "api/scripts/agent_runner.py",
+    "api/scripts/check_pipeline.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_pr_check_failure_triage.py",
     "api/tests/test_worktree_pr_guard.py",
@@ -49,6 +50,7 @@
     ".github/workflows/test.yml",
     ".github/workflows/thread-gates.yml",
     "api/scripts/agent_runner.py",
+    "api/scripts/check_pipeline.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_pr_check_failure_triage.py",
     "api/tests/test_worktree_pr_guard.py",
