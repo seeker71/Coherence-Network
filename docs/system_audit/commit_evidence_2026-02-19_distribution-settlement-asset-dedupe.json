@@ -1,0 +1,108 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/clawwork-onchain-asset-identity",
+  "commit_scope": "Implement persisted distribution settlement records with payout tx hashes and fix GitHub repository asset identity deduplication.",
+  "files_owned": [
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/app/models/distribution.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/distributions.py",
+    "api/app/services/distribution_settlement_service.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_distributions.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
+  ],
+  "idea_ids": [
+    "coherence-network-onchain-payout-execution",
+    "coherence-network-github-asset-identity"
+  ],
+  "spec_ids": [
+    "048-contributions-api",
+    "049-distribution-engine"
+  ],
+  "task_ids": [
+    "task-2026-02-19-distribution-settlement-persistence",
+    "task-2026-02-19-github-asset-dedupe-fix"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest -q api/tests/test_contributions.py api/tests/test_distributions.py",
+    "cd api && pytest -q",
+    "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
+  ],
+  "change_files": [
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/app/models/distribution.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/distributions.py",
+    "api/app/services/distribution_settlement_service.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_distributions.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "pytest -q api/tests/test_contributions.py api/tests/test_distributions.py",
+      "cd api && pytest -q",
+      "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+      "./scripts/verify_worktree_local_web.sh --start"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GitHub webhook ingestion now resolves canonical repository asset identity to prevent duplicate assets, and distribution records persist settlement outcomes with per-payout transaction hashes and settlement status fields.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/v1/contributions/github",
+      "https://coherence-network-production.up.railway.app/v1/distributions",
+      "https://coherence-network-production.up.railway.app/v1/distributions/{distribution_id}"
+    ],
+    "test_flows": [
+      "POST /v1/contributions/github twice for same repository returns contributions tied to one canonical asset id",
+      "POST /v1/distributions persists a distribution record retrievable through GET /v1/distributions/{distribution_id}",
+      "Distribution payouts with contributor wallets include settlement_status=confirmed and tx_hash identity"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI, and Railway deployment verification"
+  }
+}

@@ -156,15 +156,19 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Find or create asset for repository
+    canonical_asset_name = f"GitHub repository: {payload.repository}"
     asset = None
     if hasattr(store, "find_asset_by_name"):
-        asset = store.find_asset_by_name(payload.repository)
+        asset = store.find_asset_by_name(canonical_asset_name)
+        if not asset:
+            # Backward compatibility in case legacy rows stored raw repository names.
+            asset = store.find_asset_by_name(payload.repository)
 
     if not asset:
         # Create new asset
         asset = Asset(
             type=AssetType.CODE,
-            description=f"GitHub repository: {payload.repository}"
+            description=canonical_asset_name
         )
         asset = store.create_asset(asset)
 
@@ -237,14 +241,17 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
             contributor = store.create_contributor(contributor)
 
         # Find or create asset
+        canonical_asset_name = f"GitHub repository: {payload.repository}"
         asset = None
         if hasattr(store, "find_asset_by_name"):
-            asset = store.find_asset_by_name(payload.repository)
+            asset = store.find_asset_by_name(canonical_asset_name)
+            if not asset:
+                asset = store.find_asset_by_name(payload.repository)
 
         if not asset:
             asset = Asset(
                 type=AssetType.CODE,
-                description=f"GitHub repository: {payload.repository}"
+                description=canonical_asset_name
             )
             asset = store.create_asset(asset)
 

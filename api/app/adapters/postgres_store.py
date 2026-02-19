@@ -17,6 +17,7 @@ from datetime import datetime
 from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
+from app.models.distribution import Distribution, Payout
 from app.models.project import Project, ProjectSummary
 from app.services.contributor_hygiene import is_test_contributor_email
 
@@ -57,6 +58,18 @@ class ContributionModel(Base):
     meta = Column(JSON, default={})
 
 
+class DistributionModel(Base):
+    __tablename__ = "distributions"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    asset_id = Column(PG_UUID(as_uuid=True), nullable=False, index=True)
+    value_amount = Column(Numeric(precision=20, scale=2), nullable=False)
+    payouts = Column(JSON, default=[])
+    settlement_status = Column(String, nullable=False, default="pending", index=True)
+    settled_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+
+
 class PostgresGraphStore:
     """PostgreSQL-backed GraphStore for contribution tracking.
 
@@ -77,6 +90,7 @@ class PostgresGraphStore:
             "contributors": {"expires_at": 0.0, "items_by_limit": {}},
             "assets": {"expires_at": 0.0, "items_by_limit": {}},
             "contributions": {"expires_at": 0.0, "items_by_limit": {}},
+            "distributions": {"expires_at": 0.0, "items_by_limit": {}},
         }
         self._ensure_tables()
         self._purge_test_contributors()
@@ -264,9 +278,22 @@ class PostgresGraphStore:
             )
 
     def find_asset_by_name(self, name: str) -> Asset | None:
-        """Find asset by description (name)."""
+        """Find asset by canonical repository identity."""
+        canonical_name = (name or "").strip()
+        if not canonical_name:
+            return None
+
+        search_descriptions = [canonical_name]
+        if not canonical_name.lower().startswith("github repository:"):
+            search_descriptions.append(f"GitHub repository: {canonical_name}")
+
         with self._session() as session:
-            model = session.query(AssetModel).filter_by(description=name).first()
+            model = (
+                session.query(AssetModel)
+                .filter(AssetModel.description.in_(search_descriptions))
+                .order_by(AssetModel.created_at.asc())
+                .first()
+            )
             if not model:
                 return None
             return Asset(
@@ -434,6 +461,65 @@ class PostgresGraphStore:
                 )
                 for m in models
             ]
+
+    def create_distribution(self, distribution: Distribution) -> Distribution:
+        with self._session() as session:
+            model = DistributionModel(
+                id=distribution.id,
+                asset_id=distribution.asset_id,
+                value_amount=float(distribution.value_amount),
+                payouts=[row.model_dump(mode="json") for row in distribution.payouts],
+                settlement_status=distribution.settlement_status.value,
+                settled_at=distribution.settled_at,
+                created_at=distribution.created_at,
+            )
+            session.add(model)
+            session.commit()
+            self._invalidate_list_cache()
+            return distribution
+
+    def get_distribution(self, distribution_id: UUID) -> Distribution | None:
+        with self._session() as session:
+            model = session.query(DistributionModel).filter_by(id=distribution_id).first()
+            if not model:
+                return None
+            return Distribution(
+                id=model.id,
+                asset_id=model.asset_id,
+                value_amount=Decimal(str(model.value_amount)),
+                payouts=[Payout(**row) for row in (model.payouts or [])],
+                settlement_status=model.settlement_status,
+                settled_at=model.settled_at,
+                created_at=model.created_at,
+            )
+
+    def list_distributions(self, limit: int = 100) -> list[Distribution]:
+        requested_limit = self._normalize_limit("distributions", limit, 5000)
+        cached = self._read_cached_rows("distributions", requested_limit, Distribution)
+        if cached is not None:
+            return cached
+
+        with self._session() as session:
+            models = (
+                session.query(DistributionModel)
+                .order_by(DistributionModel.created_at.desc())
+                .limit(requested_limit)
+                .all()
+            )
+            items = [
+                Distribution(
+                    id=m.id,
+                    asset_id=m.asset_id,
+                    value_amount=Decimal(str(m.value_amount)),
+                    payouts=[Payout(**row) for row in (m.payouts or [])],
+                    settlement_status=m.settlement_status,
+                    settled_at=m.settled_at,
+                    created_at=m.created_at,
+                )
+                for m in models
+            ]
+            self._write_cache_rows("distributions", requested_limit, items)
+            return items
 
     # ---- Project/dependency API (not yet implemented for PostgreSQL) ----
 

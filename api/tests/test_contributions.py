@@ -236,6 +236,47 @@ async def test_github_contribution_cost_marks_actual_with_verification_keys() ->
 
 
 @pytest.mark.asyncio
+async def test_github_contribution_reuses_existing_repository_asset() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+    repo = "seeker71/Coherence-Network"
+    expected_description = f"GitHub repository: {repo}"
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "alice@coherence.network",
+                "repository": repo,
+                "commit_hash": "abc123",
+                "cost_amount": "4.00",
+                "metadata": {"files_changed": 1, "lines_added": 10},
+            },
+        )
+        assert first.status_code == 201
+
+        second = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "bob@coherence.network",
+                "repository": repo,
+                "commit_hash": "def456",
+                "cost_amount": "5.00",
+                "metadata": {"files_changed": 2, "lines_added": 20},
+            },
+        )
+        assert second.status_code == 201
+
+        first_asset_id = first.json()["asset_id"]
+        second_asset_id = second.json()["asset_id"]
+        assert first_asset_id == second_asset_id
+
+        assets = await client.get("/api/assets?limit=100")
+        assert assets.status_code == 200
+        matching_assets = [asset for asset in assets.json() if asset["description"] == expected_description]
+        assert len(matching_assets) == 1
+
+
+@pytest.mark.asyncio
 async def test_agent_tasks_router_is_exposed() -> None:
     # Validates /api/agent/tasks is publicly mountable (router included in main app).
     app.state.graph_store = InMemoryGraphStore()
