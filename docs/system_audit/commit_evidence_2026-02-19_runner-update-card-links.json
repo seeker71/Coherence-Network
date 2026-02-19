@@ -44,7 +44,8 @@
     "cd api && pytest -q tests/test_agent_telegram_webhook.py",
     "cd api && pytest -q tests/test_telegram_diagnostics_api.py tests/test_agent_telegram_webhook.py",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "PR #245 created from rebased commit 297c7ad to retrigger CI on current origin/main base"
   ],
   "change_files": [
     "api/app/routers/agent_telegram.py",
@@ -83,6 +84,6 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "Awaiting commit/push/CI and production verification."
+    "reason": "Awaiting CI pass on PR #245 and production Telegram verification."
   }
 }
