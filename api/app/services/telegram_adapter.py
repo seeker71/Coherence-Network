@@ -60,6 +60,7 @@ async def send_alert(message: str, parse_mode: str = "Markdown") -> bool:
     async with httpx.AsyncClient(timeout=10.0) as client:
         for chat_id in chat_ids:
             try:
+                telegram_diagnostics.record_report("alert", chat_id.strip(), message)
                 r = await client.post(
                     url,
                     json={
@@ -90,6 +91,7 @@ async def send_reply(chat_id: Union[int, str], message: str, parse_mode: str = "
     url = f"{TELEGRAM_API}/bot{token}/sendMessage"
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
+            telegram_diagnostics.record_report("reply", chat_id, message)
             r = await client.post(
                 url,
                 json={

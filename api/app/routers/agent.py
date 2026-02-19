@@ -860,6 +860,49 @@ async def telegram_diagnostics() -> dict:
     from app.services import telegram_adapter
     from app.services import telegram_diagnostics as diag
 
+    def _iso_ts(raw: object) -> str | None:
+        try:
+            ts = float(raw)  # type: ignore[arg-type]
+        except Exception:
+            return None
+        if ts <= 0:
+            return None
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+
+    webhook_events = diag.get_webhook_events()
+    send_results = diag.get_send_results()
+    report_log = diag.get_report_log()
+
+    webhook_events_out = []
+    for row in webhook_events:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            webhook_events_out.append(out)
+        else:
+            webhook_events_out.append(row)
+
+    send_results_out = []
+    for row in send_results:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            send_results_out.append(out)
+        else:
+            send_results_out.append(row)
+
+    report_log_out = []
+    for row in report_log:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            report_log_out.append(out)
+        else:
+            report_log_out.append(row)
+
+    send_success = sum(1 for item in send_results if isinstance(item, dict) and bool(item.get("ok")))
+    send_failures = sum(1 for item in send_results if isinstance(item, dict) and not bool(item.get("ok")))
+
     token = (
         (os.environ.get("TELEGRAM_BOT_TOKEN") or "")[:8] + "..." if os.environ.get("TELEGRAM_BOT_TOKEN") else None
     )
@@ -873,8 +916,19 @@ async def telegram_diagnostics() -> dict:
                 if os.environ.get("TELEGRAM_ALLOWED_USER_IDS") else []
             ),
         },
-        "webhook_events": diag.get_webhook_events(),
-        "send_results": diag.get_send_results(),
+        "summary": {
+            "webhook_event_count": len(webhook_events),
+            "send_count": len(send_results),
+            "send_success_count": send_success,
+            "send_failure_count": send_failures,
+            "report_count": len(report_log),
+            "last_webhook_at": _iso_ts(webhook_events[-1].get("ts")) if webhook_events and isinstance(webhook_events[-1], dict) else None,
+            "last_send_at": _iso_ts(send_results[-1].get("ts")) if send_results and isinstance(send_results[-1], dict) else None,
+            "last_report_at": _iso_ts(report_log[-1].get("ts")) if report_log and isinstance(report_log[-1], dict) else None,
+        },
+        "webhook_events": webhook_events_out,
+        "send_results": send_results_out,
+        "report_log": report_log_out,
     }
 
 
