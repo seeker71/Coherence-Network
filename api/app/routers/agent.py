@@ -70,6 +70,14 @@ def _require_execute_token(
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+def _require_execute_token_when_unset() -> bool:
+    """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
+    # Default-on security default for deployed services.
+    # Local/test callers can opt out with AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH=1.
+    return not _truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
+
+
+
 def _coerce_force_paid_override(request: Request) -> bool:
     """Read force-paid override flags directly from raw query values."""
     raw_query = request.url.query
@@ -352,7 +360,7 @@ async def execute_task(
     _require_execute_token(
         "execute_task",
         x_agent_execute_token,
-        require_when_token_not_configured=False,
+        require_when_token_not_configured=_require_execute_token_when_unset(),
     )
 
     task = agent_service.get_task(task_id)

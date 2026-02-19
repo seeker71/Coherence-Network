@@ -157,12 +157,45 @@ EOF
     if [[ -n "$task_id" ]]; then
       log "Created task: ${task_id}"
       if [[ -n "$EXEC_TOKEN" ]]; then
+        cat > "$TMP_DIR/direct_task.json" <<EOF
+{
+  "direction": "Remote ops smoke check direct execute verification",
+  "task_type": "${TASK_TYPE}",
+  "context": {
+    "executor": "remote-ops-smoke",
+    "model_override": "openrouter/free"
+  }
+}
+EOF
+
+        status="$(http_call POST "${API_URL%/}/api/agent/tasks" "$TMP_DIR/new_direct_task.json" \
+          -H "Content-Type: application/json" \
+          --data-binary "@$TMP_DIR/direct_task.json")"
+        direct_task_id=""
+        if require_2xx "Create smoke task for direct execute" "$status" "$TMP_DIR/new_direct_task.json"; then
+          direct_task_id="$(extract_task_id "$TMP_DIR/new_direct_task.json")"
+        fi
+
         log "Dispatching task via pickup-and-execute"
         status="$(http_call POST "${API_URL%/}/api/agent/tasks/pickup-and-execute?task_id=${task_id}&task_type=${TASK_TYPE}&force_paid_providers=true" "$TMP_DIR/task_execute.json" \
           -H "Content-Type: application/json" \
           -H "X-Agent-Execute-Token: ${EXEC_TOKEN}")"
         if require_2xx "Dispatch via pickup-and-execute" "$status" "$TMP_DIR/task_execute.json"; then
           log "Pickup+execute requested for ${task_id}"
+        else
+          fail=$((fail + 1))
+        fi
+
+        if [[ -n "$direct_task_id" ]]; then
+          log "Dispatching task via direct execute"
+          status="$(http_call POST "${API_URL%/}/api/agent/tasks/${direct_task_id}/execute?force_paid_providers=true" "$TMP_DIR/task_execute_direct.json" \
+            -H "Content-Type: application/json" \
+            -H "X-Agent-Execute-Token: ${EXEC_TOKEN}")"
+          if require_2xx "Dispatch via direct execute" "$status" "$TMP_DIR/task_execute_direct.json"; then
+            log "Direct execute requested for ${direct_task_id}"
+          else
+            fail=$((fail + 1))
+          fi
         else
           fail=$((fail + 1))
         fi
@@ -180,6 +213,16 @@ EOF
         else
           require_2xx "Dispatch via pickup-and-execute without token" "$status" "$TMP_DIR/task_execute_unauth.json"
           log "Unexpectedly accepted without token. This is still recorded as a smoke failure for safety."
+          fail=$((fail + 1))
+        fi
+
+        status="$(http_call POST "${API_URL%/}/api/agent/tasks/${task_id}/execute?force_paid_providers=true" "$TMP_DIR/task_execute_direct_unauth.json" \
+          -H "Content-Type: application/json")"
+        if [[ "$status" == "401" || "$status" == "403" ]]; then
+          log "Direct execute endpoint is token-protected (${status}) as expected."
+        else
+          require_2xx "Direct execute without token" "$status" "$TMP_DIR/task_execute_direct_unauth.json"
+          log "Unexpectedly accepted direct execute without token. This is still recorded as a smoke failure for safety."
           fail=$((fail + 1))
         fi
       fi

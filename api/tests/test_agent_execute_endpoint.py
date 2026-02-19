@@ -11,6 +11,11 @@ from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service
 
 
+@pytest.fixture(autouse=True)
+def _allow_legacy_unauthenticated_execute_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", "1")
+
+
 def _reset_agent_store() -> None:
     agent_service._store.clear()
     agent_service._store_loaded = False
