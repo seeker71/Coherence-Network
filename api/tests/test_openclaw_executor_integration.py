@@ -141,6 +141,30 @@ def test_create_task_openclaw_model_override_normalizes_alias(monkeypatch: pytes
     assert task["model"] == "openclaw/gpt-5-codex"
 
 
+def test_create_task_openclaw_model_override_normalizes_alias_with_partial_env_map(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_MODEL", "gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize typo alias even when env map is partial",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gtp-5.3-codex"},
+        )
+    )
+
+    assert "--model gpt-5-codex" in task["command"]
+    assert "--model gtp-5.3-codex" not in task["command"]
+    assert task["model"] == "openclaw/gpt-5-codex"
+
+
 @pytest.mark.asyncio
 async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
