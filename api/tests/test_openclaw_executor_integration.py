@@ -97,6 +97,50 @@ def test_create_task_openclaw_model_override_adds_model_flag(monkeypatch: pytest
     assert task["model"] == "openclaw/openrouter/free"
 
 
+def test_create_task_openclaw_default_model_normalizes_legacy_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.delenv("OPENCLAW_COMMAND_TEMPLATE", raising=False)
+    monkeypatch.setattr(
+        agent_service.routing_service,
+        "OPENCLAW_MODEL_BY_TYPE",
+        {task_type: "gtp-5.3-codex" for task_type in TaskType},
+    )
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize legacy model alias",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw"},
+        )
+    )
+
+    assert task["model"] == "openclaw/gpt-5-codex"
+    assert "--model gpt-5-codex" in task["command"]
+
+
+def test_create_task_openclaw_model_override_normalizes_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize model override typo alias",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gtp-5.3-codex"},
+        )
+    )
+
+    assert "--model gpt-5-codex" in task["command"]
+    assert task["model"] == "openclaw/gpt-5-codex"
+
+
 @pytest.mark.asyncio
 async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
