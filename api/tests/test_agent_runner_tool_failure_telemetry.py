@@ -346,6 +346,48 @@ def test_append_agent_manifest_entry_writes_agent_doc_and_context(monkeypatch, t
     assert "manifestation_range `L42-L48`" in body
 
 
+def test_append_agent_manifest_entry_includes_code_references(monkeypatch, tmp_path):
+    monkeypatch.setattr(agent_runner, "AGENT_MANIFESTS_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner, "AGENT_MANIFEST_ENABLED", True)
+    monkeypatch.setattr(
+        agent_runner,
+        "_collect_manifestation_blocks",
+        lambda _repo_path, *, max_blocks: [
+            {
+                "file": "api/app/service.py",
+                "line": 42,
+                "file_line_ref": "api/app/service.py:42",
+                "read_range": "42-48",
+                "manifestation_range": "L42-L48",
+            }
+        ],
+    )
+
+    payload = agent_runner._append_agent_manifest_entry(
+        task_id="task_manifest_ref",
+        task_type="impl",
+        task_direction="Add provenance with code references",
+        task_ctx={
+            "task_agent": "dev-engineer",
+            "code_references": [
+                {
+                    "url": "https://github.com/example/public-repo/blob/main/demo.py",
+                    "license": "MIT",
+                }
+            ],
+        },
+        repo_path=str(tmp_path),
+        executor="openai-codex",
+    )
+
+    manifest = payload.get("agent_manifest") or {}
+    assert manifest.get("code_refs")
+    doc_path = Path(str(manifest.get("doc_path") or ""))
+    body = doc_path.read_text(encoding="utf-8")
+    assert "Code references" in body
+    assert "MIT" in body
+
+
 def test_observe_target_contract_detects_abort_evidence():
     contract = agent_runner._normalize_task_target_contract(
         {
