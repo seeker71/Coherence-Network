@@ -2567,7 +2567,8 @@ def _uses_cursor_cli(command: str) -> bool:
 
 def _uses_openclaw_cli(command: str) -> bool:
     """True if command uses OpenClaw CLI."""
-    return command.strip().startswith("openclaw ")
+    stripped = command.strip()
+    return stripped.startswith("openclaw ") or stripped.startswith("clawwork ")
 
 
 def _uses_codex_cli(command: str) -> bool:
@@ -2619,7 +2620,7 @@ def _infer_executor(command: str, model: str) -> str:
         return "cursor"
     if _uses_codex_cli(command):
         return "openai-codex"
-    if _uses_openclaw_cli(command) or model_value.startswith("openclaw/"):
+    if _uses_openclaw_cli(command) or model_value.startswith(("openclaw/", "clawwork/")):
         return "openclaw"
     if s.startswith("aider "):
         return "aider"

@@ -837,9 +837,12 @@ async def get_task_log(task_id: str) -> dict:
 @router.get("/agent/route", response_model=RouteResponse)
 async def route(
     task_type: TaskType = Query(...),
-    executor: Optional[str] = Query("auto", description="Executor: auto (default policy), claude, cursor, or openclaw"),
+    executor: Optional[str] = Query(
+        "auto",
+        description="Executor: auto (default policy), claude, cursor, openclaw, or clawwork (alias).",
+    ),
 ) -> RouteResponse:
-    """Get routing for a task type (no persistence). Use executor=cursor|openclaw for alternate CLIs."""
+    """Get routing for a task type (no persistence). Use executor=cursor|openclaw|clawwork for alternate CLIs."""
     return RouteResponse(**agent_service.get_route(task_type, executor=executor or "auto"))
 
 
