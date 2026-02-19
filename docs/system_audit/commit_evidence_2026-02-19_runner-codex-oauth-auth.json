@@ -42,7 +42,8 @@
     "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_automation_usage_api.py",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main (ready_for_push=True)",
     "Re-ran local PR guard after rebase to confirm clean merge-base gating",
-    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "maintainability_audit_report.json refreshed by worktree guard hooks and committed for PR tracking"
   ],
   "change_files": [
     "api/scripts/agent_runner.py",
