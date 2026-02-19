@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
+const FETCH_TIMEOUT_MS = 6000;
+const FETCH_RETRY_DELAY_MS = 250;
+const FETCH_RETRY_ATTEMPTS = 3;
 
 type IdeaQuestion = {
   question: string;
@@ -58,36 +62,124 @@ type FlowResponse = {
   items: FlowItem[];
 };
 
+type LoadIdeaResult =
+  | { kind: "ok"; idea: IdeaWithScore }
+  | { kind: "not_found" }
+  | { kind: "error"; details: string };
+
+type LoadFlowResult = {
+  flow: FlowItem | null;
+  details: string | null;
+};
+
 function toRepoHref(pathOrUrl: string): string {
   if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
   return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
 }
 
-async function loadIdea(ideaId: string): Promise<IdeaWithScore> {
-  const API = getApiBase();
-  const res = await fetch(`${API}/api/ideas/${encodeURIComponent(ideaId)}`, { cache: "no-store" });
-  if (res.status === 404) throw new Error("Idea not found");
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as IdeaWithScore;
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function loadFlowForIdea(ideaId: string): Promise<FlowItem | null> {
+async function fetchJsonWithRetries<T>(
+  url: string,
+  attempts = FETCH_RETRY_ATTEMPTS,
+): Promise<{ status: number | null; data: T | null; details: string | null }> {
+  let lastStatus: number | null = null;
+  let lastDetails: string | null = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+      FETCH_TIMEOUT_MS,
+    );
+    try {
+      const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+      lastStatus = res.status;
+      if (res.ok) {
+        return { status: res.status, data: (await res.json()) as T, details: null };
+      }
+      lastDetails = `HTTP ${res.status}`;
+      if (res.status < 500 && res.status !== 429) {
+        return { status: res.status, data: null, details: lastDetails };
+      }
+    } catch (error) {
+      lastDetails = String(error);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (attempt < attempts) {
+      await wait(FETCH_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  return { status: lastStatus, data: null, details: lastDetails };
+}
+
+async function loadIdea(ideaId: string): Promise<LoadIdeaResult> {
+  const API = getApiBase();
+  const url = `${API}/api/ideas/${encodeURIComponent(ideaId)}`;
+  const result = await fetchJsonWithRetries<IdeaWithScore>(url);
+  if (result.data) return { kind: "ok", idea: result.data };
+  if (result.status === 404) return { kind: "not_found" };
+  return { kind: "error", details: result.details || "Upstream unavailable" };
+}
+
+async function loadFlowForIdea(ideaId: string): Promise<LoadFlowResult> {
   const API = getApiBase();
   const params = new URLSearchParams({
     runtime_window_seconds: "86400",
     idea_id: ideaId,
   });
-  const res = await fetch(`${API}/api/inventory/flow?${params.toString()}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`flow HTTP ${res.status}`);
-  const payload = (await res.json()) as FlowResponse;
-  if (!Array.isArray(payload.items)) return null;
-  return payload.items.find((item) => item.idea_id === ideaId) ?? null;
+  const url = `${API}/api/inventory/flow?${params.toString()}`;
+  const result = await fetchJsonWithRetries<FlowResponse>(url);
+  if (!result.data || !Array.isArray(result.data.items)) {
+    return { flow: null, details: result.details || "Flow payload unavailable" };
+  }
+  return {
+    flow: result.data.items.find((item) => item.idea_id === ideaId) ?? null,
+    details: null,
+  };
 }
 
 export default async function IdeaDetailPage({ params }: { params: Promise<{ idea_id: string }> }) {
   const resolved = await params;
   const ideaId = decodeURIComponent(resolved.idea_id);
-  const [idea, flow] = await Promise.all([loadIdea(ideaId), loadFlowForIdea(ideaId)]);
+  const ideaResult = await loadIdea(ideaId);
+  if (ideaResult.kind === "not_found") {
+    notFound();
+  }
+  if (ideaResult.kind === "error") {
+    return (
+      <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-4">
+        <h1 className="text-2xl font-bold">Idea Details Unavailable</h1>
+        <p className="text-muted-foreground">
+          Could not load <code>{ideaId}</code> from upstream right now.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          details <code>{ideaResult.details}</code>
+        </p>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link href="/ideas" className="underline hover:text-foreground">
+            Back to ideas
+          </Link>
+          <a
+            href={`${getApiBase()}/api/ideas/${encodeURIComponent(ideaId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Open upstream API
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const idea = ideaResult.idea;
+  const flowResult = await loadFlowForIdea(ideaId);
+  const flow = flowResult.flow;
   const apiBase = getApiBase();
 
   return (
@@ -134,6 +226,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       </div>
 
       <p>{idea.description}</p>
+
+      {flowResult.details ? (
+        <p className="text-sm text-muted-foreground">
+          Flow data unavailable: <code>{flowResult.details}</code>
+        </p>
+      ) : null}
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <div className="rounded border p-3">
