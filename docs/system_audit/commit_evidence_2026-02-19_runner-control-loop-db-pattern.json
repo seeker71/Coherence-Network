@@ -55,6 +55,7 @@
   "change_files": [
     "api/app/models/agent.py",
     "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
     "api/app/services/agent_service.py",
     "api/app/services/agent_run_state_service.py",
     "api/app/services/agent_runner_registry_service.py",

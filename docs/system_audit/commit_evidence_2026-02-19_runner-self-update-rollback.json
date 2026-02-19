@@ -67,9 +67,34 @@
     "API telegram diagnostics send_results count increased to 1 for task_0b4877d753461e47 with placeholder token/chat"
   ],
   "change_files": [
+    "api/app/models/agent.py",
     "api/app/routers/agent.py",
     "api/app/routers/agent_telegram.py",
-    "api/scripts/agent_runner.py"
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_runner_registry_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_run_state_api.py",
+    "api/tests/test_agent_runner_registry_api.py",
+    "api/tests/test_agent_task_persistence.py",
+    "docs/AGENT-THREAD-RESUME-SPEC.md",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "web/app/remote-ops/page.tsx"
   ],
-  "change_intent": "process_only"
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Runner startup/task failures trigger rollback/self-heal logic; API task updates from runner include Telegram-ready metadata payload with task link, ROI, and measured value fields.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/telegram/diagnostics",
+      "/api/agent/runners/heartbeat"
+    ],
+    "test_flows": [
+      "runner startup installs deps and begins polling",
+      "runner claims and executes pending task, patching status updates",
+      "API telegram diagnostics records send attempts when Telegram credentials are configured"
+    ]
+  }
 }
