@@ -17,8 +17,51 @@ _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")
 _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
-_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark")
-_OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
+DEFAULT_MODEL_ALIAS_MAP = (
+    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gpt-5.3-codex:gpt-5-codex,"
+    "gtp-5.3-codex-spark:gpt-5-codex,"
+    "gtp-5.3-codex:gpt-5-codex"
+)
+
+
+def _parse_model_alias_map(raw: str) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for pair in str(raw or "").split(","):
+        item = pair.strip()
+        if not item or ":" not in item:
+            continue
+        source, target = item.split(":", 1)
+        source_key = source.strip().lower()
+        target_value = target.strip()
+        if source_key and target_value:
+            aliases[source_key] = target_value
+    return aliases
+
+
+def _model_alias_map() -> dict[str, str]:
+    raw = os.environ.get("AGENT_MODEL_ALIAS_MAP", DEFAULT_MODEL_ALIAS_MAP)
+    return _parse_model_alias_map(str(raw))
+
+
+def normalize_model_name(model: str) -> str:
+    cleaned = str(model or "").strip()
+    if not cleaned:
+        return ""
+    aliases = _model_alias_map()
+    direct = aliases.get(cleaned.lower())
+    if direct:
+        return direct
+    if "/" in cleaned:
+        prefix, _, suffix = cleaned.partition("/")
+        mapped_suffix = aliases.get(suffix.strip().lower())
+        if mapped_suffix:
+            return f"{prefix}/{mapped_suffix}"
+    return cleaned
+
+
+_OPENCLAW_MODEL_DEFAULT = normalize_model_name(os.environ.get("OPENCLAW_MODEL", "gpt-5-codex"))
+_OPENCLAW_MODEL_REVIEW = normalize_model_name(os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT))
 
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (_OLLAMA_MODEL, "openrouter"),
@@ -161,7 +204,7 @@ def cursor_command_template(task_type: TaskType) -> str:
 
 
 def openclaw_command_template(task_type: TaskType) -> str:
-    model = OPENCLAW_MODEL_BY_TYPE[task_type]
+    model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
         'codex exec "{{direction}}" --model {{model}} --reasoning-effort high --worktree --skip-git-repo-check --json',
@@ -178,7 +221,8 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
         template = cursor_command_template(task_type)
         tier = "cursor"
     elif normalized == "openclaw":
-        model = f"openclaw/{OPENCLAW_MODEL_BY_TYPE[task_type]}"
+        resolved_model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
+        model = f"openclaw/{resolved_model}"
         template = openclaw_command_template(task_type)
         tier = "openclaw"
     else:
@@ -204,7 +248,7 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
 
 
 def apply_model_override(command: str, override: str) -> tuple[str, str]:
-    cleaned = override.strip()
+    cleaned = normalize_model_name(override.strip())
     if not cleaned:
         return command, ""
     if re.search(r"--model\s+\S+", command):

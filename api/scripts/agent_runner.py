@@ -217,7 +217,12 @@ except ValueError:
 PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
-DEFAULT_CODEX_MODEL_ALIAS_MAP = "gpt-5.3-codex-spark:gpt-5-codex,gpt-5.3-codex:gpt-5-codex"
+DEFAULT_CODEX_MODEL_ALIAS_MAP = (
+    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gpt-5.3-codex:gpt-5-codex,"
+    "gtp-5.3-codex-spark:gpt-5-codex,"
+    "gtp-5.3-codex:gpt-5-codex"
+)
 CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 
 
