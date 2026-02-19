@@ -51,3 +51,33 @@ async def test_telegram_test_send_records_send_results(monkeypatch: pytest.Monke
     assert len(send_results) == 2
     assert all(item["ok"] is True for item in send_results)
     assert {str(item["chat_id"]) for item in send_results} == {"111", "222"}
+
+
+@pytest.mark.asyncio
+async def test_telegram_diagnostics_includes_summary_and_report_log() -> None:
+    telegram_diagnostics.clear()
+    telegram_diagnostics.record_webhook({"message": {"text": "/status"}})
+    telegram_diagnostics.record_send(chat_id="111", ok=True, status_code=200, response_text="ok")
+    telegram_diagnostics.record_report("reply", "111", "*Agent status*")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        diagnostics = await client.get("/api/agent/telegram/diagnostics")
+
+    assert diagnostics.status_code == 200
+    payload = diagnostics.json()
+    summary = payload.get("summary", {})
+    assert summary.get("webhook_event_count") == 1
+    assert summary.get("send_count") == 1
+    assert summary.get("send_success_count") == 1
+    assert summary.get("report_count") == 1
+    assert isinstance(summary.get("last_webhook_at"), str)
+    assert isinstance(summary.get("last_send_at"), str)
+    assert isinstance(summary.get("last_report_at"), str)
+
+    webhook_events = payload.get("webhook_events", [])
+    send_results = payload.get("send_results", [])
+    report_log = payload.get("report_log", [])
+    assert webhook_events and isinstance(webhook_events[0].get("ts_iso"), str)
+    assert send_results and isinstance(send_results[0].get("ts_iso"), str)
+    assert report_log and report_log[0].get("kind") == "reply"
+    assert report_log[0].get("text_preview") == "*Agent status*"

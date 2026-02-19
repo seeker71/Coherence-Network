@@ -2,6 +2,7 @@
 
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -186,6 +187,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     """Format a telegram task alert with routing/context/value metadata."""
     status = task.get("status", "?")
     status_str = status.value if hasattr(status, "value") else str(status)
+    status_norm = status_str.strip().lower()
     context = _task_context(task)
     task_id = str(task.get("id") or "").strip()
     direction = _escape_markdown(str(task.get("direction") or "").strip()[:220] or "(no direction)")
@@ -197,14 +199,24 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     measured_value, measured_value_source = _resolve_measured_value(context, idea_values)
     task_url = _task_web_url(task_id, context)
 
-    title = "runner_update" if runner_update else status_str
+    icon = "⚠️"
+    if runner_update:
+        icon = "🔄"
+    elif status_norm == TaskStatus.FAILED.value:
+        icon = "❌"
+    elif status_norm == TaskStatus.NEEDS_DECISION.value:
+        icon = "🟡"
+    title = "runner_update" if runner_update else status_norm
     msg = (
-        f"⚠️ *{_escape_markdown(title)}*\n"
+        f"{icon} *{_escape_markdown(title)}*\n"
         f"Task: {direction}\n"
         f"Status: `{status_str}`\n"
         f"Task ID: `{task_id}`\n"
         f"Web UI: [open task]({task_url})"
     )
+    updated_at = str(task.get("updated_at") or task.get("created_at") or "").strip()
+    if updated_at:
+        msg += f"\nUpdated: `{updated_at}`"
     progress_pct = task.get("progress_pct")
     if progress_pct is not None:
         msg += f"\nProgress: `{progress_pct}%`"
@@ -222,10 +234,148 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
         msg += f"\nMeasured value: `{measured_value:.3f}` ({source})"
     else:
         msg += "\nMeasured value: `unavailable`"
+    if status_norm == TaskStatus.NEEDS_DECISION.value and task_id:
+        msg += f"\nAction: `/reply {task_id} <decision>`"
+    elif status_norm == TaskStatus.FAILED.value and task_id:
+        msg += f"\nAction: `/task {task_id}` then `/direction Retry task {task_id}`"
     if task.get("decision_prompt"):
         prompt = _escape_markdown(str(task.get("decision_prompt") or "")[:500])
         msg += f"\n\n{prompt}"
     return msg[:3800]
+
+
+def _now_utc_label() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _help_reply() -> str:
+    return (
+        "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, "
+        "/attention, /usage, /direction \"...\", /railway ..., or just type your direction"
+    )
+
+
+def _format_agent_status_reply(summary: dict[str, Any]) -> str:
+    by_status = summary.get("by_status") if isinstance(summary.get("by_status"), dict) else {}
+    needs = summary.get("needs_attention") if isinstance(summary.get("needs_attention"), list) else []
+    reply = (
+        "*Agent status*\n"
+        f"Checked: `{_now_utc_label()}`\n"
+        f"Total tasks: `{int(summary.get('total') or 0)}`"
+    )
+    if by_status:
+        for key in sorted(by_status):
+            reply += f"\n`{key}`: `{int(by_status.get(key) or 0)}`"
+    if needs:
+        reply += f"\nAttention: `{len(needs)}` (use `/attention`)"
+    else:
+        reply += "\nAttention: `0`"
+    return reply
+
+
+def _format_usage_reply(usage: dict[str, Any]) -> str:
+    reply = f"*Usage by model*\nChecked: `{_now_utc_label()}`"
+    by_model = usage.get("by_model") if isinstance(usage.get("by_model"), dict) else {}
+    if not by_model:
+        reply += "\nNo usage data yet."
+    for model, data in by_model.items():
+        if not isinstance(data, dict):
+            continue
+        count = int(data.get("count") or 0)
+        line = f"\n`{model}`: `{count}` tasks"
+        by_status = data.get("by_status") if isinstance(data.get("by_status"), dict) else {}
+        if by_status:
+            status_pairs = ", ".join(f"{k}:{int(by_status.get(k) or 0)}" for k in sorted(by_status))
+            line += f" ({status_pairs})"
+        reply += line
+    routing = usage.get("routing") if isinstance(usage.get("routing"), dict) else {}
+    if routing:
+        pairs = []
+        for task_type, route in routing.items():
+            if not isinstance(route, dict):
+                continue
+            pairs.append(f"{task_type}={route.get('model')}")
+        if pairs:
+            reply += "\n\n*Routing*: " + ", ".join(sorted(pairs))
+    return reply
+
+
+def _format_tasks_reply(
+    items: list[dict[str, Any]],
+    total: int,
+    *,
+    status_filter: str | None,
+) -> str:
+    reply = (
+        f"*Tasks* ({total} total)\n"
+        f"Checked: `{_now_utc_label()}`"
+    )
+    if status_filter:
+        reply += f"\nFilter: `{status_filter}`"
+    if not items:
+        return reply + "\nNo matching tasks."
+    for task in items:
+        task_id = str(task.get("id") or "").strip()
+        status_obj = task.get("status")
+        status = (
+            str(status_obj.value).strip()
+            if hasattr(status_obj, "value")
+            else str(status_obj or "unknown").strip()
+        )
+        direction = _escape_markdown(str(task.get("direction") or "").strip())
+        if len(direction) > 70:
+            direction = f"{direction[:67]}..."
+        reply += f"\n`{task_id}` `{status}` {direction}"
+    return reply
+
+
+def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
+    task_id = str(task.get("id") or "").strip()
+    status = task.get("status", "unknown")
+    status_str = status.value if hasattr(status, "value") else str(status)
+    direction = _escape_markdown(str(task.get("direction") or "").strip())
+    updated = task.get("updated_at") or task.get("created_at")
+    if hasattr(updated, "isoformat"):
+        updated_at = str(updated.isoformat()).strip()
+    else:
+        updated_at = str(updated or "").strip()
+    reply = (
+        f"*Task* `{task_id}`\n"
+        f"Status: `{status_str}`"
+    )
+    if updated_at:
+        reply += f"\nUpdated: `{updated_at}`"
+    if direction:
+        reply += f"\nDirection: {direction[:220]}"
+    reply += f"\nNext: `/task {task_id}`"
+    return reply
+
+
+def _format_attention_reply(items: list[dict[str, Any]], total: int) -> str:
+    reply = (
+        f"*Attention* ({total} need action)\n"
+        f"Checked: `{_now_utc_label()}`"
+    )
+    if not items:
+        return reply + "\nNo attention tasks right now."
+    for task in items:
+        task_id = str(task.get("id") or "").strip()
+        status = str(task.get("status") or "unknown").strip()
+        direction = _escape_markdown(str(task.get("direction") or "").strip())
+        if len(direction) > 60:
+            direction = f"{direction[:57]}..."
+        reply += f"\n`{task_id}` `{status}` {direction}"
+        if task.get("decision_prompt"):
+            prompt = _escape_markdown(str(task.get("decision_prompt") or "").strip())
+            reply += f"\nPrompt: _{prompt[:100]}_"
+    return reply
+
+
+def _extract_status_filter(arg: str) -> str | None:
+    candidate = str(arg or "").strip().lower()
+    if candidate in ("pending", "running", "completed", "failed", "needs_decision"):
+        return candidate
+    return None
 
 
 @router.post("/agent/telegram/webhook")
@@ -271,30 +421,15 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
 
     if cmd == "status":
         summary = agent_service.get_review_summary()
-        needs = summary["needs_attention"]
-        reply = f"*Agent status*\nTasks: {summary['total']}\n"
-        reply += "\n".join(f"  {k}: {v}" for k, v in summary["by_status"].items())
-        if needs:
-            reply += f"\n\n⚠️ *{len(needs)} need attention*"
+        reply = _format_agent_status_reply(summary if isinstance(summary, dict) else {})
     elif cmd == "usage":
         usage = agent_service.get_usage_summary()
-        reply = "*Usage by model*\n"
-        for model, u in usage.get("by_model", {}).items():
-            reply += f"\n`{model}`: {u.get('count', 0)} tasks"
-            if u.get("by_status"):
-                reply += " " + ", ".join(f"{k}:{v}" for k, v in u["by_status"].items())
-        reply += "\n\n*Routing*: " + ", ".join(
-            f"{t}={d['model']}" for t, d in usage.get("routing", {}).items()
-        )
+        reply = _format_usage_reply(usage if isinstance(usage, dict) else {})
     elif cmd == "tasks":
-        status_filter = (
-            arg if arg in ("pending", "running", "completed", "failed", "needs_decision") else None
-        )
+        status_filter = _extract_status_filter(arg)
         status_enum = TaskStatus(status_filter) if status_filter else None
         items, total = agent_service.list_tasks(status=status_enum, limit=10)
-        reply = f"*Tasks* ({total} total)\n"
-        for t in items:
-            reply += f"\n`{t['id']}` {t['status']} — {str(t['direction'])[:50]}..."
+        reply = _format_tasks_reply(items, total, status_filter=status_filter)
     elif cmd == "task":
         if not arg:
             reply = "Usage: /task {id}"
@@ -307,7 +442,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
                     format_task_alert(task)
                     if task.get("status")
                     in (agent_service.TaskStatus.NEEDS_DECISION, agent_service.TaskStatus.FAILED)
-                    else f"*Task* `{task['id']}`\n{task['status']}\n{task.get('direction', '')[:200]}"
+                    else _format_task_snapshot_reply(task)
                 )
     elif cmd == "reply":
         parts = (arg or "").split(maxsplit=1)
@@ -323,11 +458,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
                 reply = f"Decision recorded for `{task_id}`"
     elif cmd == "attention":
         items, total = agent_service.get_attention_tasks(limit=10)
-        reply = f"*Attention* ({total} need action)\n"
-        for t in items:
-            reply += f"\n`{t['id']}` {t['status']} — {str(t.get('direction', ''))[:40]}..."
-            if t.get("decision_prompt"):
-                reply += f"\n  _{t['decision_prompt'][:60]}_"
+        reply = _format_attention_reply(items, total)
     elif cmd in {"railway", "deploy"}:
         from app.services import telegram_railway_service
 
@@ -342,12 +473,15 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
             )
             reply = f"✅ Task `{created['id']}`\n\nRun:\n`{created['command']}`"
     else:
-        reply = (
-            "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, "
-            "/attention, /usage, /direction \"...\", /railway ..., or just type your direction"
-        )
+        reply = _help_reply()
 
     if reply:
+        logger.info(
+            "Telegram reply prepared: cmd=%s chat_id=%s preview=%r",
+            cmd,
+            chat_id,
+            reply[:200],
+        )
         ok = await telegram_adapter.send_reply(chat_id, reply)
         logger.info("Telegram reply sent: %s", ok)
         if not ok:
