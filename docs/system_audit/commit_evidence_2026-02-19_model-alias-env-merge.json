@@ -40,7 +40,8 @@
     "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_runner_tool_failure_telemetry.py",
     "Added regressions for partial env alias maps in routing + runner alias resolution",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main (ready_for_push=True)",
-    "maintainability_audit_report.json refreshed by local PR guard"
+    "maintainability_audit_report.json refreshed by local PR guard",
+    "Rebased onto latest origin/main and re-ran targeted regressions + evidence validation"
   ],
   "change_files": [
     "api/app/services/agent_routing_service.py",
