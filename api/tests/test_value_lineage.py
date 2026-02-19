@@ -106,17 +106,112 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
         )
         assert payout.status_code == 200
         data = payout.json()
+        assert data["schema_version"] == "energy-balanced-v1"
         assert data["weights"] == {
             "idea": 0.1,
+            "research": 0.2,
             "spec": 0.2,
+            "spec_upgrade": 0.15,
             "implementation": 0.5,
             "review": 0.2,
+        }
+        assert data["objective_weights"] == {
+            "coherence": 0.35,
+            "energy_flow": 0.2,
+            "awareness": 0.2,
+            "friction_relief": 0.15,
+            "balance": 0.1,
+        }
+        assert set(data["signals"].keys()) == {
+            "coherence",
+            "energy_flow",
+            "awareness",
+            "friction",
+            "balance",
         }
         amounts = {row["role"]: row["amount"] for row in data["payouts"]}
         assert amounts["idea"] == 100.0
         assert amounts["spec"] == 200.0
         assert amounts["implementation"] == 500.0
         assert amounts["review"] == 200.0
+
+
+@pytest.mark.asyncio
+async def test_payout_preview_supports_stage_investments(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+
+    payload = {
+        "idea_id": "coherence-energy-balance",
+        "spec_id": "048-value-lineage-and-payout-attribution",
+        "implementation_refs": ["PR#29"],
+        "contributors": {},
+        "investments": [
+            {
+                "stage": "research",
+                "contributor": "alice",
+                "energy_units": 3.0,
+                "coherence_score": 0.9,
+                "awareness_score": 0.9,
+                "friction_score": 0.1,
+            },
+            {
+                "stage": "implementation",
+                "contributor": "bob",
+                "energy_units": 4.0,
+                "coherence_score": 0.4,
+                "awareness_score": 0.5,
+                "friction_score": 0.9,
+            },
+            {
+                "stage": "implementation",
+                "contributor": "carol",
+                "energy_units": 2.0,
+                "coherence_score": 0.9,
+                "awareness_score": 0.8,
+                "friction_score": 0.1,
+            },
+            {
+                "stage": "spec_upgrade",
+                "contributor": "dave",
+                "energy_units": 1.5,
+                "coherence_score": 0.85,
+                "awareness_score": 0.8,
+                "friction_score": 0.2,
+            },
+        ],
+        "estimated_cost": 80.0,
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/value-lineage/links", json=payload)
+        assert created.status_code == 201
+        lineage_id = created.json()["id"]
+
+        usage = await client.post(
+            f"/api/value-lineage/links/{lineage_id}/usage-events",
+            json={"source": "api", "metric": "adoption_events", "value": 120.0},
+        )
+        assert usage.status_code == 201
+
+        payout = await client.post(
+            f"/api/value-lineage/links/{lineage_id}/payout-preview",
+            json={"payout_pool": 1000.0},
+        )
+        assert payout.status_code == 200
+        data = payout.json()
+
+        rows = {(row["role"], row["contributor"]): row for row in data["payouts"]}
+        assert ("research", "alice") in rows
+        assert ("spec_upgrade", "dave") in rows
+        assert ("implementation", "bob") in rows
+        assert ("implementation", "carol") in rows
+        assert rows[("implementation", "carol")]["amount"] > rows[("implementation", "bob")]["amount"]
+        assert rows[("implementation", "carol")]["effective_weight"] > rows[("implementation", "bob")][
+            "effective_weight"
+        ]
+
+        total_amount = sum(float(row["amount"]) for row in data["payouts"])
+        assert total_amount == pytest.approx(1000.0, abs=0.1)
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,97 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/value-lineage-energy-payout-20260219",
+  "commit_scope": "Extend value-lineage attribution to support contributor investments across idea, research, spec creation/upgrades, implementation, and review with an energy-balanced payout schema.",
+  "files_owned": [
+    "api/app/models/value_lineage.py",
+    "api/app/services/value_lineage_service.py",
+    "api/tests/test_value_lineage.py",
+    "docs/SPEC-COVERAGE.md",
+    "specs/048-value-lineage-and-payout-attribution.md",
+    "docs/system_audit/commit_evidence_2026-02-19_value-lineage-energy-balanced-payout.json"
+  ],
+  "idea_ids": [
+    "coherence-network-value-attribution",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "048"
+  ],
+  "task_ids": [
+    "value-lineage-energy-balanced-payout-20260219"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_worktree_local_web.sh --start",
+    "cd api && pytest -q tests/test_value_lineage.py",
+    "cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+  ],
+  "change_files": [
+    "api/app/models/value_lineage.py",
+    "api/app/services/value_lineage_service.py",
+    "api/tests/test_value_lineage.py",
+    "docs/SPEC-COVERAGE.md",
+    "specs/048-value-lineage-and-payout-attribution.md",
+    "docs/system_audit/commit_evidence_2026-02-19_value-lineage-energy-balanced-payout.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Value-lineage payout previews now account for investment-stage energy and signal quality so high-coherence, low-friction contributions are rewarded across idea, research, spec, implementation, and review stages.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/value-lineage/links",
+      "https://coherence-network-production.up.railway.app/api/value-lineage/links/{lineage_id}/usage-events",
+      "https://coherence-network-production.up.railway.app/api/value-lineage/links/{lineage_id}/valuation",
+      "https://coherence-network-production.up.railway.app/api/value-lineage/links/{lineage_id}/payout-preview"
+    ],
+    "test_flows": [
+      "create lineage link with stage investments for research/spec_upgrade/implementation",
+      "append usage events and verify valuation totals",
+      "request payout preview and verify schema_version/objective_weights/signals/payout rows"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_worktree_local_web.sh --start",
+      "cd api && pytest -q tests/test_value_lineage.py",
+      "cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway+vercel"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI, merge, and public deployment verification"
+  }
+}

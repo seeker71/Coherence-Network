@@ -59,7 +59,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 045 Effectiveness Plan Progress Phase 6  | ? | ? | ? | Pending |
 | 046 Agent Debugging Pipeline Stuck Task Hang | ? | ? | ? | Pending |
 | 047 Heal Completion Issue Resolutio | ? | ? | ? | Pending |
-| 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea->spec->impl->usage->payout preview trace API |
+| 048 Value Lineage and Payout Attribution | ✓ | ✓ | ✓ | idea/research/spec(creation+upgrade)/impl->usage->energy-balanced payout preview |
 | 054 Commit Provenance Contract Gate | ✓ | ✓ | ✓ | CI-enforced evidence schema + diff-range changed-file coverage gate |
 | 055 Runtime Intent and Public E2E Contract Gate | ✓ | ✓ | ✓ | runtime-intent classification + runtime-diff and E2E evidence requirements |
 | 056 Commit-Derived Traceability Report | ✓ | ✓ | ✓ | derives idea/spec/implementation references from commit evidence + SHA |
@@ -430,11 +430,11 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 | Requirement | Implementation | Test |
 |-------------|----------------|------|
-| POST /api/value-lineage/links creates lineage link (idea/spec/implementation/contributors/cost) | `routers/value_lineage.py`, `services/value_lineage_service.py`, `models/value_lineage.py` | `test_create_and_get_lineage_link` |
+| POST /api/value-lineage/links creates lineage link (idea/spec/implementation/contributors/cost + optional stage investments) | `routers/value_lineage.py`, `services/value_lineage_service.py`, `models/value_lineage.py` | `test_create_and_get_lineage_link` |
 | GET /api/value-lineage/links/{id} fetches persisted lineage | same as above | `test_create_and_get_lineage_link` |
 | POST /api/value-lineage/links/{id}/usage-events appends measurable value signals | same as above | `test_usage_events_roll_up_to_valuation` |
 | GET /api/value-lineage/links/{id}/valuation returns measured value, estimated cost, ROI, event count | same as above | `test_usage_events_roll_up_to_valuation` |
-| POST /api/value-lineage/links/{id}/payout-preview returns role-weighted payouts | same as above | `test_payout_preview_uses_role_weights` |
+| POST /api/value-lineage/links/{id}/payout-preview returns stage-weighted, energy-balanced payouts with objective signals | same as above | `test_payout_preview_uses_role_weights`, `test_payout_preview_supports_stage_investments` |
 | Missing lineage returns 404 with exact detail | router raises HTTPException | `test_lineage_404_contract` |
 
 **Files:** `api/app/models/value_lineage.py`, `api/app/services/value_lineage_service.py`, `api/app/routers/value_lineage.py`, `api/app/main.py`, `api/tests/test_value_lineage.py`
