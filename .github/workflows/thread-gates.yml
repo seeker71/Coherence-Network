@@ -106,9 +106,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: web/package-lock.json
 
+      - name: Upgrade npm for install hardening support
+        run: npm install -g npm@11.10.0
+
       - name: Build web
         run: |
-          cd web && npm ci && npm run build
+          cd web && npm ci --allow-git=none && npm run build
 
       - name: Check open PR failures (PRs only)
         if: github.event_name == 'pull_request'
