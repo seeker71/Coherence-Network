@@ -20,6 +20,7 @@ def test_hint_mapping_known_checks() -> None:
     assert "pytest -q" in mod._hint_for_check("Test")
     assert "validate_spec_quality.py" in mod._hint_for_check("Validate spec quality contract")
     assert "worktree_pr_guard.py" in mod._hint_for_check("Thread Gates")
+    assert "--allow-git=none" in mod._hint_for_check("Build web")
 
 
 def test_blocking_failures_detection() -> None:
