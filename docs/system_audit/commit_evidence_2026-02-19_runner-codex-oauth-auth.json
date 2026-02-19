@@ -7,8 +7,7 @@
     "api/app/services/automation_usage_service.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_automation_usage_api.py",
-    "docs/system_audit/commit_evidence_2026-02-19_runner-codex-oauth-auth.json",
-    "maintainability_audit_report.json"
+    "docs/system_audit/commit_evidence_2026-02-19_runner-codex-oauth-auth.json"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
@@ -38,30 +37,21 @@
   "evidence_refs": [
     "Added AGENT_CODEX_AUTH_MODE support (api_key/oauth/auto) with OAuth session discovery and per-task auth telemetry notes/context",
     "Added openai-codex readiness/probe OAuth fallback via local Codex OAuth session detection",
-    "CI follow-up fix: imported shutil in api/scripts/agent_runner.py after NameError in test_run_one_task_records_codex_model_alias_in_context_and_log",
-    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_automation_usage_api.py",
-    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main (ready_for_push=True)",
-    "Re-ran local PR guard after rebase to confirm clean merge-base gating",
-    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
-    "maintainability_audit_report.json refreshed by worktree guard hooks and committed for PR tracking"
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_automation_usage_api.py"
   ],
   "change_files": [
     "api/scripts/agent_runner.py",
     "api/app/services/automation_usage_service.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_automation_usage_api.py",
-    "docs/system_audit/commit_evidence_2026-02-19_runner-codex-oauth-auth.json",
-    "maintainability_audit_report.json"
+    "docs/system_audit/commit_evidence_2026-02-19_runner-codex-oauth-auth.json"
   ],
   "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
       "make start-gate",
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_automation_usage_api.py",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
-      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-codex-oauth-auth.json"
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_automation_usage_api.py"
     ]
   },
   "ci_validation": {
