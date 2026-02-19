@@ -29,6 +29,10 @@ class AgentTaskCreate(BaseModel):
     direction: str = Field(..., min_length=1, max_length=5000)
     task_type: TaskType
     context: Optional[Dict[str, Any]] = None
+    target_state: Optional[str] = Field(default=None, min_length=1, max_length=600)
+    success_evidence: Optional[List[str]] = None
+    abort_evidence: Optional[List[str]] = None
+    observation_window_sec: Optional[int] = Field(default=None, ge=1, le=604800)
 
     @field_validator("task_type", mode="before")
     @classmethod
@@ -49,6 +53,32 @@ class AgentTaskCreate(BaseModel):
         if isinstance(v, str):
             return v.strip()
         return v
+
+    @field_validator("target_state", mode="before")
+    @classmethod
+    def target_state_strip(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("success_evidence", "abort_evidence", mode="before")
+    @classmethod
+    def normalize_evidence_list(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            cleaned = v.strip()
+            return [cleaned] if cleaned else []
+        if not isinstance(v, list):
+            raise ValueError("evidence fields must be a list of strings")
+        out: list[str] = []
+        for item in v:
+            if not isinstance(item, str):
+                raise ValueError("evidence fields must contain strings only")
+            cleaned = item.strip()
+            if cleaned:
+                out.append(cleaned)
+        return out
 
 
 class AgentTaskUpsertActive(BaseModel):
@@ -86,6 +116,10 @@ class AgentTaskUpdate(BaseModel):
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running
     context: Optional[Dict[str, Any]] = None
     worker_id: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    target_state: Optional[str] = Field(default=None, min_length=1, max_length=600)
+    success_evidence: Optional[List[str]] = None
+    abort_evidence: Optional[List[str]] = None
+    observation_window_sec: Optional[int] = Field(default=None, ge=1, le=604800)
 
     @field_validator("progress_pct", mode="before")
     @classmethod
@@ -96,6 +130,32 @@ class AgentTaskUpdate(BaseModel):
         if not isinstance(v, int):
             raise ValueError("progress_pct must be an integer")
         return v
+
+    @field_validator("target_state", mode="before")
+    @classmethod
+    def update_target_state_strip(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("success_evidence", "abort_evidence", mode="before")
+    @classmethod
+    def update_normalize_evidence_list(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            cleaned = v.strip()
+            return [cleaned] if cleaned else []
+        if not isinstance(v, list):
+            raise ValueError("evidence fields must be a list of strings")
+        out: list[str] = []
+        for item in v:
+            if not isinstance(item, str):
+                raise ValueError("evidence fields must contain strings only")
+            cleaned = item.strip()
+            if cleaned:
+                out.append(cleaned)
+        return out
 
 
 class AgentTask(BaseModel):
@@ -113,6 +173,10 @@ class AgentTask(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None
+    target_state: Optional[str] = None
+    success_evidence: Optional[List[str]] = None
+    abort_evidence: Optional[List[str]] = None
+    observation_window_sec: Optional[int] = None
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
     created_at: datetime
@@ -131,6 +195,10 @@ class AgentTaskListItem(BaseModel):
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None
+    target_state: Optional[str] = None
+    success_evidence: Optional[List[str]] = None
+    abort_evidence: Optional[List[str]] = None
+    observation_window_sec: Optional[int] = None
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
     created_at: datetime
