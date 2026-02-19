@@ -37,7 +37,7 @@
     "api/scripts/agent_runner.py",
     "docs/system_audit/commit_evidence_2026-02-19_runner-measured-value-priority.json"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
