@@ -1,0 +1,99 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/public-ui-timeout-race-fix-20260219c",
+  "commit_scope": "Harden public web runtime-facing pages against stalled upstream calls by adding deterministic timeout races in API proxy and API health polling, and make tasks detail view resilient so optional runtime-event fetch failures do not break the full page.",
+  "files_owned": [
+    "web/app/api/[...path]/route.ts",
+    "web/app/api-health/page.tsx",
+    "web/app/tasks/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-19_public-ui-timeout-race-resilience.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime",
+    "coherence-network-value-attribution"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task_abe8192cfa915431",
+    "task_fe31655c4f614bc4",
+    "task_9f782d69484ef31f"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "./scripts/verify_web_api_deploy.sh",
+    "Playwright public proof artifacts: output/playwright/vercel_before_tasks.png, output/playwright/vercel_before_api_health.png, output/playwright/vercel_before_runtime.png, output/playwright/vercel_before_idea_tool_failure.png",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_public-ui-timeout-race-resilience.json"
+  ],
+  "change_files": [
+    "web/app/api/[...path]/route.ts",
+    "web/app/api-health/page.tsx",
+    "web/app/tasks/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Tasks and API-health pages resolve to explicit states under upstream slowness, and runtime route remains usable via usage fallback rather than hanging UI states.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network.vercel.app/tasks?task_id=task_abe8192cfa915431",
+      "https://coherence-network.vercel.app/api-health",
+      "https://coherence-network.vercel.app/runtime",
+      "https://coherence-network.vercel.app/ideas/tool-failure-cost-ledger"
+    ],
+    "test_flows": [
+      "web: open /tasks?task_id=<id> and verify no perpetual loading state",
+      "web: verify tasks page still shows evidence links even when runtime event fetch degrades",
+      "web: open /api-health and verify polling transitions to a deterministic result (ok/error)",
+      "web: open /runtime and verify redirect target /usage renders without application-error page"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-19T21:32:00Z",
+    "commands": [
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and post-merge public verification on deployed web endpoints."
+  }
+}
