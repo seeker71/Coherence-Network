@@ -11,6 +11,7 @@ CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
 CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
+VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 
 check_url() {
   local name="$1"
@@ -136,6 +137,44 @@ check_persistence_contract() {
   return 1
 }
 
+check_telegram_alert_config() {
+  local url="$1"
+  local body_file="$TMP_DIR/telegram_diagnostics.body.json"
+  local status
+
+  echo
+  echo "==> Telegram alert diagnostics: ${url}"
+  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" || true)"
+  echo "HTTP status: ${status:-unknown}"
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    echo "FAIL: diagnostics endpoint unavailable"
+    head -c 300 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  local has_token chat_ids_count
+  if command -v jq >/dev/null 2>&1; then
+    has_token="$(jq -r '.config.has_token // false' "$body_file" 2>/dev/null || echo "false")"
+    chat_ids_count="$(jq -r '(.config.chat_ids // []) | map(select((. | tostring | length) > 0)) | length' "$body_file" 2>/dev/null || echo "0")"
+  else
+    has_token="$(grep -q '"has_token"[[:space:]]*:[[:space:]]*true' "$body_file" && echo "true" || echo "false")"
+    chat_ids_count="$(grep -o '"chat_ids"[[:space:]]*:[[:space:]]*\\[[^]]*\\]' "$body_file" | grep -o ',' | wc -l | tr -d ' ')"
+  fi
+  echo "has_token: ${has_token} | chat_ids_count: ${chat_ids_count}"
+
+  if [[ "$has_token" == "true" && "${chat_ids_count:-0}" -gt 0 ]]; then
+    echo "PASS"
+    return 0
+  fi
+
+  echo "FAIL: Telegram alert channel is not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_IDS missing)"
+  return 1
+}
+
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
@@ -155,6 +194,12 @@ check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1
 check_url "Railway web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
 check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
+if [[ "$VERIFY_REQUIRE_TELEGRAM_ALERTS" == "1" ]]; then
+  check_telegram_alert_config "${API_URL%/}/api/agent/telegram/diagnostics" || fail=1
+else
+  echo
+  echo "==> Skipping Telegram alert config gate (VERIFY_REQUIRE_TELEGRAM_ALERTS=0)"
+fi
 
 if [[ "$fail" -eq 0 ]]; then
   echo
