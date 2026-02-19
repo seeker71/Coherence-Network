@@ -12,6 +12,7 @@ Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 
 import argparse
 import logging
+import math
 import os
 import socket
 import subprocess
@@ -24,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
 from typing import Any, Optional
+from urllib.parse import quote
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -69,6 +71,28 @@ TASK_LOG_TAIL_CHARS = max(200, int(os.environ.get("AGENT_TASK_LOG_TAIL_CHARS", "
 MAX_RUN_RECORDS = max(50, int(os.environ.get("AGENT_RUN_RECORDS_MAX", "5000")))
 RUN_RECORDS_FILE = os.path.join(LOG_DIR, "agent_runner_runs.json")
 RUN_RECORDS_LOCK = threading.Lock()
+try:
+    PENDING_TASK_FETCH_LIMIT = int(os.environ.get("AGENT_PENDING_TASK_FETCH_LIMIT", "20"))
+except ValueError:
+    PENDING_TASK_FETCH_LIMIT = 20
+PENDING_TASK_FETCH_LIMIT = max(1, PENDING_TASK_FETCH_LIMIT)
+try:
+    MEASURED_VALUE_TARGET_SHARE = float(os.environ.get("AGENT_MEASURED_VALUE_TARGET_SHARE", "0.5"))
+except ValueError:
+    MEASURED_VALUE_TARGET_SHARE = 0.5
+MEASURED_VALUE_TARGET_SHARE = max(0.0, min(1.0, MEASURED_VALUE_TARGET_SHARE))
+try:
+    IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = int(
+        os.environ.get("AGENT_IDEA_MEASURED_CACHE_TTL_SECONDS", "300")
+    )
+except ValueError:
+    IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = 300
+IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = max(30, IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS)
+SCHEDULER_STATS_LOCK = threading.Lock()
+SCHEDULER_EXECUTED_TOTAL = 0
+SCHEDULER_EXECUTED_MEASURED = 0
+IDEA_MEASURED_VALUE_CACHE_LOCK = threading.Lock()
+IDEA_MEASURED_VALUE_CACHE: dict[str, tuple[float, bool]] = {}
 SELF_UPDATE_ENABLED = str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_ENABLED", "1")).strip().lower() in {
     "1",
     "true",
@@ -117,6 +141,8 @@ except ValueError:
 ROLLBACK_MIN_INTERVAL_SECONDS = max(10, ROLLBACK_MIN_INTERVAL_SECONDS)
 ROLLBACK_LOCK = threading.Lock()
 ROLLBACK_LAST_AT = 0.0
+
+TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 
 
 def _tool_token(command: str) -> str:
@@ -174,6 +200,151 @@ def _as_bool(value: object) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
+
+
+def _safe_float(value: object) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(str(value).strip())
+    except Exception:
+        return None
+
+
+def _task_idea_id(context: dict[str, Any]) -> str:
+    idea_id = str(context.get("idea_id") or "").strip()
+    if idea_id:
+        return idea_id
+    idea_ids = context.get("idea_ids")
+    if isinstance(idea_ids, list):
+        for raw in idea_ids:
+            candidate = str(raw or "").strip()
+            if candidate:
+                return candidate
+    return ""
+
+
+def _task_has_inline_measured_value(context: dict[str, Any]) -> bool:
+    for key in ("measured_value_total", "measured_value", "actual_value", "measured_delta"):
+        value = _safe_float(context.get(key))
+        if value is not None and value > 0:
+            return True
+    return False
+
+
+def _idea_has_measured_value(client: httpx.Client, *, idea_id: str, log: logging.Logger) -> bool:
+    now = time.monotonic()
+    with IDEA_MEASURED_VALUE_CACHE_LOCK:
+        cached = IDEA_MEASURED_VALUE_CACHE.get(idea_id)
+        if cached and cached[0] > now:
+            return cached[1]
+
+    has_measured = False
+    ttl_seconds = IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS
+    response = _http_with_retry(
+        client,
+        "GET",
+        f"{BASE}/api/ideas/{quote(idea_id, safe='')}",
+        log,
+    )
+    if response is not None and response.status_code == 200:
+        try:
+            payload = response.json()
+        except Exception:
+            payload = {}
+        if isinstance(payload, dict):
+            actual_value = _safe_float(payload.get("actual_value"))
+            measured_total = _safe_float(payload.get("measured_value_total"))
+            has_measured = (actual_value is not None and actual_value > 0) or (
+                measured_total is not None and measured_total > 0
+            )
+    else:
+        ttl_seconds = min(60, IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS)
+
+    with IDEA_MEASURED_VALUE_CACHE_LOCK:
+        IDEA_MEASURED_VALUE_CACHE[idea_id] = (now + ttl_seconds, has_measured)
+    return has_measured
+
+
+def _task_has_measured_value_signal(
+    client: httpx.Client,
+    *,
+    context: dict[str, Any],
+    log: logging.Logger,
+) -> bool:
+    if _task_has_inline_measured_value(context):
+        return True
+    idea_id = _task_idea_id(context)
+    if not idea_id:
+        return False
+    return _idea_has_measured_value(client, idea_id=idea_id, log=log)
+
+
+def _scheduler_stats_snapshot() -> tuple[int, int]:
+    with SCHEDULER_STATS_LOCK:
+        return SCHEDULER_EXECUTED_TOTAL, SCHEDULER_EXECUTED_MEASURED
+
+
+def _record_scheduler_execution(has_measured_value: bool) -> None:
+    global SCHEDULER_EXECUTED_TOTAL
+    global SCHEDULER_EXECUTED_MEASURED
+    with SCHEDULER_STATS_LOCK:
+        SCHEDULER_EXECUTED_TOTAL += 1
+        if has_measured_value:
+            SCHEDULER_EXECUTED_MEASURED += 1
+
+
+def _select_tasks_for_execution(
+    candidates: list[TaskRunItem],
+    *,
+    max_tasks: int,
+    log: logging.Logger,
+) -> list[TaskRunItem]:
+    if max_tasks <= 0 or not candidates:
+        return []
+
+    measured_pool = [item for item in candidates if item[6]]
+    other_pool = [item for item in candidates if not item[6]]
+    base_total, base_measured = _scheduler_stats_snapshot()
+
+    selected: list[TaskRunItem] = []
+    selected_measured = 0
+    slots = min(max_tasks, len(candidates))
+    for _ in range(slots):
+        projected_total = base_total + len(selected) + 1
+        required_measured = math.ceil(MEASURED_VALUE_TARGET_SHARE * projected_total)
+        current_measured = base_measured + selected_measured
+        must_pick_measured = current_measured < required_measured
+
+        chosen: TaskRunItem | None = None
+        if must_pick_measured and measured_pool:
+            chosen = measured_pool.pop(0)
+        elif other_pool:
+            chosen = other_pool.pop(0)
+        elif measured_pool:
+            chosen = measured_pool.pop(0)
+
+        if chosen is None:
+            break
+        selected.append(chosen)
+        if chosen[6]:
+            selected_measured += 1
+
+    selected_count = len(selected)
+    if selected_count > 0:
+        selected_share = selected_measured / selected_count
+        available_measured = len([item for item in candidates if item[6]])
+        log.info(
+            "scheduler selection measured=%s/%s (%.2f) available_measured=%s target=%.2f history=%s/%s",
+            selected_measured,
+            selected_count,
+            selected_share,
+            available_measured,
+            MEASURED_VALUE_TARGET_SHARE,
+            base_measured,
+            base_total,
+        )
+    return selected
 
 
 def _safe_get_task_context(task: object) -> dict[str, Any]:
@@ -2574,8 +2745,13 @@ def poll_and_run(
             active_run_id="",
             metadata={"mode": "polling"},
         )
+        fetch_limit = max(workers, PENDING_TASK_FETCH_LIMIT)
         r = _http_with_retry(
-            client, "GET", f"{BASE}/api/agent/tasks", log, params={"status": "pending", "limit": workers}
+            client,
+            "GET",
+            f"{BASE}/api/agent/tasks",
+            log,
+            params={"status": "pending", "limit": fetch_limit},
         )
         if r is None:
             if once:
@@ -2599,7 +2775,7 @@ def poll_and_run(
             continue
 
         # Fetch full task (including command) for each
-        to_run: list[tuple[str, str, str, str, dict[str, Any], str]] = []
+        to_run: list[TaskRunItem] = []
         for task in tasks:
             task_id = task["id"]
             r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
@@ -2621,7 +2797,12 @@ def poll_and_run(
             if retry_not_before is not None and retry_not_before > datetime.now(timezone.utc):
                 continue
             direction = str(full.get("direction", "") or "")
-            to_run.append((task_id, command, task_type, model, context, direction))
+            has_measured_value = _task_has_measured_value_signal(
+                client,
+                context=context,
+                log=log,
+            )
+            to_run.append((task_id, command, task_type, model, context, direction, has_measured_value))
 
         if not to_run:
             if once:
@@ -2629,18 +2810,29 @@ def poll_and_run(
             time.sleep(interval)
             continue
 
+        scheduled_tasks = _select_tasks_for_execution(
+            to_run,
+            max_tasks=max(1, workers),
+            log=log,
+        )
+        if not scheduled_tasks:
+            if once:
+                break
+            time.sleep(interval)
+            continue
+
         # PR-flow tasks should stay serial to avoid shared worktree race conditions.
-        pr_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
-        direct_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
-        for item in to_run:
-            _, _, task_type, _, ctx, _ = item
+        pr_tasks: list[TaskRunItem] = []
+        direct_tasks: list[TaskRunItem] = []
+        for item in scheduled_tasks:
+            _, _, task_type, _, ctx, _, _ = item
             if _should_run_pr_flow({"task_type": task_type, "context": ctx}):
                 pr_tasks.append(item)
             else:
                 direct_tasks.append(item)
 
         if pr_tasks:
-            for tid, cmd, tt, m, ctx, direction in pr_tasks:
+            for tid, cmd, tt, m, ctx, direction, has_measured_value in pr_tasks:
                 run_one_task(
                     client,
                     tid,
@@ -2652,6 +2844,7 @@ def poll_and_run(
                     task_context=ctx,
                     task_direction=direction,
                 )
+                _record_scheduler_execution(has_measured_value)
                 _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
 
         if not direct_tasks:
@@ -2661,7 +2854,7 @@ def poll_and_run(
             continue
 
         if workers == 1:
-            tid, cmd, tt, m, ctx, direction = direct_tasks[0]
+            tid, cmd, tt, m, ctx, direction, has_measured_value = direct_tasks[0]
             run_one_task(
                 client,
                 tid,
@@ -2673,6 +2866,7 @@ def poll_and_run(
                 task_context=ctx,
                 task_direction=direction,
             )
+            _record_scheduler_execution(has_measured_value)
             _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
         else:
             with ThreadPoolExecutor(max_workers=max(1, len(direct_tasks))) as ex:
@@ -2688,15 +2882,16 @@ def poll_and_run(
                         m,
                         ctx,
                         direction,
-                    ): (tid, cmd)
-                    for tid, cmd, tt, m, ctx, direction in direct_tasks
+                    ): (tid, cmd, has_measured_value)
+                    for tid, cmd, tt, m, ctx, direction, has_measured_value in direct_tasks
                 }
                 for future in as_completed(futures):
+                    tid, _, has_measured_value = futures[future]
                     try:
                         future.result()
                     except Exception as e:
-                        tid, _ = futures[future]
                         log.exception("task=%s worker error: %s", tid, e)
+                    _record_scheduler_execution(has_measured_value)
             _maybe_trigger_runner_self_update(client, log)
 
         if once:
