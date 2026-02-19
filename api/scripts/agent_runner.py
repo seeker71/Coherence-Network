@@ -141,6 +141,30 @@ except ValueError:
 ROLLBACK_MIN_INTERVAL_SECONDS = max(10, ROLLBACK_MIN_INTERVAL_SECONDS)
 ROLLBACK_LOCK = threading.Lock()
 ROLLBACK_LAST_AT = 0.0
+AGENT_MANIFESTS_DIR = os.path.abspath(
+    os.environ.get("AGENT_MANIFESTS_DIR", os.path.join(LOG_DIR, "agent_manifests"))
+)
+AGENT_WEB_BASE_URL = str(os.environ.get("AGENT_WEB_BASE_URL", "")).strip().rstrip("/")
+try:
+    AGENT_MANIFEST_MAX_BLOCKS = int(os.environ.get("AGENT_MANIFEST_MAX_BLOCKS", "80"))
+except ValueError:
+    AGENT_MANIFEST_MAX_BLOCKS = 80
+AGENT_MANIFEST_MAX_BLOCKS = max(1, AGENT_MANIFEST_MAX_BLOCKS)
+try:
+    AGENT_MANIFEST_CONTEXT_BLOCKS = int(os.environ.get("AGENT_MANIFEST_CONTEXT_BLOCKS", "20"))
+except ValueError:
+    AGENT_MANIFEST_CONTEXT_BLOCKS = 20
+AGENT_MANIFEST_CONTEXT_BLOCKS = max(1, AGENT_MANIFEST_CONTEXT_BLOCKS)
+AGENT_MANIFEST_ENABLED = str(os.environ.get("AGENT_MANIFEST_ENABLED", "1")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "enabled",
+    "y",
+}
+AGENT_MANIFEST_WRITE_LOCK = threading.Lock()
+DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 
@@ -353,6 +377,228 @@ def _safe_get_task_context(task: object) -> dict[str, Any]:
         if isinstance(context, dict):
             return context
     return {}
+
+
+def _safe_agent_slug(value: str, default: str = "unknown-agent") -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "-", (value or "").strip().lower())
+    cleaned = cleaned.strip("-.")
+    return cleaned or default
+
+
+def _web_base_url() -> str:
+    if AGENT_WEB_BASE_URL:
+        return AGENT_WEB_BASE_URL
+    base = BASE.rstrip("/")
+    if base.endswith("/api"):
+        return base[:-4]
+    return base
+
+
+def _task_source_references(context: dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+
+    def _append_ref(raw: object) -> None:
+        if not isinstance(raw, str):
+            return
+        text = raw.strip()
+        if not text:
+            return
+        refs.append(text)
+
+    for key in (
+        "spec_ref",
+        "spec_path",
+        "doc_ref",
+        "source_doc",
+        "source_reference",
+        "reference_doc",
+    ):
+        _append_ref(context.get(key))
+    for key in ("doc_refs", "source_docs", "source_references", "reference_docs", "references"):
+        values = context.get(key)
+        if isinstance(values, list):
+            for item in values:
+                _append_ref(item)
+
+    spec_id = str(context.get("spec_id") or "").strip()
+    if spec_id:
+        refs.append(f"/specs/{quote(spec_id, safe='')}")
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for ref in refs:
+        if ref in seen:
+            continue
+        seen.add(ref)
+        deduped.append(ref)
+    return deduped
+
+
+def _idea_links(idea_id: str) -> tuple[str, str]:
+    if not idea_id:
+        return "", ""
+    encoded = quote(idea_id, safe="")
+    web_base = _web_base_url().rstrip("/")
+    api_base = BASE.rstrip("/")
+    return f"{web_base}/ideas/{encoded}", f"{api_base}/api/ideas/{encoded}"
+
+
+def _parse_diff_manifestation_blocks(
+    diff_text: str,
+    *,
+    max_blocks: int,
+) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    if not diff_text:
+        return blocks
+
+    current_file = ""
+    for line in diff_text.splitlines():
+        if line.startswith("+++ "):
+            target = line[4:].strip()
+            if target == "/dev/null":
+                current_file = ""
+                continue
+            if target.startswith("b/"):
+                target = target[2:]
+            current_file = target
+            continue
+
+        match = DIFF_HUNK_RE.match(line)
+        if not match or not current_file:
+            continue
+
+        start = int(match.group(1))
+        count_raw = match.group(2)
+        count = int(count_raw) if count_raw is not None else 1
+        count = max(1, count)
+        end = start + count - 1
+        read_range = f"{start}-{end}"
+        blocks.append(
+            {
+                "file": current_file,
+                "line": start,
+                "file_line_ref": f"{current_file}:{start}",
+                "read_range": read_range,
+                "manifestation_range": f"L{start}-L{end}",
+            }
+        )
+        if len(blocks) >= max_blocks:
+            break
+
+    return blocks
+
+
+def _collect_manifestation_blocks(repo_path: str, *, max_blocks: int) -> list[dict[str, Any]]:
+    git_dir = os.path.join(repo_path, ".git")
+    if not os.path.isdir(git_dir):
+        return []
+    diff = _run_git("diff", "--unified=0", "--no-color", "--", cwd=repo_path, timeout=120)
+    if diff.returncode != 0:
+        return []
+    return _parse_diff_manifestation_blocks(diff.stdout, max_blocks=max_blocks)
+
+
+def _append_agent_manifest_entry(
+    *,
+    task_id: str,
+    task_type: str,
+    task_direction: str,
+    task_ctx: dict[str, Any],
+    repo_path: str,
+    executor: str,
+) -> dict[str, Any]:
+    if not AGENT_MANIFEST_ENABLED:
+        return {}
+    try:
+        blocks = _collect_manifestation_blocks(repo_path, max_blocks=AGENT_MANIFEST_MAX_BLOCKS)
+        if not blocks:
+            return {}
+
+        agent_name = str(
+            task_ctx.get("task_agent")
+            or task_ctx.get("agent")
+            or task_ctx.get("executor")
+            or executor
+            or task_type
+            or "unknown-agent"
+        ).strip()
+        if not agent_name:
+            agent_name = "unknown-agent"
+
+        idea_id = _task_idea_id(task_ctx)
+        idea_url, idea_api_url = _idea_links(idea_id)
+        source_refs = _task_source_references(task_ctx)
+        primary_source_ref = source_refs[0] if source_refs else ""
+
+        manifest_dir = os.path.join(AGENT_MANIFESTS_DIR, _safe_agent_slug(agent_name))
+        manifest_path = os.path.join(manifest_dir, "AGENT.md")
+        os.makedirs(manifest_dir, exist_ok=True)
+
+        now_iso = _utc_now_iso()
+        direction_preview = " ".join(str(task_direction or "").split())[:400]
+        with AGENT_MANIFEST_WRITE_LOCK:
+            exists = os.path.exists(manifest_path)
+            with open(manifest_path, "a", encoding="utf-8") as handle:
+                if not exists:
+                    handle.write(f"# AGENT.md - {agent_name}\n\n")
+                    handle.write("Append-only manifestation provenance written by `api/scripts/agent_runner.py`.\n\n")
+                handle.write(f"## Task `{task_id}` ({now_iso})\n\n")
+                handle.write(f"- Agent: `{agent_name}`\n")
+                handle.write(f"- Task type: `{task_type}`\n")
+                if direction_preview:
+                    handle.write(f"- Decision prompt: `{direction_preview}`\n")
+                if idea_id and idea_url:
+                    handle.write(f"- Idea link: [{idea_id}]({idea_url})\n")
+                if idea_id and idea_api_url:
+                    handle.write(f"- Idea API: [{idea_api_url}]({idea_api_url})\n")
+                if source_refs:
+                    handle.write("- Source references:\n")
+                    for ref in source_refs:
+                        handle.write(f"  - [{ref}]({ref})\n")
+                else:
+                    handle.write("- Source references: none\n")
+                handle.write("- Manifestation blocks:\n")
+                for block in blocks:
+                    file_line_ref = str(block.get("file_line_ref") or "")
+                    read_range = str(block.get("read_range") or "")
+                    manifestation_range = str(block.get("manifestation_range") or "")
+                    line = (
+                        f"  - `{file_line_ref}` | read_range `{read_range}` | manifestation_range `{manifestation_range}`"
+                    )
+                    if idea_id and idea_url:
+                        line += f" | idea [{idea_id}]({idea_url})"
+                    if primary_source_ref:
+                        line += f" | source [{primary_source_ref}]({primary_source_ref})"
+                    handle.write(line + "\n")
+                handle.write("\n")
+
+        context_blocks: list[dict[str, Any]] = []
+        for block in blocks[:AGENT_MANIFEST_CONTEXT_BLOCKS]:
+            payload = dict(block)
+            if idea_id:
+                payload["idea_id"] = idea_id
+            if idea_url:
+                payload["idea_url"] = idea_url
+            if primary_source_ref:
+                payload["source_ref"] = primary_source_ref
+            context_blocks.append(payload)
+
+        return {
+            "agent_manifest": {
+                "doc_path": manifest_path,
+                "agent_name": agent_name,
+                "updated_at": now_iso,
+                "idea_id": idea_id or None,
+                "idea_url": idea_url or None,
+                "idea_api_url": idea_api_url or None,
+                "source_refs": source_refs,
+                "manifestation_blocks": context_blocks,
+                "manifestation_block_count": len(blocks),
+            }
+        }
+    except Exception:
+        return {}
 
 
 def _tail_text(value: str, max_chars: int) -> str:
@@ -2505,6 +2751,17 @@ def run_one_task(
             attempt_status=status,
             failure_class=failure_class,
         )
+        if pr_mode:
+            manifest_context_patch = _append_agent_manifest_entry(
+                task_id=task_id,
+                task_type=task_type,
+                task_direction=task_direction,
+                task_ctx=task_ctx,
+                repo_path=repo_path,
+                executor=executor,
+            )
+            if manifest_context_patch:
+                _patch_task_context(client, task_id=task_id, context_patch=manifest_context_patch)
 
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
