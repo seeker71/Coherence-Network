@@ -3,10 +3,8 @@
 import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
 
-const API_URL = getApiBase();
 const REQUEST_TIMEOUT_MS = 12000;
 
 type AgentTask = {
@@ -104,7 +102,7 @@ function TasksPageContent() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
-      const res = await fetchWithTimeout(`${API_URL}/api/agent/tasks`);
+      const res = await fetchWithTimeout("/api/agent/tasks");
       const json = (await res.json()) as TaskListResponse;
       if (!res.ok) throw new Error(JSON.stringify(json));
       const taskRows = Array.isArray(json.tasks)
@@ -122,9 +120,9 @@ function TasksPageContent() {
         setSelectedTaskEvents([]);
       } else {
         const [taskRes, logRes, eventsRes] = await Promise.all([
-          fetchWithTimeout(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`),
-          fetchWithTimeout(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`),
-          fetchWithTimeout(`${API_URL}/api/runtime/events?limit=2000`),
+          fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`),
+          fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`),
+          fetchWithTimeout("/api/runtime/events?limit=2000"),
         ]);
 
         if (taskRes.ok) {

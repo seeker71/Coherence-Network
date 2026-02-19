@@ -56,29 +56,76 @@ type SubscriptionEstimatorResponse = {
   plans: SubscriptionPlanEstimate[];
 };
 
+const FETCH_TIMEOUT_MS = 8000;
+
+const DEFAULT_RUNTIME: RuntimeSummaryResponse = {
+  window_seconds: 86400,
+  ideas: [],
+};
+
+const DEFAULT_FRICTION: FrictionReport = {
+  window_days: 7,
+  total_events: 0,
+  open_events: 0,
+  total_energy_loss: 0,
+  total_cost_of_delay: 0,
+  top_block_types: [],
+  top_stages: [],
+};
+
+const DEFAULT_SUBSCRIPTIONS: SubscriptionEstimatorResponse = {
+  detected_subscriptions: 0,
+  estimated_current_monthly_cost_usd: 0,
+  estimated_next_monthly_cost_usd: 0,
+  estimated_monthly_upgrade_delta_usd: 0,
+  plans: [],
+};
+
+async function fetchJsonOrNull<T>(url: string): Promise<T | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+    FETCH_TIMEOUT_MS,
+  );
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function loadUsage(): Promise<{
   runtime: RuntimeSummaryResponse;
   friction: FrictionReport;
   subscriptions: SubscriptionEstimatorResponse;
+  warnings: string[];
 }> {
   const API = getApiBase();
-  const [rtRes, frRes, subRes] = await Promise.all([
-    fetch(`${API}/api/runtime/ideas/summary?seconds=86400`, { cache: "no-store" }),
-    fetch(`${API}/api/friction/report?window_days=7`, { cache: "no-store" }),
-    fetch(`${API}/api/automation/usage/subscription-estimator`, { cache: "no-store" }),
+  const [runtime, friction, subscriptions] = await Promise.all([
+    fetchJsonOrNull<RuntimeSummaryResponse>(`${API}/api/runtime/ideas/summary?seconds=86400`),
+    fetchJsonOrNull<FrictionReport>(`${API}/api/friction/report?window_days=7`),
+    fetchJsonOrNull<SubscriptionEstimatorResponse>(`${API}/api/automation/usage/subscription-estimator`),
   ]);
-  if (!rtRes.ok) throw new Error(`runtime HTTP ${rtRes.status}`);
-  if (!frRes.ok) throw new Error(`friction HTTP ${frRes.status}`);
-  if (!subRes.ok) throw new Error(`subscriptions HTTP ${subRes.status}`);
+
+  const warnings: string[] = [];
+  if (!runtime) warnings.push("runtime telemetry");
+  if (!friction) warnings.push("friction report");
+  if (!subscriptions) warnings.push("subscription estimator");
+
   return {
-    runtime: (await rtRes.json()) as RuntimeSummaryResponse,
-    friction: (await frRes.json()) as FrictionReport,
-    subscriptions: (await subRes.json()) as SubscriptionEstimatorResponse,
+    runtime: runtime ?? DEFAULT_RUNTIME,
+    friction: friction ?? DEFAULT_FRICTION,
+    subscriptions: subscriptions ?? DEFAULT_SUBSCRIPTIONS,
+    warnings,
   };
 }
 
 export default async function UsagePage() {
-  const { runtime, friction, subscriptions } = await loadUsage();
+  const { runtime, friction, subscriptions, warnings } = await loadUsage();
   const ideas = [...runtime.ideas].sort((a, b) => b.runtime_cost_estimate - a.runtime_cost_estimate).slice(0, 20);
   const plans = [...subscriptions.plans]
     .sort((a, b) => b.estimated_roi - a.estimated_roi)
@@ -124,6 +171,11 @@ export default async function UsagePage() {
 
       <h1 className="text-2xl font-bold">Usage</h1>
       <p className="text-muted-foreground">Runtime telemetry + friction summary (machine data rendered for humans).</p>
+      {warnings.length > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Partial data mode: unavailable {warnings.join(", ")}.
+        </p>
+      ) : null}
 
       <section className="rounded border p-4 space-y-2 text-sm">
         <h2 className="font-semibold">Friction (7d)</h2>
