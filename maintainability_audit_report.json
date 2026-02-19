@@ -1,0 +1,214 @@
+{
+  "generated_at": "2026-02-19T15:15:14.584944+00:00",
+  "policy": {
+    "large_module_lines": 600,
+    "very_large_module_lines": 1000,
+    "long_function_lines": 90,
+    "warning_risk_score": 40,
+    "blocking_risk_score": 90
+  },
+  "baseline": {
+    "max_layer_violation_count": 0,
+    "max_large_module_count": 7,
+    "max_very_large_module_count": 4,
+    "max_long_function_count": 16,
+    "max_placeholder_count": 1,
+    "max_risk_score": 158
+  },
+  "summary": {
+    "python_module_count": 78,
+    "runtime_file_count": 110,
+    "layer_violation_count": 0,
+    "large_module_count": 7,
+    "very_large_module_count": 4,
+    "long_function_count": 16,
+    "placeholder_count": 1,
+    "risk_score": 158,
+    "severity": "high",
+    "blocking_gap": true,
+    "regression": false,
+    "regression_reasons": []
+  },
+  "architecture": {
+    "python_module_count": 78,
+    "layer_violations": [],
+    "large_modules": [
+      {
+        "file": "api/app/services/inventory_service.py",
+        "line_count": 3982
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
+        "line_count": 1856
+      },
+      {
+        "file": "api/app/services/automation_usage_service.py",
+        "line_count": 1805
+      },
+      {
+        "file": "api/app/services/agent_service.py",
+        "line_count": 1701
+      },
+      {
+        "file": "api/app/services/runtime_service.py",
+        "line_count": 994
+      },
+      {
+        "file": "api/app/routers/agent.py",
+        "line_count": 851
+      },
+      {
+        "file": "api/app/services/idea_service.py",
+        "line_count": 659
+      }
+    ],
+    "very_large_modules": [
+      {
+        "file": "api/app/services/inventory_service.py",
+        "line_count": 3982
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
+        "line_count": 1856
+      },
+      {
+        "file": "api/app/services/automation_usage_service.py",
+        "line_count": 1805
+      },
+      {
+        "file": "api/app/services/agent_service.py",
+        "line_count": 1701
+      }
+    ],
+    "long_functions": [
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "build_spec_process_implementation_validation_flow",
+        "line_count": 526,
+        "line_start": 3359
+      },
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "sync_traceability_gap_artifacts",
+        "line_count": 264,
+        "line_start": 1744
+      },
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "build_endpoint_traceability_inventory",
+        "line_count": 225,
+        "line_start": 3064
+      },
+      {
+        "file": "api/app/services/friction_service.py",
+        "function": "friction_entry_points",
+        "line_count": 221,
+        "line_start": 264
+      },
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "evaluate_process_completeness",
+        "line_count": 204,
+        "line_start": 2010
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
+        "function": "evaluate_commit_traceability_report",
+        "line_count": 143,
+        "line_start": 1714
+      },
+      {
+        "file": "api/app/services/automation_usage_service.py",
+        "function": "_build_openai_snapshot",
+        "line_count": 138,
+        "line_start": 1025
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
+        "function": "check_value_lineage_e2e_flow",
+        "line_count": 130,
+        "line_start": 1014
+      },
+      {
+        "file": "api/app/services/agent_service.py",
+        "function": "_execution_usage_summary",
+        "line_count": 126,
+        "line_start": 1214
+      },
+      {
+        "file": "api/app/routers/agent_telegram.py",
+        "function": "telegram_webhook",
+        "line_count": 121,
+        "line_start": 232
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
+        "function": "evaluate_public_deploy_contract_report",
+        "line_count": 114,
+        "line_start": 1372
+      },
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "build_system_lineage_inventory",
+        "line_count": 110,
+        "line_start": 673
+      },
+      {
+        "file": "api/app/services/automation_usage_service.py",
+        "function": "_build_github_snapshot",
+        "line_count": 110,
+        "line_start": 703
+      },
+      {
+        "file": "api/app/services/automation_usage_service.py",
+        "function": "_subscription_plans",
+        "line_count": 104,
+        "line_start": 1687
+      },
+      {
+        "file": "api/app/services/inventory_service.py",
+        "function": "next_unblock_task_from_flow",
+        "line_count": 96,
+        "line_start": 3887
+      },
+      {
+        "file": "api/app/main.py",
+        "function": "capture_runtime_metrics",
+        "line_count": 91,
+        "line_start": 337
+      }
+    ],
+    "parse_errors": []
+  },
+  "placeholder_scan": {
+    "scanned_file_count": 110,
+    "findings": [
+      {
+        "file": "api/app/models/coherence.py",
+        "line": 14,
+        "type": "literal_fake_data",
+        "snippet": "description=\"Count of components with real data; rest are 0.5 stub (spec 020 data confidence)\","
+      }
+    ]
+  },
+  "recommended_tasks": [
+    {
+      "task_id": "runtime-placeholder-elimination",
+      "title": "Runtime placeholder elimination",
+      "direction": "Replace runtime mock/fake/placeholder markers with production-grade logic or tracked backlog tasks.",
+      "estimated_cost_hours": 1.4,
+      "value_to_whole": 20.0,
+      "roi_estimate": 14.2857,
+      "priority": "high"
+    },
+    {
+      "task_id": "architecture-modularization-review",
+      "title": "Architecture modularization review",
+      "direction": "Refactor high-risk modules and remove cross-layer dependencies. Split oversized files and long functions, then re-run maintainability audit.",
+      "estimated_cost_hours": 13.35,
+      "value_to_whole": 100.0,
+      "roi_estimate": 7.4906,
+      "priority": "high"
+    }
+  ]
+}

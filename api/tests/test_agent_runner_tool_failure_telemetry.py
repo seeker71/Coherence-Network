@@ -193,6 +193,67 @@ def test_infer_executor_detects_openclaw():
     assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"
 
 
+def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
+    monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
+    remapped, alias = agent_runner._apply_codex_model_alias(
+        'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
+    )
+    assert alias == {
+        "requested_model": "gpt-5.3-codex",
+        "effective_model": "gpt-5-codex",
+    }
+    assert "--model gpt-5-codex" in remapped
+    assert "--model gpt-5.3-codex" not in remapped
+
+
+def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
+    t = [4000.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:test-runner")
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=0, stdout_text="MODEL_OK\n")
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_alias",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/openrouter/free",
+    )
+    assert done is True
+
+    running_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_alias") and patch.get("status") == "running"
+    )
+    context = running_patch.get("context") or {}
+    alias = context.get("runner_model_alias") or {}
+    assert alias.get("requested_model") == "gpt-5.3-codex"
+    assert alias.get("effective_model") == "gpt-5-codex"
+
+    log_file = tmp_path / "task_task_alias.log"
+    body = log_file.read_text(encoding="utf-8")
+    assert "--model gpt-5-codex" in body
+    assert "--model gpt-5.3-codex" not in body
+    assert "runner-model-alias" in body
+
+
 def test_parse_diff_manifestation_blocks_extracts_file_line_ranges():
     diff_text = """diff --git a/api/app/demo.py b/api/app/demo.py
 index 1111111..2222222 100644
