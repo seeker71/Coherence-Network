@@ -34,6 +34,9 @@ function _resolveApiEnvUrl(envValue: string): string | null {
 }
 
 export function getApiBase(): string {
+  // Browser callers should use same-origin `/api/...` routes so they do not depend on cross-origin CORS behavior.
+  if (typeof window !== "undefined") return "";
+
   const env = process.env.NEXT_PUBLIC_API_URL;
   const resolved = env ? _resolveApiEnvUrl(env) : null;
   if (resolved) return resolved;
