@@ -508,7 +508,7 @@ def test_format_task_alert_defaults_to_public_web_ui_link() -> None:
 
 def test_format_runner_update_card_uses_clean_title_and_links() -> None:
     task = {
-        "id": "taskrunner123",
+        "id": "task_runner_123",
         "status": "running",
         "direction": "Stream runner progress",
         "context": {},
@@ -516,8 +516,9 @@ def test_format_runner_update_card_uses_clean_title_and_links() -> None:
     message = format_task_alert(task, runner_update=True)
     assert "*runner update*" in message
     assert "runner\\_update" not in message
-    assert "Task ID: [taskrunner123](https://coherence-web-production.up.railway.app/tasks?task_id=taskrunner123)" in message
-    assert "Railway logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/taskrunner123/log)" in message
+    assert "task\\_runner_123" not in message
+    assert "Task ID: [task_runner_123](https://coherence-web-production.up.railway.app/tasks?task_id=task_runner_123)" in message
+    assert "Railway logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/task_runner_123/log)" in message
 
 
 @pytest.mark.asyncio
