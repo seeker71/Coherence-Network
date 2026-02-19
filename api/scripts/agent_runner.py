@@ -770,6 +770,33 @@ def _task_source_references(context: dict[str, Any]) -> list[str]:
     return deduped
 
 
+def _task_code_references(context: dict[str, Any]) -> list[dict[str, str]]:
+    raw = context.get("code_references")
+    if not isinstance(raw, list):
+        return []
+
+    references: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for item in raw:
+        url = ""
+        license_name = ""
+        note = ""
+        if isinstance(item, str):
+            url = item.strip()
+        elif isinstance(item, dict):
+            url = str(item.get("url") or item.get("source") or "").strip()
+            license_name = str(item.get("license") or item.get("license_id") or "").strip()
+            note = str(item.get("note") or item.get("repository") or item.get("match_reason") or "").strip()
+        if not url:
+            continue
+        key = (url, license_name, note)
+        if key in seen:
+            continue
+        seen.add(key)
+        references.append({"url": url, "license": license_name, "note": note})
+    return references
+
+
 def _idea_links(idea_id: str) -> tuple[str, str]:
     if not idea_id:
         return "", ""
@@ -865,7 +892,9 @@ def _append_agent_manifest_entry(
         idea_id = _task_idea_id(task_ctx)
         idea_url, idea_api_url = _idea_links(idea_id)
         source_refs = _task_source_references(task_ctx)
+        code_refs = _task_code_references(task_ctx)
         primary_source_ref = source_refs[0] if source_refs else ""
+        primary_code_ref = code_refs[0]["url"] if code_refs else ""
 
         manifest_dir = os.path.join(AGENT_MANIFESTS_DIR, _safe_agent_slug(agent_name))
         manifest_path = os.path.join(manifest_dir, "AGENT.md")
@@ -894,6 +923,18 @@ def _append_agent_manifest_entry(
                         handle.write(f"  - [{ref}]({ref})\n")
                 else:
                     handle.write("- Source references: none\n")
+                if code_refs:
+                    handle.write("- Code references:\n")
+                    for ref in code_refs:
+                        detail_parts: list[str] = []
+                        if ref["license"]:
+                            detail_parts.append(f"license `{ref['license']}`")
+                        if ref["note"]:
+                            detail_parts.append(ref["note"])
+                        detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
+                        handle.write(f"  - [{ref['url']}]({ref['url']}){detail}\n")
+                else:
+                    handle.write("- Code references: none\n")
                 handle.write("- Manifestation blocks:\n")
                 for block in blocks:
                     file_line_ref = str(block.get("file_line_ref") or "")
@@ -906,6 +947,8 @@ def _append_agent_manifest_entry(
                         line += f" | idea [{idea_id}]({idea_url})"
                     if primary_source_ref:
                         line += f" | source [{primary_source_ref}]({primary_source_ref})"
+                    if primary_code_ref:
+                        line += f" | code_ref [{primary_code_ref}]({primary_code_ref})"
                     handle.write(line + "\n")
                 handle.write("\n")
 
@@ -929,6 +972,7 @@ def _append_agent_manifest_entry(
                 "idea_url": idea_url or None,
                 "idea_api_url": idea_api_url or None,
                 "source_refs": source_refs,
+                "code_refs": code_refs,
                 "manifestation_blocks": context_blocks,
                 "manifestation_block_count": len(blocks),
             }
