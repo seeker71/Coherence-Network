@@ -72,7 +72,7 @@ def _hint_for_check(name: str) -> str:
             "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
         ),
         ("test", "cd api && pytest -q"),
-        ("build web", "cd web && npm ci && npm run build"),
+        ("build web", "cd web && npm ci --allow-git=none && npm run build"),
         ("thread gates", "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"),
         ("public deploy contract", "./scripts/verify_web_api_deploy.sh"),
         ("change contract", "python3 scripts/worktree_pr_guard.py --mode all --base-ref origin/main"),
