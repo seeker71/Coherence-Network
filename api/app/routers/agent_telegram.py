@@ -233,7 +233,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
     """Receive Telegram updates and run command handlers.
 
     Commands: /status, /tasks [status], /task {id}, /reply {id} {decision},
-    /attention, /usage, /direction \"...\" or plain text.
+    /attention, /usage, /direction \"...\", /railway ..., or plain text.
     """
     from app.services import telegram_adapter
     from app.services import telegram_diagnostics
@@ -328,6 +328,10 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
             reply += f"\n`{t['id']}` {t['status']} — {str(t.get('direction', ''))[:40]}..."
             if t.get("decision_prompt"):
                 reply += f"\n  _{t['decision_prompt'][:60]}_"
+    elif cmd in {"railway", "deploy"}:
+        from app.services import telegram_railway_service
+
+        reply = await telegram_railway_service.handle_railway_command(arg)
     elif cmd == "direction" or (not cmd and text):
         direction = arg if cmd == "direction" else text
         if not direction:
@@ -340,7 +344,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
     else:
         reply = (
             "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, "
-            "/attention, /usage, /direction \"...\" or just type your direction"
+            "/attention, /usage, /direction \"...\", /railway ..., or just type your direction"
         )
 
     if reply:
