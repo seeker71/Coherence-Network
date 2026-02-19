@@ -18,7 +18,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
@@ -311,6 +311,192 @@ def _patch_task_progress(
         client.patch(f"{BASE}/api/agent/tasks/{task_id}", json=patch_payload)
     except Exception:
         return
+
+
+def _patch_task_context(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    context_patch: dict[str, Any],
+) -> None:
+    if not context_patch:
+        return
+    try:
+        client.patch(f"{BASE}/api/agent/tasks/{task_id}", json={"context": context_patch})
+    except Exception:
+        return
+
+
+def _int_or_default(value: object, default: int = 0) -> int:
+    try:
+        return int(str(value))
+    except Exception:
+        return default
+
+
+def _parse_iso_utc(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _append_failure_history(existing: object, entry: dict[str, Any], limit: int = 20) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    if isinstance(existing, list):
+        for row in existing:
+            if isinstance(row, dict):
+                items.append(row)
+    items.append(entry)
+    return items[-limit:]
+
+
+def _update_task_run_metrics(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    task_type: str,
+    model: str,
+    command: str,
+    attempt: int,
+    duration_seconds: float,
+    attempt_status: str,
+    failure_class: str,
+) -> dict[str, Any]:
+    snapshot = _safe_get_task_snapshot(client, task_id)
+    context = _safe_get_task_context(snapshot)
+    existing = context.get("runner_metrics")
+    metrics = dict(existing) if isinstance(existing, dict) else {}
+
+    runs_total = max(0, _int_or_default(metrics.get("runs_total"), 0)) + 1
+    runs_success = max(0, _int_or_default(metrics.get("runs_success"), 0)) + (1 if attempt_status == "completed" else 0)
+    runs_failed = max(0, _int_or_default(metrics.get("runs_failed"), 0)) + (1 if attempt_status != "completed" else 0)
+    retries_total = max(0, _int_or_default(metrics.get("retries_total"), 0)) + (1 if attempt > 1 else 0)
+
+    paid_call = _model_is_paid(model)
+    paid_calls_total = max(0, _int_or_default(metrics.get("paid_calls_total"), 0)) + (1 if paid_call else 0)
+    paid_calls_success = max(0, _int_or_default(metrics.get("paid_calls_success"), 0)) + (
+        1 if paid_call and attempt_status == "completed" else 0
+    )
+    paid_calls_failed = max(0, _int_or_default(metrics.get("paid_calls_failed"), 0)) + (
+        1 if paid_call and attempt_status != "completed" else 0
+    )
+    paid_retry_calls = max(0, _int_or_default(metrics.get("paid_retry_calls"), 0)) + (
+        1 if paid_call and attempt > 1 else 0
+    )
+
+    total_runtime_seconds = round(
+        float(metrics.get("total_runtime_seconds") or 0.0) + max(0.0, float(duration_seconds)),
+        3,
+    )
+    avg_runtime_seconds = round(total_runtime_seconds / max(1, runs_total), 3)
+    success_rate = round(runs_success / max(1, runs_total), 4)
+    paid_success_rate = round(paid_calls_success / max(1, paid_calls_total), 4) if paid_calls_total > 0 else 1.0
+
+    updated = {
+        "runs_total": runs_total,
+        "runs_success": runs_success,
+        "runs_failed": runs_failed,
+        "success_rate": success_rate,
+        "retries_total": retries_total,
+        "paid_calls_total": paid_calls_total,
+        "paid_calls_success": paid_calls_success,
+        "paid_calls_failed": paid_calls_failed,
+        "paid_retry_calls": paid_retry_calls,
+        "paid_success_rate": paid_success_rate,
+        "total_runtime_seconds": total_runtime_seconds,
+        "avg_runtime_seconds": avg_runtime_seconds,
+        "last_attempt": attempt,
+        "last_status": attempt_status,
+        "last_failure_class": failure_class if attempt_status != "completed" else "",
+        "last_model": model,
+        "last_tool": _tool_token(command),
+        "updated_at": _utc_now_iso(),
+    }
+    _patch_task_context(
+        client,
+        task_id=task_id,
+        context_patch={
+            "runner_metrics": updated,
+            "runner_last_result": {
+                "attempt": attempt,
+                "status": attempt_status,
+                "failure_class": failure_class if attempt_status != "completed" else "",
+                "duration_seconds": round(float(duration_seconds), 3),
+                "paid_call": paid_call,
+                "task_type": task_type,
+                "model": model,
+                "command_tool": _tool_token(command),
+                "at": _utc_now_iso(),
+            },
+        },
+    )
+    return updated
+
+
+def _schedule_retry_if_configured(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    task_ctx: dict[str, Any],
+    output: str,
+    failure_class: str,
+    attempt: int,
+    duration_seconds: float,
+) -> tuple[bool, str]:
+    max_retries = max(0, _to_int(task_ctx.get("runner_retry_max"), 0))
+    retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+    retries_used = max(0, attempt - 1)
+    retries_remaining = max_retries - retries_used
+    if retries_remaining <= 0:
+        return False, ""
+
+    live_snapshot = _safe_get_task_snapshot(client, task_id)
+    live_ctx = _safe_get_task_context(live_snapshot)
+    merged_ctx = dict(task_ctx)
+    merged_ctx.update(live_ctx)
+    retry_not_before = (datetime.now(timezone.utc) + timedelta(seconds=retry_delay_seconds)).isoformat()
+    failure_entry = {
+        "attempt": attempt,
+        "failure_class": failure_class,
+        "duration_seconds": round(float(duration_seconds), 3),
+        "at": _utc_now_iso(),
+        "output_tail": _tail_text(output, 600),
+    }
+    failure_history = _append_failure_history(merged_ctx.get("runner_failure_history"), failure_entry)
+    context_patch = {
+        "runner_retry_max": max_retries,
+        "runner_retry_delay_seconds": retry_delay_seconds,
+        "runner_retry_count": retries_used + 1,
+        "runner_retry_remaining": retries_remaining - 1,
+        "runner_state": "retry_pending",
+        "retry_not_before": retry_not_before,
+        "runner_last_failure": failure_entry,
+        "runner_failure_history": failure_history,
+    }
+    message = (
+        f"[runner-retry] attempt {attempt} failed ({failure_class}); "
+        f"scheduled retry in {retry_delay_seconds}s ({retries_remaining - 1} retries remaining)."
+    )
+    try:
+        client.patch(
+            f"{BASE}/api/agent/tasks/{task_id}",
+            json={
+                "status": "pending",
+                "current_step": "retry scheduled",
+                "output": f"{output[-3200:]}\n\n{message}"[-4000:],
+                "context": context_patch,
+            },
+        )
+    except Exception:
+        return False, ""
+    return True, message
 
 
 def _sanitize_branch_name(raw: str, fallback: str) -> str:
@@ -1302,6 +1488,11 @@ def run_one_task(
     branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     attempt = _next_task_attempt(task_id)
+    if attempt > 1:
+        retry_override_command = str(task_ctx.get("retry_override_command") or "").strip()
+        if retry_override_command:
+            log.info("task=%s applying retry_override_command for attempt=%s", task_id, attempt)
+            command = retry_override_command
     _runner_heartbeat(
         client,
         runner_id=worker_id,
@@ -1364,6 +1555,18 @@ def run_one_task(
     )
     if not lease_ok:
         log.info("task=%s lease claim rejected by run-state owner", task_id)
+        try:
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={
+                    "current_step": "waiting for lease",
+                    "context": {
+                        "retry_not_before": (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(),
+                    },
+                },
+            )
+        except Exception:
+            pass
         _sync_run_state(
             client,
             task_id=task_id,
@@ -1741,6 +1944,18 @@ def run_one_task(
                 command=command,
             )
 
+        _update_task_run_metrics(
+            client,
+            task_id=task_id,
+            task_type=task_type,
+            model=model,
+            command=command,
+            attempt=attempt,
+            duration_seconds=duration_sec,
+            attempt_status=status,
+            failure_class=failure_class,
+        )
+
         client.patch(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
@@ -1810,6 +2025,47 @@ def run_one_task(
             )
             status = final_status
             output = f"{output}\n\n{handoff_summary}" if handoff_summary else output
+        elif (not pr_mode) and status != "completed":
+            retry_scheduled, retry_message = _schedule_retry_if_configured(
+                client,
+                task_id=task_id,
+                task_ctx=task_ctx,
+                output=output,
+                failure_class=failure_class,
+                attempt=attempt,
+                duration_seconds=duration_sec,
+            )
+            if retry_scheduled:
+                status = "pending"
+                output = f"{output}\n\n{retry_message}"
+                _sync_run_state(
+                    client,
+                    task_id=task_id,
+                    run_id=run_id,
+                    worker_id=worker_id,
+                    patch={
+                        "status": "failed",
+                        "failure_class": failure_class,
+                        "next_action": "retry_scheduled",
+                        "completed_at": _utc_now_iso(),
+                    },
+                    lease_seconds=RUN_LEASE_SECONDS,
+                    require_owner=True,
+                )
+            else:
+                _sync_run_state(
+                    client,
+                    task_id=task_id,
+                    run_id=run_id,
+                    worker_id=worker_id,
+                    patch={
+                        "status": status,
+                        "next_action": "needs_attention",
+                        "completed_at": _utc_now_iso(),
+                    },
+                    lease_seconds=RUN_LEASE_SECONDS,
+                    require_owner=True,
+                )
         else:
             _sync_run_state(
                 client,
@@ -1965,6 +2221,9 @@ def poll_and_run(
             task_type = str(full.get("task_type", "impl"))
             model = str(full.get("model", "unknown"))
             context = _safe_get_task_context(full)
+            retry_not_before = _parse_iso_utc(context.get("retry_not_before"))
+            if retry_not_before is not None and retry_not_before > datetime.now(timezone.utc):
+                continue
             direction = str(full.get("direction", "") or "")
             to_run.append((task_id, command, task_type, model, context, direction))
 

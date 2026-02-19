@@ -1,7 +1,7 @@
 {
   "date": "2026-02-19",
   "thread_branch": "codex/b480",
-  "commit_scope": "Add API-visible runner registry heartbeats and list endpoints; wire worker heartbeat updates into poll/execute flow",
+  "commit_scope": "Add API-visible runner registry heartbeats and list endpoints; wire worker heartbeat updates into poll/execute flow and add retry/steering diagnostics telemetry",
   "files_owned": [
     "api/app/models/agent.py",
     "api/app/routers/agent.py",
@@ -43,6 +43,7 @@
   },
   "evidence_refs": [
     "pytest -q api/tests/test_agent_runner_registry_api.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py",
+    "python3 -m py_compile api/scripts/agent_runner.py",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-registry-control-heartbeat.json"
   ],
   "change_files": [
@@ -66,6 +67,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
+      "python3 -m py_compile api/scripts/agent_runner.py",
       "pytest -q api/tests/test_agent_runner_registry_api.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py"
     ]
   },
