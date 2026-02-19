@@ -21,7 +21,9 @@ import time
 from datetime import datetime, timezone
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
+import json
+import re
+from typing import Any, Optional
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -43,6 +45,30 @@ TASK_TIMEOUT = int(os.environ.get("AGENT_TASK_TIMEOUT", "3600"))
 HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
 MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
 RETRY_BACKOFF = 2  # seconds between retries
+REPO_PATH = os.path.abspath(os.environ.get("AGENT_WORKTREE_PATH", os.path.dirname(_api_dir)))
+REPO_GIT_URL = os.environ.get("AGENT_REPO_GIT_URL", "").strip()
+DEFAULT_GITHUB_REPO = os.environ.get("AGENT_GITHUB_REPO", "seeker71/Coherence-Network")
+DEFAULT_PR_BASE_BRANCH = os.environ.get("AGENT_PR_BASE_BRANCH", "main")
+DEFAULT_PR_LOCAL_CHECK_CMD = os.environ.get(
+    "AGENT_PR_LOCAL_VALIDATION_CMD",
+    "bash ./scripts/verify_worktree_local_web.sh",
+)
+MAX_PR_GATE_ATTEMPTS = max(1, int(os.environ.get("AGENT_PR_GATE_ATTEMPTS", "8")))
+PR_GATE_POLL_SECONDS = max(5, int(os.environ.get("AGENT_PR_GATE_POLL_SECONDS", "30")))
+PR_FLOW_TIMEOUT_SECONDS = max(
+    5,
+    int(os.environ.get("AGENT_PR_FLOW_TIMEOUT_SECONDS", str(60 * 60))),
+)
+MAX_RESUME_ATTEMPTS = max(0, int(os.environ.get("AGENT_MAX_RESUME_ATTEMPTS", "2")))
+RUN_HEARTBEAT_SECONDS = max(5, int(os.environ.get("AGENT_RUN_HEARTBEAT_SECONDS", "15")))
+RUN_LEASE_SECONDS = max(15, int(os.environ.get("AGENT_RUN_LEASE_SECONDS", "120")))
+PERIODIC_CHECKPOINT_SECONDS = max(0, int(os.environ.get("AGENT_PERIODIC_CHECKPOINT_SECONDS", "300")))
+CONTROL_POLL_SECONDS = max(2, int(os.environ.get("AGENT_CONTROL_POLL_SECONDS", "5")))
+DIAGNOSTIC_TIMEOUT_SECONDS = max(10, int(os.environ.get("AGENT_DIAGNOSTIC_TIMEOUT_SECONDS", "120")))
+TASK_LOG_TAIL_CHARS = max(200, int(os.environ.get("AGENT_TASK_LOG_TAIL_CHARS", "2000")))
+MAX_RUN_RECORDS = max(50, int(os.environ.get("AGENT_RUN_RECORDS_MAX", "5000")))
+RUN_RECORDS_FILE = os.path.join(LOG_DIR, "agent_runner_runs.json")
+RUN_RECORDS_LOCK = threading.Lock()
 
 
 def _tool_token(command: str) -> str:
@@ -92,6 +118,513 @@ def _time_cost_per_second() -> float:
     except ValueError:
         v = 0.01
     return max(0.0, v)
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
+
+
+def _safe_get_task_context(task: object) -> dict[str, Any]:
+    if isinstance(task, dict):
+        context = task.get("context")
+        if isinstance(context, dict):
+            return context
+    return {}
+
+
+def _tail_text(value: str, max_chars: int) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
+def _tail_output_lines(lines: list[str], max_chars: int = TASK_LOG_TAIL_CHARS) -> str:
+    if not lines:
+        return ""
+    tail = "".join(lines[-160:])
+    return _tail_text(tail, max_chars)
+
+
+def _safe_get_task_snapshot(client: httpx.Client, task_id: str) -> dict[str, Any] | None:
+    getter = getattr(client, "get", None)
+    if getter is None:
+        return None
+    try:
+        response = getter(f"{BASE}/api/agent/tasks/{task_id}", timeout=HTTP_TIMEOUT)
+    except TypeError:
+        try:
+            response = getter(f"{BASE}/api/agent/tasks/{task_id}")
+        except Exception:
+            return None
+    except Exception:
+        return None
+    if getattr(response, "status_code", 0) != 200:
+        return None
+    try:
+        payload = response.json()
+    except Exception:
+        return None
+    if isinstance(payload, dict):
+        return payload
+    return None
+
+
+def _extract_control_signals(task_snapshot: dict[str, Any] | None) -> tuple[bool, str, dict[str, Any] | None]:
+    if not isinstance(task_snapshot, dict):
+        return False, "", None
+    context = _safe_get_task_context(task_snapshot)
+    if not context:
+        return False, "", None
+
+    control = context.get("control")
+    abort_requested = _as_bool(context.get("abort_requested")) or _as_bool(context.get("control_abort"))
+    abort_reason = str(context.get("abort_reason") or "").strip()
+    if isinstance(control, dict):
+        abort_requested = (
+            abort_requested
+            or _as_bool(control.get("abort"))
+            or str(control.get("action") or "").strip().lower() == "abort"
+            or str(control.get("state") or "").strip().lower() == "abort"
+        )
+        if not abort_reason:
+            abort_reason = str(
+                control.get("reason")
+                or control.get("note")
+                or control.get("message")
+                or ""
+            ).strip()
+
+    diagnostic_request = context.get("diagnostic_request")
+    if not isinstance(diagnostic_request, dict):
+        command = str(context.get("diagnostic_command") or "").strip()
+        if command:
+            diagnostic_request = {
+                "id": context.get("diagnostic_request_id"),
+                "command": command,
+            }
+        else:
+            diagnostic_request = None
+    return abort_requested, abort_reason, diagnostic_request
+
+
+def _diagnostic_request_id(request: dict[str, Any]) -> str:
+    explicit = str(request.get("id") or request.get("request_id") or "").strip()
+    if explicit:
+        return explicit[:160]
+    command = str(request.get("command") or "").strip()
+    if not command:
+        return ""
+    return f"cmd:{command[:120]}"
+
+
+def _run_diagnostic_request(
+    request: dict[str, Any],
+    *,
+    cwd: str,
+    env: dict[str, str],
+) -> dict[str, Any]:
+    req_id = _diagnostic_request_id(request)
+    command = str(request.get("command") or "").strip()
+    started_at = time.monotonic()
+    started_iso = _utc_now_iso()
+    if not command:
+        return {
+            "id": req_id,
+            "status": "rejected",
+            "error": "diagnostic command is required",
+            "ran_at": started_iso,
+            "duration_seconds": 0.0,
+        }
+
+    timeout_requested = _to_int(request.get("timeout_seconds"), DIAGNOSTIC_TIMEOUT_SECONDS)
+    timeout_seconds = max(5, min(DIAGNOSTIC_TIMEOUT_SECONDS, timeout_requested))
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            cwd=cwd,
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        output = (result.stdout or "") + (result.stderr or "")
+        status = "completed" if result.returncode == 0 else "failed"
+        return {
+            "id": req_id,
+            "status": status,
+            "exit_code": int(result.returncode),
+            "command": _scrub_command(command),
+            "output_tail": _tail_text(output, TASK_LOG_TAIL_CHARS),
+            "ran_at": started_iso,
+            "duration_seconds": round(time.monotonic() - started_at, 3),
+            "timeout_seconds": timeout_seconds,
+        }
+    except subprocess.TimeoutExpired as exc:
+        combined = f"{(exc.stdout or '')}{(exc.stderr or '')}"
+        return {
+            "id": req_id,
+            "status": "timeout",
+            "exit_code": -9,
+            "command": _scrub_command(command),
+            "output_tail": _tail_text(combined, TASK_LOG_TAIL_CHARS),
+            "ran_at": started_iso,
+            "duration_seconds": round(time.monotonic() - started_at, 3),
+            "timeout_seconds": timeout_seconds,
+        }
+    except Exception as exc:
+        return {
+            "id": req_id,
+            "status": "failed",
+            "exit_code": -1,
+            "command": _scrub_command(command),
+            "error": str(exc)[:800],
+            "ran_at": started_iso,
+            "duration_seconds": round(time.monotonic() - started_at, 3),
+            "timeout_seconds": timeout_seconds,
+        }
+
+
+def _patch_task_progress(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    progress_pct: int,
+    current_step: str,
+    context_patch: dict[str, Any],
+) -> None:
+    patch_payload: dict[str, Any] = {
+        "progress_pct": int(max(0, min(100, progress_pct))),
+        "current_step": current_step[:300],
+    }
+    if context_patch:
+        patch_payload["context"] = context_patch
+    try:
+        client.patch(f"{BASE}/api/agent/tasks/{task_id}", json=patch_payload)
+    except Exception:
+        return
+
+
+def _sanitize_branch_name(raw: str, fallback: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-/]", "-", (raw or "").strip())
+    slug = slug.strip("/").strip(".-")
+    if not slug:
+        return fallback
+    return slug[:120]
+
+
+def _extract_pr_branch(task_id: str, task_ctx: dict[str, Any], direction: str) -> str:
+    explicit = (
+        task_ctx.get("pr_branch")
+        or task_ctx.get("git_branch")
+        or task_ctx.get("branch")
+        or f"codex/{task_id}"
+    )
+    prefix = str(task_ctx.get("pr_branch_prefix") or "").strip().strip("/")
+    if prefix:
+        explicit = f"{prefix}/{explicit}"
+    return _sanitize_branch_name(f"{explicit}", f"codex/{_sanitize_branch_name(task_id, task_id[:8])}")
+
+
+def _should_run_pr_flow(task: dict[str, Any]) -> bool:
+    task_type = str(task.get("task_type") or "impl").strip().lower()
+    if task_type != "impl":
+        return False
+    ctx = _safe_get_task_context(task)
+    explicit = str((ctx.get("execution_mode") or "")).strip().lower()
+    if explicit in {"pr", "thread", "codex_thread", "codex-thread", "codex"}:
+        return True
+    return any(
+        _as_bool(ctx.get(flag))
+        for flag in ("create_pr", "requires_pr", "system_change", "pr_workflow", "codex_thread", "run_with_pr")
+    )
+
+
+def _run_cmd(
+    command: list[str] | str,
+    *,
+    cwd: str,
+    timeout: int = 1200,
+    env: dict[str, str] | None = None,
+    shell: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        shell=shell,
+        timeout=timeout,
+    )
+
+
+def _run_git(
+    *args: str,
+    cwd: str,
+    timeout: int = 1200,
+) -> subprocess.CompletedProcess[str]:
+    return _run_cmd(["git", *args], cwd=cwd, timeout=timeout)
+
+
+def _pr_command_output(report: object, max_len: int = 3000) -> str:
+    if isinstance(report, str):
+        return report[:max_len]
+    if isinstance(report, dict):
+        return json.dumps(report, indent=2)[:max_len]
+    try:
+        return str(report)
+    except Exception:
+        return ""
+
+
+def _json_or_text(payload: str) -> object:
+    if not payload:
+        return {}
+    text = payload.strip()
+    if not text:
+        return {}
+    if not text.startswith(("{", "[")):
+        return {}
+    try:
+        decoded = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return decoded
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _to_int(value: object, default: int) -> int:
+    try:
+        return int(str(value))
+    except Exception:
+        return default
+
+
+def _read_run_records() -> dict[str, Any]:
+    if not os.path.exists(RUN_RECORDS_FILE):
+        return {"runs": []}
+    try:
+        with open(RUN_RECORDS_FILE, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return {"runs": []}
+    if not isinstance(payload, dict):
+        return {"runs": []}
+    runs = payload.get("runs")
+    if not isinstance(runs, list):
+        payload["runs"] = []
+    return payload
+
+
+def _write_run_records(payload: dict[str, Any]) -> None:
+    os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
+    tmp = f"{RUN_RECORDS_FILE}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    os.replace(tmp, RUN_RECORDS_FILE)
+
+
+def _record_run_update(run_id: str, patch: dict[str, Any]) -> None:
+    if not run_id:
+        return
+    with RUN_RECORDS_LOCK:
+        payload = _read_run_records()
+        runs = payload.get("runs")
+        if not isinstance(runs, list):
+            runs = []
+        target: dict[str, Any] | None = None
+        for rec in runs:
+            if isinstance(rec, dict) and str(rec.get("run_id") or "") == run_id:
+                target = rec
+                break
+        if target is None:
+            target = {"run_id": run_id, "created_at": _utc_now_iso()}
+            runs.append(target)
+        target.update(patch)
+        target["updated_at"] = _utc_now_iso()
+        if len(runs) > MAX_RUN_RECORDS:
+            runs = runs[-MAX_RUN_RECORDS:]
+        payload["runs"] = runs
+        _write_run_records(payload)
+
+
+def _claim_run_lease(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    run_id: str,
+    worker_id: str,
+    attempt: int,
+    branch: str,
+    repo_path: str,
+    task_type: str,
+    direction: str,
+) -> bool:
+    try:
+        resp = client.post(
+            f"{BASE}/api/agent/run-state/claim",
+            json={
+                "task_id": task_id,
+                "run_id": run_id,
+                "worker_id": worker_id,
+                "lease_seconds": RUN_LEASE_SECONDS,
+                "attempt": attempt,
+                "branch": branch,
+                "repo_path": repo_path,
+                "metadata": {"task_type": task_type, "direction": direction[:500]},
+            },
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            # Backward-compatible fallback when run-state API is unavailable.
+            return True
+        payload = resp.json() if resp.content else {}
+        if not isinstance(payload, dict):
+            return True
+        claimed = payload.get("claimed")
+        if claimed is False:
+            detail = str(payload.get("detail") or "").strip()
+            if detail == "lease_owned_by_other_worker":
+                return False
+        return True
+    except Exception:
+        # Best-effort: do not block task execution if lease service is down.
+        return True
+
+
+def _sync_run_state(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    run_id: str,
+    worker_id: str,
+    patch: dict[str, Any],
+    lease_seconds: int | None = None,
+    require_owner: bool = True,
+) -> None:
+    _record_run_update(run_id, patch)
+    try:
+        client.post(
+            f"{BASE}/api/agent/run-state/update",
+            json={
+                "task_id": task_id,
+                "run_id": run_id,
+                "worker_id": worker_id,
+                "patch": patch,
+                "lease_seconds": lease_seconds,
+                "require_owner": require_owner,
+            },
+            timeout=HTTP_TIMEOUT,
+        )
+    except Exception:
+        return
+
+
+def _next_task_attempt(task_id: str) -> int:
+    if not task_id:
+        return 1
+    with RUN_RECORDS_LOCK:
+        payload = _read_run_records()
+    runs = payload.get("runs")
+    if not isinstance(runs, list):
+        return 1
+    best = 0
+    for rec in runs:
+        if not isinstance(rec, dict):
+            continue
+        if str(rec.get("task_id") or "") != task_id:
+            continue
+        best = max(best, _to_int(rec.get("attempt"), 0))
+    return best + 1
+
+
+def _current_head_sha(repo_path: str) -> str:
+    head = _run_git("rev-parse", "HEAD", cwd=repo_path, timeout=60)
+    if head.returncode != 0:
+        return ""
+    return (head.stdout or "").strip()[:80]
+
+
+def _checkpoint_partial_progress(
+    *,
+    task_id: str,
+    repo_path: str,
+    branch: str,
+    run_id: str,
+    reason: str,
+    log: logging.Logger,
+) -> dict[str, Any]:
+    status = _run_git("status", "--porcelain", cwd=repo_path, timeout=120)
+    if status.returncode != 0:
+        return {"ok": False, "reason": f"git status failed: {status.stderr.strip()[:500]}"}
+
+    changed = bool((status.stdout or "").strip())
+    if changed:
+        add = _run_git("add", "-A", cwd=repo_path, timeout=120)
+        if add.returncode != 0:
+            return {"ok": False, "reason": f"git add failed: {add.stderr.strip()[:500]}"}
+        message = f"[checkpoint] task {task_id} run {run_id}: {reason}"[:120]
+        commit = _run_git("commit", "-m", message, cwd=repo_path, timeout=240)
+        if commit.returncode != 0 and "nothing to commit" not in (commit.stderr or "").lower():
+            return {"ok": False, "reason": f"git commit failed: {commit.stderr.strip()[:500]}"}
+
+    push = _run_cmd(["git", "push", "-u", "origin", branch], cwd=repo_path, timeout=300)
+    if push.returncode != 0:
+        return {"ok": False, "reason": f"git push failed: {push.stderr.strip()[:500]}", "changed": changed}
+
+    head_sha = _current_head_sha(repo_path)
+    log.info("task=%s checkpoint pushed branch=%s sha=%s reason=%s", task_id, branch, head_sha, reason)
+    return {"ok": True, "changed": changed, "checkpoint_sha": head_sha, "branch": branch}
+
+
+_USAGE_LIMIT_MARKERS = (
+    "usage limit",
+    "rate limit",
+    "quota exceeded",
+    "insufficient_quota",
+    "billing hard limit",
+    "too many requests",
+    "provider blocked",
+)
+
+
+def _detect_usage_limit(text: str) -> bool:
+    lowered = (text or "").lower()
+    if not lowered:
+        return False
+    return any(marker in lowered for marker in _USAGE_LIMIT_MARKERS)
+
+
+def _classify_failure(
+    *,
+    output: str,
+    timed_out: bool,
+    stopped_for_usage: bool,
+    stopped_for_abort: bool,
+    returncode: int,
+) -> str:
+    if stopped_for_abort:
+        return "aborted_by_user"
+    if stopped_for_usage or _detect_usage_limit(output):
+        return "usage_limit"
+    if timed_out:
+        return "timeout"
+    if returncode in {-9, 137, 143}:
+        return "killed"
+    return "command_failed"
 
 
 def _post_runtime_event(
@@ -254,6 +787,439 @@ def _is_openai_codex_worker(worker_id: str) -> bool:
     return normalized == "openai-codex" or normalized.startswith("openai-codex:")
 
 
+def _repo_path_for_task(task_ctx: dict[str, Any]) -> str:
+    repo_path = str(
+        task_ctx.get("repo_path")
+        or task_ctx.get("working_copy_path")
+        or os.environ.get("AGENT_WORKTREE_PATH", REPO_PATH)
+    ).strip()
+    if not repo_path:
+        return REPO_PATH
+    return os.path.abspath(repo_path)
+
+
+def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
+    git_dir = os.path.join(repo_path, ".git")
+    if os.path.isdir(git_dir):
+        return True
+    clone_url = REPO_GIT_URL
+    if not clone_url:
+        log.warning("repo checkout missing at %s and AGENT_REPO_GIT_URL is not set", repo_path)
+        return False
+    parent = os.path.dirname(repo_path.rstrip("/")) or "."
+    os.makedirs(parent, exist_ok=True)
+    clone = _run_cmd(["git", "clone", clone_url, repo_path], cwd=parent, timeout=1200)
+    if clone.returncode != 0:
+        log.warning("git clone failed repo_path=%s err=%s", repo_path, clone.stderr.strip())
+        return False
+    return os.path.isdir(git_dir)
+
+
+def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: logging.Logger) -> bool:
+    base_branch = str(os.environ.get("AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip() or DEFAULT_PR_BASE_BRANCH
+    try:
+        if not _ensure_repo_checkout(repo_path, log=log):
+            return False
+        fetch = _run_git("fetch", "origin", "--prune", cwd=repo_path, timeout=120)
+        if fetch.returncode != 0:
+            log.warning("task=%s git fetch failed: %s", task_id, fetch.stderr.strip())
+            return False
+        remote_branch = _run_git("rev-parse", "--verify", f"origin/{branch}", cwd=repo_path, timeout=60)
+        if remote_branch.returncode == 0:
+            # Resume from previously pushed progress when available.
+            checkout = _run_git("checkout", "-B", branch, f"origin/{branch}", cwd=repo_path, timeout=120)
+            if checkout.returncode != 0:
+                log.warning("task=%s branch resume failed: %s", task_id, checkout.stderr.strip())
+                return False
+            return True
+
+        checkout = _run_git("checkout", "-B", branch, f"origin/{base_branch}", cwd=repo_path, timeout=120)
+        if checkout.returncode != 0:
+            checkout = _run_git("checkout", "-B", branch, base_branch, cwd=repo_path, timeout=120)
+        if checkout.returncode != 0:
+            checkout = _run_git("checkout", "-B", branch, cwd=repo_path, timeout=120)
+        if checkout.returncode != 0:
+            log.warning("task=%s branch setup failed: %s", task_id, checkout.stderr.strip())
+            return False
+        return True
+    except Exception as e:
+        log.warning("task=%s branch prep failed: %s", task_id, e)
+        return False
+
+
+def _run_local_pr_checks(
+    branch: str,
+    task_id: str,
+    log: logging.Logger,
+    *,
+    repo_path: str,
+) -> dict[str, object]:
+    repo = str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+    args: list[str] = [
+        sys.executable,
+        os.path.join(_api_dir, "scripts", "validate_pr_to_public.py"),
+        "--branch",
+        branch,
+        "--repo",
+        repo,
+        "--json",
+    ]
+    try:
+        check = _run_cmd(args, cwd=repo_path, timeout=max(30, PR_GATE_POLL_SECONDS))
+        if check.returncode not in {0, 2}:
+            return {
+                "result": "blocked",
+                "reason": "validate_pr_to_public.py invocation failed",
+                "error": check.stderr.strip()[:1200],
+            }
+        payload = _json_or_text(check.stdout)
+        if isinstance(payload, dict):
+            return payload
+        return {
+            "result": "blocked",
+            "reason": "validate_pr_to_public.py returned non-dict payload",
+            "payload": payload,
+        }
+    except Exception as e:
+        log.warning("task=%s PR gate check failed: %s", task_id, e)
+        return {
+            "result": "blocked",
+            "reason": "PR gate check raised exception",
+            "error": str(e)[:1200],
+        }
+
+
+def _get_or_create_pr(
+    *,
+    task_id: str,
+    task_ctx: dict[str, Any],
+    repo: str,
+    repo_path: str,
+    branch: str,
+    direction: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    list_cmd = [
+        "gh",
+        "pr",
+        "list",
+        "--repo",
+        repo,
+        "--head",
+        branch,
+        "--state",
+        "open",
+        "--json",
+        "number,url,title",
+    ]
+    listed = _run_cmd(list_cmd, cwd=repo_path, timeout=120)
+    if listed.returncode == 0:
+        payload = _json_or_text(listed.stdout)
+        if isinstance(payload, list):
+            for pr in payload:
+                if isinstance(pr, dict):
+                    url = str(pr.get("url") or "").strip()
+                    if url:
+                        return True, url
+    else:
+        log.warning("task=%s PR list failed: %s", task_id, listed.stderr.strip())
+
+    title = str(
+        task_ctx.get("pr_title")
+        or f"[{task_id}] {str(direction or '').strip()}".strip()
+        or f"Coherence-Network task {task_id}"
+    )
+    title = title[:140]
+    body = str(
+        task_ctx.get("pr_body")
+        or (
+            "System task for Codex thread execution.\n\n"
+            f"Task ID: {task_id}\n"
+            f"Direction: {direction}\n"
+            "Please review and merge when checks are green."
+        )
+    )[:4000]
+    create_cmd = [
+        "gh",
+        "pr",
+        "create",
+        "--repo",
+        repo,
+        "--base",
+        str(os.environ.get("AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip() or DEFAULT_PR_BASE_BRANCH,
+        "--head",
+        branch,
+        "--title",
+        title,
+        "--body",
+        body,
+    ]
+    created = _run_cmd(create_cmd, cwd=repo_path, timeout=1200)
+    if created.returncode != 0:
+        err = created.stderr.strip()[:1200]
+        if "already exists" in err.lower() or "already exists" in created.stdout.lower():
+            # Another actor created it between list and create. Retry lookup.
+            listed = _run_cmd(list_cmd, cwd=repo_path, timeout=120)
+            payload = _json_or_text(listed.stdout)
+            if isinstance(payload, list):
+                for pr in payload:
+                    if isinstance(pr, dict):
+                        url = str(pr.get("url") or "").strip()
+                        if url:
+                            return True, url
+        return False, f"PR create failed: {err}"
+
+    url = ""
+    payload = _json_or_text(created.stdout)
+    if isinstance(payload, dict):
+        url = str(payload.get("url") or "").strip()
+    if not url:
+        parsed = created.stdout.strip().splitlines()
+        for line in reversed(parsed):
+            if line.strip().startswith("https://"):
+                url = line.strip()
+                break
+    if url:
+        return True, url
+    return False, f"PR created but URL unknown. stdout={created.stdout[:500]}"
+
+
+def _attempt_pr_merge(
+    *,
+    task_id: str,
+    pr_url: str,
+    repo_path: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    method = str(os.environ.get("AGENT_PR_MERGE_METHOD", "squash")).strip().lower() or "squash"
+    method_flag = f"--{method}" if method in {"squash", "merge", "rebase"} else "--squash"
+    merge_cmd = [
+        "gh",
+        "pr",
+        "merge",
+        "--repo",
+        str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO,
+        pr_url,
+        "--auto",
+        method_flag,
+        "--delete-branch",
+    ]
+    merged = _run_cmd(merge_cmd, cwd=repo_path, timeout=1800)
+    if merged.returncode != 0:
+        return False, merged.stderr.strip()[:1200]
+    return True, merged.stdout.strip()[:3000]
+
+
+def _run_pr_delivery_flow(
+    task_id: str,
+    task: dict[str, Any],
+    task_direction: str,
+    command_status: str,
+    command_output: str,
+    log: logging.Logger,
+) -> tuple[str, str]:
+    if command_status != "completed":
+        return "failed", "[pr-flow] Skipped PR delivery because execution failed."
+
+    ctx = _safe_get_task_context(task)
+    branch = _extract_pr_branch(task_id=task_id, task_ctx=ctx, direction=task_direction)
+    repo_path = _repo_path_for_task(ctx)
+    if not os.path.isdir(repo_path) and not _ensure_repo_checkout(repo_path, log=log):
+        return "failed", f"[pr-flow] Repo path not found and clone failed: {repo_path}"
+    if not os.path.isdir(repo_path):
+        return "failed", f"[pr-flow] Repo path not found: {repo_path}"
+
+    if not _prepare_pr_branch(task_id, repo_path, branch, log=log):
+        return "failed", "[pr-flow] Unable to initialize codex task branch."
+
+    if not _as_bool(ctx.get("skip_local_validation")):
+        validation_cmd = str(os.environ.get("AGENT_PR_LOCAL_VALIDATION_CMD", DEFAULT_PR_LOCAL_CHECK_CMD)).strip()
+        if validation_cmd:
+            validation = _run_cmd(
+                validation_cmd,
+                cwd=repo_path,
+                timeout=max(60, PR_GATE_POLL_SECONDS),
+                shell=True,
+            )
+            if validation.returncode != 0:
+                return (
+                    "failed",
+                    f"[pr-flow] Local validation command failed: {validation.stderr.strip()[:1200]}",
+                )
+
+    status_lines = _run_git("status", "--porcelain", cwd=repo_path, timeout=120)
+    if status_lines.returncode != 0:
+        return "failed", f"[pr-flow] Unable to inspect working tree: {status_lines.stderr.strip()[:1200]}"
+    if not status_lines.stdout.strip():
+        return "completed", f"[pr-flow] No file changes. Branch '{branch}' unchanged."
+
+    commit_msg = str(
+        ctx.get("pr_commit_message")
+        or f"[coherence-bot] task {task_id}: {task_direction}".strip()
+    )[:120]
+    add = _run_git("add", "-A", cwd=repo_path, timeout=120)
+    if add.returncode != 0:
+        return "failed", f"[pr-flow] git add failed: {add.stderr.strip()[:1200]}"
+    commit = _run_git("commit", "-m", commit_msg, cwd=repo_path, timeout=240)
+    if commit.returncode != 0:
+        if "nothing to commit" in commit.stderr.lower() and "changed" in commit.stderr.lower():
+            return "completed", f"[pr-flow] No commit created for {branch}; no changes."
+        return "failed", f"[pr-flow] git commit failed: {commit.stderr.strip()[:1200]}"
+
+    push = _run_cmd(
+        ["git", "push", "-u", "origin", branch],
+        cwd=repo_path,
+        timeout=300,
+    )
+    if push.returncode != 0:
+        return "failed", f"[pr-flow] git push failed: {push.stderr.strip()[:1200]}"
+
+    repo = str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+    pr_ok, pr_url_or_error = _get_or_create_pr(
+        task_id=task_id,
+        task_ctx=ctx,
+        repo=repo,
+        repo_path=repo_path,
+        branch=branch,
+        direction=task_direction,
+        log=log,
+    )
+    if not pr_ok:
+        return "failed", f"[pr-flow] PR create/update failed: {pr_url_or_error}"
+
+    # Poll for checks. This handles transient check lag and flake.
+    deadline = time.time() + PR_FLOW_TIMEOUT_SECONDS
+    last_report = {}
+    attempts_remaining = MAX_PR_GATE_ATTEMPTS
+    while time.time() < deadline and attempts_remaining > 0:
+        attempts_remaining -= 1
+        last_report = _run_local_pr_checks(branch, task_id, log=log, repo_path=repo_path)
+        result = str(last_report.get("result") or "").strip()
+        if result in {"ready_for_merge", "public_validated"}:
+            if _as_bool(ctx.get("auto_merge")) or _as_bool(ctx.get("auto_merge_pr")):
+                merged, merge_msg = _attempt_pr_merge(
+                    task_id=task_id,
+                    pr_url=pr_url_or_error,
+                    repo_path=repo_path,
+                    log=log,
+                )
+                if not merged:
+                    return (
+                        "needs_decision",
+                        f"[pr-flow] PR ready but merge failed: {merge_msg}\nPR: {pr_url_or_error}",
+                    )
+                merged_output = f"PR merged: {pr_url_or_error}"
+                if _as_bool(ctx.get("wait_public")):
+                    wait_public = _run_cmd(
+                        [
+                            sys.executable,
+                            os.path.join(_api_dir, "scripts", "validate_pr_to_public.py"),
+                            "--branch",
+                            branch,
+                            "--repo",
+                            repo,
+                            "--wait-public",
+                            "--json",
+                        ],
+                        cwd=repo_path,
+                        timeout=1800,
+                    )
+                    if wait_public.returncode != 0:
+                        return (
+                            "failed",
+                            f"[pr-flow] PR merged but public validation command failed: {wait_public.stderr.strip()[:1200]}",
+                        )
+                return "completed", f"[pr-flow] {merged_output}. Branch={branch}"
+            return "completed", f"[pr-flow] PR ready for merge: {pr_url_or_error}. Branch={branch}"
+        if len(last_report) == 0:
+            return "failed", "[pr-flow] PR checks did not return a valid report."
+        if result not in {"blocked", "ready_for_merge", "public_validated"}:
+            return "failed", f"[pr-flow] PR checks returned unknown result: {_pr_command_output(last_report, 600)}"
+        time.sleep(PR_GATE_POLL_SECONDS)
+
+    reason = str(last_report.get("reason") or "PR checks did not become green before timeout.")
+    return "failed", f"[pr-flow] Timeout waiting for PR checks/mergeability. reason={reason}\nPR: {pr_url_or_error}"
+
+
+def _handle_pr_failure_handoff(
+    *,
+    client: httpx.Client,
+    task_id: str,
+    task_ctx: dict[str, Any],
+    repo_path: str,
+    branch: str,
+    failure_class: str,
+    output: str,
+    run_id: str,
+    attempt: int,
+    worker_id: str,
+    log: logging.Logger,
+) -> tuple[str, str]:
+    reason = f"{failure_class} during codex execution"
+    checkpoint = _checkpoint_partial_progress(
+        task_id=task_id,
+        repo_path=repo_path,
+        branch=branch,
+        run_id=run_id,
+        reason=reason,
+        log=log,
+    )
+    checkpoint_ok = _as_bool(checkpoint.get("ok"))
+    checkpoint_sha = str(checkpoint.get("checkpoint_sha") or "").strip()
+    resume_attempts = _to_int(task_ctx.get("resume_attempts"), 0)
+    max_resume_attempts = max(0, _to_int(task_ctx.get("max_resume_attempts"), MAX_RESUME_ATTEMPTS))
+    should_requeue = (
+        checkpoint_ok
+        and failure_class in {"usage_limit", "timeout"}
+        and resume_attempts < max_resume_attempts
+    )
+    next_status = "pending" if should_requeue else "failed"
+    next_action = "requeue_for_resume" if should_requeue else "needs_manual_attention"
+    context_patch: dict[str, Any] = {
+        "resume_branch": branch,
+        "resume_checkpoint_sha": checkpoint_sha,
+        "resume_ready": checkpoint_ok,
+        "resume_reason": reason,
+        "resume_from_run_id": run_id,
+        "resume_attempts": resume_attempts + (1 if should_requeue else 0),
+        "last_failure_class": failure_class,
+        "last_attempt": attempt,
+        "last_worker_id": worker_id,
+        "repo_path": repo_path,
+        "next_action": next_action,
+    }
+    if checkpoint_ok and checkpoint_sha:
+        context_patch["resume_head_sha"] = checkpoint_sha
+
+    summary = (
+        f"[handoff] failure_class={failure_class}; "
+        f"checkpoint_ok={checkpoint_ok}; branch={branch}; checkpoint_sha={checkpoint_sha or 'n/a'}; "
+        f"next_status={next_status}; attempts={resume_attempts}/{max_resume_attempts}"
+    )
+    final_output = f"{output}\n\n{summary}"[-4000:]
+    client.patch(
+        f"{BASE}/api/agent/tasks/{task_id}",
+        json={"status": next_status, "output": final_output, "context": context_patch},
+    )
+    _sync_run_state(
+        client,
+        task_id=task_id,
+        run_id=run_id,
+        worker_id=worker_id,
+        patch={
+            "status": next_status,
+            "failure_class": failure_class,
+            "checkpoint_ok": checkpoint_ok,
+            "checkpoint_sha": checkpoint_sha,
+            "next_action": next_action,
+            "completed_at": _utc_now_iso(),
+        },
+        lease_seconds=RUN_LEASE_SECONDS,
+        require_owner=False,
+    )
+    return next_status, summary
+
+
 def run_one_task(
     client: httpx.Client,
     task_id: str,
@@ -262,6 +1228,8 @@ def run_one_task(
     verbose: bool = False,
     task_type: str = "impl",
     model: str = "unknown",
+    task_context: dict[str, Any] | None = None,
+    task_direction: str = "",
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
@@ -298,17 +1266,138 @@ def run_one_task(
     executor = _infer_executor(command, model)
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
+    task_ctx = task_context or {}
+    task_snapshot = {"task_type": task_type, "context": task_ctx}
+    pr_mode = _should_run_pr_flow(task_snapshot)
+    repo_path = _repo_path_for_task(task_ctx) if pr_mode else os.path.dirname(_api_dir)
+    branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
+    run_id = f"run_{uuid.uuid4().hex[:12]}"
+    attempt = _next_task_attempt(task_id)
+    # Ensure the task runs from the target worktree in PR mode so file edits stay on a dedicated branch.
+    if pr_mode:
+        if not _prepare_pr_branch(task_id, repo_path, branch_name, log=log):
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "task_id": task_id,
+                    "attempt": attempt,
+                    "status": "failed",
+                    "worker_id": worker_id,
+                    "task_type": task_type,
+                    "direction": task_direction,
+                    "branch": branch_name,
+                    "repo_path": repo_path,
+                    "failure_class": "branch_setup_failed",
+                    "next_action": "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=False,
+            )
+            if verbose:
+                print(f"  -> pre-run branch setup failed for {task_id}")
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": "failed", "output": f"[pr-flow] branch setup failed: {branch_name}"},
+            )
+            return True
+
+    lease_ok = _claim_run_lease(
+        client,
+        task_id=task_id,
+        run_id=run_id,
+        worker_id=worker_id,
+        attempt=attempt,
+        branch=branch_name,
+        repo_path=repo_path,
+        task_type=task_type,
+        direction=task_direction,
+    )
+    if not lease_ok:
+        log.info("task=%s lease claim rejected by run-state owner", task_id)
+        _sync_run_state(
+            client,
+            task_id=task_id,
+            run_id=run_id,
+            worker_id=worker_id,
+            patch={
+                "status": "skipped",
+                "failure_class": "lease_claim_rejected",
+                "next_action": "skip",
+                "completed_at": _utc_now_iso(),
+            },
+            lease_seconds=RUN_LEASE_SECONDS,
+            require_owner=False,
+        )
+        return True
+
     # PATCH to running
     r = client.patch(
         f"{BASE}/api/agent/tasks/{task_id}",
-        json={"status": "running", "worker_id": worker_id},
+        json={
+            "status": "running",
+            "worker_id": worker_id,
+            "context": {
+                "active_run_id": run_id,
+                "active_worker_id": worker_id,
+                "active_branch": branch_name if pr_mode else "",
+                "last_attempt": attempt,
+            },
+        },
     )
     if r.status_code != 200:
+        _sync_run_state(
+            client,
+            task_id=task_id,
+            run_id=run_id,
+            worker_id=worker_id,
+            patch={
+                "task_id": task_id,
+                "attempt": attempt,
+                "status": "skipped",
+                "worker_id": worker_id,
+                "task_type": task_type,
+                "direction": task_direction,
+                "branch": branch_name,
+                "repo_path": repo_path,
+                "failure_class": "claim_conflict" if r.status_code == 409 else "claim_failed",
+                "next_action": "skip",
+                "completed_at": _utc_now_iso(),
+            },
+            lease_seconds=RUN_LEASE_SECONDS,
+            require_owner=False,
+        )
         if r.status_code == 409:
             log.info("task=%s already claimed by another worker; skipping", task_id)
         else:
             log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
         return True
+
+    _sync_run_state(
+        client,
+        task_id=task_id,
+        run_id=run_id,
+        worker_id=worker_id,
+        patch={
+            "task_id": task_id,
+            "attempt": attempt,
+            "status": "running",
+            "worker_id": worker_id,
+            "task_type": task_type,
+            "direction": task_direction,
+            "branch": branch_name,
+            "repo_path": repo_path,
+            "started_at": _utc_now_iso(),
+            "last_heartbeat_at": _utc_now_iso(),
+            "head_sha": _current_head_sha(repo_path) if pr_mode else "",
+            "next_action": "execute_command",
+        },
+        lease_seconds=RUN_LEASE_SECONDS,
+        require_owner=True,
+    )
 
     start_time = time.monotonic()
     log.info("task=%s starting command=%s", task_id, command[:120])
@@ -341,7 +1430,7 @@ def run_one_task(
             command,
             shell=True,
             env=env,
-            cwd=os.path.dirname(_api_dir),
+            cwd=repo_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -350,12 +1439,176 @@ def run_one_task(
         reader = threading.Thread(target=_stream_reader, args=(process,), daemon=False)
         reader.start()
 
-        try:
-            process.wait(timeout=TASK_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            output_lines.append(f"\n[Timeout {TASK_TIMEOUT}s]\n")
+        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), TASK_TIMEOUT)
+        max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
+        timed_out = False
+        stopped_for_usage = False
+        stopped_for_abort = False
+        abort_reason = ""
+        diagnostic_completed_id = str(task_ctx.get("diagnostic_last_completed_id") or "").strip()
+        if hasattr(process, "poll"):
+            deadline = start_time + float(max_runtime_seconds)
+            next_heartbeat = time.monotonic() + RUN_HEARTBEAT_SECONDS
+            next_control_poll = time.monotonic() + CONTROL_POLL_SECONDS
+            next_progress_patch = time.monotonic() + max(2, min(RUN_HEARTBEAT_SECONDS, CONTROL_POLL_SECONDS))
+            next_checkpoint = (
+                time.monotonic() + PERIODIC_CHECKPOINT_SECONDS
+                if pr_mode and PERIODIC_CHECKPOINT_SECONDS > 0
+                else float("inf")
+            )
+            while process.poll() is None:
+                now = time.monotonic()
+                if now >= deadline:
+                    timed_out = True
+                    output_lines.append(f"\n[Timeout {max_runtime_seconds}s]\n")
+                    break
+                if now >= next_heartbeat:
+                    elapsed = max(0.0, now - start_time)
+                    approx_progress = min(95, max(1, int((elapsed / max_runtime_seconds) * 90)))
+                    tail = _tail_output_lines(output_lines)
+                    _patch_task_progress(
+                        client,
+                        task_id=task_id,
+                        progress_pct=approx_progress,
+                        current_step="running command",
+                        context_patch={
+                            "runner_id": worker_id,
+                            "runner_run_id": run_id,
+                            "runner_last_seen_at": _utc_now_iso(),
+                            "runner_pid": getattr(process, "pid", None),
+                            "runner_log_tail": tail,
+                        },
+                    )
+                    _sync_run_state(
+                        client,
+                        task_id=task_id,
+                        run_id=run_id,
+                        worker_id=worker_id,
+                        patch={
+                            "status": "running",
+                            "last_heartbeat_at": _utc_now_iso(),
+                            "next_action": "execute_command",
+                        },
+                        lease_seconds=RUN_LEASE_SECONDS,
+                        require_owner=True,
+                    )
+                    next_heartbeat = now + RUN_HEARTBEAT_SECONDS
+                if now >= next_control_poll:
+                    task_snapshot_live = _safe_get_task_snapshot(client, task_id)
+                    abort_requested, requested_abort_reason, diagnostic_request = _extract_control_signals(task_snapshot_live)
+                    if diagnostic_request:
+                        request_id = _diagnostic_request_id(diagnostic_request)
+                        if request_id and request_id != diagnostic_completed_id:
+                            diagnostic_result = _run_diagnostic_request(
+                                diagnostic_request,
+                                cwd=repo_path,
+                                env=env,
+                            )
+                            diagnostic_completed_id = request_id
+                            _patch_task_progress(
+                                client,
+                                task_id=task_id,
+                                progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                current_step="running diagnostic",
+                                context_patch={
+                                    "diagnostic_last_completed_id": request_id,
+                                    "diagnostic_last_result": diagnostic_result,
+                                    "runner_last_seen_at": _utc_now_iso(),
+                                },
+                            )
+                            output_lines.append(
+                                "\n[Diagnostic] "
+                                f"id={request_id} status={diagnostic_result.get('status')} "
+                                f"exit={diagnostic_result.get('exit_code')}\n"
+                            )
+                    if abort_requested:
+                        stopped_for_abort = True
+                        abort_reason = requested_abort_reason or "abort requested from API"
+                        output_lines.append(f"\n[Abort] {abort_reason}\n")
+                        _sync_run_state(
+                            client,
+                            task_id=task_id,
+                            run_id=run_id,
+                            worker_id=worker_id,
+                            patch={
+                                "status": "running",
+                                "last_heartbeat_at": _utc_now_iso(),
+                                "next_action": "abort_requested",
+                                "failure_class": "aborted_by_user",
+                            },
+                            lease_seconds=RUN_LEASE_SECONDS,
+                            require_owner=True,
+                        )
+                        break
+                    next_control_poll = now + CONTROL_POLL_SECONDS
+                if now >= next_progress_patch:
+                    elapsed = max(0.0, now - start_time)
+                    approx_progress = min(95, max(1, int((elapsed / max_runtime_seconds) * 90)))
+                    _patch_task_progress(
+                        client,
+                        task_id=task_id,
+                        progress_pct=approx_progress,
+                        current_step="running command",
+                        context_patch={
+                            "runner_id": worker_id,
+                            "runner_run_id": run_id,
+                            "runner_last_seen_at": _utc_now_iso(),
+                            "runner_log_tail": _tail_output_lines(output_lines),
+                        },
+                    )
+                    next_progress_patch = now + max(2, min(RUN_HEARTBEAT_SECONDS, CONTROL_POLL_SECONDS))
+                if now >= next_checkpoint:
+                    checkpoint = _checkpoint_partial_progress(
+                        task_id=task_id,
+                        repo_path=repo_path,
+                        branch=branch_name,
+                        run_id=run_id,
+                        reason="periodic checkpoint",
+                        log=log,
+                    )
+                    checkpoint_sha = str(checkpoint.get("checkpoint_sha") or "").strip()
+                    if _as_bool(checkpoint.get("ok")):
+                        _sync_run_state(
+                            client,
+                            task_id=task_id,
+                            run_id=run_id,
+                            worker_id=worker_id,
+                            patch={
+                                "checkpoint_sha": checkpoint_sha,
+                                "head_sha": checkpoint_sha,
+                                "next_action": "execute_command",
+                            },
+                            lease_seconds=RUN_LEASE_SECONDS,
+                            require_owner=True,
+                        )
+                    else:
+                        log.warning(
+                            "task=%s periodic checkpoint failed: %s",
+                            task_id,
+                            str(checkpoint.get("reason") or "unknown"),
+                        )
+                    next_checkpoint = now + PERIODIC_CHECKPOINT_SECONDS
+                tail = "".join(output_lines[-120:])
+                if _detect_usage_limit(tail):
+                    stopped_for_usage = True
+                    output_lines.append("\n[Usage guard] Stopping execution due to usage/quota signal.\n")
+                    break
+                time.sleep(1)
+        else:
+            # Legacy/mocked process objects may only support wait(timeout=...).
+            try:
+                process.wait(timeout=max_runtime_seconds)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                output_lines.append(f"\n[Timeout {max_runtime_seconds}s]\n")
+
+        if timed_out or stopped_for_usage or stopped_for_abort:
+            try:
+                process.terminate()
+                process.wait(timeout=10)
+            except Exception:
+                process.kill()
+                process.wait()
 
         reader_done.wait(timeout=5)
         reader.join(timeout=2)
@@ -376,6 +1629,16 @@ def run_one_task(
             )
         else:
             status = "completed" if returncode == 0 else "failed"
+        if stopped_for_abort:
+            status = "failed"
+            output = f"{output}\n[Runner] Task aborted by request: {abort_reason or 'abort requested'}"
+        failure_class = _classify_failure(
+            output=output,
+            timed_out=timed_out,
+            stopped_for_usage=stopped_for_usage,
+            stopped_for_abort=stopped_for_abort,
+            returncode=returncode,
+        )
 
         with open(out_file, "a", encoding="utf-8") as f:
             f.write(f"\n# duration_seconds={duration_sec} exit={returncode} status={status}\n")
@@ -412,6 +1675,85 @@ def run_one_task(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": status, "output": output[:4000]},
         )
+        _sync_run_state(
+            client,
+            task_id=task_id,
+            run_id=run_id,
+            worker_id=worker_id,
+            patch={
+                "status": status,
+                "duration_seconds": duration_sec,
+                "returncode": returncode,
+                "failure_class": failure_class if status != "completed" else "",
+                "last_heartbeat_at": _utc_now_iso(),
+                "head_sha": _current_head_sha(repo_path) if pr_mode else "",
+                "next_action": "pr_delivery" if pr_mode and status == "completed" else "finalize",
+            },
+            lease_seconds=RUN_LEASE_SECONDS,
+            require_owner=True,
+        )
+
+        final_status = status
+        if pr_mode and status == "completed":
+            final_status, pr_output = _run_pr_delivery_flow(
+                task_id=task_id,
+                task=task_snapshot,
+                task_direction=task_direction,
+                command_status=status,
+                command_output=output,
+                log=log,
+            )
+            status = final_status
+            if pr_output:
+                output = f"{output}\n\n{pr_output}"
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": final_status, "output": output[-4000:]},
+            )
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "status": final_status,
+                    "head_sha": _current_head_sha(repo_path),
+                    "next_action": "done" if final_status == "completed" else "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=True,
+            )
+        elif pr_mode and status != "completed":
+            final_status, handoff_summary = _handle_pr_failure_handoff(
+                client=client,
+                task_id=task_id,
+                task_ctx=task_ctx,
+                repo_path=repo_path,
+                branch=branch_name,
+                failure_class=failure_class,
+                output=output,
+                run_id=run_id,
+                attempt=attempt,
+                worker_id=worker_id,
+                log=log,
+            )
+            status = final_status
+            output = f"{output}\n\n{handoff_summary}" if handoff_summary else output
+        else:
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "status": status,
+                    "next_action": "done" if status == "completed" else "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=True,
+            )
         log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
@@ -454,6 +1796,21 @@ def run_one_task(
             f"{BASE}/api/agent/tasks/{task_id}",
             json={"status": "failed", "output": str(e)},
         )
+        _sync_run_state(
+            client,
+            task_id=task_id,
+            run_id=run_id,
+            worker_id=worker_id,
+            patch={
+                "status": "failed",
+                "failure_class": "runner_exception",
+                "error": str(e)[:1200],
+                "next_action": "needs_attention",
+                "completed_at": _utc_now_iso(),
+            },
+            lease_seconds=RUN_LEASE_SECONDS,
+            require_owner=False,
+        )
         log.exception("task=%s error: %s", task_id, e)
         return True
 
@@ -494,7 +1851,7 @@ def poll_and_run(
             continue
 
         # Fetch full task (including command) for each
-        to_run: list[tuple[str, str, str, str]] = []
+        to_run: list[tuple[str, str, str, str, dict[str, Any], str]] = []
         for task in tasks:
             task_id = task["id"]
             r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
@@ -511,7 +1868,9 @@ def poll_and_run(
                 continue
             task_type = str(full.get("task_type", "impl"))
             model = str(full.get("model", "unknown"))
-            to_run.append((task_id, command, task_type, model))
+            context = _safe_get_task_context(full)
+            direction = str(full.get("direction", "") or "")
+            to_run.append((task_id, command, task_type, model, context, direction))
 
         if not to_run:
             if once:
@@ -519,14 +1878,65 @@ def poll_and_run(
             time.sleep(interval)
             continue
 
+        # PR-flow tasks should stay serial to avoid shared worktree race conditions.
+        pr_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
+        direct_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
+        for item in to_run:
+            _, _, task_type, _, ctx, _ = item
+            if _should_run_pr_flow({"task_type": task_type, "context": ctx}):
+                pr_tasks.append(item)
+            else:
+                direct_tasks.append(item)
+
+        if pr_tasks:
+            for tid, cmd, tt, m, ctx, direction in pr_tasks:
+                run_one_task(
+                    client,
+                    tid,
+                    cmd,
+                    log=log,
+                    verbose=verbose,
+                    task_type=tt,
+                    model=m,
+                    task_context=ctx,
+                    task_direction=direction,
+                )
+
+        if not direct_tasks:
+            if once:
+                break
+            time.sleep(interval)
+            continue
+
         if workers == 1:
-            tid, cmd, tt, m = to_run[0]
-            run_one_task(client, tid, cmd, log=log, verbose=verbose, task_type=tt, model=m)
+            tid, cmd, tt, m, ctx, direction = direct_tasks[0]
+            run_one_task(
+                client,
+                tid,
+                cmd,
+                log=log,
+                verbose=verbose,
+                task_type=tt,
+                model=m,
+                task_context=ctx,
+                task_direction=direction,
+            )
         else:
-            with ThreadPoolExecutor(max_workers=len(to_run)) as ex:
+            with ThreadPoolExecutor(max_workers=max(1, len(direct_tasks))) as ex:
                 futures = {
-                    ex.submit(run_one_task, client, tid, cmd, log, verbose, tt, m): (tid, cmd)
-                    for tid, cmd, tt, m in to_run
+                    ex.submit(
+                        run_one_task,
+                        client,
+                        tid,
+                        cmd,
+                        log,
+                        verbose,
+                        tt,
+                        m,
+                        ctx,
+                        direction,
+                    ): (tid, cmd)
+                    for tid, cmd, tt, m, ctx, direction in direct_tasks
                 }
                 for future in as_completed(futures):
                     try:
@@ -570,6 +1980,7 @@ def _http_with_retry(client: httpx.Client, method: str, url: str, log: logging.L
 
 
 def main():
+    global REPO_PATH
     ap = argparse.ArgumentParser(description="Agent runner: poll and execute pending tasks")
     ap.add_argument("--interval", type=int, default=10, help="Poll interval (seconds)")
     ap.add_argument("--once", action="store_true", help="Run one task and exit")
@@ -581,9 +1992,15 @@ def main():
         default=1,
         help="Max parallel tasks (default 1). With Cursor executor, use 2+ to run multiple tasks concurrently.",
     )
+    ap.add_argument(
+        "--repo-path",
+        default=os.environ.get("AGENT_WORKTREE_PATH", REPO_PATH),
+        help="Path to the local git checkout used by PR workflow and command execution.",
+    )
     args = ap.parse_args()
 
     workers = max(1, args.workers)
+    REPO_PATH = os.path.abspath(args.repo_path)
     log = _setup_logging(verbose=args.verbose)
     log.info("Agent runner started API=%s interval=%s timeout=%ds workers=%d", BASE, args.interval, TASK_TIMEOUT, workers)
 

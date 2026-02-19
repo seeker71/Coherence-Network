@@ -124,3 +124,42 @@ def test_agent_store_isolated_between_pytest_test_contexts(
     rows_after, total_after = agent_service.list_tasks(limit=50, offset=0)
     assert total_after == 0
     assert rows_after == []
+
+
+def test_agent_tasks_persist_and_reload_from_db(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "agent_tasks.db"
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "1")
+    monkeypatch.setenv("AGENT_TASKS_DATABASE_URL", f"sqlite:///{db_path}")
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Persist this task in DB",
+            task_type=TaskType.IMPL,
+            context={"source": "db-persistence-test"},
+        )
+    )
+    task_id = created["id"]
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.RUNNING,
+        worker_id="openai-codex",
+    )
+    assert updated is not None
+
+    # Simulate process restart and verify DB-backed reload.
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    rows, total = agent_service.list_tasks(limit=50, offset=0)
+    assert total == 1
+    assert rows[0]["id"] == task_id
+    assert rows[0]["status"] == TaskStatus.RUNNING

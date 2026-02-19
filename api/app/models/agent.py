@@ -155,3 +155,49 @@ class RouteResponse(BaseModel):
     provider: Optional[str] = None
     billing_provider: Optional[str] = None
     is_paid_provider: Optional[bool] = None
+
+
+class AgentRunStateClaim(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    lease_seconds: int = Field(default=120, ge=15, le=3600)
+    attempt: int = Field(default=1, ge=1, le=100000)
+    branch: Optional[str] = Field(default=None, max_length=300)
+    repo_path: Optional[str] = Field(default=None, max_length=2000)
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunStateUpdate(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    patch: Dict[str, Any] = Field(default_factory=dict)
+    lease_seconds: Optional[int] = Field(default=None, ge=15, le=3600)
+    require_owner: bool = True
+
+
+class AgentRunStateHeartbeat(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    lease_seconds: int = Field(default=120, ge=15, le=3600)
+
+
+class AgentRunStateSnapshot(BaseModel):
+    claimed: bool
+    task_id: str
+    run_id: Optional[str] = None
+    worker_id: Optional[str] = None
+    status: Optional[str] = None
+    attempt: Optional[int] = None
+    branch: Optional[str] = None
+    repo_path: Optional[str] = None
+    head_sha: Optional[str] = None
+    checkpoint_sha: Optional[str] = None
+    failure_class: Optional[str] = None
+    next_action: Optional[str] = None
+    lease_expires_at: Optional[str] = None
+    last_heartbeat_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    detail: Optional[str] = None
