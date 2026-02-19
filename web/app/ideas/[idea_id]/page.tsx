@@ -72,6 +72,12 @@ type LoadFlowResult = {
   details: string | null;
 };
 
+type IdeaListPayload =
+  | {
+      ideas?: IdeaWithScore[];
+    }
+  | IdeaWithScore[];
+
 function toRepoHref(pathOrUrl: string): string {
   if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
   return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
@@ -119,11 +125,26 @@ async function fetchJsonWithRetries<T>(
 
 async function loadIdea(ideaId: string): Promise<LoadIdeaResult> {
   const API = getApiBase();
-  const url = `${API}/api/ideas/${encodeURIComponent(ideaId)}`;
-  const result = await fetchJsonWithRetries<IdeaWithScore>(url);
-  if (result.data) return { kind: "ok", idea: result.data };
-  if (result.status === 404) return { kind: "not_found" };
-  return { kind: "error", details: result.details || "Upstream unavailable" };
+  const detailUrl = `${API}/api/ideas/${encodeURIComponent(ideaId)}`;
+  const detailResult = await fetchJsonWithRetries<IdeaWithScore>(detailUrl);
+  if (detailResult.data) return { kind: "ok", idea: detailResult.data };
+  if (detailResult.status === 404) return { kind: "not_found" };
+
+  // Fallback to idea list lookup when detail route is intermittently unavailable.
+  const listUrl = `${API}/api/ideas?limit=200`;
+  const listResult = await fetchJsonWithRetries<IdeaListPayload>(listUrl);
+  const listPayload = listResult.data;
+  const ideaRows = Array.isArray(listPayload)
+    ? listPayload
+    : Array.isArray(listPayload?.ideas)
+      ? listPayload.ideas
+      : [];
+  const fromList = ideaRows.find((idea) => idea.id === ideaId);
+  if (fromList) return { kind: "ok", idea: fromList };
+
+  const detailReason = detailResult.details || "detail endpoint unavailable";
+  const listReason = listResult.details || "ideas fallback unavailable";
+  return { kind: "error", details: `${detailReason}; fallback ${listReason}` };
 }
 
 async function loadFlowForIdea(ideaId: string): Promise<LoadFlowResult> {
