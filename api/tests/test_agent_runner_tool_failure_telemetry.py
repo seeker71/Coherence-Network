@@ -191,3 +191,78 @@ def test_agent_runner_runtime_event_includes_codex_execution_metadata(monkeypatc
 
 def test_infer_executor_detects_openclaw():
     assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"
+
+
+def test_parse_diff_manifestation_blocks_extracts_file_line_ranges():
+    diff_text = """diff --git a/api/app/demo.py b/api/app/demo.py
+index 1111111..2222222 100644
+--- a/api/app/demo.py
++++ b/api/app/demo.py
+@@ -10,0 +10,4 @@
++line_a
++line_b
++line_c
++line_d
+@@ -30,2 +34,1 @@
+-old_a
+-old_b
++new_a
+"""
+    blocks = agent_runner._parse_diff_manifestation_blocks(diff_text, max_blocks=10)
+    assert blocks == [
+        {
+            "file": "api/app/demo.py",
+            "line": 10,
+            "file_line_ref": "api/app/demo.py:10",
+            "read_range": "10-13",
+            "manifestation_range": "L10-L13",
+        },
+        {
+            "file": "api/app/demo.py",
+            "line": 34,
+            "file_line_ref": "api/app/demo.py:34",
+            "read_range": "34-34",
+            "manifestation_range": "L34-L34",
+        },
+    ]
+
+
+def test_append_agent_manifest_entry_writes_agent_doc_and_context(monkeypatch, tmp_path):
+    monkeypatch.setattr(agent_runner, "AGENT_MANIFESTS_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner, "AGENT_MANIFEST_ENABLED", True)
+    monkeypatch.setattr(
+        agent_runner,
+        "_collect_manifestation_blocks",
+        lambda _repo_path, *, max_blocks: [
+            {
+                "file": "api/app/service.py",
+                "line": 42,
+                "file_line_ref": "api/app/service.py:42",
+                "read_range": "42-48",
+                "manifestation_range": "L42-L48",
+            }
+        ],
+    )
+
+    payload = agent_runner._append_agent_manifest_entry(
+        task_id="task_manifest",
+        task_type="impl",
+        task_direction="Implement measurable ROI provenance tracking",
+        task_ctx={
+            "task_agent": "dev-engineer",
+            "idea_id": "coherence-network-agent-pipeline",
+            "spec_ref": "specs/054-commit-provenance-contract-gate.md",
+        },
+        repo_path=str(tmp_path),
+        executor="openai-codex",
+    )
+
+    manifest = payload.get("agent_manifest") or {}
+    assert manifest.get("agent_name") == "dev-engineer"
+    assert manifest.get("idea_id") == "coherence-network-agent-pipeline"
+    doc_path = Path(str(manifest.get("doc_path") or ""))
+    assert doc_path.exists()
+    body = doc_path.read_text(encoding="utf-8")
+    assert "Idea link" in body
+    assert "api/app/service.py:42" in body
+    assert "manifestation_range `L42-L48`" in body
