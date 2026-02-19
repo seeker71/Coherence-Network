@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 
+const HEALTH_POLL_INTERVAL_MS = 15000;
+const HEALTH_REQUEST_TIMEOUT_MS = 10000;
+
 export default function ApiHealthPage() {
   const apiUrl = getApiBase();
   const proxyUrl = "/api/health-proxy";
@@ -14,9 +17,18 @@ export default function ApiHealthPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight: AbortController | null = null;
 
     const poll = () => {
-      fetch(proxyUrl, { cache: "no-store" })
+      const controller = new AbortController();
+      inFlight?.abort();
+      inFlight = controller;
+      const timeoutId = setTimeout(
+        () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+        HEALTH_REQUEST_TIMEOUT_MS,
+      );
+
+      fetch(proxyUrl, { cache: "no-store", signal: controller.signal })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
@@ -33,13 +45,20 @@ export default function ApiHealthPage() {
           setError(String(e));
           setStatus("error");
           setLastUpdated(new Date().toLocaleString());
+        })
+        .finally(() => {
+          clearTimeout(timeoutId);
+          if (inFlight === controller) {
+            inFlight = null;
+          }
         });
     };
 
     poll();
-    const id = setInterval(poll, 15000);
+    const id = setInterval(poll, HEALTH_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
+      inFlight?.abort();
       clearInterval(id);
     };
   }, [proxyUrl]);

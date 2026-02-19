@@ -7,6 +7,7 @@ import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
+const REQUEST_TIMEOUT_MS = 12000;
 
 type AgentTask = {
   id: string;
@@ -35,6 +36,7 @@ type RuntimeEvent = {
 
 type TaskListResponse = {
   tasks?: AgentTask[];
+  items?: AgentTask[];
 };
 
 type TaskLogResponse = {
@@ -68,6 +70,23 @@ function tailLines(value: string, maxLines: number): string {
   return rows.slice(Math.max(0, rows.length - maxLines)).join("\n");
 }
 
+async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+    timeoutMs,
+  );
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+      cache: init.cache ?? "no-store",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
@@ -85,10 +104,16 @@ function TasksPageContent() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/agent/tasks`, { cache: "no-store" });
+      const res = await fetchWithTimeout(`${API_URL}/api/agent/tasks`);
       const json = (await res.json()) as TaskListResponse;
       if (!res.ok) throw new Error(JSON.stringify(json));
-      const taskRows = Array.isArray(json.tasks) ? json.tasks : [];
+      const taskRows = Array.isArray(json.tasks)
+        ? json.tasks
+        : Array.isArray(json.items)
+          ? json.items
+          : Array.isArray(json)
+            ? json
+            : [];
       setRows(taskRows);
 
       if (!taskIdFilter) {
@@ -97,9 +122,9 @@ function TasksPageContent() {
         setSelectedTaskEvents([]);
       } else {
         const [taskRes, logRes, eventsRes] = await Promise.all([
-          fetch(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`, { cache: "no-store" }),
-          fetch(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`, { cache: "no-store" }),
-          fetch(`${API_URL}/api/runtime/events?limit=2000`, { cache: "no-store" }),
+          fetchWithTimeout(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`),
+          fetchWithTimeout(`${API_URL}/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`),
+          fetchWithTimeout(`${API_URL}/api/runtime/events?limit=2000`),
         ]);
 
         if (taskRes.ok) {
@@ -117,9 +142,14 @@ function TasksPageContent() {
         }
 
         if (eventsRes.ok) {
-          const eventsPayload = (await eventsRes.json()) as RuntimeEvent[];
-          const filtered = Array.isArray(eventsPayload)
+          const eventsPayload = (await eventsRes.json()) as RuntimeEvent[] | { items?: RuntimeEvent[] };
+          const eventsRows = Array.isArray(eventsPayload)
             ? eventsPayload
+            : Array.isArray(eventsPayload.items)
+              ? eventsPayload.items
+              : [];
+          const filtered = Array.isArray(eventsRows)
+            ? eventsRows
                 .filter((event) => {
                   const metadata = asRecord(event.metadata);
                   return String(metadata.task_id || "").trim() === taskIdFilter;
