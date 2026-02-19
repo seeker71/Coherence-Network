@@ -62,24 +62,12 @@
     "scripts/verify_worktree_local_web.sh",
     "scripts/worktree_pr_guard.py"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
       "pytest -q tests/test_pr_check_failure_triage.py tests/test_worktree_pr_guard.py tests/test_agent_runner_tool_failure_telemetry.py",
       "python3 scripts/validate_workflow_references.py"
-    ]
-  },
-  "e2e_validation": {
-    "status": "pending",
-    "expected_behavior_delta": "PR failure triage and worktree guard workflows enforce npm hardening/provenance checks while preserving runtime routing fallback behavior for openclaw/codex alias handling.",
-    "public_endpoints": [
-      "https://coherence-network-production.up.railway.app/api/agent/route?task_type=impl&executor=openclaw",
-      "https://coherence-network-production.up.railway.app/api/agent/tasks"
-    ],
-    "test_flows": [
-      "CI thread-gates run validates commit evidence/spec quality/runtime drift/maintainability + PR failure triage on codex branches",
-      "Agent route + runner telemetry preserve code reference provenance and executor alias normalization in PR/test paths"
     ]
   },
   "ci_validation": {
