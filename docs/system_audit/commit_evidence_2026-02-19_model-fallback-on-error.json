@@ -42,7 +42,8 @@
     "Hosted typo alias verification: task_64fda47091fcf552 completed with command --model gpt-5.3-codex and output TYPO_OK",
     "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
     "cd api && pytest -q tests/test_openclaw_executor_integration.py",
-    "maintainability_audit_report.json captured by worktree guard for PR tracking"
+    "maintainability_audit_report.json captured by worktree guard for PR tracking",
+    "local push hook refreshed maintainability_audit_report.json and was recorded in this evidence update"
   ],
   "change_files": [
     "api/app/services/agent_routing_service.py",
