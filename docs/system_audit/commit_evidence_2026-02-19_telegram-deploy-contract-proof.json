@@ -46,7 +46,7 @@
     "api/tests/test_telegram_diagnostics_api.py",
     "scripts/verify_web_api_deploy.sh"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -60,6 +60,18 @@
   "deploy_validation": {
     "status": "pending",
     "environment": "railway-production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Telegram diagnostics captures test-send attempts, and deploy verification can optionally fail when Telegram alerts are not configured.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/test-send"
+    ],
+    "test_flows": [
+      "Run verify_web_api_deploy.sh with VERIFY_REQUIRE_TELEGRAM_ALERTS=1 to prove deployment fails when Telegram env vars are missing.",
+      "After setting TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS in Railway, rerun telegram test-send and diagnostics to confirm send_results include ok=true entries."
+    ]
   },
   "phase_gate": {
     "can_move_next_phase": false,
