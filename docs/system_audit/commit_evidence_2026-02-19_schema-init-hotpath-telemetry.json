@@ -55,7 +55,7 @@
     "api/tests/test_schema_init_fastpath.py",
     "docs/system_audit/commit_evidence_2026-02-19_schema-init-hotpath-telemetry.json"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -74,5 +74,20 @@
   "phase_gate": {
     "can_move_next_phase": false,
     "reason": "Awaiting push, PR checks, merge, and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production API hot paths stop re-running schema table introspection on every request, reducing timeout flapping on health, task polling, and runner heartbeat endpoints.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/agent/tasks",
+      "/api/agent/runners/heartbeat",
+      "/api/runtime/events"
+    ],
+    "test_flows": [
+      "run repeated public deploy contract checks after deploy",
+      "sample /api/health and /api/health-proxy reliability with timeout window",
+      "submit clawwork/openclaw task and verify it reaches completed state"
+    ]
   }
 }
