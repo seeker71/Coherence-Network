@@ -117,8 +117,8 @@ def test_create_task_openclaw_default_model_normalizes_legacy_alias(monkeypatch:
         )
     )
 
-    assert task["model"] == "openclaw/gpt-5-codex"
-    assert "--model gpt-5-codex" in task["command"]
+    assert task["model"] == "openclaw/gpt-5.3-codex"
+    assert "--model gpt-5.3-codex" in task["command"]
 
 
 def test_create_task_openclaw_model_override_normalizes_alias(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -137,8 +137,8 @@ def test_create_task_openclaw_model_override_normalizes_alias(monkeypatch: pytes
         )
     )
 
-    assert "--model gpt-5-codex" in task["command"]
-    assert task["model"] == "openclaw/gpt-5-codex"
+    assert "--model gpt-5.3-codex" in task["command"]
+    assert task["model"] == "openclaw/gpt-5.3-codex"
 
 
 def test_create_task_openclaw_model_override_normalizes_alias_with_partial_env_map(
@@ -160,9 +160,9 @@ def test_create_task_openclaw_model_override_normalizes_alias_with_partial_env_m
         )
     )
 
-    assert "--model gpt-5-codex" in task["command"]
+    assert "--model gpt-5.3-codex" in task["command"]
     assert "--model gtp-5.3-codex" not in task["command"]
-    assert task["model"] == "openclaw/gpt-5-codex"
+    assert task["model"] == "openclaw/gpt-5.3-codex"
 
 
 @pytest.mark.asyncio

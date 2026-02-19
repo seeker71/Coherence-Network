@@ -220,10 +220,15 @@ PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "openrouter/free:gpt-5-codex,"
-    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gpt-5.3-codex-spark:gpt-5.3-codex,"
+    "gtp-5.3-codex-spark:gpt-5.3-codex,"
+    "gtp-5.3-codex:gpt-5.3-codex"
+)
+DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
-    "gtp-5.3-codex-spark:gpt-5-codex,"
-    "gtp-5.3-codex:gpt-5-codex"
+    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gtp-5.3-codex:gpt-5-codex,"
+    "gtp-5.3-codex-spark:gpt-5-codex"
 )
 CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 CODEX_AUTH_MODE_VALUES = {"api_key", "oauth", "auto"}
@@ -1722,6 +1727,7 @@ def _schedule_retry_if_configured(
     failure_class: str,
     attempt: int,
     duration_seconds: float,
+    extra_context_patch: dict[str, Any] | None = None,
 ) -> tuple[bool, str]:
     max_retries = max(0, _to_int(task_ctx.get("runner_retry_max"), 0))
     requested_retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
@@ -1798,6 +1804,8 @@ def _schedule_retry_if_configured(
         "cadence_limits": cadence_limits,
     }
     )
+    if extra_context_patch:
+        context_patch.update(dict(extra_context_patch))
     message = (
         f"[runner-retry] attempt {attempt} failed ({failure_class}); "
         f"scheduled retry in {retry_delay_seconds}s ({retries_remaining - 1} retries remaining)."
@@ -2482,6 +2490,8 @@ def _classify_failure(
         return "aborted_by_user"
     if stopped_for_usage or _detect_usage_limit(output):
         return "usage_limit"
+    if _codex_model_not_found_or_access_error(output):
+        return "model_not_found"
     if timed_out:
         return "timeout"
     if returncode in {-9, 137, 143}:
@@ -2794,22 +2804,72 @@ def _codex_model_alias_map() -> dict[str, str]:
     return aliases
 
 
-def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+def _codex_model_not_found_fallback_map() -> dict[str, str]:
+    aliases = _parse_codex_model_alias_map(DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP)
+    raw = os.environ.get("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", "")
+    if raw:
+        aliases.update(_parse_codex_model_alias_map(str(raw)))
+    return aliases
+
+
+def _codex_command_model(command: str) -> str:
     if not _uses_codex_cli(command):
-        return command, None
+        return ""
     match = CODEX_MODEL_ARG_RE.search(command or "")
     if match is None:
-        return command, None
-    requested_model = match.group("model").strip()
+        return ""
+    return match.group("model").strip()
+
+
+def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+    requested_model = _codex_command_model(command)
     if not requested_model:
         return command, None
     target_model = _codex_model_alias_map().get(requested_model.lower(), "").strip()
     if not target_model or target_model.lower() == requested_model.lower():
         return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
     remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
     return remapped, {
         "requested_model": requested_model,
         "effective_model": target_model,
+    }
+
+
+def _codex_model_not_found_or_access_error(output: str) -> bool:
+    lowered = (output or "").lower()
+    if not lowered:
+        return False
+    if "model_not_found" in lowered:
+        return True
+    if "does not exist or you do not have access" in lowered:
+        return True
+    if "do not have access to it" in lowered and "model" in lowered:
+        return True
+    if "model" in lowered and "does not exist" in lowered:
+        return True
+    return False
+
+
+def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dict[str, str] | None]:
+    if not _codex_model_not_found_or_access_error(output):
+        return command, None
+    requested_model = _codex_command_model(command)
+    if not requested_model:
+        return command, None
+    target_model = _codex_model_not_found_fallback_map().get(requested_model.lower(), "").strip()
+    if not target_model or target_model.lower() == requested_model.lower():
+        return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
+    remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
+    return remapped, {
+        "requested_model": requested_model,
+        "effective_model": target_model,
+        "trigger": "model_not_found_or_access",
     }
 
 
@@ -4147,14 +4207,43 @@ def run_one_task(
             status = final_status
             output = f"{output}\n\n{handoff_summary}" if handoff_summary else output
         elif (not hold_policy_applied) and (not pr_mode) and status != "completed":
+            retry_task_ctx = task_ctx
+            retry_context_patch: dict[str, Any] | None = None
+            if _uses_codex_cli(command) and _codex_model_not_found_or_access_error(output):
+                fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
+                fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
+                if fallback_alias and not fallback_already_attempted:
+                    retry_task_ctx = dict(task_ctx)
+                    retry_task_ctx["retry_override_command"] = fallback_command
+                    retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                    requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                    retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                    retry_context_patch = {
+                        "retry_override_command": fallback_command,
+                        "runner_model_not_found_fallback_attempted": True,
+                        "runner_model_not_found_fallback": {
+                            **fallback_alias,
+                            "at": _utc_now_iso(),
+                        },
+                    }
+                    output = (
+                        f"{output}\n[runner-model-fallback] model unavailable; "
+                        f"retrying with --model {fallback_alias['effective_model']}."
+                    )
+                elif fallback_already_attempted:
+                    output = (
+                        f"{output}\n[runner-model-fallback] "
+                        "model unavailable after fallback attempt; not retrying fallback."
+                    )
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
                 task_id=task_id,
-                task_ctx=task_ctx,
+                task_ctx=retry_task_ctx,
                 output=output,
                 failure_class=failure_class,
                 attempt=attempt,
                 duration_seconds=duration_sec,
+                extra_context_patch=retry_context_patch,
             )
             if retry_scheduled:
                 status = "pending"
