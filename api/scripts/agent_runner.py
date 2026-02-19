@@ -69,6 +69,54 @@ TASK_LOG_TAIL_CHARS = max(200, int(os.environ.get("AGENT_TASK_LOG_TAIL_CHARS", "
 MAX_RUN_RECORDS = max(50, int(os.environ.get("AGENT_RUN_RECORDS_MAX", "5000")))
 RUN_RECORDS_FILE = os.path.join(LOG_DIR, "agent_runner_runs.json")
 RUN_RECORDS_LOCK = threading.Lock()
+SELF_UPDATE_ENABLED = str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_ENABLED", "1")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "enabled",
+    "y",
+}
+SELF_UPDATE_REPO = (
+    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+)
+SELF_UPDATE_BRANCH = (
+    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip()
+    or DEFAULT_PR_BASE_BRANCH
+)
+try:
+    SELF_UPDATE_MIN_INTERVAL_SECONDS = int(
+        os.environ.get("AGENT_RUNNER_SELF_UPDATE_MIN_INTERVAL_SECONDS", "60")
+    )
+except ValueError:
+    SELF_UPDATE_MIN_INTERVAL_SECONDS = 60
+SELF_UPDATE_MIN_INTERVAL_SECONDS = max(5, SELF_UPDATE_MIN_INTERVAL_SECONDS)
+SELF_UPDATE_LOCK = threading.Lock()
+SELF_UPDATE_LAST_CHECK_AT = 0.0
+SELF_UPDATE_LAST_TRIGGER_SHA = ""
+ROLLBACK_ON_TASK_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_TASK_FAILURE", "1")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "enabled",
+    "y",
+}
+ROLLBACK_ON_START_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_START_FAILURE", "1")).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+    "enabled",
+    "y",
+}
+try:
+    ROLLBACK_MIN_INTERVAL_SECONDS = int(os.environ.get("AGENT_RUNNER_ROLLBACK_MIN_INTERVAL_SECONDS", "180"))
+except ValueError:
+    ROLLBACK_MIN_INTERVAL_SECONDS = 180
+ROLLBACK_MIN_INTERVAL_SECONDS = max(10, ROLLBACK_MIN_INTERVAL_SECONDS)
+ROLLBACK_LOCK = threading.Lock()
+ROLLBACK_LAST_AT = 0.0
 
 
 def _tool_token(command: str) -> str:
@@ -773,6 +821,311 @@ def _current_head_sha(repo_path: str) -> str:
     return (head.stdout or "").strip()[:80]
 
 
+def _normalize_sha(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if re.fullmatch(r"[0-9a-f]{7,64}", text):
+        return text[:40]
+    return ""
+
+
+def _github_head_sha(client: httpx.Client, repo: str, branch: str, log: logging.Logger) -> str:
+    repository = str(repo or "").strip()
+    ref = str(branch or "").strip()
+    if not repository or "/" not in repository:
+        return ""
+    if not ref:
+        ref = "main"
+    token = str(os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "coherence-agent-runner",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    url = f"https://api.github.com/repos/{repository}/commits/{ref}"
+    response = _http_with_retry(client, "GET", url, log, headers=headers)
+    if response is None:
+        return ""
+    if response.status_code != 200:
+        log.warning(
+            "runner self-update: GitHub head lookup failed repo=%s ref=%s status=%s",
+            repository,
+            ref,
+            response.status_code,
+        )
+        return ""
+    try:
+        payload = response.json()
+    except Exception:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return _normalize_sha(payload.get("sha"))
+
+
+def _railway_runner_commit_sha(client: httpx.Client, log: logging.Logger) -> tuple[str, str]:
+    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
+    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
+    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
+    if not token or not env_id or not service_id:
+        env_commit = _normalize_sha(
+            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
+            or os.environ.get("GIT_COMMIT_SHA")
+        )
+        return env_commit, ""
+    try:
+        uuid.UUID(env_id)
+        uuid.UUID(service_id)
+    except Exception:
+        log.warning(
+            "runner self-update: Railway IDs must be UUIDs (env=%r service=%r); skipping auto-redeploy check",
+            env_id,
+            service_id,
+        )
+        return "", ""
+
+    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
+    query = {
+        "query": (
+            "query RunnerDeployment($environmentId:String!, $serviceId:String!) { "
+            "serviceInstance(environmentId:$environmentId, serviceId:$serviceId) { "
+            "latestDeployment { id meta } } }"
+        ),
+        "variables": {"environmentId": env_id, "serviceId": service_id},
+    }
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = client.post(railway_url, json=query, headers=headers, timeout=HTTP_TIMEOUT)
+    except Exception as exc:
+        log.warning("runner self-update: Railway deployment lookup failed: %s", exc)
+        return "", ""
+    if response.status_code != 200:
+        log.warning(
+            "runner self-update: Railway deployment lookup status=%s",
+            response.status_code,
+        )
+        return "", ""
+    try:
+        payload = response.json()
+    except Exception:
+        return "", ""
+    if not isinstance(payload, dict):
+        return "", ""
+    if payload.get("errors"):
+        log.warning("runner self-update: Railway deployment lookup errors=%s", str(payload.get("errors"))[:600])
+        return "", ""
+    service_instance = ((payload.get("data") or {}).get("serviceInstance") or {})
+    latest_deployment = (service_instance.get("latestDeployment") or {})
+    deployment_id = str(latest_deployment.get("id") or "").strip()
+    meta = latest_deployment.get("meta")
+    commit_sha = ""
+    if isinstance(meta, dict):
+        commit_sha = _normalize_sha(meta.get("commitHash"))
+    if not commit_sha:
+        commit_sha = _normalize_sha(
+            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
+            or os.environ.get("GIT_COMMIT_SHA")
+        )
+    return commit_sha, deployment_id
+
+
+def _trigger_railway_runner_redeploy(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
+    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
+    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
+    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
+    if not token or not env_id or not service_id:
+        return False, "missing_railway_context"
+    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
+    mutation = {
+        "query": (
+            "mutation RunnerRedeploy($environmentId:String!, $serviceId:String!) { "
+            "serviceInstanceRedeploy(environmentId:$environmentId, serviceId:$serviceId) }"
+        ),
+        "variables": {"environmentId": env_id, "serviceId": service_id},
+    }
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
+    except Exception as exc:
+        return False, f"railway_request_failed:{exc}"
+    if response.status_code != 200:
+        return False, f"railway_status_{response.status_code}"
+    try:
+        payload = response.json()
+    except Exception:
+        return False, "railway_non_json_response"
+    if not isinstance(payload, dict):
+        return False, "railway_invalid_response"
+    if payload.get("errors"):
+        log.warning("runner self-update: Railway redeploy errors=%s", str(payload.get("errors"))[:800])
+        return False, "railway_graphql_errors"
+    data = payload.get("data") or {}
+    if not bool(data.get("serviceInstanceRedeploy")):
+        return False, "railway_redeploy_not_triggered"
+    return True, "redeploy_triggered"
+
+
+def _trigger_railway_runner_rollback(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
+    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
+    if not token:
+        return False, "missing_railway_token"
+
+    _, deployment_id = _railway_runner_commit_sha(client, log)
+    if not deployment_id:
+        return False, "missing_current_deployment_id"
+
+    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
+    mutation = {
+        "query": "mutation Rollback($id:String!) { deploymentRollback(id:$id) }",
+        "variables": {"id": deployment_id},
+    }
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
+    except Exception as exc:
+        return False, f"railway_request_failed:{exc}"
+    if response.status_code != 200:
+        return False, f"railway_status_{response.status_code}"
+    try:
+        payload = response.json()
+    except Exception:
+        return False, "railway_non_json_response"
+    if not isinstance(payload, dict):
+        return False, "railway_invalid_response"
+    if payload.get("errors"):
+        log.warning("runner rollback: Railway rollback errors=%s", str(payload.get("errors"))[:800])
+        return False, "railway_graphql_errors"
+    data = payload.get("data") or {}
+    if not bool(data.get("deploymentRollback")):
+        return False, "railway_rollback_not_triggered"
+    return True, deployment_id
+
+
+def _maybe_trigger_runner_rollback(
+    client: httpx.Client,
+    log: logging.Logger,
+    *,
+    reason: str,
+    task_id: str = "",
+    failure_class: str = "",
+) -> None:
+    now = time.monotonic()
+    with ROLLBACK_LOCK:
+        global ROLLBACK_LAST_AT
+        if (now - ROLLBACK_LAST_AT) < float(ROLLBACK_MIN_INTERVAL_SECONDS):
+            return
+        ROLLBACK_LAST_AT = now
+
+    ok, detail = _trigger_railway_runner_rollback(client, log)
+    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    if not ok:
+        log.warning(
+            "runner rollback: failed reason=%s task=%s failure_class=%s detail=%s",
+            reason,
+            task_id or "-",
+            failure_class or "-",
+            detail,
+        )
+        return
+    _runner_heartbeat(
+        client,
+        runner_id=worker_id,
+        status="degraded",
+        active_task_id="",
+        active_run_id="",
+        metadata={
+            "rollback_triggered": True,
+            "rollback_reason": reason,
+            "rollback_task_id": task_id,
+            "rollback_failure_class": failure_class,
+            "rollback_source_deployment_id": detail,
+        },
+    )
+    log.warning(
+        "runner rollback: triggered reason=%s task=%s failure_class=%s source_deployment=%s",
+        reason,
+        task_id or "-",
+        failure_class or "-",
+        detail,
+    )
+
+
+def _maybe_trigger_runner_self_update(
+    client: httpx.Client,
+    log: logging.Logger,
+    *,
+    last_task_id: str = "",
+) -> None:
+    if not SELF_UPDATE_ENABLED:
+        return
+    now = time.monotonic()
+    with SELF_UPDATE_LOCK:
+        global SELF_UPDATE_LAST_CHECK_AT, SELF_UPDATE_LAST_TRIGGER_SHA
+        if (now - SELF_UPDATE_LAST_CHECK_AT) < float(SELF_UPDATE_MIN_INTERVAL_SECONDS):
+            return
+        SELF_UPDATE_LAST_CHECK_AT = now
+
+    latest_main_sha = _github_head_sha(client, SELF_UPDATE_REPO, SELF_UPDATE_BRANCH, log)
+    if not latest_main_sha:
+        return
+
+    current_sha, deployment_id = _railway_runner_commit_sha(client, log)
+    if not current_sha:
+        log.info(
+            "runner self-update: current deployment commit unavailable; "
+            "set Railway context vars for commit-aware redeploy checks"
+        )
+        return
+
+    if latest_main_sha.startswith(current_sha) or current_sha.startswith(latest_main_sha):
+        return
+
+    with SELF_UPDATE_LOCK:
+        if SELF_UPDATE_LAST_TRIGGER_SHA == latest_main_sha:
+            return
+
+    ok, reason = _trigger_railway_runner_redeploy(client, log)
+    if not ok:
+        log.warning(
+            "runner self-update: redeploy failed task=%s current=%s latest=%s reason=%s",
+            last_task_id or "-",
+            current_sha[:12],
+            latest_main_sha[:12],
+            reason,
+        )
+        return
+
+    with SELF_UPDATE_LOCK:
+        SELF_UPDATE_LAST_TRIGGER_SHA = latest_main_sha
+
+    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    _runner_heartbeat(
+        client,
+        runner_id=worker_id,
+        status="updating",
+        active_task_id="",
+        active_run_id="",
+        metadata={
+            "self_update_triggered": True,
+            "self_update_task_id": last_task_id,
+            "runner_commit": current_sha,
+            "target_commit": latest_main_sha,
+            "deployment_id": deployment_id,
+            "reason": reason,
+        },
+    )
+    log.warning(
+        "runner self-update: triggered Railway redeploy task=%s current=%s latest=%s deployment=%s",
+        last_task_id or "-",
+        current_sha[:12],
+        latest_main_sha[:12],
+        deployment_id or "unknown",
+    )
+
+
 def _checkpoint_partial_progress(
     *,
     task_id: str,
@@ -805,14 +1158,31 @@ def _checkpoint_partial_progress(
     return {"ok": True, "changed": changed, "checkpoint_sha": head_sha, "branch": branch}
 
 
-_USAGE_LIMIT_MARKERS = (
+_USAGE_LIMIT_HARD_MARKERS = (
+    "insufficient_quota",
+    "quota exceeded",
+    "billing hard limit",
+    "provider blocked",
+)
+
+_USAGE_LIMIT_SOFT_MARKERS = (
     "usage limit",
     "rate limit",
-    "quota exceeded",
+    "too many requests",
+)
+
+_USAGE_LIMIT_ERROR_TOKENS = (
+    "http 429",
+    "status 429",
+    " 429",
     "insufficient_quota",
+    "quota exceeded",
     "billing hard limit",
     "too many requests",
+    "rate limit reached",
     "provider blocked",
+    "retry-after",
+    "retry after",
 )
 
 
@@ -820,7 +1190,14 @@ def _detect_usage_limit(text: str) -> bool:
     lowered = (text or "").lower()
     if not lowered:
         return False
-    return any(marker in lowered for marker in _USAGE_LIMIT_MARKERS)
+    if any(marker in lowered for marker in _USAGE_LIMIT_HARD_MARKERS):
+        return True
+    for line in lowered.splitlines():
+        if any(marker in line for marker in _USAGE_LIMIT_SOFT_MARKERS) and any(
+            token in line for token in _USAGE_LIMIT_ERROR_TOKENS
+        ):
+            return True
+    return False
 
 
 def _classify_failure(
@@ -1458,6 +1835,8 @@ def run_one_task(
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
         env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
         log.info("task=%s using codex CLI", task_id)
+        if "--dangerously-bypass-approvals-and-sandbox" not in command:
+            command = f"{command} --dangerously-bypass-approvals-and-sandbox"
     elif _uses_openclaw_cli(command):
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
@@ -2096,6 +2475,15 @@ def run_one_task(
         if status == "completed" and task_type != "heal" and os.environ.get("PIPELINE_AUTO_COMMIT") == "1":
             _try_commit(task_id, task_type, log)
 
+        if status == "failed" and ROLLBACK_ON_TASK_FAILURE:
+            _maybe_trigger_runner_rollback(
+                client,
+                log,
+                reason="task_failed",
+                task_id=task_id,
+                failure_class=failure_class,
+            )
+
         return True
     except Exception as e:
         duration_sec = round(time.monotonic() - start_time, 1)  # start_time set before try
@@ -2154,6 +2542,14 @@ def run_one_task(
             last_error=str(e),
             metadata={"last_task_id": task_id, "task_type": task_type},
         )
+        if ROLLBACK_ON_TASK_FAILURE:
+            _maybe_trigger_runner_rollback(
+                client,
+                log,
+                reason="runner_exception",
+                task_id=task_id,
+                failure_class="runner_exception",
+            )
         log.exception("task=%s error: %s", task_id, e)
         return True
 
@@ -2256,6 +2652,7 @@ def poll_and_run(
                     task_context=ctx,
                     task_direction=direction,
                 )
+                _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
 
         if not direct_tasks:
             if once:
@@ -2276,6 +2673,7 @@ def poll_and_run(
                 task_context=ctx,
                 task_direction=direction,
             )
+            _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
         else:
             with ThreadPoolExecutor(max_workers=max(1, len(direct_tasks))) as ex:
                 futures = {
@@ -2299,6 +2697,7 @@ def poll_and_run(
                     except Exception as e:
                         tid, _ = futures[future]
                         log.exception("task=%s worker error: %s", tid, e)
+            _maybe_trigger_runner_self_update(client, log)
 
         if once:
             break
@@ -2364,15 +2763,22 @@ def main():
             msg = f"API not reachable at {BASE}/api/health — start the API first"
             log.error(msg)
             print(msg)
+            if ROLLBACK_ON_START_FAILURE:
+                _maybe_trigger_runner_rollback(client, log, reason="startup_api_unreachable")
             sys.exit(1)
         if args.verbose:
             print(f"Agent runner | API: {BASE} | interval: {args.interval}s | workers: {workers}")
             print(f"  Log: {LOG_FILE}")
             print("  Polling for pending tasks...\n")
 
-        poll_and_run(
-            client, once=args.once, interval=args.interval, workers=workers, log=log, verbose=args.verbose
-        )
+        try:
+            poll_and_run(
+                client, once=args.once, interval=args.interval, workers=workers, log=log, verbose=args.verbose
+            )
+        except Exception:
+            if ROLLBACK_ON_START_FAILURE:
+                _maybe_trigger_runner_rollback(client, log, reason="startup_runner_crash")
+            raise
 
 
 if __name__ == "__main__":

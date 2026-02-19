@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/b480",
+  "commit_scope": "Add runner self-update/rollback resilience and runner-update Telegram alert formatting (task link, potential ROI, measured value) for API task PATCH updates.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/scripts/agent_runner.py",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-self-update-rollback.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-self-update-rollback.json",
+      "Live validation: task_2dc862a4b41a52f8 failed and triggered rollback deployment ca4faf9e-d90b-437b-a7f7-9bc49fd529c9",
+      "Live validation: task_0b4877d753461e47 moved pending->running->failed with Telegram send_results incrementing under placeholder token/chat config"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR checks and merge."
+  },
+  "idea_ids": [
+    "agent-task-lease-and-heartbeat"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task_978669a7dc879d74",
+    "task_c7d09aa135e6a438",
+    "task_2dc862a4b41a52f8",
+    "task_d792313ec690c33a",
+    "task_031dc02a66931022",
+    "task_5f3fa9399348d1d8",
+    "task_0b4877d753461e47"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex:railway-runner-1",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "deployment",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Railway runner deployment 82e0f2e6-d282-4aaa-ad11-b1f1069230b3",
+    "Railway rollback deployment ca4faf9e-d90b-437b-a7f7-9bc49fd529c9",
+    "Runner log: rollback triggered reason=task_failed task=task_2dc862a4b41a52f8",
+    "Railway API deployment 130b4460-9cc0-4175-bc33-09b2b30c8df5 (Telegram update formatter active)",
+    "Railway runner deployment c5f4745a-999a-4334-a430-af39ea274b77 (startup bootstrap + codex runner loop)",
+    "API telegram diagnostics send_results count increased to 1 for task_0b4877d753461e47 with placeholder token/chat"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/scripts/agent_runner.py"
+  ],
+  "change_intent": "process_only"
+}
