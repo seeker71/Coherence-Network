@@ -170,6 +170,51 @@ try:
 except ValueError:
     DEFAULT_OBSERVATION_WINDOW_SEC = 900
 DEFAULT_OBSERVATION_WINDOW_SEC = max(30, min(DEFAULT_OBSERVATION_WINDOW_SEC, 7 * 24 * 60 * 60))
+try:
+    HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = float(
+        os.environ.get("AGENT_HOLD_PATTERN_SCORE_THRESHOLD", "0.8")
+    )
+except ValueError:
+    HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = 0.8
+HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = max(0.0, HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT)
+try:
+    HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = int(
+        os.environ.get("AGENT_HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS", "120")
+    )
+except ValueError:
+    HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = 120
+HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = max(10, min(HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS, 24 * 60 * 60))
+HOLD_PATTERN_DIAGNOSTIC_COMMAND = str(
+    os.environ.get(
+        "AGENT_HOLD_PATTERN_DIAGNOSTIC_COMMAND",
+        "git status --porcelain --branch && git log --oneline -n 5",
+    )
+).strip()
+try:
+    MIN_RETRY_DELAY_SECONDS = int(os.environ.get("AGENT_MIN_RETRY_DELAY_SECONDS", "15"))
+except ValueError:
+    MIN_RETRY_DELAY_SECONDS = 15
+MIN_RETRY_DELAY_SECONDS = max(1, min(MIN_RETRY_DELAY_SECONDS, 3600))
+try:
+    DIAGNOSTIC_COOLDOWN_SECONDS = int(os.environ.get("AGENT_DIAGNOSTIC_COOLDOWN_SECONDS", "30"))
+except ValueError:
+    DIAGNOSTIC_COOLDOWN_SECONDS = 30
+DIAGNOSTIC_COOLDOWN_SECONDS = max(0, min(DIAGNOSTIC_COOLDOWN_SECONDS, 3600))
+try:
+    MAX_INTERVENTIONS_PER_WINDOW = int(os.environ.get("AGENT_MAX_INTERVENTIONS_PER_WINDOW", "5"))
+except ValueError:
+    MAX_INTERVENTIONS_PER_WINDOW = 5
+MAX_INTERVENTIONS_PER_WINDOW = max(1, min(MAX_INTERVENTIONS_PER_WINDOW, 100))
+try:
+    INTERVENTION_WINDOW_SECONDS = int(os.environ.get("AGENT_INTERVENTION_WINDOW_SECONDS", "900"))
+except ValueError:
+    INTERVENTION_WINDOW_SECONDS = 900
+INTERVENTION_WINDOW_SECONDS = max(30, min(INTERVENTION_WINDOW_SECONDS, 24 * 60 * 60))
+try:
+    PAID_CALL_COST_UNITS = float(os.environ.get("AGENT_PAID_CALL_COST_UNITS", "1.0"))
+except ValueError:
+    PAID_CALL_COST_UNITS = 1.0
+PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 
@@ -238,6 +283,52 @@ def _safe_float(value: object) -> float | None:
         return float(str(value).strip())
     except Exception:
         return None
+
+
+def _context_first_float(context: dict[str, Any], keys: tuple[str, ...]) -> float | None:
+    for key in keys:
+        value = _safe_float(context.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _estimated_roi_value(context: dict[str, Any]) -> float:
+    value = _context_first_float(
+        context,
+        (
+            "estimated_roi",
+            "estimated_value",
+            "potential_roi",
+            "potential_value",
+            "value_to_whole",
+        ),
+    )
+    if value is None:
+        value = _safe_float(context.get("awareness_estimated_roi_total"))
+    return max(0.0, float(value or 0.0))
+
+
+def _measured_roi_value(context: dict[str, Any]) -> float:
+    value = _context_first_float(
+        context,
+        (
+            "measured_roi",
+            "actual_value",
+            "measured_value",
+            "measured_value_total",
+            "measured_delta",
+        ),
+    )
+    if value is None:
+        value = _safe_float(context.get("awareness_measured_roi_total"))
+    return max(0.0, float(value or 0.0))
+
+
+def _estimated_transition_cost(duration_seconds: float, *, paid_call: bool) -> float:
+    wall_time_cost = max(0.0, float(duration_seconds)) * _time_cost_per_second()
+    paid_call_cost = PAID_CALL_COST_UNITS if paid_call else 0.0
+    return round(max(0.0, wall_time_cost + paid_call_cost), 6)
 
 
 def _normalize_evidence_terms(raw: object) -> list[str]:
@@ -315,6 +406,161 @@ def _observe_target_contract(
         "attempt_status": attempt_status,
         "observed_at": _utc_now_iso(),
     }
+
+
+def _evaluate_hold_pattern_policy(task_ctx: dict[str, Any], *, attempt: int) -> dict[str, Any]:
+    score = _safe_float(task_ctx.get("hold_pattern_score"))
+    threshold = _safe_float(task_ctx.get("hold_pattern_score_threshold"))
+    if threshold is None:
+        threshold = HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT
+    threshold = max(0.0, threshold)
+    high_hold = score is not None and score >= threshold
+    return {
+        "triggered": bool(high_hold),
+        "score": score,
+        "threshold": threshold,
+        "attempt": max(1, int(attempt)),
+        "action_rate": "reduced" if high_hold else "normal",
+        "request_steering": bool(high_hold),
+        "suppress_blind_retry": bool(high_hold),
+    }
+
+
+def _hold_pattern_diagnostic_command(task_ctx: dict[str, Any]) -> str:
+    for key in (
+        "hold_pattern_diagnostic_command",
+        "high_signal_diagnostic_command",
+        "runner_high_signal_diagnostic_command",
+    ):
+        value = str(task_ctx.get(key) or "").strip()
+        if value:
+            return value
+    return HOLD_PATTERN_DIAGNOSTIC_COMMAND
+
+
+def _apply_hold_pattern_policy(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    task_ctx: dict[str, Any],
+    attempt: int,
+    failure_class: str,
+    output: str,
+    repo_path: str,
+    env: dict[str, str],
+    run_id: str,
+    worker_id: str,
+) -> tuple[bool, str]:
+    policy = _evaluate_hold_pattern_policy(task_ctx, attempt=attempt)
+    if not _as_bool(policy.get("triggered")):
+        return False, ""
+
+    intervention_allowed, cadence_patch, cadence_limits, window_load = _allow_intervention_frequency(
+        task_ctx,
+        kind="steering",
+        hold_pattern_inc=1,
+    )
+    diagnostic_command = _hold_pattern_diagnostic_command(task_ctx)
+    diagnostic_timeout = max(
+        5,
+        min(
+            DIAGNOSTIC_TIMEOUT_SECONDS,
+            _to_int(task_ctx.get("hold_pattern_diagnostic_timeout_seconds"), DIAGNOSTIC_TIMEOUT_SECONDS),
+        ),
+    )
+    diagnostic_request_id = f"hold-pattern-{task_id[:24]}-attempt-{attempt}"
+    diagnostic_result: dict[str, Any] | None = None
+    if intervention_allowed and diagnostic_command:
+        diagnostic_result = _run_diagnostic_request(
+            {
+                "id": diagnostic_request_id,
+                "command": diagnostic_command,
+                "timeout_seconds": diagnostic_timeout,
+            },
+            cwd=repo_path,
+            env=env,
+        )
+
+    retry_not_before = (
+        datetime.now(timezone.utc) + timedelta(seconds=HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS)
+    ).isoformat()
+    score = policy.get("score")
+    threshold = policy.get("threshold")
+    if intervention_allowed:
+        steering_message = (
+            "[policy] High hold_pattern_score detected "
+            f"(score={score if score is not None else 'n/a'}, threshold={threshold}); "
+            "reduced action rate, ran one high-signal diagnostic, requested steering, and suppressed blind retries."
+        )
+    else:
+        steering_message = (
+            "[policy] High hold_pattern_score detected; steering requested. "
+            f"Additional intervention suppressed by cadence limit "
+            f"({window_load}/{cadence_limits.get('max_interventions_per_window')} in "
+            f"{cadence_limits.get('intervention_window_sec')}s)."
+        )
+    context_patch: dict[str, Any] = dict(cadence_patch)
+    context_patch.update(
+        {
+        "runner_state": "steering_required",
+        "runner_action_rate": "reduced",
+        "retry_not_before": retry_not_before,
+        "next_action": "steering_required",
+        "steering_requested": True,
+        "hold_pattern_policy": {
+            "triggered": True,
+            "score": score,
+            "threshold": threshold,
+            "attempt": policy.get("attempt"),
+            "action_rate": "reduced",
+            "blind_retry_suppressed": True,
+            "diagnostic_request_id": diagnostic_request_id,
+            "diagnostic_command": _scrub_command(diagnostic_command),
+            "intervention_allowed": intervention_allowed,
+            "intervention_window_load": window_load,
+            "intervention_window_limit": cadence_limits.get("max_interventions_per_window"),
+            "triggered_at": _utc_now_iso(),
+            "failure_class": failure_class,
+        },
+        "cadence_limits": cadence_limits,
+    }
+    )
+    if not intervention_allowed:
+        context_patch["runner_intervention_blocked"] = True
+        context_patch["runner_intervention_block_reason"] = "max_interventions_per_window"
+    if diagnostic_result is not None:
+        context_patch["diagnostic_last_completed_id"] = diagnostic_request_id
+        context_patch["diagnostic_last_result"] = diagnostic_result
+
+    final_output = f"{output[-3200:]}\n\n{steering_message}"[-4000:]
+    try:
+        client.patch(
+            f"{BASE}/api/agent/tasks/{task_id}",
+            json={
+                "status": "needs_decision",
+                "current_step": "awaiting steering",
+                "output": final_output,
+                "context": context_patch,
+            },
+        )
+    except Exception:
+        return False, ""
+
+    _sync_run_state(
+        client,
+        task_id=task_id,
+        run_id=run_id,
+        worker_id=worker_id,
+        patch={
+            "status": "needs_decision",
+            "failure_class": failure_class,
+            "next_action": "steering_required",
+            "completed_at": _utc_now_iso(),
+        },
+        lease_seconds=RUN_LEASE_SECONDS,
+        require_owner=True,
+    )
+    return True, steering_message
 
 
 def _task_idea_id(context: dict[str, Any]) -> str:
@@ -904,6 +1150,397 @@ def _append_failure_history(existing: object, entry: dict[str, Any], limit: int 
     return items[-limit:]
 
 
+def _count_observer_context_snapshots(context: dict[str, Any]) -> int:
+    raw = context.get("observer_context_snapshots")
+    if not isinstance(raw, list):
+        return 0
+    count = 0
+    for item in raw:
+        if isinstance(item, dict):
+            count += 1
+    return count
+
+
+def _awareness_quality_summary(
+    *,
+    events_total: int,
+    interventions_total: int,
+    blocks_total: int,
+    snapshot_count: int,
+    transition_total: int,
+    successful_transition_total: int,
+    hold_pattern_total: int,
+    estimated_roi_total: float,
+    measured_roi_total: float,
+    transition_cost_total: float,
+) -> dict[str, Any]:
+    events_total = max(0, int(events_total))
+    interventions_total = max(0, int(interventions_total))
+    blocks_total = max(0, int(blocks_total))
+    snapshot_count = max(0, int(snapshot_count))
+    transition_total = max(0, int(transition_total))
+    successful_transition_total = max(0, int(successful_transition_total))
+    hold_pattern_total = max(0, int(hold_pattern_total))
+    estimated_roi_total = max(0.0, float(estimated_roi_total))
+    measured_roi_total = max(0.0, float(measured_roi_total))
+    transition_cost_total = max(0.0, float(transition_cost_total))
+    policy_discipline = max(0.0, 1.0 - (float(blocks_total) / float(max(1, events_total))))
+    context_coverage = min(1.0, float(snapshot_count) / 5.0)
+    state_transition_quality = (
+        float(successful_transition_total) / float(max(1, transition_total))
+        if transition_total > 0
+        else 0.0
+    )
+    hold_pattern_rate = (
+        float(hold_pattern_total) / float(max(1, transition_total))
+        if transition_total > 0
+        else 0.0
+    )
+    estimated_to_measured_roi_conversion = (
+        float(measured_roi_total) / float(estimated_roi_total)
+        if estimated_roi_total > 0
+        else None
+    )
+    cost_per_successful_transition = (
+        float(transition_cost_total) / float(max(1, successful_transition_total))
+    )
+    roi_component = (
+        min(1.0, max(0.0, float(estimated_to_measured_roi_conversion)))
+        if estimated_to_measured_roi_conversion is not None
+        else 0.0
+    )
+    hold_component = max(0.0, 1.0 - min(1.0, hold_pattern_rate))
+    cost_component = 1.0 / (1.0 + max(0.0, cost_per_successful_transition))
+    score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (
+                    (0.25 * policy_discipline)
+                    + (0.15 * context_coverage)
+                    + (0.20 * state_transition_quality)
+                    + (0.15 * hold_component)
+                    + (0.15 * roi_component)
+                    + (0.10 * cost_component)
+                ),
+            ),
+        ),
+        4,
+    )
+    return {
+        "score": score,
+        "policy_discipline": round(policy_discipline, 4),
+        "context_coverage": round(context_coverage, 4),
+        "state_transition_quality": round(state_transition_quality, 4),
+        "hold_pattern_rate": round(hold_pattern_rate, 4),
+        "estimated_to_measured_roi_conversion": (
+            round(float(estimated_to_measured_roi_conversion), 4)
+            if estimated_to_measured_roi_conversion is not None
+            else None
+        ),
+        "cost_per_successful_transition": round(cost_per_successful_transition, 6),
+        "events_total": events_total,
+        "interventions_total": interventions_total,
+        "blocks_total": blocks_total,
+        "snapshot_count": snapshot_count,
+        "transition_total": transition_total,
+        "successful_transition_total": successful_transition_total,
+        "hold_pattern_total": hold_pattern_total,
+        "estimated_roi_total": round(estimated_roi_total, 6),
+        "measured_roi_total": round(measured_roi_total, 6),
+        "transition_cost_total": round(transition_cost_total, 6),
+        "updated_at": _utc_now_iso(),
+    }
+
+
+def _awareness_patch_from_context(
+    context: dict[str, Any],
+    *,
+    event_inc: int = 0,
+    intervention_inc: int = 0,
+    block_inc: int = 0,
+    transition_inc: int = 0,
+    successful_transition_inc: int = 0,
+    hold_pattern_inc: int = 0,
+    transition_cost_inc: float = 0.0,
+    snapshot_count_override: int | None = None,
+) -> dict[str, Any]:
+    events_total = max(0, _to_int(context.get("awareness_events_total"), 0)) + max(0, int(event_inc))
+    interventions_total = max(0, _to_int(context.get("awareness_interventions_total"), 0)) + max(
+        0,
+        int(intervention_inc),
+    )
+    blocks_total = max(0, _to_int(context.get("awareness_blocks_total"), 0)) + max(0, int(block_inc))
+    transition_total = max(0, _to_int(context.get("awareness_transition_total"), 0)) + max(0, int(transition_inc))
+    successful_transition_total = max(0, _to_int(context.get("awareness_successful_transition_total"), 0)) + max(
+        0,
+        int(successful_transition_inc),
+    )
+    hold_pattern_total = max(0, _to_int(context.get("awareness_hold_pattern_total"), 0)) + max(0, int(hold_pattern_inc))
+    transition_cost_total = max(0.0, float(_safe_float(context.get("awareness_transition_cost_total")) or 0.0)) + max(
+        0.0,
+        float(transition_cost_inc),
+    )
+    transition_cost_total = round(transition_cost_total, 6)
+    snapshot_count = (
+        max(0, int(snapshot_count_override))
+        if snapshot_count_override is not None
+        else _count_observer_context_snapshots(context)
+    )
+    estimated_roi_total = _estimated_roi_value(context)
+    measured_roi_total = _measured_roi_value(context)
+    quality = _awareness_quality_summary(
+        events_total=events_total,
+        interventions_total=interventions_total,
+        blocks_total=blocks_total,
+        snapshot_count=snapshot_count,
+        transition_total=transition_total,
+        successful_transition_total=successful_transition_total,
+        hold_pattern_total=hold_pattern_total,
+        estimated_roi_total=estimated_roi_total,
+        measured_roi_total=measured_roi_total,
+        transition_cost_total=transition_cost_total,
+    )
+    return {
+        "awareness_events_total": events_total,
+        "awareness_interventions_total": interventions_total,
+        "awareness_blocks_total": blocks_total,
+        "awareness_transition_total": transition_total,
+        "awareness_successful_transition_total": successful_transition_total,
+        "awareness_hold_pattern_total": hold_pattern_total,
+        "awareness_transition_cost_total": transition_cost_total,
+        "awareness_estimated_roi_total": round(estimated_roi_total, 6),
+        "awareness_measured_roi_total": round(measured_roi_total, 6),
+        "awareness_state_transition_quality": quality.get("state_transition_quality"),
+        "awareness_hold_pattern_rate": quality.get("hold_pattern_rate"),
+        "awareness_estimated_to_measured_roi_conversion": quality.get("estimated_to_measured_roi_conversion"),
+        "awareness_cost_per_successful_transition": quality.get("cost_per_successful_transition"),
+        "awareness_quality": quality,
+    }
+
+
+def _cadence_limits(context: dict[str, Any]) -> dict[str, int]:
+    min_retry_delay_seconds = _to_int(
+        context.get("runner_min_retry_delay_seconds"),
+        _to_int(context.get("min_retry_delay_seconds"), MIN_RETRY_DELAY_SECONDS),
+    )
+    min_retry_delay_seconds = max(1, min(min_retry_delay_seconds, 3600))
+    diagnostic_cooldown_seconds = _to_int(
+        context.get("diagnostic_cooldown_seconds"),
+        DIAGNOSTIC_COOLDOWN_SECONDS,
+    )
+    diagnostic_cooldown_seconds = max(0, min(diagnostic_cooldown_seconds, 3600))
+    max_interventions_per_window = _to_int(
+        context.get("max_interventions_per_window"),
+        MAX_INTERVENTIONS_PER_WINDOW,
+    )
+    max_interventions_per_window = max(1, min(max_interventions_per_window, 100))
+    intervention_window_sec = _to_int(
+        context.get("intervention_window_sec"),
+        INTERVENTION_WINDOW_SECONDS,
+    )
+    intervention_window_sec = max(30, min(intervention_window_sec, 24 * 60 * 60))
+    return {
+        "min_retry_delay_seconds": min_retry_delay_seconds,
+        "diagnostic_cooldown_seconds": diagnostic_cooldown_seconds,
+        "max_interventions_per_window": max_interventions_per_window,
+        "intervention_window_sec": intervention_window_sec,
+    }
+
+
+def _recent_intervention_events(
+    context: dict[str, Any],
+    *,
+    now: datetime,
+    window_seconds: int,
+) -> list[dict[str, Any]]:
+    raw = context.get("runner_intervention_events")
+    if not isinstance(raw, list):
+        return []
+    cutoff = now - timedelta(seconds=max(1, int(window_seconds)))
+    events: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        ts = _parse_iso_utc(item.get("at"))
+        if ts is None or ts < cutoff:
+            continue
+        kind = str(item.get("kind") or "").strip()[:80]
+        if not kind:
+            continue
+        events.append({"kind": kind, "at": ts.isoformat()})
+    return events[-200:]
+
+
+def _allow_intervention_frequency(
+    context: dict[str, Any],
+    *,
+    kind: str,
+    hold_pattern_inc: int = 0,
+    now: datetime | None = None,
+) -> tuple[bool, dict[str, Any], dict[str, int], int]:
+    now_utc = now or datetime.now(timezone.utc)
+    limits = _cadence_limits(context)
+    recent = _recent_intervention_events(
+        context,
+        now=now_utc,
+        window_seconds=limits["intervention_window_sec"],
+    )
+    window_load = len(recent)
+    allowed = window_load < limits["max_interventions_per_window"]
+    awareness_patch = _awareness_patch_from_context(
+        context,
+        event_inc=1,
+        intervention_inc=1 if allowed else 0,
+        block_inc=0 if allowed else 1,
+        hold_pattern_inc=hold_pattern_inc,
+    )
+    patch = dict(awareness_patch)
+    patch["cadence_limits"] = limits
+    event = {"kind": str(kind or "unknown")[:80], "at": now_utc.isoformat()}
+    if allowed:
+        recent.append(event)
+        patch["runner_intervention_events"] = recent[-100:]
+        patch["cadence_last_intervention"] = {
+            "kind": event["kind"],
+            "at": event["at"],
+            "window_load": window_load + 1,
+            "window_limit": limits["max_interventions_per_window"],
+            "window_seconds": limits["intervention_window_sec"],
+        }
+    else:
+        patch["runner_intervention_events"] = recent[-100:]
+        patch["cadence_last_block"] = {
+            "kind": event["kind"],
+            "at": event["at"],
+            "reason": "max_interventions_per_window",
+            "window_load": window_load,
+            "window_limit": limits["max_interventions_per_window"],
+            "window_seconds": limits["intervention_window_sec"],
+        }
+    return allowed, patch, limits, window_load
+
+
+def _observer_context_compact_view(context: dict[str, Any]) -> dict[str, Any]:
+    keys = (
+        "active_run_id",
+        "active_worker_id",
+        "active_branch",
+        "last_attempt",
+        "runner_state",
+        "runner_retry_count",
+        "runner_retry_remaining",
+        "retry_not_before",
+        "next_action",
+        "last_failure_class",
+        "resume_branch",
+        "resume_checkpoint_sha",
+        "resume_ready",
+        "target_state",
+        "observation_window_sec",
+        "hold_pattern_score",
+        "hold_pattern_score_threshold",
+        "steering_requested",
+        "abort_requested",
+        "abort_reason",
+    )
+    compact: dict[str, Any] = {}
+    for key in keys:
+        if key in context:
+            compact[key] = context.get(key)
+    control = context.get("control")
+    if isinstance(control, dict):
+        control_view: dict[str, Any] = {}
+        for key in ("action", "state", "abort", "reason"):
+            if key in control:
+                control_view[key] = control.get(key)
+        if control_view:
+            compact["control"] = control_view
+    return compact
+
+
+def _observer_context_delta(previous_state: object, current_state: dict[str, Any]) -> dict[str, Any]:
+    prev = previous_state if isinstance(previous_state, dict) else {}
+    sentinel = object()
+    delta: dict[str, Any] = {}
+    keys = set(prev.keys()) | set(current_state.keys())
+    for key in sorted(keys):
+        prev_value = prev.get(key, sentinel)
+        curr_value = current_state.get(key, sentinel)
+        if prev_value != curr_value:
+            delta[key] = None if curr_value is sentinel else curr_value
+    return delta
+
+
+def _record_observer_context_snapshot(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    transition: str,
+    run_id: str,
+    worker_id: str,
+    status: str,
+    current_step: str,
+    failure_class: str = "",
+    context_hint: dict[str, Any] | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    snapshot = _safe_get_task_snapshot(client, task_id)
+    context = _safe_get_task_context(snapshot)
+    effective_context = dict(context)
+    if isinstance(context_hint, dict):
+        effective_context.update(context_hint)
+
+    existing = context.get("observer_context_snapshots")
+    history: list[dict[str, Any]] = []
+    if isinstance(existing, list):
+        for row in existing:
+            if isinstance(row, dict):
+                history.append(row)
+    previous_entry = history[-1] if history else {}
+    previous_state = previous_entry.get("state") if isinstance(previous_entry, dict) else {}
+    state = _observer_context_compact_view(effective_context)
+    state_delta = _observer_context_delta(previous_state, state)
+    entry: dict[str, Any] = {
+        "transition": str(transition or "unknown")[:80],
+        "status": str(status or "")[:80],
+        "current_step": str(current_step or "")[:200],
+        "at": _utc_now_iso(),
+        "run_id": str(run_id or "")[:120],
+        "worker_id": str(worker_id or "")[:160],
+        "failure_class": str(failure_class or "")[:120],
+        "state": state,
+        "delta": state_delta,
+    }
+    if isinstance(details, dict) and details:
+        entry["details"] = details
+    history.append(entry)
+    history = history[-40:]
+    transition_name = str(entry.get("transition") or "").strip().lower()
+    transition_status = str(entry.get("status") or "").strip().lower()
+    successful_transition = bool(state_delta) and transition_name != "abort" and (
+        transition_status in {"claimed", "running", "pending", "completed", "needs_decision"}
+    )
+    awareness_patch = _awareness_patch_from_context(
+        context,
+        event_inc=1,
+        transition_inc=1,
+        successful_transition_inc=1 if successful_transition else 0,
+        snapshot_count_override=len(history),
+    )
+    context_patch = {
+        "observer_context_last_snapshot": entry,
+        "observer_context_snapshots": history,
+    }
+    context_patch.update(awareness_patch)
+    _patch_task_context(
+        client,
+        task_id=task_id,
+        context_patch=context_patch,
+    )
+
+
 def _update_task_run_metrics(
     client: httpx.Client,
     *,
@@ -945,6 +1582,17 @@ def _update_task_run_metrics(
     avg_runtime_seconds = round(total_runtime_seconds / max(1, runs_total), 3)
     success_rate = round(runs_success / max(1, runs_total), 4)
     paid_success_rate = round(paid_calls_success / max(1, paid_calls_total), 4) if paid_calls_total > 0 else 1.0
+    transition_cost_inc = _estimated_transition_cost(duration_seconds, paid_call=paid_call)
+    awareness_patch = _awareness_patch_from_context(
+        context,
+        transition_cost_inc=transition_cost_inc,
+    )
+    awareness = awareness_patch.get("awareness_quality")
+    awareness_score = _safe_float(awareness.get("score")) if isinstance(awareness, dict) else None
+    if awareness_score is None:
+        awareness_score = _safe_float(context.get("awareness_quality_score"))
+    if awareness_score is None:
+        awareness_score = 0.0
 
     updated = {
         "runs_total": runs_total,
@@ -964,12 +1612,31 @@ def _update_task_run_metrics(
         "last_failure_class": failure_class if attempt_status != "completed" else "",
         "last_model": model,
         "last_tool": _tool_token(command),
+        "awareness_quality_score": round(max(0.0, min(1.0, float(awareness_score))), 4),
+        "state_transition_quality": _safe_float(awareness_patch.get("awareness_state_transition_quality")) or 0.0,
+        "hold_pattern_rate": _safe_float(awareness_patch.get("awareness_hold_pattern_rate")) or 0.0,
+        "estimated_to_measured_roi_conversion": awareness_patch.get("awareness_estimated_to_measured_roi_conversion"),
+        "cost_per_successful_transition": (
+            _safe_float(awareness_patch.get("awareness_cost_per_successful_transition")) or 0.0
+        ),
+        "awareness_events_total": max(0, _to_int(awareness_patch.get("awareness_events_total"), 0)),
+        "awareness_interventions_total": max(0, _to_int(awareness_patch.get("awareness_interventions_total"), 0)),
+        "awareness_blocks_total": max(0, _to_int(awareness_patch.get("awareness_blocks_total"), 0)),
+        "awareness_transition_total": max(0, _to_int(awareness_patch.get("awareness_transition_total"), 0)),
+        "awareness_successful_transition_total": max(
+            0,
+            _to_int(awareness_patch.get("awareness_successful_transition_total"), 0),
+        ),
+        "awareness_hold_pattern_total": max(0, _to_int(awareness_patch.get("awareness_hold_pattern_total"), 0)),
+        "awareness_transition_cost_total": round(
+            max(0.0, float(_safe_float(awareness_patch.get("awareness_transition_cost_total")) or 0.0)),
+            6,
+        ),
         "updated_at": _utc_now_iso(),
     }
-    _patch_task_context(
-        client,
-        task_id=task_id,
-        context_patch={
+    context_patch = dict(awareness_patch)
+    context_patch.update(
+        {
             "runner_metrics": updated,
             "runner_last_result": {
                 "attempt": attempt,
@@ -982,7 +1649,12 @@ def _update_task_run_metrics(
                 "command_tool": _tool_token(command),
                 "at": _utc_now_iso(),
             },
-        },
+        }
+    )
+    _patch_task_context(
+        client,
+        task_id=task_id,
+        context_patch=context_patch,
     )
     return updated
 
@@ -998,7 +1670,7 @@ def _schedule_retry_if_configured(
     duration_seconds: float,
 ) -> tuple[bool, str]:
     max_retries = max(0, _to_int(task_ctx.get("runner_retry_max"), 0))
-    retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+    requested_retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
     retries_used = max(0, attempt - 1)
     retries_remaining = max_retries - retries_used
     if retries_remaining <= 0:
@@ -1008,6 +1680,43 @@ def _schedule_retry_if_configured(
     live_ctx = _safe_get_task_context(live_snapshot)
     merged_ctx = dict(task_ctx)
     merged_ctx.update(live_ctx)
+    cadence_limits = _cadence_limits(merged_ctx)
+    retry_delay_seconds = max(cadence_limits["min_retry_delay_seconds"], requested_retry_delay_seconds)
+    min_delay_enforced = retry_delay_seconds > requested_retry_delay_seconds
+    intervention_allowed, cadence_patch, _, window_load = _allow_intervention_frequency(
+        merged_ctx,
+        kind="retry",
+    )
+    if not intervention_allowed:
+        message = (
+            "[cadence-steering] retry suppressed: intervention frequency limit reached "
+            f"({window_load}/{cadence_limits['max_interventions_per_window']} in "
+            f"{cadence_limits['intervention_window_sec']}s)."
+        )
+        context_patch: dict[str, Any] = dict(cadence_patch)
+        context_patch.update(
+            {
+                "runner_state": "steering_required",
+                "next_action": "steering_required",
+                "steering_requested": True,
+                "runner_retry_suppressed": "intervention_frequency_limit",
+                "runner_retry_remaining": retries_remaining,
+                "last_failure_class": failure_class,
+            }
+        )
+        try:
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={
+                    "status": "needs_decision",
+                    "current_step": "awaiting steering",
+                    "output": f"{output[-3200:]}\n\n{message}"[-4000:],
+                    "context": context_patch,
+                },
+            )
+        except Exception:
+            return False, ""
+        return False, message
     retry_not_before = (datetime.now(timezone.utc) + timedelta(seconds=retry_delay_seconds)).isoformat()
     failure_entry = {
         "attempt": attempt,
@@ -1017,16 +1726,24 @@ def _schedule_retry_if_configured(
         "output_tail": _tail_text(output, 600),
     }
     failure_history = _append_failure_history(merged_ctx.get("runner_failure_history"), failure_entry)
-    context_patch = {
+    context_patch = dict(cadence_patch)
+    context_patch.update(
+        {
         "runner_retry_max": max_retries,
         "runner_retry_delay_seconds": retry_delay_seconds,
+        "runner_retry_delay_requested_seconds": requested_retry_delay_seconds,
+        "runner_retry_delay_effective_seconds": retry_delay_seconds,
+        "runner_min_retry_delay_seconds": cadence_limits["min_retry_delay_seconds"],
+        "runner_retry_delay_enforced": min_delay_enforced,
         "runner_retry_count": retries_used + 1,
         "runner_retry_remaining": retries_remaining - 1,
         "runner_state": "retry_pending",
         "retry_not_before": retry_not_before,
         "runner_last_failure": failure_entry,
         "runner_failure_history": failure_history,
+        "cadence_limits": cadence_limits,
     }
+    )
     message = (
         f"[runner-retry] attempt {attempt} failed ({failure_class}); "
         f"scheduled retry in {retry_delay_seconds}s ({retries_remaining - 1} retries remaining)."
@@ -2308,6 +3025,30 @@ def _handle_pr_failure_handoff(
         lease_seconds=RUN_LEASE_SECONDS,
         require_owner=False,
     )
+    if should_requeue:
+        _record_observer_context_snapshot(
+            client,
+            task_id=task_id,
+            transition="retry",
+            run_id=run_id,
+            worker_id=worker_id,
+            status="pending",
+            current_step="resume checkpoint scheduled",
+            failure_class=failure_class,
+            context_hint={
+                "runner_state": "retry_pending",
+                "next_action": "requeue_for_resume",
+                "resume_branch": branch,
+                "resume_checkpoint_sha": checkpoint_sha,
+                "last_failure_class": failure_class,
+            },
+            details={
+                "checkpoint_ok": checkpoint_ok,
+                "checkpoint_sha": checkpoint_sha,
+                "resume_attempts": resume_attempts + 1,
+                "max_resume_attempts": max_resume_attempts,
+            },
+        )
     return next_status, summary
 
 
@@ -2475,6 +3216,28 @@ def run_one_task(
         )
         return True
 
+    _record_observer_context_snapshot(
+        client,
+        task_id=task_id,
+        transition="claim",
+        run_id=run_id,
+        worker_id=worker_id,
+        status="claimed",
+        current_step="lease claimed",
+        context_hint={
+            "active_run_id": run_id,
+            "active_worker_id": worker_id,
+            "active_branch": branch_name if pr_mode else "",
+            "last_attempt": attempt,
+            "runner_state": "claimed",
+        },
+        details={
+            "task_type": str(task_type or "")[:40],
+            "direction": str(task_direction or "")[:200],
+            "repo_path": repo_path if pr_mode else "",
+        },
+    )
+
     # PATCH to running
     r = client.patch(
         f"{BASE}/api/agent/tasks/{task_id}",
@@ -2556,6 +3319,23 @@ def run_one_task(
             "abort_evidence": target_contract.get("abort_evidence"),
             "observation_window_sec": target_contract.get("observation_window_sec"),
             "target_state_contract": target_contract,
+        },
+    )
+    _record_observer_context_snapshot(
+        client,
+        task_id=task_id,
+        transition="start",
+        run_id=run_id,
+        worker_id=worker_id,
+        status="running",
+        current_step="command started",
+        context_hint={
+            "active_run_id": run_id,
+            "active_worker_id": worker_id,
+            "active_branch": branch_name if pr_mode else "",
+            "last_attempt": attempt,
+            "runner_state": "running",
+            "next_action": "execute_command",
         },
     )
 
@@ -2663,32 +3443,126 @@ def run_one_task(
                     next_heartbeat = now + RUN_HEARTBEAT_SECONDS
                 if now >= next_control_poll:
                     task_snapshot_live = _safe_get_task_snapshot(client, task_id)
+                    task_ctx_live = _safe_get_task_context(task_snapshot_live)
                     abort_requested, requested_abort_reason, diagnostic_request = _extract_control_signals(task_snapshot_live)
                     if diagnostic_request:
                         request_id = _diagnostic_request_id(diagnostic_request)
                         if request_id and request_id != diagnostic_completed_id:
-                            diagnostic_result = _run_diagnostic_request(
-                                diagnostic_request,
-                                cwd=repo_path,
-                                env=env,
-                            )
-                            diagnostic_completed_id = request_id
-                            _patch_task_progress(
-                                client,
-                                task_id=task_id,
-                                progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
-                                current_step="running diagnostic",
-                                context_patch={
-                                    "diagnostic_last_completed_id": request_id,
-                                    "diagnostic_last_result": diagnostic_result,
-                                    "runner_last_seen_at": _utc_now_iso(),
-                                },
-                            )
-                            output_lines.append(
-                                "\n[Diagnostic] "
-                                f"id={request_id} status={diagnostic_result.get('status')} "
-                                f"exit={diagnostic_result.get('exit_code')}\n"
-                            )
+                            cadence_limits = _cadence_limits(task_ctx_live)
+                            cooldown_seconds = cadence_limits["diagnostic_cooldown_seconds"]
+                            diag_now_utc = datetime.now(timezone.utc)
+                            last_diag_at = _parse_iso_utc(task_ctx_live.get("diagnostic_last_ran_at"))
+                            cooldown_remaining = 0
+                            if last_diag_at is not None and cooldown_seconds > 0:
+                                elapsed = (diag_now_utc - last_diag_at).total_seconds()
+                                if elapsed < float(cooldown_seconds):
+                                    cooldown_remaining = max(1, int(cooldown_seconds - elapsed))
+                            if cooldown_remaining > 0:
+                                diagnostic_completed_id = request_id
+                                awareness_patch = _awareness_patch_from_context(
+                                    task_ctx_live,
+                                    event_inc=1,
+                                    block_inc=1,
+                                )
+                                deferred_result = {
+                                    "id": request_id,
+                                    "status": "deferred_cooldown",
+                                    "exit_code": None,
+                                    "cooldown_seconds": cooldown_seconds,
+                                    "retry_after_seconds": cooldown_remaining,
+                                    "ran_at": _utc_now_iso(),
+                                }
+                                context_patch = dict(awareness_patch)
+                                context_patch.update(
+                                    {
+                                        "diagnostic_last_completed_id": request_id,
+                                        "diagnostic_last_result": deferred_result,
+                                        "diagnostic_cooldown_seconds": cooldown_seconds,
+                                        "runner_last_seen_at": _utc_now_iso(),
+                                        "cadence_limits": cadence_limits,
+                                    }
+                                )
+                                _patch_task_progress(
+                                    client,
+                                    task_id=task_id,
+                                    progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                    current_step="diagnostic cooldown active",
+                                    context_patch=context_patch,
+                                )
+                                output_lines.append(
+                                    "\n[Diagnostic] "
+                                    f"id={request_id} status=deferred_cooldown retry_after={cooldown_remaining}s\n"
+                                )
+                            else:
+                                intervention_allowed, cadence_patch, _, window_load = _allow_intervention_frequency(
+                                    task_ctx_live,
+                                    kind="diagnostic",
+                                    now=diag_now_utc,
+                                )
+                                if not intervention_allowed:
+                                    diagnostic_completed_id = request_id
+                                    deferred_result = {
+                                        "id": request_id,
+                                        "status": "deferred_intervention_limit",
+                                        "exit_code": None,
+                                        "window_load": window_load,
+                                        "window_limit": cadence_limits["max_interventions_per_window"],
+                                        "window_seconds": cadence_limits["intervention_window_sec"],
+                                        "ran_at": _utc_now_iso(),
+                                    }
+                                    context_patch = dict(cadence_patch)
+                                    context_patch.update(
+                                        {
+                                            "diagnostic_last_completed_id": request_id,
+                                            "diagnostic_last_result": deferred_result,
+                                            "diagnostic_cooldown_seconds": cooldown_seconds,
+                                            "runner_last_seen_at": _utc_now_iso(),
+                                            "steering_requested": True,
+                                            "next_action": "steering_required",
+                                        }
+                                    )
+                                    _patch_task_progress(
+                                        client,
+                                        task_id=task_id,
+                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                        current_step="diagnostic limited by cadence",
+                                        context_patch=context_patch,
+                                    )
+                                    output_lines.append(
+                                        "\n[Diagnostic] "
+                                        f"id={request_id} status=deferred_intervention_limit "
+                                        f"load={window_load}/{cadence_limits['max_interventions_per_window']}\n"
+                                    )
+                                else:
+                                    diagnostic_result = _run_diagnostic_request(
+                                        diagnostic_request,
+                                        cwd=repo_path,
+                                        env=env,
+                                    )
+                                    diagnostic_completed_id = request_id
+                                    context_patch = dict(cadence_patch)
+                                    context_patch.update(
+                                        {
+                                            "diagnostic_last_completed_id": request_id,
+                                            "diagnostic_last_result": diagnostic_result,
+                                            "diagnostic_last_ran_at": _utc_now_iso(),
+                                            "diagnostic_cooldown_seconds": cooldown_seconds,
+                                            "runner_last_seen_at": _utc_now_iso(),
+                                            "cadence_limits": cadence_limits,
+                                        }
+                                    )
+                                    _patch_task_progress(
+                                        client,
+                                        task_id=task_id,
+                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                        current_step="running diagnostic",
+                                        context_patch=context_patch,
+                                    )
+                                    output_lines.append(
+                                        "\n[Diagnostic] "
+                                        f"id={request_id} status={diagnostic_result.get('status')} "
+                                        f"exit={diagnostic_result.get('exit_code')}\n"
+                                    )
                     if abort_requested:
                         stopped_for_abort = True
                         abort_reason = requested_abort_reason or "abort requested from API"
@@ -2706,6 +3580,22 @@ def run_one_task(
                             },
                             lease_seconds=RUN_LEASE_SECONDS,
                             require_owner=True,
+                        )
+                        _record_observer_context_snapshot(
+                            client,
+                            task_id=task_id,
+                            transition="abort",
+                            run_id=run_id,
+                            worker_id=worker_id,
+                            status="running",
+                            current_step="abort requested",
+                            failure_class="aborted_by_user",
+                            context_hint={
+                                "runner_state": "abort_requested",
+                                "abort_requested": True,
+                                "abort_reason": abort_reason,
+                                "next_action": "abort_requested",
+                            },
                         )
                         break
                     next_control_poll = now + CONTROL_POLL_SECONDS
@@ -2909,8 +3799,27 @@ def run_one_task(
             require_owner=True,
         )
 
+        hold_policy_applied = False
+        hold_policy_message = ""
+        if status != "completed":
+            hold_policy_applied, hold_policy_message = _apply_hold_pattern_policy(
+                client,
+                task_id=task_id,
+                task_ctx=task_ctx,
+                attempt=attempt,
+                failure_class=failure_class,
+                output=output,
+                repo_path=repo_path,
+                env=env,
+                run_id=run_id,
+                worker_id=worker_id,
+            )
+            if hold_policy_applied:
+                status = "needs_decision"
+                output = f"{output}\n\n{hold_policy_message}" if hold_policy_message else output
+
         final_status = status
-        if pr_mode and status == "completed":
+        if (not hold_policy_applied) and pr_mode and status == "completed":
             final_status, pr_output = _run_pr_delivery_flow(
                 task_id=task_id,
                 task=task_snapshot,
@@ -2940,7 +3849,7 @@ def run_one_task(
                 lease_seconds=RUN_LEASE_SECONDS,
                 require_owner=True,
             )
-        elif pr_mode and status != "completed":
+        elif (not hold_policy_applied) and pr_mode and status != "completed":
             final_status, handoff_summary = _handle_pr_failure_handoff(
                 client=client,
                 task_id=task_id,
@@ -2956,7 +3865,7 @@ def run_one_task(
             )
             status = final_status
             output = f"{output}\n\n{handoff_summary}" if handoff_summary else output
-        elif (not pr_mode) and status != "completed":
+        elif (not hold_policy_applied) and (not pr_mode) and status != "completed":
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
                 task_id=task_id,
@@ -2983,6 +3892,38 @@ def run_one_task(
                     lease_seconds=RUN_LEASE_SECONDS,
                     require_owner=True,
                 )
+                _record_observer_context_snapshot(
+                    client,
+                    task_id=task_id,
+                    transition="retry",
+                    run_id=run_id,
+                    worker_id=worker_id,
+                    status="pending",
+                    current_step="retry scheduled",
+                    failure_class=failure_class,
+                    context_hint={
+                        "runner_state": "retry_pending",
+                        "next_action": "retry_scheduled",
+                        "last_failure_class": failure_class,
+                    },
+                )
+            elif retry_message.startswith("[cadence-steering]"):
+                status = "needs_decision"
+                output = f"{output}\n\n{retry_message}"
+                _sync_run_state(
+                    client,
+                    task_id=task_id,
+                    run_id=run_id,
+                    worker_id=worker_id,
+                    patch={
+                        "status": "needs_decision",
+                        "failure_class": failure_class,
+                        "next_action": "steering_required",
+                        "completed_at": _utc_now_iso(),
+                    },
+                    lease_seconds=RUN_LEASE_SECONDS,
+                    require_owner=True,
+                )
             else:
                 _sync_run_state(
                     client,
@@ -2997,7 +3938,7 @@ def run_one_task(
                     lease_seconds=RUN_LEASE_SECONDS,
                     require_owner=True,
                 )
-        else:
+        elif not hold_policy_applied:
             _sync_run_state(
                 client,
                 task_id=task_id,
@@ -3011,6 +3952,37 @@ def run_one_task(
                 lease_seconds=RUN_LEASE_SECONDS,
                 require_owner=True,
             )
+        _record_observer_context_snapshot(
+            client,
+            task_id=task_id,
+            transition="complete",
+            run_id=run_id,
+            worker_id=worker_id,
+            status=status,
+            current_step="finalized",
+            failure_class=failure_class if status != "completed" else "",
+            context_hint={
+                "runner_state": (
+                    "idle"
+                    if status == "completed"
+                    else (
+                        "retry_pending"
+                        if status == "pending"
+                        else ("steering_required" if status == "needs_decision" else "finished")
+                    )
+                ),
+                "next_action": (
+                    "done"
+                    if status == "completed"
+                    else (
+                        "retry_scheduled"
+                        if status == "pending"
+                        else ("steering_required" if status == "needs_decision" else "needs_attention")
+                    )
+                ),
+                "last_failure_class": failure_class if status != "completed" else "",
+            },
+        )
         log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
