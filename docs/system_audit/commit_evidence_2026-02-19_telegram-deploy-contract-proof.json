@@ -1,0 +1,68 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/telegram-deploy-proof",
+  "commit_scope": "Add Telegram delivery proof hooks (diagnostic send recording) and optional deploy-contract gates to detect missing Telegram production config before claiming alert coverage.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "api/tests/test_telegram_diagnostics_api.py",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-02-19_telegram-deploy-contract-proof.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task_telegram-deploy-contract-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex:gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_telegram_diagnostics_api.py tests/test_release_gate_service.py::test_public_deploy_contract_warns_when_telegram_not_configured tests/test_release_gate_service.py::test_public_deploy_contract_can_require_telegram_config",
+    "VERIFY_REQUIRE_TELEGRAM_ALERTS=1 ./scripts/verify_web_api_deploy.sh",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "api/tests/test_telegram_diagnostics_api.py",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_telegram_diagnostics_api.py tests/test_release_gate_service.py::test_public_deploy_contract_warns_when_telegram_not_configured tests/test_release_gate_service.py::test_public_deploy_contract_can_require_telegram_config"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Production TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_IDS are not configured; deploy succeeds but Telegram proof send is blocked until secrets are set."
+  }
+}

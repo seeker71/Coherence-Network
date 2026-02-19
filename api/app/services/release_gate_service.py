@@ -198,6 +198,18 @@ def _headers(github_token: str | None = None) -> dict[str, str]:
     return headers
 
 
+def _env_to_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = str(raw).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
 def _ensure_job_defaults(
     repository: str,
     branch: str,
@@ -1398,6 +1410,7 @@ def evaluate_public_deploy_contract_report(
         return report
 
     checks: list[dict[str, Any]] = []
+    require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
@@ -1437,6 +1450,29 @@ def evaluate_public_deploy_contract_report(
         )
     checks.append(web_proxy)
 
+    telegram_diag_url = f"{report['api_base']}/api/agent/telegram/diagnostics"
+    telegram_diag = check_http_json_endpoint(telegram_diag_url, timeout=timeout)
+    telegram_diag["name"] = "railway_telegram_alert_config"
+    telegram_diag["required"] = require_telegram_alerts
+    telegram_diag["configured"] = False
+    if telegram_diag.get("ok") and isinstance(telegram_diag.get("json"), dict):
+        payload = telegram_diag["json"]
+        config_payload = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+        has_token = bool(config_payload.get("has_token"))
+        chat_ids_payload = config_payload.get("chat_ids")
+        chat_ids = chat_ids_payload if isinstance(chat_ids_payload, list) else []
+        chat_ids_count = len([chat_id for chat_id in chat_ids if str(chat_id).strip()])
+        configured = bool(has_token and chat_ids_count > 0)
+        telegram_diag["has_token"] = has_token
+        telegram_diag["chat_ids_count"] = chat_ids_count
+        telegram_diag["configured"] = configured
+        if require_telegram_alerts:
+            telegram_diag["ok"] = bool(telegram_diag["ok"] and configured)
+    if not require_telegram_alerts:
+        # Keep this informational unless explicitly required by env.
+        telegram_diag["ok"] = True
+    checks.append(telegram_diag)
+
     value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
     value_lineage_e2e["name"] = "railway_value_lineage_e2e"
     checks.append(value_lineage_e2e)
@@ -1450,6 +1486,12 @@ def evaluate_public_deploy_contract_report(
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
+            if (
+                name == "railway_telegram_alert_config"
+                and not require_telegram_alerts
+                and not bool(check.get("configured"))
+            ):
+                warnings.append("railway_telegram_alert_not_configured")
             continue
         if name == "railway_web_health_proxy":
             updated_raw = str(check.get("web_updated_at") or "").strip().lower()

@@ -884,6 +884,7 @@ async def telegram_test_send(
 ) -> dict:
     """Send a test message to TELEGRAM_CHAT_IDS. Returns raw Telegram API response for debugging."""
     import httpx
+    from app.services import telegram_diagnostics as diag
 
     message_text = text or "Test from diagnostics"
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -896,6 +897,12 @@ async def telegram_test_send(
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         for cid in chat_ids[:3]:
             r = await client.post(url, json={"chat_id": cid, "text": message_text})
+            response_text = (
+                r.text[:500]
+                if not r.headers.get("content-type", "").startswith("application/json")
+                else str(r.json())[:500]
+            )
+            diag.record_send(cid, r.status_code == 200, r.status_code, response_text)
             results.append({
                 "chat_id": cid,
                 "status_code": r.status_code,
