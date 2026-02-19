@@ -83,6 +83,15 @@ ensure_npm_cache() {
   export NPM_CONFIG_CACHE="${NPM_CACHE}"
 }
 
+npm_ci_hardened() {
+  if npm help install 2>/dev/null | grep -q -- "--allow-git"; then
+    npm ci --allow-git=none
+  else
+    echo "Warning: npm version lacks --allow-git; running npm ci without that hardening flag."
+    npm ci
+  fi
+}
+
 select_python() {
   local candidate
   for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/bin/python3" "$(command -v python3.11 || true)" "$(command -v python3 || true)"; do
@@ -241,7 +250,7 @@ start_web_if_needed() {
   pushd "${WEB_DIR}" >/dev/null
   if [[ ! -d node_modules || ! -x node_modules/.bin/next ]]; then
     echo "Installing web dependencies (node_modules missing)..."
-    npm ci
+    npm_ci_hardened
   fi
 
   echo "Building web app..."
