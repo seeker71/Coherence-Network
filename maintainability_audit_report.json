@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T17:15:39.082636+00:00",
+  "generated_at": "2026-02-19T17:33:46.320641+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -38,12 +38,12 @@
         "line_count": 3982
       },
       {
-        "file": "api/app/services/release_gate_service.py",
-        "line_count": 1856
+        "file": "api/app/services/automation_usage_service.py",
+        "line_count": 1928
       },
       {
-        "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1844
+        "file": "api/app/services/release_gate_service.py",
+        "line_count": 1898
       },
       {
         "file": "api/app/services/agent_service.py",
@@ -55,7 +55,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 904
+        "line_count": 911
       },
       {
         "file": "api/app/services/idea_service.py",
@@ -68,12 +68,12 @@
         "line_count": 3982
       },
       {
-        "file": "api/app/services/release_gate_service.py",
-        "line_count": 1856
+        "file": "api/app/services/automation_usage_service.py",
+        "line_count": 1928
       },
       {
-        "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1844
+        "file": "api/app/services/release_gate_service.py",
+        "line_count": 1898
       },
       {
         "file": "api/app/services/agent_service.py",
@@ -113,21 +113,27 @@
       },
       {
         "file": "api/app/services/release_gate_service.py",
+        "function": "evaluate_public_deploy_contract_report",
+        "line_count": 144,
+        "line_start": 1384
+      },
+      {
+        "file": "api/app/services/release_gate_service.py",
         "function": "evaluate_commit_traceability_report",
         "line_count": 143,
-        "line_start": 1714
+        "line_start": 1756
       },
       {
         "file": "api/app/services/automation_usage_service.py",
         "function": "_build_openai_snapshot",
         "line_count": 138,
-        "line_start": 1051
+        "line_start": 1132
       },
       {
         "file": "api/app/services/release_gate_service.py",
         "function": "check_value_lineage_e2e_flow",
         "line_count": 130,
-        "line_start": 1014
+        "line_start": 1026
       },
       {
         "file": "api/app/services/agent_service.py",
@@ -142,12 +148,6 @@
         "line_start": 232
       },
       {
-        "file": "api/app/services/release_gate_service.py",
-        "function": "evaluate_public_deploy_contract_report",
-        "line_count": 114,
-        "line_start": 1372
-      },
-      {
         "file": "api/app/services/inventory_service.py",
         "function": "build_system_lineage_inventory",
         "line_count": 110,
@@ -157,13 +157,13 @@
         "file": "api/app/services/automation_usage_service.py",
         "function": "_build_github_snapshot",
         "line_count": 110,
-        "line_start": 729
+        "line_start": 791
       },
       {
         "file": "api/app/services/automation_usage_service.py",
         "function": "_subscription_plans",
         "line_count": 104,
-        "line_start": 1726
+        "line_start": 1810
       },
       {
         "file": "api/app/services/inventory_service.py",
