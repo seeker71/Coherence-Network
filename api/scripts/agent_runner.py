@@ -167,6 +167,8 @@ AGENT_MANIFEST_WRITE_LOCK = threading.Lock()
 DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
+DEFAULT_CODEX_MODEL_ALIAS_MAP = "gpt-5.3-codex-spark:gpt-5-codex,gpt-5.3-codex:gpt-5-codex"
+CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 
 
 def _tool_token(command: str) -> str:
@@ -1773,6 +1775,44 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for pair in str(raw or "").split(","):
+        item = pair.strip()
+        if not item or ":" not in item:
+            continue
+        source, target = item.split(":", 1)
+        source_key = source.strip().lower()
+        target_value = target.strip()
+        if source_key and target_value:
+            aliases[source_key] = target_value
+    return aliases
+
+
+def _codex_model_alias_map() -> dict[str, str]:
+    raw = os.environ.get("AGENT_CODEX_MODEL_ALIAS_MAP", DEFAULT_CODEX_MODEL_ALIAS_MAP)
+    return _parse_codex_model_alias_map(str(raw))
+
+
+def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+    if not _uses_codex_cli(command):
+        return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
+    requested_model = match.group("model").strip()
+    if not requested_model:
+        return command, None
+    target_model = _codex_model_alias_map().get(requested_model.lower(), "").strip()
+    if not target_model or target_model.lower() == requested_model.lower():
+        return command, None
+    remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
+    return remapped, {
+        "requested_model": requested_model,
+        "effective_model": target_model,
+    }
+
+
 def _infer_executor(command: str, model: str) -> str:
     s = (command or "").strip()
     model_value = (model or "").strip().lower()
@@ -2242,6 +2282,7 @@ def run_one_task(
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
+    codex_model_alias: dict[str, str] | None = None
     if _uses_cursor_cli(command):
         # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
@@ -2252,6 +2293,14 @@ def run_one_task(
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
         env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
         log.info("task=%s using codex CLI", task_id)
+        command, codex_model_alias = _apply_codex_model_alias(command)
+        if codex_model_alias:
+            log.warning(
+                "task=%s remapped codex model %s -> %s",
+                task_id,
+                codex_model_alias["requested_model"],
+                codex_model_alias["effective_model"],
+            )
         if "--dangerously-bypass-approvals-and-sandbox" not in command:
             command = f"{command} --dangerously-bypass-approvals-and-sandbox"
     elif _uses_openclaw_cli(command):
@@ -2388,17 +2437,23 @@ def run_one_task(
         return True
 
     # PATCH to running
+    running_context: dict[str, Any] = {
+        "active_run_id": run_id,
+        "active_worker_id": worker_id,
+        "active_branch": branch_name if pr_mode else "",
+        "last_attempt": attempt,
+    }
+    if codex_model_alias:
+        running_context["runner_model_alias"] = {
+            **codex_model_alias,
+            "at": _utc_now_iso(),
+        }
     r = client.patch(
         f"{BASE}/api/agent/tasks/{task_id}",
         json={
             "status": "running",
             "worker_id": worker_id,
-            "context": {
-                "active_run_id": run_id,
-                "active_worker_id": worker_id,
-                "active_branch": branch_name if pr_mode else "",
-                "last_attempt": attempt,
-            },
+            "context": running_context,
         },
     )
     if r.status_code != 200:
@@ -2468,6 +2523,12 @@ def run_one_task(
     out_file = os.path.join(LOG_DIR, f"task_{task_id}.log")
     output_lines: list[str] = []
     reader_done = threading.Event()
+    alias_note = ""
+    if codex_model_alias:
+        alias_note = (
+            "[runner-model-alias] requested_model="
+            f"{codex_model_alias['requested_model']} effective_model={codex_model_alias['effective_model']}\n"
+        )
 
     def _stream_reader(proc: subprocess.Popen) -> None:
         """Read process stdout line-by-line, write to log file + collect output."""
@@ -2476,6 +2537,9 @@ def run_one_task(
                 f.write(f"# task_id={task_id} status=running\n")
                 f.write(f"# command={command}\n")
                 f.write("---\n")
+                if alias_note:
+                    f.write(alias_note)
+                    output_lines.append(alias_note)
                 f.flush()
                 for line in iter(proc.stdout.readline, ""):
                     f.write(line)
