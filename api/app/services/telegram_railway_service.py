@@ -51,6 +51,43 @@ def _now_utc_label() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _normalized_url(raw_value: str, *, fallback: str) -> str:
+    value = str(raw_value or "").strip()
+    if not value:
+        return fallback
+    if value.startswith(("http://", "https://")):
+        return value.rstrip("/")
+    if value.startswith("/"):
+        return fallback
+    return f"https://{value.rstrip('/')}"
+
+
+def _api_base_url() -> str:
+    return _normalized_url(
+        os.getenv("AGENT_API_BASE_URL") or os.getenv("PUBLIC_APP_URL") or "",
+        fallback=_DEFAULT_API_BASE,
+    )
+
+
+def _web_base_url() -> str:
+    return _normalized_url(
+        os.getenv("AGENT_WEB_UI_BASE_URL") or os.getenv("WEB_UI_BASE_URL") or os.getenv("NEXT_PUBLIC_WEB_URL") or "",
+        fallback=_DEFAULT_WEB_BASE,
+    )
+
+
+def _main_head_url() -> str:
+    return f"{_api_base_url()}/api/gates/main-head"
+
+
+def _telegram_diag_url() -> str:
+    return f"{_api_base_url()}/api/agent/telegram/diagnostics"
+
+
+def _tasks_url() -> str:
+    return f"{_web_base_url()}/tasks"
+
+
 def railway_help_reply() -> str:
     return (
         "*Railway commands*\n"
@@ -88,16 +125,19 @@ def _format_status_reply(report: dict[str, Any]) -> str:
         reply += "\nNext: `/railway schedule 8` to monitor future deploy checks"
     else:
         reply += "\nNext: `/railway verify` to create+run a verification job"
+    reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
 
 def _format_jobs_reply(jobs: list[dict[str, Any]]) -> str:
     if not jobs:
-        return (
+        reply = (
             "*Railway jobs*\n"
             f"Checked: `{_now_utc_label()}`\n"
             "No verification jobs found."
         )
+        reply += f"\nLinks: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
+        return reply
     reply = (
         f"*Railway jobs* ({len(jobs)} total)\n"
         f"Checked: `{_now_utc_label()}`"
@@ -112,6 +152,7 @@ def _format_jobs_reply(jobs: list[dict[str, Any]]) -> str:
             reply += f"\n`{job_id}` {status} ({attempts}/{max_attempts})"
         else:
             reply += f"\n`{job_id}` {status} ({attempts})"
+    reply += f"\nLinks: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
     return reply
 
 
@@ -147,6 +188,7 @@ def _format_verify_reply(created: dict[str, Any], ticked: dict[str, Any]) -> str
         reply += f"\nNext: inspect `/railway status` then retry `/railway tick {job_id}`"
     elif status == "completed":
         reply += "\nNext: `/railway status`"
+    reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
 
@@ -184,6 +226,7 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
         reply += "\nNext: `/railway status` and `/railway verify`"
     elif status == "completed":
         reply += "\nNext: `/railway jobs`"
+    reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
 
@@ -213,6 +256,7 @@ def _format_tick_many_reply(result: dict[str, Any], *, due_only: bool) -> str:
         )
         reply += f"\n`{job_id}` {status} ({attempts}/{max_attempts or '?'}) `{result_name}`"
     reply += "\nNext: `/railway jobs`"
+    reply += f"\nLinks: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
     return reply
 
 
@@ -227,7 +271,8 @@ def _format_schedule_reply(created: dict[str, Any]) -> str:
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
         f"Attempts: `{attempts}/{max_attempts or '?'}`\n"
-        "Next: `/railway tick due`"
+        "Next: `/railway tick due`\n"
+        f"Links: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
     )
 
 
@@ -253,13 +298,15 @@ async def _command_head(token: str | None) -> str:
             "*Railway head*\n"
             f"Repository: `{_DEFAULT_REPOSITORY}`\n"
             f"Branch: `{_DEFAULT_BRANCH}`\n"
-            "SHA: `unavailable`"
+            "SHA: `unavailable`\n"
+            f"Links: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
         )
     return (
         "*Railway head*\n"
         f"Repository: `{_DEFAULT_REPOSITORY}`\n"
         f"Branch: `{_DEFAULT_BRANCH}`\n"
-        f"SHA: `{_short_sha(sha)}`"
+        f"SHA: `{_short_sha(sha)}`\n"
+        f"Links: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     )
 
 
