@@ -111,7 +111,7 @@ def _hint_for_step(name: str, command: str, output: str) -> str:
     if "pytest" in lower:
         return "Reproduce locally with failing test subset, fix implementation, re-run full api pytest."
     if "npm run build" in lower:
-        return "Fix web build/type/runtime issues and re-run npm ci && npm run build in web/."
+        return "Fix web build/type/runtime issues and re-run npm ci --allow-git=none && npm run build in web/."
     if "verify_worktree_local_web" in lower:
         return "Inspect API/web runtime logs emitted by verify_worktree_local_web.sh and fix failing route/runtime errors."
     return "Review command output tail, fix root cause, and re-run this guard before push."
@@ -490,7 +490,7 @@ def _local_steps(
     if not skip_api_tests:
         steps.append(("api-tests", "cd api && pytest -q"))
     if not skip_web_build:
-        steps.append(("web-build", "cd web && npm ci && npm run build"))
+        steps.append(("web-build", "cd web && npm ci --allow-git=none && npm run build"))
     steps.append(("worktree-runtime-web-guard", "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"))
     return steps
 
@@ -504,7 +504,7 @@ def _check_run_hint(name: str) -> str:
         ("maintainability", "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"),
         ("run api tests", "cd api && pytest -q"),
         ("test", "cd api && pytest -q"),
-        ("build web", "cd web && npm ci && npm run build"),
+        ("build web", "cd web && npm ci --allow-git=none && npm run build"),
         ("thread gates", "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"),
     ]
     for key, cmd in mapping:
