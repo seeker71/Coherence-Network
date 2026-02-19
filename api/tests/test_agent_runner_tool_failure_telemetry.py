@@ -217,9 +217,9 @@ def test_apply_codex_model_alias_supports_gtp_typo_default_map():
     )
     assert alias == {
         "requested_model": "gtp-5.3-codex",
-        "effective_model": "gpt-5-codex",
+        "effective_model": "gpt-5.3-codex",
     }
-    assert "--model gpt-5-codex" in remapped
+    assert "--model gpt-5.3-codex" in remapped
     assert "--model gtp-5.3-codex" not in remapped
 
 
@@ -242,10 +242,85 @@ def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatc
     )
     assert alias == {
         "requested_model": "gtp-5.3-codex",
+        "effective_model": "gpt-5.3-codex",
+    }
+    assert "--model gpt-5.3-codex" in remapped
+    assert "--model gtp-5.3-codex" not in remapped
+
+
+def test_codex_model_not_found_fallback_only_applies_after_not_found_signal():
+    command = 'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
+    output = "stream disconnected before completion: The model `gpt-5.3-codex` does not exist or you do not have access to it."
+
+    remapped, alias = agent_runner._codex_model_not_found_fallback(command, output)
+    assert alias == {
+        "requested_model": "gpt-5.3-codex",
         "effective_model": "gpt-5-codex",
+        "trigger": "model_not_found_or_access",
     }
     assert "--model gpt-5-codex" in remapped
-    assert "--model gtp-5.3-codex" not in remapped
+    assert "--model gpt-5.3-codex" not in remapped
+
+    unchanged, alias_none = agent_runner._codex_model_not_found_fallback(
+        command,
+        "command failed for unrelated reason",
+    )
+    assert alias_none is None
+    assert unchanged == command
+
+
+def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_path):
+    t = [4500.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:test-runner")
+    monkeypatch.delenv("AGENT_CODEX_MODEL_ALIAS_MAP", raising=False)
+    monkeypatch.delenv("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", raising=False)
+
+    def _popen(*args, **kwargs):
+        return _Proc(
+            returncode=1,
+            stdout_text=(
+                "stream disconnected before completion: "
+                "The model `gpt-5.3-codex` does not exist or you do not have access to it.\n"
+            ),
+        )
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_model_fallback",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    assert "retry_override_command" in context
+    assert "--model gpt-5-codex" in context["retry_override_command"]
+    assert context.get("runner_model_not_found_fallback_attempted") is True
+    fallback = context.get("runner_model_not_found_fallback") or {}
+    assert fallback.get("requested_model") == "gpt-5.3-codex"
+    assert fallback.get("effective_model") == "gpt-5-codex"
+    assert fallback.get("trigger") == "model_not_found_or_access"
+    assert "runner-model-fallback" in str(pending_patch.get("output") or "")
 
 
 def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):

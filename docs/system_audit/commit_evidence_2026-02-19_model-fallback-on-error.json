@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/runner-codex-oauth-auth-20260219",
+  "commit_scope": "Remove default gpt-5.3->gpt-5 alias fallback and trigger codex model fallback only after model-not-found/access failures, with retry override evidence in task context.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_2696dc22b2a4b0a7",
+    "task_5aafefb7c722370a",
+    "task_64fda47091fcf552"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Before fix hosted failure: task_2696dc22b2a4b0a7 returned model access error for gpt-5.3-codex without remapping to gpt-5-codex",
+    "Hosted post-fix verification: task_5aafefb7c722370a completed with model openclaw/gpt-5.3-codex and output OAUTH_FIX_OK",
+    "Hosted typo alias verification: task_64fda47091fcf552 completed with command --model gpt-5.3-codex and output TYPO_OK",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting CI completion and branch merge to main."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Runner keeps gpt-5.3 model by default and only applies fallback to gpt-5-codex when model-not-found/access errors are detected.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}"
+    ],
+    "test_flows": [
+      "Submit gpt-5.3-codex task and verify command model remains gpt-5.3-codex",
+      "On model-not-found/access failure, schedule retry with retry_override_command mapped to fallback model"
+    ]
+  }
+}
