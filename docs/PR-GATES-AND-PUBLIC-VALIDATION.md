@@ -118,3 +118,52 @@ Manual run:
 ```bash
 cd api && .venv/bin/python scripts/validate_merged_change_contract.py --sha <main_commit_sha> --json
 ```
+
+## Public worker PR-thread runtime (agent_runner)
+
+See also: `docs/AGENT-THREAD-RESUME-SPEC.md` for run-record and checkpoint/resume behavior.
+
+When a task has `context.execution_mode` in `{"pr", "thread", "codex-thread"}` or `context.create_pr=true`, the
+`api/scripts/agent_runner.py` worker executes it in PR mode:
+
+1. Checkout/create `codex/<task_id>` (or `context.pr_branch` if provided).
+2. Run the task command in that checkout.
+3. If changes are present, commit and push to origin.
+4. Create or update a PR targeting `main`.
+5. Poll `scripts/validate_pr_to_public.py --json --branch <branch>` until merge-ready or timeout.
+6. Optionally auto-merge and optionally wait for public validation.
+
+Suggested environment for Railway/public workers:
+
+```bash
+export AGENT_WORKTREE_PATH=/workspace/Coherence-Network
+export AGENT_REPO_GIT_URL=https://github.com/seeker71/Coherence-Network.git
+export AGENT_GITHUB_REPO=seeker71/Coherence-Network
+export AGENT_PR_BASE_BRANCH=main
+export AGENT_TASKS_DATABASE_URL=$DATABASE_URL
+export AGENT_TASKS_USE_DB=1
+export GITHUB_TOKEN=...   # or GH_TOKEN
+export AGENT_RUN_STATE_DATABASE_URL=$DATABASE_URL
+export AGENT_PR_LOCAL_VALIDATION_CMD='bash ./scripts/verify_worktree_local_web.sh'
+export AGENT_PR_GATE_ATTEMPTS=8
+export AGENT_PR_GATE_POLL_SECONDS=30
+export AGENT_PR_FLOW_TIMEOUT_SECONDS=3600
+export AGENT_RUN_LEASE_SECONDS=120
+export AGENT_PERIODIC_CHECKPOINT_SECONDS=300
+export AGENT_PR_MERGE_METHOD=squash
+```
+
+Example task creation payload for UI-created threads:
+
+```json
+{
+  "direction": "Run implementation task from Codex thread",
+  "task_type": "impl",
+  "context": {
+    "execution_mode": "pr",
+    "create_pr": true,
+    "auto_merge_pr": true,
+    "wait_public": true
+  }
+}
+```
