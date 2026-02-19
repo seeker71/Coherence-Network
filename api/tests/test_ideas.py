@@ -50,6 +50,22 @@ async def test_get_idea_by_id_and_404(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
 
 @pytest.mark.asyncio
+async def test_get_idea_returns_known_derived_runtime_idea(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        derived = await client.get("/api/ideas/coherence-network-agent-pipeline")
+
+    assert derived.status_code == 200
+    payload = derived.json()
+    assert payload["id"] == "coherence-network-agent-pipeline"
+    assert payload["name"] == "Coherence network agent pipeline"
+
+
+@pytest.mark.asyncio
 async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
