@@ -2596,8 +2596,11 @@ def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
 
 
 def _codex_model_alias_map() -> dict[str, str]:
-    raw = os.environ.get("AGENT_CODEX_MODEL_ALIAS_MAP", DEFAULT_CODEX_MODEL_ALIAS_MAP)
-    return _parse_codex_model_alias_map(str(raw))
+    aliases = _parse_codex_model_alias_map(DEFAULT_CODEX_MODEL_ALIAS_MAP)
+    raw = os.environ.get("AGENT_CODEX_MODEL_ALIAS_MAP", "")
+    if raw:
+        aliases.update(_parse_codex_model_alias_map(str(raw)))
+    return aliases
 
 
 def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:

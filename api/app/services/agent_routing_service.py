@@ -40,8 +40,11 @@ def _parse_model_alias_map(raw: str) -> dict[str, str]:
 
 
 def _model_alias_map() -> dict[str, str]:
-    raw = os.environ.get("AGENT_MODEL_ALIAS_MAP", DEFAULT_MODEL_ALIAS_MAP)
-    return _parse_model_alias_map(str(raw))
+    aliases = _parse_model_alias_map(DEFAULT_MODEL_ALIAS_MAP)
+    raw = os.environ.get("AGENT_MODEL_ALIAS_MAP", "")
+    if raw:
+        aliases.update(_parse_model_alias_map(str(raw)))
+    return aliases
 
 
 def normalize_model_name(model: str) -> str:

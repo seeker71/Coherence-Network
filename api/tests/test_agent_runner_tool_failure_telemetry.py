@@ -235,6 +235,19 @@ def test_apply_codex_model_alias_remaps_openrouter_free_default_map():
     assert "--model openrouter/free" not in remapped
 
 
+def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatch):
+    monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
+    remapped, alias = agent_runner._apply_codex_model_alias(
+        'codex exec --model gtp-5.3-codex "Output exactly MODEL_OK."'
+    )
+    assert alias == {
+        "requested_model": "gtp-5.3-codex",
+        "effective_model": "gpt-5-codex",
+    }
+    assert "--model gpt-5-codex" in remapped
+    assert "--model gtp-5.3-codex" not in remapped
+
+
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
     t = [4000.0]
 
