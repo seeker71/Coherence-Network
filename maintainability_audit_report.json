@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T19:07:19.913952+00:00",
+  "generated_at": "2026-02-19T19:50:37.298392+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -16,8 +16,8 @@
     "max_risk_score": 158
   },
   "summary": {
-    "python_module_count": 82,
-    "runtime_file_count": 114,
+    "python_module_count": 83,
+    "runtime_file_count": 115,
     "layer_violation_count": 0,
     "large_module_count": 7,
     "very_large_module_count": 4,
@@ -30,7 +30,7 @@
     "regression_reasons": []
   },
   "architecture": {
-    "python_module_count": 82,
+    "python_module_count": 83,
     "layer_violations": [],
     "large_modules": [
       {
@@ -181,7 +181,7 @@
     "parse_errors": []
   },
   "placeholder_scan": {
-    "scanned_file_count": 114,
+    "scanned_file_count": 115,
     "findings": [
       {
         "file": "api/app/models/coherence.py",
