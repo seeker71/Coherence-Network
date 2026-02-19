@@ -1,0 +1,90 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/telegram-clickable-links-20260219",
+  "commit_scope": "Make Telegram report links explicitly clickable with absolute URLs and add high-context links across task and Railway command replies.",
+  "files_owned": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "docs/system_audit/commit_evidence_2026-02-19_telegram-clickable-links.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-19-telegram-clickable-links"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py",
+    "cd api && pytest -q tests/test_telegram_diagnostics_api.py tests/test_agent_telegram_webhook.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py",
+      "cd api && pytest -q tests/test_telegram_diagnostics_api.py tests/test_agent_telegram_webhook.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Telegram messages include absolute clickable links for tasks and Railway context links so users can jump directly from alert text to relevant web/API context.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/webhook",
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "https://coherence-web-production.up.railway.app/tasks"
+    ],
+    "test_flows": [
+      "POST webhook commands and verify report_log contains markdown links with absolute URLs",
+      "Extract links from report_log and verify each resolves HTTP 200"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI, merge, and production verification."
+  }
+}

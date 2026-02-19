@@ -61,6 +61,8 @@ async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch) 
     assert "public_contract_passed" in sent["message"]
     assert "`1234567890ab`" in sent["message"]
     assert "Next:" in sent["message"]
+    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -112,6 +114,8 @@ async def test_telegram_railway_verify_command_creates_and_ticks_job(
     assert "`retrying`" in sent["message"]
     assert "blocked" in sent["message"]
     assert "/railway tick job_123" in sent["message"]
+    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -149,6 +153,8 @@ async def test_telegram_railway_jobs_command_lists_recent_jobs(
     assert "Checked:" in sent["message"]
     assert "`job_a` scheduled" in sent["message"]
     assert "`job_b` completed" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -204,6 +210,8 @@ async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch) ->
     assert sent["chat_id"] == "2002"
     assert "*Railway head*" in sent["message"]
     assert "`abcdef123456`" in sent["message"]
+    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -255,6 +263,8 @@ async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch
     assert "`job_due_1` retrying" in sent["message"]
     assert "`job_due_2` completed" in sent["message"]
     assert "Next: `/railway jobs`" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -306,6 +316,8 @@ async def test_telegram_railway_schedule_command_creates_job_without_tick(
     assert "`scheduled`" in sent["message"]
     assert "`0/5`" in sent["message"]
     assert "Next: `/railway tick due`" in sent["message"]
+    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
     assert tick_called["value"] is False
 
 
@@ -346,6 +358,7 @@ async def test_telegram_status_command_reports_checked_and_attention(
     assert "Total tasks: `3`" in sent["message"]
     assert "Attention: `2`" in sent["message"]
     assert "/attention" in sent["message"]
+    assert "Web UI: [open tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
 
 
 def test_format_task_alert_includes_updated_and_action() -> None:
@@ -359,6 +372,8 @@ def test_format_task_alert_includes_updated_and_action() -> None:
     message = format_task_alert(task)
     assert "Updated: `2026-02-19T17:00:00Z`" in message
     assert "Action: `/reply task_123 <decision>`" in message
+    assert "[open task](https://coherence-web-production.up.railway.app/tasks?task_id=task_123)" in message
+    assert "[all tasks](https://coherence-web-production.up.railway.app/tasks)" in message
 
 
 @pytest.mark.asyncio
@@ -394,3 +409,5 @@ async def test_telegram_tasks_command_renders_status_values(
     assert sent["chat_id"] == "2002"
     assert "`pending`" in sent["message"]
     assert "TaskStatus.PENDING" not in sent["message"]
+    assert "[open](https://coherence-web-production.up.railway.app/tasks?task_id=task_1)" in sent["message"]
+    assert "Web UI: [open tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
