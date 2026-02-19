@@ -1,10 +1,11 @@
 {
   "date": "2026-02-19",
   "thread_branch": "codex/public-ui-timeout-race-fix-20260219c",
-  "commit_scope": "Harden public web runtime-facing pages against stalled upstream calls by adding deterministic timeout races in API proxy and API health polling, and make tasks detail view resilient so optional runtime-event fetch failures do not break the full page.",
+  "commit_scope": "Harden public web runtime-facing pages against stalled upstream calls by adding deterministic timeout races in API proxy and API health polling, making tasks detail view resilient when runtime-event fetches degrade, and adding ideas-detail fallback loading from list API when per-idea detail endpoint is transiently unavailable.",
   "files_owned": [
     "web/app/api/[...path]/route.ts",
     "web/app/api-health/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
     "web/app/tasks/page.tsx",
     "docs/system_audit/commit_evidence_2026-02-19_public-ui-timeout-race-resilience.json"
   ],
@@ -49,18 +50,19 @@
     "cd web && npm run build",
     "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
     "./scripts/verify_web_api_deploy.sh",
-    "Playwright public proof artifacts: output/playwright/vercel_before_tasks.png, output/playwright/vercel_before_api_health.png, output/playwright/vercel_before_runtime.png, output/playwright/vercel_before_idea_tool_failure.png",
+    "Playwright public proof artifacts: output/playwright/public_after_fix/vercel_tasks_task_abe.png, output/playwright/public_after_fix/vercel_api_health.png, output/playwright/public_after_fix/vercel_runtime_usage.png, output/playwright/public_after_fix/vercel_idea_tool_failure.png",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_public-ui-timeout-race-resilience.json"
   ],
   "change_files": [
     "web/app/api/[...path]/route.ts",
     "web/app/api-health/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
     "web/app/tasks/page.tsx"
   ],
   "change_intent": "runtime_fix",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Tasks and API-health pages resolve to explicit states under upstream slowness, and runtime route remains usable via usage fallback rather than hanging UI states.",
+    "expected_behavior_delta": "Tasks and API-health pages resolve to explicit states under upstream slowness, runtime route remains usable via usage fallback, and idea detail route degrades gracefully by resolving via ideas-list fallback when detail endpoint times out.",
     "public_endpoints": [
       "https://coherence-network.vercel.app/tasks",
       "https://coherence-network.vercel.app/tasks?task_id=task_abe8192cfa915431",
@@ -72,12 +74,13 @@
       "web: open /tasks?task_id=<id> and verify no perpetual loading state",
       "web: verify tasks page still shows evidence links even when runtime event fetch degrades",
       "web: open /api-health and verify polling transitions to a deterministic result (ok/error)",
-      "web: open /runtime and verify redirect target /usage renders without application-error page"
+      "web: open /runtime and verify redirect target /usage renders without application-error page",
+      "web: open /ideas/<idea_id> and verify fallback fetch path still renders idea details when detail endpoint is transiently slow"
     ]
   },
   "local_validation": {
     "status": "pass",
-    "ran_at": "2026-02-19T21:32:00Z",
+    "ran_at": "2026-02-19T21:58:00Z",
     "commands": [
       "cd web && npm run build",
       "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
