@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/runner-model-alias-fallback-20260219",
+  "commit_scope": "Add codex model alias fallback in agent_runner to remap unsupported hosted-runner model IDs (gpt-5.3-codex*) to gpt-5-codex with explicit task-context/log evidence and regression tests.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-model-alias-fallback.json",
+    "maintainability_audit_report.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_c5571a2dae262b30",
+    "task_85ba29439f436d68"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hosted failure proof task_c5571a2dae262b30 shows gpt-5.3-codex unavailable on openai-codex:railway-runner-1",
+    "Local proof: codex exec -m gpt-5.3-codex returns LOCAL_MODEL_OK in this worktree",
+    "pytest -q api/tests/test_agent_runner_tool_failure_telemetry.py (9 passed)",
+    "maintainability_audit_report.json captured in per-PR tracking artifacts"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-model-alias-fallback.json",
+    "maintainability_audit_report.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-model-alias-fallback.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting deploy verification on hosted runner and post-fix task success evidence."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted runner remaps unsupported codex model IDs to configured fallback model and records runner_model_alias metadata so model-not-found failures are prevented.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/runners",
+      "/api/runtime/events"
+    ],
+    "test_flows": [
+      "submit task with command_override using --model gpt-5.3-codex",
+      "runner applies alias to gpt-5-codex and records context.runner_model_alias",
+      "task completes on hosted runner without model-not-found error"
+    ]
+  }
+}
