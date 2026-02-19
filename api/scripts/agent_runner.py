@@ -165,6 +165,11 @@ AGENT_MANIFEST_ENABLED = str(os.environ.get("AGENT_MANIFEST_ENABLED", "1")).stri
 }
 AGENT_MANIFEST_WRITE_LOCK = threading.Lock()
 DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+try:
+    DEFAULT_OBSERVATION_WINDOW_SEC = int(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900"))
+except ValueError:
+    DEFAULT_OBSERVATION_WINDOW_SEC = 900
+DEFAULT_OBSERVATION_WINDOW_SEC = max(30, min(DEFAULT_OBSERVATION_WINDOW_SEC, 7 * 24 * 60 * 60))
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 
@@ -233,6 +238,83 @@ def _safe_float(value: object) -> float | None:
         return float(str(value).strip())
     except Exception:
         return None
+
+
+def _normalize_evidence_terms(raw: object) -> list[str]:
+    values = raw if isinstance(raw, list) else ([raw] if raw is not None else [])
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in values:
+        if not isinstance(item, str):
+            continue
+        cleaned = item.strip()
+        if not cleaned:
+            continue
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cleaned[:240])
+    return out
+
+
+def _normalize_task_target_contract(
+    task_ctx: dict[str, Any],
+    *,
+    task_type: str,
+    task_direction: str,
+) -> dict[str, Any]:
+    target_state = str(task_ctx.get("target_state") or "").strip()
+    if not target_state:
+        direction_hint = " ".join(str(task_direction or "").split())[:200]
+        base = f"{task_type} task reaches intended target state"
+        target_state = f"{base}: {direction_hint}" if direction_hint else base
+
+    success_evidence = _normalize_evidence_terms(task_ctx.get("success_evidence"))
+    abort_evidence = _normalize_evidence_terms(task_ctx.get("abort_evidence"))
+
+    raw_window = task_ctx.get("observation_window_sec")
+    try:
+        observation_window_sec = int(raw_window) if raw_window is not None else DEFAULT_OBSERVATION_WINDOW_SEC
+    except Exception:
+        observation_window_sec = DEFAULT_OBSERVATION_WINDOW_SEC
+    observation_window_sec = max(30, min(observation_window_sec, 7 * 24 * 60 * 60))
+
+    return {
+        "target_state": target_state[:600],
+        "success_evidence": success_evidence,
+        "abort_evidence": abort_evidence,
+        "observation_window_sec": observation_window_sec,
+    }
+
+
+def _observe_target_contract(
+    *,
+    contract: dict[str, Any],
+    output: str,
+    duration_seconds: float,
+    attempt_status: str,
+) -> dict[str, Any]:
+    haystack = (output or "").lower()
+    success_terms = _normalize_evidence_terms(contract.get("success_evidence"))
+    abort_terms = _normalize_evidence_terms(contract.get("abort_evidence"))
+    success_hits = [term for term in success_terms if term.lower() in haystack]
+    abort_hits = [term for term in abort_terms if term.lower() in haystack]
+    observation_window_sec = max(30, _to_int(contract.get("observation_window_sec"), DEFAULT_OBSERVATION_WINDOW_SEC))
+    exceeded = float(duration_seconds) > float(observation_window_sec)
+    return {
+        "target_state": str(contract.get("target_state") or ""),
+        "success_evidence": success_terms,
+        "success_evidence_hits": success_hits,
+        "success_evidence_met": bool(success_terms) and bool(success_hits),
+        "abort_evidence": abort_terms,
+        "abort_evidence_hits": abort_hits,
+        "abort_evidence_met": bool(abort_hits),
+        "observation_window_sec": observation_window_sec,
+        "observation_window_exceeded": exceeded,
+        "attempt_status": attempt_status,
+        "observed_at": _utc_now_iso(),
+    }
 
 
 def _task_idea_id(context: dict[str, Any]) -> str:
@@ -2278,6 +2360,12 @@ def run_one_task(
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
     task_ctx = task_context or {}
+    target_contract = _normalize_task_target_contract(
+        task_ctx,
+        task_type=str(task_type or "impl"),
+        task_direction=task_direction,
+    )
+    task_ctx.update(target_contract)
     task_snapshot = {"task_type": task_type, "context": task_ctx}
     pr_mode = _should_run_pr_flow(task_snapshot)
     repo_path = _repo_path_for_task(task_ctx) if pr_mode else os.path.dirname(_api_dir)
@@ -2458,6 +2546,17 @@ def run_one_task(
         },
         lease_seconds=RUN_LEASE_SECONDS,
         require_owner=True,
+    )
+    _patch_task_context(
+        client,
+        task_id=task_id,
+        context_patch={
+            "target_state": target_contract.get("target_state"),
+            "success_evidence": target_contract.get("success_evidence"),
+            "abort_evidence": target_contract.get("abort_evidence"),
+            "observation_window_sec": target_contract.get("observation_window_sec"),
+            "target_state_contract": target_contract,
+        },
     )
 
     start_time = time.monotonic()
@@ -2701,12 +2800,37 @@ def run_one_task(
         if stopped_for_abort:
             status = "failed"
             output = f"{output}\n[Runner] Task aborted by request: {abort_reason or 'abort requested'}"
+        contract_observation = _observe_target_contract(
+            contract=target_contract,
+            output=output,
+            duration_seconds=duration_sec,
+            attempt_status=status,
+        )
+        if _as_bool(contract_observation.get("abort_evidence_met")):
+            status = "failed"
+            hits = contract_observation.get("abort_evidence_hits") or []
+            hit_preview = ", ".join(str(hit) for hit in hits[:3]) if isinstance(hits, list) else ""
+            output = (
+                f"{output}\n[Target Contract] Abort evidence observed; "
+                f"marking task failed. hits={hit_preview or 'configured abort evidence matched'}"
+            )
         failure_class = _classify_failure(
             output=output,
             timed_out=timed_out,
             stopped_for_usage=stopped_for_usage,
             stopped_for_abort=stopped_for_abort,
             returncode=returncode,
+        )
+        if _as_bool(contract_observation.get("abort_evidence_met")):
+            failure_class = "abort_evidence_triggered"
+        _patch_task_context(
+            client,
+            task_id=task_id,
+            context_patch={
+                "target_state_contract": target_contract,
+                "target_state_observation": contract_observation,
+                "target_state_last_observed_at": _utc_now_iso(),
+            },
         )
 
         with open(out_file, "a", encoding="utf-8") as f:
