@@ -15,6 +15,7 @@ import logging
 import math
 import os
 import socket
+import shutil
 import subprocess
 import sys
 import threading
@@ -225,6 +226,7 @@ DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "gtp-5.3-codex:gpt-5-codex"
 )
 CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
+CODEX_AUTH_MODE_VALUES = {"api_key", "oauth", "auto"}
 
 
 def _tool_token(command: str) -> str:
@@ -2625,6 +2627,151 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _codex_auth_mode() -> str:
+    raw = str(os.environ.get("AGENT_CODEX_AUTH_MODE", "api_key")).strip().lower()
+    if raw in CODEX_AUTH_MODE_VALUES:
+        return raw
+    return "api_key"
+
+
+def _abs_expanded_path(path: str) -> str:
+    value = str(path or "").strip()
+    if not value:
+        return ""
+    return os.path.abspath(os.path.expanduser(value))
+
+
+def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    codex_home = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    if not codex_home:
+        codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
+    if codex_home:
+        _append(os.path.join(codex_home, "auth.json"))
+        _append(os.path.join(codex_home, "oauth.json"))
+        _append(os.path.join(codex_home, "credentials.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        _append(os.path.join(home, ".codex", "auth.json"))
+        _append(os.path.join(home, ".codex", "oauth.json"))
+        _append(os.path.join(home, ".codex", "credentials.json"))
+        _append(os.path.join(home, ".config", "codex", "auth.json"))
+        _append(os.path.join(home, ".config", "codex", "oauth.json"))
+
+    return candidates
+
+
+def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    candidates = _codex_oauth_session_candidates(env)
+    for candidate in candidates:
+        try:
+            if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
+                return True, f"session_file:{candidate}"
+        except OSError:
+            continue
+
+    codex_binary = shutil.which("codex")
+    if codex_binary:
+        try:
+            completed = subprocess.run(
+                ["codex", "auth", "status"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=8,
+                env=env,
+            )
+            if completed.returncode == 0:
+                return True, "codex_auth_status"
+        except Exception:
+            pass
+
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_codex_oauth_session"
+
+
+def _configure_codex_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> dict[str, Any]:
+    requested_mode = _codex_auth_mode()
+    codex_home_override = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    if codex_home_override:
+        env["CODEX_HOME"] = _abs_expanded_path(codex_home_override)
+
+    openai_api_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
+    openai_admin_key = str(os.environ.get("OPENAI_ADMIN_API_KEY", "")).strip()
+    api_key_present = bool(openai_api_key or openai_admin_key)
+    oauth_available, oauth_source = _codex_oauth_session_status(env)
+    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0"))
+
+    effective_mode = requested_mode
+    if requested_mode == "auto":
+        effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available else "api_key")
+
+    if effective_mode == "oauth":
+        if allow_oauth_fallback:
+            env.setdefault("OPENAI_API_KEY", openai_api_key)
+            env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+            env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+        else:
+            env.pop("OPENAI_API_KEY", None)
+            env.pop("OPENAI_ADMIN_API_KEY", None)
+            env.pop("OPENAI_API_BASE", None)
+            env.pop("OPENAI_BASE_URL", None)
+    else:
+        env.setdefault("OPENAI_API_KEY", openai_api_key)
+        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+
+    oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": bool(api_key_present),
+        "oauth_fallback_allowed": bool(allow_oauth_fallback),
+        "oauth_missing": oauth_missing,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s codex oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s api_key_present=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        bool(api_key_present),
+    )
+    return auth_state
+
+
 def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
     aliases: dict[str, str] = {}
     for pair in str(raw or "").split(","):
@@ -3160,16 +3307,14 @@ def run_one_task(
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
+    codex_auth_state: dict[str, Any] | None = None
     if _uses_cursor_cli(command):
         # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
         log.info("task=%s using Cursor CLI with OpenRouter", task_id)
     elif _uses_codex_cli(command):
-        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
-        log.info("task=%s using codex CLI", task_id)
+        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log)
         command, codex_model_alias = _apply_codex_model_alias(command)
         if codex_model_alias:
             log.warning(
@@ -3348,6 +3493,11 @@ def run_one_task(
         "active_branch": branch_name if pr_mode else "",
         "last_attempt": attempt,
     }
+    if codex_auth_state:
+        running_context["runner_codex_auth"] = {
+            **codex_auth_state,
+            "at": _utc_now_iso(),
+        }
     if codex_model_alias:
         running_context["runner_model_alias"] = {
             **codex_model_alias,
@@ -3456,6 +3606,16 @@ def run_one_task(
     out_file = os.path.join(LOG_DIR, f"task_{task_id}.log")
     output_lines: list[str] = []
     reader_done = threading.Event()
+    auth_note = ""
+    if codex_auth_state:
+        auth_note = (
+            "[runner-codex-auth] requested_mode="
+            f"{codex_auth_state['requested_mode']} effective_mode={codex_auth_state['effective_mode']} "
+            f"oauth_session={'true' if codex_auth_state['oauth_session'] else 'false'} "
+            f"oauth_source={codex_auth_state['oauth_source']} "
+            f"api_key_present={'true' if codex_auth_state['api_key_present'] else 'false'} "
+            f"oauth_missing={'true' if codex_auth_state['oauth_missing'] else 'false'}\n"
+        )
     alias_note = ""
     if codex_model_alias:
         alias_note = (
@@ -3470,6 +3630,9 @@ def run_one_task(
                 f.write(f"# task_id={task_id} status=running\n")
                 f.write(f"# command={command}\n")
                 f.write("---\n")
+                if auth_note:
+                    f.write(auth_note)
+                    output_lines.append(auth_note)
                 if alias_note:
                     f.write(alias_note)
                     output_lines.append(alias_note)

@@ -489,6 +489,64 @@ def _railway_auth_available() -> bool:
     return _cli_ok(["railway", "whoami"])
 
 
+def _abs_expanded_path(path: str) -> str:
+    value = str(path or "").strip()
+    if not value:
+        return ""
+    return str(Path(value).expanduser().resolve())
+
+
+def _codex_oauth_session_candidates() -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(os.getenv("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    codex_home = str(os.getenv("AGENT_CODEX_HOME", "")).strip() or str(os.getenv("CODEX_HOME", "")).strip()
+    if codex_home:
+        _append(os.path.join(codex_home, "auth.json"))
+        _append(os.path.join(codex_home, "oauth.json"))
+        _append(os.path.join(codex_home, "credentials.json"))
+
+    home = str(os.getenv("HOME", "")).strip()
+    if home:
+        _append(os.path.join(home, ".codex", "auth.json"))
+        _append(os.path.join(home, ".codex", "oauth.json"))
+        _append(os.path.join(home, ".codex", "credentials.json"))
+        _append(os.path.join(home, ".config", "codex", "auth.json"))
+        _append(os.path.join(home, ".config", "codex", "oauth.json"))
+
+    return candidates
+
+
+def _codex_oauth_available() -> tuple[bool, str]:
+    candidates = _codex_oauth_session_candidates()
+    for candidate in candidates:
+        try:
+            if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
+                return True, f"session_file:{candidate}"
+        except OSError:
+            continue
+
+    if shutil.which("codex") is not None and _cli_ok(["codex", "auth", "status"]):
+        return True, "codex_auth_status"
+
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_codex_oauth_session"
+
+
 def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
     rule = _PROVIDER_CONFIG_RULES.get(provider, {})
     all_of = [str(item) for item in (rule.get("all_of") or [])]
@@ -522,9 +580,13 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
         return True, [], ["gh_auth"], ["Configured via gh CLI auth session."]
     if provider_name == "railway" and _railway_auth_available():
         return True, [], ["railway_cli_auth"], ["Configured via Railway CLI auth session."]
-    if provider_name == "openai-codex" and active_runs > 0:
-        notes.append("OpenAI Codex observed in runtime usage; treating as configured by active execution context.")
-        return True, [], present, notes
+    if provider_name == "openai-codex":
+        oauth_ok, oauth_detail = _codex_oauth_available()
+        if oauth_ok:
+            return True, [], ["codex_oauth_session"], [f"Configured via Codex OAuth session ({oauth_detail})."]
+        if active_runs > 0:
+            notes.append("OpenAI Codex observed in runtime usage; treating as configured by active execution context.")
+            return True, [], present, notes
     if provider_name == "openclaw" and active_runs > 0:
         openai_key = bool(
             os.getenv("OPENAI_ADMIN_API_KEY", "").strip()
@@ -841,6 +903,25 @@ def _build_github_snapshot() -> ProviderUsageSnapshot:
 def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
     api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
+        oauth_ok, oauth_detail = _codex_oauth_available()
+        if oauth_ok:
+            active = int(_active_provider_usage_counts().get("openai-codex", 0))
+            if active > 0:
+                return _runtime_task_runs_snapshot(
+                    provider="openai-codex",
+                    kind="custom",
+                    active_runs=active,
+                    note=f"Using runtime Codex execution evidence with OAuth session ({oauth_detail}).",
+                )
+            return ProviderUsageSnapshot(
+                id=f"provider_openai_codex_{int(time.time())}",
+                provider="openai-codex",
+                kind="custom",
+                status="ok",
+                data_source="configuration_only",
+                notes=[f"Configured via Codex OAuth session ({oauth_detail})."],
+                raw={"auth_mode": "oauth", "oauth_detail": oauth_detail},
+            )
         active = int(_active_provider_usage_counts().get("openai-codex", 0))
         if active > 0:
             return _runtime_task_runs_snapshot(
@@ -1415,6 +1496,9 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
 def _probe_openai_codex() -> tuple[bool, str]:
     api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
+        oauth_ok, oauth_detail = _codex_oauth_available()
+        if oauth_ok:
+            return True, f"ok_via_codex_oauth_session:{oauth_detail}"
         active = int(_active_provider_usage_counts().get("openai-codex", 0))
         if active > 0:
             return True, "ok_via_runtime_usage"

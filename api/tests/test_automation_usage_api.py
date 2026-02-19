@@ -10,6 +10,34 @@ from app.models.automation_usage import ProviderReadinessReport, ProviderReadine
 from app.services import agent_service, automation_usage_service, telemetry_persistence_service
 
 
+def test_configured_status_openai_codex_accepts_oauth_session(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+
+    configured, missing, present, notes = automation_usage_service._configured_status("openai-codex")
+    assert configured is True
+    assert missing == []
+    assert "codex_oauth_session" in present
+    assert any("Codex OAuth session" in note for note in notes)
+
+
+def test_probe_openai_codex_accepts_oauth_without_api_key(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+
+    ok, detail = automation_usage_service._probe_openai_codex()
+    assert ok is True
+    assert detail.startswith("ok_via_codex_oauth_session:")
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,
