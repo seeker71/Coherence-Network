@@ -533,6 +533,35 @@ def _sync_run_state(
         return
 
 
+def _runner_heartbeat(
+    client: httpx.Client,
+    *,
+    runner_id: str,
+    status: str,
+    active_task_id: str = "",
+    active_run_id: str = "",
+    last_error: str = "",
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    lease_seconds = max(20, min(3600, RUN_HEARTBEAT_SECONDS * 3))
+    payload = {
+        "runner_id": runner_id,
+        "status": str(status or "idle"),
+        "lease_seconds": lease_seconds,
+        "host": socket.gethostname(),
+        "pid": os.getpid(),
+        "version": os.environ.get("AGENT_RUNNER_VERSION", "agent_runner.py"),
+        "active_task_id": active_task_id[:200],
+        "active_run_id": active_run_id[:200],
+        "last_error": last_error[:2000],
+        "metadata": metadata or {},
+    }
+    try:
+        client.post(f"{BASE}/api/agent/runners/heartbeat", json=payload, timeout=HTTP_TIMEOUT)
+    except Exception:
+        return
+
+
 def _next_task_attempt(task_id: str) -> int:
     if not task_id:
         return 1
@@ -1273,6 +1302,14 @@ def run_one_task(
     branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     attempt = _next_task_attempt(task_id)
+    _runner_heartbeat(
+        client,
+        runner_id=worker_id,
+        status="running",
+        active_task_id=task_id,
+        active_run_id=run_id,
+        metadata={"executor": executor, "task_type": task_type},
+    )
     # Ensure the task runs from the target worktree in PR mode so file edits stay on a dedicated branch.
     if pr_mode:
         if not _prepare_pr_branch(task_id, repo_path, branch_name, log=log):
@@ -1303,6 +1340,15 @@ def run_one_task(
                 f"{BASE}/api/agent/tasks/{task_id}",
                 json={"status": "failed", "output": f"[pr-flow] branch setup failed: {branch_name}"},
             )
+            _runner_heartbeat(
+                client,
+                runner_id=worker_id,
+                status="degraded",
+                active_task_id="",
+                active_run_id="",
+                last_error="branch setup failed",
+                metadata={"task_id": task_id, "task_type": task_type},
+            )
             return True
 
     lease_ok = _claim_run_lease(
@@ -1331,6 +1377,14 @@ def run_one_task(
             },
             lease_seconds=RUN_LEASE_SECONDS,
             require_owner=False,
+        )
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="idle",
+            active_task_id="",
+            active_run_id="",
+            metadata={"last_task_id": task_id, "detail": "lease_claim_rejected"},
         )
         return True
 
@@ -1374,6 +1428,14 @@ def run_one_task(
             log.info("task=%s already claimed by another worker; skipping", task_id)
         else:
             log.error("task=%s PATCH running failed status=%s", task_id, r.status_code)
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="idle",
+            active_task_id="",
+            active_run_id="",
+            metadata={"last_task_id": task_id, "detail": "patch_running_failed"},
+        )
         return True
 
     _sync_run_state(
@@ -1491,6 +1553,14 @@ def run_one_task(
                         },
                         lease_seconds=RUN_LEASE_SECONDS,
                         require_owner=True,
+                    )
+                    _runner_heartbeat(
+                        client,
+                        runner_id=worker_id,
+                        status="running",
+                        active_task_id=task_id,
+                        active_run_id=run_id,
+                        metadata={"executor": executor, "task_type": task_type},
                     )
                     next_heartbeat = now + RUN_HEARTBEAT_SECONDS
                 if now >= next_control_poll:
@@ -1757,6 +1827,14 @@ def run_one_task(
         log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="idle",
+            active_task_id="",
+            active_run_id="",
+            metadata={"last_task_id": task_id, "last_status": status},
+        )
 
         # Auto-commit progress (spec 030) when PIPELINE_AUTO_COMMIT=1
         if status == "completed" and task_type != "heal" and os.environ.get("PIPELINE_AUTO_COMMIT") == "1":
@@ -1811,6 +1889,15 @@ def run_one_task(
             lease_seconds=RUN_LEASE_SECONDS,
             require_owner=False,
         )
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="degraded",
+            active_task_id="",
+            active_run_id="",
+            last_error=str(e),
+            metadata={"last_task_id": task_id, "task_type": task_type},
+        )
         log.exception("task=%s error: %s", task_id, e)
         return True
 
@@ -1825,7 +1912,16 @@ def poll_and_run(
 ) -> None:
     """Poll for pending tasks and run up to workers in parallel (Cursor supports multiple concurrent agent invocations)."""
     log = log or logging.getLogger("agent_runner")
+    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     while True:
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="idle",
+            active_task_id="",
+            active_run_id="",
+            metadata={"mode": "polling"},
+        )
         r = _http_with_retry(
             client, "GET", f"{BASE}/api/agent/tasks", log, params={"status": "pending", "limit": workers}
         )
