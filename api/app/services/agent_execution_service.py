@@ -243,7 +243,14 @@ def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
 
 
 def _resolve_prompt(task: dict[str, Any]) -> str:
-    return str(task.get("direction") or "").strip()
+    prompt = str(task.get("direction") or "").strip()
+    if not prompt:
+        return ""
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    retry_hint = str(context.get("retry_hint") or "").strip()
+    if not retry_hint:
+        return prompt
+    return f"{prompt}\n\nRetry guidance:\n{retry_hint}"
 
 
 def _normalize_positive_float(value: Any, default: float | None = None) -> float | None:
