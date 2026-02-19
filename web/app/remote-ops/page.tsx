@@ -455,7 +455,7 @@ export default function RemoteOpsPage() {
             <Input
               value={executor}
               onChange={(e) => setExecutor(e.target.value)}
-              placeholder="openclaw | cursor | claude"
+              placeholder="openclaw (or clawwork) | cursor | claude"
             />
           </label>
           <label className="text-sm">
