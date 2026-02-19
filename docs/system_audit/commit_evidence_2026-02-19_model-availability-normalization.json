@@ -1,0 +1,89 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/runner-model-availability-root-cause-20260219",
+  "commit_scope": "Normalize unavailable/legacy codex model aliases at routing + runner execution boundaries so hosted runner converts gtp/gpt-5.3 codex variants to gpt-5-codex with explicit trace evidence.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-availability-normalization.json",
+    "maintainability_audit_report.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_d5e16d762a45e42c",
+    "task_4cd4f158c05d7b3a",
+    "task_7a8826453d39d42e"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hosted direct probe: gpt-5.3-codex failed with model_not_found (task_d5e16d762a45e42c)",
+    "Hosted control probe: gpt-5-codex succeeded (task_4cd4f158c05d7b3a)",
+    "Hosted pre-fix typo probe: gtp-5.3-codex failed and had no runner_model_alias (task_7a8826453d39d42e)",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "maintainability_audit_report.json refreshed by local PR guard"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-availability-normalization.json",
+    "maintainability_audit_report.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_model-availability-normalization.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting CI + deployed hosted-runner post-fix task proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted runner and task routing normalize gtp/gpt-5.3 codex aliases to gpt-5-codex so model_not_found failures no longer block task execution.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/runners",
+      "/api/gates/main-head"
+    ],
+    "test_flows": [
+      "pre-fix hosted probe with codex --model gtp-5.3-codex fails",
+      "post-fix hosted probe with same command succeeds and emits runner_model_alias",
+      "route/task creation with model_override gtp-5.3-codex resolves to gpt-5-codex"
+    ]
+  }
+}
