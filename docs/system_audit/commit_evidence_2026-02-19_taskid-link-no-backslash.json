@@ -1,0 +1,84 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/remove-taskid-backslash-20260219",
+  "commit_scope": "Remove visible backslash from Telegram runner update Task ID link label while keeping the ID clickable and preserving runner card links.",
+  "files_owned": [
+    "api/app/routers/agent_telegram.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "docs/system_audit/commit_evidence_2026-02-19_taskid-link-no-backslash.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-19-taskid-link-no-backslash"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_taskid-link-no-backslash.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent_telegram.py",
+    "api/tests/test_agent_telegram_webhook.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Runner update cards show Task ID link text without a visible backslash escape while keeping the link clickable and preserving Railway log links.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-web-production.up.railway.app/tasks"
+    ],
+    "test_flows": [
+      "Render runner update card with underscore task id and verify link label has no backslash escape",
+      "Verify Task ID and Railway logs links remain present in runner update card"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, PR CI, and production verification."
+  }
+}
