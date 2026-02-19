@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T20:32:52.878239+00:00",
+  "generated_at": "2026-02-19T21:01:47.489375+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -16,8 +16,8 @@
     "max_risk_score": 158
   },
   "summary": {
-    "python_module_count": 81,
-    "runtime_file_count": 115,
+    "python_module_count": 82,
+    "runtime_file_count": 116,
     "layer_violation_count": 0,
     "large_module_count": 7,
     "very_large_module_count": 4,
@@ -30,7 +30,7 @@
     "regression_reasons": []
   },
   "architecture": {
-    "python_module_count": 81,
+    "python_module_count": 82,
     "layer_violations": [],
     "large_modules": [
       {
@@ -39,7 +39,7 @@
       },
       {
         "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1928
+        "line_count": 1953
       },
       {
         "file": "api/app/services/release_gate_service.py",
@@ -69,7 +69,7 @@
       },
       {
         "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1928
+        "line_count": 1953
       },
       {
         "file": "api/app/services/release_gate_service.py",
@@ -130,6 +130,12 @@
         "line_start": 1132
       },
       {
+        "file": "api/app/routers/agent_telegram.py",
+        "function": "telegram_webhook",
+        "line_count": 134,
+        "line_start": 409
+      },
+      {
         "file": "api/app/services/release_gate_service.py",
         "function": "check_value_lineage_e2e_flow",
         "line_count": 130,
@@ -154,16 +160,10 @@
         "line_start": 791
       },
       {
-        "file": "api/app/routers/agent_telegram.py",
-        "function": "telegram_webhook",
-        "line_count": 109,
-        "line_start": 382
-      },
-      {
         "file": "api/app/services/automation_usage_service.py",
         "function": "_subscription_plans",
         "line_count": 104,
-        "line_start": 1810
+        "line_start": 1835
       },
       {
         "file": "api/app/services/inventory_service.py",
@@ -181,7 +181,7 @@
     "parse_errors": []
   },
   "placeholder_scan": {
-    "scanned_file_count": 115,
+    "scanned_file_count": 116,
     "findings": [
       {
         "file": "api/app/models/coherence.py",

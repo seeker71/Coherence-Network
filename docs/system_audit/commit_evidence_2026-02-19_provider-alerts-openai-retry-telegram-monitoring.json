@@ -1,0 +1,139 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/provider-alerts-openai-retry-20260219",
+  "commit_scope": "Fix provider alert signal quality, enable OpenAI-paid override retries for failed tasks, harden Telegram status/attention reporting with public links, and document gate self-unblock workflow.",
+  "files_owned": [
+    "AGENT.md",
+    "AGENTS.md",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/telegram_report_formatter.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "api/tests/test_monitor_pipeline_stale_running.py",
+    "specs/005-backlog.md",
+    "specs/007-meta-pipeline-backlog.md",
+    "specs/048-value-lineage-and-payout-attribution.md",
+    "docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json",
+    "docs/system_audit/public_verification_2026-02-19_telegram_and_system_status.json",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_provider-alerts-openai-retry-telegram-monitoring.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "coherence-network-provider-alert-reliability"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop",
+    "spec-005-backlog",
+    "spec-007-meta-pipeline-backlog",
+    "spec-048-value-lineage-and-payout-attribution"
+  ],
+  "task_ids": [
+    "task-provider-alerts-openai-retry-2026-02-19",
+    "task_653f454a407ce381",
+    "task_dd26e73b122c04a5",
+    "task_235a3610d6e62cca",
+    "task_2ce5a2c007413aaa",
+    "task_9e0ee9a10c74f494"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation",
+        "deployment"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_agent_telegram_webhook.py tests/test_monitor_pipeline_github_actions.py tests/test_monitor_pipeline_stale_running.py tests/test_agent_execute_endpoint.py tests/test_automation_usage_api.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "git fetch origin main && git rebase origin/main --autostash",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "AGENT.md",
+    "AGENTS.md",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/telegram_report_formatter.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "api/tests/test_monitor_pipeline_stale_running.py",
+    "docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json",
+    "docs/system_audit/public_verification_2026-02-19_telegram_and_system_status.json",
+    "maintainability_audit_report.json",
+    "specs/005-backlog.md",
+    "specs/007-meta-pipeline-backlog.md",
+    "specs/048-value-lineage-and-payout-attribution.md"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_agent_telegram_webhook.py tests/test_monitor_pipeline_github_actions.py tests/test_monitor_pipeline_stale_running.py tests/test_agent_execute_endpoint.py tests/test_automation_usage_api.py",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Provider alert snapshots and Telegram status/attention reports now surface actionable public links, while retry flows can force paid OpenAI overrides to unblock failed tasks.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary?limit=20",
+      "https://coherence-network-production.up.railway.app/api/runtime/events?limit=100",
+      "https://coherence-network-production.up.railway.app/api/friction/events?status=open&limit=20",
+      "https://coherence-network-production.up.railway.app/api/agent/status-report",
+      "https://coherence-web-production.up.railway.app/tasks",
+      "https://coherence-web-production.up.railway.app/usage",
+      "https://coherence-web-production.up.railway.app/friction"
+    ],
+    "test_flows": [
+      "Create retry tasks from failed tasks with force_paid_providers=true and verify execution events include openrouter paid-call traces",
+      "Call Telegram /status and /attention handlers and verify output includes public UI/API links and stale-running monitor signals"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI completion, and PR merge."
+  }
+}

@@ -6,7 +6,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.models.automation_usage import ProviderReadinessReport, ProviderReadinessRow
+from app.models.automation_usage import (
+    ProviderReadinessReport,
+    ProviderReadinessRow,
+    ProviderUsageOverview,
+    ProviderUsageSnapshot,
+)
 from app.services import agent_service, automation_usage_service, telemetry_persistence_service
 
 
@@ -36,6 +41,84 @@ def test_probe_openai_codex_accepts_oauth_without_api_key(monkeypatch: pytest.Mo
     ok, detail = automation_usage_service._probe_openai_codex()
     assert ok is True
     assert detail.startswith("ok_via_codex_oauth_session:")
+
+
+def test_evaluate_usage_alerts_skips_optional_unavailable_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_cursor_test",
+                provider="cursor",
+                kind="custom",
+                status="unavailable",
+                data_source="configuration_only",
+                notes=["missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"],
+            )
+        ],
+        unavailable_providers=["cursor"],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=True: overview,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_required_providers_from_env",
+        lambda: ["coherence-internal", "openai", "github"],
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"cursor": 0})
+
+    report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=0.2)
+    assert all(
+        not (alert.provider == "cursor" and alert.metric_id == "provider_status")
+        for alert in report.alerts
+    )
+
+
+def test_evaluate_usage_alerts_suppresses_openai_permission_only_degraded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openai_test",
+                provider="openai",
+                kind="openai",
+                status="degraded",
+                data_source="provider_api",
+                notes=[
+                    (
+                        "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' "
+                        "for url 'https://api.openai.com/v1/organization/usage/completions'; "
+                        "costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs'"
+                    )
+                ],
+            )
+        ],
+        unavailable_providers=["openai"],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=True: overview,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_required_providers_from_env",
+        lambda: ["coherence-internal", "openai", "github"],
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openai": 3})
+
+    report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=0.2)
+    assert all(
+        not (alert.provider == "openai" and alert.metric_id == "provider_status")
+        for alert in report.alerts
+    )
 
 
 @pytest.mark.asyncio
