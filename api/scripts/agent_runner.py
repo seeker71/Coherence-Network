@@ -218,6 +218,7 @@ PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
+    "openrouter/free:gpt-5-codex,"
     "gpt-5.3-codex-spark:gpt-5-codex,"
     "gpt-5.3-codex:gpt-5-codex,"
     "gtp-5.3-codex-spark:gpt-5-codex,"
