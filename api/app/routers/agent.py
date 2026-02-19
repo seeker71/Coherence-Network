@@ -835,11 +835,42 @@ async def get_task_log(task_id: str) -> dict:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", f"task_{task_id}.log")
-    if not os.path.isfile(log_path):
-        raise HTTPException(status_code=404, detail="Task log not found")
-    with open(log_path, encoding="utf-8") as f:
-        log_content = f.read()
-    return {"task_id": task_id, "log": log_content, "command": task.get("command"), "output": task.get("output")}
+    if os.path.isfile(log_path):
+        with open(log_path, encoding="utf-8") as f:
+            log_content = f.read()
+        return {
+            "task_id": task_id,
+            "log": log_content,
+            "command": task.get("command"),
+            "output": task.get("output"),
+            "log_source": "file",
+        }
+
+    # Keep task-log links useful even when per-task log files are unavailable.
+    fallback_lines: list[str] = []
+    status = task.get("status")
+    current_step = task.get("current_step")
+    updated_at = task.get("updated_at")
+    if status is not None:
+        fallback_lines.append(f"status: {status}")
+    if current_step:
+        fallback_lines.append(f"current_step: {current_step}")
+    if updated_at:
+        fallback_lines.append(f"updated_at: {updated_at}")
+    output = str(task.get("output") or "").strip()
+    if output:
+        fallback_lines.append("")
+        fallback_lines.append("output:")
+        fallback_lines.append(output[:5000])
+    fallback = "\n".join(fallback_lines).strip() or "No task log file is available for this task yet."
+
+    return {
+        "task_id": task_id,
+        "log": fallback,
+        "command": task.get("command"),
+        "output": task.get("output"),
+        "log_source": "task_snapshot",
+    }
 
 
 @router.get("/agent/route", response_model=RouteResponse)
