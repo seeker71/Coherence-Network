@@ -18,10 +18,9 @@ _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
 DEFAULT_MODEL_ALIAS_MAP = (
-    "gpt-5.3-codex-spark:gpt-5-codex,"
-    "gpt-5.3-codex:gpt-5-codex,"
-    "gtp-5.3-codex-spark:gpt-5-codex,"
-    "gtp-5.3-codex:gpt-5-codex"
+    "gpt-5.3-codex-spark:gpt-5.3-codex,"
+    "gtp-5.3-codex-spark:gpt-5.3-codex,"
+    "gtp-5.3-codex:gpt-5.3-codex"
 )
 
 
