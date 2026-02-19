@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.main import app
+from app.services.evm_settlement_provider import EvmNativeSettlementProvider
 
 
 @pytest.mark.asyncio
@@ -161,3 +162,102 @@ async def test_distribution_auto_settlement_adds_tx_hashes_for_wallet_payouts() 
             assert payout["tx_hash"].startswith("0x")
             assert len(payout["tx_hash"]) == 66
             assert payout["settled_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_distribution_external_evm_backend_uses_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    app.state.graph_store = InMemoryGraphStore()
+    monkeypatch.setenv("DISTRIBUTION_SETTLEMENT_BACKEND", "evm_native")
+    monkeypatch.setenv("EVM_SETTLEMENT_RPC_URL", "https://rpc.example.invalid")
+    monkeypatch.setenv("EVM_SETTLEMENT_CHAIN_ID", "1")
+    monkeypatch.setenv("EVM_SETTLEMENT_PRIVATE_KEY", f"0x{'1' * 64}")
+
+    expected_tx_hash = f"0x{'c' * 64}"
+
+    class _FakeAccount:
+        @staticmethod
+        def from_key(private_key: str):
+            assert private_key.startswith("0x")
+            return type("Sender", (), {"address": "0x1111111111111111111111111111111111111111"})()
+
+    monkeypatch.setattr(EvmNativeSettlementProvider, "_load_account", lambda self: _FakeAccount)
+
+    async def _fake_send(
+        self: EvmNativeSettlementProvider,
+        *,
+        distribution_id: str,
+        contributor_id: str,
+        wallet_address: str,
+        amount: Decimal,
+    ) -> str:
+        assert distribution_id
+        assert contributor_id
+        assert wallet_address.startswith("0x")
+        assert amount > Decimal("0")
+        return expected_tx_hash
+
+    async def _fake_confirm(self: EvmNativeSettlementProvider, tx_hash: str) -> bool:
+        return tx_hash == expected_tx_hash
+
+    monkeypatch.setattr(EvmNativeSettlementProvider, "send_payout", _fake_send)
+    monkeypatch.setattr(EvmNativeSettlementProvider, "confirm_tx", _fake_confirm)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        contributor = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "Alice",
+                "email": "alice-evm@example.com",
+                "wallet_address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            },
+        )
+        contributor_id = contributor.json()["id"]
+        asset = await client.post("/api/assets", json={"type": "CODE", "description": "EVM settlement asset"})
+        asset_id = asset.json()["id"]
+        await client.post(
+            "/api/contributions",
+            json={"contributor_id": contributor_id, "asset_id": asset_id, "cost_amount": "5.00", "metadata": {}},
+        )
+
+        created = await client.post("/api/distributions", json={"asset_id": asset_id, "value_amount": "12.00"})
+        assert created.status_code == 201
+        payload = created.json()
+        assert payload["settlement_status"] == "settled"
+        assert payload["payouts"][0]["tx_hash"] == expected_tx_hash
+        assert payload["payouts"][0]["settlement_status"] == "confirmed"
+
+
+@pytest.mark.asyncio
+async def test_distribution_external_evm_backend_fails_when_misconfigured(monkeypatch: pytest.MonkeyPatch) -> None:
+    app.state.graph_store = InMemoryGraphStore()
+    monkeypatch.setenv("DISTRIBUTION_SETTLEMENT_BACKEND", "evm_native")
+    monkeypatch.delenv("EVM_SETTLEMENT_RPC_URL", raising=False)
+    monkeypatch.delenv("EVM_SETTLEMENT_CHAIN_ID", raising=False)
+    monkeypatch.delenv("EVM_SETTLEMENT_PRIVATE_KEY", raising=False)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        contributor = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "Bob",
+                "email": "bob-evm@example.com",
+                "wallet_address": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            },
+        )
+        contributor_id = contributor.json()["id"]
+        asset = await client.post("/api/assets", json={"type": "CODE", "description": "Misconfigured EVM backend asset"})
+        asset_id = asset.json()["id"]
+        await client.post(
+            "/api/contributions",
+            json={"contributor_id": contributor_id, "asset_id": asset_id, "cost_amount": "7.00", "metadata": {}},
+        )
+
+        created = await client.post("/api/distributions", json={"asset_id": asset_id, "value_amount": "21.00"})
+        assert created.status_code == 201
+        payload = created.json()
+        assert payload["settlement_status"] == "failed"
+        assert payload["payouts"][0]["settlement_status"] == "failed"
+        assert payload["payouts"][0]["tx_hash"] is None
+        assert "evm_settlement_misconfigured" in (payload["payouts"][0]["settlement_error"] or "")

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import datetime
+from decimal import Decimal
+from typing import Protocol
 
 from app.adapters.graph_store import GraphStore
 from app.models.distribution import (
@@ -10,13 +13,72 @@ from app.models.distribution import (
     Payout,
     PayoutSettlementStatus,
 )
+from app.services.evm_settlement_provider import EvmNativeSettlementProvider, EvmSettlementConfig
+
+
+class SettlementProvider(Protocol):
+    async def send_payout(
+        self,
+        *,
+        distribution_id: str,
+        contributor_id: str,
+        wallet_address: str,
+        amount: Decimal,
+    ) -> str:
+        ...
+
+    async def confirm_tx(self, tx_hash: str) -> bool:
+        ...
+
+
+class SimulatedSettlementProvider:
+    async def send_payout(
+        self,
+        *,
+        distribution_id: str,
+        contributor_id: str,
+        wallet_address: str,
+        amount: Decimal,
+    ) -> str:
+        seed = f"{distribution_id}:{contributor_id}:{wallet_address}:{amount}"
+        digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+        return f"0x{digest}"
+
+    async def confirm_tx(self, tx_hash: str) -> bool:
+        return tx_hash.startswith("0x") and len(tx_hash) == 66
+
+
+class MisconfiguredSettlementProvider:
+    def __init__(self, error_message: str):
+        self._error_message = error_message
+
+    async def send_payout(
+        self,
+        *,
+        distribution_id: str,
+        contributor_id: str,
+        wallet_address: str,
+        amount: Decimal,
+    ) -> str:
+        raise RuntimeError(self._error_message)
+
+    async def confirm_tx(self, tx_hash: str) -> bool:
+        return False
 
 
 class DistributionSettlementService:
-    """Settle computed payouts and attach transaction identity data."""
+    """Settle computed payouts and attach transaction identity data.
 
-    def __init__(self, store: GraphStore):
+    Default backend is simulated. To enable real EVM settlement set:
+    - DISTRIBUTION_SETTLEMENT_BACKEND=evm_native
+    - EVM_SETTLEMENT_RPC_URL
+    - EVM_SETTLEMENT_CHAIN_ID
+    - EVM_SETTLEMENT_PRIVATE_KEY
+    """
+
+    def __init__(self, store: GraphStore, provider: SettlementProvider | None = None):
         self.store = store
+        self._provider: SettlementProvider = provider or self._provider_from_env()
 
     async def settle(self, distribution: Distribution) -> Distribution:
         if not distribution.payouts:
@@ -73,13 +135,13 @@ class DistributionSettlementService:
         wallet_address: str,
     ) -> tuple[Payout, str]:
         try:
-            tx_hash = await self._broadcast_payout(
+            tx_hash = await self._provider.send_payout(
                 distribution_id=distribution_id,
                 contributor_id=str(payout.contributor_id),
                 wallet_address=wallet_address,
-                amount=str(payout.amount),
+                amount=payout.amount,
             )
-            confirmed = await self._confirm_tx(tx_hash)
+            confirmed = await self._provider.confirm_tx(tx_hash)
             if confirmed:
                 return (
                     payout.model_copy(
@@ -115,6 +177,17 @@ class DistributionSettlementService:
                 "failed",
             )
 
+    def _provider_from_env(self) -> SettlementProvider:
+        backend = (os.getenv("DISTRIBUTION_SETTLEMENT_BACKEND") or "simulated").strip().lower()
+        if backend in {"", "simulated", "mock"}:
+            return SimulatedSettlementProvider()
+        if backend in {"evm_native", "evm"}:
+            try:
+                return EvmNativeSettlementProvider(EvmSettlementConfig.from_env())
+            except Exception as exc:
+                return MisconfiguredSettlementProvider(f"evm_settlement_misconfigured:{exc}")
+        return MisconfiguredSettlementProvider(f"unsupported_settlement_backend:{backend}")
+
     def _resolve_distribution_status(self, counters: dict[str, int]) -> DistributionSettlementStatus:
         confirmed_count = counters.get("confirmed", 0)
         skipped_count = counters.get("skipped", 0)
@@ -124,18 +197,3 @@ class DistributionSettlementService:
         if confirmed_count and (skipped_count or failed_count):
             return DistributionSettlementStatus.PARTIALLY_SETTLED
         return DistributionSettlementStatus.FAILED
-
-    async def _broadcast_payout(
-        self,
-        *,
-        distribution_id: str,
-        contributor_id: str,
-        wallet_address: str,
-        amount: str,
-    ) -> str:
-        seed = f"{distribution_id}:{contributor_id}:{wallet_address}:{amount}"
-        digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
-        return f"0x{digest}"
-
-    async def _confirm_tx(self, tx_hash: str) -> bool:
-        return tx_hash.startswith("0x") and len(tx_hash) == 66

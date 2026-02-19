@@ -1,0 +1,106 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/clawwork-onchain-asset-identity",
+  "commit_scope": "Add external EVM-native payout settlement integration (RPC broadcast + receipt confirmation) behind env-gated backend selection while preserving simulated default behavior.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/distribution_settlement_service.py",
+    "api/app/services/evm_settlement_provider.py",
+    "api/pyproject.toml",
+    "api/requirements.txt",
+    "api/tests/test_distributions.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_external-evm-settlement.json"
+  ],
+  "idea_ids": [
+    "coherence-network-onchain-payout-execution",
+    "coherence-network-external-settlement-provider"
+  ],
+  "spec_ids": [
+    "048-contributions-api",
+    "049-distribution-engine"
+  ],
+  "task_ids": [
+    "task-2026-02-19-external-evm-settlement-provider",
+    "task-2026-02-19-env-gated-real-money-settlement"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest -q api/tests/test_distributions.py api/tests/test_contributions.py",
+    "cd api && pytest -q",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "python3 -m py_compile api/app/services/evm_settlement_provider.py api/app/services/distribution_settlement_service.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_external-evm-settlement.json"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/distribution_settlement_service.py",
+    "api/app/services/evm_settlement_provider.py",
+    "api/pyproject.toml",
+    "api/requirements.txt",
+    "api/tests/test_distributions.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_external-evm-settlement.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "pytest -q api/tests/test_distributions.py api/tests/test_contributions.py",
+      "cd api && pytest -q",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+      "python3 -m py_compile api/app/services/evm_settlement_provider.py api/app/services/distribution_settlement_service.py"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When DISTRIBUTION_SETTLEMENT_BACKEND=evm_native and EVM settlement secrets are configured, payout settlement broadcasts signed native EVM transfers and confirms receipts over external JSON-RPC instead of simulated tx hashes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/v1/distributions",
+      "https://coherence-network-production.up.railway.app/v1/distributions/{distribution_id}",
+      "https://coherence-network-production.up.railway.app/api/health"
+    ],
+    "test_flows": [
+      "Default backend remains simulated when settlement backend env is not configured",
+      "EVM backend path returns confirmed tx hashes when provider send/confirm succeeds",
+      "EVM backend returns failed settlement rows when required env keys are missing"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI, and Railway deployment verification"
+  }
+}
