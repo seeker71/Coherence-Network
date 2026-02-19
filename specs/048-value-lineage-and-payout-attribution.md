@@ -2,14 +2,15 @@
 
 ## Purpose
 
-Create a verifiable, machine-readable chain from **idea -> spec -> implementation -> usage/value signals -> payout preview** so contributors can be rewarded based on measurable system value.
+Create a verifiable, machine-readable chain from **idea -> research -> spec creation/upgrade -> implementation -> usage/value signals -> payout preview** so contributors can be rewarded based on measurable system value and energy-balanced contribution quality.
 
 ## Requirements
 
-- [ ] API supports creating and fetching a lineage link that binds idea/spec/implementation references and contributor roles.
+- [ ] API supports creating and fetching a lineage link that binds idea/spec/implementation references, contributor roles, and explicit stage investments.
 - [ ] API supports appending usage/value events to a lineage link.
 - [ ] API exposes valuation summary for a lineage link (measured value, estimated cost, ROI ratio, event count).
-- [ ] API supports payout preview from valuation using explicit role weights and returns per-contributor attribution.
+- [ ] API supports payout preview from valuation using explicit stage weights and returns per-contributor attribution.
+- [ ] Payout preview applies optimization objectives for coherence, energy flow, awareness, friction relief, and stage-balance.
 - [ ] All artifacts are persisted in a durable local store for auditability.
 - [ ] Missing lineage id returns 404 with `{ "detail": "Lineage link not found" }`.
 
@@ -27,10 +28,30 @@ Create a lineage link.
   "implementation_refs": ["PR#26", "commit:e616516"],
   "contributors": {
     "idea": "alice",
+    "research": "rita",
     "spec": "bob",
+    "spec_upgrade": "sam",
     "implementation": "carol",
     "review": "dave"
   },
+  "investments": [
+    {
+      "stage": "research",
+      "contributor": "rita",
+      "energy_units": 3.0,
+      "coherence_score": 0.9,
+      "awareness_score": 0.8,
+      "friction_score": 0.1
+    },
+    {
+      "stage": "implementation",
+      "contributor": "carol",
+      "energy_units": 4.0,
+      "coherence_score": 0.85,
+      "awareness_score": 0.7,
+      "friction_score": 0.2
+    }
+  ],
   "estimated_cost": 120.0
 }
 ```
@@ -44,10 +65,30 @@ Create a lineage link.
   "implementation_refs": ["PR#26", "commit:e616516"],
   "contributors": {
     "idea": "alice",
+    "research": "rita",
     "spec": "bob",
+    "spec_upgrade": "sam",
     "implementation": "carol",
     "review": "dave"
   },
+  "investments": [
+    {
+      "stage": "research",
+      "contributor": "rita",
+      "energy_units": 3.0,
+      "coherence_score": 0.9,
+      "awareness_score": 0.8,
+      "friction_score": 0.1
+    },
+    {
+      "stage": "implementation",
+      "contributor": "carol",
+      "energy_units": 4.0,
+      "coherence_score": 0.85,
+      "awareness_score": 0.7,
+      "friction_score": 0.2
+    }
+  ],
   "estimated_cost": 120.0
 }
 ```
@@ -65,10 +106,30 @@ Fetch lineage link.
   "implementation_refs": ["PR#26", "commit:e616516"],
   "contributors": {
     "idea": "alice",
+    "research": "rita",
     "spec": "bob",
+    "spec_upgrade": "sam",
     "implementation": "carol",
     "review": "dave"
   },
+  "investments": [
+    {
+      "stage": "research",
+      "contributor": "rita",
+      "energy_units": 3.0,
+      "coherence_score": 0.9,
+      "awareness_score": 0.8,
+      "friction_score": 0.1
+    },
+    {
+      "stage": "implementation",
+      "contributor": "carol",
+      "energy_units": 4.0,
+      "coherence_score": 0.85,
+      "awareness_score": 0.7,
+      "friction_score": 0.2
+    }
+  ],
   "estimated_cost": 120.0
 }
 ```
@@ -135,21 +196,48 @@ Compute payout attribution for contributors.
 ```json
 {
   "lineage_id": "lnk_123",
+  "schema_version": "energy-balanced-v1",
   "payout_pool": 1000.0,
   "measured_value_total": 100.0,
   "estimated_cost": 120.0,
   "roi_ratio": 0.8333,
   "weights": {
     "idea": 0.1,
+    "research": 0.2,
     "spec": 0.2,
+    "spec_upgrade": 0.15,
     "implementation": 0.5,
     "review": 0.2
   },
+  "objective_weights": {
+    "coherence": 0.35,
+    "energy_flow": 0.2,
+    "awareness": 0.2,
+    "friction_relief": 0.15,
+    "balance": 0.1
+  },
+  "signals": {
+    "coherence": 0.45,
+    "energy_flow": 0.45,
+    "awareness": 0.5,
+    "friction": 0.2,
+    "balance": 0.9
+  },
   "payouts": [
-    {"role": "idea", "contributor": "alice", "amount": 100.0},
-    {"role": "spec", "contributor": "bob", "amount": 200.0},
-    {"role": "implementation", "contributor": "carol", "amount": 500.0},
-    {"role": "review", "contributor": "dave", "amount": 200.0}
+    {
+      "role": "research",
+      "contributor": "rita",
+      "amount": 240.0,
+      "energy_units": 3.0,
+      "effective_weight": 0.24
+    },
+    {
+      "role": "implementation",
+      "contributor": "carol",
+      "amount": 760.0,
+      "energy_units": 4.0,
+      "effective_weight": 0.76
+    }
   ]
 }
 ```
@@ -164,9 +252,18 @@ LineageLink:
   implementation_refs: string[]
   contributors:
     idea: string?
+    research: string?
     spec: string?
+    spec_upgrade: string?
     implementation: string?
     review: string?
+  investments:
+    - stage: enum(idea, research, spec, spec_upgrade, implementation, review)
+      contributor: string
+      energy_units: number (> 0)
+      coherence_score: number (0..1)
+      awareness_score: number (0..1)
+      friction_score: number (0..1)
   estimated_cost: number
 
 UsageEvent:
@@ -185,7 +282,9 @@ UsageEvent:
   - Create + fetch lineage link works with persistence.
   - Usage events accumulate measured value.
   - Valuation computes `roi_ratio = measured_value_total / estimated_cost` (0 when estimated_cost is 0).
-  - Payout preview allocates by role weights among present contributors.
+  - Payout preview allocates by stage weights among present contributors and explicit investments.
+  - Payout preview includes optimization objective weights and calculated system signals.
+  - For contributors sharing a stage, higher coherence/awareness and lower friction can outweigh raw energy input.
   - Missing lineage returns 404 exact detail message.
 - Public deploy gate must include a live E2E transaction check for this flow and fail deployment contract when invariants break.
 
@@ -201,8 +300,33 @@ UsageEvent:
 - `api/app/routers/gates.py` — machine-access endpoint for public deploy contract report
 - `web/app/gates/page.tsx` — human-access report viewer for public deploy contract
 
+## Acceptance Criteria
+
+- `api/tests/test_value_lineage.py::test_create_and_get_lineage_link` validates persisted lineage links include contributors and optional investment payloads.
+- `api/tests/test_value_lineage.py::test_payout_preview_uses_role_weights` validates default stage weights and objective/signal metadata in payout preview responses.
+- `api/tests/test_value_lineage.py::test_payout_preview_supports_stage_investments` validates investment-stage attribution and stage-peer ranking behavior.
+
+## Verification
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections
+python3 scripts/validate_spec_quality.py --file specs/048-value-lineage-and-payout-attribution.md
+```
+
+## Risks and Assumptions
+
+- Static stage/objective weights are assumed to be acceptable until governance-driven tuning is implemented.
+- Investment metadata is assumed to be honest self-reporting unless future verification signals are added.
+- Signal blending may over-reward/under-reward edge cases until more real usage telemetry is available.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up task: add governance-controlled weight tuning and simulation endpoints for payout policy calibration.
+- Follow-up task: add anti-gaming checks that compare declared energy units against implementation telemetry.
+
 ## Out of Scope
 
 - On-chain payout execution
 - Fiat/crypto settlement integration
-- Dynamic weight governance beyond static defaults
+- Dynamic governance voting over stage/objective weights
