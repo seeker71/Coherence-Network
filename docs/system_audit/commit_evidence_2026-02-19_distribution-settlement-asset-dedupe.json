@@ -3,16 +3,21 @@
   "thread_branch": "codex/clawwork-onchain-asset-identity",
   "commit_scope": "Implement persisted distribution settlement records with payout tx hashes and fix GitHub repository asset identity deduplication.",
   "files_owned": [
+    "api/.env.example",
     "api/app/adapters/graph_store.py",
     "api/app/adapters/postgres_store.py",
     "api/app/models/distribution.py",
     "api/app/routers/contributions.py",
     "api/app/routers/distributions.py",
     "api/app/services/distribution_settlement_service.py",
+    "api/app/services/evm_settlement_provider.py",
+    "api/pyproject.toml",
+    "api/requirements.txt",
     "api/tests/test_contributions.py",
     "api/tests/test_distributions.py",
     "maintainability_audit_report.json",
-    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
+    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json",
+    "docs/system_audit/commit_evidence_2026-02-19_external-evm-settlement.json"
   ],
   "idea_ids": [
     "coherence-network-onchain-payout-execution",
@@ -58,16 +63,21 @@
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
   ],
   "change_files": [
+    "api/.env.example",
     "api/app/adapters/graph_store.py",
     "api/app/adapters/postgres_store.py",
     "api/app/models/distribution.py",
     "api/app/routers/contributions.py",
     "api/app/routers/distributions.py",
     "api/app/services/distribution_settlement_service.py",
+    "api/app/services/evm_settlement_provider.py",
+    "api/pyproject.toml",
+    "api/requirements.txt",
     "api/tests/test_contributions.py",
     "api/tests/test_distributions.py",
     "maintainability_audit_report.json",
-    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json"
+    "docs/system_audit/commit_evidence_2026-02-19_distribution-settlement-asset-dedupe.json",
+    "docs/system_audit/commit_evidence_2026-02-19_external-evm-settlement.json"
   ],
   "change_intent": "runtime_feature",
   "local_validation": {
