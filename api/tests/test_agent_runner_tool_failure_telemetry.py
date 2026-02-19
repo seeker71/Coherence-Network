@@ -266,3 +266,25 @@ def test_append_agent_manifest_entry_writes_agent_doc_and_context(monkeypatch, t
     assert "Idea link" in body
     assert "api/app/service.py:42" in body
     assert "manifestation_range `L42-L48`" in body
+
+
+def test_observe_target_contract_detects_abort_evidence():
+    contract = agent_runner._normalize_task_target_contract(
+        {
+            "target_state": "task completed with clean output",
+            "success_evidence": ["all checks passed"],
+            "abort_evidence": ["fatal", "panic"],
+            "observation_window_sec": 120,
+        },
+        task_type="impl",
+        task_direction="run task",
+    )
+    observed = agent_runner._observe_target_contract(
+        contract=contract,
+        output="step completed then fatal pipeline state reached",
+        duration_seconds=140.0,
+        attempt_status="completed",
+    )
+    assert observed["abort_evidence_met"] is True
+    assert "fatal" in observed["abort_evidence_hits"]
+    assert observed["observation_window_exceeded"] is True

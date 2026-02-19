@@ -131,6 +131,7 @@ def _force_paid_override(
 
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -141,6 +142,10 @@ def _task_to_item(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "target_state": ctx.get("target_state"),
+        "success_evidence": ctx.get("success_evidence"),
+        "abort_evidence": ctx.get("abort_evidence"),
+        "observation_window_sec": ctx.get("observation_window_sec"),
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
@@ -157,6 +162,7 @@ def _task_to_attention_item(task: dict) -> dict:
 
 def _task_to_full(task: dict) -> dict:
     """Convert stored task to full response."""
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -170,11 +176,46 @@ def _task_to_full(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "target_state": ctx.get("target_state"),
+        "success_evidence": ctx.get("success_evidence"),
+        "abort_evidence": ctx.get("abort_evidence"),
+        "observation_window_sec": ctx.get("observation_window_sec"),
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
         "updated_at": task.get("updated_at"),
     }
+
+
+def _task_update_has_fields(data: AgentTaskUpdate) -> bool:
+    keys = (
+        "status",
+        "output",
+        "progress_pct",
+        "current_step",
+        "decision_prompt",
+        "decision",
+        "context",
+        "worker_id",
+        "target_state",
+        "success_evidence",
+        "abort_evidence",
+        "observation_window_sec",
+    )
+    return any(getattr(data, key) is not None for key in keys)
+
+
+def _target_state_context_patch(data: AgentTaskUpdate) -> dict:
+    context_patch = dict(data.context) if isinstance(data.context, dict) else {}
+    if data.target_state is not None:
+        context_patch["target_state"] = data.target_state
+    if data.success_evidence is not None:
+        context_patch["success_evidence"] = data.success_evidence
+    if data.abort_evidence is not None:
+        context_patch["abort_evidence"] = data.abort_evidence
+    if data.observation_window_sec is not None:
+        context_patch["observation_window_sec"] = data.observation_window_sec
+    return context_patch
 
 
 @router.post(
@@ -521,11 +562,9 @@ async def update_task(
     Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
     When decision present and task needs_decision, sets status→running.
     """
-    if all(
-        getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
-    ):
+    if not _task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
+    context_patch = _target_state_context_patch(data)
     try:
         task = agent_service.update_task(
             task_id,
@@ -535,7 +574,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
-            context=data.context,
+            context=context_patch if context_patch else None,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
@@ -543,7 +582,10 @@ async def update_task(
         raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    runner_update = is_runner_task_update(worker_id=data.worker_id, context_patch=data.context)
+    runner_update = is_runner_task_update(
+        worker_id=data.worker_id,
+        context_patch=context_patch if context_patch else data.context,
+    )
     if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
         from app.services import telegram_adapter
 

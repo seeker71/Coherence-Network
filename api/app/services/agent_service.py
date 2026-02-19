@@ -44,6 +44,12 @@ _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
 _OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
 _EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+try:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = int(str(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900")).strip())
+except ValueError:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
+_TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
+_TARGET_STATE_MAX_TEXT = 600
 # Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -858,6 +864,22 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     _ensure_store_loaded()
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    target_contract = _normalize_target_state_contract(
+        direction=data.direction,
+        task_type=data.task_type,
+        target_state=data.target_state if data.target_state is not None else ctx.get("target_state"),
+        success_evidence=(
+            data.success_evidence if data.success_evidence is not None else ctx.get("success_evidence")
+        ),
+        abort_evidence=data.abort_evidence if data.abort_evidence is not None else ctx.get("abort_evidence"),
+        observation_window_sec=(
+            data.observation_window_sec
+            if data.observation_window_sec is not None
+            else ctx.get("observation_window_sec")
+        ),
+    )
+    ctx.update(target_contract)
+    ctx["target_state_contract"] = dict(target_contract)
     executor, policy_meta = _select_executor(data.task_type, data.direction, ctx)
     if policy_meta.get("policy_applied"):
         ctx["executor_policy"] = policy_meta
@@ -1132,6 +1154,20 @@ def update_task(
             next_context.update(context)
         else:
             next_context = dict(context)
+        if any(
+            key in next_context
+            for key in ("target_state", "success_evidence", "abort_evidence", "observation_window_sec")
+        ):
+            normalized_contract = _normalize_target_state_contract(
+                direction=str(task.get("direction") or ""),
+                task_type=task.get("task_type") if isinstance(task.get("task_type"), TaskType) else TaskType.IMPL,
+                target_state=next_context.get("target_state"),
+                success_evidence=next_context.get("success_evidence"),
+                abort_evidence=next_context.get("abort_evidence"),
+                observation_window_sec=next_context.get("observation_window_sec"),
+            )
+            next_context.update(normalized_contract)
+            next_context["target_state_contract"] = dict(normalized_contract)
         task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
@@ -1209,6 +1245,65 @@ def _metadata_bool(value: Any) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     return False
+
+
+def _normalize_evidence_list(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    values = raw if isinstance(raw, list) else [raw]
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        cleaned = value.strip()
+        if not cleaned:
+            continue
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cleaned[:_TARGET_STATE_MAX_TEXT])
+    return out
+
+
+def _normalize_observation_window(raw: Any) -> int:
+    if isinstance(raw, bool):
+        return _TARGET_STATE_DEFAULT_WINDOW_SEC
+    if isinstance(raw, (int, float)):
+        value = int(raw)
+    elif isinstance(raw, str):
+        value_text = raw.strip()
+        value = int(value_text) if value_text.isdigit() else _TARGET_STATE_DEFAULT_WINDOW_SEC
+    else:
+        value = _TARGET_STATE_DEFAULT_WINDOW_SEC
+    return max(30, min(value, 7 * 24 * 60 * 60))
+
+
+def _normalize_target_state_contract(
+    *,
+    direction: str,
+    task_type: TaskType,
+    target_state: Any,
+    success_evidence: Any,
+    abort_evidence: Any,
+    observation_window_sec: Any,
+) -> dict[str, Any]:
+    candidate = str(target_state or "").strip()
+    if not candidate:
+        direction_hint = " ".join((direction or "").split())[:220]
+        base = f"{task_type.value} task reaches intended target state"
+        candidate = f"{base}: {direction_hint}" if direction_hint else base
+    target_state_value = candidate[:_TARGET_STATE_MAX_TEXT]
+    success = _normalize_evidence_list(success_evidence)
+    abort = _normalize_evidence_list(abort_evidence)
+    window = _normalize_observation_window(observation_window_sec)
+    return {
+        "target_state": target_state_value,
+        "success_evidence": success,
+        "abort_evidence": abort,
+        "observation_window_sec": window,
+    }
 
 
 def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[str, Any]:
