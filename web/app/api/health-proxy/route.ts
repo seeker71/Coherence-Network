@@ -5,6 +5,7 @@ import { fetchJsonOrNull } from "@/lib/fetch";
 const API_URL = getApiBase();
 const WEB_STARTED_AT = new Date();
 const WEB_UPDATED_AT = process.env.WEB_UPDATED_AT || process.env.VERCEL_GIT_COMMIT_SHA || "unknown";
+const UPSTREAM_TIMEOUT_MS = 15000;
 
 function uptimeSeconds() {
   return Math.max(0, Math.floor((Date.now() - WEB_STARTED_AT.getTime()) / 1000));
@@ -22,7 +23,11 @@ function uptimeHuman(seconds: number) {
 export async function GET() {
   const started = performance.now();
   try {
-    const upstreamJson = await fetchJsonOrNull<Record<string, unknown>>(`${API_URL}/api/health`, { cache: "no-store" }, 5000);
+    const upstreamJson = await fetchJsonOrNull<Record<string, unknown>>(
+      `${API_URL}/api/health`,
+      { cache: "no-store" },
+      UPSTREAM_TIMEOUT_MS,
+    );
     if (!upstreamJson) {
       throw new Error("Upstream health payload unavailable");
     }
