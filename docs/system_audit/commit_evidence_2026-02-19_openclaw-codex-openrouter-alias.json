@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/railway-openclaw-runtime-fix",
+  "commit_scope": "Fix codex-runner clawwork/openclaw failures by remapping unsupported openrouter/free model requests to a codex-compatible fallback model and covering with regression tests.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_openclaw-codex-openrouter-alias.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-openclaw-clawwork-executor-alias"
+  ],
+  "task_ids": [
+    "task-2026-02-19-railway-openclaw-codex-openrouter-remap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Railway runner logs show repeated codex failures for openclaw tasks with returncode=1 and output_len~=793 under worker_id=openai-codex:railway-runner-1.",
+    "Production runtime events show the same failure signature for task ids task_5bf765978f547728 and task_c61bd6e3b4e7d736.",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_usage_tracking_api.py -k 'clawwork or openclaw_openrouter_override_tracks_openrouter_provider'"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_openclaw-codex-openrouter-alias.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_usage_tracking_api.py -k 'clawwork or openclaw_openrouter_override_tracks_openrouter_provider'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_openclaw-codex-openrouter-alias.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local guard re-run, CI, and production verification."
+  }
+}
