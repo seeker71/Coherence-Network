@@ -30,6 +30,29 @@ def test_create_task_supports_openclaw_executor(monkeypatch: pytest.MonkeyPatch)
     assert "--json" in task["command"]
 
 
+def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'openclaw run "{{direction}}" --model {{model}} --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Implement clawwork alias support",
+            task_type=TaskType.IMPL,
+            context={"executor": "clawwork"},
+        )
+    )
+
+    assert task["model"].startswith("openclaw/")
+    assert task["tier"] == "openclaw"
+    assert "--json" in task["command"]
+    context = task.get("context") or {}
+    assert context.get("executor") == "openclaw"
+
+
 def test_create_task_openclaw_default_template_includes_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.delenv("OPENCLAW_COMMAND_TEMPLATE", raising=False)
@@ -88,3 +111,14 @@ async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
         template = str(payload["command_template"])
         assert "{{direction}}" in template
         assert template.startswith("openclaw ") or template.startswith("codex exec ")
+
+
+@pytest.mark.asyncio
+async def test_agent_route_endpoint_accepts_clawwork_executor_alias() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/api/agent/route", params={"task_type": "impl", "executor": "clawwork"})
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["executor"] == "openclaw"
+        assert payload["tier"] == "openclaw"
+        assert str(payload["model"]).startswith("openclaw/")

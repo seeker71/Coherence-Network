@@ -89,7 +89,7 @@ Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed comma
 
 ## OpenClaw Integration
 
-OpenClaw is supported as an additional executor through `context.executor=openclaw` or `AGENT_EXECUTOR_DEFAULT=openclaw`.
+OpenClaw is supported as an additional executor through `context.executor=openclaw` (or `context.executor=clawwork` alias) and `AGENT_EXECUTOR_DEFAULT=openclaw`.
 
 ### Required env
 
@@ -116,6 +116,8 @@ curl -X POST http://localhost:8000/api/agent/tasks \
 
 ```bash
 curl "http://localhost:8000/api/agent/route?task_type=impl&executor=openclaw"
+# alias:
+curl "http://localhost:8000/api/agent/route?task_type=impl&executor=clawwork"
 ```
 
 Notes:

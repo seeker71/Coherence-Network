@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T15:17:09.218390+00:00",
+  "generated_at": "2026-02-19T15:27:34.173460+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -43,11 +43,11 @@
       },
       {
         "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1805
+        "line_count": 1844
       },
       {
         "file": "api/app/services/agent_service.py",
-        "line_count": 1701
+        "line_count": 1797
       },
       {
         "file": "api/app/services/runtime_service.py",
@@ -55,7 +55,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 851
+        "line_count": 896
       },
       {
         "file": "api/app/services/idea_service.py",
@@ -73,11 +73,11 @@
       },
       {
         "file": "api/app/services/automation_usage_service.py",
-        "line_count": 1805
+        "line_count": 1844
       },
       {
         "file": "api/app/services/agent_service.py",
-        "line_count": 1701
+        "line_count": 1797
       }
     ],
     "long_functions": [
@@ -121,7 +121,7 @@
         "file": "api/app/services/automation_usage_service.py",
         "function": "_build_openai_snapshot",
         "line_count": 138,
-        "line_start": 1025
+        "line_start": 1051
       },
       {
         "file": "api/app/services/release_gate_service.py",
@@ -133,7 +133,7 @@
         "file": "api/app/services/agent_service.py",
         "function": "_execution_usage_summary",
         "line_count": 126,
-        "line_start": 1214
+        "line_start": 1310
       },
       {
         "file": "api/app/routers/agent_telegram.py",
@@ -157,13 +157,13 @@
         "file": "api/app/services/automation_usage_service.py",
         "function": "_build_github_snapshot",
         "line_count": 110,
-        "line_start": 703
+        "line_start": 729
       },
       {
         "file": "api/app/services/automation_usage_service.py",
         "function": "_subscription_plans",
         "line_count": 104,
-        "line_start": 1687
+        "line_start": 1726
       },
       {
         "file": "api/app/services/inventory_service.py",

@@ -194,6 +194,10 @@ def test_infer_executor_detects_openclaw():
     assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"
 
 
+def test_infer_executor_detects_clawwork_alias():
+    assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
+
+
 def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
     monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
     remapped, alias = agent_runner._apply_codex_model_alias(
