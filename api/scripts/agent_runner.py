@@ -15,6 +15,7 @@ import logging
 import math
 import os
 import socket
+import shutil
 import subprocess
 import sys
 import threading
