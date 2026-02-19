@@ -211,6 +211,18 @@ def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
     assert "--model gpt-5.3-codex" not in remapped
 
 
+def test_apply_codex_model_alias_supports_gtp_typo_default_map():
+    remapped, alias = agent_runner._apply_codex_model_alias(
+        'codex exec --model gtp-5.3-codex "Output exactly MODEL_OK."'
+    )
+    assert alias == {
+        "requested_model": "gtp-5.3-codex",
+        "effective_model": "gpt-5-codex",
+    }
+    assert "--model gpt-5-codex" in remapped
+    assert "--model gtp-5.3-codex" not in remapped
+
+
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
     t = [4000.0]
 

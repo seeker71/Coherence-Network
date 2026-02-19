@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T15:29:55.049145+00:00",
+  "generated_at": "2026-02-19T15:51:11.078115+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -55,7 +55,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 896
+        "line_count": 904
       },
       {
         "file": "api/app/services/idea_service.py",
