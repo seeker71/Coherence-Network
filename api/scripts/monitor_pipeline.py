@@ -18,10 +18,10 @@ Detection rules:
   - low_success_rate: 7d rate < 80% (10+ tasks)
   - api_unreachable: pipeline-status fails
   - runner_log_errors: ERROR or "API not reachable" in agent_runner.log (last 2h)
-  - orphan_running: running task > 2h (likely stale)
+  - orphan_running: running task over stale threshold (default 30m)
   - phase_6_7_not_worked: backlog has not reached Phase 6 (006); Phase 6/7 product-critical items not being worked
 
-Fallback: when PIPELINE_AUTO_RECOVER=1, write restart_requested (stale_version), PATCH orphan to failed, create heal tasks.
+Fallback: when PIPELINE_AUTO_RECOVER=1, write restart_requested (stale_version/stale_running), PATCH orphan to failed, create heal tasks.
 """
 
 import argparse
@@ -71,7 +71,18 @@ SEVERITY_TO_PRIORITY = {"high": 1, "medium": 2, "low": 3}
 
 STUCK_THRESHOLD_SEC = 600   # 10 min
 NO_RUNNING_THRESHOLD_SEC = 180  # 3 min — raise issue if pending but no task running
-ORPHAN_RUNNING_SEC = 7200  # 2 h
+try:
+    ORPHAN_RUNNING_SEC = max(
+        60,
+        int(
+            os.environ.get(
+                "PIPELINE_ORPHAN_RUNNING_SECONDS",
+                os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
+            )
+        ),
+    )
+except (TypeError, ValueError):
+    ORPHAN_RUNNING_SEC = 1800
 LOW_SUCCESS_RATE = 0.80
 MIN_TASKS_FOR_RATE = 10
 MIN_RUNNING_WHEN_PENDING = 2  # expect at least 2 tasks running when we have pending (phase coverage)
@@ -1191,29 +1202,100 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         if heal_task_id:
             data["issues"][-1]["heal_task_id"] = heal_task_id
 
-    # Orphan running: single running task for > 2h — fallback: PATCH to failed when auto_recover
+    # Orphan running: one or more running tasks over stale threshold (default 30m).
+    stale_running: list[dict[str, Any]] = []
     for r in running:
         run_sec = r.get("running_seconds")
-        if run_sec is not None and run_sec > ORPHAN_RUNNING_SEC:
-            tid = r.get("id")
-            action = "PATCH task to failed or restart pipeline to clear"
-            if auto_recover and tid:
+        if run_sec is None:
+            continue
+        try:
+            run_sec_num = float(run_sec)
+        except (TypeError, ValueError):
+            continue
+        if run_sec_num > ORPHAN_RUNNING_SEC:
+            stale_running.append({"id": r.get("id"), "running_seconds": run_sec_num})
+
+    if stale_running:
+        stale_ids = [str(row.get("id") or "").strip() for row in stale_running if str(row.get("id") or "").strip()]
+        stale_minutes = max(1, int(round(ORPHAN_RUNNING_SEC / 60)))
+        longest_sec = int(max((row.get("running_seconds") or 0.0) for row in stale_running))
+        action_parts: list[str] = []
+        healed_ids: list[str] = []
+
+        if auto_recover:
+            for tid in stale_ids:
                 try:
                     pr = client.patch(
                         f"{BASE}/api/agent/tasks/{tid}",
-                        json={"status": "failed", "output": f"Orphan: running > 2h (auto-recover); cleared"},
+                        json={
+                            "status": "failed",
+                            "output": (
+                                f"Orphan: running exceeded stale threshold "
+                                f"{ORPHAN_RUNNING_SEC}s (~{stale_minutes}m); auto-recovered"
+                            ),
+                        },
                         timeout=10,
                     )
                     if pr.status_code == 200:
-                        action = f"Auto-recovered: PATCHed {tid} to failed"
+                        healed_ids.append(tid)
                         log.info("Auto-recover: PATCHed orphan %s to failed", tid)
                 except Exception as ex:
                     log.warning("Auto-recover orphan failed: %s", ex)
-            _add_issue(
-                data, "orphan_running", "medium",
-                f"Task {tid} running > 2h (likely stale)",
-                action,
+            _request_restart("stale_running_orphan", log)
+            action_parts.append(
+                "Restart requested (PIPELINE_AUTO_RECOVER=1). Watchdog will restart pipeline."
             )
+            if healed_ids:
+                preview = ", ".join(healed_ids[:5])
+                if len(healed_ids) > 5:
+                    preview += ", ..."
+                action_parts.append(f"Auto-recovered stale tasks by PATCH to failed: {preview}.")
+
+        heal_task_id = None
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "orphan_running" not in prev_conditions:
+            try:
+                resp = client.post(
+                    f"{BASE}/api/agent/tasks",
+                    json={
+                        "direction": (
+                            "Monitor detected stale running tasks older than threshold. "
+                            "Investigate runner deadlock/orphaned claims, clear stale tasks, and ensure pipeline resumes."
+                        ),
+                        "task_type": "heal",
+                        "context": {
+                            "executor": "cursor",
+                            "monitor_condition": "orphan_running",
+                            "stale_threshold_seconds": ORPHAN_RUNNING_SEC,
+                            "stale_task_count": len(stale_running),
+                        },
+                    },
+                    timeout=10,
+                )
+                if resp.status_code == 201:
+                    heal_task_id = resp.json().get("id")
+                    action_parts.append(f"Created heal task {heal_task_id}.")
+                    log.info("Auto-fix: created heal task for orphan_running")
+            except Exception as e:
+                log.warning("Auto-fix heal task failed: %s", e)
+
+        if not action_parts:
+            action_parts.append("PATCH stale task(s) to failed or restart pipeline to clear orphaned runs.")
+
+        stale_preview = ", ".join(stale_ids[:5]) if stale_ids else "unknown"
+        if len(stale_ids) > 5:
+            stale_preview += ", ..."
+        _add_issue(
+            data,
+            "orphan_running",
+            "high",
+            (
+                f"{len(stale_running)} running task(s) exceeded stale threshold "
+                f"{ORPHAN_RUNNING_SEC}s (~{stale_minutes}m); longest={longest_sec}s; ids={stale_preview}"
+            ),
+            " ".join(action_parts),
+        )
+        if heal_task_id:
+            data["issues"][-1]["heal_task_id"] = heal_task_id
 
     # Needs decision blocked
     if pm.get("blocked"):

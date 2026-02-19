@@ -112,6 +112,11 @@ def test_run_check_tracks_high_github_actions_failure_rate(tmp_path, monkeypatch
     monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(issues_file))
     monkeypatch.setattr(monitor_pipeline, "GITHUB_ACTIONS_HEALTH_FILE", str(gha_file))
     monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE",
+        str(tmp_path / "public_deploy_contract_block_state.json"),
+    )
     monkeypatch.setattr(monitor_pipeline, "_get_current_git_sha", lambda: "")
     monkeypatch.setattr(
         monitor_pipeline,
@@ -172,6 +177,11 @@ def test_run_check_marks_github_actions_issue_resolved_when_rate_drops(tmp_path,
     monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(issues_file))
     monkeypatch.setattr(monitor_pipeline, "GITHUB_ACTIONS_HEALTH_FILE", str(tmp_path / "gha.json"))
     monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE",
+        str(tmp_path / "public_deploy_contract_block_state.json"),
+    )
     monkeypatch.setattr(monitor_pipeline, "_get_current_git_sha", lambda: "")
     monkeypatch.setattr(
         monitor_pipeline,
