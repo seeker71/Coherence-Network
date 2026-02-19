@@ -5,91 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from app.models.spec_registry import SpecRegistryUpdate
+from app.services import agent_execution_metrics as metrics_service
+from app.services import agent_execution_retry as retry_service
 from app.services import agent_execution_service as execution_service
-
-
-def _resolve_cost_controls(
-    task: dict[str, Any],
-    max_cost_usd: float | None,
-    estimated_cost_usd: float | None,
-    cost_slack_ratio: float | None,
-) -> dict[str, float | None]:
-    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
-    context_max_cost = execution_service._normalize_positive_float(ctx.get("max_cost_usd")) or execution_service._normalize_positive_float(
-        ctx.get("max_cost")
-    )
-    context_estimated_cost = execution_service._normalize_positive_float(ctx.get("estimated_cost_usd")) or execution_service._normalize_positive_float(
-        ctx.get("estimated_cost")
-    )
-    context_slack = execution_service._normalize_ratio(ctx.get("cost_slack_ratio"), default=1.25)
-
-    env_max_cost = execution_service._normalize_positive_float(execution_service.os.getenv("AGENT_TASK_MAX_COST_USD"))
-    env_estimated_cost = execution_service._normalize_positive_float(execution_service.os.getenv("AGENT_TASK_ESTIMATED_COST_USD"))
-    env_slack = execution_service._normalize_ratio(execution_service.os.getenv("AGENT_TASK_COST_SLACK_RATIO"), default=1.25)
-
-    resolved_max_cost = execution_service._normalize_positive_float(max_cost_usd) or context_max_cost or env_max_cost
-    resolved_estimated_cost = (
-        execution_service._normalize_positive_float(estimated_cost_usd)
-        or context_estimated_cost
-        or env_estimated_cost
-    )
-    resolved_slack = execution_service._normalize_ratio(cost_slack_ratio, default=context_slack or env_slack or 1.25)
-
-    if resolved_max_cost is None and resolved_estimated_cost is not None:
-        resolved_max_cost = max(resolved_estimated_cost * resolved_slack, 0.0001)
-
-    return {
-        "max_cost_usd": resolved_max_cost,
-        "estimated_cost_usd": resolved_estimated_cost,
-        "cost_slack_ratio": resolved_slack,
-    }
-
-
-def _safe_parse_output_metrics(output: str) -> dict[str, Any]:
-    try:
-        parsed = execution_service.json.loads(output)
-    except execution_service.json.JSONDecodeError:
-        return {}
-    if not isinstance(parsed, dict):
-        return {}
-    return parsed
-
-
-def _extract_output_metric(parsed: dict[str, Any], keys: tuple[str, ...]) -> float | None:
-    for key in keys:
-        if key not in parsed:
-            continue
-        raw = parsed.get(key)
-        if raw is None:
-            return None
-        try:
-            value = float(raw)
-        except (TypeError, ValueError):
-            continue
-        if value < 0.0:
-            continue
-        return value
-    return None
-
-
-def _attribution_values_from_output(output: str) -> dict[str, float | None]:
-    parsed = _safe_parse_output_metrics(output)
-    if not parsed:
-        return {}
-
-    return {
-        "actual_value": _extract_output_metric(
-            parsed, ("actual_value", "actual_value_to_whole", "actual_impact")
-        ),
-        "confidence": _extract_output_metric(parsed, ("confidence",)),
-        "estimated_value": _extract_output_metric(
-            parsed, ("estimated_value", "estimated_value_to_whole", "potential_value")
-        ),
-        "estimated_cost": _extract_output_metric(
-            parsed, ("estimated_cost", "estimated_cost_usd", "estimated_budget", "cost_budget")
-        ),
-        "actual_cost": _extract_output_metric(parsed, ("actual_cost", "actual_cost_usd", "cost_actual")),
-    }
 
 
 def _task_target_ids(task: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -109,7 +27,7 @@ def _apply_value_attribution(
     if not idea_id and not spec_id:
         return
 
-    metrics = _attribution_values_from_output(output)
+    metrics = metrics_service.attribution_values_from_output(output)
     potential_value = metrics.get("estimated_value")
     estimated_cost = metrics.get("estimated_cost")
     actual_value = metrics.get("actual_value")
@@ -334,7 +252,7 @@ def _handle_paid_route_guard(
             model_for_metrics=str(task.get("model") or "unknown"),
             elapsed_ms=1,
         )
-        return {"ok": False, "error": "paid_provider_blocked"}
+        return {"ok": False, "status": "failed", "error": "paid_provider_blocked"}
 
     if route_is_paid and not force_paid_providers:
         allowed, budget_msg = execution_service._check_paid_provider_window_budget(
@@ -353,9 +271,43 @@ def _handle_paid_route_guard(
                 model_for_metrics=str(task.get("model") or "unknown"),
                 elapsed_ms=1,
             )
-            return {"ok": False, "error": "paid_provider_window_budget_exceeded"}
+            return {
+                "ok": False,
+                "status": "failed",
+                "error": "paid_provider_window_budget_exceeded",
+            }
 
     return None
+
+
+def _finalize_with_retry(
+    *,
+    task_id: str,
+    task: dict[str, Any],
+    result: dict[str, Any],
+    worker_id: str,
+    force_paid_providers: bool,
+    max_cost_usd: float | None,
+    estimated_cost_usd: float | None,
+    cost_slack_ratio: float | None,
+    retry_depth: int,
+) -> dict[str, Any]:
+    refreshed = execution_service.agent_service.get_task(task_id) or task
+    return retry_service.record_failure_hits_and_retry(
+        task_id=task_id,
+        task=refreshed,
+        result=result,
+        worker_id=worker_id,
+        retry_depth=retry_depth,
+        env_retry_max=execution_service.os.getenv("AGENT_TASK_RETRY_MAX"),
+        pending_status=execution_service.TaskStatus.PENDING,
+        update_task=execution_service.agent_service.update_task,
+        execute_again=execute_task,
+        force_paid_providers=force_paid_providers,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+    )
 
 
 def _resolve_execution_plan(
@@ -367,8 +319,51 @@ def _resolve_execution_plan(
     default_model = execution_service.os.getenv("OPENROUTER_FREE_MODEL", "openrouter/free").strip() or "openrouter/free"
     model = execution_service._resolve_openrouter_model(task, default_model)
     prompt = execution_service._resolve_prompt(task)
-    cost_budget = _resolve_cost_controls(task, max_cost_usd, estimated_cost_usd, cost_slack_ratio)
+    cost_budget = metrics_service.resolve_cost_controls(task, max_cost_usd, estimated_cost_usd, cost_slack_ratio)
     return model, prompt, cost_budget
+
+
+def _handle_empty_prompt_failure(
+    *,
+    task_id: str,
+    task: dict[str, Any],
+    worker_id: str,
+    model: str,
+    force_paid_providers: bool,
+    max_cost_usd: float | None,
+    estimated_cost_usd: float | None,
+    cost_slack_ratio: float | None,
+    retry_depth: int,
+) -> dict[str, Any]:
+    execution_service._record_friction_event(
+        task_id=task_id,
+        task=task,
+        stage="agent_execution",
+        block_type="validation_failure",
+        endpoint="tool:agent-task-execution-summary",
+        severity="high",
+        notes="Execution blocked: empty direction.",
+        energy_loss_estimate=0.0,
+    )
+    failure = _complete_failure(
+        task_id=task_id,
+        task=task,
+        worker_id=worker_id,
+        model=model,
+        elapsed_ms=1,
+        msg="Empty direction",
+    )
+    return _finalize_with_retry(
+        task_id=task_id,
+        task=task,
+        result=failure,
+        worker_id=worker_id,
+        force_paid_providers=force_paid_providers,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+        retry_depth=retry_depth,
+    )
 
 
 def _handle_openrouter_success(
@@ -385,7 +380,7 @@ def _handle_openrouter_success(
     usage_json = str(result.get("usage_json") or "{}")
     request_id = str(result.get("provider_request_id") or "")
     actual_cost_usd = float(result.get("actual_cost_usd") or execution_service._runtime_cost_usd(elapsed_ms))
-    output_metrics = _attribution_values_from_output(content)
+    output_metrics = metrics_service.attribution_values_from_output(content)
 
     _apply_value_attribution(task, output=content, actual_cost_usd=actual_cost_usd)
 
@@ -524,6 +519,7 @@ def execute_task(
     max_cost_usd: float | None = None,
     estimated_cost_usd: float | None = None,
     cost_slack_ratio: float | None = None,
+    _retry_depth: int = 0,
 ) -> dict[str, Any]:
     """Execute a task using OpenRouter (free model by default)."""
     task = execution_service.agent_service.get_task(task_id)
@@ -545,7 +541,17 @@ def execute_task(
         force_paid_providers=force_paid_providers,
     )
     if payment_error is not None:
-        return payment_error
+        return _finalize_with_retry(
+            task_id=task_id,
+            task=task,
+            result=payment_error,
+            worker_id=worker_id,
+            force_paid_providers=force_paid_providers,
+            max_cost_usd=max_cost_usd,
+            estimated_cost_usd=estimated_cost_usd,
+            cost_slack_ratio=cost_slack_ratio,
+            retry_depth=_retry_depth,
+        )
 
     model, prompt, cost_budget = _resolve_execution_plan(
         task,
@@ -553,28 +559,19 @@ def execute_task(
         estimated_cost_usd=estimated_cost_usd,
         cost_slack_ratio=cost_slack_ratio,
     )
-
     if not prompt:
-        execution_service._record_friction_event(
-            task_id=task_id,
-            task=task,
-            stage="agent_execution",
-            block_type="validation_failure",
-            endpoint="tool:agent-task-execution-summary",
-            severity="high",
-            notes="Execution blocked: empty direction.",
-            energy_loss_estimate=0.0,
-        )
-        return _complete_failure(
+        return _handle_empty_prompt_failure(
             task_id=task_id,
             task=task,
             worker_id=worker_id,
             model=model,
-            elapsed_ms=1,
-            msg="Empty direction",
+            force_paid_providers=force_paid_providers,
+            max_cost_usd=max_cost_usd,
+            estimated_cost_usd=estimated_cost_usd,
+            cost_slack_ratio=cost_slack_ratio,
+            retry_depth=_retry_depth,
         )
-
-    return _run_execution(
+    result = _run_execution(
         task_id=task_id,
         task=task,
         route_is_paid=route_is_paid,
@@ -582,4 +579,15 @@ def execute_task(
         model=model,
         prompt=prompt,
         cost_budget=cost_budget,
+    )
+    return _finalize_with_retry(
+        task_id=task_id,
+        task=task,
+        result=result,
+        worker_id=worker_id,
+        force_paid_providers=force_paid_providers,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+        retry_depth=_retry_depth,
     )

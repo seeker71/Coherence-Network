@@ -103,6 +103,112 @@ async def test_execute_endpoint_completes_task_when_openrouter_is_stubbed(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    call_count = {"value": 0}
+    prompt_history: list[str] = []
+
+    def _flaky_chat_completion(**kwargs):
+        prompt_history.append(str(kwargs.get("prompt") or ""))
+        call_count["value"] += 1
+        if call_count["value"] == 1:
+            raise agent_execution_service.OpenRouterError("temporary failure: missing setup")
+        return (
+            "retry-ok",
+            {"prompt_tokens": 2, "completion_tokens": 2, "total_tokens": 4},
+            {"elapsed_ms": 8, "provider_request_id": "req_retry_ok", "response_id": "resp_retry_ok"},
+        )
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _flaky_chat_completion)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Return retry success",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+        fetched = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert fetched.status_code == 200
+        payload = fetched.json()
+        context = payload.get("context") or {}
+
+        assert payload["status"] == "completed"
+        assert payload["output"] == "retry-ok"
+        assert int(context.get("failure_hits", 0)) == 1
+        assert int(context.get("retry_count", 0)) == 1
+        assert "Retry attempt 1" in str(context.get("retry_hint") or "")
+        assert call_count["value"] == 2
+        assert len(prompt_history) == 2
+        assert "Retry guidance" in prompt_history[1]
+        assert "temporary failure" in prompt_history[1]
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_stops_retry_after_single_retry_budget(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    call_count = {"value": 0}
+
+    def _always_fail_chat_completion(**_kwargs):
+        call_count["value"] += 1
+        raise agent_execution_service.OpenRouterError(
+            f"persistent failure attempt {call_count['value']}"
+        )
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _always_fail_chat_completion)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Keep failing to test retry budget",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+        fetched = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert fetched.status_code == 200
+        payload = fetched.json()
+        context = payload.get("context") or {}
+
+        assert payload["status"] == "failed"
+        assert "persistent failure attempt 2" in payload["output"]
+        assert int(context.get("failure_hits", 0)) == 2
+        assert int(context.get("retry_count", 0)) == 1
+        assert call_count["value"] == 2
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_blocks_paid_provider_until_forced(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
