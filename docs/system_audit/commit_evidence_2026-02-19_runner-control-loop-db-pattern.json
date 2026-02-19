@@ -1,6 +1,6 @@
 {
   "date": "2026-02-19",
-  "thread_branch": "HEAD",
+  "thread_branch": "codex/b480",
   "commit_scope": "Add DB-backed agent task/run-state pattern and runner pull-based control loop for abort, diagnostics, and progress telemetry",
   "files_owned": [
     "api/app/models/agent.py",
@@ -57,14 +57,17 @@
     "api/app/routers/agent.py",
     "api/app/services/agent_service.py",
     "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_runner_registry_service.py",
     "api/app/services/agent_task_store_service.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_task_persistence.py",
     "api/tests/test_agent_run_state_api.py",
+    "api/tests/test_agent_runner_registry_api.py",
     "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
     "docs/AGENT-THREAD-RESUME-SPEC.md",
     "web/app/remote-ops/page.tsx",
-    "docs/system_audit/commit_evidence_2026-02-19_runner-control-loop-db-pattern.json"
+    "docs/system_audit/commit_evidence_2026-02-19_runner-control-loop-db-pattern.json",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-registry-control-heartbeat.json"
   ],
   "change_intent": "runtime_feature",
   "local_validation": {

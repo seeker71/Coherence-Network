@@ -265,6 +265,126 @@ def _write_local(payload: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def _normalized_heartbeat(
+    *,
+    runner_id: str,
+    status: str,
+    lease_seconds: int,
+    host: str,
+    pid: int | None,
+    version: str,
+    active_task_id: str,
+    active_run_id: str,
+    last_error: str,
+    capabilities: dict[str, Any] | None,
+    metadata: dict[str, Any] | None,
+) -> dict[str, Any]:
+    now = _now()
+    lease_until = now + timedelta(seconds=_normalize_lease_seconds(lease_seconds))
+    normalized_id = str(runner_id or "").strip()[:200]
+    if not normalized_id:
+        raise ValueError("runner_id is required")
+    merged_metadata: dict[str, Any] = {}
+    merged_metadata.update(_safe_dict(metadata))
+    safe_capabilities = _safe_dict(capabilities)
+    if safe_capabilities:
+        merged_metadata["capabilities"] = safe_capabilities
+    return {
+        "runner_id": normalized_id,
+        "status": _normalize_status(status),
+        "host": str(host or "").strip()[:200],
+        "pid": _safe_int(pid),
+        "version": str(version or "").strip()[:200],
+        "active_task_id": str(active_task_id or "").strip()[:200],
+        "active_run_id": str(active_run_id or "").strip()[:200],
+        "last_error": str(last_error or "").strip()[:2000],
+        "capabilities": safe_capabilities,
+        "metadata": merged_metadata,
+        "now": now,
+        "lease_until": lease_until,
+    }
+
+
+def _heartbeat_local(row: dict[str, Any]) -> dict[str, Any]:
+    with _LOCAL_LOCK:
+        payload = _read_local()
+        runners = payload.setdefault("runners", {})
+        runner_id = str(row["runner_id"])
+        now_iso = _iso(row["now"])
+        runner_row = {
+            "runner_id": runner_id,
+            "status": row["status"],
+            "host": row["host"],
+            "pid": row["pid"],
+            "version": row["version"],
+            "active_task_id": row["active_task_id"],
+            "active_run_id": row["active_run_id"],
+            "last_error": row["last_error"],
+            "metadata": row["metadata"],
+            "lease_expires_at": _iso(row["lease_until"]),
+            "last_seen_at": now_iso,
+            "updated_at": now_iso,
+            "created_at": str((runners.get(runner_id) or {}).get("created_at") or now_iso or ""),
+        }
+        runners[runner_id] = runner_row
+        _write_local(payload)
+        return {
+            "runner_id": runner_row["runner_id"],
+            "status": runner_row["status"],
+            "online": True,
+            "host": runner_row["host"],
+            "pid": runner_row["pid"],
+            "version": runner_row["version"],
+            "active_task_id": runner_row["active_task_id"],
+            "active_run_id": runner_row["active_run_id"],
+            "last_error": runner_row["last_error"],
+            "lease_expires_at": runner_row["lease_expires_at"],
+            "last_seen_at": runner_row["last_seen_at"],
+            "updated_at": runner_row["updated_at"],
+            "metadata": row["metadata"],
+        }
+
+
+def _heartbeat_db(row: dict[str, Any]) -> dict[str, Any]:
+    _ensure_schema()
+    runner_id = str(row["runner_id"])
+    with _session() as session:
+        record = session.get(AgentRunnerRecord, runner_id)
+        if record is None:
+            record = AgentRunnerRecord(
+                runner_id=runner_id,
+                status=str(row["status"]),
+                host=str(row["host"]),
+                pid=row["pid"],
+                version=str(row["version"]),
+                active_task_id=str(row["active_task_id"]),
+                active_run_id=str(row["active_run_id"]),
+                last_error=str(row["last_error"]),
+                capabilities_json=json.dumps(_safe_dict(row.get("capabilities"))),
+                metadata_json=json.dumps(_safe_dict(row.get("metadata"))),
+                lease_expires_at=_aware(row.get("lease_until")),
+                last_seen_at=_aware(row.get("now")),
+                created_at=_aware(row.get("now")),
+                updated_at=_aware(row.get("now")),
+            )
+            session.add(record)
+        else:
+            record.status = str(row["status"])
+            record.host = str(row["host"])
+            record.pid = row["pid"]
+            record.version = str(row["version"])
+            record.active_task_id = str(row["active_task_id"])
+            record.active_run_id = str(row["active_run_id"])
+            record.last_error = str(row["last_error"])
+            record.capabilities_json = json.dumps(_safe_dict(row.get("capabilities")))
+            record.metadata_json = json.dumps(_safe_dict(row.get("metadata")))
+            record.lease_expires_at = _aware(row.get("lease_until"))
+            record.last_seen_at = _aware(row.get("now"))
+            record.updated_at = _aware(row.get("now"))
+        session.flush()
+        return _record_to_payload(record)
+
+
 def heartbeat_runner(
     *,
     runner_id: str,
@@ -279,94 +399,22 @@ def heartbeat_runner(
     capabilities: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    now = _now()
-    lease_until = now + timedelta(seconds=_normalize_lease_seconds(lease_seconds))
-    normalized_id = str(runner_id or "").strip()[:200]
-    if not normalized_id:
-        raise ValueError("runner_id is required")
-    merged_metadata: dict[str, Any] = {}
-    merged_metadata.update(_safe_dict(metadata))
-    safe_capabilities = _safe_dict(capabilities)
-    if safe_capabilities:
-        merged_metadata["capabilities"] = safe_capabilities
-
+    normalized = _normalized_heartbeat(
+        runner_id=runner_id,
+        status=status,
+        lease_seconds=lease_seconds,
+        host=host,
+        pid=pid,
+        version=version,
+        active_task_id=active_task_id,
+        active_run_id=active_run_id,
+        last_error=last_error,
+        capabilities=capabilities,
+        metadata=metadata,
+    )
     if not _database_url():
-        with _LOCAL_LOCK:
-            payload = _read_local()
-            runners = payload.setdefault("runners", {})
-            row = {
-                "runner_id": normalized_id,
-                "status": _normalize_status(status),
-                "host": str(host or "").strip()[:200],
-                "pid": _safe_int(pid),
-                "version": str(version or "").strip()[:200],
-                "active_task_id": str(active_task_id or "").strip()[:200],
-                "active_run_id": str(active_run_id or "").strip()[:200],
-                "last_error": str(last_error or "").strip()[:2000],
-                "metadata": merged_metadata,
-                "lease_expires_at": _iso(lease_until),
-                "last_seen_at": _iso(now),
-                "updated_at": _iso(now),
-                "created_at": str(
-                    (runners.get(normalized_id) or {}).get("created_at")
-                    or _iso(now)
-                    or ""
-                ),
-            }
-            runners[normalized_id] = row
-            _write_local(payload)
-            return {
-                "runner_id": row["runner_id"],
-                "status": row["status"],
-                "online": True,
-                "host": row["host"],
-                "pid": row["pid"],
-                "version": row["version"],
-                "active_task_id": row["active_task_id"],
-                "active_run_id": row["active_run_id"],
-                "last_error": row["last_error"],
-                "lease_expires_at": row["lease_expires_at"],
-                "last_seen_at": row["last_seen_at"],
-                "updated_at": row["updated_at"],
-                "metadata": merged_metadata,
-            }
-
-    _ensure_schema()
-    with _session() as session:
-        record = session.get(AgentRunnerRecord, normalized_id)
-        if record is None:
-            record = AgentRunnerRecord(
-                runner_id=normalized_id,
-                status=_normalize_status(status),
-                host=str(host or "").strip()[:200],
-                pid=_safe_int(pid),
-                version=str(version or "").strip()[:200],
-                active_task_id=str(active_task_id or "").strip()[:200],
-                active_run_id=str(active_run_id or "").strip()[:200],
-                last_error=str(last_error or "").strip()[:2000],
-                capabilities_json=json.dumps(safe_capabilities),
-                metadata_json=json.dumps(merged_metadata),
-                lease_expires_at=lease_until,
-                last_seen_at=now,
-                created_at=now,
-                updated_at=now,
-            )
-            session.add(record)
-        else:
-            record.status = _normalize_status(status)
-            record.host = str(host or "").strip()[:200]
-            record.pid = _safe_int(pid)
-            record.version = str(version or "").strip()[:200]
-            record.active_task_id = str(active_task_id or "").strip()[:200]
-            record.active_run_id = str(active_run_id or "").strip()[:200]
-            record.last_error = str(last_error or "").strip()[:2000]
-            record.capabilities_json = json.dumps(safe_capabilities)
-            record.metadata_json = json.dumps(merged_metadata)
-            record.lease_expires_at = lease_until
-            record.last_seen_at = now
-            record.updated_at = now
-        session.flush()
-        return _record_to_payload(record)
+        return _heartbeat_local(normalized)
+    return _heartbeat_db(normalized)
 
 
 def list_runners(*, include_stale: bool = False, limit: int = 100) -> list[dict[str, Any]]:
