@@ -12,7 +12,11 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
-from app.routers.agent_telegram import format_task_alert, router as telegram_router
+from app.routers.agent_telegram import (
+    format_task_alert,
+    is_runner_task_update,
+    router as telegram_router,
+)
 
 from app.models.agent import (
     AgentRunnerHeartbeat,
@@ -514,7 +518,8 @@ async def update_task(
     background_tasks: BackgroundTasks,
 ) -> AgentTask:
     """Update task. Supports status, output, progress_pct, current_step, decision_prompt, decision.
-    Sends Telegram alert for needs_decision/failed. When decision present and task needs_decision, sets status→running.
+    Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
+    When decision present and task needs_decision, sets status→running.
     """
     if all(
         getattr(data, f) is None
@@ -538,11 +543,12 @@ async def update_task(
         raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    if data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
+    runner_update = is_runner_task_update(worker_id=data.worker_id, context_patch=data.context)
+    if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
-            msg = format_task_alert(task)
+            msg = format_task_alert(task, runner_update=runner_update)
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)
