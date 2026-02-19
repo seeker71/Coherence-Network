@@ -61,7 +61,8 @@
     "python3 scripts/start_gate.py (validated from temporary clean worktree)",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
     "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
-    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_start-gate-clawwork-integration.json"
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_start-gate-clawwork-integration.json",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
   ],
   "change_files": [
     "scripts/start_gate.py",
@@ -87,7 +88,8 @@
     "status": "pass",
     "commands": [
       "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py tests/test_agent_runner_tool_failure_telemetry.py",
-      "python3 -m py_compile scripts/start_gate.py api/app/services/agent_routing_service.py api/app/services/agent_service.py api/app/services/automation_usage_service.py api/scripts/agent_runner.py api/app/services/agent_execution_service.py"
+      "python3 -m py_compile scripts/start_gate.py api/app/services/agent_routing_service.py api/app/services/agent_service.py api/app/services/automation_usage_service.py api/scripts/agent_runner.py api/app/services/agent_execution_service.py",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
     ]
   },
   "e2e_validation": {
