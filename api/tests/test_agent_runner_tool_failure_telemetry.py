@@ -248,6 +248,36 @@ def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatc
     assert "--model gtp-5.3-codex" not in remapped
 
 
+def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-test")
+
+    env = {
+        "OPENAI_API_KEY": "sk-test",
+        "OPENAI_ADMIN_API_KEY": "admin-test",
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session"] is True
+    assert auth["oauth_missing"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
+
+
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
     t = [4000.0]
 
@@ -294,6 +324,66 @@ def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, 
     assert "--model gpt-5-codex" in body
     assert "--model gpt-5.3-codex" not in body
     assert "runner-model-alias" in body
+
+
+def test_run_one_task_records_codex_oauth_auth_context_and_log(monkeypatch, tmp_path):
+    t = [5000.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-runner")
+
+    popen_env: dict[str, str] = {}
+
+    def _popen(*args, **kwargs):
+        env = kwargs.get("env") or {}
+        if isinstance(env, dict):
+            popen_env.update(env)
+        return _Proc(returncode=0, stdout_text="MODEL_OK\n")
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_oauth",
+        command='codex exec --model gpt-5-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5-codex",
+    )
+    assert done is True
+
+    assert popen_env.get("OPENAI_API_KEY", "") == ""
+
+    running_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth") and patch.get("status") == "running"
+    )
+    context = running_patch.get("context") or {}
+    auth = context.get("runner_codex_auth") or {}
+    assert auth.get("requested_mode") == "oauth"
+    assert auth.get("effective_mode") == "oauth"
+    assert auth.get("oauth_session") is True
+    assert auth.get("oauth_missing") is False
+
+    log_file = tmp_path / "task_task_oauth.log"
+    body = log_file.read_text(encoding="utf-8")
+    assert "runner-codex-auth" in body
+    assert "effective_mode=oauth" in body
 
 
 def test_parse_diff_manifestation_blocks_extracts_file_line_ranges():
