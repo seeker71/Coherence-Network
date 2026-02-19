@@ -42,6 +42,7 @@ _WEB_BASE_ENV_KEYS = (
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_WEB_URL",
 )
+_DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
 
 
 def _escape_markdown(text: str) -> str:
@@ -49,6 +50,17 @@ def _escape_markdown(text: str) -> str:
     for ch in ("\\", "`", "*", "_", "[", "]"):
         out = out.replace(ch, f"\\{ch}")
     return out
+
+
+def _normalize_base_url(raw_value: Any) -> str:
+    value = str(raw_value or "").strip()
+    if not value:
+        return ""
+    if value.startswith(("http://", "https://")):
+        return value.rstrip("/")
+    if value.startswith("/"):
+        return ""
+    return f"https://{value.rstrip('/')}"
 
 
 def _coerce_float(value: Any) -> float | None:
@@ -149,23 +161,28 @@ def _resolve_measured_value(
 
 
 def _base_web_url(context: dict[str, Any]) -> str:
-    context_value = str(context.get("web_ui_base_url") or "").strip()
-    if context_value:
-        return context_value
+    for context_key in ("web_ui_base_url", "web_base_url", "web_url"):
+        context_value = _normalize_base_url(context.get(context_key))
+        if context_value:
+            return context_value
     for env_key in _WEB_BASE_ENV_KEYS:
-        value = str(os.getenv(env_key) or "").strip()
+        value = _normalize_base_url(os.getenv(env_key))
         if value:
             return value
-    return ""
+    return _DEFAULT_WEB_BASE_URL
+
+
+def _tasks_web_url(context: dict[str, Any]) -> str:
+    return f"{_base_web_url(context).rstrip('/')}/tasks"
 
 
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     task_path = f"/tasks?task_id={quote(task_id, safe='')}"
     base = _base_web_url(context)
-    if not base:
-        return task_path
     if "/tasks?" in base and "task_id=" in base:
         return base
+    if base.rstrip("/").endswith("/tasks"):
+        return f"{base}?task_id={quote(task_id, safe='')}"
     return f"{base.rstrip('/')}{task_path}"
 
 
@@ -198,6 +215,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     potential_roi, potential_roi_source = _resolve_potential_roi(context, idea_values)
     measured_value, measured_value_source = _resolve_measured_value(context, idea_values)
     task_url = _task_web_url(task_id, context)
+    tasks_url = _tasks_web_url(context)
 
     icon = "⚠️"
     if runner_update:
@@ -212,7 +230,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
         f"Task: {direction}\n"
         f"Status: `{status_str}`\n"
         f"Task ID: `{task_id}`\n"
-        f"Web UI: [open task]({task_url})"
+        f"Web UI: [open task]({task_url}) | [all tasks]({tasks_url})"
     )
     updated_at = str(task.get("updated_at") or task.get("created_at") or "").strip()
     if updated_at:
@@ -270,6 +288,7 @@ def _format_agent_status_reply(summary: dict[str, Any]) -> str:
         reply += f"\nAttention: `{len(needs)}` (use `/attention`)"
     else:
         reply += "\nAttention: `0`"
+    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
     return reply
 
 
@@ -313,7 +332,7 @@ def _format_tasks_reply(
     if status_filter:
         reply += f"\nFilter: `{status_filter}`"
     if not items:
-        return reply + "\nNo matching tasks."
+        return reply + f"\nNo matching tasks.\nWeb UI: [open tasks]({_tasks_web_url({})})"
     for task in items:
         task_id = str(task.get("id") or "").strip()
         status_obj = task.get("status")
@@ -325,12 +344,17 @@ def _format_tasks_reply(
         direction = _escape_markdown(str(task.get("direction") or "").strip())
         if len(direction) > 70:
             direction = f"{direction[:67]}..."
-        reply += f"\n`{task_id}` `{status}` {direction}"
+        task_url = _task_web_url(task_id, _task_context(task))
+        reply += f"\n`{task_id}` `{status}` {direction} [open]({task_url})"
+    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
     return reply
 
 
 def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
     task_id = str(task.get("id") or "").strip()
+    context = _task_context(task)
+    task_url = _task_web_url(task_id, context)
+    tasks_url = _tasks_web_url(context)
     status = task.get("status", "unknown")
     status_str = status.value if hasattr(status, "value") else str(status)
     direction = _escape_markdown(str(task.get("direction") or "").strip())
@@ -347,6 +371,7 @@ def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
         reply += f"\nUpdated: `{updated_at}`"
     if direction:
         reply += f"\nDirection: {direction[:220]}"
+    reply += f"\nWeb UI: [open task]({task_url}) | [all tasks]({tasks_url})"
     reply += f"\nNext: `/task {task_id}`"
     return reply
 
@@ -357,17 +382,19 @@ def _format_attention_reply(items: list[dict[str, Any]], total: int) -> str:
         f"Checked: `{_now_utc_label()}`"
     )
     if not items:
-        return reply + "\nNo attention tasks right now."
+        return reply + f"\nNo attention tasks right now.\nWeb UI: [open tasks]({_tasks_web_url({})})"
     for task in items:
         task_id = str(task.get("id") or "").strip()
         status = str(task.get("status") or "unknown").strip()
         direction = _escape_markdown(str(task.get("direction") or "").strip())
         if len(direction) > 60:
             direction = f"{direction[:57]}..."
-        reply += f"\n`{task_id}` `{status}` {direction}"
+        task_url = _task_web_url(task_id, _task_context(task))
+        reply += f"\n`{task_id}` `{status}` {direction} [open]({task_url})"
         if task.get("decision_prompt"):
             prompt = _escape_markdown(str(task.get("decision_prompt") or "").strip())
             reply += f"\nPrompt: _{prompt[:100]}_"
+    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
     return reply
 
 
@@ -471,7 +498,17 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
             created = agent_service.create_task(
                 AgentTaskCreate(direction=direction, task_type=TaskType.IMPL)
             )
-            reply = f"✅ Task `{created['id']}`\n\nRun:\n`{created['command']}`"
+            created_id = str(created.get("id") or "").strip()
+            created_context = created.get("context")
+            task_url = _task_web_url(
+                created_id,
+                created_context if isinstance(created_context, dict) else {},
+            )
+            reply = (
+                f"✅ Task `{created_id}`\n"
+                f"Web UI: [open task]({task_url})\n\n"
+                f"Run:\n`{created['command']}`"
+            )
     else:
         reply = _help_reply()
 
