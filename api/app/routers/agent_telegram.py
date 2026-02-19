@@ -69,6 +69,12 @@ def _escape_markdown(text: str) -> str:
     return out
 
 
+def _task_id_link_label(task_id: str) -> str:
+    # Task ids are generated internally and should already be safe; do not escape "_" here
+    # because Telegram clients can display the escape character in markdown link labels.
+    return str(task_id or "").strip()
+
+
 def _normalize_base_url(raw_value: Any) -> str:
     value = str(raw_value or "").strip()
     if not value:
@@ -327,7 +333,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     elif status_norm == TaskStatus.NEEDS_DECISION.value:
         icon = "🟡"
     title = "runner update" if runner_update else status_norm
-    task_id_label = _escape_markdown(task_id)
+    task_id_label = _task_id_link_label(task_id)
     msg = (
         f"{icon} *{_escape_markdown(title)}*\n"
         f"Task: {direction}\n"
