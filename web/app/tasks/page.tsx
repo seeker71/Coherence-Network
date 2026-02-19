@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { useLiveRefresh } from "@/lib/live_refresh";
 
 const REQUEST_TIMEOUT_MS = 12000;
+const EVENTS_TIMEOUT_MS = 8000;
+const EVENTS_LIMIT = 500;
 
 type AgentTask = {
   id: string;
@@ -70,18 +72,24 @@ function tailLines(value: string, maxLines: number): string {
 
 async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
-    timeoutMs,
-  );
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<Response>((_, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort(new DOMException("Request timed out", "TimeoutError"));
+      reject(new Error(`Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  const fetchPromise = fetch(input, {
+    ...init,
+    signal: controller.signal,
+    cache: init.cache ?? "no-store",
+  });
+
   try {
-    return await fetch(input, {
-      ...init,
-      signal: controller.signal,
-      cache: init.cache ?? "no-store",
-    });
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } finally {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -91,6 +99,7 @@ function TasksPageContent() {
   const [selectedTask, setSelectedTask] = useState<AgentTask | null>(null);
   const [selectedTaskLog, setSelectedTaskLog] = useState<string>("");
   const [selectedTaskEvents, setSelectedTaskEvents] = useState<RuntimeEvent[]>([]);
+  const [selectedTaskEventsWarning, setSelectedTaskEventsWarning] = useState<string | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
@@ -118,49 +127,57 @@ function TasksPageContent() {
         setSelectedTask(null);
         setSelectedTaskLog("");
         setSelectedTaskEvents([]);
+        setSelectedTaskEventsWarning(null);
       } else {
-        const [taskRes, logRes, eventsRes] = await Promise.all([
+        const [taskResult, logResult, eventsResult] = await Promise.allSettled([
           fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`),
           fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`),
-          fetchWithTimeout("/api/runtime/events?limit=2000"),
+          fetchWithTimeout(`/api/runtime/events?limit=${EVENTS_LIMIT}`, {}, EVENTS_TIMEOUT_MS),
         ]);
 
-        if (taskRes.ok) {
-          const taskPayload = (await taskRes.json()) as AgentTask;
-          setSelectedTask(taskPayload);
+        if (taskResult.status === "fulfilled" && taskResult.value.ok) {
+          const taskPayload = (await taskResult.value.json()) as AgentTask;
+          setSelectedTask(taskPayload ?? null);
         } else {
           setSelectedTask(null);
         }
 
-        if (logRes.ok) {
-          const logPayload = (await logRes.json()) as TaskLogResponse;
+        if (logResult.status === "fulfilled" && logResult.value.ok) {
+          const logPayload = (await logResult.value.json()) as TaskLogResponse;
           setSelectedTaskLog(String(logPayload.log || ""));
         } else {
           setSelectedTaskLog("");
         }
 
-        if (eventsRes.ok) {
-          const eventsPayload = (await eventsRes.json()) as RuntimeEvent[] | { items?: RuntimeEvent[] };
-          const eventsRows = Array.isArray(eventsPayload)
-            ? eventsPayload
-            : Array.isArray(eventsPayload.items)
-              ? eventsPayload.items
+        if (eventsResult.status === "fulfilled") {
+          if (eventsResult.value.ok) {
+            const eventsPayload = (await eventsResult.value.json()) as RuntimeEvent[] | { items?: RuntimeEvent[] };
+            const eventsRows = Array.isArray(eventsPayload)
+              ? eventsPayload
+              : Array.isArray(eventsPayload.items)
+                ? eventsPayload.items
+                : [];
+            const filtered = Array.isArray(eventsRows)
+              ? eventsRows
+                  .filter((event) => {
+                    const metadata = asRecord(event.metadata);
+                    return String(metadata.task_id || "").trim() === taskIdFilter;
+                  })
+                  .sort((a, b) => {
+                    const aTs = new Date(String(a.recorded_at || "")).getTime();
+                    const bTs = new Date(String(b.recorded_at || "")).getTime();
+                    return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
+                  })
               : [];
-          const filtered = Array.isArray(eventsRows)
-            ? eventsRows
-                .filter((event) => {
-                  const metadata = asRecord(event.metadata);
-                  return String(metadata.task_id || "").trim() === taskIdFilter;
-                })
-                .sort((a, b) => {
-                  const aTs = new Date(String(a.recorded_at || "")).getTime();
-                  const bTs = new Date(String(b.recorded_at || "")).getTime();
-                  return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
-                })
-            : [];
-          setSelectedTaskEvents(filtered);
+            setSelectedTaskEvents(filtered);
+            setSelectedTaskEventsWarning(null);
+          } else {
+            setSelectedTaskEvents([]);
+            setSelectedTaskEventsWarning(`HTTP ${eventsResult.value.status}`);
+          }
         } else {
           setSelectedTaskEvents([]);
+          setSelectedTaskEventsWarning(String(eventsResult.reason || "runtime events unavailable"));
         }
       }
 
@@ -369,6 +386,11 @@ function TasksPageContent() {
 
                   <div className="space-y-1">
                     <p className="text-muted-foreground">runtime events for this task</p>
+                    {selectedTaskEventsWarning ? (
+                      <p className="text-muted-foreground">
+                        runtime events unavailable: <code>{selectedTaskEventsWarning}</code>
+                      </p>
+                    ) : null}
                     {evidenceEvents.length === 0 ? (
                       <p className="text-muted-foreground">No runtime events found.</p>
                     ) : (

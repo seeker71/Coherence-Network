@@ -23,12 +23,18 @@ export default function ApiHealthPage() {
       const controller = new AbortController();
       inFlight?.abort();
       inFlight = controller;
-      const timeoutId = setTimeout(
-        () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
-        HEALTH_REQUEST_TIMEOUT_MS,
-      );
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<Response>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort(new DOMException("Request timed out", "TimeoutError"));
+          reject(new Error(`Request timed out after ${HEALTH_REQUEST_TIMEOUT_MS}ms`));
+        }, HEALTH_REQUEST_TIMEOUT_MS);
+      });
 
-      fetch(proxyUrl, { cache: "no-store", signal: controller.signal })
+      Promise.race([
+        fetch(proxyUrl, { cache: "no-store", signal: controller.signal }),
+        timeoutPromise,
+      ])
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
@@ -47,7 +53,7 @@ export default function ApiHealthPage() {
           setLastUpdated(new Date().toLocaleString());
         })
         .finally(() => {
-          clearTimeout(timeoutId);
+          if (timeoutId) clearTimeout(timeoutId);
           if (inFlight === controller) {
             inFlight = null;
           }

@@ -58,14 +58,17 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
   const upstreamUrl = buildUpstreamUrl(path, request.nextUrl.search);
   const method = request.method.toUpperCase();
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
-    UPSTREAM_TIMEOUT_MS,
-  );
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<Response>((_, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort(new DOMException("Request timed out", "TimeoutError"));
+      reject(new Error(`Upstream request timed out after ${UPSTREAM_TIMEOUT_MS}ms`));
+    }, UPSTREAM_TIMEOUT_MS);
+  });
 
   try {
     const body = method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
-    const upstream = await fetch(upstreamUrl, {
+    const fetchPromise = fetch(upstreamUrl, {
       method,
       headers: copyRequestHeaders(request),
       body,
@@ -73,6 +76,7 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
       redirect: "manual",
       signal: controller.signal,
     });
+    const upstream = await Promise.race([fetchPromise, timeoutPromise]);
 
     const headers = copyResponseHeaders(upstream);
     const responseBody = method === "HEAD" ? null : await upstream.arrayBuffer();
@@ -93,7 +97,7 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
       { status: 502 },
     );
   } finally {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
   }
 }
 
