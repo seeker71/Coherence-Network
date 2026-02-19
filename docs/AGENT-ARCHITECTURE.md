@@ -142,3 +142,9 @@ The **Project Manager orchestrator** (`api/scripts/project_manager.py`) automate
 8. **Advance** — when all pass, next backlog item
 
 State: `api/logs/project_manager_state.json`. On `needs_decision`, orchestrator pauses for human `/reply`.
+
+## Observe/React Loop Notes (Runner E2E)
+
+- Observe stable state transitions, not only event volume.
+- React with one targeted diagnostic before retry escalation.
+- Escalate to `needs_decision` when hold-pattern score remains elevated.
