@@ -1,0 +1,366 @@
+{
+  "verified_at_utc": "2026-02-19T20:35:16Z",
+  "scope": {
+    "request": "Wire stale-running/system status into Telegram, validate against real public UI/API, and report links + measurements.",
+    "environment": "production + local_worktree_validation"
+  },
+  "telegram_wiring_local": {
+    "status": "implemented_and_tested",
+    "files": [
+      "api/app/routers/agent_telegram.py",
+      "api/tests/test_agent_telegram_webhook.py"
+    ],
+    "new_behavior": [
+      "/status includes stale-running summary (30m threshold), monitor issue summary, status-report freshness, and public UI/API links.",
+      "/attention includes stale-running summary, monitor issue summary, and public UI links.",
+      "Task alert links default to the real public web UI if no explicit web_ui_base_url is configured."
+    ],
+    "local_validation_commands": [
+      "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_agent_telegram_webhook.py tests/test_telegram_diagnostics_api.py",
+      "cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_monitor_pipeline_stale_running.py tests/test_monitor_pipeline_github_actions.py"
+    ],
+    "local_validation_results": {
+      "telegram_tests": "16 passed",
+      "monitor_tests": "5 passed"
+    }
+  },
+  "public_web_ui_verification": {
+    "base_url": "https://coherence-web-production.up.railway.app",
+    "pages": {
+      "/": 200,
+      "/tasks": 200,
+      "/friction": 200,
+      "/usage": 200,
+      "/gates": 200,
+      "/agent": 200,
+      "/api-health": 200
+    }
+  },
+  "public_api_verification": {
+    "base_url": "https://coherence-network-production.up.railway.app",
+    "endpoint_codes_after_recovery": {
+      "/api/health": 200,
+      "/api/agent/tasks": 200,
+      "/api/agent/pipeline-status": 200,
+      "/api/agent/effectiveness": 200,
+      "/api/agent/monitor-issues": 200,
+      "/api/agent/status-report": 200,
+      "/api/friction/events?status=open&limit=15": 200,
+      "/api/runtime/endpoints/summary?limit=10": 200,
+      "/api/agent/telegram/diagnostics": 200,
+      "/api/automation/usage": 200,
+      "/api/automation/usage/alerts": 200,
+      "/api/automation/usage/readiness": 200,
+      "/api/automation/usage/subscription-estimator": 200
+    },
+    "transient_outage_probe": [
+      {
+        "at_utc": "2026-02-19T20:05:18Z",
+        "web_root": 200,
+        "api_health": 502,
+        "api_tasks": 502
+      },
+      {
+        "at_utc": "2026-02-19T20:05:24Z",
+        "web_root": 200,
+        "api_health": 502,
+        "api_tasks": 502
+      },
+      {
+        "at_utc": "2026-02-19T20:05:29Z",
+        "web_root": 200,
+        "api_health": 200,
+        "api_tasks": 200
+      },
+      {
+        "at_utc": "2026-02-19T20:05:42Z",
+        "web_root": 200,
+        "api_health": 200,
+        "api_tasks": 200
+      },
+      {
+        "at_utc": "2026-02-19T20:06:09Z",
+        "web_root": 200,
+        "api_health": 200,
+        "api_tasks": 200
+      },
+      {
+        "at_utc": "2026-02-19T20:06:29Z",
+        "web_root": 200,
+        "api_health": 200,
+        "api_tasks": 200
+      }
+    ],
+    "followup_probe_after_contract_failure": {
+      "at_utc": "2026-02-19T20:15:00Z",
+      "results": {
+        "https://coherence-web-production.up.railway.app/": 200,
+        "https://coherence-web-production.up.railway.app/api-health": 200,
+        "https://coherence-web-production.up.railway.app/api/health-proxy": 502,
+        "https://coherence-network-production.up.railway.app/api/health": 200,
+        "https://coherence-network-production.up.railway.app/api/agent/tasks": "timeout_20s",
+        "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics": "timeout_20s"
+      }
+    },
+    "latest_probe_unstable_window": {
+      "at_utc": "2026-02-19T20:18:44Z",
+      "results": {
+        "https://coherence-web-production.up.railway.app/": 200,
+        "https://coherence-web-production.up.railway.app/tasks": 200,
+        "https://coherence-web-production.up.railway.app/friction": 200,
+        "https://coherence-web-production.up.railway.app/usage": "timeout_12s",
+        "https://coherence-web-production.up.railway.app/gates": 200,
+        "https://coherence-web-production.up.railway.app/agent": "timeout_12s",
+        "https://coherence-web-production.up.railway.app/api-health": 200,
+        "https://coherence-web-production.up.railway.app/api/health-proxy": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/health": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/agent/tasks": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/agent/effectiveness": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/agent/pipeline-status": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/agent/monitor-issues": 200,
+        "https://coherence-network-production.up.railway.app/api/agent/status-report": 200,
+        "https://coherence-network-production.up.railway.app/api/automation/usage": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/automation/usage/alerts": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/automation/usage/readiness": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/automation/usage/subscription-estimator": "timeout_12s",
+        "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics": "timeout_12s"
+      }
+    },
+    "live_snapshot": {
+      "tasks_summary": {
+        "total": 67,
+        "sample_count": 50,
+        "by_status": {
+          "completed": 33,
+          "failed": 9,
+          "needs_decision": 1,
+          "pending": 1,
+          "running": 6
+        }
+      },
+      "running_stale_over_30m": {
+        "running_count": 7,
+        "stale_count": 5,
+        "stale_task_ids": [
+          "task_00e1beca1e8e4797",
+          "task_baa8e84faa749b1c",
+          "task_85ac555c17bc0f22",
+          "task_be90cb8d82a6dd48",
+          "task_a3272029c2351bbe"
+        ]
+      },
+      "effectiveness": {
+        "success_rate": 0.46
+      },
+      "pipeline_status_contract": {
+        "running_count": null,
+        "pending_count": null,
+        "completed_count": null,
+        "failed_count": null,
+        "health_flags": null,
+        "success_rate": null,
+        "last_updated": null
+      },
+      "monitor_contract": {
+        "monitor_issues_last_check": null,
+        "monitor_issues_count": null,
+        "status_report_generated_at": null,
+        "status_report_overall_health": null
+      },
+      "friction_open_sample": {
+        "sample_size": 15,
+        "open_by_type": {
+          "paid_provider_blocked": 13,
+          "unexpected_execution_exception": 2
+        }
+      },
+      "runtime_hotspots_1h": {
+        "agent_task_completion": {
+          "event_count": 9,
+          "average_runtime_ms": 28199.1504,
+          "status_500_count": 3
+        },
+        "health_proxy": {
+          "event_count": 47,
+          "average_runtime_ms": 2610.8804,
+          "status_502_count": 6
+        },
+        "automation_usage_endpoints": {
+          "usage_avg_ms": 7106.9991,
+          "alerts_avg_ms": 14038.1991,
+          "readiness_avg_ms": 16896.2353,
+          "subscription_estimator_avg_ms": 17530.7535
+        }
+      },
+      "usage": {
+        "generated_at": "2026-02-19T20:07:47.442056Z",
+        "tracked_providers": 11,
+        "unavailable_providers": [
+          "openai",
+          "cursor"
+        ],
+        "limit_coverage_ratio": 0.1
+      },
+      "usage_alerts": {
+        "generated_at": "2026-02-19T20:07:34.964331Z",
+        "alert_count": 2,
+        "alerts": [
+          "openai status=degraded",
+          "cursor status=unavailable"
+        ]
+      },
+      "usage_readiness": {
+        "generated_at": "2026-02-19T20:07:47.996371Z",
+        "readiness": null,
+        "blockers": null,
+        "warnings": null
+      },
+      "subscription_estimator": {
+        "generated_at": "2026-02-19T20:08:11.975267Z",
+        "plan_count": 4,
+        "recommendation": null
+      },
+      "telegram_diagnostics": {
+        "enabled": null,
+        "bot_username": null,
+        "last_report_at": null,
+        "last_report_preview": null
+      }
+    }
+  },
+  "public_deploy_contract_run": {
+    "command": "./scripts/verify_web_api_deploy.sh",
+    "executed_at_utc": "2026-02-19T20:13:44Z",
+    "result": "failed",
+    "failures": [
+      {
+        "target": "https://coherence-network-production.up.railway.app/api/health",
+        "symptom": "timeout_25s"
+      },
+      {
+        "target": "https://coherence-network-production.up.railway.app/api/gates/main-head",
+        "symptom": "timeout_25s"
+      },
+      {
+        "target": "https://coherence-network-production.up.railway.app/api/health/persistence",
+        "symptom": "timeout_25s"
+      },
+      {
+        "target": "https://coherence-web-production.up.railway.app/api/health-proxy",
+        "symptom": "http_502_upstream_api_unreachable"
+      },
+      {
+        "target": "CORS check against /api/health",
+        "symptom": "timeout_25s"
+      }
+    ],
+    "passing_checks": [
+      "https://coherence-web-production.up.railway.app/",
+      "https://coherence-web-production.up.railway.app/gates",
+      "https://coherence-web-production.up.railway.app/api-health"
+    ]
+  },
+  "provider_alerts_current_public": {
+    "checked_at_utc": "2026-02-19T20:33:43Z",
+    "alert_count": 2,
+    "alerts": [
+      "openai usage provider status=degraded",
+      "cursor usage provider status=unavailable"
+    ],
+    "note": "These are expected to be reduced after deploying local alert-filtering changes in automation_usage_service.evaluate_usage_alerts."
+  },
+  "manual_openai_override_retries": {
+    "executed_at_utc": "2026-02-19T20:33:00Z",
+    "source_failed_task_ids": [
+      "task_e79cbb8cb6e27eca",
+      "task_2696dc22b2a4b0a7",
+      "task_b4c49be570ad0e28",
+      "task_94b0fcb08a3c38f9",
+      "task_28917ba93d25de34"
+    ],
+    "created_retry_tasks": [
+      {
+        "retry_task_id": "task_653f454a407ce381",
+        "status": "pending",
+        "model": "openclaw/gpt-5-codex"
+      },
+      {
+        "retry_task_id": "task_dd26e73b122c04a5",
+        "status": "completed",
+        "model": "openclaw/gpt-5-codex"
+      },
+      {
+        "retry_task_id": "task_235a3610d6e62cca",
+        "status": "completed",
+        "model": "openclaw/gpt-5-codex"
+      },
+      {
+        "retry_task_id": "task_2ce5a2c007413aaa",
+        "status": "running",
+        "model": "openclaw/gpt-5-codex"
+      },
+      {
+        "retry_task_id": "task_9e0ee9a10c74f494",
+        "status": "running",
+        "model": "openclaw/gpt-5-codex"
+      }
+    ],
+    "retry_context": {
+      "executor": "openclaw",
+      "model_override": "gpt-5-codex",
+      "force_paid_providers": true,
+      "force_paid_override_source": "manual_retry_openai_override",
+      "retry_strategy": "openai_override"
+    }
+  },
+  "production_gap": {
+    "status": "pending_deploy_verification",
+    "notes": [
+      "Local Telegram wiring is implemented and passing tests.",
+      "Public API diagnostics currently return null Telegram state, so live report formatting cannot yet prove new /status and /attention message text.",
+      "Public deploy contract check failed due API timeouts/502 during this verification window; rerun once API stabilizes.",
+      "Re-run diagnostics after deploying this worktree to verify live Telegram report content includes absolute public links and stale-running summary."
+    ]
+  },
+  "real_system_links": {
+    "web_ui": [
+      "https://coherence-web-production.up.railway.app/",
+      "https://coherence-web-production.up.railway.app/tasks",
+      "https://coherence-web-production.up.railway.app/friction",
+      "https://coherence-web-production.up.railway.app/usage",
+      "https://coherence-web-production.up.railway.app/gates",
+      "https://coherence-web-production.up.railway.app/agent",
+      "https://coherence-web-production.up.railway.app/api-health"
+    ],
+    "api": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/pipeline-status",
+      "https://coherence-network-production.up.railway.app/api/agent/effectiveness",
+      "https://coherence-network-production.up.railway.app/api/agent/monitor-issues",
+      "https://coherence-network-production.up.railway.app/api/agent/status-report",
+      "https://coherence-network-production.up.railway.app/api/friction/events?status=open&limit=15",
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary?limit=10",
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/alerts",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/subscription-estimator",
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics"
+    ]
+  },
+  "captured_commands": [
+    "curl https://coherence-web-production.up.railway.app/{/,tasks,friction,usage,gates,agent,api-health}",
+    "curl https://coherence-network-production.up.railway.app/api/agent/tasks?limit=50",
+    "curl https://coherence-network-production.up.railway.app/api/agent/effectiveness",
+    "curl https://coherence-network-production.up.railway.app/api/agent/pipeline-status",
+    "curl https://coherence-network-production.up.railway.app/api/agent/monitor-issues",
+    "curl https://coherence-network-production.up.railway.app/api/agent/status-report",
+    "curl https://coherence-network-production.up.railway.app/api/friction/events?status=open&limit=15",
+    "curl https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary?limit=10",
+    "curl https://coherence-network-production.up.railway.app/api/automation/usage",
+    "curl https://coherence-network-production.up.railway.app/api/automation/usage/alerts",
+    "curl https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+    "curl https://coherence-network-production.up.railway.app/api/automation/usage/subscription-estimator",
+    "curl https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics"
+  ]
+}

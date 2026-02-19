@@ -361,6 +361,125 @@ async def test_telegram_status_command_reports_checked_and_attention(
     assert "Web UI: [open tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
 
 
+@pytest.mark.asyncio
+async def test_telegram_status_includes_public_links_and_stale_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+    sent: dict[str, str] = {}
+
+    async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
+        sent["chat_id"] = str(chat_id)
+        sent["message"] = message
+        sent["parse_mode"] = parse_mode
+        return True
+
+    monkeypatch.setattr("app.services.telegram_adapter.send_reply", _fake_send_reply)
+    monkeypatch.setattr(
+        "app.services.agent_service.get_review_summary",
+        lambda: {
+            "total": 4,
+            "by_status": {"running": 1, "failed": 1, "completed": 2},
+            "needs_attention": [{"id": "task_a"}],
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.agent_service.get_pipeline_status",
+        lambda: {
+            "running": [{"id": "task_orphan_1", "running_seconds": 2500}],
+            "pending": [],
+            "recent_completed": [{"id": "task_done_1"}],
+            "attention": {"flags": ["low_success_rate"]},
+        },
+    )
+    monkeypatch.setattr(
+        "app.routers.agent_telegram._load_monitor_issues",
+        lambda: {
+            "issues": [
+                {
+                    "condition": "orphan_running",
+                    "severity": "high",
+                    "message": "running task exceeded stale threshold",
+                }
+            ],
+            "last_check": "2026-02-19T19:50:00Z",
+        },
+    )
+    monkeypatch.setattr(
+        "app.routers.agent_telegram._load_status_report",
+        lambda: {"generated_at": "2026-02-19T19:49:30Z", "layer_3_attention": {"status": "needs_attention"}},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/agent/telegram/webhook",
+            json=_telegram_update("/status"),
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert sent["chat_id"] == "2002"
+    assert "Stale running (>30m): `1`" in sent["message"]
+    assert "task_orphan_1" in sent["message"]
+    assert "Monitor issues: `1` (orphan\\_running)" in sent["message"]
+    assert "https://coherence-web-production.up.railway.app/tasks" in sent["message"]
+    assert "https://coherence-network-production.up.railway.app/api/agent/pipeline-status" in sent["message"]
+
+
+@pytest.mark.asyncio
+async def test_telegram_attention_includes_monitor_summary_and_public_links(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+    sent: dict[str, str] = {}
+
+    async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
+        sent["chat_id"] = str(chat_id)
+        sent["message"] = message
+        sent["parse_mode"] = parse_mode
+        return True
+
+    monkeypatch.setattr("app.services.telegram_adapter.send_reply", _fake_send_reply)
+    monkeypatch.setattr(
+        "app.services.agent_service.get_attention_tasks",
+        lambda limit=10: (
+            [{"id": "task_fail_1", "status": "failed", "direction": "Retry stale orphan recovery path"}],
+            1,
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.agent_service.get_pipeline_status",
+        lambda: {"running": [{"id": "task_orphan_2", "running_seconds": 2200}]},
+    )
+    monkeypatch.setattr(
+        "app.routers.agent_telegram._load_monitor_issues",
+        lambda: {
+            "issues": [
+                {
+                    "condition": "orphan_running",
+                    "severity": "high",
+                    "message": "2 running task(s) exceeded stale threshold 1800s",
+                }
+            ],
+            "last_check": "2026-02-19T19:52:00Z",
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/agent/telegram/webhook",
+            json=_telegram_update("/attention"),
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert sent["chat_id"] == "2002"
+    assert "Stale running (>30m): `1`" in sent["message"]
+    assert "Monitor issues: `1`" in sent["message"]
+    assert "`orphan_running` `high`" in sent["message"]
+    assert "https://coherence-web-production.up.railway.app/friction" in sent["message"]
+
+
 def test_format_task_alert_includes_updated_and_action() -> None:
     task = {
         "id": "task_123",
@@ -374,6 +493,17 @@ def test_format_task_alert_includes_updated_and_action() -> None:
     assert "Action: `/reply task_123 <decision>`" in message
     assert "[open task](https://coherence-web-production.up.railway.app/tasks?task_id=task_123)" in message
     assert "[all tasks](https://coherence-web-production.up.railway.app/tasks)" in message
+
+
+def test_format_task_alert_defaults_to_public_web_ui_link() -> None:
+    task = {
+        "id": "task_link_1",
+        "status": "failed",
+        "direction": "Investigate stale-running monitor issue",
+        "context": {},
+    }
+    message = format_task_alert(task)
+    assert "https://coherence-web-production.up.railway.app/tasks?task_id=task_link_1" in message
 
 
 @pytest.mark.asyncio
