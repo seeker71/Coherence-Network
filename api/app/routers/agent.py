@@ -12,9 +12,20 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
-from app.routers.agent_telegram import format_task_alert, router as telegram_router
+from app.routers.agent_telegram import (
+    format_task_alert,
+    is_runner_task_update,
+    router as telegram_router,
+)
 
 from app.models.agent import (
+    AgentRunnerHeartbeat,
+    AgentRunnerList,
+    AgentRunnerSnapshot,
+    AgentRunStateClaim,
+    AgentRunStateHeartbeat,
+    AgentRunStateSnapshot,
+    AgentRunStateUpdate,
     AgentTask,
     AgentTaskCreate,
     AgentTaskList,
@@ -26,7 +37,7 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_service
+from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -195,6 +206,80 @@ async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) 
     else:
         task = agent_service.create_task(data)
     return AgentTask(**_task_to_full(task))
+
+
+@router.post("/agent/run-state/claim", response_model=AgentRunStateSnapshot)
+async def claim_run_state(data: AgentRunStateClaim) -> dict:
+    """Claim or refresh an execution lease for task-level run ownership."""
+    return agent_run_state_service.claim_run_state(
+        task_id=data.task_id,
+        run_id=data.run_id,
+        worker_id=data.worker_id,
+        lease_seconds=data.lease_seconds,
+        attempt=data.attempt,
+        branch=data.branch or "",
+        repo_path=data.repo_path or "",
+        metadata=data.metadata if isinstance(data.metadata, dict) else None,
+    )
+
+
+@router.post("/agent/run-state/heartbeat", response_model=AgentRunStateSnapshot)
+async def heartbeat_run_state(data: AgentRunStateHeartbeat) -> dict:
+    return agent_run_state_service.heartbeat_run_state(
+        task_id=data.task_id,
+        run_id=data.run_id,
+        worker_id=data.worker_id,
+        lease_seconds=data.lease_seconds,
+    )
+
+
+@router.post("/agent/run-state/update", response_model=AgentRunStateSnapshot)
+async def update_run_state(data: AgentRunStateUpdate) -> dict:
+    return agent_run_state_service.update_run_state(
+        task_id=data.task_id,
+        run_id=data.run_id,
+        worker_id=data.worker_id,
+        patch=data.patch if isinstance(data.patch, dict) else {},
+        lease_seconds=data.lease_seconds,
+        require_owner=bool(data.require_owner),
+    )
+
+
+@router.get("/agent/run-state/{task_id}", response_model=AgentRunStateSnapshot)
+async def get_run_state(task_id: str) -> dict:
+    state = agent_run_state_service.get_run_state(task_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Run state not found")
+    return state
+
+
+@router.post("/agent/runners/heartbeat", response_model=AgentRunnerSnapshot)
+async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
+    return agent_runner_registry_service.heartbeat_runner(
+        runner_id=data.runner_id,
+        status=data.status,
+        lease_seconds=data.lease_seconds,
+        host=data.host or "",
+        pid=data.pid,
+        version=data.version or "",
+        active_task_id=data.active_task_id or "",
+        active_run_id=data.active_run_id or "",
+        last_error=data.last_error or "",
+        capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
+        metadata=data.metadata if isinstance(data.metadata, dict) else None,
+    )
+
+
+@router.get("/agent/runners", response_model=AgentRunnerList)
+async def list_runners(
+    include_stale: bool = Query(False),
+    limit: int = Query(100, ge=1, le=500),
+) -> AgentRunnerList:
+    rows = agent_runner_registry_service.list_runners(include_stale=include_stale, limit=limit)
+    return AgentRunnerList(
+        runners=[AgentRunnerSnapshot(**row) for row in rows],
+        total=len(rows),
+    )
 
 
 @router.post(
@@ -433,7 +518,8 @@ async def update_task(
     background_tasks: BackgroundTasks,
 ) -> AgentTask:
     """Update task. Supports status, output, progress_pct, current_step, decision_prompt, decision.
-    Sends Telegram alert for needs_decision/failed. When decision present and task needs_decision, sets status→running.
+    Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
+    When decision present and task needs_decision, sets status→running.
     """
     if all(
         getattr(data, f) is None
@@ -457,11 +543,12 @@ async def update_task(
         raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    if data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
+    runner_update = is_runner_task_update(worker_id=data.worker_id, context_patch=data.context)
+    if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
-            msg = format_task_alert(task)
+            msg = format_task_alert(task, runner_update=runner_update)
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)

@@ -155,3 +155,84 @@ class RouteResponse(BaseModel):
     provider: Optional[str] = None
     billing_provider: Optional[str] = None
     is_paid_provider: Optional[bool] = None
+
+
+class AgentRunStateClaim(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    lease_seconds: int = Field(default=120, ge=15, le=3600)
+    attempt: int = Field(default=1, ge=1, le=100000)
+    branch: Optional[str] = Field(default=None, max_length=300)
+    repo_path: Optional[str] = Field(default=None, max_length=2000)
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunStateUpdate(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    patch: Dict[str, Any] = Field(default_factory=dict)
+    lease_seconds: Optional[int] = Field(default=None, ge=15, le=3600)
+    require_owner: bool = True
+
+
+class AgentRunStateHeartbeat(BaseModel):
+    task_id: str = Field(..., min_length=1, max_length=200)
+    run_id: str = Field(..., min_length=1, max_length=200)
+    worker_id: str = Field(..., min_length=1, max_length=200)
+    lease_seconds: int = Field(default=120, ge=15, le=3600)
+
+
+class AgentRunStateSnapshot(BaseModel):
+    claimed: bool
+    task_id: str
+    run_id: Optional[str] = None
+    worker_id: Optional[str] = None
+    status: Optional[str] = None
+    attempt: Optional[int] = None
+    branch: Optional[str] = None
+    repo_path: Optional[str] = None
+    head_sha: Optional[str] = None
+    checkpoint_sha: Optional[str] = None
+    failure_class: Optional[str] = None
+    next_action: Optional[str] = None
+    lease_expires_at: Optional[str] = None
+    last_heartbeat_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    detail: Optional[str] = None
+
+
+class AgentRunnerHeartbeat(BaseModel):
+    runner_id: str = Field(..., min_length=1, max_length=200)
+    status: str = Field(default="idle", min_length=1, max_length=50)
+    lease_seconds: int = Field(default=90, ge=10, le=3600)
+    host: Optional[str] = Field(default=None, max_length=200)
+    pid: Optional[int] = Field(default=None, ge=1, le=2_147_483_647)
+    version: Optional[str] = Field(default=None, max_length=200)
+    active_task_id: Optional[str] = Field(default=None, max_length=200)
+    active_run_id: Optional[str] = Field(default=None, max_length=200)
+    last_error: Optional[str] = Field(default=None, max_length=2000)
+    capabilities: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunnerSnapshot(BaseModel):
+    runner_id: str
+    status: str
+    online: bool
+    host: Optional[str] = None
+    pid: Optional[int] = None
+    version: Optional[str] = None
+    active_task_id: Optional[str] = None
+    active_run_id: Optional[str] = None
+    last_error: Optional[str] = None
+    lease_expires_at: Optional[str] = None
+    last_seen_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunnerList(BaseModel):
+    runners: List[AgentRunnerSnapshot]
+    total: int

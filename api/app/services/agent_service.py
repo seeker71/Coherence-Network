@@ -13,6 +13,7 @@ from typing import Any, List, Optional, Tuple
 from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_routing_service as routing_service
+from app.services import agent_task_store_service
 
 # Routing decisions and provider classification live in agent_routing_service.
 ROUTING = routing_service.ROUTING
@@ -522,6 +523,14 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
 def _load_store_from_disk() -> dict[str, dict[str, Any]]:
     if not _persistence_enabled():
         return {}
+    if agent_task_store_service.enabled():
+        loaded: dict[str, dict[str, Any]] = {}
+        for raw in agent_task_store_service.load_tasks():
+            task = _deserialize_task(raw)
+            if not task:
+                continue
+            loaded[task["id"]] = task
+        return loaded
     path = _store_path()
     if not path.exists():
         return {}
@@ -544,6 +553,10 @@ def _load_store_from_disk() -> dict[str, dict[str, Any]]:
 def _save_store_to_disk() -> None:
     if not _persistence_enabled():
         return
+    if agent_task_store_service.enabled():
+        for task in _store.values():
+            agent_task_store_service.upsert_task(_serialize_task(task))
+        return
     path = _store_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -564,6 +577,15 @@ def _ensure_store_loaded() -> None:
         _store_loaded = False
         _store_loaded_path = None
         _store_loaded_test_context = current_test
+
+    # In DB mode we reload on every call so multi-instance workers observe fresh state.
+    if agent_task_store_service.enabled():
+        _store.clear()
+        _store.update(_load_store_from_disk())
+        _store_loaded = True
+        _store_loaded_path = current_path
+        _store_loaded_test_context = current_test
+        return
 
     if _store_loaded and _store_loaded_path == current_path:
         return
@@ -880,7 +902,10 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "tier": tier,
     }
     _store[task_id] = task
-    _save_store_to_disk()
+    if agent_task_store_service.enabled():
+        agent_task_store_service.upsert_task(_serialize_task(task))
+    else:
+        _save_store_to_disk()
     return task
 
 
@@ -1110,7 +1135,10 @@ def update_task(
         task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
-    _save_store_to_disk()
+    if agent_task_store_service.enabled():
+        agent_task_store_service.upsert_task(_serialize_task(task))
+    else:
+        _save_store_to_disk()
     return task
 
 
@@ -1606,7 +1634,10 @@ def upsert_active_task(
     if existing is not None:
         _claim_running_task(existing, worker_id)
         existing["updated_at"] = _now()
-        _save_store_to_disk()
+        if agent_task_store_service.enabled():
+            agent_task_store_service.upsert_task(_serialize_task(existing))
+        else:
+            _save_store_to_disk()
         return existing, False
 
     payload_context = dict(context or {})
@@ -1621,7 +1652,10 @@ def upsert_active_task(
     )
     _claim_running_task(created, worker_id)
     created["updated_at"] = _now()
-    _save_store_to_disk()
+    if agent_task_store_service.enabled():
+        agent_task_store_service.upsert_task(_serialize_task(created))
+    else:
+        _save_store_to_disk()
     return created, True
 
 
@@ -1661,4 +1695,7 @@ def clear_store() -> None:
     """Clear in-memory store (for testing)."""
     _ensure_store_loaded()
     _store.clear()
-    _save_store_to_disk()
+    if agent_task_store_service.enabled():
+        agent_task_store_service.clear_tasks()
+    else:
+        _save_store_to_disk()
