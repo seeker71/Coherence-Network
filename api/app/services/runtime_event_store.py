@@ -107,11 +107,8 @@ def ensure_schema() -> None:
     global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
     url = _database_url()
     if _SCHEMA_INITIALIZED and _SCHEMA_INITIALIZED_URL == url:
-        engine = _engine()
-        if engine is not None and _table_exists(engine, "runtime_events"):
-            return
-        _SCHEMA_INITIALIZED = False
-        _SCHEMA_INITIALIZED_URL = ""
+        # Hot path: avoid table introspection on every write once initialized.
+        return
     engine = _engine()
     if engine is None or not url:
         return
