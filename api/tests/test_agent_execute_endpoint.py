@@ -209,6 +209,62 @@ async def test_execute_endpoint_stops_retry_after_single_retry_budget(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_override(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
+    monkeypatch.setenv("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "1")
+    monkeypatch.setenv("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "gpt-5-codex")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    call_count = {"value": 0}
+
+    def _paid_retry_success(**_kwargs):
+        call_count["value"] += 1
+        return (
+            "paid-retry-ok",
+            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
+            {"elapsed_ms": 5, "provider_request_id": "req_paid_retry", "response_id": "resp_paid_retry"},
+        )
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _paid_retry_success)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Retry paid route with override",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+        fetched = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert fetched.status_code == 200
+        payload = fetched.json()
+        context = payload.get("context") or {}
+
+        assert payload["status"] == "completed"
+        assert payload["output"] == "paid-retry-ok"
+        assert int(context.get("failure_hits", 0)) == 1
+        assert int(context.get("retry_count", 0)) == 1
+        assert context.get("retry_paid_override_applied") is True
+        assert context.get("force_paid_providers") is True
+        assert context.get("force_paid_override_source") == "auto_retry_openai_override"
+        assert context.get("model_override") == "gpt-5-codex"
+        assert call_count["value"] == 1
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_blocks_paid_provider_until_forced(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
