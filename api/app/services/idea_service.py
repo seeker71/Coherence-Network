@@ -495,6 +495,10 @@ def get_idea(idea_id: str) -> IdeaWithScore | None:
     for idea in _read_ideas():
         if idea.id == idea_id:
             return _with_score(idea)
+    # Some runtime/inventory idea ids are derived and may not be persisted in the
+    # portfolio store yet. Expose them so UI links remain walkable.
+    if idea_id in DERIVED_IDEA_METADATA:
+        return _with_score(_derived_idea_for_id(idea_id))
     return None
 
 
