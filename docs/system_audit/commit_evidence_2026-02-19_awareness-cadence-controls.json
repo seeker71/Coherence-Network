@@ -3,7 +3,11 @@
   "thread_branch": "codex/b480",
   "commit_scope": "Enforce runner cadence controls (minimum retry delay, diagnostic cooldown, intervention frequency) and extend awareness quality with transition, hold-pattern, ROI-conversion, and cost-per-success metrics.",
   "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
     "api/scripts/agent_runner.py",
+    "api/tests/test_agent_integration_api.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "docs/system_audit/commit_evidence_2026-02-19_awareness-cadence-controls.json"
   ],
@@ -36,7 +40,11 @@
     "Awareness quality now reports state_transition_quality, hold_pattern_rate, estimated_to_measured_roi_conversion, and cost_per_successful_transition"
   ],
   "change_files": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
     "api/scripts/agent_runner.py",
+    "api/tests/test_agent_integration_api.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "docs/system_audit/commit_evidence_2026-02-19_awareness-cadence-controls.json"
   ],
