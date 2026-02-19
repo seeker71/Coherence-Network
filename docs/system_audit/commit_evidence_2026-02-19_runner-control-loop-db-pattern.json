@@ -1,0 +1,104 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "HEAD",
+  "commit_scope": "Add DB-backed agent task/run-state pattern and runner pull-based control loop for abort, diagnostics, and progress telemetry",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_run_state_api.py",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "docs/AGENT-THREAD-RESUME-SPEC.md",
+    "web/app/remote-ops/page.tsx"
+  ],
+  "idea_ids": [
+    "agent-runner-public-control-plane"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_runner_db_backed_control_loop"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest -q api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py",
+    "make start-gate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-control-loop-db-pattern.json"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_run_state_api.py",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "docs/AGENT-THREAD-RESUME-SPEC.md",
+    "web/app/remote-ops/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-control-loop-db-pattern.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "make start-gate",
+      "pytest -q api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local/CI/deploy validation pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public worker fleet can coordinate task ownership, diagnostics, and abort controls via API-polled context while preserving local checkpoint and resume behavior.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/run-state/claim",
+      "/api/agent/run-state/update"
+    ],
+    "test_flows": [
+      "runner picks task, claims lease, executes command, updates progress",
+      "runner polls control state and aborts on request",
+      "runner executes diagnostic request and posts result"
+    ]
+  }
+}

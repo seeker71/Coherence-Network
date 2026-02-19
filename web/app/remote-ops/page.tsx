@@ -135,6 +135,9 @@ export default function RemoteOpsPage() {
   const [executor, setExecutor] = useState("openclaw");
   const [modelOverride, setModelOverride] = useState("");
   const [forcePaid, setForcePaid] = useState(false);
+  const [runAsPrThread, setRunAsPrThread] = useState(false);
+  const [autoMergePr, setAutoMergePr] = useState(false);
+  const [waitPublic, setWaitPublic] = useState(false);
   const [executeToken, setExecuteToken] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -298,6 +301,12 @@ export default function RemoteOpsPage() {
       };
       if (forcePaid) context.force_paid_providers = true;
       if (modelOverride.trim()) context.model_override = modelOverride.trim();
+      if (runAsPrThread) {
+        context.execution_mode = "pr";
+        context.create_pr = true;
+      }
+      if (autoMergePr) context.auto_merge_pr = true;
+      if (waitPublic) context.wait_public = true;
 
       const res = await fetch(`${API_URL}/api/agent/tasks`, {
         method: "POST",
@@ -326,6 +335,9 @@ export default function RemoteOpsPage() {
       if (!json.id) throw new Error("Task id missing in response");
       setDirection("");
       setModelOverride("");
+      setRunAsPrThread(false);
+      setAutoMergePr(false);
+      setWaitPublic(false);
       setRunningMessage(`Created task ${json.id}`);
       setStatus("idle");
       await runTask(json.id);
@@ -469,6 +481,30 @@ export default function RemoteOpsPage() {
               onChange={(e) => setForcePaid(e.target.checked)}
             />
             Force paid provider override
+          </label>
+          <label className="text-sm md:col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={runAsPrThread}
+              onChange={(e) => setRunAsPrThread(e.target.checked)}
+            />
+            Run as Codex thread (create PR)
+          </label>
+          <label className="text-sm md:col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={autoMergePr}
+              onChange={(e) => setAutoMergePr(e.target.checked)}
+            />
+            Auto-merge PR when checks are ready
+          </label>
+          <label className="text-sm md:col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={waitPublic}
+              onChange={(e) => setWaitPublic(e.target.checked)}
+            />
+            Wait for public deploy validation before completion
           </label>
         </div>
 
