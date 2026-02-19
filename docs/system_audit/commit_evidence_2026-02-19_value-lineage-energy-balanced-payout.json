@@ -1,7 +1,7 @@
 {
   "date": "2026-02-19",
   "thread_branch": "codex/value-lineage-energy-payout-20260219",
-  "commit_scope": "Extend value-lineage attribution to support contributor investments across idea, research, spec creation/upgrades, implementation, and review with an energy-balanced payout schema.",
+  "commit_scope": "Extend value-lineage attribution to support contributor investments across idea, research, spec creation/upgrades, implementation, and review with an energy-balanced payout schema, and bring spec 048 up to quality-gate completeness.",
   "files_owned": [
     "api/app/models/value_lineage.py",
     "api/app/services/value_lineage_service.py",
@@ -47,7 +47,8 @@
     "./scripts/verify_worktree_local_web.sh --start",
     "cd api && pytest -q tests/test_value_lineage.py",
     "cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections",
-    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_spec_quality.py --file specs/048-value-lineage-and-payout-attribution.md"
   ],
   "change_files": [
     "api/app/models/value_lineage.py",
@@ -79,7 +80,8 @@
       "./scripts/verify_worktree_local_web.sh --start",
       "cd api && pytest -q tests/test_value_lineage.py",
       "cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections",
-      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "python3 scripts/validate_spec_quality.py --file specs/048-value-lineage-and-payout-attribution.md"
     ]
   },
   "ci_validation": {
