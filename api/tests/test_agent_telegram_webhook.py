@@ -376,6 +376,20 @@ def test_format_task_alert_includes_updated_and_action() -> None:
     assert "[all tasks](https://coherence-web-production.up.railway.app/tasks)" in message
 
 
+def test_format_runner_update_card_uses_clean_title_and_links() -> None:
+    task = {
+        "id": "taskrunner123",
+        "status": "running",
+        "direction": "Stream runner progress",
+        "context": {},
+    }
+    message = format_task_alert(task, runner_update=True)
+    assert "*runner update*" in message
+    assert "runner\\_update" not in message
+    assert "Task ID: [taskrunner123](https://coherence-web-production.up.railway.app/tasks?task_id=taskrunner123)" in message
+    assert "Railway logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/taskrunner123/log)" in message
+
+
 @pytest.mark.asyncio
 async def test_telegram_tasks_command_renders_status_values(
     monkeypatch: pytest.MonkeyPatch,

@@ -43,6 +43,18 @@ _WEB_BASE_ENV_KEYS = (
     "NEXT_PUBLIC_WEB_URL",
 )
 _DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
+_API_BASE_ENV_KEYS = (
+    "AGENT_API_BASE_URL",
+    "API_BASE_URL",
+    "PUBLIC_APP_URL",
+    "NEXT_PUBLIC_APP_URL",
+)
+_DEFAULT_API_BASE_URL = "https://coherence-network-production.up.railway.app"
+_RAILWAY_LOGS_ENV_KEYS = (
+    "AGENT_RAILWAY_LOGS_URL",
+    "RAILWAY_LOGS_URL",
+    "RAILWAY_DEPLOY_LOGS_URL",
+)
 
 
 def _escape_markdown(text: str) -> str:
@@ -176,6 +188,18 @@ def _tasks_web_url(context: dict[str, Any]) -> str:
     return f"{_base_web_url(context).rstrip('/')}/tasks"
 
 
+def _base_api_url(context: dict[str, Any]) -> str:
+    for context_key in ("api_base_url", "api_url", "public_api_url"):
+        context_value = _normalize_base_url(context.get(context_key))
+        if context_value:
+            return context_value
+    for env_key in _API_BASE_ENV_KEYS:
+        value = _normalize_base_url(os.getenv(env_key))
+        if value:
+            return value
+    return _DEFAULT_API_BASE_URL
+
+
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     task_path = f"/tasks?task_id={quote(task_id, safe='')}"
     base = _base_web_url(context)
@@ -184,6 +208,26 @@ def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     if base.rstrip("/").endswith("/tasks"):
         return f"{base}?task_id={quote(task_id, safe='')}"
     return f"{base.rstrip('/')}{task_path}"
+
+
+def _task_log_url(task_id: str, context: dict[str, Any]) -> str:
+    return f"{_base_api_url(context).rstrip('/')}/api/agent/tasks/{quote(task_id, safe='')}/log"
+
+
+def _railway_logs_url(task_id: str, context: dict[str, Any]) -> str:
+    for context_key in ("railway_logs_url", "railway_log_url"):
+        context_value = str(context.get(context_key) or "").strip()
+        if context_value:
+            if "{task_id}" in context_value:
+                return context_value.replace("{task_id}", quote(task_id, safe=""))
+            return context_value
+    for env_key in _RAILWAY_LOGS_ENV_KEYS:
+        env_value = str(os.getenv(env_key) or "").strip()
+        if env_value:
+            if "{task_id}" in env_value:
+                return env_value.replace("{task_id}", quote(task_id, safe=""))
+            return env_value
+    return _task_log_url(task_id, context)
 
 
 def is_runner_task_update(worker_id: str | None = None, context_patch: dict[str, Any] | None = None) -> bool:
@@ -216,6 +260,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     measured_value, measured_value_source = _resolve_measured_value(context, idea_values)
     task_url = _task_web_url(task_id, context)
     tasks_url = _tasks_web_url(context)
+    logs_url = _railway_logs_url(task_id, context) if task_id else ""
 
     icon = "⚠️"
     if runner_update:
@@ -224,14 +269,17 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
         icon = "❌"
     elif status_norm == TaskStatus.NEEDS_DECISION.value:
         icon = "🟡"
-    title = "runner_update" if runner_update else status_norm
+    title = "runner update" if runner_update else status_norm
+    task_id_label = _escape_markdown(task_id)
     msg = (
         f"{icon} *{_escape_markdown(title)}*\n"
         f"Task: {direction}\n"
         f"Status: `{status_str}`\n"
-        f"Task ID: `{task_id}`\n"
+        f"Task ID: [{task_id_label}]({task_url})\n"
         f"Web UI: [open task]({task_url}) | [all tasks]({tasks_url})"
     )
+    if runner_update and task_id and logs_url:
+        msg += f"\nRailway logs: [open logs]({logs_url})"
     updated_at = str(task.get("updated_at") or task.get("created_at") or "").strip()
     if updated_at:
         msg += f"\nUpdated: `{updated_at}`"
