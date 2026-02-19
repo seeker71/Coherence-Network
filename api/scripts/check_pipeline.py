@@ -332,6 +332,9 @@ def main():
                 print(f"  Waiting on: {pm['current_task_id']}")
             if pm.get("blocked"):
                 print("  (blocked by needs_decision)")
+        else:
+            # Keep output contract stable for downstream checks expecting PM visibility.
+            print("  PROJECT MANAGER: PM not seen")
 
         # Layer 2: Tasks
         print("\nTasks (Layer 2)")
