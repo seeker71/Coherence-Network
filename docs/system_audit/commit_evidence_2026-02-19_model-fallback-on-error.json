@@ -7,7 +7,8 @@
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_openclaw_executor_integration.py",
-    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json"
+    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json",
+    "maintainability_audit_report.json"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
@@ -40,14 +41,16 @@
     "Hosted post-fix verification: task_5aafefb7c722370a completed with model openclaw/gpt-5.3-codex and output OAUTH_FIX_OK",
     "Hosted typo alias verification: task_64fda47091fcf552 completed with command --model gpt-5.3-codex and output TYPO_OK",
     "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
-    "cd api && pytest -q tests/test_openclaw_executor_integration.py"
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+    "maintainability_audit_report.json captured by worktree guard for PR tracking"
   ],
   "change_files": [
     "api/app/services/agent_routing_service.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/tests/test_openclaw_executor_integration.py",
-    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json"
+    "docs/system_audit/commit_evidence_2026-02-19_model-fallback-on-error.json",
+    "maintainability_audit_report.json"
   ],
   "change_intent": "runtime_fix",
   "local_validation": {
