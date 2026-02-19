@@ -19,6 +19,7 @@ from uuid import UUID
 from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
+from app.models.distribution import Distribution
 from app.models.github_contributor import GitHubContributor
 from app.models.github_organization import GitHubOrganization
 from app.models.project import Project, ProjectSummary
@@ -65,8 +66,16 @@ class GraphStore(Protocol):
         """List all contributors."""
         ...
 
+    def find_contributor_by_email(self, email: str) -> Contributor | None:
+        """Find contributor by email."""
+        ...
+
     def get_asset(self, asset_id: UUID) -> Asset | None:
         """Get asset by ID."""
+        ...
+
+    def find_asset_by_name(self, name: str) -> Asset | None:
+        """Find asset by canonical name."""
         ...
 
     def create_asset(self, asset: Asset) -> Asset:
@@ -102,6 +111,18 @@ class GraphStore(Protocol):
 
     def get_contributor_contributions(self, contributor_id: UUID) -> list[Contribution]:
         """Get all contributions by a contributor."""
+        ...
+
+    def create_distribution(self, distribution: Distribution) -> Distribution:
+        """Persist distribution result."""
+        ...
+
+    def get_distribution(self, distribution_id: UUID) -> Distribution | None:
+        """Get distribution by ID."""
+        ...
+
+    def list_distributions(self, limit: int = 100) -> list[Distribution]:
+        """List persisted distributions."""
         ...
 
     # ---- GitHub integration API (spec 029) ----
@@ -146,6 +167,7 @@ class InMemoryGraphStore:
         self._contributors: dict[UUID, Contributor] = {}
         self._assets: dict[UUID, Asset] = {}
         self._contributions: dict[UUID, Contribution] = {}
+        self._distributions: dict[UUID, Distribution] = {}
 
         # GitHub integration data (spec 029)
         self._github_contributors: dict[str, GitHubContributor] = {}  # key: github:login
@@ -186,6 +208,9 @@ class InMemoryGraphStore:
                 if contribn.contributor_id not in self._contributors:
                     continue
                 self._contributions[contribn.id] = contribn
+            for row in data.get("distributions", []):
+                dist = Distribution(**row)
+                self._distributions[dist.id] = dist
 
             # GitHub integration (spec 029)
             for gc in data.get("github_contributors", []):
@@ -220,6 +245,7 @@ class InMemoryGraphStore:
             "contributors": [c.model_dump(mode="json") for c in self._contributors.values()],
             "assets": [a.model_dump(mode="json") for a in self._assets.values()],
             "contributions": [c.model_dump(mode="json") for c in self._contributions.values()],
+            "distributions": [d.model_dump(mode="json") for d in self._distributions.values()],
             "github_contributors": [gc.model_dump(mode="json") for gc in self._github_contributors.values()],
             "github_organizations": [go.model_dump(mode="json") for go in self._github_organizations.values()],
             "github_contributes_to": [[contrib_id, list(proj_k)] for contrib_id, proj_k in self._github_contributes_to],
@@ -288,8 +314,31 @@ class InMemoryGraphStore:
             items = [item for item in items if not is_test_contributor_email(str(item.email))]
         return items[: max(0, int(limit))]
 
+    def find_contributor_by_email(self, email: str) -> Contributor | None:
+        needle = (email or "").strip().lower()
+        if not needle:
+            return None
+        for contributor in self._contributors.values():
+            if str(contributor.email).strip().lower() == needle:
+                return contributor
+        return None
+
     def get_asset(self, asset_id: UUID) -> Asset | None:
         return self._assets.get(asset_id)
+
+    def find_asset_by_name(self, name: str) -> Asset | None:
+        needle = (name or "").strip().lower()
+        if not needle:
+            return None
+        for asset in self._assets.values():
+            description = asset.description.strip()
+            if description.lower() == needle:
+                return asset
+            if description.lower().startswith("github repository: "):
+                repo_name = description[len("GitHub repository: ") :].strip().lower()
+                if repo_name == needle:
+                    return asset
+        return None
 
     def create_asset(self, asset: Asset) -> Asset:
         self._assets[asset.id] = asset
@@ -338,6 +387,17 @@ class InMemoryGraphStore:
         out = [c for c in self._contributions.values() if c.contributor_id == contributor_id]
         out.sort(key=lambda c: c.timestamp)
         return out
+
+    def create_distribution(self, distribution: Distribution) -> Distribution:
+        self._distributions[distribution.id] = distribution
+        return distribution
+
+    def get_distribution(self, distribution_id: UUID) -> Distribution | None:
+        return self._distributions.get(distribution_id)
+
+    def list_distributions(self, limit: int = 100) -> list[Distribution]:
+        items = sorted(self._distributions.values(), key=lambda d: d.created_at, reverse=True)
+        return items[: max(0, int(limit))]
 
     # ----------------------------
     # GitHub integration API (spec 029)

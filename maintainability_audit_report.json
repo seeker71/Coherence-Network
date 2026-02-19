@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T18:07:38.545490+00:00",
+  "generated_at": "2026-02-19T19:07:19.913952+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -16,8 +16,8 @@
     "max_risk_score": 158
   },
   "summary": {
-    "python_module_count": 81,
-    "runtime_file_count": 113,
+    "python_module_count": 82,
+    "runtime_file_count": 114,
     "layer_violation_count": 0,
     "large_module_count": 7,
     "very_large_module_count": 4,
@@ -30,7 +30,7 @@
     "regression_reasons": []
   },
   "architecture": {
-    "python_module_count": 81,
+    "python_module_count": 82,
     "layer_violations": [],
     "large_modules": [
       {
@@ -55,7 +55,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 911
+        "line_count": 965
       },
       {
         "file": "api/app/services/idea_service.py",
@@ -142,12 +142,6 @@
         "line_start": 1310
       },
       {
-        "file": "api/app/routers/agent_telegram.py",
-        "function": "telegram_webhook",
-        "line_count": 125,
-        "line_start": 232
-      },
-      {
         "file": "api/app/services/inventory_service.py",
         "function": "build_system_lineage_inventory",
         "line_count": 110,
@@ -158,6 +152,12 @@
         "function": "_build_github_snapshot",
         "line_count": 110,
         "line_start": 791
+      },
+      {
+        "file": "api/app/routers/agent_telegram.py",
+        "function": "telegram_webhook",
+        "line_count": 109,
+        "line_start": 382
       },
       {
         "file": "api/app/services/automation_usage_service.py",
@@ -181,7 +181,7 @@
     "parse_errors": []
   },
   "placeholder_scan": {
-    "scanned_file_count": 113,
+    "scanned_file_count": 114,
     "findings": [
       {
         "file": "api/app/models/coherence.py",
