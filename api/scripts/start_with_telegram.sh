@@ -17,11 +17,34 @@ if [ -f .env ]; then
 fi
 
 PORT="${PORT:-8000}"
+API_START_TIMEOUT_SEC="${API_START_TIMEOUT_SEC:-90}"
 LOG_DIR="${API_DIR}/logs"
 mkdir -p "$LOG_DIR"
 API_LOG="$LOG_DIR/start_api.log"
 TUNNEL_LOG="$LOG_DIR/start_tunnel.log"
 PIDFILE="$LOG_DIR/start.pid"
+
+select_api_launcher() {
+  local candidates=("${API_DIR}/.venv/bin/python" "python3" "python")
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [ "$candidate" = "python3" ] || [ "$candidate" = "python" ]; then
+      command -v "$candidate" >/dev/null 2>&1 || continue
+    else
+      [ -x "$candidate" ] || continue
+    fi
+
+    if "$candidate" -c "import uvicorn" >/dev/null 2>&1; then
+      echo "python::$candidate"
+      return 0
+    fi
+  done
+  if command -v uvicorn >/dev/null 2>&1; then
+    echo "uvicorn::$(command -v uvicorn)"
+    return 0
+  fi
+  return 1
+}
 
 cleanup() {
   echo ""
@@ -41,19 +64,43 @@ sleep 2
 
 # 1. Start API
 echo "[1/4] Starting API on port $PORT..."
-PYTHON="${API_DIR}/.venv/bin/python"
-[ -x "$PYTHON" ] || PYTHON="python3"
-$PYTHON -m uvicorn app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
+: > "$API_LOG"
+: > "$TUNNEL_LOG"
+if ! API_LAUNCHER="$(select_api_launcher)"; then
+  echo "No usable Uvicorn launcher is available."
+  echo "Checked Python runtimes: ${API_DIR}/.venv/bin/python, python3, python"
+  echo "Checked executable: uvicorn"
+  echo "Install uvicorn (or add it to one of these runtimes) and retry."
+  exit 1
+fi
+LAUNCHER_KIND="${API_LAUNCHER%%::*}"
+LAUNCHER_PATH="${API_LAUNCHER#*::}"
+if [ "$LAUNCHER_KIND" = "python" ]; then
+  if [ "$LAUNCHER_PATH" != "${API_DIR}/.venv/bin/python" ]; then
+    echo "      Using fallback runtime: $LAUNCHER_PATH"
+  fi
+  "$LAUNCHER_PATH" -m uvicorn app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
+else
+  echo "      Using uvicorn executable: $LAUNCHER_PATH"
+  "$LAUNCHER_PATH" app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
+fi
 API_PID=$!
 echo "$API_PID" > "$PIDFILE"
 
 # Wait for API
-for i in $(seq 1 15); do
+for i in $(seq 1 "$API_START_TIMEOUT_SEC"); do
+  if ! kill -0 "$API_PID" 2>/dev/null; then
+    echo "API process exited before health check. Check $API_LOG"
+    exit 1
+  fi
   if curl -s "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
     echo "      API ready."
     break
   fi
-  [ $i -eq 15 ] && { echo "API failed to start. Check $API_LOG"; exit 1; }
+  [ "$i" -eq "$API_START_TIMEOUT_SEC" ] && {
+    echo "API failed to start within ${API_START_TIMEOUT_SEC}s. Check $API_LOG"
+    exit 1
+  }
   sleep 1
 done
 

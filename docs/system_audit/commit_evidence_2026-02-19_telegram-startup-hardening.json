@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/telegram-bot-diagnose-20260219",
+  "commit_scope": "Harden Telegram startup orchestration so api/scripts/start_with_telegram.sh works when the local .venv exists but cannot import uvicorn, and when API startup takes longer than 15 seconds.",
+  "files_owned": [
+    "api/scripts/start_with_telegram.sh",
+    "docs/system_audit/commit_evidence_2026-02-19_telegram-startup-hardening.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-19-telegram-startup-hardening"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "bash -n api/scripts/start_with_telegram.sh",
+    "cd api && ./scripts/start_with_telegram.sh (observed fallback to /opt/homebrew/bin/uvicorn and full ready state)",
+    "curl https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo (webhook url set, pending_update_count=0, last_error_message=None)",
+    "POST https://<tunnel>/api/agent/telegram/webhook with /status payload then GET http://127.0.0.1:8000/api/agent/telegram/diagnostics (webhook_events incremented, send_results ok=true status=200, Telegram message_id recorded)",
+    "POST http://127.0.0.1:8000/api/agent/telegram/test-send?text=start_with_telegram_script_verified (Telegram response ok=true, message_id=557)",
+    "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_startup_hardening.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/scripts/start_with_telegram.sh",
+    "docs/system_audit/commit_evidence_2026-02-19_telegram-startup-hardening.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "bash -n api/scripts/start_with_telegram.sh",
+      "cd api && ./scripts/start_with_telegram.sh",
+      "curl https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo",
+      "curl -X POST https://<tunnel>/api/agent/telegram/webhook ...",
+      "curl -X POST http://127.0.0.1:8000/api/agent/telegram/test-send?text=start_with_telegram_script_verified",
+      "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_startup_hardening.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI, and deploy verification."
+  }
+}
