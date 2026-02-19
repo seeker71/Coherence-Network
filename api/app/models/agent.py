@@ -201,3 +201,38 @@ class AgentRunStateSnapshot(BaseModel):
     last_heartbeat_at: Optional[str] = None
     updated_at: Optional[str] = None
     detail: Optional[str] = None
+
+
+class AgentRunnerHeartbeat(BaseModel):
+    runner_id: str = Field(..., min_length=1, max_length=200)
+    status: str = Field(default="idle", min_length=1, max_length=50)
+    lease_seconds: int = Field(default=90, ge=10, le=3600)
+    host: Optional[str] = Field(default=None, max_length=200)
+    pid: Optional[int] = Field(default=None, ge=1, le=2_147_483_647)
+    version: Optional[str] = Field(default=None, max_length=200)
+    active_task_id: Optional[str] = Field(default=None, max_length=200)
+    active_run_id: Optional[str] = Field(default=None, max_length=200)
+    last_error: Optional[str] = Field(default=None, max_length=2000)
+    capabilities: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunnerSnapshot(BaseModel):
+    runner_id: str
+    status: str
+    online: bool
+    host: Optional[str] = None
+    pid: Optional[int] = None
+    version: Optional[str] = None
+    active_task_id: Optional[str] = None
+    active_run_id: Optional[str] = None
+    last_error: Optional[str] = None
+    lease_expires_at: Optional[str] = None
+    last_seen_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentRunnerList(BaseModel):
+    runners: List[AgentRunnerSnapshot]
+    total: int

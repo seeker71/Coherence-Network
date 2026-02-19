@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 from app.routers.agent_telegram import format_task_alert, router as telegram_router
 
 from app.models.agent import (
+    AgentRunnerHeartbeat,
+    AgentRunnerList,
+    AgentRunnerSnapshot,
     AgentRunStateClaim,
     AgentRunStateHeartbeat,
     AgentRunStateSnapshot,
@@ -30,7 +33,7 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_run_state_service, agent_service
+from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -244,6 +247,35 @@ async def get_run_state(task_id: str) -> dict:
     if state is None:
         raise HTTPException(status_code=404, detail="Run state not found")
     return state
+
+
+@router.post("/agent/runners/heartbeat", response_model=AgentRunnerSnapshot)
+async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
+    return agent_runner_registry_service.heartbeat_runner(
+        runner_id=data.runner_id,
+        status=data.status,
+        lease_seconds=data.lease_seconds,
+        host=data.host or "",
+        pid=data.pid,
+        version=data.version or "",
+        active_task_id=data.active_task_id or "",
+        active_run_id=data.active_run_id or "",
+        last_error=data.last_error or "",
+        capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
+        metadata=data.metadata if isinstance(data.metadata, dict) else None,
+    )
+
+
+@router.get("/agent/runners", response_model=AgentRunnerList)
+async def list_runners(
+    include_stale: bool = Query(False),
+    limit: int = Query(100, ge=1, le=500),
+) -> AgentRunnerList:
+    rows = agent_runner_registry_service.list_runners(include_stale=include_stale, limit=limit)
+    return AgentRunnerList(
+        runners=[AgentRunnerSnapshot(**row) for row in rows],
+        total=len(rows),
+    )
 
 
 @router.post(
