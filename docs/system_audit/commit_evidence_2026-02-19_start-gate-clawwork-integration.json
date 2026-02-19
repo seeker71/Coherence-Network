@@ -1,0 +1,115 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/fix-start-gate-and-clawwork",
+  "commit_scope": "Unblock start-gate by treating main maintainability workflow failures as advisory and add clawwork executor alias integration across routing, telemetry, provider readiness, docs, and tests.",
+  "files_owned": [
+    "scripts/start_gate.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/agent_execution_service.py",
+    "api/scripts/agent_runner.py",
+    "api/app/routers/agent.py",
+    "api/app/models/agent.py",
+    "web/app/remote-ops/page.tsx",
+    "docs/CURSOR-CLI.md",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_start-gate-clawwork-integration.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "worktree-bootstrap-resilience"
+  ],
+  "spec_ids": [
+    "process-bootstrap-resilience-001",
+    "spec-openclaw-clawwork-executor-alias"
+  ],
+  "task_ids": [
+    "task-2026-02-19-start-gate-advisory-main-workflow",
+    "task-2026-02-19-clawwork-alias-integration"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "python3 -m py_compile scripts/start_gate.py api/app/services/agent_routing_service.py api/app/services/agent_service.py api/app/services/automation_usage_service.py api/scripts/agent_runner.py api/app/services/agent_execution_service.py",
+    "python3 scripts/start_gate.py (validated from temporary clean worktree)",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_start-gate-clawwork-integration.json"
+  ],
+  "change_files": [
+    "scripts/start_gate.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/agent_execution_service.py",
+    "api/scripts/agent_runner.py",
+    "api/app/routers/agent.py",
+    "api/app/models/agent.py",
+    "web/app/remote-ops/page.tsx",
+    "docs/CURSOR-CLI.md",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_start-gate-clawwork-integration.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 -m py_compile scripts/start_gate.py api/app/services/agent_routing_service.py api/app/services/agent_service.py api/app/services/automation_usage_service.py api/scripts/agent_runner.py api/app/services/agent_execution_service.py"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Thread startup gates no longer hard-block on the scheduled maintainability workflow while all other failing workflows still block, and executor/provider handling accepts clawwork as an alias of openclaw across route selection and telemetry attribution.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/route?task_type=impl&executor=clawwork",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+    ],
+    "test_flows": [
+      "api:/api/agent/route with executor=clawwork resolves to openclaw tier/model",
+      "api:/api/automation/usage/provider-validation infers openclaw validation when runtime metadata uses clawwork executor/model prefixes"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit, CI, and public deploy verification"
+  }
+}
