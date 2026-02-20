@@ -812,3 +812,147 @@ async def test_execution_updates_cost_value_targets(
         assert spec_row["actual_value"] == expected_idea_output["actual_value"]
         assert spec_row["estimated_cost"] == expected_idea_output["estimated_cost"]
         assert spec_row["potential_value"] == expected_idea_output["estimated_value"]
+
+
+def test_seed_next_tasks_falls_back_from_specs_to_idea_roi(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services import agent_execution_service as _execution_service  # noqa: F401
+    from app.services import agent_execution_task_flow
+    from app.services import inventory_service
+
+    monkeypatch.setattr(
+        inventory_service,
+        "sync_spec_implementation_gap_tasks",
+        lambda create_task, limit=200: {"result": "no_spec_implementation_gaps", "created_tasks": []},
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "next_highest_roi_task_from_answered_questions",
+        lambda create_task: {"result": "task_suggested", "created_task": {"id": "task_roi_1"}},
+    )
+    fallback_called = {"value": False}
+
+    def _flow_fallback(*, create_task: bool, runtime_window_seconds: int) -> dict:
+        fallback_called["value"] = True
+        return {"result": "task_suggested", "created_task": {"id": "task_flow_1"}}
+
+    monkeypatch.setattr(inventory_service, "next_unblock_task_from_flow", _flow_fallback)
+
+    task_ids, source = agent_execution_task_flow._seed_next_tasks()
+    assert task_ids == ["task_roi_1"]
+    assert source == "idea_answered_question_roi"
+    assert fallback_called["value"] is False
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queue_empty(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL", "1")
+    monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL_AUTORUN", "1")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+    from app.services import agent_execution_task_flow
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 5, "provider_request_id": "req_followup", "response_id": "resp_followup"},
+        ),
+    )
+    monkeypatch.setattr(
+        agent_execution_task_flow,
+        "_seed_next_tasks",
+        lambda: (["task_followup_from_spec"], "spec_implementation_gap"),
+    )
+
+    scheduled: list[str] = []
+
+    def _capture_schedule(**kwargs: object) -> None:
+        scheduled.append(str(kwargs.get("task_id") or ""))
+
+    monkeypatch.setattr(agent_execution_task_flow, "_schedule_followup_execution", _capture_schedule)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Complete and continue",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+    assert scheduled == ["task_followup_from_spec"]
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL", "1")
+    monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL_AUTORUN", "1")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+    from app.services import agent_execution_task_flow
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 4, "provider_request_id": "req_no_seed", "response_id": "resp_no_seed"},
+        ),
+    )
+
+    seed_called = {"count": 0}
+
+    def _seed_counter() -> tuple[list[str], str]:
+        seed_called["count"] += 1
+        return (["task_should_not_run"], "spec_implementation_gap")
+
+    monkeypatch.setattr(agent_execution_task_flow, "_seed_next_tasks", _seed_counter)
+    scheduled: list[str] = []
+    monkeypatch.setattr(
+        agent_execution_task_flow,
+        "_schedule_followup_execution",
+        lambda **kwargs: scheduled.append(str(kwargs.get("task_id") or "")),
+    )
+
+    # Keep one pending task in queue so autofill should not trigger.
+    agent_service.create_task(
+        AgentTaskCreate(
+            direction="Remain pending",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Complete without spawning follow-up",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+    assert seed_called["count"] == 0
+    assert scheduled == []
