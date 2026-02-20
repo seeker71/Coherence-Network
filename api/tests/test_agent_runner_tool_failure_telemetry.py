@@ -820,6 +820,50 @@ def test_auto_generate_tasks_when_idle_creates_spec_gap_tasks(monkeypatch, tmp_p
         call[0] == "POST" and call[1].endswith("/api/inventory/specs/sync-implementation-tasks")
         for call in calls
     )
+    assert not any(
+        call[0] == "POST" and call[1].endswith("/api/inventory/flow/next-unblock-task")
+        for call in calls
+    )
+
+
+def test_auto_generate_tasks_when_idle_falls_back_to_flow_task_generation(monkeypatch, tmp_path):
+    calls: list[tuple[str, str, dict | None]] = []
+
+    def _fake_http(client, method, url, log, **kwargs):
+        params = kwargs.get("params")
+        calls.append((method.upper(), url, params if isinstance(params, dict) else None))
+        if method.upper() == "GET" and url.endswith("/api/agent/tasks"):
+            return _Resp(200, {"total": 0, "tasks": []})
+        if method.upper() == "POST" and url.endswith("/api/inventory/specs/sync-implementation-tasks"):
+            return _Resp(200, {"created_count": 0})
+        if method.upper() == "POST" and url.endswith("/api/inventory/flow/next-unblock-task"):
+            return _Resp(
+                200,
+                {
+                    "result": "task_suggested",
+                    "created_task": {"id": "task_flow_fallback", "task_type": "spec"},
+                },
+            )
+        return _Resp(500, {})
+
+    monkeypatch.setattr(agent_runner, "_http_with_retry", _fake_http)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASKS", True)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASK_LIMIT", 25)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", 0)
+    monkeypatch.setattr(agent_runner, "_last_idle_task_generation_ts", 0.0)
+    monkeypatch.setattr(agent_runner.time, "monotonic", lambda: 1000.0)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+
+    created = agent_runner._auto_generate_tasks_when_idle(client=object(), log=agent_runner._setup_logging())
+    assert created == 1
+    assert any(
+        call[0] == "POST" and call[1].endswith("/api/inventory/specs/sync-implementation-tasks")
+        for call in calls
+    )
+    assert any(
+        call[0] == "POST" and call[1].endswith("/api/inventory/flow/next-unblock-task")
+        for call in calls
+    )
 
 
 def test_auto_generate_tasks_when_idle_skips_when_open_tasks_exist(monkeypatch, tmp_path):
