@@ -60,6 +60,84 @@ class _StaleClient:
         return _Resp(200, {})
 
 
+class _PaidSignalsClient:
+    def get(self, url: str, timeout: int = 10):  # noqa: ARG002
+        if url.endswith("/api/agent/pipeline-status"):
+            return _Resp(
+                200,
+                {
+                    "attention": {"low_success_rate": False},
+                    "running": [],
+                    "pending": [],
+                    "project_manager": {"blocked": False},
+                },
+            )
+        if url.endswith("/api/agent/metrics"):
+            return _Resp(200, {})
+        if url.endswith("/api/agent/effectiveness"):
+            return _Resp(
+                200,
+                {
+                    "plan_progress": {
+                        "backlog_alignment": {"phase_6_7_not_worked": False},
+                        "index": 1,
+                        "total": 80,
+                    }
+                },
+            )
+        if url.endswith("/api/gates/public-deploy-contract"):
+            return _Resp(200, {"result": "public_contract_passed"})
+        if url.endswith("/api/automation/usage/alerts"):
+            return _Resp(
+                200,
+                {
+                    "alerts": [
+                        {
+                            "id": "a1",
+                            "provider": "supabase",
+                            "metric_id": "egress_quota",
+                            "severity": "critical",
+                            "message": "low remaining egress",
+                        }
+                    ]
+                },
+            )
+        if "/api/automation/usage/readiness" in url:
+            return _Resp(
+                200,
+                {
+                    "all_required_ready": False,
+                    "blocking_issues": ["supabase: status=degraded, configured=True"],
+                },
+            )
+        if "/api/automation/usage/provider-validation" in url:
+            return _Resp(
+                200,
+                {
+                    "all_required_validated": False,
+                    "blocking_issues": ["supabase: configured=True, readiness_status=degraded, successful_events=0/1"],
+                },
+            )
+        if "/api/friction/events" in url:
+            return _Resp(
+                200,
+                [
+                    {
+                        "event_id": "f1",
+                        "block_type": "paid_provider_blocked",
+                        "metadata": {"provider": "openrouter"},
+                    }
+                ],
+            )
+        raise AssertionError(f"unexpected url: {url}")
+
+    def post(self, url: str, json: dict | None = None, timeout: int = 10):  # noqa: ARG002
+        return _Resp(201, {"id": "noop-heal"})
+
+    def patch(self, url: str, json: dict | None = None, timeout: int = 10):  # noqa: ARG002
+        return _Resp(200, {})
+
+
 def _set_common_monkeypatches(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(tmp_path / "monitor_issues.json"))
     monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
@@ -157,3 +235,20 @@ def test_run_check_reaps_stale_running_tasks_and_triggers_heal_and_restart(monke
     heal_context = (heal_posts[0]["json"] or {}).get("context") or {}
     assert heal_context.get("monitor_condition") == "orphan_running"
 
+
+def test_run_check_flags_paid_service_awareness_issues(monkeypatch, tmp_path) -> None:
+    _set_common_monkeypatches(monkeypatch, tmp_path)
+    client = _PaidSignalsClient()
+
+    payload = monitor_pipeline._run_check(
+        client,
+        logging.getLogger("test"),
+        auto_fix=False,
+        auto_recover=False,
+    )
+
+    conditions = {row["condition"] for row in payload["issues"]}
+    assert "paid_service_usage_alerts" in conditions
+    assert "paid_service_readiness_blocked" in conditions
+    assert "paid_service_validation_blocked" in conditions
+    assert "paid_provider_blocked_friction" in conditions

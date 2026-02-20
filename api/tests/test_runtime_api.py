@@ -48,6 +48,43 @@ async def test_runtime_event_ingest_and_summary(tmp_path, monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
+async def test_runtime_change_token_only_advances_when_data_changes(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("AGENT_TASKS_PATH", str(tmp_path / "agent_tasks.json"))
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'telemetry.db'}")
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.get("/api/runtime/change-token")
+        assert first.status_code == 200
+        first_token = first.json()["token"]
+
+        second = await client.get("/api/runtime/change-token")
+        assert second.status_code == 200
+        assert second.json()["token"] == first_token
+        assert runtime_service.list_events(limit=20) == []
+
+        created = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "api",
+                "endpoint": "/api/ideas",
+                "method": "GET",
+                "status_code": 200,
+                "runtime_ms": 15.0,
+            },
+        )
+        assert created.status_code == 201
+
+        third = await client.get("/api/runtime/change-token", params={"force_refresh": True})
+        assert third.status_code == 200
+        assert third.json()["token"] != first_token
+
+
+@pytest.mark.asyncio
 async def test_runtime_middleware_records_api_calls(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))

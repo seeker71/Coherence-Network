@@ -111,10 +111,10 @@ async function loadAutomationData(): Promise<{
 }> {
   const api = getApiBase();
   const [usageRes, alertsRes, readinessRes, validationRes] = await Promise.all([
-    fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
+    fetch(`${api}/api/automation/usage`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1&force_refresh=true`, {
+    fetch(`${api}/api/automation/usage/readiness`, { cache: "no-store" }),
+    fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1`, {
       cache: "no-store",
     }),
   ]);

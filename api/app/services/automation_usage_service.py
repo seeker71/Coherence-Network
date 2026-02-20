@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -42,12 +43,22 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
     "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
+    "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
 }
 
-_DEFAULT_REQUIRED_PROVIDERS = ("coherence-internal", "github", "openai", "railway")
+_DEFAULT_REQUIRED_PROVIDERS = (
+    "coherence-internal",
+    "github",
+    "openai",
+    "openrouter",
+    "railway",
+    "supabase",
+)
 _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "coherence-internal",
     "openai-codex",
+    "openrouter",
+    "supabase",
     "github",
     "railway",
     "claude",
@@ -169,6 +180,15 @@ def _metric(
     )
 
 
+def _coerce_float(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _header_float(headers: httpx.Headers, *keys: str) -> float | None:
     for key in keys:
         raw = str(headers.get(key, "")).strip()
@@ -256,6 +276,35 @@ def _runtime_task_runs_snapshot(*, provider: str, kind: str, active_runs: int, n
 
 def _subset_headers(headers: httpx.Headers, keys: tuple[str, ...]) -> dict[str, str | None]:
     return {key: headers.get(key) for key in keys}
+
+
+def _record_external_tool_usage(
+    *,
+    tool_name: str,
+    provider: str,
+    operation: str,
+    resource: str,
+    status: str,
+    http_status: int | None = None,
+    duration_ms: int | None = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    event_payload: dict[str, Any] = {
+        "event_id": f"tool_{uuid.uuid4().hex}",
+        "occurred_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "tool_name": tool_name,
+        "provider": provider,
+        "operation": operation,
+        "resource": resource,
+        "status": status,
+        "http_status": http_status,
+        "duration_ms": duration_ms,
+        "payload": payload or {},
+    }
+    try:
+        telemetry_persistence_service.append_external_tool_usage_event(event_payload)
+    except Exception:
+        return
 
 
 def _build_models_visibility_snapshot(
@@ -381,6 +430,11 @@ def _default_official_records(provider: str) -> list[str]:
         ],
         "openrouter": [
             "https://openrouter.ai/docs/api-reference/overview",
+        ],
+        "supabase": [
+            "https://supabase.com/docs/reference/api/introduction",
+            "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-counts",
+            "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-requests-count",
         ],
     }
     return links.get(provider, [])
@@ -1062,6 +1116,279 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
     )
 
 
+def _openrouter_headers() -> dict[str, str]:
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    headers: dict[str, str] = {"Authorization": f"Bearer {api_key}"}
+    site_url = os.getenv("OPENROUTER_HTTP_REFERER", "").strip()
+    site_title = os.getenv("OPENROUTER_X_TITLE", "").strip()
+    if site_url:
+        headers["HTTP-Referer"] = site_url
+    if site_title:
+        headers["X-Title"] = site_title
+    return headers
+
+
+def _openrouter_models_probe(models_url: str) -> tuple[dict[str, Any], httpx.Headers]:
+    started = time.perf_counter()
+    try:
+        with httpx.Client(timeout=8.0, headers=_openrouter_headers()) as client:
+            response = client.get(models_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        status_code = None
+        response = getattr(exc, "response", None)
+        if response is not None:
+            status_code = int(getattr(response, "status_code", 0) or 0) or None
+        _record_external_tool_usage(
+            tool_name="openrouter-api",
+            provider="openrouter",
+            operation="list_models",
+            resource=models_url,
+            status="error",
+            http_status=status_code,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            payload={"error": str(exc)},
+        )
+        raise
+
+    _record_external_tool_usage(
+        tool_name="openrouter-api",
+        provider="openrouter",
+        operation="list_models",
+        resource=models_url,
+        status="success",
+        http_status=int(response.status_code),
+        duration_ms=int((time.perf_counter() - started) * 1000),
+    )
+    return payload, response.headers
+
+
+def _openrouter_probe_failure_snapshot(exc: Exception, *, models_url: str) -> ProviderUsageSnapshot:
+    active = int(_active_provider_usage_counts().get("openrouter", 0))
+    if active > 0:
+        snapshot = _runtime_task_runs_snapshot(
+            provider="openrouter",
+            kind="custom",
+            active_runs=active,
+            note=f"OpenRouter models probe failed ({exc}); using runtime execution evidence fallback.",
+        )
+        snapshot.raw["probe_url"] = models_url
+        return snapshot
+    return ProviderUsageSnapshot(
+        id=f"provider_openrouter_{int(time.time())}",
+        provider="openrouter",
+        kind="custom",
+        status="degraded",
+        data_source="provider_api",
+        notes=[f"OpenRouter models probe failed: {exc}"],
+        raw={"probe_url": models_url},
+    )
+
+
+def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("openrouter", 0))
+        if active > 0:
+            return _runtime_task_runs_snapshot(
+                provider="openrouter",
+                kind="custom",
+                active_runs=active,
+                note="Using runtime OpenRouter execution evidence (no direct OpenRouter key in environment).",
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_openrouter_{int(time.time())}",
+            provider="openrouter",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set OPENROUTER_API_KEY to validate OpenRouter provider access."],
+        )
+
+    models_url = os.getenv("OPENROUTER_MODELS_URL", "https://openrouter.ai/api/v1/models")
+    try:
+        payload, response_headers = _openrouter_models_probe(models_url)
+    except Exception as exc:
+        return _openrouter_probe_failure_snapshot(exc, models_url=models_url)
+
+    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
+    return _build_models_visibility_snapshot(
+        provider="openrouter",
+        label="OpenRouter visible models",
+        models_url=models_url,
+        rows=rows,
+        headers=response_headers,
+        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit", "x-ratelimit-limit-requests"),
+        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining", "x-ratelimit-remaining-requests"),
+        request_window="minute",
+        request_label="OpenRouter request quota",
+        token_limit_keys=("x-ratelimit-limit-tokens",),
+        token_remaining_keys=("x-ratelimit-remaining-tokens",),
+        token_window="minute",
+        token_label="OpenRouter token quota",
+        rate_header_keys=(
+            "x-ratelimit-limit",
+            "x-ratelimit-remaining",
+            "ratelimit-limit",
+            "ratelimit-remaining",
+            "x-ratelimit-limit-requests",
+            "x-ratelimit-remaining-requests",
+            "x-ratelimit-limit-tokens",
+            "x-ratelimit-remaining-tokens",
+        ),
+        no_header_note="OpenRouter models probe succeeded, but no request/token remaining headers were returned.",
+    )
+
+
+def _supabase_headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+    }
+
+
+def _supabase_project_probe(token: str, project_url: str) -> tuple[dict[str, Any], httpx.Headers]:
+    started = time.perf_counter()
+    try:
+        with httpx.Client(timeout=8.0, headers=_supabase_headers(token)) as client:
+            response = client.get(project_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        status_code = None
+        response = getattr(exc, "response", None)
+        if response is not None:
+            status_code = int(getattr(response, "status_code", 0) or 0) or None
+        _record_external_tool_usage(
+            tool_name="supabase-management-api",
+            provider="supabase",
+            operation="get_project",
+            resource=project_url,
+            status="error",
+            http_status=status_code,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            payload={"error": str(exc)},
+        )
+        raise
+
+    _record_external_tool_usage(
+        tool_name="supabase-management-api",
+        provider="supabase",
+        operation="get_project",
+        resource=project_url,
+        status="success",
+        http_status=int(response.status_code),
+        duration_ms=int((time.perf_counter() - started) * 1000),
+    )
+    return payload, response.headers
+
+
+def _supabase_probe_failure_snapshot(
+    exc: Exception,
+    *,
+    project_url: str,
+    project_ref: str,
+) -> ProviderUsageSnapshot:
+    return ProviderUsageSnapshot(
+        id=f"provider_supabase_{int(time.time())}",
+        provider="supabase",
+        kind="custom",
+        status="degraded",
+        data_source="provider_api",
+        notes=[f"Supabase project probe failed: {exc}"],
+        raw={"probe_url": project_url, "project_ref": project_ref},
+    )
+
+
+def _supabase_probe_metrics(headers: httpx.Headers) -> tuple[list[UsageMetric], list[str]]:
+    metrics = [
+        _metric(
+            id="api_probe",
+            label="Supabase API probe",
+            unit="requests",
+            used=1.0,
+            window="probe",
+        )
+    ]
+    has_limit_headers = _append_rate_limit_metrics(
+        metrics=metrics,
+        headers=headers,
+        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit"),
+        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining"),
+        request_window="hourly",
+        request_label="Supabase API request quota",
+    )
+    notes: list[str] = []
+    if not has_limit_headers:
+        notes.append("Supabase probe succeeded, but no request remaining headers were returned.")
+
+    egress_limit = _coerce_float(os.getenv("SUPABASE_EGRESS_LIMIT_GB"))
+    egress_used = _coerce_float(os.getenv("SUPABASE_EGRESS_USED_GB"))
+    if egress_limit is not None and egress_limit > 0:
+        used = max(0.0, egress_used or 0.0)
+        remaining = max(0.0, egress_limit - used)
+        metrics.append(
+            _metric(
+                id="egress_quota",
+                label="Supabase egress quota",
+                unit="gb",
+                used=used,
+                remaining=remaining,
+                limit=egress_limit,
+                window=os.getenv("SUPABASE_EGRESS_WINDOW", "monthly"),
+            )
+        )
+        notes.append("Using SUPABASE_EGRESS_LIMIT_GB/SUPABASE_EGRESS_USED_GB environment inputs for egress tracking.")
+
+    return metrics, notes
+
+
+def _build_supabase_snapshot() -> ProviderUsageSnapshot:
+    token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip() or os.getenv("SUPABASE_TOKEN", "").strip()
+    project_ref = os.getenv("SUPABASE_PROJECT_REF", "").strip()
+    if not token or not project_ref:
+        return ProviderUsageSnapshot(
+            id=f"provider_supabase_{int(time.time())}",
+            provider="supabase",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set SUPABASE_ACCESS_TOKEN (or SUPABASE_TOKEN) and SUPABASE_PROJECT_REF."],
+            raw={"missing_project_ref": not bool(project_ref), "missing_token": not bool(token)},
+        )
+
+    base_url = os.getenv("SUPABASE_MANAGEMENT_API_URL", "https://api.supabase.com/v1").rstrip("/")
+    project_url = f"{base_url}/projects/{project_ref}"
+    try:
+        payload, response_headers = _supabase_project_probe(token, project_url)
+    except Exception as exc:
+        return _supabase_probe_failure_snapshot(exc, project_url=project_url, project_ref=project_ref)
+
+    metrics, notes = _supabase_probe_metrics(response_headers)
+
+    return ProviderUsageSnapshot(
+        id=f"provider_supabase_{int(time.time())}",
+        provider="supabase",
+        kind="custom",
+        status="ok",
+        data_source="provider_api",
+        metrics=metrics,
+        notes=list(dict.fromkeys(notes)),
+        raw={
+            "probe_url": project_url,
+            "project_ref": project_ref,
+            "project_status": payload.get("status"),
+            "project_region": payload.get("region"),
+            "project_name": payload.get("name"),
+            "rate_limit_headers": _subset_headers(
+                response_headers,
+                ("x-ratelimit-limit", "x-ratelimit-remaining", "ratelimit-limit", "ratelimit-remaining"),
+            ),
+        },
+    )
+
+
 def _build_railway_snapshot() -> ProviderUsageSnapshot:
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
@@ -1099,12 +1426,36 @@ def _build_railway_snapshot() -> ProviderUsageSnapshot:
     gql_url = os.getenv("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
     query = {"query": "query { me { id } }"}
     headers = {"Authorization": f"Bearer {token}"}
+    started = time.perf_counter()
     try:
         with httpx.Client(timeout=8.0, headers=headers) as client:
             response = client.post(gql_url, json=query)
             response.raise_for_status()
             payload = response.json() if isinstance(response.json(), dict) else {}
+        _record_external_tool_usage(
+            tool_name="railway-graphql",
+            provider="railway",
+            operation="probe_me",
+            resource=gql_url,
+            status="success",
+            http_status=int(response.status_code),
+            duration_ms=int((time.perf_counter() - started) * 1000),
+        )
     except Exception as exc:
+        status_code = None
+        response = getattr(exc, "response", None)
+        if response is not None:
+            status_code = int(getattr(response, "status_code", 0) or 0) or None
+        _record_external_tool_usage(
+            tool_name="railway-graphql",
+            provider="railway",
+            operation="probe_me",
+            resource=gql_url,
+            status="error",
+            http_status=status_code,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            payload={"error": str(exc)},
+        )
         return ProviderUsageSnapshot(
             id=f"provider_railway_{int(time.time())}",
             provider="railway",
@@ -1154,20 +1505,57 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
     cost_payload: dict[str, Any] = {}
     usage_error = None
     cost_error = None
+    usage_status_code: int | None = None
+    cost_status_code: int | None = None
+    usage_duration_ms = 0
+    cost_duration_ms = 0
+    usage_started = time.perf_counter()
     try:
         with httpx.Client(timeout=10.0, headers=headers) as client:
             usage_response = client.get(usage_url, params={"start_time": start_time, "end_time": now})
             usage_response.raise_for_status()
             usage_payload = usage_response.json() if isinstance(usage_response.json(), dict) else {}
+            usage_status_code = int(usage_response.status_code)
     except Exception as exc:
         usage_error = str(exc)
+        response = getattr(exc, "response", None)
+        if response is not None:
+            usage_status_code = int(getattr(response, "status_code", 0) or 0) or None
+    usage_duration_ms = int((time.perf_counter() - usage_started) * 1000)
+    _record_external_tool_usage(
+        tool_name="openai-api",
+        provider="openai",
+        operation="organization_usage_completions",
+        resource=usage_url,
+        status="success" if usage_error is None else "error",
+        http_status=usage_status_code,
+        duration_ms=usage_duration_ms,
+        payload={"window_start_unix": start_time, "window_end_unix": now},
+    )
+
+    cost_started = time.perf_counter()
     try:
         with httpx.Client(timeout=10.0, headers=headers) as client:
             costs_response = client.get(costs_url, params={"start_time": start_time, "end_time": now})
             costs_response.raise_for_status()
             cost_payload = costs_response.json() if isinstance(costs_response.json(), dict) else {}
+            cost_status_code = int(costs_response.status_code)
     except Exception as exc:
         cost_error = str(exc)
+        response = getattr(exc, "response", None)
+        if response is not None:
+            cost_status_code = int(getattr(response, "status_code", 0) or 0) or None
+    cost_duration_ms = int((time.perf_counter() - cost_started) * 1000)
+    _record_external_tool_usage(
+        tool_name="openai-api",
+        provider="openai",
+        operation="organization_costs",
+        resource=costs_url,
+        status="success" if cost_error is None else "error",
+        http_status=cost_status_code,
+        duration_ms=cost_duration_ms,
+        payload={"window_start_unix": start_time, "window_end_unix": now},
+    )
 
     records = usage_payload.get("data") if isinstance(usage_payload.get("data"), list) else []
     input_tokens = 0.0
@@ -1229,9 +1617,19 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
     if usage_error and cost_error:
         try:
             models_url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
+            models_started = time.perf_counter()
             with httpx.Client(timeout=8.0, headers=headers) as client:
                 model_response = client.get(models_url)
                 model_response.raise_for_status()
+            _record_external_tool_usage(
+                tool_name="openai-api",
+                provider="openai",
+                operation="list_models_fallback",
+                resource=models_url,
+                status="success",
+                http_status=int(model_response.status_code),
+                duration_ms=int((time.perf_counter() - models_started) * 1000),
+            )
             has_model_limits = _append_rate_limit_metrics(
                 metrics=metrics,
                 headers=model_response.headers,
@@ -1247,6 +1645,19 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             if has_model_limits:
                 notes.append("Using OpenAI models endpoint rate-limit headers as best-effort fallback for remaining quota.")
         except Exception as exc:
+            response = getattr(exc, "response", None)
+            status_code = None
+            if response is not None:
+                status_code = int(getattr(response, "status_code", 0) or 0) or None
+            _record_external_tool_usage(
+                tool_name="openai-api",
+                provider="openai",
+                operation="list_models_fallback",
+                resource=os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models"),
+                status="error",
+                http_status=status_code,
+                payload={"error": str(exc)},
+            )
             notes.append(f"OpenAI models fallback probe failed: {exc}")
 
     return ProviderUsageSnapshot(
@@ -1277,11 +1688,11 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_claude_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
-        _build_config_only_snapshot("openrouter"),
+        _build_openrouter_snapshot(),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
         _build_config_only_snapshot("cursor"),
-        _build_config_only_snapshot("openclaw"),
+        _build_supabase_snapshot(),
         _build_railway_snapshot(),
     ]
     for snapshot in providers:
@@ -1385,9 +1796,132 @@ def list_external_tool_usage_events(
     )
 
 
-def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
+def _is_openai_permission_gated(notes: list[str]) -> bool:
+    joined = " | ".join(str(note).lower() for note in notes)
+    return "openai usage/cost fetch failed" in joined and "403" in joined
+
+
+def _append_usage_alerts_for_provider(
+    *,
+    provider: ProviderUsageSnapshot,
+    provider_name: str,
+    required: set[str],
+    active_usage: int,
+    ratio: float,
+    alerts: list[UsageAlert],
+    seen_alert_ids: set[str],
+) -> None:
+    should_alert_status = provider.status != "ok"
+    if provider_name not in required and active_usage <= 0:
+        should_alert_status = False
+    if (
+        provider_name == "openai"
+        and provider.status == "degraded"
+        and _is_openai_permission_gated(provider.notes)
+    ):
+        should_alert_status = False
+
+    if should_alert_status:
+        alert_id = f"usage_alert_{provider.provider}_unavailable"
+        if alert_id not in seen_alert_ids:
+            alerts.append(
+                UsageAlert(
+                    id=alert_id,
+                    provider=provider.provider,
+                    metric_id="provider_status",
+                    severity="warning" if provider.status == "degraded" else "critical",
+                    message=f"{provider.provider} usage provider status={provider.status}",
+                )
+            )
+            seen_alert_ids.add(alert_id)
+
+    for metric in provider.metrics:
+        if metric.limit is None or metric.limit <= 0 or metric.remaining is None:
+            continue
+        remaining_ratio = metric.remaining / metric.limit
+        if remaining_ratio > ratio:
+            continue
+        severity = "critical" if remaining_ratio <= ratio / 2.0 else "warning"
+        alert_id = f"usage_alert_{provider.provider}_{metric.id}"
+        if alert_id in seen_alert_ids:
+            continue
+        alerts.append(
+            UsageAlert(
+                id=alert_id,
+                provider=provider.provider,
+                metric_id=metric.id,
+                severity=severity,  # type: ignore[arg-type]
+                message=(
+                    f"{provider.provider} {metric.label} low remaining: "
+                    f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
+                ),
+                remaining_ratio=round(remaining_ratio, 4),
+            )
+        )
+        seen_alert_ids.add(alert_id)
+
+    has_limit_with_remaining = any(
+        metric.limit is not None and metric.limit > 0 and metric.remaining is not None
+        for metric in provider.metrics
+    )
+    if (provider_name in required or active_usage > 0) and not has_limit_with_remaining:
+        alert_id = f"usage_alert_{provider.provider}_remaining_tracking_gap"
+        if alert_id not in seen_alert_ids:
+            alerts.append(
+                UsageAlert(
+                    id=alert_id,
+                    provider=provider.provider,
+                    metric_id="remaining_tracking_gap",
+                    severity="warning" if provider_name in required else "info",
+                    message=(
+                        f"{provider.provider} has no remaining/limit telemetry. "
+                        "Configure quota metrics to track usage remaining before reset windows."
+                    ),
+                )
+            )
+            seen_alert_ids.add(alert_id)
+
+
+def _append_readiness_alerts(
+    *,
+    readiness: ProviderReadinessReport,
+    alerts: list[UsageAlert],
+    seen_alert_ids: set[str],
+) -> None:
+    for row in readiness.providers:
+        provider_name = _normalize_provider_name(row.provider)
+        if not row.required:
+            continue
+        if row.status == "ok" and row.configured:
+            continue
+
+        severity: str = "warning" if row.status == "degraded" else "critical"
+        notes = list(row.notes)
+        if provider_name == "openai" and _is_openai_permission_gated(notes):
+            severity = "warning"
+
+        alert_id = f"usage_alert_{provider_name}_readiness"
+        if alert_id in seen_alert_ids:
+            continue
+        alerts.append(
+            UsageAlert(
+                id=alert_id,
+                provider=provider_name,
+                metric_id="provider_readiness",
+                severity=severity,  # type: ignore[arg-type]
+                message=(
+                    f"{provider_name} readiness blocking: status={row.status}, configured={row.configured}. "
+                    f"Notes: {', '.join(notes[:2]) if notes else 'none'}"
+                ),
+            )
+        )
+        seen_alert_ids.add(alert_id)
+
+
+def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool = False) -> UsageAlertReport:
     ratio = max(0.0, min(float(threshold_ratio), 1.0))
-    overview = collect_usage_overview(force_refresh=True)
+    overview = collect_usage_overview(force_refresh=force_refresh)
+    readiness = provider_readiness_report(force_refresh=force_refresh)
     required = set(_required_providers_from_env())
     active_counts = _active_provider_usage_counts()
 
@@ -1395,59 +1929,20 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
     seen_alert_ids: set[str] = set()
     for provider in overview.providers:
         provider_name = _normalize_provider_name(provider.provider)
-        active_usage = int(active_counts.get(provider_name, 0))
-        should_alert_status = provider.status != "ok"
-        if provider_name not in required and active_usage <= 0:
-            # Do not page on optional providers that are not currently participating in runtime execution.
-            should_alert_status = False
-        if (
-            provider_name == "openai"
-            and provider.status == "degraded"
-            and any("usage/cost fetch failed" in str(note).lower() for note in provider.notes)
-            and any("403" in str(note) for note in provider.notes)
-        ):
-            # OpenAI org usage/cost endpoints can be permission-gated while execution is still healthy.
-            should_alert_status = False
-
-        if should_alert_status:
-            alert_id = f"usage_alert_{provider.provider}_unavailable"
-            if alert_id not in seen_alert_ids:
-                alerts.append(
-                    UsageAlert(
-                        id=alert_id,
-                        provider=provider.provider,
-                        metric_id="provider_status",
-                        severity="warning" if provider.status == "degraded" else "critical",
-                        message=f"{provider.provider} usage provider status={provider.status}",
-                    )
-                )
-                seen_alert_ids.add(alert_id)
-
-        for metric in provider.metrics:
-            if metric.limit is None or metric.limit <= 0:
-                continue
-            if metric.remaining is None:
-                continue
-            remaining_ratio = metric.remaining / metric.limit
-            if remaining_ratio <= ratio:
-                severity = "critical" if remaining_ratio <= ratio / 2.0 else "warning"
-                alert_id = f"usage_alert_{provider.provider}_{metric.id}"
-                if alert_id in seen_alert_ids:
-                    continue
-                alerts.append(
-                    UsageAlert(
-                        id=alert_id,
-                        provider=provider.provider,
-                        metric_id=metric.id,
-                        severity=severity,  # type: ignore[arg-type]
-                        message=(
-                            f"{provider.provider} {metric.label} low remaining: "
-                            f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
-                        ),
-                        remaining_ratio=round(remaining_ratio, 4),
-                    )
-                )
-                seen_alert_ids.add(alert_id)
+        _append_usage_alerts_for_provider(
+            provider=provider,
+            provider_name=provider_name,
+            required=required,
+            active_usage=int(active_counts.get(provider_name, 0)),
+            ratio=ratio,
+            alerts=alerts,
+            seen_alert_ids=seen_alert_ids,
+        )
+    _append_readiness_alerts(
+        readiness=readiness,
+        alerts=alerts,
+        seen_alert_ids=seen_alert_ids,
+    )
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
 
@@ -1572,6 +2067,26 @@ def _probe_github() -> tuple[bool, str]:
     return False, "missing_github_auth"
 
 
+def _probe_openrouter() -> tuple[bool, str]:
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("openrouter", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage"
+        return False, "missing_openrouter_key"
+    url = os.getenv("OPENROUTER_MODELS_URL", "https://openrouter.ai/api/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_openrouter_headers()) as client:
+            response = client.get(url)
+            response.raise_for_status()
+        return True, "ok"
+    except Exception as exc:
+        active = int(_active_provider_usage_counts().get("openrouter", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_after_api_error"
+        return False, f"openrouter_probe_failed:{exc}"
+
+
 def _probe_railway() -> tuple[bool, str]:
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
@@ -1592,6 +2107,25 @@ def _probe_railway() -> tuple[bool, str]:
         return (ok, "ok" if ok else "railway_probe_bad_payload")
     except Exception as exc:
         return False, f"railway_probe_failed:{exc}"
+
+
+def _probe_supabase() -> tuple[bool, str]:
+    token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip() or os.getenv("SUPABASE_TOKEN", "").strip()
+    project_ref = os.getenv("SUPABASE_PROJECT_REF", "").strip()
+    if not token or not project_ref:
+        return False, "missing_supabase_env"
+    base_url = os.getenv("SUPABASE_MANAGEMENT_API_URL", "https://api.supabase.com/v1").rstrip("/")
+    url = f"{base_url}/projects/{project_ref}"
+    try:
+        with httpx.Client(timeout=8.0, headers=_supabase_headers(token)) as client:
+            response = client.get(url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+        if isinstance(payload, dict) and (payload.get("id") or payload.get("ref") or payload.get("name")):
+            return True, "ok"
+        return False, "supabase_probe_bad_payload"
+    except Exception as exc:
+        return False, f"supabase_probe_failed:{exc}"
 
 
 def _probe_claude() -> tuple[bool, str]:
@@ -1651,6 +2185,8 @@ def run_provider_validation_probes(*, required_providers: list[str] | None = Non
         "coherence-internal": _probe_internal,
         "openai-codex": _probe_openai_codex,
         "openclaw": _probe_openclaw,
+        "openrouter": _probe_openrouter,
+        "supabase": _probe_supabase,
         "github": _probe_github,
         "railway": _probe_railway,
         "claude": _probe_claude,
