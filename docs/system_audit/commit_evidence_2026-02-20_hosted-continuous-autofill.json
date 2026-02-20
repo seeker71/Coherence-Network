@@ -4,6 +4,7 @@
   "commit_scope": "Add continuous hosted task continuation: when execution finishes with no open tasks, auto-seed next work from specs/ideas by ROI and auto-run follow-up on Railway deployments.",
   "files_owned": [
     "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_task_continuation_service.py",
     "api/tests/test_agent_execute_endpoint.py",
     "docs/system_audit/commit_evidence_2026-02-20_hosted-continuous-autofill.json"
   ],
@@ -59,6 +60,7 @@
   ],
   "change_files": [
     "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_task_continuation_service.py",
     "api/tests/test_agent_execute_endpoint.py"
   ],
   "change_intent": "runtime_feature",

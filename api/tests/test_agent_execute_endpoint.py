@@ -816,7 +816,7 @@ async def test_execution_updates_cost_value_targets(
 
 def test_seed_next_tasks_falls_back_from_specs_to_idea_roi(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.services import agent_execution_service as _execution_service  # noqa: F401
-    from app.services import agent_execution_task_flow
+    from app.services import agent_task_continuation_service
     from app.services import inventory_service
 
     monkeypatch.setattr(
@@ -837,7 +837,7 @@ def test_seed_next_tasks_falls_back_from_specs_to_idea_roi(monkeypatch: pytest.M
 
     monkeypatch.setattr(inventory_service, "next_unblock_task_from_flow", _flow_fallback)
 
-    task_ids, source = agent_execution_task_flow._seed_next_tasks()
+    task_ids, source = agent_task_continuation_service._seed_next_tasks()
     assert task_ids == ["task_roi_1"]
     assert source == "idea_answered_question_roi"
     assert fallback_called["value"] is False
@@ -856,7 +856,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
     _reset_agent_store()
 
     from app.services import agent_execution_service
-    from app.services import agent_execution_task_flow
+    from app.services import agent_task_continuation_service
 
     monkeypatch.setattr(
         agent_execution_service,
@@ -868,7 +868,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
         ),
     )
     monkeypatch.setattr(
-        agent_execution_task_flow,
+        agent_task_continuation_service,
         "_seed_next_tasks",
         lambda: (["task_followup_from_spec"], "spec_implementation_gap"),
     )
@@ -878,7 +878,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
     def _capture_schedule(**kwargs: object) -> None:
         scheduled.append(str(kwargs.get("task_id") or ""))
 
-    monkeypatch.setattr(agent_execution_task_flow, "_schedule_followup_execution", _capture_schedule)
+    monkeypatch.setattr(agent_task_continuation_service, "_schedule_followup_execution", _capture_schedule)
 
     task = agent_service.create_task(
         AgentTaskCreate(
@@ -908,7 +908,7 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
     _reset_agent_store()
 
     from app.services import agent_execution_service
-    from app.services import agent_execution_task_flow
+    from app.services import agent_task_continuation_service
 
     monkeypatch.setattr(
         agent_execution_service,
@@ -926,10 +926,10 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
         seed_called["count"] += 1
         return (["task_should_not_run"], "spec_implementation_gap")
 
-    monkeypatch.setattr(agent_execution_task_flow, "_seed_next_tasks", _seed_counter)
+    monkeypatch.setattr(agent_task_continuation_service, "_seed_next_tasks", _seed_counter)
     scheduled: list[str] = []
     monkeypatch.setattr(
-        agent_execution_task_flow,
+        agent_task_continuation_service,
         "_schedule_followup_execution",
         lambda **kwargs: scheduled.append(str(kwargs.get("task_id") or "")),
     )
