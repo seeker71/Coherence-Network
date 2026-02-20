@@ -1,0 +1,77 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/hosted-task-pickup-autoexec",
+  "commit_scope": "Auto-execute inventory-created tasks when AGENT_AUTO_EXECUTE is enabled so hosted runs can pick up open-idea/open-spec generated tasks without external runner dependence.",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/commit_evidence_2026-02-20_inventory-auto-execute-fallback.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "tool-failure-cost-ledger"
+  ],
+  "spec_ids": [
+    "002",
+    "053"
+  ],
+  "task_ids": [
+    "inventory-auto-execute-fallback",
+    "open-idea-task-pickup-smoke"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "cd api && ruff check app/routers/inventory.py tests/test_inventory_api.py",
+    "POST /api/inventory/flow/next-unblock-task?create_task=true returns pending task on hosted when runner is absent"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/tests/test_inventory_api.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted inventory task generation paths enqueue immediate server-side execution when AGENT_AUTO_EXECUTE=1, preventing orphan pending tasks during runner outages.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
+      "https://coherence-network-production.up.railway.app/api/inventory/specs/sync-implementation-tasks"
+    ],
+    "test_flows": [
+      "open idea -> create_task=true -> task created and auto execution queued",
+      "open spec sync -> create_task=true -> created impl tasks auto execution queued"
+    ]
+  }
+}
