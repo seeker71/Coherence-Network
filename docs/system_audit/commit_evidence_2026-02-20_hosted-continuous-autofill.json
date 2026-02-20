@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/hosted-continuous-autofill",
+  "commit_scope": "Add continuous hosted task continuation: when execution finishes with no open tasks, auto-seed next work from specs/ideas by ROI and auto-run follow-up on Railway deployments.",
+  "files_owned": [
+    "api/app/services/agent_execution_task_flow.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/system_audit/commit_evidence_2026-02-20_hosted-continuous-autofill.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "provider-readiness-contract-automation"
+  ],
+  "spec_ids": [
+    "006",
+    "100"
+  ],
+  "task_ids": [
+    "hosted-continuous-autofill",
+    "spec-and-idea-autoseed"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py",
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"continuous_autofill or seed_next_tasks_falls_back\"",
+    "cd api && ruff check app/services/agent_execution_task_flow.py tests/test_agent_execute_endpoint.py"
+  ],
+  "change_files": [
+    "api/app/services/agent_execution_task_flow.py",
+    "api/tests/test_agent_execute_endpoint.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted execution automatically seeds next tasks from open specs or ideas when queue is empty, and Railway deployments auto-run seeded follow-up tasks to maintain execution continuity.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/inventory/specs/sync-implementation-tasks",
+      "https://coherence-network-production.up.railway.app/api/inventory/questions/next-highest-roi-task",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task"
+    ],
+    "test_flows": [
+      "execute task completes and triggers continuous autofill when no pending/running/needs_decision tasks exist",
+      "autofill prefers spec implementation gaps before idea-derived tasks",
+      "autofill does not trigger when open tasks are already present"
+    ]
+  }
+}
