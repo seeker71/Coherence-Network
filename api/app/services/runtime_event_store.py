@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, inspect
+from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, func, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -196,6 +196,29 @@ def list_events(limit: int = 100, since: datetime | None = None) -> list[Runtime
             )
         )
     return out
+
+
+def checkpoint(*, exclude_endpoints: list[str] | None = None) -> dict[str, Any]:
+    if not enabled():
+        return {"enabled": False, "count": 0, "max_recorded_at": None}
+    ensure_schema()
+    normalized_excludes = [str(item).strip() for item in (exclude_endpoints or []) if str(item).strip()]
+    with _session() as session:
+        query = session.query(
+            func.count(RuntimeEventRecord.id),
+            func.max(RuntimeEventRecord.recorded_at),
+        )
+        if normalized_excludes:
+            query = query.filter(~RuntimeEventRecord.endpoint.in_(normalized_excludes))
+        count_raw, max_recorded_at = query.one()
+    count = int(count_raw or 0)
+    if isinstance(max_recorded_at, datetime) and max_recorded_at.tzinfo is None:
+        max_recorded_at = max_recorded_at.replace(tzinfo=timezone.utc)
+    return {
+        "enabled": True,
+        "count": count,
+        "max_recorded_at": max_recorded_at.isoformat() if isinstance(max_recorded_at, datetime) else None,
+    }
 
 
 def _redact_database_url(url: str) -> str:

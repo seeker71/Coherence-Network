@@ -3,11 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { getApiBase } from "@/lib/api";
 import { LIVE_REFRESH_EVENT } from "@/lib/live_refresh";
 
-const POLL_MS = 10000;
-const VERSION_CHECK_INTERVAL_TICKS = 3;
+const DEFAULT_POLL_MS = 30000;
+const MIN_POLL_MS = 15000;
+const VERSION_CHECK_INTERVAL_TICKS = 2;
+const DEFAULT_ROUTER_REFRESH_EVERY_TICKS = 4;
 const LIVE_UPDATES_STORAGE_KEY = "coherence_live_updates_enabled";
+const ROUTER_REFRESH_SKIP_PREFIXES = ["/automation"];
 
 type HealthProxyResponse = {
   web?: {
@@ -15,13 +19,28 @@ type HealthProxyResponse = {
   };
 };
 
+type ChangeTokenResponse = {
+  token?: string;
+};
+
 export default function LiveUpdatesController() {
   const router = useRouter();
   const pathname = usePathname();
+  const apiBase = getApiBase();
   const [enabled, setEnabled] = useState(true);
   const [lastRefreshAt, setLastRefreshAt] = useState<string>("never");
   const webVersionRef = useRef<string>("");
+  const changeTokenRef = useRef<string>("");
   const tickRef = useRef<number>(0);
+  const parsedPollMs = Number.parseInt(process.env.NEXT_PUBLIC_LIVE_UPDATES_POLL_MS ?? "", 10);
+  const pollMs = Number.isFinite(parsedPollMs) ? Math.max(MIN_POLL_MS, parsedPollMs) : DEFAULT_POLL_MS;
+  const parsedRefreshEveryTicks = Number.parseInt(process.env.NEXT_PUBLIC_LIVE_UPDATES_ROUTER_REFRESH_EVERY_TICKS ?? "", 10);
+  const routerRefreshEveryTicks = Number.isFinite(parsedRefreshEveryTicks)
+    ? Math.max(1, parsedRefreshEveryTicks)
+    : DEFAULT_ROUTER_REFRESH_EVERY_TICKS;
+  const skipRouterRefresh = ROUTER_REFRESH_SKIP_PREFIXES.some((prefix) =>
+    (pathname || "/").startsWith(prefix)
+  );
 
   useEffect(() => {
     const stored = window.localStorage.getItem(LIVE_UPDATES_STORAGE_KEY);
@@ -38,6 +57,27 @@ export default function LiveUpdatesController() {
     if (!enabled) return;
 
     let cancelled = false;
+
+    const checkDataChange = async (): Promise<boolean> => {
+      try {
+        const res = await fetch(`${apiBase}/api/runtime/change-token`, { cache: "no-store" });
+        if (!res.ok) return false;
+        const json = (await res.json()) as ChangeTokenResponse;
+        const nextToken = json.token ?? "";
+        if (!nextToken) return false;
+        if (!changeTokenRef.current) {
+          changeTokenRef.current = nextToken;
+          return false;
+        }
+        if (changeTokenRef.current === nextToken) {
+          return false;
+        }
+        changeTokenRef.current = nextToken;
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
     const checkWebVersion = async () => {
       try {
@@ -63,11 +103,15 @@ export default function LiveUpdatesController() {
       if (cancelled || document.visibilityState !== "visible") return;
 
       tickRef.current += 1;
-      const now = new Date().toISOString();
-      setLastRefreshAt(now);
-
-      window.dispatchEvent(new Event(LIVE_REFRESH_EVENT));
-      router.refresh();
+      const changed = await checkDataChange();
+      if (changed) {
+        const now = new Date().toISOString();
+        setLastRefreshAt(now);
+        window.dispatchEvent(new Event(LIVE_REFRESH_EVENT));
+        if (!skipRouterRefresh && tickRef.current % routerRefreshEveryTicks === 0) {
+          router.refresh();
+        }
+      }
 
       if (tickRef.current % VERSION_CHECK_INTERVAL_TICKS === 0) {
         await checkWebVersion();
@@ -91,7 +135,7 @@ export default function LiveUpdatesController() {
 
     const timer = window.setInterval(() => {
       void runTick();
-    }, POLL_MS);
+    }, pollMs);
 
     return () => {
       cancelled = true;
@@ -99,7 +143,7 @@ export default function LiveUpdatesController() {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [enabled, router]);
+  }, [apiBase, enabled, pollMs, router, routerRefreshEveryTicks, skipRouterRefresh]);
 
   return (
     <div className="border-b bg-muted/20">

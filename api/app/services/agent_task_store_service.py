@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, Integer, String, Text, create_engine, inspect
+from sqlalchemy import DateTime, Integer, String, Text, create_engine, func, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -253,3 +253,22 @@ def clear_tasks() -> None:
     ensure_schema()
     with _session() as session:
         session.query(AgentTaskRecord).delete()
+
+
+def checkpoint() -> dict[str, Any]:
+    if not enabled():
+        return {"enabled": False, "count": 0, "max_updated_at": None}
+    ensure_schema()
+    with _session() as session:
+        count_raw, max_updated_at = session.query(
+            func.count(AgentTaskRecord.id),
+            func.max(func.coalesce(AgentTaskRecord.updated_at, AgentTaskRecord.created_at)),
+        ).one()
+    count = int(count_raw or 0)
+    if isinstance(max_updated_at, datetime) and max_updated_at.tzinfo is None:
+        max_updated_at = max_updated_at.replace(tzinfo=timezone.utc)
+    return {
+        "enabled": True,
+        "count": count,
+        "max_updated_at": _serialize_dt(max_updated_at) if isinstance(max_updated_at, datetime) else None,
+    }
