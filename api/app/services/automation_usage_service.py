@@ -468,6 +468,111 @@ def _build_models_visibility_snapshot(
     )
 
 
+def _openai_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers | None, str | None]:
+    probe_url = os.getenv("OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
+    model = os.getenv("OPENAI_QUOTA_PROBE_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    payload = {
+        "model": model,
+        "input": "quota probe",
+        "max_output_tokens": 1,
+    }
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            response = client.post(probe_url, json=payload)
+            response.raise_for_status()
+        return response.headers, None
+    except Exception as exc:
+        return None, str(exc)
+
+
+def _claude_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers | None, str | None]:
+    probe_url = os.getenv("ANTHROPIC_MESSAGES_URL", "https://api.anthropic.com/v1/messages")
+    model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-3-5-haiku-latest").strip() or "claude-3-5-haiku-latest"
+    payload = {
+        "model": model,
+        "max_tokens": 1,
+        "messages": [{"role": "user", "content": "quota probe"}],
+    }
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            response = client.post(probe_url, json=payload)
+            response.raise_for_status()
+        return response.headers, None
+    except Exception as exc:
+        return None, str(exc)
+
+
+def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
+    token = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not token:
+        return _build_config_only_snapshot("openrouter")
+
+    auth_key_url = os.getenv("OPENROUTER_AUTH_KEY_URL", "https://openrouter.ai/api/v1/auth/key")
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        with httpx.Client(timeout=8.0, headers=headers) as client:
+            response = client.get(auth_key_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        fallback = _build_config_only_snapshot("openrouter")
+        fallback.notes.append(f"OpenRouter key usage probe failed: {exc}")
+        fallback.notes = list(dict.fromkeys(fallback.notes))
+        fallback.raw["probe_url"] = auth_key_url
+        return fallback
+
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    usage = float(data.get("usage") or 0.0)
+    limit = data.get("limit")
+    try:
+        limit_value = float(limit) if limit is not None else None
+    except (TypeError, ValueError):
+        limit_value = None
+    remaining = max(0.0, limit_value - usage) if limit_value is not None else None
+
+    metrics = [
+        _metric(
+            id="api_probe",
+            label="OpenRouter key probe",
+            unit="requests",
+            used=1.0,
+            window="probe",
+        )
+    ]
+    if limit_value is not None and limit_value > 0:
+        metrics.append(
+            _metric(
+                id="credits_quota",
+                label="OpenRouter credits quota",
+                unit="usd",
+                used=usage,
+                remaining=remaining,
+                limit=limit_value,
+                window="rolling",
+            )
+        )
+    notes: list[str] = []
+    if limit_value is None:
+        notes.append("OpenRouter auth/key probe succeeded, but no credit limit was returned.")
+
+    return ProviderUsageSnapshot(
+        id=f"provider_openrouter_{int(time.time())}",
+        provider="openrouter",
+        kind="custom",
+        status="ok",
+        data_source="provider_api",
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "probe_url": auth_key_url,
+            "key_label": data.get("label"),
+            "usage": usage,
+            "limit": limit,
+            "is_free_tier": data.get("is_free_tier"),
+        },
+    )
+
+
 def _railway_api_probe_snapshot(*, ok: bool, response_headers: httpx.Headers, gql_url: str) -> ProviderUsageSnapshot:
     metrics = [
         _metric(
@@ -1114,7 +1219,7 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    return _build_models_visibility_snapshot(
+    snapshot = _build_models_visibility_snapshot(
         provider="openai-codex",
         label="OpenAI visible models",
         models_url=models_url,
@@ -1136,6 +1241,36 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         ),
         no_header_note="OpenAI models probe succeeded, but no request/token remaining headers were returned.",
     )
+    has_quota_metric = any(metric.id in {"requests_quota", "tokens_quota"} for metric in snapshot.metrics)
+    if not has_quota_metric:
+        probe_headers, probe_error = _openai_quota_probe_headers(headers)
+        if probe_headers is not None:
+            appended = _append_rate_limit_metrics(
+                metrics=snapshot.metrics,
+                headers=probe_headers,
+                request_limit_keys=("x-ratelimit-limit-requests",),
+                request_remaining_keys=("x-ratelimit-remaining-requests",),
+                request_window="minute",
+                request_label="OpenAI request quota",
+                token_limit_keys=("x-ratelimit-limit-tokens",),
+                token_remaining_keys=("x-ratelimit-remaining-tokens",),
+                token_window="minute",
+                token_label="OpenAI token quota",
+            )
+            if appended:
+                snapshot.notes.append("Quota headers sourced from lightweight OpenAI responses probe.")
+                snapshot.notes = [
+                    note
+                    for note in snapshot.notes
+                    if "no request/token remaining headers were returned" not in note.lower()
+                ]
+            else:
+                snapshot.notes.append(
+                    "OpenAI responses probe completed, but no request/token remaining headers were returned."
+                )
+        elif probe_error:
+            snapshot.notes.append(f"OpenAI responses quota probe failed: {probe_error}")
+    return snapshot
 
 
 def _anthropic_headers() -> dict[str, str]:
@@ -1194,7 +1329,7 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    return _build_models_visibility_snapshot(
+    snapshot = _build_models_visibility_snapshot(
         provider="claude",
         label="Claude visible models",
         models_url=models_url,
@@ -1216,6 +1351,36 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         ),
         no_header_note="Claude models probe succeeded, but no request/token remaining headers were returned.",
     )
+    has_quota_metric = any(metric.id in {"requests_quota", "tokens_quota"} for metric in snapshot.metrics)
+    if not has_quota_metric:
+        probe_headers, probe_error = _claude_quota_probe_headers(_anthropic_headers())
+        if probe_headers is not None:
+            appended = _append_rate_limit_metrics(
+                metrics=snapshot.metrics,
+                headers=probe_headers,
+                request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
+                request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
+                request_window="minute",
+                request_label="Claude request quota",
+                token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
+                token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
+                token_window="minute",
+                token_label="Claude token quota",
+            )
+            if appended:
+                snapshot.notes.append("Quota headers sourced from lightweight Anthropic messages probe.")
+                snapshot.notes = [
+                    note
+                    for note in snapshot.notes
+                    if "no request/token remaining headers were returned" not in note.lower()
+                ]
+            else:
+                snapshot.notes.append(
+                    "Anthropic messages probe completed, but no request/token remaining headers were returned."
+                )
+        elif probe_error:
+            snapshot.notes.append(f"Anthropic messages quota probe failed: {probe_error}")
+    return snapshot
 
 
 def _openrouter_headers() -> dict[str, str]:
@@ -1715,26 +1880,15 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             )
         )
 
-    # Best-effort fallback: when org usage APIs are unavailable, attempt limit headers from models probe.
+    # Best-effort fallback: when org usage APIs are unavailable, attempt quota headers from a tiny responses probe.
     if usage_error and cost_error:
         try:
-            models_url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
-            models_started = time.perf_counter()
-            with httpx.Client(timeout=8.0, headers=headers) as client:
-                model_response = client.get(models_url)
-                model_response.raise_for_status()
-            _record_external_tool_usage(
-                tool_name="openai-api",
-                provider="openai",
-                operation="list_models_fallback",
-                resource=models_url,
-                status="success",
-                http_status=int(model_response.status_code),
-                duration_ms=int((time.perf_counter() - models_started) * 1000),
-            )
+            probe_headers, probe_error = _openai_quota_probe_headers(headers)
+            if probe_headers is None:
+                raise RuntimeError(probe_error or "openai_quota_probe_unavailable")
             has_model_limits = _append_rate_limit_metrics(
                 metrics=metrics,
-                headers=model_response.headers,
+                headers=probe_headers,
                 request_limit_keys=("x-ratelimit-limit-requests",),
                 request_remaining_keys=("x-ratelimit-remaining-requests",),
                 request_window="minute",
@@ -1745,7 +1899,7 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
                 token_label="OpenAI token quota",
             )
             if has_model_limits:
-                notes.append("Using OpenAI models endpoint rate-limit headers as best-effort fallback for remaining quota.")
+                notes.append("Using OpenAI responses probe rate-limit headers as best-effort fallback for remaining quota.")
         except Exception as exc:
             response = getattr(exc, "response", None)
             status_code = None
@@ -1754,13 +1908,13 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
             _record_external_tool_usage(
                 tool_name="openai-api",
                 provider="openai",
-                operation="list_models_fallback",
-                resource=os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models"),
+                operation="responses_quota_probe_fallback",
+                resource=os.getenv("OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses"),
                 status="error",
                 http_status=status_code,
                 payload={"error": str(exc)},
             )
-            notes.append(f"OpenAI models fallback probe failed: {exc}")
+            notes.append(f"OpenAI responses fallback probe failed: {exc}")
 
     return ProviderUsageSnapshot(
         id=f"provider_openai_{int(time.time())}",

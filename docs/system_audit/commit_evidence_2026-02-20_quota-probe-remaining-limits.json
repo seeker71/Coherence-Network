@@ -1,0 +1,76 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/fix-start-gate-and-clawwork",
+  "commit_scope": "Improve provider quota awareness by adding lightweight quota probes for OpenAI and Claude plus OpenRouter credit-limit telemetry, while preserving readiness behavior on probe failures.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "docs/system_audit/commit_evidence_2026-02-20_quota-probe-remaining-limits.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "provider-readiness-contract"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "quota-probe-remaining-limits"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+    "cd api && .venv/bin/pytest -q tests/test_automation_usage_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation usage snapshots now attempt low-cost quota probes to populate remaining request/token/credit limits for OpenAI, Claude, and OpenRouter when available.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/external-tools"
+    ],
+    "test_flows": [
+      "OpenAI-Codex snapshot includes quota metrics when responses probe returns ratelimit headers",
+      "Claude snapshot includes quota metrics when messages probe returns ratelimit headers",
+      "OpenRouter snapshot reports credits quota via auth/key endpoint and falls back to configured readiness if probe fails"
+    ]
+  }
+}
