@@ -133,7 +133,6 @@ def _is_openclaw_spark_model(model_name: str) -> bool:
 def _build_retry_context_patch(
     *,
     failure_hits: int,
-    retry_count: int,
     retry_max: int,
     failure_output: str,
 ) -> dict[str, Any]:
@@ -142,10 +141,6 @@ def _build_retry_context_patch(
         "last_failure_output": failure_output[:_FAILURE_OUTPUT_MAX],
         "last_failure_at": datetime.now(timezone.utc).isoformat(),
         "retry_max": retry_max,
-        "retry_count": retry_count + 1,
-        "retry_hint": _retry_fix_hint(failure_output, retry_count + 1),
-        "retry_requested_at": datetime.now(timezone.utc).isoformat(),
-        "last_retry_source": "auto_failure_recovery",
     }
 
 
@@ -213,7 +208,6 @@ def record_failure_hits_and_retry(
     current_model = str(task.get("model") or "").strip().lower()
     context_patch: dict[str, Any] = _build_retry_context_patch(
         failure_hits=failure_hits,
-        retry_count=retry_count,
         retry_max=retry_max,
         failure_output=failure_output,
     )
@@ -229,6 +223,9 @@ def record_failure_hits_and_retry(
 
     next_retry = retry_count + 1
     context_patch["retry_count"] = next_retry
+    context_patch["retry_hint"] = _retry_fix_hint(failure_output, next_retry)
+    context_patch["retry_requested_at"] = datetime.now(timezone.utc).isoformat()
+    context_patch["last_retry_source"] = "auto_failure_recovery"
     retry_force_paid_providers = force_paid_providers
     override_patch = _build_retry_override(
         context=context,
