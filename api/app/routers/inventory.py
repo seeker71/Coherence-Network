@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
+import os
+
+from fastapi import APIRouter, BackgroundTasks, Query, Request
 
 from app.adapters.graph_store import GraphStore
+from app.services import agent_service
 from app.services import inventory_service
 from app.services import page_lineage_service
 from app.services import route_registry_service
@@ -14,6 +17,66 @@ router = APIRouter()
 
 def get_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
+
+
+def _truthy(raw: str | None) -> bool:
+    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _extract_created_task_ids(payload: dict) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+
+    def _append(candidate: str | None) -> None:
+        task_id = str(candidate or "").strip()
+        if not task_id or task_id in seen:
+            return
+        seen.add(task_id)
+        ids.append(task_id)
+
+    created_task = payload.get("created_task")
+    if isinstance(created_task, dict):
+        _append(created_task.get("id"))
+
+    created_tasks = payload.get("created_tasks")
+    if isinstance(created_tasks, list):
+        for row in created_tasks:
+            if not isinstance(row, dict):
+                continue
+            _append(row.get("task_id") or row.get("id"))
+
+    return ids
+
+
+def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTasks) -> None:
+    if not _truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0")):
+        return
+
+    task_ids = _extract_created_task_ids(payload)
+    if not task_ids:
+        return
+
+    model_override = os.environ.get("AGENT_AUTO_EXECUTE_MODEL", "openrouter/free")
+    from app.services import agent_execution_service
+
+    for task_id in task_ids[:20]:
+        try:
+            task = agent_service.get_task(task_id)
+            task_ctx = task.get("context") if isinstance(task, dict) else {}
+            context_patch: dict[str, object] = {}
+            if not isinstance(task_ctx, dict):
+                context_patch["executor"] = "openclaw"
+                context_patch["model_override"] = model_override
+            else:
+                if not str(task_ctx.get("executor") or "").strip():
+                    context_patch["executor"] = "openclaw"
+                if not str(task_ctx.get("model_override") or "").strip():
+                    context_patch["model_override"] = model_override
+            if context_patch:
+                agent_service.update_task(task_id, context=context_patch)
+            background_tasks.add_task(agent_execution_service.execute_task, task_id)
+        except Exception:
+            continue
 
 
 @router.get("/inventory/system-lineage")
@@ -42,24 +105,36 @@ async def page_lineage() -> dict:
 
 
 @router.post("/inventory/questions/next-highest-roi-task")
-async def next_highest_roi_task(create_task: bool = Query(False)) -> dict:
-    return inventory_service.next_highest_roi_task_from_answered_questions(create_task=create_task)
+async def next_highest_roi_task(
+    background_tasks: BackgroundTasks,
+    create_task: bool = Query(False),
+) -> dict:
+    payload = inventory_service.next_highest_roi_task_from_answered_questions(create_task=create_task)
+    if create_task:
+        _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.post("/inventory/questions/sync-implementation-tasks")
-async def sync_implementation_request_tasks() -> dict:
-    return inventory_service.sync_implementation_request_question_tasks()
+async def sync_implementation_request_tasks(background_tasks: BackgroundTasks) -> dict:
+    payload = inventory_service.sync_implementation_request_question_tasks()
+    _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.post("/inventory/specs/sync-implementation-tasks")
 async def sync_spec_implementation_gap_tasks(
+    background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
     limit: int = Query(200, ge=1, le=500),
 ) -> dict:
-    return inventory_service.sync_spec_implementation_gap_tasks(
+    payload = inventory_service.sync_spec_implementation_gap_tasks(
         create_task=create_task,
         limit=limit,
     )
+    if create_task:
+        _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.get("/inventory/questions/proactive")
@@ -83,19 +158,22 @@ async def sync_proactive_questions(
 
 @router.post("/inventory/gaps/sync-traceability")
 async def sync_traceability_gap_artifacts(
+    background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     max_spec_idea_links: int = Query(150, ge=1, le=1000),
     max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
     max_spec_process_backfills: int = Query(500, ge=1, le=5000),
     max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
 ) -> dict:
-    return inventory_service.sync_traceability_gap_artifacts(
+    payload = inventory_service.sync_traceability_gap_artifacts(
         runtime_window_seconds=runtime_window_seconds,
         max_spec_idea_links=max_spec_idea_links,
         max_missing_endpoint_specs=max_missing_endpoint_specs,
         max_spec_process_backfills=max_spec_process_backfills,
         max_usage_gap_tasks=max_usage_gap_tasks,
     )
+    _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.get("/inventory/process-completeness")
@@ -119,6 +197,7 @@ async def process_completeness(
 
 @router.post("/inventory/gaps/sync-process-tasks")
 async def sync_process_gap_tasks(
+    background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     auto_sync: bool = Query(True),
     max_tasks: int = Query(50, ge=1, le=500),
@@ -127,7 +206,7 @@ async def sync_process_gap_tasks(
     max_spec_process_backfills: int = Query(500, ge=1, le=5000),
     max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
 ) -> dict:
-    return inventory_service.sync_process_completeness_gap_tasks(
+    payload = inventory_service.sync_process_completeness_gap_tasks(
         runtime_window_seconds=runtime_window_seconds,
         auto_sync=auto_sync,
         max_tasks=max_tasks,
@@ -136,6 +215,8 @@ async def sync_process_gap_tasks(
         max_spec_process_backfills=max_spec_process_backfills,
         max_usage_gap_tasks=max_usage_gap_tasks,
     )
+    _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.get("/inventory/asset-modularity")
@@ -151,13 +232,16 @@ async def asset_modularity(
 
 @router.post("/inventory/gaps/sync-asset-modularity-tasks")
 async def sync_asset_modularity_tasks(
+    background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     max_tasks: int = Query(50, ge=1, le=500),
 ) -> dict:
-    return inventory_service.sync_asset_modularity_tasks(
+    payload = inventory_service.sync_asset_modularity_tasks(
         runtime_window_seconds=runtime_window_seconds,
         max_tasks=max_tasks,
     )
+    _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.get("/inventory/flow")
@@ -194,15 +278,19 @@ def spec_process_implementation_validation_flow(
 
 @router.post("/inventory/flow/next-unblock-task")
 async def next_unblock_task(
+    background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
     idea_id: str | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
-    return inventory_service.next_unblock_task_from_flow(
+    payload = inventory_service.next_unblock_task_from_flow(
         create_task=create_task,
         idea_id=idea_id,
         runtime_window_seconds=runtime_window_seconds,
     )
+    if create_task:
+        _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
 
 
 @router.get("/inventory/endpoint-traceability")

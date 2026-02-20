@@ -9,6 +9,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import agent_execution_service
 from app.services import agent_service
 from app.services import commit_evidence_service
 from app.services import inventory_service
@@ -811,6 +812,67 @@ async def test_sync_spec_implementation_gap_tasks_orders_by_roi_and_dedupes(
 
 
 @pytest.mark.asyncio
+async def test_sync_spec_implementation_gap_tasks_auto_executes_when_enabled(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    docs_dir = root / "docs"
+    specs_dir = root / "specs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    specs_dir.mkdir(parents=True, exist_ok=True)
+
+    (docs_dir / "SPEC-COVERAGE.md").write_text(
+        "\n".join(
+            [
+                "# Spec Coverage",
+                "",
+                "## Status Summary",
+                "",
+                "| Spec | Present | Spec'd | Tested | Notes |",
+                "|------|---------|--------|--------|-------|",
+                "| 029 GitHub API Integration | ? | ✓ | ? | Pending |",
+                "| 036 Check Pipeline Hierarchical View | ? | ✓ | ? | Pending |",
+                "",
+                "**Present:** Implemented.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (specs_dir / "029-github-api-integration.md").write_text("# 029\n", encoding="utf-8")
+    (specs_dir / "036-check-pipeline-hierarchical-view.md").write_text("# 036\n", encoding="utf-8")
+
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: root)
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000: [
+            SimpleNamespace(spec_id="029-github-api-integration", estimated_roi=7.5),
+            SimpleNamespace(spec_id="036-check-pipeline-hierarchical-view", estimated_roi=2.0),
+        ],
+    )
+    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "1")
+
+    queued: list[str] = []
+
+    def _fake_execute_task(task_id: str, **_: object) -> None:
+        queued.append(task_id)
+
+    monkeypatch.setattr(agent_execution_service, "execute_task", _fake_execute_task)
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/inventory/specs/sync-implementation-tasks",
+            params={"create_task": True, "limit": 10},
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        created_ids = [row["task_id"] for row in payload["created_tasks"]]
+        assert payload["created_count"] == 2
+        assert set(queued) == set(created_ids)
+
+
+@pytest.mark.asyncio
 async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -982,6 +1044,57 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
         duplicate_payload = duplicate.json()
         assert duplicate_payload["result"] == "task_already_active"
         assert duplicate_payload["active_task"]["id"] == created_payload["created_task"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_next_unblock_task_auto_executes_created_task_when_enabled(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "1")
+
+    (tmp_path / "ideas.json").write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "auto-exec-unblock-idea",
+                        "name": "Auto exec unblock idea",
+                        "description": "Flow should auto execute newly created unblock task.",
+                        "potential_value": 42.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 6.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.8,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    queued: list[str] = []
+
+    def _fake_execute_task(task_id: str, **_: object) -> None:
+        queued.append(task_id)
+
+    monkeypatch.setattr(agent_execution_service, "execute_task", _fake_execute_task)
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/inventory/flow/next-unblock-task", params={"create_task": True})
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["result"] == "task_suggested"
+        created_id = payload["created_task"]["id"]
+        assert created_id in queued
 
 
 @pytest.mark.asyncio
