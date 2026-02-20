@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.services import agent_runner_registry_service
+from app.services import agent_runner_registry_service, agent_service
 
 
 @pytest.mark.asyncio
@@ -91,3 +91,67 @@ async def test_runner_registry_filters_stale_by_default(tmp_path, monkeypatch: p
         assert payload["total"] == 1
         assert payload["runners"][0]["runner_id"] == "runner-stale"
         assert payload["runners"][0]["online"] is False
+
+
+@pytest.mark.asyncio
+async def test_runner_idle_heartbeat_reaps_orphaned_running_tasks(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_path = tmp_path / "runner_registry_orphan.db"
+    monkeypatch.setenv("AGENT_RUNNER_REGISTRY_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_ORPHAN_RUNNING_SEC", "60")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "bot-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_IDS", "111")
+    agent_service._store.clear()
+
+    sent_messages: list[str] = []
+
+    async def _fake_send_alert(message: str, parse_mode: str = "Markdown") -> bool:
+        sent_messages.append(message)
+        return True
+
+    monkeypatch.setattr("app.services.telegram_adapter.send_alert", _fake_send_alert)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "orphan recovery probe", "task_type": "impl"},
+        )
+        assert created.status_code == 201
+        task_id = created.json()["id"]
+
+        started = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "runner-a"},
+        )
+        assert started.status_code == 200
+        sent_messages.clear()
+
+        # Simulate an orphaned running task older than threshold.
+        task = agent_service.get_task(task_id)
+        assert task is not None
+        stale_time = datetime.now(timezone.utc) - timedelta(seconds=3700)
+        task["started_at"] = stale_time
+        task["claimed_at"] = stale_time
+        task["updated_at"] = stale_time
+
+        heartbeat = await client.post(
+            "/api/agent/runners/heartbeat",
+            json={
+                "runner_id": "runner-a",
+                "status": "idle",
+                "lease_seconds": 120,
+                "active_task_id": "",
+            },
+        )
+        assert heartbeat.status_code == 200
+
+        refreshed = await client.get(f"/api/agent/tasks/{task_id}")
+        assert refreshed.status_code == 200
+        payload = refreshed.json()
+        assert payload["status"] == "failed"
+        assert "auto-recovered" in str(payload.get("output") or "")
+
+    assert len(sent_messages) == 1
+    assert task_id in sent_messages[0]
