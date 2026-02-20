@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/spec-gap-idle-task-generation",
+  "commit_scope": "Add ROI-ordered spec implementation gap task generation, idle queue auto task creation, and PR-guard self-healing for generated maintainability artifacts.",
+  "files_owned": [
+    "api/app/services/inventory_service.py",
+    "api/app/routers/inventory.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "scripts/worktree_pr_guard.py",
+    "api/tests/test_worktree_pr_guard.py"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "005",
+    "053",
+    "083"
+  ],
+  "task_ids": [
+    "spec-implementation-gap-sync",
+    "runner-idle-auto-generate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_worktree_pr_guard.py tests/test_inventory_api.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check app/services/inventory_service.py app/routers/inventory.py scripts/agent_runner.py tests/test_inventory_api.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_worktree_pr_guard.py",
+    "cd api && python3 scripts/update_spec_coverage.py --validate"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_worktree_pr_guard.py",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When the queue is idle, the runner can auto-create ROI-ordered spec implementation tasks from coverage gaps instead of stalling.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/specs/sync-implementation-tasks"
+    ],
+    "test_flows": [
+      "api:/api/inventory/specs/sync-implementation-tasks returns ordered gaps and create_task dedupe",
+      "runner idle path calls spec-gap sync endpoint when no open tasks"
+    ]
+  }
+}

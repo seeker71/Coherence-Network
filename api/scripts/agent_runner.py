@@ -216,6 +216,22 @@ try:
 except ValueError:
     PAID_CALL_COST_UNITS = 1.0
 PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
+AUTO_GENERATE_IDLE_TASKS = str(
+    os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASKS", "1")
+).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
+try:
+    AUTO_GENERATE_IDLE_TASK_LIMIT = int(os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_LIMIT", "50"))
+except ValueError:
+    AUTO_GENERATE_IDLE_TASK_LIMIT = 50
+AUTO_GENERATE_IDLE_TASK_LIMIT = max(1, min(AUTO_GENERATE_IDLE_TASK_LIMIT, 500))
+try:
+    AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = int(
+        os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", "30")
+    )
+except ValueError:
+    AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = 30
+AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = max(0, AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS)
+_last_idle_task_generation_ts = 0.0
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
@@ -4448,6 +4464,86 @@ def run_one_task(
         return True
 
 
+def _task_status_count(client: httpx.Client, log: logging.Logger, status: str) -> int | None:
+    response = _http_with_retry(
+        client,
+        "GET",
+        f"{BASE}/api/agent/tasks",
+        log,
+        params={"status": status, "limit": 1},
+    )
+    if response is None or response.status_code != 200:
+        return None
+    try:
+        payload = response.json()
+    except Exception:
+        return None
+    total_raw = payload.get("total")
+    if isinstance(total_raw, bool):
+        return None
+    try:
+        return int(total_raw or 0)
+    except (TypeError, ValueError):
+        return None
+
+
+def _has_open_tasks(client: httpx.Client, log: logging.Logger) -> bool:
+    for status in ("pending", "running", "needs_decision"):
+        total = _task_status_count(client, log, status)
+        if total is None:
+            # Fail safe: avoid creating duplicate tasks when API state is uncertain.
+            return True
+        if total > 0:
+            return True
+    return False
+
+
+def _auto_generate_tasks_when_idle(client: httpx.Client, log: logging.Logger) -> int:
+    global _last_idle_task_generation_ts
+    if not AUTO_GENERATE_IDLE_TASKS:
+        return 0
+
+    now = time.monotonic()
+    if AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS > 0:
+        elapsed = now - _last_idle_task_generation_ts
+        if elapsed < AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS:
+            return 0
+
+    if _has_open_tasks(client, log):
+        return 0
+
+    _last_idle_task_generation_ts = now
+    response = _http_with_retry(
+        client,
+        "POST",
+        f"{BASE}/api/inventory/specs/sync-implementation-tasks",
+        log,
+        params={
+            "create_task": True,
+            "limit": AUTO_GENERATE_IDLE_TASK_LIMIT,
+        },
+    )
+    if response is None or response.status_code != 200:
+        return 0
+    try:
+        payload = response.json()
+    except Exception:
+        return 0
+    created_raw = payload.get("created_count")
+    if isinstance(created_raw, bool):
+        return 0
+    try:
+        created_count = int(created_raw or 0)
+    except (TypeError, ValueError):
+        return 0
+    if created_count > 0:
+        log.info(
+            "Idle queue detected: created %d task(s) from spec implementation gaps",
+            created_count,
+        )
+    return created_count
+
+
 def poll_and_run(
     client: httpx.Client,
     once: bool = False,
@@ -4491,6 +4587,11 @@ def poll_and_run(
         data = r.json()
         tasks = data.get("tasks") or []
         if not tasks:
+            created_count = _auto_generate_tasks_when_idle(client, log)
+            if created_count > 0:
+                if verbose:
+                    print(f"Auto-generated {created_count} task(s) from spec implementation gaps")
+                continue
             if once:
                 print("No pending tasks")
                 break
