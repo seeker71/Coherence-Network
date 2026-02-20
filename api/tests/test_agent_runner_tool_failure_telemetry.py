@@ -18,9 +18,10 @@ _spec.loader.exec_module(agent_runner)
 @dataclass
 class _Resp:
     status_code: int = 200
+    payload: dict | None = None
 
     def json(self):
-        return {}
+        return self.payload or {}
 
 
 class _Client:
@@ -791,3 +792,59 @@ def test_awareness_quality_tracks_requested_metrics():
     assert quality.get("hold_pattern_rate") == pytest.approx(0.4, rel=1e-3)
     assert quality.get("estimated_to_measured_roi_conversion") == pytest.approx(0.4, rel=1e-3)
     assert quality.get("cost_per_successful_transition") == pytest.approx(12.5 / 3.0, rel=1e-3)
+
+
+def test_auto_generate_tasks_when_idle_creates_spec_gap_tasks(monkeypatch, tmp_path):
+    calls: list[tuple[str, str, dict | None]] = []
+
+    def _fake_http(client, method, url, log, **kwargs):
+        params = kwargs.get("params")
+        calls.append((method.upper(), url, params if isinstance(params, dict) else None))
+        if method.upper() == "GET" and url.endswith("/api/agent/tasks"):
+            return _Resp(200, {"total": 0, "tasks": []})
+        if method.upper() == "POST" and url.endswith("/api/inventory/specs/sync-implementation-tasks"):
+            return _Resp(200, {"created_count": 2})
+        return _Resp(500, {})
+
+    monkeypatch.setattr(agent_runner, "_http_with_retry", _fake_http)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASKS", True)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASK_LIMIT", 25)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", 0)
+    monkeypatch.setattr(agent_runner, "_last_idle_task_generation_ts", 0.0)
+    monkeypatch.setattr(agent_runner.time, "monotonic", lambda: 1000.0)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+
+    created = agent_runner._auto_generate_tasks_when_idle(client=object(), log=agent_runner._setup_logging())
+    assert created == 2
+    assert any(
+        call[0] == "POST" and call[1].endswith("/api/inventory/specs/sync-implementation-tasks")
+        for call in calls
+    )
+
+
+def test_auto_generate_tasks_when_idle_skips_when_open_tasks_exist(monkeypatch, tmp_path):
+    calls: list[tuple[str, str, dict | None]] = []
+
+    def _fake_http(client, method, url, log, **kwargs):
+        params = kwargs.get("params")
+        calls.append((method.upper(), url, params if isinstance(params, dict) else None))
+        if method.upper() == "GET" and url.endswith("/api/agent/tasks"):
+            status = str((params or {}).get("status") or "")
+            if status == "pending":
+                return _Resp(200, {"total": 1, "tasks": [{"id": "task_existing"}]})
+            return _Resp(200, {"total": 0, "tasks": []})
+        return _Resp(500, {})
+
+    monkeypatch.setattr(agent_runner, "_http_with_retry", _fake_http)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASKS", True)
+    monkeypatch.setattr(agent_runner, "AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", 0)
+    monkeypatch.setattr(agent_runner, "_last_idle_task_generation_ts", 0.0)
+    monkeypatch.setattr(agent_runner.time, "monotonic", lambda: 1000.0)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+
+    created = agent_runner._auto_generate_tasks_when_idle(client=object(), log=agent_runner._setup_logging())
+    assert created == 0
+    assert not any(
+        call[0] == "POST" and call[1].endswith("/api/inventory/specs/sync-implementation-tasks")
+        for call in calls
+    )

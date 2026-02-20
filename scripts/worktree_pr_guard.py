@@ -21,6 +21,8 @@ import httpx
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = REPO_ROOT / "api"
+DEFAULT_MAINTAINABILITY_OUTPUT = "api/logs/maintainability_audit_report.worktree_guard.json"
+AUTO_HEAL_GENERATED_ARTIFACTS = {"maintainability_audit_report.json"}
 
 # Allow importing api.app services from repo root script.
 if str(API_ROOT) not in sys.path:
@@ -98,6 +100,12 @@ class StepResult:
     hint: str
 
 
+@dataclass
+class FileSnapshot:
+    exists: bool
+    content: bytes
+
+
 def _hint_for_step(name: str, command: str, output: str) -> str:
     lower = f"{name} {command} {output}".lower()
     if "validate_commit_evidence" in lower:
@@ -149,6 +157,64 @@ def _run_step(name: str, command: str, cwd: Path, env: dict[str, str] | None = N
         output_tail=tail,
         hint=hint,
     )
+
+
+def _as_repo_relative(path_value: str) -> str | None:
+    candidate = Path(path_value).expanduser()
+    if not candidate.is_absolute():
+        candidate = (REPO_ROOT / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    try:
+        return candidate.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return None
+
+
+def _auto_heal_targets(maintainability_output: str) -> set[str]:
+    targets = set(AUTO_HEAL_GENERATED_ARTIFACTS)
+    rel = _as_repo_relative(maintainability_output)
+    if rel:
+        targets.add(rel)
+    return targets
+
+
+def _snapshot_files(paths: set[str]) -> dict[str, FileSnapshot]:
+    snapshots: dict[str, FileSnapshot] = {}
+    for rel in paths:
+        abs_path = (REPO_ROOT / rel).resolve()
+        if abs_path.exists() and abs_path.is_file():
+            snapshots[rel] = FileSnapshot(exists=True, content=abs_path.read_bytes())
+        else:
+            snapshots[rel] = FileSnapshot(exists=False, content=b"")
+    return snapshots
+
+
+def _restore_snapshot(path: Path, snapshot: FileSnapshot) -> None:
+    if snapshot.exists:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(snapshot.content)
+    elif path.exists():
+        if path.is_file():
+            path.unlink()
+
+
+def _auto_heal_generated_artifacts(
+    *,
+    preexisting_changed_paths: set[str],
+    snapshots: dict[str, FileSnapshot],
+) -> list[str]:
+    current_changed = set(_changed_paths_worktree())
+    healed: list[str] = []
+    for rel in sorted(snapshots.keys()):
+        if rel in preexisting_changed_paths:
+            continue
+        if rel not in current_changed:
+            continue
+        target = (REPO_ROOT / rel).resolve()
+        _restore_snapshot(target, snapshots[rel])
+        healed.append(rel)
+    return healed
 
 
 def _changed_paths_worktree() -> list[str]:
@@ -455,8 +521,8 @@ def _local_steps(
     skip_api_tests: bool,
     skip_web_build: bool,
     require_gh_auth: bool,
+    maintainability_output: str,
 ) -> list[tuple[str, str]]:
-    maintainability_output = os.getenv("WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT", "maintainability_audit_report.json")
     steps: list[tuple[str, str]] = []
     workflow_check = _existing_script_command("scripts/validate_workflow_references.py")
     if workflow_check:
@@ -745,6 +811,14 @@ def main() -> int:
     }
 
     if args.mode in ("local", "all"):
+        maintainability_output = os.getenv(
+            "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT",
+            DEFAULT_MAINTAINABILITY_OUTPUT,
+        )
+        auto_heal_targets = _auto_heal_targets(maintainability_output)
+        preexisting_changed_paths = set(_changed_paths_worktree())
+        snapshots = _snapshot_files(auto_heal_targets)
+        healed_artifacts: set[str] = set()
         steps: list[StepResult] = []
         rebase_step = _run_rebase_freshness_guard(args.base_ref)
         steps.append(rebase_step)
@@ -770,8 +844,20 @@ def main() -> int:
                 args.skip_api_tests,
                 args.skip_web_build,
                 args.require_gh_auth,
+                maintainability_output,
             ):
                 step = _run_step(name, command, cwd=REPO_ROOT)
+                healed_now = _auto_heal_generated_artifacts(
+                    preexisting_changed_paths=preexisting_changed_paths,
+                    snapshots=snapshots,
+                )
+                if healed_now:
+                    healed_artifacts.update(healed_now)
+                    auto_heal_note = f"[AUTO-HEAL] restored generated artifacts: {', '.join(healed_now)}"
+                    if step.output_tail:
+                        step.output_tail = f"{step.output_tail}\n{auto_heal_note}"[-5000:]
+                    else:
+                        step.output_tail = auto_heal_note
                 steps.append(step)
                 if not step.ok:
                     break
@@ -783,6 +869,7 @@ def main() -> int:
             local_ok = all(s.ok for s in steps)
             report["local_preflight"] = {
                 "status": "pass" if local_ok else "fail",
+                "auto_healed_artifacts": sorted(healed_artifacts),
                 "steps": [
                     {
                         "name": s.name,
