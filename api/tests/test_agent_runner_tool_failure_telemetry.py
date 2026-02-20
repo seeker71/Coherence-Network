@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 from dataclasses import dataclass
 import importlib.util
 from pathlib import Path
@@ -864,6 +865,37 @@ def test_auto_generate_tasks_when_idle_falls_back_to_flow_task_generation(monkey
         call[0] == "POST" and call[1].endswith("/api/inventory/flow/next-unblock-task")
         for call in calls
     )
+
+
+def test_ensure_repo_checkout_accepts_git_marker_file(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir(parents=True, exist_ok=True)
+    (repo / ".git").write_text("gitdir: /tmp/example\n", encoding="utf-8")
+
+    ok = agent_runner._ensure_repo_checkout(str(repo), log=agent_runner._setup_logging())
+    assert ok is True
+
+
+def test_resolve_repo_path_for_execution_uses_fallback_clone_path(monkeypatch, tmp_path):
+    primary = tmp_path / "app"
+    primary.mkdir(parents=True, exist_ok=True)
+    (primary / "README.md").write_text("not a git checkout\n", encoding="utf-8")
+    fallback = (tmp_path / "runner-fallback").resolve()
+
+    calls: list[str] = []
+
+    def _fake_ensure(repo_path: str, *, log):
+        calls.append(repo_path)
+        os.makedirs(repo_path, exist_ok=True)
+        (Path(repo_path) / ".git").mkdir(exist_ok=True)
+        return True
+
+    monkeypatch.setattr(agent_runner, "REPO_FALLBACK_PATH", str(fallback))
+    monkeypatch.setattr(agent_runner, "_ensure_repo_checkout", _fake_ensure)
+
+    resolved = agent_runner._resolve_repo_path_for_execution(str(primary), log=agent_runner._setup_logging())
+    assert resolved == str(fallback)
+    assert calls == [str(fallback)]
 
 
 def test_auto_generate_tasks_when_idle_skips_when_open_tasks_exist(monkeypatch, tmp_path):

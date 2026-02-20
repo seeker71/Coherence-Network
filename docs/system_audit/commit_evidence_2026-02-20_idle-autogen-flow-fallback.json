@@ -1,7 +1,7 @@
 {
   "date": "2026-02-20",
   "thread_branch": "codex/idle-autogen-flow-fallback",
-  "commit_scope": "Keep hosted runner productive when idle by falling back from spec-gap task generation to flow-based next-unblock task generation (open spec/open idea).",
+  "commit_scope": "Keep hosted runner productive when idle by falling back from spec-gap task generation to flow-based next-unblock task generation (open spec/open idea), and self-heal non-PR execution repo paths when /app lacks a .git checkout.",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
@@ -54,7 +54,7 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
-    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k 'auto_generate_tasks_when_idle'",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k 'auto_generate_tasks_when_idle or resolve_repo_path_for_execution or ensure_repo_checkout_accepts_git_marker_file'",
     "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
     "Hosted smoke: generated task_c25759f67d257f5f from open spec idea and task_165b580ce4baac1b from open idea; both picked by openai-codex:railway-runner-1"
   ],
@@ -65,14 +65,15 @@
   "change_intent": "process_only",
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "When pending/running/needs_decision counts are zero, runner first attempts spec-gap implementation task sync and then falls back to flow next-unblock task generation so work continues from open spec or open idea.",
+    "expected_behavior_delta": "When pending/running/needs_decision counts are zero, runner first attempts spec-gap implementation task sync and then falls back to flow next-unblock task generation so work continues from open spec or open idea. For non-PR tasks, runner now self-heals to a fallback git checkout path when the configured repo path is missing .git metadata.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/inventory/specs/sync-implementation-tasks",
       "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task"
     ],
     "test_flows": [
       "idle runner + no open tasks -> create from spec gaps",
-      "idle runner + no spec gaps -> create from flow next unblock (open spec/open idea)"
+      "idle runner + no spec gaps -> create from flow next unblock (open spec/open idea)",
+      "non-PR task execution path with non-git /app -> switch to fallback checkout clone path"
     ]
   }
 }
