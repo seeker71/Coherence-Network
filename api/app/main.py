@@ -180,6 +180,129 @@ def _slow_route_reasons(
         ordered.append(reason)
     return ordered
 
+
+def _should_capture_runtime_metrics(request_path: str, raw_path: str) -> bool:
+    capture_path = request_path.startswith("/api") or request_path.startswith("/v1")
+    capture_raw = raw_path.startswith("/api") or raw_path.startswith("/v1")
+    if not (capture_path or capture_raw):
+        return False
+    if request_path == "/api/runtime/change-token":
+        # Live refresh polling must remain lightweight and should not self-generate runtime events.
+        return False
+    return True
+
+
+def _content_length_bytes(request: Request) -> int:
+    value = request.headers.get("content-length")
+    if not value:
+        return 0
+    return _safe_int_or_none(value) or 0
+
+
+def _runtime_event_metadata(
+    *,
+    request: Request,
+    method: str,
+    route_label: str,
+    query_count: int,
+    raw_query_rows: list[dict[str, str]],
+    heavy_query_rows: dict[str, str],
+    body_size: int,
+    reasons: list[str],
+    exc_name: str | None,
+) -> dict[str, str | int]:
+    return {
+        "method": method,
+        "route": route_label,
+        "query_count": query_count,
+        "query_samples": ",".join(f"{row.get('k')}={row.get('v')}" for row in raw_query_rows[:6]),
+        "heavy_query_keys": ",".join(sorted(heavy_query_rows.keys())),
+        "body_bytes": body_size,
+        "client": _client_identity(request),
+        "req_id": _correlation_id(request),
+        "slow_reasons": ", ".join(reasons),
+        "exception": exc_name or "",
+    }
+
+
+def _record_runtime_event(
+    *,
+    request: Request,
+    method: str,
+    request_path: str,
+    raw_path: str,
+    status_code: int,
+    elapsed_ms: float,
+    route_label: str,
+    query_count: int,
+    raw_query_rows: list[dict[str, str]],
+    heavy_query_rows: dict[str, str],
+    reasons: list[str],
+    body_size: int,
+    exc_name: str | None,
+) -> None:
+    metadata = _runtime_event_metadata(
+        request=request,
+        method=method,
+        route_label=route_label,
+        query_count=query_count,
+        raw_query_rows=raw_query_rows,
+        heavy_query_rows=heavy_query_rows,
+        body_size=body_size,
+        reasons=reasons,
+        exc_name=exc_name,
+    )
+    runtime_service.record_event(
+        RuntimeEventCreate(
+            source="api",
+            endpoint=request_path,
+            raw_endpoint=raw_path,
+            method=method,
+            status_code=status_code,
+            runtime_ms=max(0.1, elapsed_ms),
+            idea_id=request.headers.get("x-idea-id"),
+            metadata=metadata,
+        )
+    )
+
+
+def _log_slow_request(
+    *,
+    request: Request,
+    method: str,
+    request_path: str,
+    route_label: str,
+    raw_path: str,
+    status_code: int,
+    elapsed_ms: float,
+    query_count: int,
+    raw_query_rows: list[dict[str, str]],
+    heavy_query_rows: dict[str, str],
+    body_size: int,
+    reasons: list[str],
+    exc_name: str | None,
+    exc_message: str | None,
+) -> None:
+    reason_text = ", ".join(reasons) if reasons else "unspecified"
+    logger.warning(
+        "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
+        "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
+        method,
+        request_path,
+        route_label,
+        raw_path,
+        status_code,
+        elapsed_ms,
+        query_count,
+        raw_query_rows,
+        heavy_query_rows,
+        body_size,
+        reason_text,
+        _correlation_id(request),
+        _client_identity(request),
+        f"{exc_name or 'none'}{':' + exc_message if exc_message else ''}",
+    )
+
 # Configure CORS
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
@@ -346,7 +469,7 @@ async def capture_runtime_metrics(request: Request, call_next):
     request_path, route_name, raw_path = _build_route_signature(request)
     query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
     route_label = route_name or "unknown"
-    should_capture = request_path.startswith("/api") or request_path.startswith("/v1") or raw_path.startswith("/api") or raw_path.startswith("/v1")
+    should_capture = _should_capture_runtime_metrics(request_path, raw_path)
     slow_threshold_ms = _slow_request_ms_threshold()
     log_all_requests = _env_flag("API_LOG_ALL_REQUESTS", False)
     try:
@@ -363,10 +486,7 @@ async def capture_runtime_metrics(request: Request, call_next):
         if status_code is None:
             status_code = 500
         if should_capture:
-            if request.headers.get("content-length"):
-                body_size = _safe_int_or_none(request.headers.get("content-length")) or 0
-            else:
-                body_size = 0
+            body_size = _content_length_bytes(request)
             reasons = _slow_route_reasons(
                 path=request_path,
                 status_code=status_code,
@@ -375,53 +495,39 @@ async def capture_runtime_metrics(request: Request, call_next):
                 query_summary=heavy_query_rows,
             )
             try:
-                metadata = {
-                    "method": method,
-                    "route": route_label,
-                    "query_count": query_count,
-                    "query_samples": ",".join(
-                        f"{row.get('k')}={row.get('v')}" for row in raw_query_rows[:6]
-                    ),
-                    "heavy_query_keys": ",".join(sorted(heavy_query_rows.keys())),
-                    "body_bytes": body_size,
-                    "client": _client_identity(request),
-                    "req_id": _correlation_id(request),
-                    "slow_reasons": ", ".join(reasons),
-                    "exception": exc_name or "",
-                }
-                runtime_service.record_event(
-                    RuntimeEventCreate(
-                        source="api",
-                        endpoint=request_path,
-                        raw_endpoint=raw_path,
-                        method=method,
-                        status_code=status_code,
-                        runtime_ms=max(0.1, elapsed_ms),
-                        idea_id=request.headers.get("x-idea-id"),
-                        metadata=metadata,
-                    )
+                _record_runtime_event(
+                    request=request,
+                    method=method,
+                    request_path=request_path,
+                    raw_path=raw_path,
+                    status_code=status_code,
+                    elapsed_ms=elapsed_ms,
+                    route_label=route_label,
+                    query_count=query_count,
+                    raw_query_rows=raw_query_rows,
+                    heavy_query_rows=heavy_query_rows,
+                    reasons=reasons,
+                    body_size=body_size,
+                    exc_name=exc_name,
                 )
             except Exception:
                 # Telemetry should not affect request success.
                 pass
 
             if elapsed_ms >= slow_threshold_ms or log_all_requests or status_code >= 500:
-                    reason_text = ", ".join(reasons) if reasons else "unspecified"
-                    logger.warning(
-                        "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
-                    "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
-                    method,
-                    request_path,
-                    route_label,
-                    raw_path,
-                    status_code,
-                    elapsed_ms,
-                    query_count,
-                    raw_query_rows,
-                    heavy_query_rows,
-                    body_size,
-                    reason_text,
-                        _correlation_id(request),
-                        _client_identity(request),
-                        f"{exc_name or 'none'}{':' + exc_message if exc_message else ''}",
-                    )
+                _log_slow_request(
+                    request=request,
+                    method=method,
+                    request_path=request_path,
+                    route_label=route_label,
+                    raw_path=raw_path,
+                    status_code=status_code,
+                    elapsed_ms=elapsed_ms,
+                    query_count=query_count,
+                    raw_query_rows=raw_query_rows,
+                    heavy_query_rows=heavy_query_rows,
+                    body_size=body_size,
+                    reasons=reasons,
+                    exc_name=exc_name,
+                    exc_message=exc_message,
+                )

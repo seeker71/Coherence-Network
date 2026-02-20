@@ -20,6 +20,11 @@ async def list_runtime_events(limit: int = Query(100, ge=1, le=2000)) -> list[Ru
     return runtime_service.list_events(limit=limit)
 
 
+@router.get("/runtime/change-token")
+async def runtime_change_token(force_refresh: bool = Query(False)) -> dict:
+    return runtime_service.live_change_token(force_refresh=force_refresh)
+
+
 @router.get("/runtime/ideas/summary")
 async def runtime_summary_by_idea(seconds: int = Query(3600, ge=60, le=2592000)) -> dict:
     rows = runtime_service.summarize_by_idea(seconds=seconds)

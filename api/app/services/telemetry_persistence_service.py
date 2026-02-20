@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -163,6 +163,37 @@ def backend_info() -> dict[str, Any]:
     }
 
 
+def checkpoint() -> dict[str, Any]:
+    ensure_schema()
+    with _session() as session:
+        snapshot_count, snapshot_max = session.query(
+            func.count(AutomationUsageSnapshotRecord.id),
+            func.max(AutomationUsageSnapshotRecord.collected_at),
+        ).one()
+        friction_count, friction_max = session.query(
+            func.count(FrictionEventRecord.id),
+            func.max(FrictionEventRecord.timestamp),
+        ).one()
+        tool_count, tool_max = session.query(
+            func.count(ExternalToolUsageEventRecord.id),
+            func.max(ExternalToolUsageEventRecord.occurred_at),
+        ).one()
+        metric_count, metric_max = session.query(
+            func.count(TaskMetricRecord.id),
+            func.max(TaskMetricRecord.occurred_at),
+        ).one()
+    return {
+        "snapshot_count": int(snapshot_count or 0),
+        "snapshot_max": _iso_or_none(snapshot_max),
+        "friction_count": int(friction_count or 0),
+        "friction_max": _iso_or_none(friction_max),
+        "external_tool_count": int(tool_count or 0),
+        "external_tool_max": _iso_or_none(tool_max),
+        "task_metric_count": int(metric_count or 0),
+        "task_metric_max": _iso_or_none(metric_max),
+    }
+
+
 def _redact_database_url(url: str) -> str:
     if "@" not in url or "://" not in url:
         return url
@@ -176,6 +207,14 @@ def _redact_database_url(url: str) -> str:
     else:
         credentials = "***"
     return f"{scheme}://{credentials}@{host}"
+
+
+def _iso_or_none(value: datetime | None) -> str | None:
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 
 def _meta_get(session: Session, key: str) -> str:

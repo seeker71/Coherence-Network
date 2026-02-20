@@ -55,6 +55,7 @@ STATUS_REPORT_FILE = os.path.join(LOG_DIR, "pipeline_status_report.json")
 STATUS_REPORT_TXT = os.path.join(LOG_DIR, "pipeline_status_report.txt")
 RESOLUTIONS_FILE = os.path.join(LOG_DIR, "monitor_resolutions.jsonl")
 GITHUB_ACTIONS_HEALTH_FILE = os.path.join(LOG_DIR, "github_actions_health.json")
+MONITOR_TELEGRAM_STATE_FILE = os.path.join(LOG_DIR, "monitor_telegram_state.json")
 VERSION_FILE = os.path.join(LOG_DIR, "pipeline_version.json")
 RESTART_FILE = os.path.join(LOG_DIR, "restart_requested.json")
 META_QUESTIONS_FILE = os.path.join(LOG_DIR, "meta_questions.json")
@@ -514,6 +515,129 @@ def _add_issue(data: dict, condition: str, severity: str, message: str, suggeste
     return data
 
 
+def _monitor_telegram_targets() -> tuple[str, list[str]]:
+    token = str(os.environ.get("TELEGRAM_BOT_TOKEN", "")).strip()
+    chats = [
+        chat.strip()
+        for chat in str(os.environ.get("TELEGRAM_CHAT_IDS", "")).split(",")
+        if chat.strip()
+    ]
+    return token, chats
+
+
+def _load_monitor_telegram_state() -> dict[str, Any]:
+    if not os.path.isfile(MONITOR_TELEGRAM_STATE_FILE):
+        return {}
+    try:
+        with open(MONITOR_TELEGRAM_STATE_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return {}
+    return {}
+
+
+def _save_monitor_telegram_state(payload: dict[str, Any]) -> None:
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(MONITOR_TELEGRAM_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+
+def _monitor_issue_signature(issues: list[dict[str, Any]]) -> str:
+    rows: list[str] = []
+    for item in issues:
+        condition = str(item.get("condition") or "").strip()
+        severity = str(item.get("severity") or "").strip().lower()
+        if condition:
+            rows.append(f"{severity}:{condition}")
+    rows.sort()
+    return "|".join(rows)
+
+
+def _format_monitor_telegram_alert(issues: list[dict[str, Any]], *, api_base: str, web_base: str) -> str:
+    lines: list[str] = [
+        "Pipeline monitor alert",
+        f"Checked: {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}",
+        f"Issues: {len(issues)}",
+    ]
+    for item in issues[:5]:
+        condition = str(item.get("condition") or "unknown").strip()
+        severity = str(item.get("severity") or "unknown").strip().lower()
+        message = str(item.get("message") or "").strip()
+        if len(message) > 160:
+            message = f"{message[:157]}..."
+        lines.append(f"- [{severity}] {condition}: {message}")
+    if len(issues) > 5:
+        lines.append(f"- ... and {len(issues) - 5} more")
+    lines.extend(
+        [
+            "",
+            f"Tasks: {web_base.rstrip('/')}/tasks",
+            f"Friction: {web_base.rstrip('/')}/friction",
+            f"Usage: {web_base.rstrip('/')}/usage",
+            f"Monitor issues: {api_base.rstrip('/')}/api/agent/monitor-issues",
+            f"Status report: {api_base.rstrip('/')}/api/agent/status-report",
+        ]
+    )
+    return "\n".join(lines).strip()
+
+
+def _maybe_send_monitor_telegram_alert(data: dict[str, Any], log: logging.Logger) -> None:
+    issues = data.get("issues") if isinstance(data.get("issues"), list) else []
+    token, chats = _monitor_telegram_targets()
+    if not token or not chats or not issues:
+        return
+
+    signature = _monitor_issue_signature([row for row in issues if isinstance(row, dict)])
+    now_ts = time.time()
+    interval_seconds = _env_to_int("MONITOR_TELEGRAM_MIN_INTERVAL_SECONDS", 900, minimum=60)
+    state = _load_monitor_telegram_state()
+    previous_signature = str(state.get("signature") or "")
+    previous_sent = float(state.get("sent_at_ts") or 0.0)
+    if signature == previous_signature and (now_ts - previous_sent) < interval_seconds:
+        return
+
+    api_base = str(os.environ.get("PUBLIC_API_BASE", BASE)).strip() or BASE
+    web_base = str(
+        os.environ.get("PUBLIC_WEB_BASE", "https://coherence-web-production.up.railway.app")
+    ).strip() or "https://coherence-web-production.up.railway.app"
+    message = _format_monitor_telegram_alert(
+        [row for row in issues if isinstance(row, dict)],
+        api_base=api_base,
+        web_base=web_base,
+    )
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    delivered = 0
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            for chat_id in chats:
+                try:
+                    response = client.post(
+                        url,
+                        json={"chat_id": chat_id, "text": message[:4096]},
+                    )
+                    if response.status_code == 200:
+                        delivered += 1
+                except Exception:
+                    continue
+    except Exception as ex:
+        log.debug("Monitor telegram alert failed: %s", ex)
+        return
+
+    if delivered <= 0:
+        return
+    _save_monitor_telegram_state(
+        {
+            "signature": signature,
+            "sent_at_ts": now_ts,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+            "issue_count": len(issues),
+            "delivered_chats": delivered,
+        }
+    )
+
+
 def _load_meta_questions() -> Optional[dict]:
     """Load meta_questions.json if present. Returns None if missing or invalid."""
     if not os.path.isfile(META_QUESTIONS_FILE):
@@ -827,6 +951,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         report = _build_hierarchical_report(data, None, eff, proc, now)
         _write_hierarchical_report(report, log)
         _log_hierarchical_summary(report, log)
+        _maybe_send_monitor_telegram_alert(data, log)
         return data
 
     # Stale version: pipeline running old code (git SHA changed)
@@ -859,6 +984,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         report = _build_hierarchical_report(data, None, None, proc, now)
         _write_hierarchical_report(report, log)
         _log_hierarchical_summary(report, log)
+        _maybe_send_monitor_telegram_alert(data, log)
         return data
 
     status = r.json()
@@ -1317,6 +1443,283 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     except Exception:
         pass
 
+    # Paid-service usage/readiness/validation awareness (OpenAI/OpenRouter/Railway/Supabase, etc.).
+    try:
+        usage_alerts_resp = client.get(
+            f"{BASE}/api/automation/usage/alerts",
+            timeout=10,
+        )
+        if usage_alerts_resp.status_code == 200:
+            usage_alerts_payload = usage_alerts_resp.json()
+            alerts = (
+                usage_alerts_payload.get("alerts")
+                if isinstance(usage_alerts_payload.get("alerts"), list)
+                else []
+            )
+            critical_count = 0
+            warning_count = 0
+            for row in alerts:
+                if not isinstance(row, dict):
+                    continue
+                sev = str(row.get("severity") or "").strip().lower()
+                if sev == "critical":
+                    critical_count += 1
+                elif sev == "warning":
+                    warning_count += 1
+            if critical_count > 0 or warning_count > 0:
+                top_alert = next((row for row in alerts if isinstance(row, dict)), {})
+                top_preview = (
+                    f"{top_alert.get('provider', 'provider')}:{top_alert.get('metric_id', 'metric')}"
+                    if isinstance(top_alert, dict)
+                    else "n/a"
+                )
+                severity = "high" if critical_count > 0 else "medium"
+                condition = "paid_service_usage_alerts"
+                action = (
+                    "Review /usage and /automation dashboards, tune budgets/limits, and remediate low remaining "
+                    "quotas before run windows reset."
+                )
+                heal_task_id = None
+                if (
+                    auto_fix
+                    and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                    and condition not in prev_conditions
+                ):
+                    try:
+                        resp = client.post(
+                            f"{BASE}/api/agent/tasks",
+                            json={
+                                "direction": (
+                                    "Monitor detected paid-service usage alerts. Investigate low remaining quotas, "
+                                    "budget windows, and provider limits before execution windows reset."
+                                ),
+                                "task_type": "heal",
+                                "context": {
+                                    "executor": "cursor",
+                                    "monitor_condition": condition,
+                                    "critical_count": critical_count,
+                                    "warning_count": warning_count,
+                                },
+                            },
+                            timeout=10,
+                        )
+                        if resp.status_code == 201:
+                            heal_task_id = resp.json().get("id")
+                            action = f"Created heal task {heal_task_id}. " + action
+                            log.info("Auto-fix: created heal task for %s", condition)
+                    except Exception as e:
+                        log.warning("Auto-fix heal task failed: %s", e)
+                _add_issue(
+                    data,
+                    condition,
+                    severity,
+                    (
+                        f"Paid-service usage alerts detected: critical={critical_count}, warning={warning_count}, "
+                        f"top={top_preview}."
+                    ),
+                    action,
+                )
+                if heal_task_id:
+                    data["issues"][-1]["heal_task_id"] = heal_task_id
+    except Exception as ex:
+        log.debug("Could not check paid-service usage alerts: %s", ex)
+
+    try:
+        readiness_resp = client.get(
+            f"{BASE}/api/automation/usage/readiness?force_refresh=false",
+            timeout=10,
+        )
+        if readiness_resp.status_code == 200:
+            readiness_payload = readiness_resp.json()
+            if not bool(readiness_payload.get("all_required_ready", False)):
+                blocking = (
+                    readiness_payload.get("blocking_issues")
+                    if isinstance(readiness_payload.get("blocking_issues"), list)
+                    else []
+                )
+                paid_blocking = [
+                    str(item)
+                    for item in blocking
+                    if isinstance(item, str) and not item.lower().startswith("coherence-internal:")
+                ]
+                if paid_blocking:
+                    condition = "paid_service_readiness_blocked"
+                    action = (
+                        "Fix required provider credentials/connectivity and re-run readiness checks. "
+                        "Use /api/automation/usage/readiness and /api/automation/usage/provider-validation."
+                    )
+                    heal_task_id = None
+                    if (
+                        auto_fix
+                        and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                        and condition not in prev_conditions
+                    ):
+                        try:
+                            resp = client.post(
+                                f"{BASE}/api/agent/tasks",
+                                json={
+                                    "direction": (
+                                        "Monitor detected required paid provider readiness blockers. "
+                                        "Fix credential/connectivity issues and restore provider readiness."
+                                    ),
+                                    "task_type": "heal",
+                                    "context": {
+                                        "executor": "cursor",
+                                        "monitor_condition": condition,
+                                        "blocking_count": len(paid_blocking),
+                                    },
+                                },
+                                timeout=10,
+                            )
+                            if resp.status_code == 201:
+                                heal_task_id = resp.json().get("id")
+                                action = f"Created heal task {heal_task_id}. " + action
+                                log.info("Auto-fix: created heal task for %s", condition)
+                        except Exception as e:
+                            log.warning("Auto-fix heal task failed: %s", e)
+                    _add_issue(
+                        data,
+                        condition,
+                        "high",
+                        (
+                            f"Required paid provider readiness blocked ({len(paid_blocking)} issue(s)); "
+                            f"first={paid_blocking[0][:140]}"
+                        ),
+                        action,
+                    )
+                    if heal_task_id:
+                        data["issues"][-1]["heal_task_id"] = heal_task_id
+    except Exception as ex:
+        log.debug("Could not check paid-service readiness: %s", ex)
+
+    try:
+        validation_resp = client.get(
+            f"{BASE}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1&force_refresh=false",
+            timeout=10,
+        )
+        if validation_resp.status_code == 200:
+            validation_payload = validation_resp.json()
+            if not bool(validation_payload.get("all_required_validated", False)):
+                blocking = (
+                    validation_payload.get("blocking_issues")
+                    if isinstance(validation_payload.get("blocking_issues"), list)
+                    else []
+                )
+                paid_blocking = [
+                    str(item)
+                    for item in blocking
+                    if isinstance(item, str) and not item.lower().startswith("coherence-internal:")
+                ]
+                if paid_blocking:
+                    condition = "paid_service_validation_blocked"
+                    action = (
+                        "Run provider validation probes, generate successful runtime events for required paid "
+                        "providers, and confirm execution validation gates pass."
+                    )
+                    heal_task_id = None
+                    if (
+                        auto_fix
+                        and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                        and condition not in prev_conditions
+                    ):
+                        try:
+                            resp = client.post(
+                                f"{BASE}/api/agent/tasks",
+                                json={
+                                    "direction": (
+                                        "Monitor detected required paid provider execution-validation blockers. "
+                                        "Run probes, generate successful runtime usage evidence, and close blockers."
+                                    ),
+                                    "task_type": "heal",
+                                    "context": {
+                                        "executor": "cursor",
+                                        "monitor_condition": condition,
+                                        "blocking_count": len(paid_blocking),
+                                    },
+                                },
+                                timeout=10,
+                            )
+                            if resp.status_code == 201:
+                                heal_task_id = resp.json().get("id")
+                                action = f"Created heal task {heal_task_id}. " + action
+                                log.info("Auto-fix: created heal task for %s", condition)
+                        except Exception as e:
+                            log.warning("Auto-fix heal task failed: %s", e)
+                    _add_issue(
+                        data,
+                        condition,
+                        "medium",
+                        (
+                            f"Required paid provider execution validation blocked ({len(paid_blocking)} issue(s)); "
+                            f"first={paid_blocking[0][:140]}"
+                        ),
+                        action,
+                    )
+                    if heal_task_id:
+                        data["issues"][-1]["heal_task_id"] = heal_task_id
+    except Exception as ex:
+        log.debug("Could not check paid-service provider validation: %s", ex)
+
+    try:
+        friction_resp = client.get(f"{BASE}/api/friction/events?status=open&limit=100", timeout=10)
+        if friction_resp.status_code == 200:
+            friction_payload = friction_resp.json()
+            rows = friction_payload if isinstance(friction_payload, list) else []
+            paid_blocked = [
+                row
+                for row in rows
+                if isinstance(row, dict) and str(row.get("block_type") or "") == "paid_provider_blocked"
+            ]
+            if paid_blocked:
+                first = paid_blocked[0]
+                provider = str((first.get("metadata") or {}).get("provider") or "unknown").strip()
+                condition = "paid_provider_blocked_friction"
+                action = (
+                    "Address paid-provider access/credit/limit blockers immediately and clear open friction events "
+                    "before running additional paid workload."
+                )
+                heal_task_id = None
+                if (
+                    auto_fix
+                    and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1"
+                    and condition not in prev_conditions
+                ):
+                    try:
+                        resp = client.post(
+                            f"{BASE}/api/agent/tasks",
+                            json={
+                                "direction": (
+                                    "Monitor detected open paid_provider_blocked friction events. "
+                                    "Resolve provider billing/limit/auth blockers and close friction events."
+                                ),
+                                "task_type": "heal",
+                                "context": {
+                                    "executor": "cursor",
+                                    "monitor_condition": condition,
+                                    "provider": provider,
+                                    "open_events": len(paid_blocked),
+                                },
+                            },
+                            timeout=10,
+                        )
+                        if resp.status_code == 201:
+                            heal_task_id = resp.json().get("id")
+                            action = f"Created heal task {heal_task_id}. " + action
+                            log.info("Auto-fix: created heal task for %s", condition)
+                    except Exception as e:
+                        log.warning("Auto-fix heal task failed: %s", e)
+                _add_issue(
+                    data,
+                    condition,
+                    "high",
+                    f"Open friction events show paid_provider_blocked={len(paid_blocked)} (first provider={provider}).",
+                    action,
+                )
+                if heal_task_id:
+                    data["issues"][-1]["heal_task_id"] = heal_task_id
+    except Exception as ex:
+        log.debug("Could not check paid-provider friction events: %s", ex)
+
     # Runner log errors: ERROR or "API not reachable" in agent_runner.log (last 2h)
     has_runner_errors, sample = _runner_log_has_recent_errors()
     if has_runner_errors:
@@ -1591,6 +1994,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
 
     if data["issues"]:
         log.info("Detected %d issue(s): %s", len(data["issues"]), [i["condition"] for i in data["issues"]])
+    _maybe_send_monitor_telegram_alert(data, log)
     return data
 
 

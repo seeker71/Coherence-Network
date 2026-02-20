@@ -6,14 +6,13 @@ import json
 import os
 import re
 import time
-import asyncio
+import hashlib
 from typing import Any
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
 import httpx
-from fastapi.routing import APIRoute
 
 from app.models.runtime import (
     EndpointAttentionReport,
@@ -23,7 +22,15 @@ from app.models.runtime import (
     RuntimeEvent,
     RuntimeEventCreate,
 )
-from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
+from app.services import (
+    agent_task_store_service,
+    idea_lineage_service,
+    route_registry_service,
+    runtime_exerciser_service,
+    runtime_event_store,
+    telemetry_persistence_service,
+    value_lineage_service,
+)
 
 
 _RUNTIME_EVENTS_CACHE: dict[str, Any] = {
@@ -32,6 +39,12 @@ _RUNTIME_EVENTS_CACHE: dict[str, Any] = {
     "rows": [],
 }
 _RUNTIME_EVENTS_CACHE_TTL_SECONDS = 30.0
+
+_LIVE_CHANGE_CACHE: dict[str, Any] = {
+    "expires_at": 0.0,
+    "payload": {},
+}
+_LIVE_CHANGE_CACHE_TTL_SECONDS = 5.0
 
 
 def _default_events_path() -> Path:
@@ -50,6 +63,37 @@ def _default_idea_map_path() -> Path:
 def _idea_map_path() -> Path:
     configured = os.getenv("RUNTIME_IDEA_MAP_PATH")
     return Path(configured) if configured else _default_idea_map_path()
+
+
+def _logs_dir() -> Path:
+    return Path(__file__).resolve().parents[2] / "logs"
+
+
+def _agent_tasks_path() -> Path:
+    configured = os.getenv("AGENT_TASKS_PATH")
+    if configured:
+        return Path(configured)
+    return _logs_dir() / "agent_tasks.json"
+
+
+def _monitor_issues_path() -> Path:
+    return _logs_dir() / "monitor_issues.json"
+
+
+def _status_report_path() -> Path:
+    return _logs_dir() / "pipeline_status_report.json"
+
+
+def _path_signature(path: Path) -> dict[str, Any]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return {"exists": False, "size": 0, "mtime_ns": 0}
+    return {
+        "exists": True,
+        "size": int(stat.st_size),
+        "mtime_ns": int(stat.st_mtime_ns),
+    }
 
 
 def _runtime_cost_per_second() -> float:
@@ -298,11 +342,6 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
 
 def list_events(limit: int = 100, since: datetime | None = None) -> list[RuntimeEvent]:
     requested_limit = max(1, min(int(limit), 2000))
-    if since is None:
-        cutoff = "all"
-    else:
-        since_ts = int(since.timestamp())
-        cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
     cache_key = _runtime_events_cache_key(requested_limit, since)
     now = time.time()
     if (
@@ -351,6 +390,73 @@ def list_events(limit: int = 100, since: datetime | None = None) -> list[Runtime
     _RUNTIME_EVENTS_CACHE["cache_key"] = cache_key
     _RUNTIME_EVENTS_CACHE["rows"] = out
     return out
+
+
+def live_change_token(force_refresh: bool = False) -> dict[str, Any]:
+    now = time.time()
+    if (
+        not force_refresh
+        and isinstance(_LIVE_CHANGE_CACHE.get("payload"), dict)
+        and float(_LIVE_CHANGE_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return dict(_LIVE_CHANGE_CACHE["payload"])
+
+    runtime_checkpoint: dict[str, Any]
+    try:
+        if runtime_event_store.enabled():
+            runtime_checkpoint = runtime_event_store.checkpoint(
+                exclude_endpoints=["/api/runtime/change-token"],
+            )
+        else:
+            runtime_checkpoint = {
+                "enabled": False,
+                "count": None,
+                "max_recorded_at": None,
+                "file": _path_signature(_events_path()),
+            }
+    except Exception as exc:
+        runtime_checkpoint = {"error": str(exc), "enabled": runtime_event_store.enabled()}
+
+    task_checkpoint: dict[str, Any]
+    try:
+        if agent_task_store_service.enabled():
+            task_checkpoint = agent_task_store_service.checkpoint()
+        else:
+            task_checkpoint = {
+                "enabled": False,
+                "count": None,
+                "max_updated_at": None,
+                "file": _path_signature(_agent_tasks_path()),
+            }
+    except Exception as exc:
+        task_checkpoint = {"error": str(exc), "enabled": agent_task_store_service.enabled()}
+
+    try:
+        telemetry_checkpoint = telemetry_persistence_service.checkpoint()
+    except Exception as exc:
+        telemetry_checkpoint = {"error": str(exc)}
+
+    file_checkpoints = {
+        "monitor_issues": _path_signature(_monitor_issues_path()),
+        "status_report": _path_signature(_status_report_path()),
+    }
+
+    components: dict[str, Any] = {
+        "runtime": runtime_checkpoint,
+        "tasks": task_checkpoint,
+        "telemetry": telemetry_checkpoint,
+        "files": file_checkpoints,
+    }
+    token_basis = json.dumps(components, sort_keys=True, default=str)
+    token = hashlib.sha256(token_basis.encode("utf-8")).hexdigest()[:24]
+    payload = {
+        "token": token,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "components": components,
+    }
+    _LIVE_CHANGE_CACHE["expires_at"] = now + _LIVE_CHANGE_CACHE_TTL_SECONDS
+    _LIVE_CHANGE_CACHE["payload"] = payload
+    return dict(payload)
 
 
 def summarize_by_idea(
@@ -787,94 +893,6 @@ def verify_internal_vs_public_usage(
     }
 
 
-_EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
-    "/api/agent/route": {"task_type": "impl"},
-    "/api/agent/tasks": {"limit": "20", "offset": "0"},
-    "/api/agent/tasks/attention": {"limit": "20"},
-    "/api/agent/tasks/count": {},
-    "/api/runtime/events": {"limit": "100"},
-    "/api/runtime/ideas/summary": {"seconds": "3600"},
-    "/api/runtime/endpoints/summary": {"seconds": "3600"},
-    "/api/runtime/endpoints/attention": {
-        "seconds": "3600",
-        "min_event_count": "1",
-        "attention_threshold": "0.0",
-    },
-    "/api/inventory/process-completeness": {"runtime_window_seconds": "86400"},
-    "/api/inventory/questions/proactive": {"limit": "20", "top": "20"},
-    "/api/inventory/endpoint-traceability": {"runtime_window_seconds": "86400"},
-    "/api/inventory/system-lineage": {"runtime_window_seconds": "3600"},
-    "/api/automation/usage/snapshots": {"limit": "200"},
-    "/api/automation/usage/provider-validation": {
-        "runtime_window_seconds": "86400",
-        "min_execution_events": "1",
-    },
-}
-
-
-def _sample_path_value(param_name: str) -> str:
-    key = (param_name or "").strip().lower()
-    if key == "task_id":
-        try:
-            from app.services import agent_service
-
-            rows, total = agent_service.list_tasks(limit=1)
-            if total > 0 and rows:
-                value = str(rows[0].get("id") or "").strip()
-                if value:
-                    return value
-        except Exception:
-            pass
-        return "task_missing"
-    if key == "lineage_id":
-        try:
-            rows = value_lineage_service.list_links(limit=1)
-            if rows:
-                return rows[0].id
-        except Exception:
-            pass
-        return "lineage_missing"
-    if key == "spec_id":
-        try:
-            from app.services import spec_registry_service
-
-            rows = spec_registry_service.list_specs(limit=1)
-            if rows:
-                return rows[0].spec_id
-        except Exception:
-            pass
-        return "spec_missing"
-    if key == "idea_id":
-        return "portfolio-governance"
-    return f"{key}_sample"
-
-
-def _materialize_route_path(path_template: str) -> str:
-    def _replace(match: re.Match[str]) -> str:
-        name = match.group(1)
-        return _sample_path_value(name)
-
-    return re.sub(r"\{([^{}]+)\}", _replace, path_template)
-
-
-def _discover_get_api_paths(app) -> list[str]:
-    paths: list[str] = []
-    for route in getattr(app, "routes", []):
-        if not isinstance(route, APIRoute):
-            continue
-        methods = {m.upper() for m in (route.methods or set())}
-        if "GET" not in methods:
-            continue
-        path = str(getattr(route, "path", "") or "").strip()
-        if not path.startswith("/api/"):
-            continue
-        if path.startswith("/api/runtime/exerciser"):
-            continue
-        paths.append(path)
-    unique = sorted(set(paths))
-    return unique
-
-
 async def run_get_endpoint_exerciser(
     *,
     app,
@@ -885,110 +903,12 @@ async def run_get_endpoint_exerciser(
     timeout_seconds: float = 8.0,
     runtime_window_seconds: int = 86400,
 ) -> dict:
-    total_cycles = max(1, min(int(cycles), 200))
-    endpoint_limit = max(1, min(int(max_endpoints), 2000))
-    per_call_delay = max(0, min(int(delay_ms), 30000))
-    timeout = max(1.0, min(float(timeout_seconds), 60.0))
-    paths = _discover_get_api_paths(app)[:endpoint_limit]
-
-    before_with_usage, before_total = _exerciser_inventory_snapshot(
-        runtime_window_seconds=runtime_window_seconds
-    )
-    results, by_status = await _run_get_endpoint_exerciser_calls(
+    return await runtime_exerciser_service.run_get_endpoint_exerciser(
         app=app,
         base_url=base_url,
-        paths=paths,
-        total_cycles=total_cycles,
-        per_call_delay=per_call_delay,
-        timeout=timeout,
+        cycles=cycles,
+        max_endpoints=max_endpoints,
+        delay_ms=delay_ms,
+        timeout_seconds=timeout_seconds,
+        runtime_window_seconds=runtime_window_seconds,
     )
-    after_with_usage, after_total = _exerciser_inventory_snapshot(
-        runtime_window_seconds=runtime_window_seconds
-    )
-
-    return {
-        "result": "runtime_get_endpoint_exerciser_completed",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "config": {
-            "cycles": total_cycles,
-            "max_endpoints": endpoint_limit,
-            "delay_ms": per_call_delay,
-            "timeout_seconds": timeout,
-            "runtime_window_seconds": runtime_window_seconds,
-        },
-        "coverage": {
-            "before_with_usage_events": before_with_usage,
-            "after_with_usage_events": after_with_usage,
-            "delta_with_usage_events": after_with_usage - before_with_usage,
-            "before_total_endpoints": before_total,
-            "after_total_endpoints": after_total,
-        },
-        "summary": {
-            "discovered_get_endpoints": len(paths),
-            "total_calls": len(results),
-            "status_counts": by_status,
-            "successful_calls": sum(1 for row in results if int(row["status_code"]) < 400),
-            "failed_calls": sum(1 for row in results if int(row["status_code"]) >= 400),
-        },
-        "calls": results[:500],
-    }
-
-
-def _exerciser_inventory_snapshot(runtime_window_seconds: int) -> tuple[int, int]:
-    from app.services import inventory_service
-
-    snapshot = inventory_service.build_endpoint_traceability_inventory(
-        runtime_window_seconds=runtime_window_seconds
-    )
-    with_usage = int((snapshot.get("summary") or {}).get("with_usage_events") or 0)
-    total = int((snapshot.get("summary") or {}).get("total_endpoints") or 0)
-    return with_usage, total
-
-
-async def _run_get_endpoint_exerciser_calls(
-    *,
-    app,
-    base_url: str,
-    paths: list[str],
-    total_cycles: int,
-    per_call_delay: int,
-    timeout: float,
-) -> tuple[list[dict[str, object]], dict[str, int]]:
-    results: list[dict[str, object]] = []
-    by_status: dict[str, int] = {}
-
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app),
-        base_url=base_url.rstrip("/"),
-        timeout=timeout,
-        follow_redirects=True,
-    ) as client:
-        for cycle in range(1, total_cycles + 1):
-            for path_template in paths:
-                path = _materialize_route_path(path_template)
-                params = dict(_EXERCISER_QUERY_DEFAULTS.get(path_template, {}))
-                started = time.perf_counter()
-                status_code = 599
-                error = None
-                try:
-                    response = await client.get(path, params=params, headers={"x-endpoint-exerciser": "1"})
-                    status_code = int(response.status_code)
-                except Exception as exc:
-                    error = str(exc)
-                elapsed_ms = round(max(0.1, (time.perf_counter() - started) * 1000.0), 4)
-                status_key = str(status_code)
-                by_status[status_key] = by_status.get(status_key, 0) + 1
-                row: dict[str, object] = {
-                    "cycle": cycle,
-                    "path_template": path_template,
-                    "path_called": path,
-                    "query_params": params,
-                    "status_code": status_code,
-                    "runtime_ms": elapsed_ms,
-                }
-                if error:
-                    row["error"] = error
-                results.append(row)
-                if per_call_delay > 0:
-                    await asyncio.sleep(per_call_delay / 1000.0)
-    return results, by_status
