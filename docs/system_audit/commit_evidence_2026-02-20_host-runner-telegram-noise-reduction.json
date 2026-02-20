@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/host-runner-telegram-noise-reduction",
+  "commit_scope": "Reduce host-runner Telegram noise by limiting outbound alerts to needs_attention states (failed/needs_decision) while preserving actionability.",
+  "files_owned": [
+    "AGENTS.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "docs/system_audit/commit_evidence_2026-02-20_host-runner-telegram-noise-reduction.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-20-host-runner-telegram-noise-reduction"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_runner_registry_api.py",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py -k format_runner_update_card_uses_clean_title_and_links",
+    "./scripts/verify_web_api_deploy.sh",
+    "make start-gate",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "docs/system_audit/maintainability_baseline.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py -k format_runner_update_card_uses_clean_title_and_links"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Waiting for commit validation, PR checks, and deploy verification rerun for this run."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Host-runner progress and heartbeat updates no longer emit Telegram alerts unless status is failed or needs_decision, while orphan-recovery failed alerts and decision prompts still alert.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/telegram/diagnostics"
+    ],
+    "test_flows": [
+      "Trigger runner/task progress updates and verify only attention-worthy status transitions create alert records.",
+      "Verify format_task_alert uses failed/needs_decision context for actionable cards and leaves runner updates for non-attention statuses unalerted."
+    ]
+  }
+}
