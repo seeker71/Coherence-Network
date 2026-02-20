@@ -3,6 +3,7 @@
   "thread_branch": "codex/fix-start-gate-and-clawwork",
   "commit_scope": "Improve provider quota awareness by adding lightweight quota probes for OpenAI and Claude plus OpenRouter credit-limit telemetry, while preserving readiness behavior on probe failures.",
   "files_owned": [
+    "package.json",
     "api/app/services/automation_usage_service.py",
     "docs/system_audit/commit_evidence_2026-02-20_quota-probe-remaining-limits.json"
   ],
@@ -56,6 +57,7 @@
     "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
   ],
   "change_files": [
+    "package.json",
     "api/app/services/automation_usage_service.py"
   ],
   "change_intent": "runtime_feature",
