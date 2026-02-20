@@ -62,7 +62,7 @@
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "e2e_validation": {
     "status": "pending",
     "expected_behavior_delta": "When pending/running/needs_decision counts are zero, runner first attempts spec-gap implementation task sync and then falls back to flow next-unblock task generation so work continues from open spec or open idea.",
