@@ -49,9 +49,15 @@ HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
 MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
 RETRY_BACKOFF = 2  # seconds between retries
 REPO_PATH = os.path.abspath(os.environ.get("AGENT_WORKTREE_PATH", os.path.dirname(_api_dir)))
-REPO_GIT_URL = os.environ.get("AGENT_REPO_GIT_URL", "").strip()
 DEFAULT_GITHUB_REPO = os.environ.get("AGENT_GITHUB_REPO", "seeker71/Coherence-Network")
 DEFAULT_PR_BASE_BRANCH = os.environ.get("AGENT_PR_BASE_BRANCH", "main")
+DEFAULT_REPO_GIT_URL = f"https://github.com/{DEFAULT_GITHUB_REPO}.git"
+REPO_GIT_URL = str(os.environ.get("AGENT_REPO_GIT_URL", DEFAULT_REPO_GIT_URL)).strip() or DEFAULT_REPO_GIT_URL
+DEFAULT_REPO_FALLBACK_PATH = os.path.join("/tmp", DEFAULT_GITHUB_REPO.split("/")[-1] or "Coherence-Network")
+REPO_FALLBACK_PATH = os.path.abspath(
+    str(os.environ.get("AGENT_REPO_FALLBACK_PATH", DEFAULT_REPO_FALLBACK_PATH)).strip()
+    or DEFAULT_REPO_FALLBACK_PATH
+)
 DEFAULT_PR_LOCAL_CHECK_CMD = os.environ.get(
     "AGENT_PR_LOCAL_VALIDATION_CMD",
     "bash ./scripts/verify_worktree_local_web.sh",
@@ -2923,10 +2929,30 @@ def _repo_path_for_task(task_ctx: dict[str, Any]) -> str:
     return os.path.abspath(repo_path)
 
 
+def _path_has_git_marker(repo_path: str) -> bool:
+    git_marker = os.path.join(repo_path, ".git")
+    return os.path.exists(git_marker)
+
+
+def _directory_has_entries(path: str) -> bool:
+    try:
+        with os.scandir(path) as entries:
+            for _ in entries:
+                return True
+    except OSError:
+        return False
+    return False
+
+
 def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
-    git_dir = os.path.join(repo_path, ".git")
-    if os.path.isdir(git_dir):
+    if _path_has_git_marker(repo_path):
         return True
+    if os.path.isdir(repo_path) and _directory_has_entries(repo_path):
+        log.warning(
+            "repo checkout missing git metadata at %s; directory is non-empty and cannot be cloned in-place",
+            repo_path,
+        )
+        return False
     clone_url = REPO_GIT_URL
     if not clone_url:
         log.warning("repo checkout missing at %s and AGENT_REPO_GIT_URL is not set", repo_path)
@@ -2937,7 +2963,32 @@ def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
     if clone.returncode != 0:
         log.warning("git clone failed repo_path=%s err=%s", repo_path, clone.stderr.strip())
         return False
-    return os.path.isdir(git_dir)
+    return _path_has_git_marker(repo_path)
+
+
+def _resolve_repo_path_for_execution(repo_path: str, *, log: logging.Logger) -> str:
+    candidate = os.path.abspath(repo_path)
+    if _path_has_git_marker(candidate):
+        return candidate
+
+    if os.path.isdir(candidate) and _directory_has_entries(candidate):
+        fallback = os.path.abspath(REPO_FALLBACK_PATH)
+        if fallback != candidate:
+            log.warning(
+                "repo path %s missing git metadata; switching execution checkout to %s",
+                candidate,
+                fallback,
+            )
+            candidate = fallback
+
+    if os.path.abspath(candidate) == os.path.abspath(REPO_FALLBACK_PATH):
+        if os.path.isdir(candidate) and _directory_has_entries(candidate) and not _path_has_git_marker(candidate):
+            # The fallback directory is runner-managed scratch space. Reset it when stale.
+            shutil.rmtree(candidate, ignore_errors=True)
+
+    if not _path_has_git_marker(candidate):
+        _ensure_repo_checkout(candidate, log=log)
+    return candidate
 
 
 def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: logging.Logger) -> bool:
@@ -3433,7 +3484,9 @@ def run_one_task(
     task_ctx.update(target_contract)
     task_snapshot = {"task_type": task_type, "context": task_ctx}
     pr_mode = _should_run_pr_flow(task_snapshot)
-    repo_path = _repo_path_for_task(task_ctx) if pr_mode else os.path.dirname(_api_dir)
+    repo_path = _repo_path_for_task(task_ctx)
+    if not pr_mode:
+        repo_path = _resolve_repo_path_for_execution(repo_path, log=log)
     branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     attempt = _next_task_attempt(task_id)
