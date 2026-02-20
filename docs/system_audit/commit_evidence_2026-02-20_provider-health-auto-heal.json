@@ -1,0 +1,87 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/provider-health-monitor-heal",
+  "commit_scope": "Add external provider health monitoring auto-heal with multi-strategy retries, API trigger endpoint, and scheduled contract execution so readiness is actively repaired multiple times daily.",
+  "files_owned": [
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md",
+    "docs/system_audit/commit_evidence_2026-02-20_provider-health-auto-heal.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "provider-readiness-contract"
+  ],
+  "spec_ids": [
+    "096",
+    "100"
+  ],
+  "task_ids": [
+    "provider-health-monitor-auto-heal",
+    "external-provider-health-recovery"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py scripts/check_provider_readiness.py tests/test_automation_usage_api.py",
+    "Scheduled workflow now runs auto-heal rounds before provider validation on each 6-hour contract cycle"
+  ],
+  "change_files": [
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/API-KEYS-SETUP.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "External providers are monitored and auto-healed via multiple strategies (direct probe, refresh+reprobe, runtime validation) with configurable rounds; the scheduled readiness contract runs these heal attempts multiple times per day.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run"
+    ],
+    "test_flows": [
+      "POST /api/automation/usage/provider-heal/run executes multi-strategy rounds and reports per-provider attempts",
+      "provider-readiness contract workflow runs auto-heal then validation every 6 hours",
+      "blocking readiness issues continue to raise/update issue when heal attempts do not recover provider health"
+    ]
+  }
+}

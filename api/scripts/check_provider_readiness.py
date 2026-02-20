@@ -20,11 +20,21 @@ def main() -> int:
     parser.add_argument("--runtime-window-seconds", type=int, default=86400, help="Validation runtime evidence window")
     parser.add_argument("--min-execution-events", type=int, default=1, help="Minimum successful execution events per required provider")
     parser.add_argument("--run-probes", action="store_true", help="Run live provider execution probes before validation")
+    parser.add_argument("--run-auto-heal", action="store_true", help="Run provider auto-heal attempts before validation")
+    parser.add_argument("--heal-rounds", type=int, default=2, help="Auto-heal rounds per provider (max 6)")
     parser.add_argument("--json", action="store_true", help="Output JSON report")
     parser.add_argument("--fail-on-blocking", action="store_true", help="Exit non-zero when blocking issues exist")
     args = parser.parse_args()
 
     required = _parse_required(args.required_providers)
+    auto_heal_payload = {}
+    if args.run_auto_heal:
+        auto_heal_payload = automation_usage_service.run_provider_auto_heal(
+            required_providers=required or None,
+            max_rounds=args.heal_rounds,
+            runtime_window_seconds=args.runtime_window_seconds,
+            min_execution_events=args.min_execution_events,
+        )
     readiness_report = automation_usage_service.provider_readiness_report(
         required_providers=required or None,
         force_refresh=True,
@@ -42,6 +52,7 @@ def main() -> int:
         "readiness": readiness_report.model_dump(mode="json"),
         "validation": validation_report.model_dump(mode="json"),
         "probe_run": probe_payload,
+        "auto_heal": auto_heal_payload,
     }
 
     if args.json:
