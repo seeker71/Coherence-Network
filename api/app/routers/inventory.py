@@ -51,6 +51,17 @@ async def sync_implementation_request_tasks() -> dict:
     return inventory_service.sync_implementation_request_question_tasks()
 
 
+@router.post("/inventory/specs/sync-implementation-tasks")
+async def sync_spec_implementation_gap_tasks(
+    create_task: bool = Query(False),
+    limit: int = Query(200, ge=1, le=500),
+) -> dict:
+    return inventory_service.sync_spec_implementation_gap_tasks(
+        create_task=create_task,
+        limit=limit,
+    )
+
+
 @router.get("/inventory/questions/proactive")
 async def proactive_questions(
     limit: int = Query(20, ge=1, le=200),

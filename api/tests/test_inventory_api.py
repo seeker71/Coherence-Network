@@ -736,6 +736,81 @@ async def test_sync_implementation_request_questions_creates_tasks_without_dupli
 
 
 @pytest.mark.asyncio
+async def test_sync_spec_implementation_gap_tasks_orders_by_roi_and_dedupes(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    docs_dir = root / "docs"
+    specs_dir = root / "specs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    specs_dir.mkdir(parents=True, exist_ok=True)
+
+    (docs_dir / "SPEC-COVERAGE.md").write_text(
+        "\n".join(
+            [
+                "# Spec Coverage",
+                "",
+                "## Status Summary",
+                "",
+                "| Spec | Present | Spec'd | Tested | Notes |",
+                "|------|---------|--------|--------|-------|",
+                "| 026 Phase 1 Task Metrics | ? | ✓ | ? | Pending |",
+                "| 030 Pipeline Full Automation | ? | ✓ | ? | Pending |",
+                "| 033 README Quick Start Qualify | ? | ✓ | ? | Pending |",
+                "| 006 Overnight Backlog | ? | ✓ | ? | Pending |",
+                "| 010 Request Validation | ✓ | ✓ | ✓ | Complete |",
+                "",
+                "**Present:** Implemented.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (specs_dir / "026-phase-1-task-metrics.md").write_text("# 026\n", encoding="utf-8")
+    (specs_dir / "030-pipeline-full-automation.md").write_text("# 030\n", encoding="utf-8")
+    (specs_dir / "033-readme-quick-start-qualify.md").write_text("# 033\n", encoding="utf-8")
+    (specs_dir / "006-overnight-backlog.md").write_text("# 006\n", encoding="utf-8")
+    (specs_dir / "010-request-validation.md").write_text("# 010\n", encoding="utf-8")
+
+    monkeypatch.setattr(inventory_service, "_project_root", lambda: root)
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000: [
+            SimpleNamespace(spec_id="030-pipeline-full-automation", estimated_roi=9.2),
+            SimpleNamespace(spec_id="026-phase-1-task-metrics", estimated_roi=4.6),
+        ],
+    )
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        preview = await client.post("/api/inventory/specs/sync-implementation-tasks")
+        assert preview.status_code == 200
+        preview_payload = preview.json()
+        assert preview_payload["result"] == "spec_implementation_gap_tasks_synced"
+        assert preview_payload["gaps_count"] == 3
+        assert [row["spec_id"] for row in preview_payload["ordered_gaps"]] == ["030", "026", "033"]
+        assert preview_payload["created_count"] == 0
+
+        created = await client.post(
+            "/api/inventory/specs/sync-implementation-tasks",
+            params={"create_task": True, "limit": 10},
+        )
+        assert created.status_code == 200
+        created_payload = created.json()
+        assert created_payload["created_count"] == 3
+        assert [row["spec_id"] for row in created_payload["created_tasks"]] == ["030", "026", "033"]
+
+        duplicate = await client.post(
+            "/api/inventory/specs/sync-implementation-tasks",
+            params={"create_task": True, "limit": 10},
+        )
+        assert duplicate.status_code == 200
+        duplicate_payload = duplicate.json()
+        assert duplicate_payload["created_count"] == 0
+        assert duplicate_payload["skipped_existing_count"] == 3
+
+
+@pytest.mark.asyncio
 async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
