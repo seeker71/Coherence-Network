@@ -43,7 +43,7 @@ N/A.
 
 - [006 Overnight Backlog](006-overnight-backlog.md) — item 14 requested this runbook
 - [013 Logging Audit](013-logging-audit.md) — log locations and rotation; RUNBOOK must list all log files
-- 024 PyPI Indexing (legacy spec reference; see docs/SPEC-COVERAGE.md) — index_pypi.py usage in RUNBOOK
+- [024 PyPI Indexing](024-pypi-indexing.md) — index_pypi.py usage in RUNBOOK
 - [030 Pipeline Full Automation](030-pipeline-full-automation.md) — auto-commit/autonomous behavior in RUNBOOK
 
 ## Decision Gates (if any)
