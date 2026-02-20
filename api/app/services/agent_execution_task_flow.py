@@ -520,14 +520,11 @@ def execute_task(
     task = execution_service.agent_service.get_task(task_id)
     if task is None:
         return {"ok": False, "error": "task_not_found"}
-
     claimed, claim_error = execution_service._claim_task(task_id, worker_id)
     if not claimed:
         return {"ok": False, "error": f"claim_failed:{claim_error}"}
-
     task = execution_service.agent_service.get_task(task_id) or {}
     route_is_paid = execution_service._task_route_is_paid(task)
-
     payment_error = _handle_paid_route_guard(
         task_id=task_id,
         task=task,
@@ -547,7 +544,6 @@ def execute_task(
             cost_slack_ratio=cost_slack_ratio,
             retry_depth=_retry_depth,
         )
-
     model, prompt, cost_budget = _resolve_execution_plan(
         task,
         max_cost_usd=max_cost_usd,
