@@ -589,21 +589,38 @@ def _maybe_send_monitor_telegram_alert(data: dict[str, Any], log: logging.Logger
     if not token or not chats or not issues:
         return
 
-    signature = _monitor_issue_signature([row for row in issues if isinstance(row, dict)])
+    normalized_issues = [row for row in issues if isinstance(row, dict)]
+    signature = _monitor_issue_signature(normalized_issues)
     now_ts = time.time()
-    interval_seconds = _env_to_int("MONITOR_TELEGRAM_MIN_INTERVAL_SECONDS", 900, minimum=60)
+    interval_seconds = _env_to_int("MONITOR_TELEGRAM_MIN_INTERVAL_SECONDS", 3600, minimum=60)
+    urgent_interval_seconds = _env_to_int(
+        "MONITOR_TELEGRAM_URGENT_MIN_INTERVAL_SECONDS",
+        300,
+        minimum=60,
+    )
+    urgent_conditions = {"needs_decision", "orphan_running", "repeated_failures", "executor_fail"}
+    urgent = any(
+        str(item.get("severity") or "").strip().lower() in {"high", "critical"}
+        or str(item.get("condition") or "").strip().lower() in urgent_conditions
+        for item in normalized_issues
+    )
     state = _load_monitor_telegram_state()
     previous_signature = str(state.get("signature") or "")
     previous_sent = float(state.get("sent_at_ts") or 0.0)
-    if signature == previous_signature and (now_ts - previous_sent) < interval_seconds:
-        return
+    elapsed = now_ts - previous_sent
+    if previous_sent > 0:
+        if urgent:
+            if signature == previous_signature and elapsed < urgent_interval_seconds:
+                return
+        elif elapsed < interval_seconds:
+            return
 
     api_base = str(os.environ.get("PUBLIC_API_BASE", BASE)).strip() or BASE
     web_base = str(
         os.environ.get("PUBLIC_WEB_BASE", "https://coherence-web-production.up.railway.app")
     ).strip() or "https://coherence-web-production.up.railway.app"
     message = _format_monitor_telegram_alert(
-        [row for row in issues if isinstance(row, dict)],
+        normalized_issues,
         api_base=api_base,
         web_base=web_base,
     )
@@ -634,6 +651,7 @@ def _maybe_send_monitor_telegram_alert(data: dict[str, Any], log: logging.Logger
             "sent_at": datetime.now(timezone.utc).isoformat(),
             "issue_count": len(issues),
             "delivered_chats": delivered,
+            "urgent": urgent,
         }
     )
 

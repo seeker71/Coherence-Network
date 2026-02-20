@@ -5,19 +5,16 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
+from typing import Optional
 from urllib.parse import parse_qs
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
-
-from typing import Optional
-
 logger = logging.getLogger(__name__)
 from app.routers.agent_telegram import (
     format_task_alert,
     is_runner_task_update,
     router as telegram_router,
 )
-
 from app.models.agent import (
     AgentRunnerHeartbeat,
     AgentRunnerList,
@@ -41,7 +38,6 @@ from app.services import agent_run_state_service, agent_runner_registry_service,
 
 router = APIRouter()
 router.include_router(telegram_router)
-
 
 def _truthy(value: str | bool | None) -> bool:
     if isinstance(value, bool):
@@ -570,7 +566,7 @@ async def update_task(
     background_tasks: BackgroundTasks,
 ) -> AgentTask:
     """Update task. Supports status, output, progress_pct, current_step, decision_prompt, decision.
-    Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
+    Sends immediate Telegram alerts for needs_decision/failed and throttled hourly summaries for runner updates.
     When decision present and task needs_decision, sets status→running.
     """
     if not _task_update_has_fields(data):
@@ -597,14 +593,18 @@ async def update_task(
         worker_id=data.worker_id,
         context_patch=context_patch if context_patch else data.context,
     )
-    if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
-        from app.services import telegram_adapter
-
+    attention_status = data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED)
+    if runner_update or attention_status:
+        from app.services import telegram_adapter, telegram_alert_policy_service
         if telegram_adapter.is_configured():
-            msg = format_task_alert(task, runner_update=runner_update)
-            if data.output:
-                msg += f"\n\nOutput: {data.output[:200]}"
-            background_tasks.add_task(telegram_adapter.send_alert, msg)
+            msg = (
+                format_task_alert(task, runner_update=False)
+                + (f"\n\nOutput: {data.output[:200]}" if data.output else "")
+                if attention_status
+                else telegram_alert_policy_service.build_runner_hourly_summary(task)
+            )
+            if msg:
+                background_tasks.add_task(telegram_adapter.send_alert, msg)
     if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         try:
             from app.services.metrics_service import record_task
