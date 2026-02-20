@@ -1787,6 +1787,95 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     }
 
 
+def _orphan_running_threshold_seconds(default: int = 1800) -> int:
+    raw = (os.environ.get("AGENT_ORPHAN_RUNNING_SEC") or os.environ.get("ORPHAN_RUNNING_SEC") or "").strip()
+    if not raw:
+        return max(60, int(default))
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return max(60, int(default))
+    return max(60, parsed)
+
+
+def recover_orphaned_running_tasks(
+    *,
+    runner_id: str,
+    min_running_seconds: int | None = None,
+    max_tasks: int = 10,
+    exclude_task_ids: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Mark stale running tasks as failed when a runner reports idle/no active task.
+
+    This is a safety net for orphaned claims when monitor_pipeline is not actively
+    running. Returns updated task rows that were transitioned to failed.
+    """
+    _ensure_store_loaded()
+    normalized_runner = _normalize_worker_id(runner_id)
+    if not normalized_runner:
+        return []
+
+    threshold = (
+        max(60, int(min_running_seconds))
+        if min_running_seconds is not None
+        else _orphan_running_threshold_seconds()
+    )
+    task_limit = max(1, min(50, int(max_tasks)))
+    excluded = {
+        str(task_id).strip()
+        for task_id in (exclude_task_ids or [])
+        if str(task_id).strip()
+    }
+
+    now = _now()
+    candidates: list[tuple[int, str]] = []
+    for task in _store.values():
+        if _status_value(task.get("status")) != TaskStatus.RUNNING.value:
+            continue
+        task_id = str(task.get("id") or "").strip()
+        if not task_id or task_id in excluded:
+            continue
+        if _normalize_worker_id(task.get("claimed_by")) != normalized_runner:
+            continue
+        _, row = _pipeline_task_status_item(task, now=now)
+        if not isinstance(row, dict):
+            continue
+        raw_running_seconds = row.get("running_seconds")
+        try:
+            running_seconds = int(float(raw_running_seconds))
+        except (TypeError, ValueError):
+            continue
+        if running_seconds < threshold:
+            continue
+        candidates.append((running_seconds, task_id))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    recovered: list[dict[str, Any]] = []
+    now_iso = now.isoformat().replace("+00:00", "Z")
+    for running_seconds, task_id in candidates[:task_limit]:
+        output = (
+            "Orphan: runner heartbeat reported idle/no active task; "
+            f"auto-recovered stale running task after {running_seconds}s "
+            f"(threshold {threshold}s)."
+        )
+        updated = update_task(
+            task_id,
+            status=TaskStatus.FAILED,
+            output=output,
+            context={
+                "orphan_recovered_at": now_iso,
+                "orphan_recovered_by_runner": normalized_runner,
+                "orphan_recovered_running_seconds": running_seconds,
+                "orphan_recovered_threshold_seconds": threshold,
+            },
+            worker_id=normalized_runner,
+        )
+        if updated is not None:
+            recovered.append(updated)
+
+    return recovered
+
+
 def clear_store() -> None:
     """Clear in-memory store (for testing)."""
     _ensure_store_loaded()
