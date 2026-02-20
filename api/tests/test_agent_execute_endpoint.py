@@ -624,6 +624,67 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_blocks(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "1")
+    monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
+    monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service.automation_usage_service,
+        "provider_limit_guard_decision",
+        lambda provider, force_refresh=False: {
+            "allowed": False,
+            "provider": provider,
+            "reason": "monthly::credits remaining=4.0/100.0 ratio=0.04<=threshold=0.1",
+            "blocked_metrics": [
+                {
+                    "metric_id": "credits",
+                    "window": "monthly",
+                    "remaining_ratio": 0.04,
+                    "threshold_ratio": 0.1,
+                }
+            ],
+            "evaluated_metrics": [],
+        },
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route with provider quota guard",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        blocked = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert blocked.status_code == 200
+        payload = blocked.json()
+        assert payload["status"] == "failed"
+        assert payload["output"].startswith("Paid-provider usage blocked by provider quota policy")
+
+        friction = await client.get("/api/friction/events?status=open")
+        assert friction.status_code == 200
+        assert any(
+            item.get("block_type") == "provider_usage_limit_exceeded"
+            and "provider quota policy" in item.get("notes", "")
+            for item in friction.json()
+        )
+
+
+@pytest.mark.asyncio
 async def test_review_task_can_return_confidence_with_paid_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

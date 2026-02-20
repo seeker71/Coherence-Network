@@ -68,6 +68,12 @@ _PROVIDER_ALIASES: dict[str, str] = {
     "clawwork": "openclaw",
 }
 
+_PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
+    "hourly": 0.1,
+    "weekly": 0.1,
+    "monthly": 0.1,
+}
+
 
 def _normalize_provider_name(value: str | None) -> str:
     candidate = str(value or "").strip().lower()
@@ -187,6 +193,102 @@ def _coerce_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _normalize_ratio_threshold(value: Any, *, default: float) -> float:
+    parsed = _coerce_float(value)
+    if parsed is None:
+        return default
+    return max(0.0, min(float(parsed), 1.0))
+
+
+def _metric_window_bucket(window: str | None) -> str:
+    raw = str(window or "").strip().lower()
+    if not raw:
+        return ""
+    normalized = raw.replace(" ", "").replace("-", "_")
+    direct_map = {
+        "hourly": "hourly",
+        "minute": "hourly",
+        "minutely": "hourly",
+        "weekly": "weekly",
+        "1w": "weekly",
+        "7d": "weekly",
+        "rolling_7d": "weekly",
+        "monthly": "monthly",
+        "1m": "monthly",
+        "30d": "monthly",
+        "rolling_30d": "monthly",
+    }
+    if normalized in direct_map:
+        return direct_map[normalized]
+    if "month" in normalized or "30d" in normalized:
+        return "monthly"
+    if "week" in normalized or "7d" in normalized or normalized.endswith("1w"):
+        return "weekly"
+    if (
+        "hour" in normalized
+        or "minute" in normalized
+        or normalized.endswith("h")
+        or "day" in normalized
+        or "24h" in normalized
+    ):
+        return "hourly"
+    return ""
+
+
+def _provider_window_guard_ratio_defaults() -> dict[str, float]:
+    defaults = dict(_PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW)
+    env_map = {
+        "hourly": "AUTOMATION_PROVIDER_MIN_REMAINING_RATIO_HOURLY",
+        "weekly": "AUTOMATION_PROVIDER_MIN_REMAINING_RATIO_WEEKLY",
+        "monthly": "AUTOMATION_PROVIDER_MIN_REMAINING_RATIO_MONTHLY",
+    }
+    for window, env_name in env_map.items():
+        defaults[window] = _normalize_ratio_threshold(
+            os.getenv(env_name),
+            default=defaults[window],
+        )
+    return defaults
+
+
+def _provider_window_guard_ratio_policy(defaults: dict[str, float]) -> dict[str, dict[str, float]]:
+    policy: dict[str, dict[str, float]] = {"default": dict(defaults)}
+    raw = str(os.getenv("AUTOMATION_PROVIDER_WINDOW_GUARD_POLICY_JSON", "")).strip()
+    if not raw:
+        return policy
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return policy
+    if not isinstance(payload, dict):
+        return policy
+
+    for provider_name, settings in payload.items():
+        if not isinstance(settings, dict):
+            continue
+        provider_key = str(provider_name).strip().lower()
+        normalized_provider = _normalize_provider_name(provider_key)
+        if provider_key == "default":
+            target_key = "default"
+        elif normalized_provider:
+            target_key = normalized_provider
+        else:
+            continue
+
+        merged = dict(policy.get("default", defaults))
+        if target_key in policy:
+            merged.update(policy[target_key])
+        for window_name, ratio_value in settings.items():
+            bucket = _metric_window_bucket(str(window_name))
+            if bucket not in defaults:
+                continue
+            merged[bucket] = _normalize_ratio_threshold(
+                ratio_value,
+                default=merged.get(bucket, defaults[bucket]),
+            )
+        policy[target_key] = merged
+    return policy
 
 
 def _header_float(headers: httpx.Headers, *keys: str) -> float | None:
@@ -1945,6 +2047,166 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
     )
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
+
+
+def _provider_limit_guard_result(
+    *,
+    allowed: bool,
+    provider: str,
+    reason: str,
+    blocked_metrics: list[dict[str, Any]] | None = None,
+    evaluated_metrics: list[dict[str, Any]] | None = None,
+    status: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "allowed": bool(allowed),
+        "provider": provider,
+        "reason": reason,
+        "blocked_metrics": list(blocked_metrics or []),
+        "evaluated_metrics": list(evaluated_metrics or []),
+    }
+    if status is not None:
+        payload["status"] = status
+    return payload
+
+
+def _provider_snapshot_for_guard(
+    provider: str,
+    *,
+    force_refresh: bool,
+) -> ProviderUsageSnapshot | None:
+    overview = collect_usage_overview(force_refresh=force_refresh)
+    return next(
+        (
+            row
+            for row in overview.providers
+            if _normalize_provider_name(row.provider) == provider
+        ),
+        None,
+    )
+
+
+def _provider_guard_thresholds(provider: str) -> dict[str, float]:
+    defaults = _provider_window_guard_ratio_defaults()
+    policy = _provider_window_guard_ratio_policy(defaults)
+    thresholds = dict(policy.get("default", defaults))
+    overrides = policy.get(provider)
+    if isinstance(overrides, dict):
+        thresholds.update(overrides)
+    return thresholds
+
+
+def _evaluate_provider_guard_metrics(
+    *,
+    snapshot: ProviderUsageSnapshot,
+    thresholds: dict[str, float],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    evaluated: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+    for metric in snapshot.metrics:
+        if metric.limit is None or metric.limit <= 0 or metric.remaining is None:
+            continue
+        bucket = _metric_window_bucket(metric.window)
+        if not bucket:
+            continue
+        threshold = thresholds.get(bucket)
+        if threshold is None:
+            continue
+        ratio = max(0.0, float(metric.remaining) / float(metric.limit))
+        row = {
+            "metric_id": metric.id,
+            "label": metric.label,
+            "window": bucket,
+            "raw_window": metric.window,
+            "remaining": round(float(metric.remaining), 6),
+            "limit": round(float(metric.limit), 6),
+            "remaining_ratio": round(ratio, 6),
+            "threshold_ratio": round(float(threshold), 6),
+        }
+        evaluated.append(row)
+        if ratio <= float(threshold):
+            blocked.append(row)
+    return evaluated, blocked
+
+
+def _provider_missing_quota_telemetry_should_block(provider: str, *, evaluated_metrics: list[dict[str, Any]]) -> bool:
+    if evaluated_metrics:
+        return False
+    if not _env_truthy("AUTOMATION_PROVIDER_WINDOW_GUARD_BLOCK_ON_MISSING_LIMITS", default=False):
+        return False
+    required = set(_required_providers_from_env())
+    active_counts = _active_provider_usage_counts()
+    active_usage = int(active_counts.get(provider, 0))
+    return provider in required or active_usage > 0
+
+
+def _provider_blocked_metrics_reason(blocked_metrics: list[dict[str, Any]]) -> str:
+    return "; ".join(
+        (
+            f"{item['window']}::{item['metric_id']} "
+            f"remaining={item['remaining']}/{item['limit']} "
+            f"ratio={item['remaining_ratio']}<=threshold={item['threshold_ratio']}"
+        )
+        for item in blocked_metrics
+    )
+
+
+def provider_limit_guard_decision(provider: str, *, force_refresh: bool = False) -> dict[str, Any]:
+    normalized_provider = _normalize_provider_name(provider)
+    if not normalized_provider:
+        return _provider_limit_guard_result(
+            allowed=True,
+            provider="",
+            reason="provider_not_set",
+        )
+
+    if not _env_truthy("AUTOMATION_PROVIDER_WINDOW_GUARD_ENABLED", default=True):
+        return _provider_limit_guard_result(
+            allowed=True,
+            provider=normalized_provider,
+            reason="window_guard_disabled",
+        )
+
+    snapshot = _provider_snapshot_for_guard(normalized_provider, force_refresh=force_refresh)
+    if snapshot is None:
+        return _provider_limit_guard_result(
+            allowed=True,
+            provider=normalized_provider,
+            reason="provider_snapshot_missing",
+        )
+
+    thresholds = _provider_guard_thresholds(normalized_provider)
+    evaluated, blocked = _evaluate_provider_guard_metrics(
+        snapshot=snapshot,
+        thresholds=thresholds,
+    )
+
+    if blocked:
+        return _provider_limit_guard_result(
+            allowed=False,
+            provider=normalized_provider,
+            reason=_provider_blocked_metrics_reason(blocked),
+            blocked_metrics=blocked,
+            evaluated_metrics=evaluated,
+            status=snapshot.status,
+        )
+
+    if _provider_missing_quota_telemetry_should_block(normalized_provider, evaluated_metrics=evaluated):
+        return _provider_limit_guard_result(
+            allowed=False,
+            provider=normalized_provider,
+            reason=f"{normalized_provider} has no quota remaining telemetry while guard strict-mode is enabled",
+            evaluated_metrics=evaluated,
+            status=snapshot.status,
+        )
+
+    return _provider_limit_guard_result(
+        allowed=True,
+        provider=normalized_provider,
+        reason="within_window_thresholds",
+        evaluated_metrics=evaluated,
+        status=snapshot.status,
+    )
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
