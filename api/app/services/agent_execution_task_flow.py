@@ -2,185 +2,13 @@
 
 from __future__ import annotations
 
-import threading
 from typing import Any
 
 from app.models.spec_registry import SpecRegistryUpdate
 from app.services import agent_execution_metrics as metrics_service
 from app.services import agent_execution_retry as retry_service
 from app.services import agent_execution_service as execution_service
-
-
-def _task_target_ids(task: dict[str, Any]) -> tuple[str | None, str | None]:
-    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
-    idea_id = str(ctx.get("idea_id") or "").strip() or None
-    spec_id = str(ctx.get("spec_id") or "").strip() or None
-    return idea_id, spec_id
-
-
-def _continuous_autofill_enabled() -> bool:
-    configured = execution_service.os.getenv("AGENT_CONTINUOUS_AUTOFILL")
-    if configured is not None and str(configured).strip():
-        return execution_service._truthy(str(configured))
-    return bool(str(execution_service.os.getenv("RAILWAY_ENVIRONMENT") or "").strip())
-
-
-def _continuous_autofill_autorun_enabled() -> bool:
-    configured = execution_service.os.getenv("AGENT_CONTINUOUS_AUTOFILL_AUTORUN")
-    if configured is not None and str(configured).strip():
-        return execution_service._truthy(str(configured))
-    return bool(str(execution_service.os.getenv("RAILWAY_ENVIRONMENT") or "").strip())
-
-
-def _open_task_count() -> int:
-    total = 0
-    for status in (
-        execution_service.TaskStatus.PENDING,
-        execution_service.TaskStatus.RUNNING,
-        execution_service.TaskStatus.NEEDS_DECISION,
-    ):
-        _, count = execution_service.agent_service.list_tasks(status=status, limit=1, offset=0)
-        total += int(count)
-    return total
-
-
-def _extract_created_task_ids(payload: dict[str, Any]) -> list[str]:
-    if not isinstance(payload, dict):
-        return []
-
-    ids: list[str] = []
-    seen: set[str] = set()
-
-    def _append(candidate: Any) -> None:
-        task_id = str(candidate or "").strip()
-        if not task_id or task_id in seen:
-            return
-        seen.add(task_id)
-        ids.append(task_id)
-
-    created = payload.get("created_task")
-    if isinstance(created, dict):
-        _append(created.get("id"))
-
-    created_many = payload.get("created_tasks")
-    if isinstance(created_many, list):
-        for row in created_many:
-            if not isinstance(row, dict):
-                continue
-            _append(row.get("task_id") or row.get("id"))
-
-    return ids
-
-
-def _seed_next_tasks() -> tuple[list[str], str]:
-    from app.services import inventory_service
-
-    spec_report = inventory_service.sync_spec_implementation_gap_tasks(create_task=True, limit=80)
-    spec_ids = _extract_created_task_ids(spec_report)
-    if spec_ids:
-        return spec_ids, "spec_implementation_gap"
-
-    roi_report = inventory_service.next_highest_roi_task_from_answered_questions(create_task=True)
-    roi_ids = _extract_created_task_ids(roi_report)
-    if roi_ids:
-        return roi_ids, "idea_answered_question_roi"
-
-    flow_report = inventory_service.next_unblock_task_from_flow(
-        create_task=True,
-        runtime_window_seconds=86400,
-    )
-    flow_ids = _extract_created_task_ids(flow_report)
-    if flow_ids:
-        return flow_ids, "idea_unblock_flow"
-    return [], "none"
-
-
-def _schedule_followup_execution(
-    *,
-    task_id: str,
-    worker_id: str,
-    force_paid_providers: bool,
-    max_cost_usd: float | None,
-    estimated_cost_usd: float | None,
-    cost_slack_ratio: float | None,
-) -> None:
-    def _runner() -> None:
-        try:
-            execute_task(
-                task_id,
-                worker_id=worker_id,
-                force_paid_providers=force_paid_providers,
-                max_cost_usd=max_cost_usd,
-                estimated_cost_usd=estimated_cost_usd,
-                cost_slack_ratio=cost_slack_ratio,
-            )
-        except Exception:
-            return
-
-    thread = threading.Thread(target=_runner, name=f"agent-followup-{task_id}", daemon=True)
-    thread.start()
-
-
-def _maybe_continue_after_finish(
-    *,
-    previous_task_id: str,
-    result: dict[str, Any],
-    worker_id: str,
-    force_paid_providers: bool,
-    max_cost_usd: float | None,
-    estimated_cost_usd: float | None,
-    cost_slack_ratio: float | None,
-) -> None:
-    if not _continuous_autofill_enabled():
-        return
-
-    final_status = str(result.get("status") or "").strip().lower()
-    if final_status not in {"completed", "failed"}:
-        return
-
-    try:
-        open_count = _open_task_count()
-        if open_count > 0:
-            return
-
-        created_ids, source = _seed_next_tasks()
-        if not created_ids:
-            return
-
-        if _continuous_autofill_autorun_enabled():
-            next_task_id = created_ids[0]
-            _schedule_followup_execution(
-                task_id=next_task_id,
-                worker_id=f"{worker_id}:autofill",
-                force_paid_providers=force_paid_providers,
-                max_cost_usd=max_cost_usd,
-                estimated_cost_usd=estimated_cost_usd,
-                cost_slack_ratio=cost_slack_ratio,
-            )
-
-        execution_service.runtime_service.record_event(
-            execution_service.RuntimeEventCreate(
-                source="worker",
-                endpoint="tool:agent-task-continuation",
-                method="RUN",
-                status_code=200,
-                runtime_ms=1.0,
-                idea_id="coherence-network-agent-pipeline",
-                metadata=execution_service._compact_metadata(
-                    {
-                        "tracking_kind": "agent_task_continuation",
-                        "task_id": previous_task_id,
-                        "source": source,
-                        "created_count": len(created_ids),
-                        "created_task_ids": ",".join(created_ids[:10]),
-                        "auto_run": _continuous_autofill_autorun_enabled(),
-                    }
-                ),
-            )
-        )
-    except Exception:
-        return
-
+from app.services import agent_task_continuation_service as continuation_service
 
 def _apply_value_attribution(
     task: dict[str, Any],
@@ -188,7 +16,9 @@ def _apply_value_attribution(
     output: str,
     actual_cost_usd: float | None,
 ) -> None:
-    idea_id, spec_id = _task_target_ids(task)
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = str(ctx.get("idea_id") or "").strip() or None
+    spec_id = str(ctx.get("spec_id") or "").strip() or None
     if not idea_id and not spec_id:
         return
 
@@ -756,7 +586,7 @@ def execute_task(
         cost_slack_ratio=cost_slack_ratio,
         retry_depth=_retry_depth,
     )
-    _maybe_continue_after_finish(
+    continuation_service.maybe_continue_after_finish(
         previous_task_id=task_id,
         result=finalized,
         worker_id=worker_id,
@@ -764,5 +594,6 @@ def execute_task(
         max_cost_usd=max_cost_usd,
         estimated_cost_usd=estimated_cost_usd,
         cost_slack_ratio=cost_slack_ratio,
+        execute_callback=execute_task,
     )
     return finalized
