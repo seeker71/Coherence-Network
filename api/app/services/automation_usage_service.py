@@ -10,7 +10,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -2033,6 +2033,26 @@ def _probe_openai_codex() -> tuple[bool, str]:
         return False, f"openai_probe_failed:{exc}"
 
 
+def _probe_openai() -> tuple[bool, str]:
+    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        active = int(_active_provider_usage_counts().get("openai", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage"
+        return False, "missing_openai_key"
+    url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_openai_headers()) as client:
+            response = client.get(url)
+            response.raise_for_status()
+        return True, "ok"
+    except Exception as exc:
+        active = int(_active_provider_usage_counts().get("openai", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_after_api_error"
+        return False, f"openai_probe_failed:{exc}"
+
+
 def _probe_openclaw() -> tuple[bool, str]:
     openclaw_key = os.getenv("OPENCLAW_API_KEY", "").strip()
     if openclaw_key:
@@ -2175,14 +2195,10 @@ def _record_provider_probe_event(provider: str, ok: bool, detail: str, runtime_m
         return
 
 
-def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
-    required = [
-        _normalize_provider_name(item)
-        for item in (required_providers or _validation_required_providers_from_env())
-        if str(item).strip()
-    ]
-    probe_map = {
+def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
+    return {
         "coherence-internal": _probe_internal,
+        "openai": _probe_openai,
         "openai-codex": _probe_openai_codex,
         "openclaw": _probe_openclaw,
         "openrouter": _probe_openrouter,
@@ -2191,6 +2207,97 @@ def run_provider_validation_probes(*, required_providers: list[str] | None = Non
         "railway": _probe_railway,
         "claude": _probe_claude,
     }
+
+
+def _record_provider_heal_event(
+    *,
+    provider: str,
+    strategy: str,
+    ok: bool,
+    detail: str,
+    round_index: int,
+    runtime_ms: float,
+) -> None:
+    try:
+        from app.models.runtime import RuntimeEventCreate
+        from app.services import runtime_service
+
+        runtime_service.record_event(
+            RuntimeEventCreate(
+                source="worker",
+                endpoint=f"tool:provider-heal/{provider}",
+                method="RUN",
+                status_code=200 if ok else 500,
+                runtime_ms=max(0.1, float(runtime_ms)),
+                idea_id="coherence-network-agent-pipeline",
+                metadata={
+                    "provider": provider,
+                    "heal_strategy": strategy,
+                    "heal_round": int(round_index),
+                    "heal_result": "pass" if ok else "fail",
+                    "heal_detail": detail,
+                    "tool_name": "provider_auto_heal",
+                },
+            )
+        )
+    except Exception:
+        return
+
+
+def _heal_strategy_refresh_and_reprobe(provider: str, probe: Callable[[], tuple[bool, str]]) -> tuple[bool, str]:
+    try:
+        collect_usage_overview(force_refresh=True)
+    except Exception:
+        pass
+    try:
+        provider_readiness_report(required_providers=[provider], force_refresh=True)
+    except Exception:
+        pass
+    ok, detail = probe()
+    return ok, f"refresh_reprobe:{detail}"
+
+
+def _heal_strategy_runtime_validation(
+    provider: str,
+    *,
+    runtime_window_seconds: int,
+    min_execution_events: int,
+) -> tuple[bool, str]:
+    try:
+        report = provider_validation_report(
+            required_providers=[provider],
+            runtime_window_seconds=runtime_window_seconds,
+            min_execution_events=min_execution_events,
+            force_refresh=True,
+        )
+    except Exception as exc:
+        return False, f"runtime_validation_failed:{exc}"
+
+    target = None
+    for row in report.providers:
+        if str(row.provider).strip().lower() == provider:
+            target = row
+            break
+    if target is None:
+        return False, "runtime_validation_missing_provider"
+    if target.validated_execution and target.readiness_status == "ok":
+        return True, "ok_via_runtime_validation"
+    return (
+        False,
+        "runtime_validation_blocked:"
+        f"readiness={target.readiness_status};"
+        f"validated_execution={target.validated_execution};"
+        f"successful_events={target.successful_events}",
+    )
+
+
+def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _validation_required_providers_from_env())
+        if str(item).strip()
+    ]
+    probe_map = _provider_probe_map()
 
     out: list[dict[str, Any]] = []
     for provider in required:
@@ -2204,6 +2311,129 @@ def run_provider_validation_probes(*, required_providers: list[str] | None = Non
         _record_provider_probe_event(provider=provider, ok=ok, detail=detail, runtime_ms=elapsed_ms)
         out.append({"provider": provider, "ok": ok, "detail": detail, "runtime_ms": elapsed_ms})
     return {"required_providers": required, "probes": out}
+
+
+def run_provider_auto_heal(
+    *,
+    required_providers: list[str] | None = None,
+    max_rounds: int = 2,
+    runtime_window_seconds: int = 86400,
+    min_execution_events: int = 1,
+) -> dict[str, Any]:
+    requested = required_providers or [
+        *_required_providers_from_env(),
+        *_validation_required_providers_from_env(),
+    ]
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in requested:
+        provider = _normalize_provider_name(item)
+        if not provider or provider in seen:
+            continue
+        seen.add(provider)
+        deduped.append(provider)
+    providers = [provider for provider in deduped if provider != "coherence-internal"]
+
+    rounds = max(1, min(int(max_rounds), 6))
+    validation_window = max(60, min(int(runtime_window_seconds), 2592000))
+    min_events = max(1, min(int(min_execution_events), 10))
+    retry_delay_seconds = max(
+        0,
+        min(int(os.getenv("AUTOMATION_PROVIDER_HEAL_RETRY_DELAY_SECONDS", "2")), 30),
+    )
+    probe_map = _provider_probe_map()
+
+    provider_rows: list[dict[str, Any]] = []
+    blocking_issues: list[str] = []
+
+    for provider in providers:
+        probe = probe_map.get(provider)
+        attempts: list[dict[str, Any]] = []
+        if probe is None:
+            provider_rows.append(
+                {
+                    "provider": provider,
+                    "status": "unavailable",
+                    "healed": False,
+                    "attempted_rounds": 0,
+                    "strategies_tried": [],
+                    "attempts": [],
+                    "final_detail": "unsupported_provider",
+                }
+            )
+            blocking_issues.append(f"{provider}: unsupported_provider")
+            continue
+
+        healed = False
+        final_detail = "not_attempted"
+        for round_index in range(1, rounds + 1):
+            strategy_runs = (
+                ("direct_probe", lambda: probe()),
+                ("refresh_and_reprobe", lambda: _heal_strategy_refresh_and_reprobe(provider, probe)),
+                (
+                    "runtime_validation",
+                    lambda: _heal_strategy_runtime_validation(
+                        provider,
+                        runtime_window_seconds=validation_window,
+                        min_execution_events=min_events,
+                    ),
+                ),
+            )
+            for strategy_name, runner in strategy_runs:
+                started = time.perf_counter()
+                ok, detail = runner()
+                elapsed_ms = round((time.perf_counter() - started) * 1000.0, 4)
+                _record_provider_heal_event(
+                    provider=provider,
+                    strategy=strategy_name,
+                    ok=ok,
+                    detail=detail,
+                    round_index=round_index,
+                    runtime_ms=elapsed_ms,
+                )
+                attempts.append(
+                    {
+                        "round": round_index,
+                        "strategy": strategy_name,
+                        "ok": ok,
+                        "detail": detail,
+                        "runtime_ms": elapsed_ms,
+                    }
+                )
+                final_detail = detail
+                if ok:
+                    healed = True
+                    break
+            if healed:
+                break
+            if round_index < rounds and retry_delay_seconds > 0:
+                time.sleep(retry_delay_seconds)
+
+        strategies_tried = list(dict.fromkeys(str(row.get("strategy") or "") for row in attempts if row.get("strategy")))
+        provider_status = "ok" if healed else "unavailable"
+        provider_rows.append(
+            {
+                "provider": provider,
+                "status": provider_status,
+                "healed": healed,
+                "attempted_rounds": max((int(row.get("round") or 0) for row in attempts), default=0),
+                "strategies_tried": strategies_tried,
+                "attempts": attempts,
+                "final_detail": final_detail,
+            }
+        )
+        if not healed:
+            blocking_issues.append(f"{provider}: {final_detail}")
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "required_providers": providers,
+        "external_provider_count": len(providers),
+        "max_rounds": rounds,
+        "all_healthy": len(blocking_issues) == 0,
+        "blocking_issues": blocking_issues,
+        "providers": provider_rows,
+    }
 
 
 def _runtime_validation_rows(*, required_providers: list[str], runtime_window_seconds: int) -> dict[str, dict[str, Any]]:

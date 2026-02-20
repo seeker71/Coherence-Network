@@ -648,6 +648,130 @@ def test_provider_validation_run_supports_openrouter_and_supabase(monkeypatch: p
     assert providers["supabase"]["ok"] is True
 
 
+def test_provider_validation_run_supports_openai_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_record_provider_probe_event", lambda **kwargs: None)
+
+    report = automation_usage_service.run_provider_validation_probes(
+        required_providers=["openai"],
+    )
+    assert report["required_providers"] == ["openai"]
+    assert len(report["probes"]) == 1
+    row = report["probes"][0]
+    assert row["provider"] == "openai"
+    assert row["ok"] is True
+    assert row["detail"] == "ok"
+    assert float(row["runtime_ms"]) >= 0.0
+
+
+def test_provider_auto_heal_uses_multiple_strategies(monkeypatch: pytest.MonkeyPatch) -> None:
+    probe_calls = {"count": 0}
+
+    def _probe_openrouter():
+        probe_calls["count"] += 1
+        if probe_calls["count"] == 1:
+            return False, "openrouter_probe_failed:temporary"
+        return True, "ok"
+
+    monkeypatch.setenv("AUTOMATION_PROVIDER_HEAL_RETRY_DELAY_SECONDS", "0")
+    monkeypatch.setattr(automation_usage_service, "_probe_openrouter", _probe_openrouter)
+    monkeypatch.setattr(automation_usage_service, "_record_provider_heal_event", lambda **kwargs: None)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=True: ProviderUsageOverview(
+            providers=[],
+            unavailable_providers=[],
+            tracked_providers=0,
+            limit_coverage={},
+        ),
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report",
+        lambda **kwargs: ProviderReadinessReport(
+            required_providers=["openrouter"],
+            all_required_ready=False,
+            blocking_issues=["openrouter"],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openrouter",
+                    kind="custom",
+                    status="degraded",
+                    required=True,
+                    configured=True,
+                    severity="warning",
+                    missing_env=[],
+                    notes=[],
+                )
+            ],
+        ),
+    )
+
+    report = automation_usage_service.run_provider_auto_heal(
+        required_providers=["openrouter"],
+        max_rounds=2,
+    )
+    assert report["all_healthy"] is True
+    assert report["blocking_issues"] == []
+    row = report["providers"][0]
+    assert row["provider"] == "openrouter"
+    assert row["healed"] is True
+    assert row["status"] == "ok"
+    assert row["strategies_tried"] == ["direct_probe", "refresh_and_reprobe"]
+    assert probe_calls["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_auto_heal(
+        *,
+        required_providers: list[str] | None = None,
+        max_rounds: int = 2,
+        runtime_window_seconds: int = 86400,
+        min_execution_events: int = 1,
+    ) -> dict:
+        captured["required_providers"] = required_providers
+        captured["max_rounds"] = max_rounds
+        captured["runtime_window_seconds"] = runtime_window_seconds
+        captured["min_execution_events"] = min_execution_events
+        return {
+            "required_providers": required_providers or [],
+            "external_provider_count": len(required_providers or []),
+            "max_rounds": max_rounds,
+            "all_healthy": True,
+            "blocking_issues": [],
+            "providers": [],
+        }
+
+    monkeypatch.setattr(automation_usage_service, "run_provider_auto_heal", _fake_auto_heal)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/automation/usage/provider-heal/run",
+            params={
+                "required_providers": "openrouter,github",
+                "max_rounds": 3,
+                "runtime_window_seconds": 7200,
+                "min_execution_events": 2,
+            },
+        )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["all_healthy"] is True
+    assert captured == {
+        "required_providers": ["openrouter", "github"],
+        "max_rounds": 3,
+        "runtime_window_seconds": 7200,
+        "min_execution_events": 2,
+    }
+
+
 @pytest.mark.asyncio
 async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata(
     tmp_path,

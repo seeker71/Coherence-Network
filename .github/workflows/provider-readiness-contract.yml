@@ -57,6 +57,8 @@ jobs:
           fi
           python scripts/check_provider_readiness.py \
             --required-providers "$REQUIRED" \
+            --run-auto-heal \
+            --heal-rounds 2 \
             --run-probes \
             --json \
             --fail-on-blocking > ../provider_readiness_report.json
