@@ -4498,6 +4498,56 @@ def _has_open_tasks(client: httpx.Client, log: logging.Logger) -> bool:
     return False
 
 
+def _extract_idle_generated_count(payload: object) -> int:
+    if not isinstance(payload, dict):
+        return 0
+
+    created_raw = payload.get("created_count")
+    if not isinstance(created_raw, bool):
+        try:
+            created_count = int(created_raw or 0)
+            if created_count > 0:
+                return created_count
+        except (TypeError, ValueError):
+            pass
+
+    created_task = payload.get("created_task")
+    if isinstance(created_task, dict):
+        task_id = str(created_task.get("id") or "").strip()
+        if task_id:
+            return 1
+
+    created_tasks = payload.get("created_tasks")
+    if isinstance(created_tasks, list):
+        count = 0
+        for row in created_tasks:
+            if not isinstance(row, dict):
+                continue
+            task_id = str(row.get("task_id") or row.get("id") or "").strip()
+            if task_id:
+                count += 1
+        return count
+
+    return 0
+
+
+def _request_idle_task_generation(
+    client: httpx.Client,
+    log: logging.Logger,
+    *,
+    endpoint: str,
+    params: dict[str, object],
+) -> int:
+    response = _http_with_retry(client, "POST", f"{BASE}{endpoint}", log, params=params)
+    if response is None or response.status_code != 200:
+        return 0
+    try:
+        payload = response.json()
+    except Exception:
+        return 0
+    return _extract_idle_generated_count(payload)
+
+
 def _auto_generate_tasks_when_idle(client: httpx.Client, log: logging.Logger) -> int:
     global _last_idle_task_generation_ts
     if not AUTO_GENERATE_IDLE_TASKS:
@@ -4513,35 +4563,36 @@ def _auto_generate_tasks_when_idle(client: httpx.Client, log: logging.Logger) ->
         return 0
 
     _last_idle_task_generation_ts = now
-    response = _http_with_retry(
+    created_count = _request_idle_task_generation(
         client,
-        "POST",
-        f"{BASE}/api/inventory/specs/sync-implementation-tasks",
         log,
+        endpoint="/api/inventory/specs/sync-implementation-tasks",
         params={
             "create_task": True,
             "limit": AUTO_GENERATE_IDLE_TASK_LIMIT,
         },
     )
-    if response is None or response.status_code != 200:
-        return 0
-    try:
-        payload = response.json()
-    except Exception:
-        return 0
-    created_raw = payload.get("created_count")
-    if isinstance(created_raw, bool):
-        return 0
-    try:
-        created_count = int(created_raw or 0)
-    except (TypeError, ValueError):
-        return 0
     if created_count > 0:
         log.info(
             "Idle queue detected: created %d task(s) from spec implementation gaps",
             created_count,
         )
-    return created_count
+        return created_count
+
+    fallback_created = _request_idle_task_generation(
+        client,
+        log,
+        endpoint="/api/inventory/flow/next-unblock-task",
+        params={"create_task": True},
+    )
+    if fallback_created > 0:
+        log.info(
+            "Idle queue detected: created %d task(s) from unblock flow fallback",
+            fallback_created,
+        )
+        return fallback_created
+
+    return 0
 
 
 def poll_and_run(
@@ -4590,7 +4641,7 @@ def poll_and_run(
             created_count = _auto_generate_tasks_when_idle(client, log)
             if created_count > 0:
                 if verbose:
-                    print(f"Auto-generated {created_count} task(s) from spec implementation gaps")
+                    print(f"Auto-generated {created_count} task(s) while idle")
                 continue
             if once:
                 print("No pending tasks")
