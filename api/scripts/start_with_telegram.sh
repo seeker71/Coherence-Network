@@ -2,7 +2,7 @@
 # Start API + cloudflared tunnel + set Telegram webhook. One command.
 # Ctrl+C stops everything.
 #
-# Prereqs: brew install cloudflared; api/.env with TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS
+# Prereqs: brew install cloudflared; api/.env with TELEGRAM_BOT_TOKEN and/or TELEGRAM_PERSONAL_BOT_TOKEN
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -142,22 +142,35 @@ if [ -z "$PUBLIC_URL" ]; then
 fi
 echo "      Tunnel: $PUBLIC_URL"
 
-# 3. Set webhook (tunnel needs a few seconds to propagate)
-echo "[3/4] Setting Telegram webhook..."
+# 3. Set webhook(s) (tunnel needs a few seconds to propagate)
+echo "[3/4] Setting Telegram webhook(s)..."
+sleep 5
+
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-  sleep 5
   WEBHOOK_URL="${PUBLIC_URL%/}/api/agent/telegram/webhook"
   RESULT=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${WEBHOOK_URL}")
   if echo "$RESULT" | grep -q '"ok":true'; then
-    echo "      Webhook set."
+    echo "      Agent webhook set: $WEBHOOK_URL"
   else
-    echo "      Webhook failed: $RESULT"
+    echo "      Agent webhook failed: $RESULT"
   fi
 else
-  echo "      TELEGRAM_BOT_TOKEN not set, skipping webhook."
+  echo "      TELEGRAM_BOT_TOKEN not set, skipping agent webhook."
 fi
 
-echo "[4/4] Ready. Message @Coherence_Network_bot with /status"
+if [ -n "$TELEGRAM_PERSONAL_BOT_TOKEN" ]; then
+  PERSONAL_WEBHOOK_URL="${PUBLIC_URL%/}/api/assistant/telegram/webhook"
+  PERSONAL_RESULT=$(curl -s "https://api.telegram.org/bot${TELEGRAM_PERSONAL_BOT_TOKEN}/setWebhook?url=${PERSONAL_WEBHOOK_URL}")
+  if echo "$PERSONAL_RESULT" | grep -q '"ok":true'; then
+    echo "      Personal assistant webhook set: $PERSONAL_WEBHOOK_URL"
+  else
+    echo "      Personal assistant webhook failed: $PERSONAL_RESULT"
+  fi
+else
+  echo "      TELEGRAM_PERSONAL_BOT_TOKEN not set, skipping personal assistant webhook."
+fi
+
+echo "[4/4] Ready. Message your Telegram bot(s): /status or /research ..."
 echo ""
 echo "  API:     http://127.0.0.1:$PORT"
 echo "  Tunnel:  $PUBLIC_URL"

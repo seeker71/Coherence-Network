@@ -1,0 +1,121 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/telegram-personal-assistant",
+  "commit_scope": "Add a local polling-based Telegram personal assistant bot runtime, help/unknown-command handling, service supervision, and an automated watchdog monitor that recovers service health and escalates via Codex diagnostics when recovery fails.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/routers/agent.py",
+    "api/app/routers/assistant_telegram.py",
+    "api/app/services/telegram_personal_adapter.py",
+    "api/scripts/start_with_telegram.sh",
+    "api/scripts/start_personal_polling.sh",
+    "api/scripts/personal_bot_service.sh",
+    "api/scripts/personal_bot_monitor.sh",
+    "api/scripts/personal_bot_monitor_service.sh",
+    "api/tests/test_assistant_telegram_webhook.py",
+    "specs/108-telegram-personal-assistant-bot.md",
+    "docs/system_audit/commit_evidence_2026-02-20_telegram-personal-assistant-local-polling-monitor.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "108-telegram-personal-assistant-bot"
+  ],
+  "task_ids": [
+    "task-telegram-personal-assistant-local-runtime",
+    "task-telegram-personal-assistant-watchdog-monitor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "operations"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "bash -n api/scripts/start_personal_polling.sh",
+    "bash -n api/scripts/personal_bot_service.sh",
+    "bash -n api/scripts/personal_bot_monitor.sh",
+    "bash -n api/scripts/personal_bot_monitor_service.sh",
+    "cd api && pytest -q tests/test_assistant_telegram_webhook.py",
+    "api/scripts/personal_bot_service.sh status (launchd polling service running)",
+    "api/scripts/personal_bot_monitor_service.sh install",
+    "api/scripts/personal_bot_monitor_service.sh status",
+    "api/scripts/personal_bot_monitor_service.sh run-once",
+    "Simulated failure by stopping personal bot service, then monitor run recovered it",
+    "curl https://api.telegram.org/bot${TELEGRAM_PERSONAL_BOT_TOKEN}/getWebhookInfo (url empty for long polling mode)"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/routers/agent.py",
+    "api/app/routers/assistant_telegram.py",
+    "api/app/services/telegram_personal_adapter.py",
+    "api/scripts/start_with_telegram.sh",
+    "api/scripts/start_personal_polling.sh",
+    "api/scripts/personal_bot_service.sh",
+    "api/scripts/personal_bot_monitor.sh",
+    "api/scripts/personal_bot_monitor_service.sh",
+    "api/tests/test_assistant_telegram_webhook.py",
+    "specs/108-telegram-personal-assistant-bot.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n api/scripts/start_personal_polling.sh",
+      "bash -n api/scripts/personal_bot_service.sh",
+      "bash -n api/scripts/personal_bot_monitor.sh",
+      "bash -n api/scripts/personal_bot_monitor_service.sh",
+      "cd api && pytest -q tests/test_assistant_telegram_webhook.py",
+      "api/scripts/personal_bot_monitor_service.sh install",
+      "api/scripts/personal_bot_monitor_service.sh run-once",
+      "api/scripts/personal_bot_service.sh stop",
+      "api/scripts/personal_bot_monitor_service.sh run-once",
+      "api/scripts/personal_bot_service.sh status"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-launchd"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit publication and CI/deploy validation."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Personal assistant bot runs continuously without tunnel/webhook dependency, responds to help fallback commands, and has an automated monitor that restarts service and escalates diagnostics when needed.",
+    "public_endpoints": [
+      "/api/assistant/telegram/webhook",
+      "/api/health",
+      "https://api.telegram.org/bot{TELEGRAM_PERSONAL_BOT_TOKEN}/getWebhookInfo",
+      "https://api.telegram.org/bot{TELEGRAM_PERSONAL_BOT_TOKEN}/getUpdates"
+    ],
+    "test_flows": [
+      "POST local webhook payloads for help, /help, and unknown slash command returns help without creating tasks",
+      "Launchd polling service status stays running and updates runtime pid file",
+      "Bot service stop then monitor run-once triggers restart and restores running state"
+    ]
+  }
+}
