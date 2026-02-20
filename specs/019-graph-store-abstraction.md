@@ -89,13 +89,13 @@ ProjectSummary (for search results):
 ## Out of Scope
 
 - Neo4j adapter (separate spec when needed)
-- PyPI indexing — now implemented as legacy spec 024 coverage (see docs/SPEC-COVERAGE.md)
+- PyPI indexing — now implemented in [024-pypi-indexing.md](024-pypi-indexing.md)
 - Coherence scores — implemented in spec 020
 - Full 5K seed in CI (use smaller fixture for tests)
 
 ## See also
 
-- [sprint0-graph-foundation-indexer-api.md](sprint0-graph-foundation-indexer-api.md) — API contract, data model (legacy spec 008 lineage)
+- [008-sprint-1-graph-foundation.md](008-sprint-1-graph-foundation.md) — API contract, data model
 - docs/concepts/OSS-CONCEPT-MAPPING.md
 
 ## Decision Gates

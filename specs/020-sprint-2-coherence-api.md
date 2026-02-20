@@ -70,7 +70,7 @@ Only 2 of 8 components currently use real data: `downstream_impact`, `dependency
 ## See also
 
 - [018-coherence-algorithm-spec.md](018-coherence-algorithm-spec.md) — algorithm definition
-- [sprint0-graph-foundation-indexer-api.md](sprint0-graph-foundation-indexer-api.md) — graph data (legacy spec 008 lineage)
+- [008-sprint-1-graph-foundation.md](008-sprint-1-graph-foundation.md) — graph data
 
 ## Decision Gates
 

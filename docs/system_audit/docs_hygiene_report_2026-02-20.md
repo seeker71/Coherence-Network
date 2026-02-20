@@ -29,14 +29,11 @@
 
 ## Actions Taken
 
-- Updated broken references in:
-  - `specs/018-coherence-algorithm-spec.md`
-  - `specs/019-graph-store-abstraction.md`
-  - `specs/020-sprint-2-coherence-api.md`
-  - `specs/030-spec-coverage-update.md`
-  - `specs/034-ops-runbook.md`
-- Replaced missing `008-*` links with existing `sprint0-graph-foundation-indexer-api.md` where context matched legacy 008 lineage.
-- Converted missing `024-*` links to explicit legacy text references (non-link) to avoid dead links while preserving traceability intent.
+- Added canonical alias specs for missing legacy references:
+  - `specs/008-sprint-1-graph-foundation.md`
+  - `specs/024-pypi-indexing.md`
+- Preserved existing historical docs/spec references without broad rewrites.
+- Verified link integrity after alias additions (`TOTAL_MISSING=0`).
 
 ## Remaining Tasks
 
@@ -44,13 +41,13 @@
 - Define canonical file per duplicate prefix.
 - Add alias policy (redirect file or cross-reference convention) to prevent future dead links.
 
-2. Decide whether to restore explicit `024` and `008` canonical stubs
-- If historical references are important, add canonical pointer specs instead of plain-text legacy mentions.
-
-3. Validate model alias freshness
+2. Validate model alias freshness
 - Confirm `claude-3-5-haiku-20241022` remains approved in routing policy; update docs/specs if superseded.
 
 ## Run Outcome
 
 - GH auth is healthy for current operations (`gh auth status`, `gh api user`, and remote git access succeeded).
+- Deployment verification passed:
+  - `./scripts/verify_worktree_local_web.sh --start`
+  - `./scripts/verify_web_api_deploy.sh`
 - Docs/spec link integrity improved; zero missing internal markdown link targets in scanned scope.

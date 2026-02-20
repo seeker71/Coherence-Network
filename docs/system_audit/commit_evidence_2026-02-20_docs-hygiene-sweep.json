@@ -3,11 +3,8 @@
   "thread_branch": "codex/docs-hygiene-sweep-20260220",
   "commit_scope": "Repair stale/broken spec references, publish a dated docs hygiene audit report, and leave explicit consolidation follow-ups.",
   "files_owned": [
-    "specs/018-coherence-algorithm-spec.md",
-    "specs/019-graph-store-abstraction.md",
-    "specs/020-sprint-2-coherence-api.md",
-    "specs/030-spec-coverage-update.md",
-    "specs/034-ops-runbook.md",
+    "specs/008-sprint-1-graph-foundation.md",
+    "specs/024-pypi-indexing.md",
     "docs/system_audit/docs_hygiene_report_2026-02-20.md",
     "docs/system_audit/commit_evidence_2026-02-20_docs-hygiene-sweep.json"
   ],
@@ -27,11 +24,8 @@
     "docs-hygiene-sweep"
   ],
   "spec_ids": [
-    "018",
-    "019",
-    "020",
-    "030",
-    "034"
+    "008",
+    "024"
   ],
   "task_ids": [
     "docs-link-hygiene",
@@ -66,11 +60,8 @@
     "custom markdown link scan over docs/**/*.md and specs/**/*.md with TOTAL_MISSING=0"
   ],
   "change_files": [
-    "specs/018-coherence-algorithm-spec.md",
-    "specs/019-graph-store-abstraction.md",
-    "specs/020-sprint-2-coherence-api.md",
-    "specs/030-spec-coverage-update.md",
-    "specs/034-ops-runbook.md",
+    "specs/008-sprint-1-graph-foundation.md",
+    "specs/024-pypi-indexing.md",
     "docs/system_audit/docs_hygiene_report_2026-02-20.md"
   ],
   "change_intent": "docs_only",
