@@ -17,6 +17,7 @@ from app.routers.agent_telegram import (
     is_runner_task_update,
     router as telegram_router,
 )
+from app.routers.assistant_telegram import router as assistant_telegram_router
 
 from app.models.agent import (
     AgentRunnerHeartbeat,
@@ -41,6 +42,7 @@ from app.services import agent_run_state_service, agent_runner_registry_service,
 
 router = APIRouter()
 router.include_router(telegram_router)
+router.include_router(assistant_telegram_router)
 
 
 def _truthy(value: str | bool | None) -> bool:
