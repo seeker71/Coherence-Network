@@ -1,0 +1,92 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/telegram-orphan-recovery-20260220",
+  "commit_scope": "Recover orphaned running tasks during idle runner heartbeats so stalled pipelines resume and Telegram receives actionable failed-task alerts.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
+    "api/tests/test_agent_runner_registry_api.py",
+    "docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-telegram-decision-loop",
+    "027-fully-automated-pipeline"
+  ],
+  "task_ids": [
+    "task-2026-02-20-telegram-orphan-recovery"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Production diagnosis: /api/health shows API restarted at 2026-02-20T08:28:00Z; /api/agent/pipeline-status shows multiple stale running tasks while /api/agent/runners reports runner idle with no active task.",
+    "Implemented orphan recovery in api/app/services/runner_orphan_recovery_service.py and invoke it from /api/agent/runners/heartbeat.",
+    "Added regression test test_runner_idle_heartbeat_reaps_orphaned_running_tasks.",
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_runner_registry_api.py::test_runner_idle_heartbeat_reaps_orphaned_running_tasks",
+    "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_task_claims.py",
+    "cd api && ruff check app/routers/agent.py app/services/runner_orphan_recovery_service.py tests/test_agent_runner_registry_api.py",
+    "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_orphan_recovery.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
+    "api/tests/test_agent_runner_registry_api.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py::test_runner_idle_heartbeat_reaps_orphaned_running_tasks",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_task_claims.py",
+      "cd api && ruff check app/routers/agent.py app/services/runner_orphan_recovery_service.py tests/test_agent_runner_registry_api.py",
+      "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_orphan_recovery.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting guard checks, PR checks, merge, and production deployment verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When a runner heartbeats as idle with no active task, stale tasks still marked running for that runner are auto-failed and trigger Telegram failed-task alerts.",
+    "public_endpoints": [
+      "/api/agent/runners/heartbeat",
+      "/api/agent/pipeline-status",
+      "/api/agent/tasks/attention",
+      "/api/agent/telegram/diagnostics"
+    ],
+    "test_flows": [
+      "Create/observe stale running task claimed by a runner, send idle heartbeat for that runner, verify task transitions to failed.",
+      "Confirm Telegram diagnostics send_count increments and failed-task alert appears in Telegram after orphan recovery."
+    ]
+  }
+}
