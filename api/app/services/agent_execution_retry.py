@@ -130,6 +130,55 @@ def _is_openclaw_spark_model(model_name: str) -> bool:
     )
 
 
+def _build_retry_context_patch(
+    *,
+    failure_hits: int,
+    retry_count: int,
+    retry_max: int,
+    failure_output: str,
+) -> dict[str, Any]:
+    return {
+        "failure_hits": failure_hits,
+        "last_failure_output": failure_output[:_FAILURE_OUTPUT_MAX],
+        "last_failure_at": datetime.now(timezone.utc).isoformat(),
+        "retry_max": retry_max,
+        "retry_count": retry_count + 1,
+        "retry_hint": _retry_fix_hint(failure_output, retry_count + 1),
+        "retry_requested_at": datetime.now(timezone.utc).isoformat(),
+        "last_retry_source": "auto_failure_recovery",
+    }
+
+
+def _build_retry_override(
+    *,
+    context: dict[str, Any],
+    failure_output: str,
+    result_error: str,
+    current_model: str,
+    retry_count: int,
+) -> dict[str, Any]:
+    if _auto_retry_openai_override_enabled(context) and _is_paid_provider_retry_candidate(
+        failure_output=failure_output,
+        result_error=result_error,
+    ):
+        return {
+            "force_paid_providers": True,
+            "force_paid_override_source": "auto_retry_openai_override",
+            "retry_paid_override_applied": True,
+            "model_override": _resolve_retry_model_override(context),
+            "executor": "openclaw",
+        }
+    if _is_openclaw_spark_model(current_model) and retry_count == 0:
+        return {
+            "force_paid_providers": True,
+            "retry_paid_override_applied": True,
+            "model_override": _OPENCLAW_SPARK_FALLBACK_MODEL,
+            "executor": "openclaw",
+            "spark_fallback_retry_applied": True,
+        }
+    return {}
+
+
 def record_failure_hits_and_retry(
     *,
     task_id: str,
@@ -162,14 +211,12 @@ def record_failure_hits_and_retry(
     )
     result_error = str(result.get("error") or "").strip()
     current_model = str(task.get("model") or "").strip().lower()
-    should_fallback_model = _is_openclaw_spark_model(current_model) and retry_count == 0
-    now_iso = datetime.now(timezone.utc).isoformat()
-    context_patch: dict[str, Any] = {
-        "failure_hits": failure_hits,
-        "last_failure_output": failure_output[:_FAILURE_OUTPUT_MAX],
-        "last_failure_at": now_iso,
-        "retry_max": retry_max,
-    }
+    context_patch: dict[str, Any] = _build_retry_context_patch(
+        failure_hits=failure_hits,
+        retry_count=retry_count,
+        retry_max=retry_max,
+        failure_output=failure_output,
+    )
 
     can_retry = retry_count < retry_max and retry_depth < retry_max
     if not can_retry:
@@ -181,40 +228,18 @@ def record_failure_hits_and_retry(
         return result
 
     next_retry = retry_count + 1
-    context_patch.update(
-        {
-            "retry_count": next_retry,
-            "retry_hint": _retry_fix_hint(failure_output, next_retry),
-            "retry_requested_at": now_iso,
-            "last_retry_source": "auto_failure_recovery",
-        }
-    )
+    context_patch["retry_count"] = next_retry
     retry_force_paid_providers = force_paid_providers
-    if _auto_retry_openai_override_enabled(context) and _is_paid_provider_retry_candidate(
+    override_patch = _build_retry_override(
+        context=context,
         failure_output=failure_output,
         result_error=result_error,
-    ):
+        current_model=current_model,
+        retry_count=retry_count,
+    )
+    context_patch.update(override_patch)
+    if override_patch.get("force_paid_providers"):
         retry_force_paid_providers = True
-        context_patch.update(
-            {
-                "force_paid_providers": True,
-                "force_paid_override_source": "auto_retry_openai_override",
-                "retry_paid_override_applied": True,
-                "model_override": _resolve_retry_model_override(context),
-                "executor": "openclaw",
-            }
-        )
-    elif should_fallback_model:
-        retry_force_paid_providers = True
-        context_patch.update(
-            {
-                "force_paid_providers": True,
-                "retry_paid_override_applied": True,
-                "model_override": _OPENCLAW_SPARK_FALLBACK_MODEL,
-                "executor": "openclaw",
-                "spark_fallback_retry_applied": True,
-            }
-        )
 
     update_task(
         task_id,
