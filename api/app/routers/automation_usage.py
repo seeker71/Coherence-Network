@@ -80,6 +80,23 @@ async def run_provider_validation_probes(
     return report
 
 
+@router.post("/automation/usage/provider-heal/run")
+async def run_provider_auto_heal(
+    required_providers: str = Query("", description="Comma-separated provider ids to heal"),
+    max_rounds: int = Query(2, ge=1, le=6),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+    min_execution_events: int = Query(1, ge=1, le=10),
+) -> dict:
+    requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
+    report = automation_usage_service.run_provider_auto_heal(
+        required_providers=requested or None,
+        max_rounds=max_rounds,
+        runtime_window_seconds=runtime_window_seconds,
+        min_execution_events=min_execution_events,
+    )
+    return report
+
+
 @router.get("/automation/usage/provider-validation")
 async def get_provider_validation_report(
     required_providers: str = Query("", description="Comma-separated provider ids to validate"),
