@@ -39,8 +39,14 @@ async def get_external_tool_usage_events(
 
 
 @router.get("/automation/usage/alerts")
-async def get_automation_usage_alerts(threshold_ratio: float = Query(0.2, ge=0.0, le=1.0)) -> dict:
-    report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=threshold_ratio)
+async def get_automation_usage_alerts(
+    threshold_ratio: float = Query(0.2, ge=0.0, le=1.0),
+    force_refresh: bool = Query(False),
+) -> dict:
+    report = automation_usage_service.evaluate_usage_alerts(
+        threshold_ratio=threshold_ratio,
+        force_refresh=force_refresh,
+    )
     return report.model_dump(mode="json")
 
 
@@ -53,7 +59,7 @@ async def get_subscription_upgrade_estimator() -> dict:
 @router.get("/automation/usage/readiness")
 async def get_provider_readiness(
     required_providers: str = Query("", description="Comma-separated provider ids to require"),
-    force_refresh: bool = Query(True),
+    force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     report = automation_usage_service.provider_readiness_report(
@@ -79,7 +85,7 @@ async def get_provider_validation_report(
     required_providers: str = Query("", description="Comma-separated provider ids to validate"),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     min_execution_events: int = Query(1, ge=1, le=50),
-    force_refresh: bool = Query(True),
+    force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     report = automation_usage_service.provider_validation_report(

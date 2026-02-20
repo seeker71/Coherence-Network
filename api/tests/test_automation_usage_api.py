@@ -121,6 +121,65 @@ def test_evaluate_usage_alerts_suppresses_openai_permission_only_degraded(
     )
 
 
+def test_evaluate_usage_alerts_flags_remaining_tracking_gap_for_required_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openrouter_test",
+                provider="openrouter",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report",
+        lambda force_refresh=False: ProviderReadinessReport(
+            required_providers=["openrouter"],
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openrouter",
+                    kind="custom",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[],
+                )
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_required_providers_from_env",
+        lambda: ["coherence-internal", "openrouter"],
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+
+    report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=0.2)
+    assert any(
+        alert.provider == "openrouter" and alert.metric_id == "remaining_tracking_gap"
+        for alert in report.alerts
+    )
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,
@@ -165,6 +224,8 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert "coherence-internal" in providers
         assert "github" in providers
         assert "openai" in providers
+        assert "openrouter" in providers
+        assert "supabase" in providers
         assert providers["coherence-internal"]["status"] == "ok"
         assert any(m["id"] == "tasks_tracked" for m in providers["coherence-internal"]["metrics"])
         assert providers["coherence-internal"]["actual_current_usage"] is not None
@@ -349,11 +410,23 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_build_openrouter_snapshot",
+        lambda: ProviderUsageSnapshot(
+            id="provider_openrouter_test",
+            provider="openrouter",
+            kind="custom",
+            status="ok",
+            data_source="provider_api",
+            metrics=[],
+        ),
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
             "/api/automation/usage/readiness",
-            params={"required_providers": "coherence-internal,openrouter"},
+            params={"required_providers": "coherence-internal,openrouter", "force_refresh": True},
         )
         assert report.status_code == 200
         payload = report.json()
@@ -559,6 +632,20 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
             assert row["usage_events"] >= 1
             assert row["successful_events"] >= 1
             assert row["validated_execution"] is True
+
+
+def test_provider_validation_run_supports_openrouter_and_supabase(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(automation_usage_service, "_probe_openrouter", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_probe_supabase", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_record_provider_probe_event", lambda **kwargs: None)
+
+    report = automation_usage_service.run_provider_validation_probes(
+        required_providers=["openrouter", "supabase"],
+    )
+    assert report["required_providers"] == ["openrouter", "supabase"]
+    providers = {row["provider"]: row for row in report["probes"]}
+    assert providers["openrouter"]["ok"] is True
+    assert providers["supabase"]["ok"] is True
 
 
 @pytest.mark.asyncio
