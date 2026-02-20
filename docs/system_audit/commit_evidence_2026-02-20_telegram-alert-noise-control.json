@@ -1,0 +1,96 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/telegram-hourly-summary-20260220",
+  "commit_scope": "Reduce Telegram noise by sending runner update summaries at most once per hour while preserving immediate alerts for failed and needs_decision states, and throttle monitor digests to hourly unless issues are urgent.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/telegram_alert_policy_service.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_agent_telegram_alert_policy.py",
+    "docs/system_audit/commit_evidence_2026-02-20_telegram-alert-noise-control.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "003-agent-telegram-decision-loop",
+    "027-fully-automated-pipeline"
+  ],
+  "task_ids": [
+    "task-2026-02-20-telegram-alert-noise-control"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "gh run rerun 22231957851",
+    "gh run watch 22231957851 --exit-status",
+    "cd api && pytest -q tests/test_agent_telegram_alert_policy.py",
+    "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_telegram_webhook.py",
+    "cd api && pytest -q tests/test_monitor_pipeline_stale_running.py tests/test_monitor_pipeline_github_actions.py",
+    "cd api && ruff check app/routers/agent.py app/services/telegram_alert_policy_service.py scripts/monitor_pipeline.py tests/test_agent_telegram_alert_policy.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/telegram_alert_policy_service.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_agent_telegram_alert_policy.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_telegram_alert_policy.py",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_telegram_webhook.py",
+      "cd api && pytest -q tests/test_monitor_pipeline_stale_running.py tests/test_monitor_pipeline_github_actions.py",
+      "cd api && ruff check app/routers/agent.py app/services/telegram_alert_policy_service.py scripts/monitor_pipeline.py tests/test_agent_telegram_alert_policy.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_telegram-alert-noise-control.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Routine runner task updates generate one Telegram summary per hour, while failed/needs_decision updates still alert immediately and monitor digests default to hourly unless urgent.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/pipeline-status",
+      "/api/agent/monitor-issues",
+      "/api/agent/telegram/diagnostics"
+    ],
+    "test_flows": [
+      "Patch a running task repeatedly with worker_id and confirm only one hourly summary alert is sent.",
+      "Patch a task to failed with worker_id and confirm immediate failed alert still sends with actionable command.",
+      "Run monitor pipeline with repeating low/medium issues and verify Telegram alerts are hourly unless severity/condition is urgent."
+    ]
+  }
+}
