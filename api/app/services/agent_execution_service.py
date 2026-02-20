@@ -19,6 +19,7 @@ from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
 from app.services import (
     agent_service,
+    automation_usage_service,
     friction_service,
     idea_service,
     metrics_service,
@@ -107,6 +108,29 @@ def _task_route_is_paid(task: dict[str, Any]) -> bool:
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     route_decision = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
     return bool(route_decision.get("is_paid_provider"))
+
+
+def _task_route_provider(task: dict[str, Any]) -> str:
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route_decision = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
+    provider = str(
+        route_decision.get("billing_provider")
+        or route_decision.get("provider")
+        or ""
+    ).strip().lower()
+    if provider:
+        return provider
+
+    model = _extract_underlying_model(str(task.get("model") or "")).strip().lower()
+    if "openrouter" in model:
+        return "openrouter"
+    if "codex" in model:
+        return "openai-codex"
+    if "claude" in model:
+        return "claude"
+    if model.startswith(("gpt", "o1", "o3", "o4", "openai/")):
+        return "openai"
+    return "unknown"
 
 
 def _finish_task(
@@ -333,6 +357,33 @@ def _check_paid_provider_window_budget(
 ) -> tuple[bool, str | None]:
     if not route_is_paid:
         return True, None
+
+    provider = _task_route_provider(task)
+    try:
+        quota_guard = automation_usage_service.provider_limit_guard_decision(
+            provider,
+            force_refresh=False,
+        )
+    except Exception:
+        quota_guard = {"allowed": True}
+
+    if not bool(quota_guard.get("allowed", True)):
+        detail = str(quota_guard.get("reason") or "provider quota threshold reached").strip()
+        msg = (
+            "Paid-provider usage blocked by provider quota policy: "
+            f"provider={provider}; {detail}"
+        )
+        _record_friction_event(
+            task_id=task_id,
+            task=task,
+            stage="agent_execution",
+            block_type="provider_usage_limit_exceeded",
+            endpoint="tool:agent-task-execution-summary",
+            severity="high",
+            notes=msg,
+            energy_loss_estimate=0.0,
+        )
+        return False, msg
 
     limit_8h, limit_week, budget_fraction = _paid_tool_windows_budget()
     if limit_8h is None and limit_week is None:
