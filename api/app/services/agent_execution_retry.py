@@ -10,7 +10,9 @@ _RETRY_MAX_DEFAULT = 1
 _RETRY_MAX_CAP = 5
 _FAILURE_OUTPUT_MAX = 1200
 _RETRY_HINT_MAX = 900
-_OPENAI_RETRY_MODEL_DEFAULT = "gpt-5-codex"
+_OPENAI_RETRY_MODEL_DEFAULT = "gpt-5.3-codex"
+_OPENCLAW_SPARK_FALLBACK_MODEL = "gpt-5.3-codex"
+_OPENCLAW_SPARK_MODEL_SUFFIX = "gpt-5.3-codex-spark"
 
 
 def _non_negative_int(value: Any, default: int = 0) -> int:
@@ -121,6 +123,13 @@ def _resolve_retry_model_override(context: dict[str, Any]) -> str:
     return _OPENAI_RETRY_MODEL_DEFAULT
 
 
+def _is_openclaw_spark_model(model_name: str) -> bool:
+    normalized = str(model_name or "").strip().lower()
+    return normalized == _OPENCLAW_SPARK_MODEL_SUFFIX or normalized.endswith(
+        f"/{_OPENCLAW_SPARK_MODEL_SUFFIX}"
+    )
+
+
 def record_failure_hits_and_retry(
     *,
     task_id: str,
@@ -152,6 +161,8 @@ def record_failure_hits_and_retry(
         or "task_failed"
     )
     result_error = str(result.get("error") or "").strip()
+    current_model = str(task.get("model") or "").strip().lower()
+    should_fallback_model = _is_openclaw_spark_model(current_model) and retry_count == 0
     now_iso = datetime.now(timezone.utc).isoformat()
     context_patch: dict[str, Any] = {
         "failure_hits": failure_hits,
@@ -191,6 +202,17 @@ def record_failure_hits_and_retry(
                 "retry_paid_override_applied": True,
                 "model_override": _resolve_retry_model_override(context),
                 "executor": "openclaw",
+            }
+        )
+    elif should_fallback_model:
+        retry_force_paid_providers = True
+        context_patch.update(
+            {
+                "force_paid_providers": True,
+                "retry_paid_override_applied": True,
+                "model_override": _OPENCLAW_SPARK_FALLBACK_MODEL,
+                "executor": "openclaw",
+                "spark_fallback_retry_applied": True,
             }
         )
 

@@ -18,8 +18,7 @@ _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
 DEFAULT_MODEL_ALIAS_MAP = (
-    "gpt-5.3-codex-spark:gpt-5.3-codex,"
-    "gtp-5.3-codex-spark:gpt-5.3-codex,"
+    "gtp-5.3-codex-spark:gpt-5.3-codex-spark,"
     "gtp-5.3-codex:gpt-5.3-codex"
 )
 
@@ -62,7 +61,9 @@ def normalize_model_name(model: str) -> str:
     return cleaned
 
 
-_OPENCLAW_MODEL_DEFAULT = normalize_model_name(os.environ.get("OPENCLAW_MODEL", "gpt-5-codex"))
+_OPENCLAW_MODEL_DEFAULT = normalize_model_name(
+    os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark")
+)
 _OPENCLAW_MODEL_REVIEW = normalize_model_name(os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT))
 
 ROUTING: dict[TaskType, tuple[str, str]] = {
