@@ -37,7 +37,7 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
+from app.services import agent_run_state_service, agent_runner_registry_service, agent_service, runner_orphan_recovery_service
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -72,10 +72,7 @@ def _require_execute_token(
 
 def _require_execute_token_when_unset() -> bool:
     """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
-    # Default-on security default for deployed services.
-    # Local/test callers can opt out with AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH=1.
     return not _truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
-
 
 
 def _coerce_force_paid_override(request: Request) -> bool:
@@ -303,8 +300,8 @@ async def get_run_state(task_id: str) -> dict:
 
 
 @router.post("/agent/runners/heartbeat", response_model=AgentRunnerSnapshot)
-async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
-    return agent_runner_registry_service.heartbeat_runner(
+async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: BackgroundTasks) -> dict:
+    snapshot = agent_runner_registry_service.heartbeat_runner(
         runner_id=data.runner_id,
         status=data.status,
         lease_seconds=data.lease_seconds,
@@ -317,6 +314,12 @@ async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
         capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
         metadata=data.metadata if isinstance(data.metadata, dict) else None,
     )
+    await runner_orphan_recovery_service.maybe_recover_on_idle_heartbeat(
+        snapshot=snapshot,
+        background_tasks=background_tasks,
+        alert_builder=lambda task: format_task_alert(task, runner_update=False),
+    )
+    return snapshot
 
 
 @router.get("/agent/runners", response_model=AgentRunnerList)
