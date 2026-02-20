@@ -15,6 +15,9 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Mandatory Delivery Contract (No Exceptions)
 
+- User-defined deploy contract: when the user asks to deploy, run the full end-to-end contract (start-gate, rebase, local gates, evidence validation, push/PR + checks), then report each proof artifact.
+- Deploy self-heal rule: do not stop for non-critical failures in this chain; implement/repair the blocker, rerun the failed step, and continue until the chain succeeds or you return a concrete blocking condition with exact blocker output + remediations applied.
+
 1. Worktree-only execution
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.

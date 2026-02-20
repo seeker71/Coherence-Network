@@ -326,13 +326,14 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     logs_url = _railway_logs_url(task_id, context) if task_id else ""
 
     icon = "⚠️"
-    if runner_update:
-        icon = "🔄"
-    elif status_norm == TaskStatus.FAILED.value:
+    title = status_norm
+    if status_norm == TaskStatus.FAILED.value:
         icon = "❌"
     elif status_norm == TaskStatus.NEEDS_DECISION.value:
         icon = "🟡"
-    title = "runner update" if runner_update else status_norm
+    elif runner_update:
+        icon = "🔄"
+        title = "runner update"
     task_id_label = _task_id_link_label(task_id)
     msg = (
         f"{icon} *{_escape_markdown(title)}*\n"
