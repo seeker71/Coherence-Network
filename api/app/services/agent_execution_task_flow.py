@@ -8,14 +8,7 @@ from app.models.spec_registry import SpecRegistryUpdate
 from app.services import agent_execution_metrics as metrics_service
 from app.services import agent_execution_retry as retry_service
 from app.services import agent_execution_service as execution_service
-
-
-def _task_target_ids(task: dict[str, Any]) -> tuple[str | None, str | None]:
-    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
-    idea_id = str(ctx.get("idea_id") or "").strip() or None
-    spec_id = str(ctx.get("spec_id") or "").strip() or None
-    return idea_id, spec_id
-
+from app.services import agent_task_continuation_service as continuation_service
 
 def _apply_value_attribution(
     task: dict[str, Any],
@@ -23,7 +16,9 @@ def _apply_value_attribution(
     output: str,
     actual_cost_usd: float | None,
 ) -> None:
-    idea_id, spec_id = _task_target_ids(task)
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = str(ctx.get("idea_id") or "").strip() or None
+    spec_id = str(ctx.get("spec_id") or "").strip() or None
     if not idea_id and not spec_id:
         return
 
@@ -525,14 +520,11 @@ def execute_task(
     task = execution_service.agent_service.get_task(task_id)
     if task is None:
         return {"ok": False, "error": "task_not_found"}
-
     claimed, claim_error = execution_service._claim_task(task_id, worker_id)
     if not claimed:
         return {"ok": False, "error": f"claim_failed:{claim_error}"}
-
     task = execution_service.agent_service.get_task(task_id) or {}
     route_is_paid = execution_service._task_route_is_paid(task)
-
     payment_error = _handle_paid_route_guard(
         task_id=task_id,
         task=task,
@@ -552,7 +544,6 @@ def execute_task(
             cost_slack_ratio=cost_slack_ratio,
             retry_depth=_retry_depth,
         )
-
     model, prompt, cost_budget = _resolve_execution_plan(
         task,
         max_cost_usd=max_cost_usd,
@@ -580,7 +571,7 @@ def execute_task(
         prompt=prompt,
         cost_budget=cost_budget,
     )
-    return _finalize_with_retry(
+    finalized = _finalize_with_retry(
         task_id=task_id,
         task=task,
         result=result,
@@ -591,3 +582,14 @@ def execute_task(
         cost_slack_ratio=cost_slack_ratio,
         retry_depth=_retry_depth,
     )
+    continuation_service.maybe_continue_after_finish(
+        previous_task_id=task_id,
+        result=finalized,
+        worker_id=worker_id,
+        force_paid_providers=force_paid_providers,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+        execute_callback=execute_task,
+    )
+    return finalized
