@@ -53,6 +53,7 @@
   "evidence_refs": [
     "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
     "cd api && .venv/bin/pytest -q tests/test_automation_usage_api.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_debug.json --fail-on-regression",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
     "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
   ],
