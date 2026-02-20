@@ -37,7 +37,7 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
+from app.services import agent_run_state_service, agent_runner_registry_service, agent_service, runner_orphan_recovery_service
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -49,21 +49,6 @@ def _truthy(value: str | bool | None) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
-
-
-def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int | None = None) -> int:
-    raw = os.getenv(name, "").strip()
-    if raw:
-        try:
-            value = int(raw)
-        except ValueError:
-            value = default
-    else:
-        value = default
-    value = max(minimum, value)
-    if maximum is not None:
-        value = min(maximum, value)
-    return value
 
 
 def _require_execute_token(
@@ -87,10 +72,7 @@ def _require_execute_token(
 
 def _require_execute_token_when_unset() -> bool:
     """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
-    # Default-on security default for deployed services.
-    # Local/test callers can opt out with AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH=1.
     return not _truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
-
 
 
 def _coerce_force_paid_override(request: Request) -> bool:
@@ -332,40 +314,11 @@ async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: Backgro
         capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
         metadata=data.metadata if isinstance(data.metadata, dict) else None,
     )
-    try:
-        snapshot_status = str(snapshot.get("status") or "").strip().lower()
-        snapshot_active_task_id = str(snapshot.get("active_task_id") or "").strip()
-        if snapshot_status == "idle" and not snapshot_active_task_id:
-            threshold_seconds = _int_env(
-                "AGENT_ORPHAN_RUNNING_SEC",
-                _int_env("ORPHAN_RUNNING_SEC", 1800, minimum=60, maximum=7 * 24 * 3600),
-                minimum=60,
-                maximum=7 * 24 * 3600,
-            )
-            max_recoveries = _int_env("AGENT_ORPHAN_REAP_MAX_TASKS", 10, minimum=1, maximum=50)
-            recovered = agent_service.recover_orphaned_running_tasks(
-                runner_id=str(snapshot.get("runner_id") or data.runner_id),
-                min_running_seconds=threshold_seconds,
-                max_tasks=max_recoveries,
-            )
-            if recovered:
-                logger.warning(
-                    "runner_orphan_recovery_applied runner_id=%s recovered=%s threshold_seconds=%s",
-                    snapshot.get("runner_id"),
-                    len(recovered),
-                    threshold_seconds,
-                )
-                from app.services import telegram_adapter
-
-                if telegram_adapter.is_configured():
-                    for task in recovered:
-                        msg = format_task_alert(task, runner_update=False)
-                        output = str(task.get("output") or "").strip()
-                        if output:
-                            msg += f"\n\nOutput: {output[:200]}"
-                        background_tasks.add_task(telegram_adapter.send_alert, msg)
-    except Exception:
-        logger.warning("runner_orphan_recovery_failed", exc_info=True)
+    await runner_orphan_recovery_service.maybe_recover_on_idle_heartbeat(
+        snapshot=snapshot,
+        background_tasks=background_tasks,
+        alert_builder=lambda task: format_task_alert(task, runner_update=False),
+    )
     return snapshot
 
 

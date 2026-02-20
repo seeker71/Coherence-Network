@@ -5,6 +5,7 @@
   "files_owned": [
     "api/app/routers/agent.py",
     "api/app/services/agent_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
     "api/tests/test_agent_runner_registry_api.py",
     "docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
   ],
@@ -35,17 +36,19 @@
   },
   "evidence_refs": [
     "Production diagnosis: /api/health shows API restarted at 2026-02-20T08:28:00Z; /api/agent/pipeline-status shows multiple stale running tasks while /api/agent/runners reports runner idle with no active task.",
-    "Added agent_service.recover_orphaned_running_tasks() and idle-heartbeat orphan recovery flow in /api/agent/runners/heartbeat.",
+    "Implemented orphan recovery in api/app/services/runner_orphan_recovery_service.py and invoke it from /api/agent/runners/heartbeat.",
     "Added regression test test_runner_idle_heartbeat_reaps_orphaned_running_tasks.",
     "make start-gate",
     "cd api && pytest -q tests/test_agent_runner_registry_api.py::test_runner_idle_heartbeat_reaps_orphaned_running_tasks",
     "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_task_claims.py",
-    "cd api && ruff check app/routers/agent.py app/services/agent_service.py tests/test_agent_runner_registry_api.py",
+    "cd api && ruff check app/routers/agent.py app/services/runner_orphan_recovery_service.py tests/test_agent_runner_registry_api.py",
+    "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_orphan_recovery.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
     "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
   ],
   "change_files": [
     "api/app/routers/agent.py",
     "api/app/services/agent_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
     "api/tests/test_agent_runner_registry_api.py"
   ],
   "change_intent": "runtime_fix",
@@ -55,7 +58,8 @@
       "make start-gate",
       "cd api && pytest -q tests/test_agent_runner_registry_api.py::test_runner_idle_heartbeat_reaps_orphaned_running_tasks",
       "cd api && pytest -q tests/test_agent_runner_registry_api.py tests/test_agent_task_claims.py",
-      "cd api && ruff check app/routers/agent.py app/services/agent_service.py tests/test_agent_runner_registry_api.py",
+      "cd api && ruff check app/routers/agent.py app/services/runner_orphan_recovery_service.py tests/test_agent_runner_registry_api.py",
+      "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_telegram_orphan_recovery.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_telegram-orphan-recovery.json"
     ]
   },
