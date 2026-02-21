@@ -1,0 +1,67 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/self-improve-report-parse-hotfix",
+  "commit_scope": "Harden Self Improve Cycle workflow failure handling so empty/invalid report JSON never crashes issue creation and always yields actionable failure metadata.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-21-self-improve-workflow-hotfix"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/self-improve-cycle.yml",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22259210362"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-21_self-improve-report-parse-hotfix.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-21_self-improve-report-parse-hotfix.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and hosted workflow re-run proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self Improve Cycle failure path emits valid JSON report fallback and issue creation no longer fails on parse errors.",
+    "public_endpoints": [
+      "/api/automation/usage/alerts"
+    ],
+    "test_flows": [
+      "Trigger workflow_dispatch for Self Improve Cycle and verify failure issue step succeeds even when report file is empty/invalid.",
+      "Verify workflow still uploads self-improve artifact and returns final status gate behavior."
+    ]
+  }
+}
