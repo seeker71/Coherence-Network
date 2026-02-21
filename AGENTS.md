@@ -15,6 +15,9 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Mandatory Delivery Contract (No Exceptions)
 
+- User-defined deploy contract: when the user asks to deploy, run the full end-to-end contract (start-gate, rebase, local gates, evidence validation, push/PR + checks), then report each proof artifact.
+- Deploy self-heal rule: do not stop for non-critical failures in this chain; implement/repair the blocker, rerun the failed step, and continue until the chain succeeds or you return a concrete blocking condition with exact blocker output + remediations applied.
+
 1. Worktree-only execution
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
@@ -35,6 +38,55 @@ Spec → Test → Implement → CI → Review → Merge
 6. Finish contract
    - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
    - Do not start a new task while previous task has unresolved blocking checks.
+
+### 2-Tier Executor Contract (Cost/Speed Mode)
+
+- Use this mode for routine implementation/execution tasks unless the user explicitly asks for another approach.
+- Default executor: `openai/gpt-4o-mini`.
+- Escalation executor: stronger model only on explicit failure conditions.
+- No escalation loops. Max 1 escalation per task.
+- Max attempts: 2 on cheap executor, then optional single escalation attempt.
+
+### Task Card Shape (required input format)
+
+- `goal`: one sentence
+- `files_allowed`: exact file paths only
+- `done_when`: 1-3 measurable checks
+- `commands`: exact commands to run
+- `constraints`: hard rules (for example: no tests unless listed, no extra files)
+- Keep command scope limited to this card and touched file snippets only.
+- Never send full docs unless the task explicitly depends on them.
+
+### Budget and Output Rules
+
+- `input_max_tokens = 1200`
+- `output_max_tokens = 300`
+- `max_attempts_cheap = 2`
+- `max_attempts_strong = 1`
+- `max_total_tokens_per_task = 2500`
+- If `cost/quality` fails a cheap attempt, retry once only when failure is mechanical, format, or small fix.
+
+### Prompt Contract (fixed)
+
+- Response format must be exactly: `PLAN`, `PATCH`, `RUN`, `RESULT`.
+- Reject non-conforming outputs and retry once with: `Format violation. Use required sections only.`
+- No explanations unless asked.
+- Do only requested edits. No extra refactors.
+- Use `docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md` as the task-card starter.
+
+### Deterministic Validation Loop
+
+- Run only `commands` from the task card.
+- Compare command output directly against `done_when`.
+- If a command fails, collect exact stderr and retry once with a targeted fix.
+- If still failing and criteria match escalation conditions, run one escalation attempt.
+
+### Proof Record
+
+- Store one JSON record per task for execution proof in `docs/system_audit/model_executor_runs.jsonl`.
+- Required fields: `model_used`, `input_tokens`, `output_tokens`, `attempts`, `commands_run`, `pass_fail`, `failure_reason`.
+- Escalation packet must stay under 200 tokens.
+- Exit only when all `done_when` checks pass and scope constraints hold.
 
 ## Key Files
 
