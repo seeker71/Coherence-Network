@@ -1,0 +1,64 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/auto-heal-start-gate-script",
+  "commit_scope": "Add auto-heal start-gate helper and update worktree quickstart guidance.",
+  "files_owned": [
+    "scripts/auto_heal_start_gate.sh",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-02-21_auto-heal-start-gate-script.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase",
+    "make start-gate",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "./scripts/verify_worktree_local_web.sh",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "scripts/auto_heal_start_gate.sh",
+    "docs/WORKTREE-QUICKSTART.md"
+  ],
+  "change_intent": "developer_flow",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deployment validation pending"
+  },
+  "task_ids": [
+    "task_auto_heal_start_gate_2026_02_21"
+  ]
+}
