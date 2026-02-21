@@ -570,7 +570,7 @@ async def update_task(
     background_tasks: BackgroundTasks,
 ) -> AgentTask:
     """Update task. Supports status, output, progress_pct, current_step, decision_prompt, decision.
-    Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
+    Sends Telegram alerts for needs_decision/failed status only.
     When decision present and task needs_decision, sets status→running.
     """
     if not _task_update_has_fields(data):
@@ -597,7 +597,13 @@ async def update_task(
         worker_id=data.worker_id,
         context_patch=context_patch if context_patch else data.context,
     )
-    if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
+    task_status = task.get("status")
+    task_status_value = (
+        task_status.value
+        if isinstance(task_status, TaskStatus)
+        else str(task_status or "").strip().lower()
+    )
+    if task_status_value in {TaskStatus.NEEDS_DECISION.value, TaskStatus.FAILED.value}:
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
