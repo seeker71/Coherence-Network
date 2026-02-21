@@ -15,7 +15,6 @@ from app.services import telegram_report_formatter
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 _RUNNER_CONTEXT_KEYS = {
     "active_run_id",
     "active_worker_id",
@@ -23,19 +22,6 @@ _RUNNER_CONTEXT_KEYS = {
     "retry_not_before",
     "runner_metrics",
 }
-_ROI_KEYS = (
-    "potential_roi",
-    "roi_estimate",
-    "estimated_roi",
-    "answer_roi",
-    "question_roi",
-)
-_MEASURED_VALUE_KEYS = (
-    "measured_value_total",
-    "measured_value",
-    "actual_value",
-    "measured_delta",
-)
 _WEB_BASE_ENV_KEYS = (
     "AGENT_WEB_UI_BASE_URL",
     "WEB_UI_BASE_URL",
@@ -61,19 +47,113 @@ _RAILWAY_LOGS_ENV_KEYS = (
     "RAILWAY_DEPLOY_LOGS_URL",
 )
 
-
 def _escape_markdown(text: str) -> str:
     out = text or ""
     for ch in ("\\", "`", "*", "_", "[", "]"):
         out = out.replace(ch, f"\\{ch}")
     return out
 
+def summarize_direction(text: str, max_chars: int = 140) -> str:
+    normalized = " ".join(str(text or "").strip().split())
+    if not normalized:
+        return "(no task description)"
+    if len(normalized) <= max_chars:
+        return normalized
+    return f"{normalized[: max_chars - 3].rstrip()}..."
 
-def _task_id_link_label(task_id: str) -> str:
-    # Task ids are generated internally and should already be safe; do not escape "_" here
-    # because Telegram clients can display the escape character in markdown link labels.
-    return str(task_id or "").strip()
+def _normalize_executor_alias(executor: str) -> str:
+    value = str(executor or "").strip().lower()
+    if value in {"openclaw", "clawwork"}:
+        return "codex"
+    return value or "unknown"
 
+def task_runtime_label(executor: str, model: str) -> str:
+    normalized_executor = _normalize_executor_alias(executor)
+    cleaned_model = str(model or "").strip()
+    if cleaned_model.startswith("openclaw/") or cleaned_model.startswith("clawwork/"):
+        cleaned_model = cleaned_model.split("/", 1)[1].strip()
+    if not cleaned_model:
+        cleaned_model = "unknown (metadata missing)"
+    return f"Executor: {normalized_executor} | Model: {cleaned_model}"
+
+def _status_why_message(status_norm: str) -> str:
+    if status_norm == TaskStatus.NEEDS_DECISION.value:
+        return "Waiting on a decision; progress is blocked until resolved."
+    if status_norm == TaskStatus.FAILED.value:
+        return "Execution failed; unblock quickly to avoid queue stall."
+    if status_norm == TaskStatus.RUNNING.value:
+        return "Actively executing; monitor proof and completion."
+    if status_norm == TaskStatus.PENDING.value:
+        return "Queued and not started yet; confirm runner pickup."
+    if status_norm == TaskStatus.COMPLETED.value:
+        return "Completed; verify output quality and merge readiness."
+    return "Task state changed; verify current status and required action."
+
+def _classify_failure_reason(task: dict[str, Any]) -> str:
+    context = _task_context(task)
+    output = str(task.get("output") or "").lower()
+    notes = " ".join(
+        str(context.get(key) or "").lower()
+        for key in ("last_error", "error", "failure_reason", "retry_hint")
+    )
+    combined = f"{output} {notes}"
+    if "usage_window_budget_exceeded" in combined or "window budget" in combined or "quota" in combined:
+        return "quota"
+    if "paid_provider_blocked" in combined or "paid provider" in combined:
+        return "paid_provider"
+    if "missing env" in combined or "secret" in combined or "not configured" in combined:
+        return "env"
+    if "lint" in combined or "pytest" in combined or "test failed" in combined:
+        return "test_lint"
+    if "rebase" in combined or "non-fast-forward" in combined or "stale branch" in combined:
+        return "rebase"
+    if "timeout" in combined or "network" in combined or "rate limit" in combined or "503" in combined:
+        return "flaky_network"
+    return "generic"
+
+def next_action_for_status(task: dict[str, Any]) -> str:
+    status = task.get("status", "?")
+    status_str = status.value if hasattr(status, "value") else str(status)
+    status_norm = status_str.strip().lower()
+    task_id = str(task.get("id") or "").strip()
+    if status_norm == TaskStatus.NEEDS_DECISION.value:
+        return f"/reply {task_id} <decision>"
+    if status_norm == TaskStatus.PENDING.value:
+        return f"/task {task_id}"
+    if status_norm == TaskStatus.RUNNING.value:
+        return f"/task {task_id}"
+    if status_norm == TaskStatus.COMPLETED.value:
+        return f"/task {task_id}"
+    if status_norm == TaskStatus.FAILED.value:
+        reason = _classify_failure_reason(task)
+        if reason == "quota":
+            return "/usage"
+        if reason == "paid_provider":
+            return f"/task {task_id}"
+        if reason == "env":
+            return "/railway verify"
+        if reason == "test_lint":
+            return f"/direction Fix failing tests/lint for task {task_id} and rerun with proof"
+        if reason == "rebase":
+            return f"/direction Rebase and rerun gates for task {task_id}"
+        if reason == "flaky_network":
+            return f"/direction Retry task {task_id} once; capture provider error + retry proof"
+        return f"/direction Retry task {task_id} with explicit proof of each fix"
+    return f"/task {task_id}"
+
+def proof_hints_for_task(task: dict[str, Any]) -> str:
+    task_id = str(task.get("id") or "").strip()
+    context = _task_context(task)
+    task_url = _task_web_url(task_id, context) if task_id else ""
+    log_url = _task_log_url(task_id, context) if task_id else ""
+    parts: list[str] = []
+    if task_url:
+        parts.append(f"[task]({task_url})")
+    if log_url:
+        parts.append(f"[task log]({log_url})")
+    if task_id:
+        parts.append(f"`id:{_escape_markdown(task_id)}`")
+    return " | ".join(parts) if parts else "n/a"
 
 def _normalize_base_url(raw_value: Any) -> str:
     value = str(raw_value or "").strip()
@@ -84,7 +164,6 @@ def _normalize_base_url(raw_value: Any) -> str:
     if value.startswith("/"):
         return ""
     return f"https://{value.rstrip('/')}"
-
 
 def _coerce_float(value: Any) -> float | None:
     if isinstance(value, bool):
@@ -99,11 +178,9 @@ def _coerce_float(value: Any) -> float | None:
         return None
     return parsed
 
-
 def _task_context(task: dict[str, Any]) -> dict[str, Any]:
     context = task.get("context")
     return context if isinstance(context, dict) else {}
-
 
 def _idea_id_from_context(context: dict[str, Any]) -> str:
     idea_id = str(context.get("idea_id") or "").strip()
@@ -117,72 +194,6 @@ def _idea_id_from_context(context: dict[str, Any]) -> str:
                 return candidate
     return ""
 
-
-def _find_numeric(context: dict[str, Any], keys: tuple[str, ...]) -> tuple[float | None, str | None]:
-    for key in keys:
-        value = _coerce_float(context.get(key))
-        if value is not None:
-            return value, key
-    return None, None
-
-
-def _resolve_idea_values(idea_id: str) -> dict[str, float]:
-    if not idea_id:
-        return {}
-    try:
-        from app.services import idea_service
-
-        idea = idea_service.get_idea(idea_id)
-    except Exception:
-        return {}
-    if idea is None:
-        return {}
-    return {
-        "potential_value": float(idea.potential_value),
-        "actual_value": float(idea.actual_value),
-        "estimated_cost": float(idea.estimated_cost),
-    }
-
-
-def _resolve_potential_roi(
-    context: dict[str, Any],
-    idea_values: dict[str, float],
-) -> tuple[float | None, str | None]:
-    direct, direct_key = _find_numeric(context, _ROI_KEYS)
-    if direct is not None:
-        return direct, f"context.{direct_key}"
-
-    value = _coerce_float(context.get("estimated_unblock_value"))
-    cost = _coerce_float(context.get("estimated_unblock_cost"))
-    if value is not None and cost is not None and cost > 0:
-        return value / cost, "context.estimated_unblock_value/estimated_unblock_cost"
-
-    value = _coerce_float(context.get("value_to_whole"))
-    cost = _coerce_float(context.get("estimated_cost"))
-    if value is not None and cost is not None and cost > 0:
-        return value / cost, "context.value_to_whole/estimated_cost"
-
-    value = _coerce_float(idea_values.get("potential_value"))
-    cost = _coerce_float(idea_values.get("estimated_cost"))
-    if value is not None and cost is not None and cost > 0:
-        return value / cost, "idea.potential_value/estimated_cost"
-    return None, None
-
-
-def _resolve_measured_value(
-    context: dict[str, Any],
-    idea_values: dict[str, float],
-) -> tuple[float | None, str | None]:
-    direct, direct_key = _find_numeric(context, _MEASURED_VALUE_KEYS)
-    if direct is not None and direct > 0:
-        return direct, f"context.{direct_key}"
-
-    actual_value = _coerce_float(idea_values.get("actual_value"))
-    if actual_value is not None and actual_value > 0:
-        return actual_value, "idea.actual_value"
-    return None, None
-
-
 def _base_web_url(context: dict[str, Any]) -> str:
     for context_key in ("web_ui_base_url", "web_base_url", "web_url"):
         context_value = _normalize_base_url(context.get(context_key))
@@ -194,10 +205,8 @@ def _base_web_url(context: dict[str, Any]) -> str:
             return value
     return _DEFAULT_WEB_BASE_URL
 
-
 def _tasks_web_url(context: dict[str, Any]) -> str:
     return f"{_base_web_url(context).rstrip('/')}/tasks"
-
 
 def _base_api_url(context: dict[str, Any] | None = None) -> str:
     context = context or {}
@@ -211,14 +220,11 @@ def _base_api_url(context: dict[str, Any] | None = None) -> str:
             return value
     return _DEFAULT_API_BASE_URL
 
-
 def _join_url(base: str, path: str) -> str:
     return f"{(base or '').rstrip('/')}{path}"
 
-
 def _logs_dir() -> str:
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-
 
 def _load_monitor_issues() -> dict[str, Any]:
     path = os.path.join(_logs_dir(), "monitor_issues.json")
@@ -233,7 +239,6 @@ def _load_monitor_issues() -> dict[str, Any]:
         pass
     return {"issues": [], "last_check": None}
 
-
 def _load_status_report() -> dict[str, Any]:
     path = os.path.join(_logs_dir(), "pipeline_status_report.json")
     if not os.path.isfile(path):
@@ -246,7 +251,6 @@ def _load_status_report() -> dict[str, Any]:
     except Exception:
         pass
     return {}
-
 
 def _orphan_threshold_seconds() -> int:
     try:
@@ -262,7 +266,6 @@ def _orphan_threshold_seconds() -> int:
     except (TypeError, ValueError):
         return 1800
 
-
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     task_path = f"/tasks?task_id={quote(task_id, safe='')}"
     base = _base_web_url(context)
@@ -272,10 +275,8 @@ def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
         return f"{base}?task_id={quote(task_id, safe='')}"
     return f"{base.rstrip('/')}{task_path}"
 
-
 def _task_log_url(task_id: str, context: dict[str, Any]) -> str:
     return f"{_base_api_url(context).rstrip('/')}/api/agent/tasks/{quote(task_id, safe='')}/log"
-
 
 def _railway_logs_url(task_id: str, context: dict[str, Any]) -> str:
     for context_key in ("railway_logs_url", "railway_log_url"):
@@ -292,7 +293,6 @@ def _railway_logs_url(task_id: str, context: dict[str, Any]) -> str:
             return env_value
     return _task_log_url(task_id, context)
 
-
 def is_runner_task_update(worker_id: str | None = None, context_patch: dict[str, Any] | None = None) -> bool:
     if str(worker_id or "").strip():
         return True
@@ -306,7 +306,6 @@ def is_runner_task_update(worker_id: str | None = None, context_patch: dict[str,
             return True
     return False
 
-
 def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     """Format a telegram task alert with routing/context/value metadata."""
     status = task.get("status", "?")
@@ -314,16 +313,18 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     status_norm = status_str.strip().lower()
     context = _task_context(task)
     task_id = str(task.get("id") or "").strip()
-    direction = _escape_markdown(str(task.get("direction") or "").strip()[:220] or "(no direction)")
-    current_step = _escape_markdown(str(task.get("current_step") or "").strip()[:180])
+    direction_summary = _escape_markdown(summarize_direction(str(task.get("direction") or ""), max_chars=160))
+    current_step = _escape_markdown(str(task.get("current_step") or "").strip()[:120])
 
     idea_id = _idea_id_from_context(context)
-    idea_values = _resolve_idea_values(idea_id)
-    potential_roi, potential_roi_source = _resolve_potential_roi(context, idea_values)
-    measured_value, measured_value_source = _resolve_measured_value(context, idea_values)
     task_url = _task_web_url(task_id, context)
-    tasks_url = _tasks_web_url(context)
     logs_url = _railway_logs_url(task_id, context) if task_id else ""
+    route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+    executor = str(context.get("executor") or route.get("executor") or "").strip()
+    model = str(task.get("model") or context.get("model_override") or route.get("model") or "").strip()
+    runtime_label = _escape_markdown(task_runtime_label(executor, model))
+    why_line = _escape_markdown(_status_why_message(status_norm))
+    action = _escape_markdown(next_action_for_status(task))
 
     icon = "⚠️"
     title = status_norm
@@ -334,53 +335,37 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
     elif runner_update:
         icon = "🔄"
         title = "runner update"
-    task_id_label = _task_id_link_label(task_id)
-    msg = (
-        f"{icon} *{_escape_markdown(title)}*\n"
-        f"Task: {direction}\n"
-        f"Status: `{status_str}`\n"
-        f"Task ID: [{task_id_label}]({task_url})\n"
-        f"Web UI: [open task]({task_url}) | [all tasks]({tasks_url})"
-    )
+    lines = [
+        f"{icon} *{_escape_markdown(title)}*",
+        f"Task: {direction_summary}",
+        f"Status: `{status_str}`",
+        f"Runtime: `{runtime_label}`",
+        f"Why: {why_line}",
+        f"Next: `{action}`",
+    ]
+    lines.append(f"Proof: {proof_hints_for_task(task)}")
     if runner_update and task_id and logs_url:
-        msg += f"\nRailway logs: [open logs]({logs_url})"
+        lines.append(f"Runner logs: [open logs]({logs_url})")
     updated_at = str(task.get("updated_at") or task.get("created_at") or "").strip()
     if updated_at:
-        msg += f"\nUpdated: `{updated_at}`"
+        lines.append(f"Updated: `{updated_at}`")
     progress_pct = task.get("progress_pct")
     if progress_pct is not None:
-        msg += f"\nProgress: `{progress_pct}%`"
+        lines.append(f"Progress: `{progress_pct}%`")
     if current_step:
-        msg += f"\nStep: {current_step}"
+        lines.append(f"Step: {current_step}")
     if idea_id:
-        msg += f"\nIdea: `{idea_id}`"
-    if potential_roi is not None:
-        source = _escape_markdown(potential_roi_source or "derived")
-        msg += f"\nPotential ROI: `{potential_roi:.3f}x` ({source})"
-    else:
-        msg += "\nPotential ROI: `n/a`"
-    if measured_value is not None:
-        source = _escape_markdown(measured_value_source or "derived")
-        msg += f"\nMeasured value: `{measured_value:.3f}` ({source})"
-    else:
-        msg += "\nMeasured value: `unavailable`"
-    if status_norm == TaskStatus.NEEDS_DECISION.value and task_id:
-        msg += f"\nAction: `/reply {task_id} <decision>`"
-    elif status_norm == TaskStatus.FAILED.value and task_id:
-        msg += f"\nAction: `/task {task_id}` then `/direction Retry task {task_id}`"
+        lines.append(f"Idea: `{idea_id}`")
     if task.get("decision_prompt"):
         prompt = _escape_markdown(str(task.get("decision_prompt") or "")[:500])
-        msg += f"\n\n{prompt}"
-    return msg[:3800]
-
+        lines.append(f"Decision: {prompt}")
+    return "\n".join(lines[:10])[:3800]
 
 def _now_utc_label() -> str:
     return telegram_report_formatter.now_utc_label()
 
-
 def _help_reply() -> str:
     return telegram_report_formatter.format_help_reply()
-
 
 def _format_agent_status_reply(
     summary: dict[str, Any],
@@ -399,10 +384,8 @@ def _format_agent_status_reply(
         orphan_threshold_seconds=_orphan_threshold_seconds(),
     )
 
-
 def _format_usage_reply(usage: dict[str, Any]) -> str:
     return telegram_report_formatter.format_usage_reply(usage)
-
 
 def _format_tasks_reply(
     items: list[dict[str, Any]],
@@ -418,14 +401,12 @@ def _format_tasks_reply(
         task_url_builder=_task_web_url,
     )
 
-
 def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
     return telegram_report_formatter.format_task_snapshot_reply(
         task,
         tasks_url_builder=_tasks_web_url,
         task_url_builder=_task_web_url,
     )
-
 
 def _format_attention_reply(
     items: list[dict[str, Any]],
@@ -445,10 +426,8 @@ def _format_attention_reply(
         task_url_builder=_task_web_url,
     )
 
-
 def _extract_status_filter(arg: str) -> str | None:
     return telegram_report_formatter.extract_status_filter(arg)
-
 
 @router.post("/agent/telegram/webhook")
 async def telegram_webhook(update: dict = Body(...)) -> dict:
