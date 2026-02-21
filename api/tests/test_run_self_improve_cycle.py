@@ -62,6 +62,13 @@ class _FakeClient:
         raise AssertionError(f"unexpected get url: {url}")
 
 
+class _FailingPrecheckClient(_FakeClient):
+    def get(self, url: str) -> _FakeResponse:
+        if "/api/automation/usage/alerts" in url:
+            raise RuntimeError("precheck timeout")
+        return super().get(url)
+
+
 def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
     prompt = run_self_improve_cycle.build_plan_direction()
 
@@ -154,5 +161,22 @@ def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
 
     assert report["status"] == "skipped"
     assert "Usage limit precheck blocked self-improve cycle" in report["skip_reason"]
+    assert report["stages"] == []
+    assert client.created_payloads == []
+
+
+def test_run_cycle_skips_when_usage_precheck_unavailable() -> None:
+    client = _FailingPrecheckClient()
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+    )
+    assert report["status"] == "skipped"
+    assert "precheck unavailable" in report["skip_reason"].lower()
     assert report["stages"] == []
     assert client.created_payloads == []
