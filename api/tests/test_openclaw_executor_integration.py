@@ -53,6 +53,29 @@ def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.Monkey
     assert context.get("executor") == "openclaw"
 
 
+def test_create_task_supports_codex_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --model {{model}} --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Implement codex alias support",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex"},
+        )
+    )
+
+    assert task["model"].startswith("openclaw/")
+    assert task["tier"] == "openclaw"
+    assert task["command"].startswith("codex exec ")
+    context = task.get("context") or {}
+    assert context.get("executor") == "openclaw"
+
+
 def test_create_task_openclaw_default_template_includes_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.delenv("OPENCLAW_COMMAND_TEMPLATE", raising=False)
