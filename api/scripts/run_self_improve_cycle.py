@@ -91,11 +91,23 @@ def _usage_limit_precheck(
     base_url: str,
     threshold_ratio: float,
 ) -> dict[str, Any]:
-    response = client.get(
-        f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true"
-    )
-    response.raise_for_status()
-    payload = response.json() if isinstance(response.json(), dict) else {}
+    try:
+        response = client.get(
+            f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true"
+        )
+        response.raise_for_status()
+        payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        return {
+            "allowed": False,
+            "threshold_ratio": threshold_ratio,
+            "skip_reason": (
+                "Usage limit precheck unavailable; skipping self-improve cycle safely: "
+                f"{str(exc)[:300]}"
+            ),
+            "blocking_alerts": [],
+            "precheck_error": str(exc),
+        }
     alerts = payload.get("alerts") if isinstance(payload.get("alerts"), list) else []
     blocking: list[dict[str, Any]] = []
     target_providers = {"openai", "openrouter", "coherence-internal"}

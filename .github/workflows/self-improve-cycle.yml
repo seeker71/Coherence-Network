@@ -38,13 +38,7 @@ jobs:
             --json > self_improve_cycle_report.json
           code=$?
           if [ ! -s self_improve_cycle_report.json ]; then
-            cat > self_improve_cycle_report.json <<'JSON'
-            {
-              "status": "failed",
-              "failed_stage": "bootstrap",
-              "error": "self_improve_cycle_report_missing_or_empty"
-            }
-            JSON
+            printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > self_improve_cycle_report.json
           fi
           cat self_improve_cycle_report.json
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
