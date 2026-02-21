@@ -91,7 +91,7 @@ OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 
 _CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
-_EXECUTOR_ALIASES = {"clawwork": "openclaw"}
+_EXECUTOR_ALIASES = {"clawwork": "openclaw", "codex": "openclaw"}
 EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES + tuple(_EXECUTOR_ALIASES.keys())
 
 REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (

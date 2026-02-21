@@ -5,7 +5,12 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.agent import TaskStatus
-from app.routers.agent_telegram import format_task_alert
+from app.routers.agent_telegram import (
+    format_task_alert,
+    next_action_for_status,
+    summarize_direction,
+    task_runtime_label,
+)
 
 
 def _telegram_update(text: str) -> dict:
@@ -486,13 +491,18 @@ def test_format_task_alert_includes_updated_and_action() -> None:
         "status": "needs_decision",
         "direction": "Handle release blocker",
         "updated_at": "2026-02-19T17:00:00Z",
-        "context": {},
+        "model": "openclaw/gpt-5.3-codex",
+        "context": {"executor": "codex"},
     }
     message = format_task_alert(task)
+    assert "Task: Handle release blocker" in message
+    assert "Runtime: `Executor: codex | Model: gpt-5.3-codex`" in message
+    assert "Why: Waiting on a decision; progress is blocked until resolved." in message
+    assert "Next: `/reply task\\_123 <decision>`" in message
     assert "Updated: `2026-02-19T17:00:00Z`" in message
-    assert "Action: `/reply task_123 <decision>`" in message
-    assert "[open task](https://coherence-web-production.up.railway.app/tasks?task_id=task_123)" in message
-    assert "[all tasks](https://coherence-web-production.up.railway.app/tasks)" in message
+    assert "Proof: [task](https://coherence-web-production.up.railway.app/tasks?task_id=task_123)" in message
+    assert "[task log](https://coherence-network-production.up.railway.app/api/agent/tasks/task_123/log)" in message
+    assert len(message.splitlines()) <= 10
 
 
 def test_format_task_alert_defaults_to_public_web_ui_link() -> None:
@@ -503,6 +513,7 @@ def test_format_task_alert_defaults_to_public_web_ui_link() -> None:
         "context": {},
     }
     message = format_task_alert(task)
+    assert "Runtime: `Executor: unknown | Model: unknown" in message
     assert "https://coherence-web-production.up.railway.app/tasks?task_id=task_link_1" in message
 
 
@@ -517,8 +528,16 @@ def test_format_runner_update_card_uses_clean_title_and_links() -> None:
     assert "*runner update*" in message
     assert "runner\\_update" not in message
     assert "task\\_runner_123" not in message
-    assert "Task ID: [task_runner_123](https://coherence-web-production.up.railway.app/tasks?task_id=task_runner_123)" in message
-    assert "Railway logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/task_runner_123/log)" in message
+    assert "Proof: [task](https://coherence-web-production.up.railway.app/tasks?task_id=task_runner_123)" in message
+    assert "Runner logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/task_runner_123/log)" in message
+
+
+def test_telegram_card_helpers_summarize_runtime_and_action() -> None:
+    assert summarize_direction("   A   long  task    description   ") == "A long task description"
+    assert task_runtime_label("openclaw", "openclaw/gpt-5.3-codex-spark") == "Executor: codex | Model: gpt-5.3-codex-spark"
+    assert next_action_for_status({"id": "task_77", "status": "failed", "output": "Execution failed: lint + pytest"}) == (
+        "/direction Fix failing tests/lint for task task_77 and rerun with proof"
+    )
 
 
 @pytest.mark.asyncio
