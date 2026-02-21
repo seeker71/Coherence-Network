@@ -36,9 +36,12 @@
   ],
   "change_files": [
     "AGENTS.md",
-    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md",
+    "docs/system_audit/maintainability_baseline.json"
   ],
-  "change_intent": "docs_only",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pending",
     "commands": [
@@ -57,5 +60,17 @@
   "phase_gate": {
     "can_move_next_phase": false,
     "blocked_reason": "Awaiting local PR gate, PR checks, and deployment verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Template-driven execution should preserve the established alert-noise reduction behavior and introduce repeatable 2-tier execution task cards.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/telegram/webhook"
+    ],
+    "test_flows": [
+      "Create a docs-only task card and run it through a cheap executor with explicit constraints.",
+      "Verify evidence validation enforces runtime change scope and model-routing proof capture."
+    ]
   }
 }
