@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/self-improve-report-parse-hotfix",
+  "commit_scope": "Handle hosted usage-precheck transport failures by safely skipping self-improve runs and harden workflow fallback JSON creation syntax.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-21-self-improve-precheck-timeout-skip"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22259537837"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/commit_evidence_2026-02-21_self-improve-precheck-timeout-skip.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and green hosted rerun proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self-improve precheck API outages no longer crash workflow run; cycle is safely skipped with explicit reason and valid report JSON for issue handling.",
+    "public_endpoints": [
+      "/api/automation/usage/alerts",
+      "/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Trigger self-improve workflow when precheck endpoint is unavailable and verify run reports skipped status instead of traceback.",
+      "Confirm failure issue step consumes report JSON without parse exceptions."
+    ]
+  }
+}
