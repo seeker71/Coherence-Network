@@ -1,0 +1,61 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/host-runner-telegram-noise-reduction",
+  "commit_scope": "Define a 2-tier cheap/executive model contract in AGENTS and add a reusable task-card template for deployable executions.",
+  "files_owned": [
+    "AGENTS.md",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "000-model-routing"
+  ],
+  "task_ids": [
+    "task-2026-02-21-cheap-executor-contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "AGENTS.md",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+  ],
+  "change_intent": "docs_only",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-21_cheap-executor-contract.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-staging"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local PR gate, PR checks, and deployment verification."
+  }
+}
