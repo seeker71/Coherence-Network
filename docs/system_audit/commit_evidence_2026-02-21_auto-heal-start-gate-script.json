@@ -41,7 +41,14 @@
     "scripts/auto_heal_start_gate.sh",
     "docs/WORKTREE-QUICKSTART.md"
   ],
-  "change_intent": "developer_flow",
+  "idea_ids": [
+    "public-e2e-flow-gate-automation",
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation"
+  ],
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
