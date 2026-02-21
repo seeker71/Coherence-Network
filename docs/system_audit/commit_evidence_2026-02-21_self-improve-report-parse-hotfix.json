@@ -33,7 +33,7 @@
     ".github/workflows/self-improve-cycle.yml",
     "docs/system_audit/commit_evidence_2026-02-21_self-improve-report-parse-hotfix.json"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
