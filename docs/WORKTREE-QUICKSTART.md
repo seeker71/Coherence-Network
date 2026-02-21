@@ -28,13 +28,16 @@ git pull --ff-only origin main
 ## Mandatory Preflight (before edits)
 
 ```bash
-make start-gate
+./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
 ```
 
-Must pass all:
-- linked worktree (not primary workspace),
-- current worktree clean,
-- primary workspace clean.
+Recommended. This command:
+- stashes local changes temporarily,
+- runs `make start-gate`,
+- refreshes `origin/main` with `git fetch/rebase` when requested,
+- runs local preflight guard.
+
+Equivalent legacy flow (manual/clean tree): `make start-gate`.
 
 ## Mandatory Local Guard (before commit/push)
 
