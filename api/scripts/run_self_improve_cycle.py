@@ -16,6 +16,8 @@ PLAN_MODEL = "gpt-5.3-codex"
 EXECUTE_MODEL = "gpt-5.3-codex-spark"
 REVIEW_MODEL = "gpt-5.3-codex"
 DEFAULT_LIMIT_THRESHOLD_RATIO = 0.15
+DEFAULT_INFRA_PREFLIGHT_ATTEMPTS = 5
+DEFAULT_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES = 2
 
 
 def _clip(text: str, max_chars: int = 12000) -> str:
@@ -150,6 +152,81 @@ def _usage_limit_precheck(
     }
 
 
+def _infra_preflight(
+    client: Any,
+    *,
+    base_url: str,
+    threshold_ratio: float,
+    attempts: int,
+    consecutive_successes_required: int,
+) -> dict[str, Any]:
+    """Require repeated healthy probes before attempting model tasks."""
+    max_attempts = max(1, int(attempts))
+    min_successes = max(1, int(consecutive_successes_required))
+    history: list[dict[str, Any]] = []
+    consecutive_successes = 0
+    for attempt in range(1, max_attempts + 1):
+        attempt_result: dict[str, Any] = {"attempt": attempt, "ok": False}
+        try:
+            health_resp = client.get(f"{base_url}/api/health")
+            health_resp.raise_for_status()
+            health_payload = health_resp.json()
+            if not isinstance(health_payload, dict):
+                raise RuntimeError("health payload is not a JSON object")
+            attempt_result["health_status"] = str(health_payload.get("status") or "")
+
+            persistence_resp = client.get(f"{base_url}/api/health/persistence")
+            persistence_resp.raise_for_status()
+            persistence_payload = persistence_resp.json()
+            if not isinstance(persistence_payload, dict):
+                raise RuntimeError("persistence payload is not a JSON object")
+            if not bool(persistence_payload.get("pass_contract")):
+                raise RuntimeError("persistence contract is not passing")
+            attempt_result["persistence_pass_contract"] = True
+
+            usage_resp = client.get(
+                f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true"
+            )
+            usage_resp.raise_for_status()
+            usage_payload = usage_resp.json()
+            if not isinstance(usage_payload, dict):
+                raise RuntimeError("usage alerts payload is not a JSON object")
+            attempt_result["usage_alert_count"] = len(
+                usage_payload.get("alerts") if isinstance(usage_payload.get("alerts"), list) else []
+            )
+
+            attempt_result["ok"] = True
+            consecutive_successes += 1
+        except Exception as exc:  # pragma: no cover - exercised in tests via behavior assertions
+            attempt_result["error"] = str(exc)
+            consecutive_successes = 0
+        history.append(attempt_result)
+        if consecutive_successes >= min_successes:
+            return {
+                "allowed": True,
+                "attempts_used": attempt,
+                "required_consecutive_successes": min_successes,
+                "history": history,
+            }
+
+    last_error = ""
+    for row in reversed(history):
+        value = str(row.get("error") or "").strip()
+        if value:
+            last_error = value
+            break
+    return {
+        "allowed": False,
+        "attempts_used": max_attempts,
+        "required_consecutive_successes": min_successes,
+        "history": history,
+        "skip_reason": (
+            "Infrastructure preflight failed; skipping self-improve cycle to avoid repeated 502/timeout loops."
+        ),
+        "preflight_error": last_error,
+    }
+
+
 def _submit_task(client: Any, base_url: str, payload: dict[str, Any]) -> str:
     response = client.post(f"{base_url}/api/agent/tasks", json=payload)
     response.raise_for_status()
@@ -207,16 +284,35 @@ def run_cycle(
     execute_pending: bool,
     execute_token: str,
     usage_threshold_ratio: float,
+    infra_preflight_attempts: int,
+    infra_preflight_consecutive_successes: int,
 ) -> dict[str, Any]:
+    clipped_ratio = max(0.0, min(1.0, float(usage_threshold_ratio)))
+    infra_precheck = _infra_preflight(
+        client,
+        base_url=base_url,
+        threshold_ratio=clipped_ratio,
+        attempts=infra_preflight_attempts,
+        consecutive_successes_required=infra_preflight_consecutive_successes,
+    )
+    if not infra_precheck.get("allowed"):
+        return {
+            "status": "infra_blocked",
+            "skip_reason": infra_precheck.get("skip_reason"),
+            "infra_preflight": infra_precheck,
+            "stages": [],
+        }
+
     precheck = _usage_limit_precheck(
         client,
         base_url=base_url,
-        threshold_ratio=max(0.0, min(1.0, float(usage_threshold_ratio))),
+        threshold_ratio=clipped_ratio,
     )
     if not precheck.get("allowed"):
         return {
             "status": "skipped",
             "skip_reason": precheck.get("skip_reason"),
+            "infra_preflight": infra_precheck,
             "usage_limit_precheck": precheck,
             "stages": [],
         }
@@ -312,6 +408,7 @@ def run_cycle(
 
     return {
         "status": "completed",
+        "infra_preflight": infra_precheck,
         "usage_limit_precheck": precheck,
         "stages": stages,
         "outputs": {
@@ -339,6 +436,23 @@ def main() -> int:
         default=float(os.environ.get("SELF_IMPROVE_USAGE_THRESHOLD_RATIO", DEFAULT_LIMIT_THRESHOLD_RATIO)),
         help="Skip the run when provider remaining_ratio is <= threshold for usage-limit alerts",
     )
+    parser.add_argument(
+        "--infra-preflight-attempts",
+        type=int,
+        default=int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS", DEFAULT_INFRA_PREFLIGHT_ATTEMPTS)),
+        help="Max infra preflight probe attempts before returning infra_blocked",
+    )
+    parser.add_argument(
+        "--infra-preflight-consecutive-successes",
+        type=int,
+        default=int(
+            os.environ.get(
+                "SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES",
+                DEFAULT_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES,
+            )
+        ),
+        help="Consecutive successful preflight probes required before creating tasks",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -352,6 +466,8 @@ def main() -> int:
             execute_pending=args.execute_pending,
             execute_token=args.execute_token,
             usage_threshold_ratio=args.usage_threshold_ratio,
+            infra_preflight_attempts=max(1, args.infra_preflight_attempts),
+            infra_preflight_consecutive_successes=max(1, args.infra_preflight_consecutive_successes),
         )
 
     if args.json:
@@ -362,7 +478,7 @@ def main() -> int:
         for row in report.get("stages", []):
             print(f"- {row.get('stage')}: task={row.get('task_id')} status={row.get('status')}")
 
-    return 0 if report.get("status") in {"completed", "skipped"} else 2
+    return 0 if report.get("status") in {"completed", "skipped", "infra_blocked"} else 2
 
 
 if __name__ == "__main__":

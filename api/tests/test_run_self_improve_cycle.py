@@ -40,6 +40,10 @@ class _FakeClient:
         raise AssertionError(f"unexpected post url: {url}")
 
     def get(self, url: str) -> _FakeResponse:
+        if url.endswith("/api/health"):
+            return _FakeResponse(200, {"status": "ok"})
+        if url.endswith("/api/health/persistence"):
+            return _FakeResponse(200, {"required": True, "pass_contract": True})
         if "/api/automation/usage/alerts" in url:
             return _FakeResponse(200, self.alerts_payload)
         for task_id in self._task_order:
@@ -63,9 +67,22 @@ class _FakeClient:
 
 
 class _FailingPrecheckClient(_FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self._usage_calls = 0
+
     def get(self, url: str) -> _FakeResponse:
         if "/api/automation/usage/alerts" in url:
-            raise RuntimeError("precheck timeout")
+            self._usage_calls += 1
+            if self._usage_calls >= 2:
+                raise RuntimeError("precheck timeout")
+        return super().get(url)
+
+
+class _FailingInfraClient(_FakeClient):
+    def get(self, url: str) -> _FakeResponse:
+        if url.endswith("/api/health"):
+            raise RuntimeError("health endpoint timeout")
         return super().get(url)
 
 
@@ -117,6 +134,8 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
+        infra_preflight_attempts=2,
+        infra_preflight_consecutive_successes=1,
     )
 
     assert report["status"] == "completed"
@@ -157,6 +176,8 @@ def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
+        infra_preflight_attempts=2,
+        infra_preflight_consecutive_successes=1,
     )
 
     assert report["status"] == "skipped"
@@ -175,8 +196,29 @@ def test_run_cycle_skips_when_usage_precheck_unavailable() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
+        infra_preflight_attempts=2,
+        infra_preflight_consecutive_successes=1,
     )
     assert report["status"] == "skipped"
     assert "precheck unavailable" in report["skip_reason"].lower()
+    assert report["stages"] == []
+    assert client.created_payloads == []
+
+
+def test_run_cycle_returns_infra_blocked_when_preflight_fails() -> None:
+    client = _FailingInfraClient()
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        infra_preflight_attempts=2,
+        infra_preflight_consecutive_successes=1,
+    )
+    assert report["status"] == "infra_blocked"
+    assert "preflight failed" in report["skip_reason"].lower()
     assert report["stages"] == []
     assert client.created_payloads == []
