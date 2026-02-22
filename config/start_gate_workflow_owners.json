@@ -1,0 +1,8 @@
+{
+  "workflow_owners": {
+    ".github/workflows/self-improve-cycle.yml": "@seeker71",
+    "Maintainability Architecture Audit": "@seeker71",
+    "Public Deploy Contract": "@seeker71",
+    "CI": "@seeker71"
+  }
+}

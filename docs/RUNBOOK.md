@@ -233,6 +233,22 @@ Both modes write JSON reports to:
 
 Remote/all mode also evaluates deployment freshness using latest `Public Deploy Contract` run on `main`; when that run is failed or older than the freshness window, the guard returns blocking status.
 
+## Start-Gate Waivers (Time-Bounded)
+
+Use waivers only for temporary, non-critical unblock cases while a root-cause fix is in-flight.
+
+- File: `config/start_gate_main_workflow_waivers.json`
+- Required fields per waiver:
+  - `workflow`
+  - `owner`
+  - `reason`
+  - `expires_at` (ISO8601 UTC)
+- Optional scope:
+  - `run_url_contains` (recommended to target a single failed run)
+
+Blocking workflow failures must have owner mappings in `config/start_gate_workflow_owners.json`.  
+The monitor writes enriched GitHub Actions health to `api/logs/github_actions_health.json`, including owner mapping gaps and waiver expiry windows.
+
 If a check fails, the report includes:
 - failing step/check name
 - output tail
