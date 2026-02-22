@@ -1,10 +1,11 @@
 {
   "date": "2026-02-22",
   "thread_branch": "codex/self-improve-report-parse-hotfix",
-  "commit_scope": "Collect resilient real-data input bundles for self-improve, support degraded usage mode using cached usage alerts, and add delta summary output for measurable before/after evidence.",
+  "commit_scope": "Fix self-improve hosted workflow execution by removing legacy preflight args from the workflow invocation and making the script parser backward-compatible.",
   "files_owned": [
     "api/scripts/run_self_improve_cycle.py",
-    "api/tests/test_run_self_improve_cycle.py"
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
@@ -33,12 +34,15 @@
   "evidence_refs": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml",
     "docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt",
     "docs/system_audit/self_improve_campaign_20260222T101129Z/03_pytest.txt",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt"
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt"
   ],
   "change_files": [
     "api/scripts/run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml",
     "api/tests/test_run_self_improve_cycle.py",
     "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json",
     "docs/system_audit/self_improve_campaign_20260222T101129Z/"
@@ -48,10 +52,10 @@
     "status": "pass",
     "commands": [
       "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt\"",
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/03_pytest.txt\"",
       "python3 scripts/validate_workflow_references.py | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt\"",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt\"",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main > /tmp/step4_guard_check.log",
       "ls docs/system_audit/self_improve_campaign_20260222T101129Z | sed -n '1,120p'"
     ]
   },

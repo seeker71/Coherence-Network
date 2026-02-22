@@ -14,8 +14,6 @@ jobs:
     env:
       SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://coherence-network-production.up.railway.app' }}
       SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
-      SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS: ${{ vars.SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS || '5' }}
-      SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES: ${{ vars.SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES || '2' }}
       AGENT_EXECUTE_TOKEN: ${{ secrets.AGENT_EXECUTE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -36,8 +34,6 @@ jobs:
           python api/scripts/run_self_improve_cycle.py \
             --base-url "${SELF_IMPROVE_API_URL}" \
             --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
-            --infra-preflight-attempts "${SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS}" \
-            --infra-preflight-consecutive-successes "${SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES}" \
             --execute-pending \
             --json > self_improve_cycle_report.json
           code=$?

@@ -654,6 +654,18 @@ def main() -> int:
         default=str(USAGE_CACHE_FILE),
         help="Path to local usage snapshot cache file",
     )
+    parser.add_argument(
+        "--infra-preflight-attempts",
+        type=int,
+        default=int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS", "5")),
+        help="Legacy option retained for workflow compatibility",
+    )
+    parser.add_argument(
+        "--infra-preflight-consecutive-successes",
+        type=int,
+        default=int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES", "2")),
+        help="Legacy option retained for workflow compatibility",
+    )
     args = parser.parse_args()
 
     base_url = args.base_url.rstrip("/")
