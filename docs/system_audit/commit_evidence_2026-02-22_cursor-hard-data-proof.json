@@ -5,6 +5,8 @@
   "files_owned": [
     "AGENTS.md",
     "api/scripts/cursor_fact_report.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/cursor_fact_report_2026-02-22.json"
   ],
   "idea_ids": [
@@ -35,6 +37,8 @@
   "change_files": [
     "AGENTS.md",
     "api/scripts/cursor_fact_report.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/cursor_fact_report_2026-02-22.json",
     "docs/system_audit/commit_evidence_2026-02-22_cursor-hard-data-proof.json"
   ],
