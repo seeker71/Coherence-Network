@@ -1,0 +1,40 @@
+
+==> Railway API health: https://coherence-network-production.up.railway.app/api/health
+FAIL: request error
+
+==> Railway gates main head: https://coherence-network-production.up.railway.app/api/gates/main-head
+FAIL: request error
+
+==> Persistence contract: https://coherence-network-production.up.railway.app/api/health/persistence
+HTTP status: 000
+FAIL: persistence contract endpoint unavailable
+
+
+==> Railway web root: https://coherence-web-production.up.railway.app/
+HTTP status: 200
+Server: railway-edge
+PASS
+
+==> Railway web gates page: https://coherence-web-production.up.railway.app/gates
+HTTP status: 200
+Server: railway-edge
+PASS
+
+==> Railway web API health page: https://coherence-web-production.up.railway.app/api-health
+HTTP status: 200
+Server: railway-edge
+PASS
+
+==> Railway web API health proxy: https://coherence-web-production.up.railway.app/api/health-proxy
+HTTP status: 502
+Server: railway-edge
+FAIL: non-success HTTP status
+Response preview:
+{"error":"Upstream API unreachable","api_url":"https://coherence-network-production.up.railway.app","web":{"status":"degraded","started_at":"2026-02-22T10:47:07.966Z","uptime_seconds":460,"updated_at":"unknown"},"details":"Error: Upstream health payl
+
+==> CORS check: https://coherence-network-production.up.railway.app/api/health with Origin https://coherence-web-production.up.railway.app
+FAIL: request error
+
+==> Skipping Telegram alert config gate (VERIFY_REQUIRE_TELEGRAM_ALERTS=0)
+
+Deployment verification failed: at least one endpoint or CORS check failed.

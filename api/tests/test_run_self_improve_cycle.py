@@ -28,11 +28,13 @@ class _FakeClient:
         friction_payload: list[dict] | None = None,
         runtime_payload: dict | None = None,
         usage_error: Exception | None = None,
+        post_error_plan: list[Exception] | None = None,
     ) -> None:
         self.created_payloads: list[dict] = []
         self._task_counter = 0
         self._task_order: list[str] = []
         self._task_outputs: dict[str, str] = {}
+        self._post_error_plan = list(post_error_plan or [])
         self.usage_payload = usage_payload
         self.tasks_payload = tasks_payload or []
         self.needs_decision_payload = needs_decision_payload or []
@@ -40,7 +42,16 @@ class _FakeClient:
         self.runtime_payload = runtime_payload or {}
         self.usage_error = usage_error
 
-    def post(self, url: str, json: dict | None = None, headers: dict | None = None) -> _FakeResponse:  # noqa: ARG002
+    def post(
+        self,
+        url: str,
+        json: dict | None = None,
+        headers: dict | None = None,
+        timeout: float | None = None,
+    ) -> _FakeResponse:  # noqa: ARG002
+        if self._post_error_plan:
+            raise self._post_error_plan.pop(0)
+
         if url.endswith("/api/agent/tasks"):
             self._task_counter += 1
             task_id = f"task-{self._task_counter}"
@@ -169,6 +180,49 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
 
     summary = report["delta_summary"]["problem"]
     assert "usage_blocking" in summary
+
+
+def test_run_cycle_retries_plan_submit_when_transient_error_happens() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        post_error_plan=[RuntimeError("intermittent read timeout"),],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_retry.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+
+
+def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        post_error_plan=[RuntimeError("timeout"), RuntimeError("timeout"), RuntimeError("timeout")],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_retry_fail.json",
+    )
+
+    assert report["status"] == "failed"
+    assert report["failed_stage"] == "plan_submit_or_wait"
+    assert "task submit failed" in str(report["failure_error"])
 
 
 def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
