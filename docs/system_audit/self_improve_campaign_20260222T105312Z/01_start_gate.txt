@@ -1,0 +1,3 @@
+start-gate: warning: temporary workflow waivers applied: Self Improve Cycle=failure (https://github.com/seeker71/Coherence-Network/actions/runs/22275595730) waived_by=@seeker71 until=2026-02-23T23:59:59+00:00 reason="Temporary waiver while self-improve cycle is failing on hosted runtime prerequisites."
+start-gate: skipping primary workspace cleanliness check in worktree mode (START_GATE_REQUIRE_PRIMARY_CLEAN=0).
+start-gate: passed
