@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/self-improve-report-parse-hotfix",
+  "commit_scope": "Collect resilient real-data input bundles for self-improve, support degraded usage mode using cached usage alerts, and add delta summary output for measurable before/after evidence.",
+  "files_owned": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-22-self-improve-resilient-input-bundle"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5.3"
+  },
+  "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt"
+  ],
+  "change_files": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt\"",
+      "python3 scripts/validate_workflow_references.py | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt\"",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt\"",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main > /tmp/step4_guard_check.log",
+      "ls docs/system_audit/self_improve_campaign_20260222T101129Z | sed -n '1,120p'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR creation/merge and hosted rerun evidence."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self-improve cycle now proceeds on usage endpoint timeout by using cached/partial usage snapshots and writes before/after delta summaries in report JSON.",
+    "public_endpoints": [
+      "/api/automation/usage/alerts",
+      "/api/agent/tasks",
+      "/api/friction/events",
+      "/api/runtime/endpoints/summary"
+    ],
+    "test_flows": [
+      "Run self-improve cycle with live usage endpoint success and confirm completed run includes data_quality_mode and input_bundle summaries.",
+      "Run self-improve cycle with usage timeout and no cache and confirm cycle continues with degraded_usage mode.",
+      "Run self-improve cycle with usage timeout and cached usage alerts near threshold and confirm skip with cached-based decision."
+    ]
+  }
+}
