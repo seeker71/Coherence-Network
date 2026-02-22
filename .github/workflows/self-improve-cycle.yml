@@ -46,15 +46,15 @@ jobs:
           fi
           cat self_improve_cycle_report.json
           status=$(python - <<'PY'
-import json
-try:
-    with open("self_improve_cycle_report.json", "r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    print(str(data.get("status") or "unknown"))
-except Exception:
-    print("unknown")
-PY
-)
+          import json
+          try:
+              with open("self_improve_cycle_report.json", "r", encoding="utf-8") as fh:
+                  data = json.load(fh)
+              print(str(data.get("status") or "unknown"))
+          except Exception:
+              print("unknown")
+          PY
+          )
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           echo "report_status=$status" >> "$GITHUB_OUTPUT"
           exit 0
