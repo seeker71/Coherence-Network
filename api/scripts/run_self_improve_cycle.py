@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import argparse
 import json
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -16,8 +18,23 @@ PLAN_MODEL = "gpt-5.3-codex"
 EXECUTE_MODEL = "gpt-5.3-codex-spark"
 REVIEW_MODEL = "gpt-5.3-codex"
 DEFAULT_LIMIT_THRESHOLD_RATIO = 0.15
-DEFAULT_INFRA_PREFLIGHT_ATTEMPTS = 5
-DEFAULT_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES = 2
+USAGE_CACHE_FILE = Path(".cache/self_improve_usage_snapshot.json")
+USAGE_CACHE_TTL_SECONDS = int(os.environ.get("SELF_IMPROVE_USAGE_CACHE_TTL_SECONDS", "21600"))
+INPUT_ENDPOINT_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_INPUT_TIMEOUT_SECONDS", "12.0"))
+
+
+def _utcnow() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _parse_timestamp(raw: str) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _clip(text: str, max_chars: int = 12000) -> str:
@@ -87,143 +104,285 @@ def build_task_payload(*, direction: str, task_type: str, model_override: str) -
     }
 
 
-def _usage_limit_precheck(
+def _safe_get(
+    client: Any,
+    url: str,
+    *,
+    timeout: float = INPUT_ENDPOINT_TIMEOUT_SECONDS,
+) -> tuple[bool, Any, str | None, int | None]:
+    try:
+        response = client.get(url, timeout=timeout)
+        status_code = response.status_code
+        if status_code >= 400:
+            return False, None, f"HTTP {status_code}", status_code
+        return True, response.json(), None, status_code
+    except Exception as exc:
+        return False, None, str(exc), None
+
+
+def _coerce_list(value: Any, default: list[Any] | None = None) -> list[Any]:
+    return list(value) if isinstance(value, list) else (list(default) if default is not None else [])
+
+
+def _coerce_dict(value: Any, default: dict[str, Any] | None = None) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else (dict(default) if default is not None else {})
+
+
+def _safe_cache_is_fresh(collected_at: str) -> bool:
+    dt = _parse_timestamp(collected_at)
+    if dt is None:
+        return False
+    return (datetime.now(timezone.utc) - dt).total_seconds() <= USAGE_CACHE_TTL_SECONDS
+
+
+def _load_cached_usage_payload(path: Path) -> tuple[bool, dict[str, Any]]:
+    try:
+        if not path.exists():
+            return False, {}
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        payload = _coerce_dict(raw)
+        collected_at = str(payload.get("collected_at") or "")
+        cached_payload = payload.get("payload")
+        if not collected_at or not isinstance(cached_payload, dict):
+            return False, {}
+        if not _safe_cache_is_fresh(collected_at):
+            return False, {}
+        return True, _coerce_dict(cached_payload)
+    except (json.JSONDecodeError, OSError, ValueError):
+        return False, {}
+
+
+def _save_cached_usage_payload(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"collected_at": _utcnow(), "payload": payload}, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _status_for_records(records: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("status") or "unknown").strip().lower()
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _collect_input_bundle(
     client: Any,
     *,
     base_url: str,
     threshold_ratio: float,
+    usage_cache_path: Path,
 ) -> dict[str, Any]:
-    try:
-        response = client.get(
-            f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true"
-        )
-        response.raise_for_status()
-        payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        return {
-            "allowed": False,
-            "threshold_ratio": threshold_ratio,
-            "skip_reason": (
-                "Usage limit precheck unavailable; skipping self-improve cycle safely: "
-                f"{str(exc)[:300]}"
-            ),
-            "blocking_alerts": [],
-            "precheck_error": str(exc),
-        }
-    alerts = payload.get("alerts") if isinstance(payload.get("alerts"), list) else []
-    blocking: list[dict[str, Any]] = []
+    usage_ok, usage_payload_raw, usage_error, usage_status_code = _safe_get(
+        client,
+        f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true",
+    )
+    usage_payload = _coerce_dict(usage_payload_raw, {})
+    usage_source = "live"
+
+    if not usage_ok:
+        cache_ok, cache_payload = _load_cached_usage_payload(usage_cache_path)
+        if cache_ok:
+            usage_payload = cache_payload
+            usage_source = "cached"
+            usage_ok = True
+        else:
+            usage_source = "missing"
+            usage_payload = {"threshold_ratio": threshold_ratio, "alerts": []}
+
+    if usage_source == "live" and usage_ok and usage_status_code == 200:
+        _save_cached_usage_payload(usage_cache_path, usage_payload)
+
+    task_ok, tasks_payload_raw, task_error, task_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?limit=40",
+    )
+    task_records = _coerce_list(tasks_payload_raw, [])
+
+    needs_decision_ok, needs_decision_payload_raw, needs_decision_error, needs_decision_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?status=needs_decision&limit=20",
+    )
+    needs_decision_records = _coerce_list(needs_decision_payload_raw, [])
+
+    friction_ok, friction_payload_raw, friction_error, friction_status_code = _safe_get(
+        client,
+        f"{base_url}/api/friction/events?status=open&limit=50",
+    )
+    friction_records = _coerce_list(friction_payload_raw, [])
+
+    runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
+        client,
+        f"{base_url}/api/runtime/endpoints/summary?limit=25",
+    )
+    runtime_payload = _coerce_dict(runtime_payload_raw, {})
+
+    usage_alerts = _coerce_list(usage_payload.get("alerts"), [])
+    blocking_alerts: list[dict[str, Any]] = []
     target_providers = {"openai", "openrouter", "coherence-internal"}
-    for row in alerts:
+    for row in usage_alerts:
         if not isinstance(row, dict):
             continue
         provider = str(row.get("provider") or "").strip().lower()
         remaining_ratio = row.get("remaining_ratio")
-        if provider not in target_providers:
-            continue
-        if remaining_ratio is None:
+        if provider not in target_providers or remaining_ratio is None:
             continue
         try:
-            numeric_ratio = float(remaining_ratio)
+            ratio = float(remaining_ratio)
         except (TypeError, ValueError):
             continue
-        if numeric_ratio <= threshold_ratio:
-            blocking.append(
+        if ratio <= threshold_ratio:
+            blocking_alerts.append(
                 {
                     "provider": provider,
                     "metric_id": str(row.get("metric_id") or ""),
                     "severity": str(row.get("severity") or ""),
-                    "remaining_ratio": round(numeric_ratio, 6),
+                    "remaining_ratio": round(ratio, 6),
                     "message": str(row.get("message") or ""),
                 }
             )
 
-    if not blocking:
-        return {"allowed": True, "threshold_ratio": threshold_ratio, "blocking_alerts": []}
+    data_quality_mode = "full"
+    if usage_source in {"cached", "missing"}:
+        data_quality_mode = "degraded_usage"
+    if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok:
+        data_quality_mode = "degraded_partial"
+
+    return {
+        "collected_at": _utcnow(),
+        "summary": {
+            "task_count": len(task_records),
+            "needs_decision_count": len(needs_decision_records),
+            "friction_open_count": len(friction_records),
+            "runtime_endpoint_count": len(_coerce_list(runtime_payload.get("summary"), [])),
+            "blocking_usage_alert_count": len(blocking_alerts),
+        },
+        "usage": {
+            "ok": usage_ok,
+            "source": usage_source,
+            "payload": usage_payload,
+            "error": usage_error,
+            "status_code": usage_status_code,
+            "threshold_ratio": threshold_ratio,
+            "blocking_alerts": blocking_alerts,
+            "counts": {
+                "alerts_total": len(usage_alerts),
+                "blocking": len(blocking_alerts),
+            },
+        },
+        "tasks": {
+            "ok": task_ok,
+            "error": task_error,
+            "status_code": task_status_code,
+            "records": task_records[:20],
+            "count": len(task_records),
+            "status_counts": _status_for_records(task_records),
+        },
+        "needs_decision": {
+            "ok": needs_decision_ok,
+            "error": needs_decision_error,
+            "status_code": needs_decision_status_code,
+            "records": needs_decision_records,
+            "count": len(needs_decision_records),
+        },
+        "friction": {
+            "ok": friction_ok,
+            "error": friction_error,
+            "status_code": friction_status_code,
+            "records": friction_records,
+            "count": len(friction_records),
+        },
+        "runtime": {
+            "ok": runtime_ok,
+            "error": runtime_error,
+            "status_code": runtime_status_code,
+            "payload": runtime_payload,
+        },
+        "data_quality_mode": data_quality_mode,
+    }
+
+
+def _input_bundle_summary(bundle: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "data_quality_mode": bundle.get("data_quality_mode", "degraded_usage"),
+        "usage_source": _coerce_dict(bundle.get("usage", {})).get("source", "missing"),
+        "usage_alert_count": _coerce_dict(bundle.get("usage", {})).get("counts", {}).get("alerts_total", 0),
+        "blocking_usage_alert_count": _coerce_dict(bundle.get("usage", {})).get("counts", {}).get("blocking", 0),
+        "task_count": _coerce_dict(bundle.get("summary", {})).get("task_count", 0),
+        "needs_decision_count": _coerce_dict(bundle.get("summary", {})).get("needs_decision_count", 0),
+        "friction_open_count": _coerce_dict(bundle.get("summary", {})).get("friction_open_count", 0),
+    }
+
+
+def _usage_limit_precheck(bundle: dict[str, Any], threshold_ratio: float) -> dict[str, Any]:
+    usage = _coerce_dict(bundle.get("usage", {}))
+    blocking_alerts = _coerce_list(usage.get("blocking_alerts"), [])
+    if not blocking_alerts:
+        return {
+            "allowed": True,
+            "threshold_ratio": threshold_ratio,
+            "blocking_alerts": [],
+            "usage_limit_data": {
+                "bundle": bundle,
+                "data_quality_mode": bundle.get("data_quality_mode"),
+            },
+        }
 
     summary = "; ".join(
         f"{row['provider']}:{row['metric_id']} remaining_ratio={row['remaining_ratio']}<=threshold={threshold_ratio}"
-        for row in blocking
+        for row in blocking_alerts
     )
     return {
         "allowed": False,
         "threshold_ratio": threshold_ratio,
         "skip_reason": f"Usage limit precheck blocked self-improve cycle: {summary}",
-        "blocking_alerts": blocking,
+        "blocking_alerts": blocking_alerts,
+        "usage_limit_data": {
+            "bundle": bundle,
+            "data_quality_mode": bundle.get("data_quality_mode"),
+        },
     }
 
 
-def _infra_preflight(
-    client: Any,
-    *,
-    base_url: str,
-    threshold_ratio: float,
-    attempts: int,
-    consecutive_successes_required: int,
+def _build_delta_summary(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    result_status: str,
 ) -> dict[str, Any]:
-    """Require repeated healthy probes before attempting model tasks."""
-    max_attempts = max(1, int(attempts))
-    min_successes = max(1, int(consecutive_successes_required))
-    history: list[dict[str, Any]] = []
-    consecutive_successes = 0
-    for attempt in range(1, max_attempts + 1):
-        attempt_result: dict[str, Any] = {"attempt": attempt, "ok": False}
-        try:
-            health_resp = client.get(f"{base_url}/api/health")
-            health_resp.raise_for_status()
-            health_payload = health_resp.json()
-            if not isinstance(health_payload, dict):
-                raise RuntimeError("health payload is not a JSON object")
-            attempt_result["health_status"] = str(health_payload.get("status") or "")
-
-            persistence_resp = client.get(f"{base_url}/api/health/persistence")
-            persistence_resp.raise_for_status()
-            persistence_payload = persistence_resp.json()
-            if not isinstance(persistence_payload, dict):
-                raise RuntimeError("persistence payload is not a JSON object")
-            if not bool(persistence_payload.get("pass_contract")):
-                raise RuntimeError("persistence contract is not passing")
-            attempt_result["persistence_pass_contract"] = True
-
-            usage_resp = client.get(
-                f"{base_url}/api/automation/usage/alerts?threshold_ratio={threshold_ratio}&force_refresh=true"
-            )
-            usage_resp.raise_for_status()
-            usage_payload = usage_resp.json()
-            if not isinstance(usage_payload, dict):
-                raise RuntimeError("usage alerts payload is not a JSON object")
-            attempt_result["usage_alert_count"] = len(
-                usage_payload.get("alerts") if isinstance(usage_payload.get("alerts"), list) else []
-            )
-
-            attempt_result["ok"] = True
-            consecutive_successes += 1
-        except Exception as exc:  # pragma: no cover - exercised in tests via behavior assertions
-            attempt_result["error"] = str(exc)
-            consecutive_successes = 0
-        history.append(attempt_result)
-        if consecutive_successes >= min_successes:
-            return {
-                "allowed": True,
-                "attempts_used": attempt,
-                "required_consecutive_successes": min_successes,
-                "history": history,
-            }
-
-    last_error = ""
-    for row in reversed(history):
-        value = str(row.get("error") or "").strip()
-        if value:
-            last_error = value
-            break
+    before_summary = _coerce_dict(before.get("summary"), {})
+    after_summary = _coerce_dict(after.get("summary"), {})
     return {
-        "allowed": False,
-        "attempts_used": max_attempts,
-        "required_consecutive_successes": min_successes,
-        "history": history,
-        "skip_reason": (
-            "Infrastructure preflight failed; skipping self-improve cycle to avoid repeated 502/timeout loops."
+        "status": result_status,
+        "data_quality_mode": {
+            "before": before.get("data_quality_mode", "degraded_usage"),
+            "after": after.get("data_quality_mode", "degraded_usage"),
+        },
+        "problem": (
+            f"usage_blocking={before_summary.get('blocking_usage_alert_count', 0)}; "
+            f"tasks={before_summary.get('task_count', 0)}; "
+            f"needs_decision={before_summary.get('needs_decision_count', 0)}; "
+            f"friction={before_summary.get('friction_open_count', 0)}"
         ),
-        "preflight_error": last_error,
+        "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
+        "proof": {
+            "status": result_status,
+            "before_counts": {
+                "task_count": before_summary.get("task_count", 0),
+                "needs_decision_count": before_summary.get("needs_decision_count", 0),
+                "friction_open_count": before_summary.get("friction_open_count", 0),
+            },
+            "after_counts": {
+                "task_count": after_summary.get("task_count", 0),
+                "needs_decision_count": after_summary.get("needs_decision_count", 0),
+                "friction_open_count": after_summary.get("friction_open_count", 0),
+            },
+        },
+        "before_metrics": before_summary,
+        "after_metrics": after_summary,
     }
 
 
@@ -284,37 +443,32 @@ def run_cycle(
     execute_pending: bool,
     execute_token: str,
     usage_threshold_ratio: float,
-    infra_preflight_attempts: int,
-    infra_preflight_consecutive_successes: int,
+    usage_cache_path: str = str(USAGE_CACHE_FILE),
 ) -> dict[str, Any]:
-    clipped_ratio = max(0.0, min(1.0, float(usage_threshold_ratio)))
-    infra_precheck = _infra_preflight(
+    threshold_ratio = max(0.0, min(1.0, float(usage_threshold_ratio)))
+    input_bundle_before = _collect_input_bundle(
         client,
         base_url=base_url,
-        threshold_ratio=clipped_ratio,
-        attempts=infra_preflight_attempts,
-        consecutive_successes_required=infra_preflight_consecutive_successes,
+        threshold_ratio=threshold_ratio,
+        usage_cache_path=Path(usage_cache_path),
     )
-    if not infra_precheck.get("allowed"):
-        return {
-            "status": "infra_blocked",
-            "skip_reason": infra_precheck.get("skip_reason"),
-            "infra_preflight": infra_precheck,
-            "stages": [],
-        }
 
-    precheck = _usage_limit_precheck(
-        client,
-        base_url=base_url,
-        threshold_ratio=clipped_ratio,
-    )
+    precheck = _usage_limit_precheck(input_bundle_before, threshold_ratio=threshold_ratio)
     if not precheck.get("allowed"):
         return {
             "status": "skipped",
             "skip_reason": precheck.get("skip_reason"),
-            "infra_preflight": infra_precheck,
             "usage_limit_precheck": precheck,
+            "data_quality_mode": input_bundle_before.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_before),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_before,
             "stages": [],
+            "delta_summary": _build_delta_summary(
+                input_bundle_before,
+                input_bundle_before,
+                "skipped",
+            ),
         }
 
     stages: list[dict[str, Any]] = []
@@ -344,8 +498,24 @@ def run_cycle(
             "model": str(plan_task.get("model") or ""),
         }
     )
-    if str(plan_task.get("status") or "").lower() != "completed":
-        return {"status": "failed", "failed_stage": "plan", "stages": stages, "task": plan_task}
+    if str(plan_task.get("status") or "").strip().lower() != "completed":
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "plan",
+            "stages": stages,
+            "task": plan_task,
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+        }
 
     plan_output = str(plan_task.get("output") or "")
     execute_payload = build_task_payload(
@@ -373,8 +543,24 @@ def run_cycle(
             "model": str(execute_task.get("model") or ""),
         }
     )
-    if str(execute_task.get("status") or "").lower() != "completed":
-        return {"status": "failed", "failed_stage": "execute", "stages": stages, "task": execute_task}
+    if str(execute_task.get("status") or "").strip().lower() != "completed":
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "execute",
+            "stages": stages,
+            "task": execute_task,
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+        }
 
     execute_output = str(execute_task.get("output") or "")
     review_payload = build_task_payload(
@@ -403,13 +589,39 @@ def run_cycle(
         }
     )
 
-    if str(review_task.get("status") or "").lower() != "completed":
-        return {"status": "failed", "failed_stage": "review", "stages": stages, "task": review_task}
+    if str(review_task.get("status") or "").strip().lower() != "completed":
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "review",
+            "stages": stages,
+            "task": review_task,
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+        }
 
+    input_bundle_after = _collect_input_bundle(
+        client,
+        base_url=base_url,
+        threshold_ratio=threshold_ratio,
+        usage_cache_path=Path(usage_cache_path),
+    )
     return {
         "status": "completed",
-        "infra_preflight": infra_precheck,
         "usage_limit_precheck": precheck,
+        "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+        "input_bundle": _input_bundle_summary(input_bundle_after),
+        "input_bundle_before": input_bundle_before,
+        "input_bundle_after": input_bundle_after,
+        "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "completed"),
         "stages": stages,
         "outputs": {
             "plan": _clip(plan_output, max_chars=2000),
@@ -436,24 +648,12 @@ def main() -> int:
         default=float(os.environ.get("SELF_IMPROVE_USAGE_THRESHOLD_RATIO", DEFAULT_LIMIT_THRESHOLD_RATIO)),
         help="Skip the run when provider remaining_ratio is <= threshold for usage-limit alerts",
     )
-    parser.add_argument(
-        "--infra-preflight-attempts",
-        type=int,
-        default=int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS", DEFAULT_INFRA_PREFLIGHT_ATTEMPTS)),
-        help="Max infra preflight probe attempts before returning infra_blocked",
-    )
-    parser.add_argument(
-        "--infra-preflight-consecutive-successes",
-        type=int,
-        default=int(
-            os.environ.get(
-                "SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES",
-                DEFAULT_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES,
-            )
-        ),
-        help="Consecutive successful preflight probes required before creating tasks",
-    )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--usage-cache-file",
+        default=str(USAGE_CACHE_FILE),
+        help="Path to local usage snapshot cache file",
+    )
     args = parser.parse_args()
 
     base_url = args.base_url.rstrip("/")
@@ -466,8 +666,7 @@ def main() -> int:
             execute_pending=args.execute_pending,
             execute_token=args.execute_token,
             usage_threshold_ratio=args.usage_threshold_ratio,
-            infra_preflight_attempts=max(1, args.infra_preflight_attempts),
-            infra_preflight_consecutive_successes=max(1, args.infra_preflight_consecutive_successes),
+            usage_cache_path=args.usage_cache_file,
         )
 
     if args.json:
@@ -478,7 +677,7 @@ def main() -> int:
         for row in report.get("stages", []):
             print(f"- {row.get('stage')}: task={row.get('task_id')} status={row.get('status')}")
 
-    return 0 if report.get("status") in {"completed", "skipped", "infra_blocked"} else 2
+    return 0 if report.get("status") in {"completed", "skipped"} else 2
 
 
 if __name__ == "__main__":
