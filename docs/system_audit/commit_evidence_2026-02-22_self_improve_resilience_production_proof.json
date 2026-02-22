@@ -50,6 +50,7 @@
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/13_evidence_validate_final.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/14_pr_guard_final.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/15_followthrough_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/16_evidence_base_head_validate.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/"
   ],
   "change_files": [
@@ -70,6 +71,7 @@
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/13_evidence_validate_final.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/14_pr_guard_final.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/15_followthrough_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/16_evidence_base_head_validate.txt",
     "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/"
   ],
   "change_intent": "process_only",
