@@ -1,7 +1,7 @@
 {
   "date": "2026-02-22",
   "thread_branch": "codex/self-improve-report-parse-hotfix",
-  "commit_scope": "Fix self-improve hosted workflow execution by removing legacy preflight args from the workflow invocation and making the script parser backward-compatible.",
+  "commit_scope": "Improve self-improve cycle transport resilience for hosted runtime failures by adding HTTP retry handling, stage-scoped exception classification, and test coverage for transient failures.",
   "files_owned": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
@@ -14,7 +14,8 @@
     "096-provider-readiness-contract-automation"
   ],
   "task_ids": [
-    "task-2026-02-22-self-improve-resilient-input-bundle"
+    "task-2026-02-22-self-improve-resilient-input-bundle",
+    "task-2026-02-22-self-improve-retry-handling"
   ],
   "contributors": [
     {
@@ -34,29 +35,38 @@
   "evidence_refs": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
-    ".github/workflows/self-improve-cycle.yml",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_pytest.txt",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt"
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_start_gate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_usage_probes.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_verify_web_api_deploy.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/02_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/03_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/03_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/04_evidence_validate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/04_pr_guard.txt"
   ],
   "change_files": [
     "api/scripts/run_self_improve_cycle.py",
-    ".github/workflows/self-improve-cycle.yml",
     "api/tests/test_run_self_improve_cycle.py",
-    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json",
-    "docs/system_audit/self_improve_campaign_20260222T101129Z/"
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_start_gate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_usage_probes.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/01_verify_web_api_deploy.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/02_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/03_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/03_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/04_evidence_validate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T105312Z/04_pr_guard.txt",
+    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json"
   ],
   "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt\"",
-      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/03_pytest.txt\"",
-      "python3 scripts/validate_workflow_references.py | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt\"",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt\"",
-      "ls docs/system_audit/self_improve_campaign_20260222T101129Z | sed -n '1,120p'"
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T105312Z/02_pytest.txt\"",
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T105312Z/03_pytest.txt\"",
+      "python3 scripts/validate_workflow_references.py | tee \"docs/system_audit/self_improve_campaign_20260222T105312Z/03_workflow_refs.txt\"",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build | tee \"docs/system_audit/self_improve_campaign_20260222T105312Z/04_pr_guard.txt\"",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json | tee \"docs/system_audit/self_improve_campaign_20260222T105312Z/04_evidence_validate.txt\""
     ]
   },
   "ci_validation": {
@@ -69,7 +79,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting PR creation/merge and hosted rerun evidence."
+    "blocked_reason": "Awaiting PR creation/merge and hosted workflow run validation."
   },
   "e2e_validation": {
     "status": "pending",

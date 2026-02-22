@@ -21,6 +21,9 @@ DEFAULT_LIMIT_THRESHOLD_RATIO = 0.15
 USAGE_CACHE_FILE = Path(".cache/self_improve_usage_snapshot.json")
 USAGE_CACHE_TTL_SECONDS = int(os.environ.get("SELF_IMPROVE_USAGE_CACHE_TTL_SECONDS", "21600"))
 INPUT_ENDPOINT_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_INPUT_TIMEOUT_SECONDS", "12.0"))
+HTTP_RETRY_ATTEMPTS = int(os.environ.get("SELF_IMPROVE_HTTP_RETRY_ATTEMPTS", "3"))
+HTTP_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_RETRY_BASE_SECONDS", "0.75"))
+HTTP_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_TIMEOUT_SECONDS", "20.0"))
 
 
 def _utcnow() -> str:
@@ -109,15 +112,49 @@ def _safe_get(
     url: str,
     *,
     timeout: float = INPUT_ENDPOINT_TIMEOUT_SECONDS,
+    attempts: int = HTTP_RETRY_ATTEMPTS,
 ) -> tuple[bool, Any, str | None, int | None]:
-    try:
-        response = client.get(url, timeout=timeout)
-        status_code = response.status_code
-        if status_code >= 400:
-            return False, None, f"HTTP {status_code}", status_code
-        return True, response.json(), None, status_code
-    except Exception as exc:
-        return False, None, str(exc), None
+    response: Any | None = None
+    status_code: int | None = None
+    last_error: str | None = None
+    for _ in range(max(1, attempts)):
+        try:
+            response = client.get(url, timeout=timeout)
+            status_code = response.status_code
+            if status_code >= 400:
+                return False, None, f"HTTP {status_code}", status_code
+            return True, response.json(), None, status_code
+        except Exception as exc:
+            last_error = str(exc)
+            time.sleep(HTTP_RETRY_BASE_SECONDS)
+            response = None
+    return False, None, last_error, status_code
+
+
+def _safe_post(
+    client: Any,
+    url: str,
+    *,
+    json: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    timeout: float = HTTP_TIMEOUT_SECONDS,
+    attempts: int = HTTP_RETRY_ATTEMPTS,
+) -> tuple[bool, Any, str | None, int | None]:
+    response: Any | None = None
+    status_code: int | None = None
+    last_error: str | None = None
+    for _ in range(max(1, attempts)):
+        try:
+            response = client.post(url, json=json, headers=headers, timeout=timeout)
+            status_code = response.status_code
+            if status_code >= 400:
+                return False, None, f"HTTP {status_code}", status_code
+            return True, response.json(), None, status_code
+        except Exception as exc:
+            last_error = str(exc)
+            time.sleep(HTTP_RETRY_BASE_SECONDS)
+            response = None
+    return False, None, last_error, status_code
 
 
 def _coerce_list(value: Any, default: list[Any] | None = None) -> list[Any]:
@@ -387,9 +424,15 @@ def _build_delta_summary(
 
 
 def _submit_task(client: Any, base_url: str, payload: dict[str, Any]) -> str:
-    response = client.post(f"{base_url}/api/agent/tasks", json=payload)
-    response.raise_for_status()
-    data = response.json()
+    ok, data, error, status_code = _safe_post(
+        client,
+        f"{base_url}/api/agent/tasks",
+        json=payload,
+        timeout=HTTP_TIMEOUT_SECONDS,
+    )
+    if not ok:
+        raise RuntimeError(f"task submit failed (status={status_code}) {error}")
+    assert data is not None
     task_id = str(data.get("id") or "").strip()
     if not task_id:
         raise RuntimeError("Task create response missing id")
@@ -400,8 +443,14 @@ def _request_execute(client: Any, base_url: str, task_id: str, execute_token: st
     headers = {}
     if execute_token:
         headers["X-Agent-Execute-Token"] = execute_token
-    response = client.post(f"{base_url}/api/agent/tasks/{task_id}/execute", headers=headers)
-    response.raise_for_status()
+    ok, _, error, status_code = _safe_post(
+        client,
+        f"{base_url}/api/agent/tasks/{task_id}/execute",
+        headers=headers,
+        timeout=HTTP_TIMEOUT_SECONDS,
+    )
+    if not ok:
+        raise RuntimeError(f"execute request failed for {task_id} (status={status_code}) {error}")
 
 
 def _wait_for_terminal(
@@ -417,9 +466,21 @@ def _wait_for_terminal(
     started = time.time()
     execute_attempted = False
     while True:
-        response = client.get(f"{base_url}/api/agent/tasks/{task_id}")
-        response.raise_for_status()
-        task = response.json()
+        ok, task_payload, error, status_code = _safe_get(
+            client,
+            f"{base_url}/api/agent/tasks/{task_id}",
+            timeout=HTTP_TIMEOUT_SECONDS,
+        )
+        if not ok:
+            if int(time.time() - started) >= timeout_seconds:
+                raise TimeoutError(
+                    f"Timed out waiting for task {task_id}; last status=unknown, "
+                    f"last_http_status={status_code}, error={error}"
+                )
+            time.sleep(max(0, poll_interval_seconds))
+            continue
+
+        task = _coerce_dict(task_payload, {})
         status = str(task.get("status") or "").strip().lower()
         if status in {"completed", "failed", "needs_decision"}:
             return task
@@ -432,6 +493,46 @@ def _wait_for_terminal(
         if elapsed >= timeout_seconds:
             raise TimeoutError(f"Timed out waiting for task {task_id}; last status={status or 'unknown'}")
         time.sleep(max(0, poll_interval_seconds))
+
+
+def _run_stage(
+    *,
+    client: Any,
+    base_url: str,
+    poll_interval_seconds: int,
+    timeout_seconds: int,
+    execute_pending: bool,
+    execute_token: str,
+    stage_name: str,
+    direction: str,
+    task_type: str,
+    model_override: str,
+) -> dict[str, Any]:
+    payload = build_task_payload(
+        direction=direction,
+        task_type=task_type,
+        model_override=model_override,
+    )
+    task_id = _submit_task(client, base_url, payload)
+    task = _wait_for_terminal(
+        client,
+        base_url=base_url,
+        task_id=task_id,
+        poll_interval_seconds=poll_interval_seconds,
+        timeout_seconds=timeout_seconds,
+        execute_pending=execute_pending,
+        execute_token=execute_token,
+    )
+    task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    return {
+        "stage": stage_name,
+        "task_id": task_id,
+        "status": str(task.get("status") or ""),
+        "executor": str(task_ctx.get("executor") or ""),
+        "model": str(task.get("model") or ""),
+        "task": task,
+        "output": str(task.get("output") or ""),
+    }
 
 
 def run_cycle(
@@ -473,32 +574,41 @@ def run_cycle(
 
     stages: list[dict[str, Any]] = []
 
-    plan_payload = build_task_payload(
-        direction=build_plan_direction(),
-        task_type="spec",
-        model_override=PLAN_MODEL,
-    )
-    plan_task_id = _submit_task(client, base_url, plan_payload)
-    plan_task = _wait_for_terminal(
-        client,
-        base_url=base_url,
-        task_id=plan_task_id,
-        poll_interval_seconds=poll_interval_seconds,
-        timeout_seconds=timeout_seconds,
-        execute_pending=execute_pending,
-        execute_token=execute_token,
-    )
-    plan_ctx = plan_task.get("context") if isinstance(plan_task.get("context"), dict) else {}
-    stages.append(
-        {
-            "stage": "plan",
-            "task_id": plan_task_id,
-            "status": plan_task.get("status"),
-            "executor": str(plan_ctx.get("executor") or ""),
-            "model": str(plan_task.get("model") or ""),
+    try:
+        plan_stage = _run_stage(
+            client=client,
+            base_url=base_url,
+            poll_interval_seconds=poll_interval_seconds,
+            timeout_seconds=timeout_seconds,
+            execute_pending=execute_pending,
+            execute_token=execute_token,
+            stage_name="plan",
+            direction=build_plan_direction(),
+            task_type="spec",
+            model_override=PLAN_MODEL,
+        )
+    except Exception as exc:
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "plan_submit_or_wait",
+            "failure_error": str(exc),
+            "stages": stages,
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
-    )
-    if str(plan_task.get("status") or "").strip().lower() != "completed":
+    stages.append(plan_stage)
+    plan_output = str(plan_stage.get("output") or "")
+    plan_task = plan_stage["task"]
+    if plan_task.get("status") != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
@@ -517,33 +627,41 @@ def run_cycle(
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
 
-    plan_output = str(plan_task.get("output") or "")
-    execute_payload = build_task_payload(
-        direction=build_execute_direction(plan_output),
-        task_type="impl",
-        model_override=EXECUTE_MODEL,
-    )
-    execute_task_id = _submit_task(client, base_url, execute_payload)
-    execute_task = _wait_for_terminal(
-        client,
-        base_url=base_url,
-        task_id=execute_task_id,
-        poll_interval_seconds=poll_interval_seconds,
-        timeout_seconds=timeout_seconds,
-        execute_pending=execute_pending,
-        execute_token=execute_token,
-    )
-    execute_ctx = execute_task.get("context") if isinstance(execute_task.get("context"), dict) else {}
-    stages.append(
-        {
-            "stage": "execute",
-            "task_id": execute_task_id,
-            "status": execute_task.get("status"),
-            "executor": str(execute_ctx.get("executor") or ""),
-            "model": str(execute_task.get("model") or ""),
+    try:
+        execute_stage = _run_stage(
+            client=client,
+            base_url=base_url,
+            poll_interval_seconds=poll_interval_seconds,
+            timeout_seconds=timeout_seconds,
+            execute_pending=execute_pending,
+            execute_token=execute_token,
+            stage_name="execute",
+            direction=build_execute_direction(plan_stage.get("output", "")),
+            task_type="impl",
+            model_override=EXECUTE_MODEL,
+        )
+    except Exception as exc:
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "execute_submit_or_wait",
+            "stages": stages,
+            "failure_error": str(exc),
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
-    )
-    if str(execute_task.get("status") or "").strip().lower() != "completed":
+    stages.append(execute_stage)
+    execute_output = str(execute_stage.get("output") or "")
+    execute_task = execute_stage["task"]
+    if execute_stage.get("status") != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
@@ -562,34 +680,41 @@ def run_cycle(
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
 
-    execute_output = str(execute_task.get("output") or "")
-    review_payload = build_task_payload(
-        direction=build_review_direction(plan_output, execute_output),
-        task_type="review",
-        model_override=REVIEW_MODEL,
-    )
-    review_task_id = _submit_task(client, base_url, review_payload)
-    review_task = _wait_for_terminal(
-        client,
-        base_url=base_url,
-        task_id=review_task_id,
-        poll_interval_seconds=poll_interval_seconds,
-        timeout_seconds=timeout_seconds,
-        execute_pending=execute_pending,
-        execute_token=execute_token,
-    )
-    review_ctx = review_task.get("context") if isinstance(review_task.get("context"), dict) else {}
-    stages.append(
-        {
-            "stage": "review",
-            "task_id": review_task_id,
-            "status": review_task.get("status"),
-            "executor": str(review_ctx.get("executor") or ""),
-            "model": str(review_task.get("model") or ""),
+    try:
+        review_stage = _run_stage(
+            client=client,
+            base_url=base_url,
+            poll_interval_seconds=poll_interval_seconds,
+            timeout_seconds=timeout_seconds,
+            execute_pending=execute_pending,
+            execute_token=execute_token,
+            stage_name="review",
+            direction=build_review_direction(plan_stage["output"], execute_stage["output"]),
+            task_type="review",
+            model_override=REVIEW_MODEL,
+        )
+    except Exception as exc:
+        input_bundle_after = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=threshold_ratio,
+            usage_cache_path=Path(usage_cache_path),
+        )
+        return {
+            "status": "failed",
+            "failed_stage": "review_submit_or_wait",
+            "stages": stages,
+            "failure_error": str(exc),
+            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(input_bundle_after),
+            "input_bundle_before": input_bundle_before,
+            "input_bundle_after": input_bundle_after,
+            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
-    )
-
-    if str(review_task.get("status") or "").strip().lower() != "completed":
+    stages.append(review_stage)
+    review_output = str(review_stage.get("output") or "")
+    review_task = review_stage["task"]
+    if review_task.get("status") != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
@@ -599,13 +724,13 @@ def run_cycle(
         return {
             "status": "failed",
             "failed_stage": "review",
-            "stages": stages,
-            "task": review_task,
             "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
             "input_bundle": _input_bundle_summary(input_bundle_after),
             "input_bundle_before": input_bundle_before,
             "input_bundle_after": input_bundle_after,
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+            "stages": stages,
+            "task": review_task,
         }
 
     input_bundle_after = _collect_input_bundle(
@@ -626,7 +751,7 @@ def run_cycle(
         "outputs": {
             "plan": _clip(plan_output, max_chars=2000),
             "execute": _clip(execute_output, max_chars=2000),
-            "review": _clip(str(review_task.get("output") or ""), max_chars=2000),
+            "review": _clip(review_output, max_chars=2000),
         },
     }
 
