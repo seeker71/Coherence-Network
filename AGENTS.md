@@ -44,6 +44,20 @@ Spec → Test → Implement → CI → Review → Merge
    - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
    - Do not start a new task while previous task has unresolved blocking checks.
 
+### Hard-Data Contract (Subscription + Routing Claims)
+
+- Do not claim provider limits, remaining quota, or routing behavior from assumptions or static docs alone.
+- For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
+  1. local fact report: `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py`
+  2. live usage/readiness API snapshots:
+     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage/readiness`
+     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage`
+  3. official provider source links (pricing/docs/limits page).
+- Required proof for routing claims:
+  - include executor-policy evidence (`routing_policy_proof`) and route matrix (`route_decision_matrix`) from the fact report.
+  - show at least one Cursor-routed case and one OpenClaw/Codex-routed case.
+- If a provider does not expose hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
+
 ### 2-Tier Executor Contract (Cost/Speed Mode)
 
 - Use this mode for routine implementation/execution tasks unless the user explicitly asks for another approach.

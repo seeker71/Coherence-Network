@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/cursor-hard-data-proof-20260222",
+  "commit_scope": "Enforce hard-data evidence for subscription/routing claims by adding an automated Cursor fact report script and codifying non-guessing evidence requirements in AGENTS.md.",
+  "files_owned": [
+    "AGENTS.md",
+    "api/scripts/cursor_fact_report.py",
+    "docs/system_audit/cursor_fact_report_2026-02-22.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100-automation-provider-usage-readiness-api"
+  ],
+  "task_ids": [
+    "task-2026-02-22-cursor-hard-data-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/cursor_fact_report.py",
+    "docs/system_audit/cursor_fact_report_2026-02-22.json",
+    "AGENTS.md"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "api/scripts/cursor_fact_report.py",
+    "docs/system_audit/cursor_fact_report_2026-02-22.json",
+    "docs/system_audit/commit_evidence_2026-02-22_cursor-hard-data-proof.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile api/scripts/cursor_fact_report.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-hosted-runner"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local gates, push/PR, and hosted check success."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Subscription/routing statements can now be backed by generated hard-data artifacts (CLI auth state, local usage snapshot, public readiness/usage snapshot, and executor-policy routing proofs).",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage"
+    ],
+    "test_flows": [
+      "Run cursor_fact_report.py and verify report captures cursor CLI auth state and provider snapshot.",
+      "Verify routing_policy_proof includes at least one cursor and one openclaw selection.",
+      "Verify public API snapshots are included with HTTP status and payload/error fields."
+    ]
+  }
+}
