@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from scripts import run_self_improve_cycle
 
 
 class _FakeResponse:
-    def __init__(self, status_code: int, payload: dict) -> None:
+    def __init__(self, status_code: int, payload: object) -> None:
         self.status_code = status_code
         self._payload = payload
 
@@ -12,17 +14,31 @@ class _FakeResponse:
         if self.status_code >= 400:
             raise RuntimeError(f"http {self.status_code}")
 
-    def json(self) -> dict:
+    def json(self) -> object:
         return self._payload
 
 
 class _FakeClient:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        usage_payload: dict,
+        tasks_payload: list[dict] | None = None,
+        needs_decision_payload: list[dict] | None = None,
+        friction_payload: list[dict] | None = None,
+        runtime_payload: dict | None = None,
+        usage_error: Exception | None = None,
+    ) -> None:
         self.created_payloads: list[dict] = []
         self._task_counter = 0
         self._task_order: list[str] = []
         self._task_outputs: dict[str, str] = {}
-        self.alerts_payload: dict = {"threshold_ratio": 0.15, "alerts": []}
+        self.usage_payload = usage_payload
+        self.tasks_payload = tasks_payload or []
+        self.needs_decision_payload = needs_decision_payload or []
+        self.friction_payload = friction_payload or []
+        self.runtime_payload = runtime_payload or {}
+        self.usage_error = usage_error
 
     def post(self, url: str, json: dict | None = None, headers: dict | None = None) -> _FakeResponse:  # noqa: ARG002
         if url.endswith("/api/agent/tasks"):
@@ -39,15 +55,27 @@ class _FakeClient:
 
         raise AssertionError(f"unexpected post url: {url}")
 
-    def get(self, url: str) -> _FakeResponse:
-        if url.endswith("/api/health"):
-            return _FakeResponse(200, {"status": "ok"})
-        if url.endswith("/api/health/persistence"):
-            return _FakeResponse(200, {"required": True, "pass_contract": True})
+    def get(self, url: str, timeout: float | None = None) -> _FakeResponse:  # noqa: ARG002
         if "/api/automation/usage/alerts" in url:
-            return _FakeResponse(200, self.alerts_payload)
-        for task_id in self._task_order:
-            if url.endswith(f"/api/agent/tasks/{task_id}"):
+            if self.usage_error:
+                raise self.usage_error
+            return _FakeResponse(200, self.usage_payload)
+
+        if "/api/agent/tasks?status=needs_decision" in url:
+            return _FakeResponse(200, self.needs_decision_payload)
+
+        if "/api/agent/tasks?" in url and "/api/agent/tasks/" not in url:
+            return _FakeResponse(200, self.tasks_payload)
+
+        if "/api/friction/events" in url:
+            return _FakeResponse(200, self.friction_payload)
+
+        if "/api/runtime/endpoints/summary" in url:
+            return _FakeResponse(200, self.runtime_payload)
+
+        if "/api/agent/tasks/" in url:
+            task_id = url.rsplit("/", 1)[-1]
+            if task_id in self._task_order:
                 idx = int(task_id.split("-")[-1])
                 output = f"stage-{idx}-output"
                 self._task_outputs[task_id] = output
@@ -63,27 +91,12 @@ class _FakeClient:
                         "model": context.get("model_override", ""),
                     },
                 )
+
         raise AssertionError(f"unexpected get url: {url}")
 
 
-class _FailingPrecheckClient(_FakeClient):
-    def __init__(self) -> None:
-        super().__init__()
-        self._usage_calls = 0
-
-    def get(self, url: str) -> _FakeResponse:
-        if "/api/automation/usage/alerts" in url:
-            self._usage_calls += 1
-            if self._usage_calls >= 2:
-                raise RuntimeError("precheck timeout")
-        return super().get(url)
-
-
-class _FailingInfraClient(_FakeClient):
-    def get(self, url: str) -> _FakeResponse:
-        if url.endswith("/api/health"):
-            raise RuntimeError("health endpoint timeout")
-        return super().get(url)
+def _default_usage_payload() -> dict:
+    return {"threshold_ratio": 0.15, "alerts": []}
 
 
 def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
@@ -124,7 +137,7 @@ def test_stage_payloads_pin_expected_models() -> None:
 
 
 def test_run_cycle_submits_plan_execute_review_in_order() -> None:
-    client = _FakeClient()
+    client = _FakeClient(usage_payload=_default_usage_payload())
 
     report = run_self_improve_cycle.run_cycle(
         client=client,
@@ -134,12 +147,14 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
-        infra_preflight_attempts=2,
-        infra_preflight_consecutive_successes=1,
+        usage_cache_path="/tmp/self_improve_cache_order.json",
     )
 
     assert report["status"] == "completed"
     assert [row["stage"] for row in report["stages"]] == ["plan", "execute", "review"]
+    assert report["data_quality_mode"] in {"full", "degraded_partial", "degraded_usage"}
+    assert report["input_bundle"]["blocking_usage_alert_count"] == 0
+    assert report["input_bundle"]["usage_source"] == "live"
 
     plan_payload, execute_payload, review_payload = client.created_payloads
     assert plan_payload["task_type"] == "spec"
@@ -152,21 +167,25 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
         assert stage["executor"] == "codex"
         assert stage["model"] in {"gpt-5.3-codex", "gpt-5.3-codex-spark"}
 
+    summary = report["delta_summary"]["problem"]
+    assert "usage_blocking" in summary
+
 
 def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
-    client = _FakeClient()
-    client.alerts_payload = {
-        "threshold_ratio": 0.15,
-        "alerts": [
-            {
-                "provider": "openai",
-                "metric_id": "tokens_quota",
-                "severity": "warning",
-                "remaining_ratio": 0.1,
-                "message": "openai tokens low remaining",
-            }
-        ],
-    }
+    client = _FakeClient(
+        usage_payload={
+            "threshold_ratio": 0.15,
+            "alerts": [
+                {
+                    "provider": "openai",
+                    "metric_id": "tokens_quota",
+                    "severity": "warning",
+                    "remaining_ratio": 0.1,
+                    "message": "openai tokens low remaining",
+                }
+            ],
+        }
+    )
 
     report = run_self_improve_cycle.run_cycle(
         client=client,
@@ -176,18 +195,19 @@ def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
-        infra_preflight_attempts=2,
-        infra_preflight_consecutive_successes=1,
+        usage_cache_path="/tmp/self_improve_cache_skip.json",
     )
 
     assert report["status"] == "skipped"
     assert "Usage limit precheck blocked self-improve cycle" in report["skip_reason"]
     assert report["stages"] == []
+    assert report["input_bundle"]["usage_source"] == "live"
     assert client.created_payloads == []
 
 
-def test_run_cycle_skips_when_usage_precheck_unavailable() -> None:
-    client = _FailingPrecheckClient()
+def test_run_cycle_continues_when_usage_precheck_fails_without_cache() -> None:
+    client = _FakeClient(usage_payload=_default_usage_payload(), usage_error=RuntimeError("precheck timeout"))
+
     report = run_self_improve_cycle.run_cycle(
         client=client,
         base_url="https://example.test",
@@ -196,17 +216,75 @@ def test_run_cycle_skips_when_usage_precheck_unavailable() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
-        infra_preflight_attempts=2,
-        infra_preflight_consecutive_successes=1,
+        usage_cache_path="/tmp/self_improve_missing_cache.json",
     )
+
+    assert report["status"] == "completed"
+    assert report["data_quality_mode"] == "degraded_usage"
+    assert report["input_bundle"]["usage_source"] == "missing"
+    assert report["usage_limit_precheck"]["allowed"] is True
+
+
+def test_run_cycle_uses_cached_usage_when_usage_endpoint_fails() -> None:
+    cache_file = "/tmp/self_improve_cache_with_data.json"
+    run_self_improve_cycle._save_cached_usage_payload(
+        Path(cache_file),
+        {
+            "threshold_ratio": 0.15,
+            "alerts": [
+                {
+                    "provider": "openai",
+                    "metric_id": "tokens_quota",
+                    "severity": "critical",
+                    "remaining_ratio": 0.05,
+                    "message": "cached low quota",
+                }
+            ],
+        },
+    )
+
+    client = _FakeClient(usage_payload=_default_usage_payload(), usage_error=RuntimeError("precheck timeout"))
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path=cache_file,
+    )
+
     assert report["status"] == "skipped"
-    assert "precheck unavailable" in report["skip_reason"].lower()
-    assert report["stages"] == []
-    assert client.created_payloads == []
+    assert report["data_quality_mode"] == "degraded_usage"
+    assert report["input_bundle"]["usage_source"] == "cached"
+    assert "blocked" in report["skip_reason"]
+    assert report["input_bundle_before"]["usage"]["blocking_alerts"][0]["provider"] == "openai"
 
 
-def test_run_cycle_returns_infra_blocked_when_preflight_fails() -> None:
-    client = _FailingInfraClient()
+def test_delta_summary_includes_before_after_metrics() -> None:
+    client = _FakeClient(
+        usage_payload={
+            "threshold_ratio": 0.15,
+            "alerts": [
+                {
+                    "provider": "openrouter",
+                    "metric_id": "requests_5m",
+                    "severity": "warning",
+                    "remaining_ratio": 0.3,
+                    "message": "stable",
+                }
+            ],
+        },
+        tasks_payload=[
+            {"id": "existing", "status": "pending"},
+            {"id": "blocked", "status": "needs_decision"},
+        ],
+        needs_decision_payload=[{"id": "blocked", "status": "needs_decision"}],
+        friction_payload=[{"id": "f1", "block_type": "paid_provider_blocked"}],
+        runtime_payload={"summary": []},
+    )
+
     report = run_self_improve_cycle.run_cycle(
         client=client,
         base_url="https://example.test",
@@ -215,10 +293,11 @@ def test_run_cycle_returns_infra_blocked_when_preflight_fails() -> None:
         execute_pending=False,
         execute_token="",
         usage_threshold_ratio=0.15,
-        infra_preflight_attempts=2,
-        infra_preflight_consecutive_successes=1,
+        usage_cache_path="/tmp/self_improve_cache_delta.json",
     )
-    assert report["status"] == "infra_blocked"
-    assert "preflight failed" in report["skip_reason"].lower()
-    assert report["stages"] == []
-    assert client.created_payloads == []
+
+    delta = report["delta_summary"]
+    assert delta["before_metrics"]["task_count"] == 2
+    assert delta["after_metrics"]["friction_open_count"] == 1
+    assert delta["proof"]["before_counts"]["needs_decision_count"] == 1
+    assert delta["proof"]["after_counts"]["needs_decision_count"] == 1
