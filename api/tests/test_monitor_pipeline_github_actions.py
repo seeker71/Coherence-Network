@@ -210,3 +210,108 @@ def test_run_check_marks_github_actions_issue_resolved_when_rate_drops(tmp_path,
     payload = monitor_pipeline._run_check(_Client(), logging.getLogger("test"), auto_fix=False, auto_recover=False)
     assert "github_actions_high_failure_rate" not in {row["condition"] for row in payload["issues"]}
     assert "github_actions_high_failure_rate" in payload["resolved_since_last"]
+
+
+def test_collect_github_actions_health_enriches_owner_and_waiver_data(tmp_path, monkeypatch) -> None:
+    owners_path = tmp_path / "owners.json"
+    waivers_path = tmp_path / "waivers.json"
+    owners_path.write_text(
+        json.dumps({"workflow_owners": {"test": "@owner"}}),
+        encoding="utf-8",
+    )
+    waivers_path.write_text(
+        json.dumps(
+            {
+                "waivers": [
+                    {
+                        "workflow": "test",
+                        "owner": "@owner",
+                        "reason": "temporary",
+                        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat().replace("+00:00", "Z"),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(monitor_pipeline, "START_GATE_WORKFLOW_OWNERS_FILE", str(owners_path))
+    monkeypatch.setattr(monitor_pipeline, "START_GATE_MAIN_WAIVERS_FILE", str(waivers_path))
+    monkeypatch.setattr(monitor_pipeline, "_github_repo_slug", lambda: "seeker71/Coherence-Network")
+    now = datetime.now(timezone.utc)
+    created = (now - timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    payload = {
+        "workflow_runs": [
+            {
+                "status": "completed",
+                "conclusion": "failure",
+                "created_at": created,
+                "run_started_at": created,
+                "updated_at": created,
+                "name": "test",
+                "html_url": "https://github.com/seeker71/Coherence-Network/actions/runs/1",
+            }
+        ]
+    }
+
+    class _RunResult:
+        def __init__(self, returncode: int, stdout: str = "", stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _fake_run(args, **kwargs):  # noqa: ANN001, ARG001
+        if args[:3] == ["gh", "auth", "status"]:
+            return _RunResult(0, "")
+        if args[:3] == ["gh", "api", "repos/seeker71/Coherence-Network/actions/runs"]:
+            return _RunResult(0, json.dumps(payload))
+        raise AssertionError(f"unexpected subprocess args: {args}")
+
+    monkeypatch.setattr("subprocess.run", _fake_run)
+    health = monitor_pipeline._collect_github_actions_health(logging.getLogger("test"))
+    top = health["top_failed_workflows"][0]
+    assert top["workflow"] == "test"
+    assert top["owner"] == "@owner"
+    assert top["active_waiver_count"] == 1
+    assert health["active_waivers"]
+    assert health["unowned_failed_workflows"] == []
+
+
+def test_run_check_adds_issue_for_unowned_failed_workflows(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(tmp_path / "monitor_issues.json"))
+    monkeypatch.setattr(monitor_pipeline, "GITHUB_ACTIONS_HEALTH_FILE", str(tmp_path / "github_actions_health.json"))
+    monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE",
+        str(tmp_path / "public_deploy_contract_block_state.json"),
+    )
+    monkeypatch.setattr(monitor_pipeline, "_get_current_git_sha", lambda: "")
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_collect_github_actions_health",
+        lambda _log: {
+            "available": True,
+            "repo": "seeker71/Coherence-Network",
+            "completed_runs": 10,
+            "failed_runs": 1,
+            "failure_rate": 0.1,
+            "wasted_minutes_failed": 0.2,
+            "top_failed_workflows": [{"workflow": "unknown", "failed_runs": 1, "owner": "", "active_waiver_count": 0}],
+            "unowned_failed_workflows": ["unknown"],
+            "active_waivers": [],
+            "sample_failed_run_links": [],
+            "official_records": ["https://github.com/seeker71/Coherence-Network/actions"],
+        },
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_get_pipeline_process_args",
+        lambda: {"runner_workers": 5, "pm_parallel": True, "runner_seen": True, "pm_seen": True},
+    )
+    monkeypatch.setattr(monitor_pipeline, "_runner_log_has_recent_errors", lambda: (False, ""))
+    monkeypatch.setattr(monitor_pipeline, "_load_recent_failed_task_durations", lambda _now: [])
+    monkeypatch.setattr(monitor_pipeline, "_run_maintainability_audit_if_due", lambda _log: None)
+    monkeypatch.setattr(monitor_pipeline, "_run_meta_questions_if_due", lambda _log: None)
+
+    payload = monitor_pipeline._run_check(_Client(), logging.getLogger("test"), auto_fix=False, auto_recover=False)
+    assert "github_actions_unowned_workflow_failures" in {row["condition"] for row in payload["issues"]}

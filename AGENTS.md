@@ -24,6 +24,11 @@ Spec → Test → Implement → CI → Review → Merge
 2. Start gate (required before any edits)
    - Run: `make start-gate`
    - If it fails, stop and fix blockers first.
+   - Main-workflow failure policy:
+     - Temporary waivers must be declared in `config/start_gate_main_workflow_waivers.json`.
+     - Each waiver must include `workflow`, `owner`, `reason`, `expires_at`, and should scope by `run_url_contains` when possible.
+     - Owner mappings for blocking workflows must exist in `config/start_gate_workflow_owners.json`.
+     - Waivers are short-lived and must be removed after root-cause repair.
 3. Pre-commit local gate (required)
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
