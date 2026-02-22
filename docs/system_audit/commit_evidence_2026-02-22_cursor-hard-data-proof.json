@@ -42,7 +42,7 @@
     "docs/system_audit/cursor_fact_report_2026-02-22.json",
     "docs/system_audit/commit_evidence_2026-02-22_cursor-hard-data-proof.json"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
