@@ -1,0 +1,115 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/self-improve-report-parse-hotfix",
+  "commit_scope": "Increase hosted self-improve success reliability by preserving stage progress, waiting for deployment settle, adding multi-attempt retries, and enforcing failure-awareness reflection in reports.",
+  "files_owned": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-22-self-improve-resume-checkpoint",
+    "task-2026-02-22-self-improve-infra-preflight-settle",
+    "task-2026-02-22-self-improve-failure-awareness-reflection"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/01_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/02_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/03_ruff.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/04_real_run_report.json",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/08_pr_guard.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/09_followthrough.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/10_evidence_validate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/11_pr_guard_after_evidence.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/12_followthrough_after_guard.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/13_evidence_validate_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/14_pr_guard_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/15_followthrough_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/"
+  ],
+  "change_files": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilience_production_proof.json",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/01_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/02_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/03_ruff.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/04_real_run_report.json",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/08_pr_guard.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/09_followthrough.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/10_evidence_validate.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/11_pr_guard_after_evidence.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/12_followthrough_after_guard.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/13_evidence_validate_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/14_pr_guard_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/15_followthrough_final.txt",
+    "docs/system_audit/self_improve_campaign_20260222T175412Z_production_proof/"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py",
+      "cd api && ruff check scripts/run_self_improve_cycle.py tests/test_run_self_improve_cycle.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-22_self_improve_resilience_production_proof.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting merge to main and hosted workflow run proof."
+  },
+  "e2e_validation": {
+    "status": "in_progress",
+    "expected_behavior_delta": "Self-improve preserves stage progress via checkpoint, waits for infra settle before execution, retries attempts in workflow, and records failure-awareness questions in report JSON.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/gates/main-head",
+      "/api/agent/tasks",
+      "/api/runtime/endpoints/summary",
+      "/api/automation/usage/alerts"
+    ],
+    "test_flows": [
+      "Hosted workflow run retries up to 3 attempts and uploads attempt artifacts.",
+      "Report includes awareness_reflection questions on infra_blocked/failure outcomes.",
+      "Checkpoint artifact is uploaded for retry-resume continuity."
+    ]
+  }
+}
