@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from scripts import run_self_improve_cycle
@@ -23,10 +24,10 @@ class _FakeClient:
         self,
         *,
         usage_payload: dict,
-        tasks_payload: list[dict] | None = None,
-        needs_decision_payload: list[dict] | None = None,
-        friction_payload: list[dict] | None = None,
-        runtime_payload: dict | None = None,
+        tasks_payload: object | None = None,
+        needs_decision_payload: object | None = None,
+        friction_payload: object | None = None,
+        runtime_payload: object | None = None,
         usage_error: Exception | None = None,
         post_error_plan: list[Exception] | None = None,
     ) -> None:
@@ -36,10 +37,10 @@ class _FakeClient:
         self._task_outputs: dict[str, str] = {}
         self._post_error_plan = list(post_error_plan or [])
         self.usage_payload = usage_payload
-        self.tasks_payload = tasks_payload or []
-        self.needs_decision_payload = needs_decision_payload or []
-        self.friction_payload = friction_payload or []
-        self.runtime_payload = runtime_payload or {}
+        self.tasks_payload = tasks_payload if tasks_payload is not None else []
+        self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
+        self.friction_payload = friction_payload if friction_payload is not None else []
+        self.runtime_payload = runtime_payload if runtime_payload is not None else {}
         self.usage_error = usage_error
 
     def post(
@@ -66,7 +67,12 @@ class _FakeClient:
 
         raise AssertionError(f"unexpected post url: {url}")
 
-    def get(self, url: str, timeout: float | None = None) -> _FakeResponse:  # noqa: ARG002
+    def get(  # noqa: ARG002
+        self,
+        url: str,
+        timeout: float | None = None,
+        headers: dict | None = None,
+    ) -> _FakeResponse:
         if "/api/automation/usage/alerts" in url:
             if self.usage_error:
                 raise self.usage_error
@@ -220,9 +226,36 @@ def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
         usage_cache_path="/tmp/self_improve_cache_retry_fail.json",
     )
 
-    assert report["status"] == "failed"
+    assert report["status"] == "infra_blocked"
     assert report["failed_stage"] == "plan_submit_or_wait"
     assert "task submit failed" in str(report["failure_error"])
+    assert report["awareness_reflection"]["status"] == "infra_blocked"
+
+
+def test_run_cycle_returns_infra_blocked_on_plan_submit_timeouts() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        post_error_plan=[
+            RuntimeError("read operation timed out"),
+            RuntimeError("read operation timed out"),
+            RuntimeError("read operation timed out"),
+        ],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_timeout_infra.json",
+    )
+
+    assert report["status"] == "infra_blocked"
+    assert report["failed_stage"] == "plan_submit_or_wait"
+    assert report["stages"] == []
 
 
 def test_run_cycle_skips_when_usage_too_close_to_limit() -> None:
@@ -355,3 +388,74 @@ def test_delta_summary_includes_before_after_metrics() -> None:
     assert delta["after_metrics"]["friction_open_count"] == 1
     assert delta["proof"]["before_counts"]["needs_decision_count"] == 1
     assert delta["proof"]["after_counts"]["needs_decision_count"] == 1
+
+
+def test_collect_input_bundle_parses_dict_task_payloads() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        tasks_payload={"tasks": [{"id": "t1", "status": "pending"}]},
+        needs_decision_payload={"tasks": [{"id": "t2", "status": "needs_decision"}]},
+        friction_payload={"events": [{"id": "f1", "block_type": "paid_provider_blocked"}]},
+        runtime_payload={"summary": [{"route": "/api/health"}]},
+    )
+
+    bundle = run_self_improve_cycle._collect_input_bundle(
+        client,
+        base_url="https://example.test",
+        threshold_ratio=0.15,
+        usage_cache_path=Path("/tmp/self_improve_cache_dict_payload.json"),
+    )
+
+    assert bundle["summary"]["task_count"] == 1
+    assert bundle["summary"]["needs_decision_count"] == 1
+    assert bundle["summary"]["friction_open_count"] == 1
+    assert bundle["summary"]["runtime_endpoint_count"] == 1
+
+
+def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "self_improve_checkpoint.json"
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "updated_at": "2099-01-01T00:00:00+00:00",
+                "status": "running",
+                "stages": [
+                    {
+                        "stage": "plan",
+                        "task_id": "task-plan-existing",
+                        "status": "completed",
+                        "executor": "codex",
+                        "model": "gpt-5.3-codex",
+                        "output": "existing plan output",
+                        "task": {
+                            "id": "task-plan-existing",
+                            "status": "completed",
+                            "output": "existing plan output",
+                            "context": {"executor": "codex", "source": "self_improve_cycle"},
+                            "model": "gpt-5.3-codex",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    client = _FakeClient(usage_payload=_default_usage_payload())
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_checkpoint_resume.json",
+        checkpoint_path=str(checkpoint),
+    )
+
+    assert report["status"] == "completed"
+    assert report["stages"][0]["stage"] == "plan"
+    assert report["stages"][0]["resumed"] is True
+    assert report["stages"][0]["resume_source"] == "checkpoint"
+    assert len(client.created_payloads) == 2
