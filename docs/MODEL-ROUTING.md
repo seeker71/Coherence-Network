@@ -113,6 +113,8 @@ Environment variables:
 - `AGENT_EXECUTOR_ESCALATE_TO` (default `claude`; if equal to cheap, falls back to `openclaw`)
 - `AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD` (default `2`)
 - `AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD` (default `1`)
+- `CURSOR_CLI_MODEL` / `CURSOR_CLI_REVIEW_MODEL` (recommended `auto`)
+- `CURSOR_SUBSCRIPTION_8H_LIMIT` / `CURSOR_SUBSCRIPTION_WEEK_LIMIT` (optional proactive backoff thresholds)
 
 Notes:
 
@@ -140,7 +142,13 @@ Use **Cursor CLI** (`agent` command) instead of Claude Code for headless, script
 
 | Task Type | Cursor Model |
 |-----------|--------------|
-| spec, impl, test | composer-1 |
-| review, heal | claude-4-opus |
+| spec, impl, test | auto |
+| review, heal | auto |
+
+Use `auto` as default so Cursor can balance availability/quality against subscription limits.  
+Track and back off via:
+- `GET /api/automation/usage`
+- `GET /api/automation/usage/alerts`
+- provider guard envs for Cursor window limits (`CURSOR_SUBSCRIPTION_8H_LIMIT`, `CURSOR_SUBSCRIPTION_WEEK_LIMIT`)
 
 See [CURSOR-CLI.md](CURSOR-CLI.md) for setup and usage.
