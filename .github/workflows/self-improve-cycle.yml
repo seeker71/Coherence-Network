@@ -61,14 +61,14 @@ jobs:
 
       - name: Upload self-improve report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: self_improve_cycle_report_${{ github.sha }}
           path: self_improve_cycle_report.json
 
       - name: Create or update self-improve failure issue
         if: ${{ steps.self_improve.outputs.exit_code != '0' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
@@ -124,7 +124,7 @@ jobs:
 
       - name: Resolve self-improve issue when cycle passes
         if: ${{ steps.self_improve.outputs.exit_code == '0' && steps.self_improve.outputs.report_status != 'infra_blocked' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const title = 'Self-improve cycle failing';
@@ -149,7 +149,7 @@ jobs:
 
       - name: Create or update self-improve infra blocked issue
         if: ${{ steps.self_improve.outputs.report_status == 'infra_blocked' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');

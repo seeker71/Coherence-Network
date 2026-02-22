@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -22,6 +23,99 @@ def _workflow_name_set(value: str) -> set[str]:
         if normalized:
             names.add(normalized)
     return names
+
+
+def _parse_iso8601_utc(value: str) -> datetime | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _load_json_file(path: Path) -> dict | list | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, (dict, list)):
+        return payload
+    return None
+
+
+def _load_workflow_owners(path: Path) -> dict[str, str]:
+    payload = _load_json_file(path)
+    if not isinstance(payload, dict):
+        return {}
+    mapping = payload.get("workflow_owners")
+    if not isinstance(mapping, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in mapping.items():
+        name = str(key or "").strip().lower()
+        owner = str(value or "").strip()
+        if name and owner:
+            out[name] = owner
+    return out
+
+
+def _load_active_waivers(path: Path, now: datetime) -> tuple[dict[str, list[dict]], list[str]]:
+    payload = _load_json_file(path)
+    if payload is None:
+        return {}, []
+    if not isinstance(payload, dict):
+        return {}, [f"start-gate: warning: invalid waiver payload in {path} (expected object)"]
+
+    rows = payload.get("waivers")
+    if not isinstance(rows, list):
+        return {}, [f"start-gate: warning: invalid waiver payload in {path} (missing waivers list)"]
+
+    warnings: list[str] = []
+    active_by_workflow: dict[str, list[dict]] = {}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            warnings.append(f"start-gate: warning: ignoring waiver[{index}] in {path} (expected object)")
+            continue
+        workflow = str(row.get("workflow") or "").strip().lower()
+        owner = str(row.get("owner") or "").strip()
+        reason = str(row.get("reason") or "").strip()
+        expires_at_raw = str(row.get("expires_at") or "").strip()
+        run_url_contains = str(row.get("run_url_contains") or "").strip()
+        expires_at = _parse_iso8601_utc(expires_at_raw)
+        if not workflow or not owner or not reason or expires_at is None:
+            warnings.append(
+                f"start-gate: warning: ignoring waiver[{index}] in {path} "
+                "(requires workflow, owner, reason, expires_at)"
+            )
+            continue
+        if expires_at <= now:
+            continue
+        waiver = {
+            "workflow": workflow,
+            "owner": owner,
+            "reason": reason,
+            "expires_at": expires_at,
+            "run_url_contains": run_url_contains,
+        }
+        active_by_workflow.setdefault(workflow, []).append(waiver)
+    return active_by_workflow, warnings
+
+
+def _match_waiver_for_failure(failure: dict, waivers: list[dict]) -> dict | None:
+    failure_url = str(failure.get("html_url") or "").strip()
+    for waiver in waivers:
+        run_url_contains = str(waiver.get("run_url_contains") or "").strip()
+        if run_url_contains and run_url_contains not in failure_url:
+            continue
+        return waiver
+    return None
 
 
 def run_json(cmd: list[str], *, required: bool = True) -> dict | None:
@@ -68,6 +162,24 @@ def main() -> None:
             "Maintainability Architecture Audit",
         )
     )
+    owners_file = Path(
+        os.environ.get(
+            "START_GATE_WORKFLOW_OWNERS_FILE",
+            "config/start_gate_workflow_owners.json",
+        )
+    )
+    waivers_file = Path(
+        os.environ.get(
+            "START_GATE_MAIN_FAILURE_WAIVERS_FILE",
+            "config/start_gate_main_workflow_waivers.json",
+        )
+    )
+    require_workflow_owner = env_flag("START_GATE_REQUIRE_WORKFLOW_OWNER", default=True)
+    now = datetime.now(timezone.utc)
+    workflow_owners = _load_workflow_owners(owners_file)
+    active_waivers, waiver_warnings = _load_active_waivers(waivers_file, now)
+    for warning in waiver_warnings:
+        print(warning)
 
     if require_gh_checks:
         run_command(["gh", "auth", "status"])
@@ -164,6 +276,16 @@ def main() -> None:
             if str(item.get("name") or "").strip().lower() in advisory_main_workflows
         ]
         blocking_failures = [item for item in failures if item not in advisory_failures]
+        waived_failures: list[tuple[dict, dict]] = []
+        remaining_blocking: list[dict] = []
+        for failure in blocking_failures:
+            name_key = str(failure.get("name") or "").strip().lower()
+            waiver = _match_waiver_for_failure(failure, active_waivers.get(name_key, []))
+            if waiver is None:
+                remaining_blocking.append(failure)
+                continue
+            waived_failures.append((failure, waiver))
+        blocking_failures = remaining_blocking
 
         if advisory_failures:
             advisory_text = ", ".join(
@@ -174,10 +296,33 @@ def main() -> None:
                 "start-gate: warning: advisory main workflow failures detected: "
                 f"{advisory_text}"
             )
+        if waived_failures:
+            waiver_text = ", ".join(
+                (
+                    f'{failure["name"]}={failure["conclusion"]} ({failure["html_url"]}) '
+                    f'waived_by={waiver["owner"]} until={waiver["expires_at"].isoformat()} '
+                    f'reason="{waiver["reason"]}"'
+                )
+                for failure, waiver in waived_failures
+            )
+            print(f"start-gate: warning: temporary workflow waivers applied: {waiver_text}")
 
         if blocking_failures:
+            if require_workflow_owner:
+                missing_owner = [
+                    item for item in blocking_failures if str(item.get("name") or "").strip().lower() not in workflow_owners
+                ]
+                if missing_owner:
+                    missing_text = ", ".join(str(item.get("name") or "unknown") for item in missing_owner)
+                    raise SystemExit(
+                        "start-gate: blocking main workflow failures missing owner mapping: "
+                        f"{missing_text}. Update {owners_file}."
+                    )
             failures_text = ", ".join(
-                f'{item["name"]}={item["conclusion"]} ({item["html_url"]})'
+                (
+                    f'{item["name"]}={item["conclusion"]} ({item["html_url"]}) '
+                    f'owner={workflow_owners.get(str(item.get("name") or "").strip().lower(), "unassigned")}'
+                )
                 for item in blocking_failures
             )
             if enforce_remote_failures:

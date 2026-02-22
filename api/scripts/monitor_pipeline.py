@@ -66,6 +66,8 @@ MAINTAINABILITY_AUDIT_LAST_RUN_FILE = os.path.join(LOG_DIR, "maintainability_aud
 MAINTAINABILITY_AUDIT_INTERVAL_SEC = 43200  # run maintainability audit at most once per 12h
 PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE = os.path.join(LOG_DIR, "public_deploy_contract_block_state.json")
 PROJECT_ROOT = os.path.dirname(_api_dir)
+START_GATE_WORKFLOW_OWNERS_FILE = os.path.join(PROJECT_ROOT, "config", "start_gate_workflow_owners.json")
+START_GATE_MAIN_WAIVERS_FILE = os.path.join(PROJECT_ROOT, "config", "start_gate_main_workflow_waivers.json")
 
 # Priority order: 1 = highest (address first)
 SEVERITY_TO_PRIORITY = {"high": 1, "medium": 2, "low": 3}
@@ -282,6 +284,66 @@ def _parse_ts_iso(raw: str | None) -> datetime | None:
         return None
 
 
+def _load_workflow_owners() -> dict[str, str]:
+    if not os.path.isfile(START_GATE_WORKFLOW_OWNERS_FILE):
+        return {}
+    try:
+        with open(START_GATE_WORKFLOW_OWNERS_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return {}
+    rows = payload.get("workflow_owners") if isinstance(payload, dict) else None
+    if not isinstance(rows, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in rows.items():
+        name = str(key or "").strip().lower()
+        owner = str(value or "").strip()
+        if name and owner:
+            out[name] = owner
+    return out
+
+
+def _load_active_start_gate_waivers(now: datetime) -> dict[str, list[dict[str, Any]]]:
+    if not os.path.isfile(START_GATE_MAIN_WAIVERS_FILE):
+        return {}
+    try:
+        with open(START_GATE_MAIN_WAIVERS_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return {}
+    waivers = payload.get("waivers") if isinstance(payload, dict) else None
+    if not isinstance(waivers, list):
+        return {}
+    out: dict[str, list[dict[str, Any]]] = {}
+    for row in waivers:
+        if not isinstance(row, dict):
+            continue
+        workflow = str(row.get("workflow") or "").strip().lower()
+        owner = str(row.get("owner") or "").strip()
+        reason = str(row.get("reason") or "").strip()
+        expires_at_raw = str(row.get("expires_at") or "").strip()
+        expires_at = _parse_ts_iso(expires_at_raw)
+        if not workflow or not owner or not reason or expires_at is None:
+            continue
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_utc = expires_at.astimezone(timezone.utc)
+        if expires_utc <= now:
+            continue
+        out.setdefault(workflow, []).append(
+            {
+                "workflow": workflow,
+                "owner": owner,
+                "reason": reason,
+                "expires_at": expires_utc.isoformat().replace("+00:00", "Z"),
+                "run_url_contains": str(row.get("run_url_contains") or "").strip(),
+                "hours_remaining": round((expires_utc - now).total_seconds() / 3600.0, 2),
+            }
+        )
+    return out
+
+
 def _collect_github_actions_health(log: logging.Logger) -> dict[str, Any]:
     health: dict[str, Any] = {
         "provider": "github-actions",
@@ -294,6 +356,8 @@ def _collect_github_actions_health(log: logging.Logger) -> dict[str, Any]:
         "failure_rate": 0.0,
         "wasted_minutes_failed": 0.0,
         "top_failed_workflows": [],
+        "unowned_failed_workflows": [],
+        "active_waivers": [],
         "sample_failed_run_links": [],
         "official_records": [
             "https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository",
@@ -389,10 +453,36 @@ def _collect_github_actions_health(log: logging.Logger) -> dict[str, Any]:
     health["failed_runs"] = failed
     health["failure_rate"] = round((failed / completed), 4) if completed > 0 else 0.0
     health["wasted_minutes_failed"] = round(wasted_seconds / 60.0, 2)
-    health["top_failed_workflows"] = [
-        {"workflow": name, "failed_runs": count}
-        for name, count in sorted(failed_workflow_counts.items(), key=lambda item: item[1], reverse=True)[:5]
-    ]
+    workflow_owners = _load_workflow_owners()
+    active_waivers = _load_active_start_gate_waivers(now)
+    top_failed_workflows: list[dict[str, Any]] = []
+    unowned: list[str] = []
+    for name, count in sorted(failed_workflow_counts.items(), key=lambda item: item[1], reverse=True)[:5]:
+        key = name.strip().lower()
+        owner = workflow_owners.get(key, "")
+        waiver_rows = active_waivers.get(key, [])
+        top_failed_workflows.append(
+            {
+                "workflow": name,
+                "failed_runs": count,
+                "owner": owner,
+                "active_waiver_count": len(waiver_rows),
+            }
+        )
+        if not owner:
+            unowned.append(name)
+        for waiver in waiver_rows:
+            health["active_waivers"].append(
+                {
+                    "workflow": name,
+                    "owner": waiver.get("owner"),
+                    "reason": waiver.get("reason"),
+                    "expires_at": waiver.get("expires_at"),
+                    "hours_remaining": waiver.get("hours_remaining"),
+                }
+            )
+    health["top_failed_workflows"] = top_failed_workflows
+    health["unowned_failed_workflows"] = unowned
     health["sample_failed_run_links"] = failed_links
     health["official_records"].append(f"https://github.com/{repo}/actions")
     health["official_records"].append(f"https://api.github.com/repos/{repo}/actions/runs")
@@ -1815,6 +1905,37 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             )
             if heal_task_id:
                 data["issues"][-1]["heal_task_id"] = heal_task_id
+        unowned_failed_workflows = (
+            gha_health.get("unowned_failed_workflows")
+            if isinstance(gha_health.get("unowned_failed_workflows"), list)
+            else []
+        )
+        if unowned_failed_workflows:
+            preview = ", ".join(str(name) for name in unowned_failed_workflows[:3])
+            _add_issue(
+                data,
+                "github_actions_unowned_workflow_failures",
+                "medium",
+                f"Failed workflows are missing owner mappings: {preview}",
+                "Add workflow owners in config/start_gate_workflow_owners.json so failures have explicit accountability.",
+            )
+        active_waivers = gha_health.get("active_waivers") if isinstance(gha_health.get("active_waivers"), list) else []
+        expiring = [
+            row for row in active_waivers
+            if isinstance(row, dict) and isinstance(row.get("hours_remaining"), (int, float)) and float(row["hours_remaining"]) <= 12.0
+        ]
+        if expiring:
+            preview = ", ".join(
+                f"{str(row.get('workflow') or 'unknown')}({float(row.get('hours_remaining') or 0.0):.1f}h)"
+                for row in expiring[:3]
+            )
+            _add_issue(
+                data,
+                "github_actions_waiver_expiring",
+                "medium",
+                f"Start-gate workflow waivers expiring soon: {preview}",
+                "Resolve the underlying workflow failures or renew waiver with owner+reason+expiry before it expires.",
+            )
 
     # Backlog alignment (spec 007 item 4): flag if Phase 6/7 items not being worked (from 006, PLAN phases)
     # Also: effectiveness 404 means API has stale routes — request restart so watchdog restarts API

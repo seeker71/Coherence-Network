@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/start-gate-hosted-unblock-20260222",
+  "commit_scope": "Harden start-gate with owner-mapped temporary waivers, surface waiver/owner drift in monitor health, and normalize self-improve workflow action refs to unblock hosted workflow validation.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml",
+    "scripts/start_gate.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "AGENTS.md",
+    "docs/RUNBOOK.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-22-start-gate-hosted-unblock"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/start_gate.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "AGENTS.md",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/commit_evidence_2026-02-22_start-gate-hosted-unblock.json",
+    "scripts/start_gate.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile scripts/start_gate.py api/scripts/monitor_pipeline.py",
+      "cd api && pytest -q tests/test_monitor_pipeline_github_actions.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-hosted-runner"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local gate chain, push, PR checks, and hosted workflow success proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "start-gate blocks only non-waived failures with explicit owners, warns on bounded waivers, and hosted self-improve workflow runs without startup-file errors.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/actions"
+    ],
+    "test_flows": [
+      "Run make start-gate from clean worktree and confirm pass with waiver metadata output.",
+      "Run monitor check path and confirm owner/waiver fields persist in github_actions_health artifact.",
+      "Run hosted workflow checks for this PR and confirm success on GitHub Actions runners."
+    ]
+  }
+}

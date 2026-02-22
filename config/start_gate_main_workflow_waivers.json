@@ -1,0 +1,11 @@
+{
+  "waivers": [
+    {
+      "workflow": ".github/workflows/self-improve-cycle.yml",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver for startup failure run while workflow action refs are normalized.",
+      "expires_at": "2026-02-23T23:59:59Z",
+      "run_url_contains": "actions/runs/22274275701"
+    }
+  ]
+}
