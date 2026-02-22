@@ -19,7 +19,11 @@
     {
       "contributor_id": "openai-codex",
       "contributor_type": "machine",
-      "roles": ["analysis", "implementation", "testing"]
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
     }
   ],
   "agent": {
@@ -36,9 +40,10 @@
   "change_files": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
-    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json"
+    "docs/system_audit/commit_evidence_2026-02-22_self_improve_resilient_bundle.json",
+    "docs/system_audit/self_improve_campaign_20260222T101129Z/"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -71,7 +76,7 @@
     "test_flows": [
       "Run self-improve cycle with live usage endpoint success and confirm completed run includes data_quality_mode and input_bundle summaries.",
       "Run self-improve cycle with usage timeout and no cache and confirm cycle continues with degraded_usage mode.",
-      "Run self-improve cycle with usage timeout and cached usage alerts near threshold and confirm skip with cached-based decision." 
+      "Run self-improve cycle with usage timeout and cached usage alerts near threshold and confirm skip with cached-based decision."
     ]
   }
 }
