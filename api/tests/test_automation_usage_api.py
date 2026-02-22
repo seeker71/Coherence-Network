@@ -224,6 +224,48 @@ def test_provider_limit_guard_decision_blocks_low_monthly_remaining(
     assert decision["blocked_metrics"][0]["remaining_ratio"] == pytest.approx(0.04, rel=1e-6)
 
 
+def test_required_providers_include_cursor_when_cursor_executor_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai")
+    monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
+    required = automation_usage_service._required_providers_from_env()
+    assert "cursor" in required
+
+
+def test_build_cursor_snapshot_includes_subscription_window_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_configured_status",
+        lambda provider: (True, [], ["CURSOR_CLI_MODEL"], []) if provider == "cursor" else (False, [], [], []),
+    )
+    monkeypatch.setenv("CURSOR_SUBSCRIPTION_8H_LIMIT", "100")
+    monkeypatch.setenv("CURSOR_SUBSCRIPTION_WEEK_LIMIT", "700")
+    monkeypatch.setattr(automation_usage_service.shutil, "which", lambda name: "/usr/local/bin/agent" if name == "agent" else None)
+    monkeypatch.setattr(automation_usage_service, "_cli_output", lambda command: (True, "agent 1.2.3"))
+
+    def _fake_window_counts(window_seconds: int) -> int:
+        if window_seconds == 8 * 60 * 60:
+            return 70
+        if window_seconds == 7 * 24 * 60 * 60:
+            return 280
+        return 0
+
+    monkeypatch.setattr(automation_usage_service, "_cursor_events_within_window", _fake_window_counts)
+
+    snapshot = automation_usage_service._build_cursor_snapshot()
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert snapshot.provider == "cursor"
+    assert snapshot.status == "ok"
+    assert "cursor_subscription_8h" in metrics
+    assert "cursor_subscription_week" in metrics
+    assert metrics["cursor_subscription_8h"].remaining == pytest.approx(30.0, rel=1e-6)
+    assert metrics["cursor_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
+    assert snapshot.data_source == "provider_cli"
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,

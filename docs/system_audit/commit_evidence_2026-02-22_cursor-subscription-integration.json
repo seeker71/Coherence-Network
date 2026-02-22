@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/cursor-subscription-integration-20260222",
+  "commit_scope": "Fully integrate renewed Cursor subscription operations: default auto model routing, Cursor CLI/provider readiness telemetry, subscription window backoff metrics, and documentation for proactive limit-aware usage.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100-automation-provider-usage-readiness-api"
+  ],
+  "task_ids": [
+    "task-2026-02-22-cursor-subscription-integration"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-02-22_cursor-subscription-integration.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile api/app/services/automation_usage_service.py api/app/services/agent_routing_service.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-hosted-runner"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting full local gate chain, push/PR, and hosted runner green checks."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Cursor is first-class in readiness/usage telemetry with limit-window metrics and proactive backoff signals while default routing uses subscription-aware auto model selection.",
+    "public_endpoints": [
+      "/api/automation/usage",
+      "/api/automation/usage/alerts",
+      "/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Collect usage overview and verify cursor provider snapshot includes CLI readiness notes plus optional 8h/weekly subscription metrics when configured.",
+      "Run provider guard decision for cursor with low remaining ratios and confirm blocked decision for proactive backoff.",
+      "Run hosted PR checks and verify full success on GitHub Actions runners."
+    ]
+  }
+}
