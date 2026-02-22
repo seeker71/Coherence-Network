@@ -15,6 +15,7 @@ jobs:
       SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://coherence-network-production.up.railway.app' }}
       SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
       AGENT_EXECUTE_TOKEN: ${{ secrets.AGENT_EXECUTE_TOKEN }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,28 +32,68 @@ jobs:
         id: self_improve
         run: |
           set +e
-          python api/scripts/run_self_improve_cycle.py \
-            --base-url "${SELF_IMPROVE_API_URL}" \
-            --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
-            --execute-pending \
-            --json > self_improve_cycle_report.json
-          code=$?
-          if [ ! -s self_improve_cycle_report.json ]; then
-            printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > self_improve_cycle_report.json
-          fi
-          cat self_improve_cycle_report.json
-          status=$(python - <<'PY'
+          final_status="unknown"
+          final_code=2
+          : > self_improve_cycle_attempts.jsonl
+          for attempt in 1 2 3; do
+            report_file="self_improve_cycle_report_attempt_${attempt}.json"
+            python api/scripts/run_self_improve_cycle.py \
+              --base-url "${SELF_IMPROVE_API_URL}" \
+              --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
+              --execute-pending \
+              --infra-preflight-attempts 6 \
+              --infra-preflight-consecutive-successes 2 \
+              --checkpoint-file self_improve_checkpoint.json \
+              --json > "${report_file}"
+            code=$?
+            if [ ! -s "${report_file}" ]; then
+              printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > "${report_file}"
+              code=2
+            fi
+            status=$(python - <<PY
           import json
           try:
-              with open("self_improve_cycle_report.json", "r", encoding="utf-8") as fh:
+              with open("${report_file}", "r", encoding="utf-8") as fh:
                   data = json.load(fh)
               print(str(data.get("status") or "unknown"))
           except Exception:
               print("unknown")
           PY
           )
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          echo "report_status=$status" >> "$GITHUB_OUTPUT"
+            python - <<PY >> self_improve_cycle_attempts.jsonl
+          import json
+          report = {}
+          try:
+              with open("${report_file}", "r", encoding="utf-8") as fh:
+                  report = json.load(fh)
+          except Exception:
+              report = {"status": "unknown"}
+          print(json.dumps({
+              "attempt": ${attempt},
+              "status": report.get("status", "unknown"),
+              "failed_stage": report.get("failed_stage", ""),
+              "data_quality_mode": report.get("data_quality_mode", ""),
+              "stages": report.get("stages", []),
+          }))
+          PY
+            cat "${report_file}"
+            final_status="${status}"
+            final_code="${code}"
+            cp "${report_file}" self_improve_cycle_report.json
+            if [ "${status}" = "completed" ] || [ "${status}" = "skipped" ]; then
+              break
+            fi
+            if [ "${attempt}" -lt 3 ]; then
+              sleep_seconds=$((20 * attempt))
+              sleep "${sleep_seconds}"
+            fi
+          done
+
+          if [ ! -s self_improve_cycle_report.json ]; then
+            printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > self_improve_cycle_report.json
+          fi
+          echo "exit_code=${final_code}" >> "$GITHUB_OUTPUT"
+          echo "report_status=${final_status}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload self-improve report
@@ -60,7 +101,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: self_improve_cycle_report_${{ github.sha }}
-          path: self_improve_cycle_report.json
+          path: |
+            self_improve_cycle_report.json
+            self_improve_cycle_report_attempt_*.json
+            self_improve_cycle_attempts.jsonl
+            self_improve_checkpoint.json
 
       - name: Create or update self-improve failure issue
         if: ${{ steps.self_improve.outputs.exit_code != '0' }}
