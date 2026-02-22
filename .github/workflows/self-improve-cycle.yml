@@ -14,6 +14,8 @@ jobs:
     env:
       SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://coherence-network-production.up.railway.app' }}
       SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
+      SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS: ${{ vars.SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS || '5' }}
+      SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES: ${{ vars.SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES || '2' }}
       AGENT_EXECUTE_TOKEN: ${{ secrets.AGENT_EXECUTE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +36,8 @@ jobs:
           python api/scripts/run_self_improve_cycle.py \
             --base-url "${SELF_IMPROVE_API_URL}" \
             --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
+            --infra-preflight-attempts "${SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS}" \
+            --infra-preflight-consecutive-successes "${SELF_IMPROVE_INFRA_PREFLIGHT_CONSECUTIVE_SUCCESSES}" \
             --execute-pending \
             --json > self_improve_cycle_report.json
           code=$?
@@ -41,7 +45,18 @@ jobs:
             printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > self_improve_cycle_report.json
           fi
           cat self_improve_cycle_report.json
+          status=$(python - <<'PY'
+import json
+try:
+    with open("self_improve_cycle_report.json", "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+    print(str(data.get("status") or "unknown"))
+except Exception:
+    print("unknown")
+PY
+)
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          echo "report_status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload self-improve report
@@ -108,7 +123,7 @@ jobs:
             }
 
       - name: Resolve self-improve issue when cycle passes
-        if: ${{ steps.self_improve.outputs.exit_code == '0' }}
+        if: ${{ steps.self_improve.outputs.exit_code == '0' && steps.self_improve.outputs.report_status != 'infra_blocked' }}
         uses: actions/github-script@v8
         with:
           script: |
@@ -131,6 +146,58 @@ jobs:
               issue_number: issue.number,
               state: 'closed',
             });
+
+      - name: Create or update self-improve infra blocked issue
+        if: ${{ steps.self_improve.outputs.report_status == 'infra_blocked' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            let report = {};
+            try {
+              const raw = fs.readFileSync('self_improve_cycle_report.json', 'utf8');
+              report = JSON.parse(raw || '{}');
+            } catch (err) {
+              report = {
+                status: 'infra_blocked',
+                failed_stage: 'report_parse',
+                error: String(err || 'json_parse_error'),
+              };
+            }
+            const title = 'Self-improve infra blocked';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const history = Array.isArray(report?.infra_preflight?.history) ? report.infra_preflight.history : [];
+            const body = [
+              'Self-improve cycle skipped because infrastructure preflight failed.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Status: ${report.status || 'unknown'}`,
+              `- Skip reason: ${report.skip_reason || 'unknown'}`,
+              `- Preflight error: ${report?.infra_preflight?.preflight_error || 'unknown'}`,
+              '',
+              'Preflight history:',
+              ...(history.length
+                ? history.map((row) => `- attempt=${row.attempt} ok=${row.ok} error=${row.error || 'none'}`)
+                : ['- (none)']),
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
 
       - name: Fail when cycle is not successful
         if: ${{ steps.self_improve.outputs.exit_code != '0' }}

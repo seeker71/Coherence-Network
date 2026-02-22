@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/codex-self-heal-preflight-guard-20260221-230012",
+  "commit_scope": "Add infrastructure preflight guards and infra_blocked handling for scheduled self-improve runs to stop repeated 502/timeout execution loops.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-22-self-improve-infra-preflight-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/commit_evidence_2026-02-22_self-improve-infra-preflight-guard.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and hosted workflow verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self-improve cycle now requires consecutive healthy infra preflight checks and returns infra_blocked without creating tasks when endpoints are unstable.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/health/persistence",
+      "/api/automation/usage/alerts"
+    ],
+    "test_flows": [
+      "Run self-improve workflow during API instability and verify report_status=infra_blocked with preflight history.",
+      "Run self-improve workflow during healthy API and verify plan/execute/review tasks are created and executed."
+    ]
+  }
+}
