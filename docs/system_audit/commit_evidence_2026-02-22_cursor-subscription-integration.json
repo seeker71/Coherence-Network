@@ -46,7 +46,7 @@
     "docs/MODEL-ROUTING.md",
     "docs/system_audit/commit_evidence_2026-02-22_cursor-subscription-integration.json"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_feature",
   "local_validation": {
     "status": "pass",
     "commands": [
