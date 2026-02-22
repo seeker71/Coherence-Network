@@ -50,7 +50,9 @@
       "cd api && pytest -q tests/test_run_self_improve_cycle.py | tee \"../docs/system_audit/self_improve_campaign_20260222T101129Z/02_pytest.txt\"",
       "python3 scripts/validate_workflow_references.py | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/03_workflow_refs.txt\"",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt\""
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main | tee \"docs/system_audit/self_improve_campaign_20260222T101129Z/04_pr_guard.txt\"",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main > /tmp/step4_guard_check.log",
+      "ls docs/system_audit/self_improve_campaign_20260222T101129Z | sed -n '1,120p'"
     ]
   },
   "ci_validation": {
