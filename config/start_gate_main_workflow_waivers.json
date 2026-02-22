@@ -6,6 +6,20 @@
       "reason": "Temporary waiver for startup failure run while workflow action refs are normalized.",
       "expires_at": "2026-02-23T23:59:59Z",
       "run_url_contains": "actions/runs/22274275701"
+    },
+    {
+      "workflow": "Self Improve Cycle",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while self-improve cycle is failing on hosted runtime prerequisites.",
+      "expires_at": "2026-02-23T23:59:59Z",
+      "run_url_contains": "actions/runs/22275468901"
+    },
+    {
+      "workflow": "Public Deploy Contract",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver for cancelled run during concurrent workflow dispatch.",
+      "expires_at": "2026-02-23T23:59:59Z",
+      "run_url_contains": "actions/runs/22275460127"
     }
   ]
 }
