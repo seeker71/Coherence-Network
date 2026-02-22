@@ -1,0 +1,1382 @@
+{
+  "cursor_cli": {
+    "about": {
+      "command": [
+        "agent",
+        "about"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading...\n\u001b[2K\u001b[1A\u001b[2K\u001b[GAbout Cursor CLI\n\nCLI Version         2026.01.28-fd13201\nModel               Auto\nOS                  darwin (arm64)\nTerminal            unknown\nShell               zsh\nUser Email          Not logged in"
+    },
+    "models": {
+      "command": [
+        "agent",
+        "models"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading models\u2026\n\u001b[2K\u001b[1A\u001b[2K\u001b[GNo models available for this account."
+    },
+    "status": {
+      "command": [
+        "agent",
+        "status"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[G\n Starting login process...\n\n\u001b[2K\u001b[1A\u001b[2K\u001b[1A\u001b[2K\u001b[G Not logged in"
+    }
+  },
+  "generated_at": "2026-02-22T10:33:38Z",
+  "local_cursor_guard_decision": {
+    "allowed": true,
+    "blocked_metrics": [],
+    "evaluated_metrics": [],
+    "provider": "cursor",
+    "reason": "within_window_thresholds",
+    "status": "unavailable"
+  },
+  "local_cursor_provider_snapshot": {
+    "actual_current_usage": 16.0,
+    "actual_current_usage_unit": "tasks",
+    "capacity_tasks_per_day": null,
+    "collected_at": "2026-02-22T10:33:37.239514Z",
+    "cost_usd": null,
+    "data_source": "provider_cli",
+    "id": "provider_cursor_1771756417",
+    "kind": "custom",
+    "metrics": [
+      {
+        "id": "runtime_task_runs",
+        "label": "Runtime task runs",
+        "limit": null,
+        "remaining": null,
+        "unit": "tasks",
+        "used": 16.0,
+        "window": "rolling"
+      }
+    ],
+    "notes": [
+      "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+      "cursor_cli_ready: 2026.01.28-fd13201",
+      "provider observed in runtime usage but key/config is missing or provider checks are failing"
+    ],
+    "official_records": [],
+    "provider": "cursor",
+    "raw": {
+      "agent_binary": "/Users/ursmuff/.local/bin/agent",
+      "cli_probe_detail": "2026.01.28-fd13201",
+      "cli_probe_ok": true,
+      "configured_env_keys": [],
+      "limits": {
+        "cursor_subscription_8h_limit": 0,
+        "cursor_subscription_week_limit": 0
+      },
+      "missing_env_keys": [
+        "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+      ],
+      "runtime_task_runs": 16
+    },
+    "status": "unavailable",
+    "usage_per_time": null,
+    "usage_remaining": null,
+    "usage_remaining_unit": null
+  },
+  "local_runtime_usage": {
+    "by_model": {},
+    "execution": {
+      "by_agent": {
+        "runner-a": {
+          "completed": 0,
+          "count": 4,
+          "failed": 4
+        },
+        "unknown": {
+          "completed": 0,
+          "count": 10,
+          "failed": 10
+        }
+      },
+      "by_executor": {
+        "cursor": {
+          "completed": 0,
+          "count": 10,
+          "failed": 10
+        },
+        "openclaw": {
+          "completed": 0,
+          "count": 4,
+          "failed": 4
+        }
+      },
+      "by_tool": {
+        "agent-task-completion": {
+          "completed": 0,
+          "count": 14,
+          "failed": 14,
+          "success_rate": 0.0
+        }
+      },
+      "codex_runs": 0,
+      "coverage": {
+        "completed_or_failed_tasks": 0,
+        "coverage_rate": 1.0,
+        "tracked_task_runs": 0,
+        "untracked_task_ids": []
+      },
+      "failed_runs": 14,
+      "recent_runs": [
+        {
+          "agent_id": "runner-a",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_3e23b64b51ff",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-02-22T10:13:50.373249+00:00",
+          "runtime_ms": 3700004.031,
+          "status_code": 500,
+          "task_id": "task_225d93cc1b2eea28",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_efa07375a63c",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:13:50.174266+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_8abe996377d2d1f0",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_ee44e35e59ae",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:13:50.108117+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_bca7bcf445490fef",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "runner-a",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_e9fa3152b4d5",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-02-22T10:11:12.743312+00:00",
+          "runtime_ms": 3700004.499,
+          "status_code": 500,
+          "task_id": "task_f1981d2551f65361",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_a78b689b7eba",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:11:12.578578+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_aea455770f65840e",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_ef7734e480cc",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:11:12.530332+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_7d12d3fbd1db962b",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_a7bcd9c98c8f",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:09:51.486813+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_eea9925f08ba228d",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_1fb71d340360",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "cursor",
+          "recorded_at": "2026-02-22T10:09:51.441350+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_6f89c0813259575c",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "runner-a",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_39bf7615268e",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-02-22T09:58:34.834687+00:00",
+          "runtime_ms": 3700004.175,
+          "status_code": 500,
+          "task_id": "task_816e514956c2c6ab",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_2c4363783050",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "openrouter",
+          "recorded_at": "2026-02-22T09:58:34.726415+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_5a3c95141c9e8426",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_507e7a165de7",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "openrouter",
+          "recorded_at": "2026-02-22T09:58:34.698828+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_da84079b330d1031",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "runner-a",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_a87cbd9b8698",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-02-22T09:56:20.153500+00:00",
+          "runtime_ms": 3700004.604,
+          "status_code": 500,
+          "task_id": "task_dcb35aaa11722951",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_ab9e0f0a1ee2",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "openrouter",
+          "recorded_at": "2026-02-22T09:56:20.091892+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_997ab29baf712196",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_dcc672a7eec3",
+          "executor": "cursor",
+          "is_openai_codex": false,
+          "provider": "openrouter",
+          "recorded_at": "2026-02-22T09:56:20.086952+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_1c1d41f68a47011d",
+          "tool": "agent-task-completion"
+        }
+      ],
+      "success_rate": 0.0,
+      "success_runs": 0,
+      "tracked_runs": 14
+    }
+  },
+  "official_sources": [
+    "https://www.cursor.com/pricing",
+    "https://docs.cursor.com/account/pricing",
+    "https://www.cursor.com/changelog/our-shift-to-usage-based-pricing",
+    "https://www.cursor.com/pricing/business"
+  ],
+  "public_api_snapshots": {
+    "usage_overview": {
+      "error": "",
+      "json": {
+        "generated_at": "2026-02-22T10:32:34.058333Z",
+        "limit_coverage": {
+          "coverage_ratio": 0.1,
+          "providers_considered": 10,
+          "providers_missing_limit_metrics": [
+            "anthropic",
+            "claude",
+            "cursor",
+            "openai",
+            "openai-codex",
+            "openclaw",
+            "openrouter",
+            "railway",
+            "supabase"
+          ],
+          "providers_partial_limit_metrics": [],
+          "providers_with_limit_metrics": 1,
+          "providers_with_remaining_metrics": 1
+        },
+        "providers": [
+          {
+            "actual_current_usage": 0.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": 0.0,
+            "collected_at": "2026-02-22T10:32:17.323254Z",
+            "cost_usd": null,
+            "data_source": "runtime_events",
+            "id": "provider_internal_1771756337",
+            "kind": "internal",
+            "metrics": [
+              {
+                "id": "tasks_tracked",
+                "label": "Tracked task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 0.0,
+                "window": "rolling"
+              },
+              {
+                "id": "tasks_failed",
+                "label": "Failed task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 0.0,
+                "window": "rolling"
+              },
+              {
+                "id": "tasks_untracked",
+                "label": "Completed/failed tasks without usage",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 194.0,
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "Execution success rate 100.0%"
+            ],
+            "official_records": [
+              "/api/usage",
+              "/api/automation/usage"
+            ],
+            "provider": "coherence-internal",
+            "raw": {
+              "execution": {
+                "by_agent": {},
+                "by_executor": {},
+                "by_tool": {},
+                "codex_runs": 0,
+                "coverage": {
+                  "completed_or_failed_tasks": 194,
+                  "coverage_rate": 0.0,
+                  "tracked_task_runs": 0,
+                  "untracked_task_ids": [
+                    "task_0022f6fa6d2d5a37",
+                    "task_00e1beca1e8e4797",
+                    "task_031dc02a66931022",
+                    "task_0372e779917fb6d8",
+                    "task_059f58545ff10457",
+                    "task_05b055d0332f65d0",
+                    "task_06ff93a6da0e40ff",
+                    "task_073c03fbc5232ccd",
+                    "task_07ba8436e3c4290d",
+                    "task_08ddee1921c1a9fd",
+                    "task_08e05afaa93c89e6",
+                    "task_09694a12f3e51168",
+                    "task_0a467386309d53c3",
+                    "task_0a814c000bc817e6",
+                    "task_0b3b26af4ddbb452",
+                    "task_0fb9c65e54a6a087",
+                    "task_104f5c2f49e7b887",
+                    "task_11eb448e26149206",
+                    "task_11f920229020e20e",
+                    "task_14ca7953227e9b5e",
+                    "task_165b580ce4baac1b",
+                    "task_1749318808cd5a81",
+                    "task_19769e1a97562f4b",
+                    "task_19bb4f8a82a809d3",
+                    "task_1c7193a922ee8211",
+                    "task_235a3610d6e62cca",
+                    "task_24340aaa12c02b37",
+                    "task_2696dc22b2a4b0a7",
+                    "task_28423f01fe3bccc6",
+                    "task_28917ba93d25de34",
+                    "task_2a2063c1f7e8d25c",
+                    "task_2a2fda1392be29ac",
+                    "task_2ce5a2c007413aaa",
+                    "task_2e7dc038dab9a3a9",
+                    "task_2f11950b158c9075",
+                    "task_2f8ebc8ad1564000",
+                    "task_30b95071174ef9bb",
+                    "task_316ec2d0078e879b",
+                    "task_320a74163cc1f642",
+                    "task_359c8a4a0f4a648c",
+                    "task_36a19e39d5f3b6d2",
+                    "task_36e21be584bea3c0",
+                    "task_39f9d860524285d3",
+                    "task_3b769b9c9e7da9ed",
+                    "task_3c4d23de5f8ba9aa",
+                    "task_3d1fb345425be6c0",
+                    "task_3fc816565759b4fe",
+                    "task_40315a491310140b",
+                    "task_40d312b2bfb054ec",
+                    "task_41ad96e5e5b9c920",
+                    "task_4740d8512018645e",
+                    "task_47f5b20cf8722658",
+                    "task_47f7c33bb0296b39",
+                    "task_4985c2c3967e36dc",
+                    "task_4b3ee51e0ce8a694",
+                    "task_4cd4f158c05d7b3a",
+                    "task_5202716e21bcf290",
+                    "task_53111a59c7b4015c",
+                    "task_575a05551652a2f1",
+                    "task_57c80a9f7f23205b",
+                    "task_58829b43b79b780a",
+                    "task_590c8c18ccbdbb15",
+                    "task_5aafefb7c722370a",
+                    "task_5ae60e7390e24182",
+                    "task_5b41a38dcbbd679d",
+                    "task_5bf765978f547728",
+                    "task_5d62440cf6f97bd5",
+                    "task_5dbf2e0f8c896f1c",
+                    "task_5e56216192173c3b",
+                    "task_5f03381abde100e1",
+                    "task_5f3fa9399348d1d8",
+                    "task_5f8dbf49b2ea9f2e",
+                    "task_60f426f95f2e5766",
+                    "task_643aabddb30cc283",
+                    "task_64fda47091fcf552",
+                    "task_653f454a407ce381",
+                    "task_66c78b91a90a8e1e",
+                    "task_672ce63ea931935d",
+                    "task_68a31737e2db4369",
+                    "task_68e7eb1a555be31b",
+                    "task_69ee93875827494b",
+                    "task_6bd3127f968a5de4",
+                    "task_6c307824638e4c2f",
+                    "task_6f63bd4a8d4b61da",
+                    "task_6fa0517be19478ba",
+                    "task_74d913ee386af6e7",
+                    "task_7597e5c2be051351",
+                    "task_76ffd09ae15337a0",
+                    "task_79e6d0e9d9c141ab",
+                    "task_7a7b4403c6bb5c2f",
+                    "task_7a8826453d39d42e",
+                    "task_7b52c5d24855f120",
+                    "task_7ba66c104d1a529e",
+                    "task_7ccc8845f0bcff70",
+                    "task_7da0b449c6ea8876",
+                    "task_7dd651b0755fc75e",
+                    "task_7e98dce126fc405f",
+                    "task_7eb7c4e4e92498b0",
+                    "task_7ecb0628b3483d8e",
+                    "task_7eea921695de8b74",
+                    "task_80112263ea23cf20",
+                    "task_80f57ced78d344fe",
+                    "task_84bc9c7238318b02",
+                    "task_85ac555c17bc0f22",
+                    "task_85ba29439f436d68",
+                    "task_86a03d92a225dec6",
+                    "task_86e76472c326f3d9",
+                    "task_88328ed09840a531",
+                    "task_888b49d75b307c10",
+                    "task_8d234c5f53d9f40c",
+                    "task_8d57a6d2cef904bf",
+                    "task_906faef73e031cb2",
+                    "task_9423f09b4071db7e",
+                    "task_942e6741c3af7482",
+                    "task_9447a941cedc0595",
+                    "task_94b0fcb08a3c38f9",
+                    "task_9581db0edd7e5671",
+                    "task_9a45765c9378600c",
+                    "task_9a4d637994f78885",
+                    "task_9b7250ae3007ae67",
+                    "task_9e0ee9a10c74f494",
+                    "task_9f1657bb1d89803b",
+                    "task_9f782d69484ef31f",
+                    "task_9fd36c195d94649a",
+                    "task_a0d1dc82707561de",
+                    "task_a325680fcd625c73",
+                    "task_a3272029c2351bbe",
+                    "task_a43e693593b64f9d",
+                    "task_a61ecc837000a0ef",
+                    "task_a8a8148047a9dc0f",
+                    "task_a9502fefea8de90c",
+                    "task_aaa992a8adacd5da",
+                    "task_ab4a082392d5261e",
+                    "task_abe8192cfa915431",
+                    "task_ae7e401ad4a6ca0c",
+                    "task_b103d3e25f23437a",
+                    "task_b230d2107efea98b",
+                    "task_b2d6ba7d3c96dbba",
+                    "task_b4c49be570ad0e28",
+                    "task_b54b966ceb94f6a7",
+                    "task_b64fe29a5799c348",
+                    "task_b81274d6e698e6a6",
+                    "task_baa8e84faa749b1c",
+                    "task_bbcd5aa24c532c79",
+                    "task_bc95e91205261492",
+                    "task_bd5570e5e327660a",
+                    "task_bdbdb4521f4d5f18",
+                    "task_be620c1831b88ad7",
+                    "task_be90cb8d82a6dd48",
+                    "task_c2563f54cb207bb8",
+                    "task_c25759f67d257f5f",
+                    "task_c275235f168d8dae",
+                    "task_c324ad0b682c5635",
+                    "task_c372338a34b3a148",
+                    "task_c39c3afb77a91e39",
+                    "task_c5571a2dae262b30",
+                    "task_c5dd36c58c1cb602",
+                    "task_c61bd6e3b4e7d736",
+                    "task_c7f05fd0a719c01a",
+                    "task_c945ead6a74162d8",
+                    "task_cae9d444cb3f7315",
+                    "task_cb2107d46d879577",
+                    "task_cb98687d6d890e2a",
+                    "task_ce481fa3b82b961f",
+                    "task_d278d56c2a1a7173",
+                    "task_d35811e406283d7b",
+                    "task_d5e16d762a45e42c",
+                    "task_d613217f6faea000",
+                    "task_d8f788fd33b0d4bd",
+                    "task_dcc0fbfd5f654e53",
+                    "task_dd26e73b122c04a5",
+                    "task_ddad4919a772cc04",
+                    "task_dfb2a0be53a60a9b",
+                    "task_e0316ae2d9027f62",
+                    "task_e05658720a846978",
+                    "task_e27d1b5ea86ce5b6",
+                    "task_e3c9942061be3756",
+                    "task_e3f289e320ba49f3",
+                    "task_e6bd60c518091ce0",
+                    "task_e79cbb8cb6e27eca",
+                    "task_e9f33c9bc7b24fd4",
+                    "task_eb85e9f7bfa97ad7",
+                    "task_eb95286a3da1d575",
+                    "task_ee9f3c48386ddf2d",
+                    "task_eee9ab13d3ddf3a8",
+                    "task_eef86d1b9896e246",
+                    "task_ef6e8369e3d84b4e",
+                    "task_efc2d6010dd9b743",
+                    "task_f0deefef52cfca9a",
+                    "task_f3bd48ed1a131036",
+                    "task_f4b6f2e540d85073",
+                    "task_f51fa160c52b9b46",
+                    "task_fe14875de963fc8b",
+                    "task_fe31655c4f614bc4"
+                  ]
+                },
+                "failed_runs": 0,
+                "recent_runs": [],
+                "success_rate": 1.0,
+                "success_runs": 0,
+                "tracked_runs": 0
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 111.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:17.635833Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_openai_codex_1771756337",
+            "kind": "custom",
+            "metrics": [
+              {
+                "id": "models_visible",
+                "label": "OpenAI visible models",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 119.0,
+                "window": "probe"
+              },
+              {
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 111.0,
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "OpenAI models probe succeeded, but no request/token remaining headers were returned.",
+              "OpenAI responses quota probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+            ],
+            "official_records": [
+              "https://api.openai.com/v1/models",
+              "https://platform.openai.com/docs/api-reference/models/list"
+            ],
+            "provider": "openai-codex",
+            "raw": {
+              "models_count": 119,
+              "probe_url": "https://api.openai.com/v1/models",
+              "rate_limit_headers": {
+                "x-ratelimit-limit-requests": null,
+                "x-ratelimit-limit-tokens": null,
+                "x-ratelimit-remaining-requests": null,
+                "x-ratelimit-remaining-tokens": null
+              },
+              "runtime_task_runs": 111
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 9.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:18.203618Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_claude_1771756338",
+            "kind": "custom",
+            "metrics": [
+              {
+                "id": "models_visible",
+                "label": "Claude visible models",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 9.0,
+                "window": "probe"
+              }
+            ],
+            "notes": [
+              "Claude models probe succeeded, but no request/token remaining headers were returned.",
+              "Anthropic messages quota probe failed: Client error '404 Not Found' for url 'https://api.anthropic.com/v1/messages'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "official_records": [
+              "https://api.anthropic.com/v1/models",
+              "https://docs.anthropic.com/en/api/models-list"
+            ],
+            "provider": "claude",
+            "raw": {
+              "models_count": 9,
+              "probe_url": "https://api.anthropic.com/v1/models",
+              "rate_limit_headers": {
+                "anthropic-ratelimit-requests-limit": null,
+                "anthropic-ratelimit-requests-remaining": null,
+                "anthropic-ratelimit-tokens-limit": null,
+                "anthropic-ratelimit-tokens-remaining": null
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 737.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:18.964482Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_github_1771756338",
+            "kind": "github",
+            "metrics": [
+              {
+                "id": "rest_requests",
+                "label": "GitHub REST core requests",
+                "limit": 5000.0,
+                "remaining": 4263.0,
+                "unit": "requests",
+                "used": 737.0,
+                "window": "hourly"
+              }
+            ],
+            "notes": [
+              "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "official_records": [
+              "https://api.github.com/rate_limit",
+              "https://api.github.com/users/seeker71/settings/billing/actions",
+              "https://docs.github.com/en/rest/rate-limit/rate-limit",
+              "https://docs.github.com/en/rest/billing/billing"
+            ],
+            "provider": "github",
+            "raw": {
+              "billing_url": "https://api.github.com/users/seeker71/settings/billing/actions",
+              "included_minutes": 0.0,
+              "minutes_used_breakdown": null,
+              "rate_limit": {
+                "actions_runner_registration": {
+                  "limit": 10000,
+                  "remaining": 10000,
+                  "reset": 1771759938,
+                  "used": 0
+                },
+                "audit_log": {
+                  "limit": 1750,
+                  "remaining": 1750,
+                  "reset": 1771759938,
+                  "used": 0
+                },
+                "audit_log_streaming": {
+                  "limit": 15,
+                  "remaining": 15,
+                  "reset": 1771759938,
+                  "used": 0
+                },
+                "code_scanning_autofix": {
+                  "limit": 10,
+                  "remaining": 10,
+                  "reset": 1771756398,
+                  "used": 0
+                },
+                "code_scanning_upload": {
+                  "limit": 5000,
+                  "remaining": 4263,
+                  "reset": 1771756385,
+                  "used": 737
+                },
+                "code_search": {
+                  "limit": 10,
+                  "remaining": 10,
+                  "reset": 1771756398,
+                  "used": 0
+                },
+                "core": {
+                  "limit": 5000,
+                  "remaining": 4263,
+                  "reset": 1771756385,
+                  "used": 737
+                },
+                "dependency_sbom": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1771756398,
+                  "used": 0
+                },
+                "dependency_snapshots": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1771756398,
+                  "used": 0
+                },
+                "graphql": {
+                  "limit": 5000,
+                  "remaining": 4879,
+                  "reset": 1771757349,
+                  "used": 121
+                },
+                "integration_manifest": {
+                  "limit": 5000,
+                  "remaining": 5000,
+                  "reset": 1771759938,
+                  "used": 0
+                },
+                "scim": {
+                  "limit": 15000,
+                  "remaining": 15000,
+                  "reset": 1771759938,
+                  "used": 0
+                },
+                "search": {
+                  "limit": 30,
+                  "remaining": 30,
+                  "reset": 1771756398,
+                  "used": 0
+                },
+                "source_import": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1771756398,
+                  "used": 0
+                }
+              },
+              "rate_limit_url": "https://api.github.com/rate_limit",
+              "total_minutes_used": 0.0
+            },
+            "status": "ok",
+            "usage_per_time": "737.0 requests/hour",
+            "usage_remaining": 4263.0,
+            "usage_remaining_unit": "requests"
+          },
+          {
+            "actual_current_usage": null,
+            "actual_current_usage_unit": null,
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:21.867046Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_openai_1771756341",
+            "kind": "openai",
+            "metrics": [],
+            "notes": [
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+            ],
+            "official_records": [
+              "https://api.openai.com/v1/organization/usage/completions",
+              "https://api.openai.com/v1/organization/costs",
+              "https://platform.openai.com/docs/api-reference/usage",
+              "https://platform.openai.com/docs/api-reference/costs"
+            ],
+            "provider": "openai",
+            "raw": {
+              "cost_records": 0,
+              "costs_url": "https://api.openai.com/v1/organization/costs",
+              "usage_records": 0,
+              "usage_url": "https://api.openai.com/v1/organization/usage/completions",
+              "window_end_unix": 1771756338,
+              "window_start_unix": 1769164338
+            },
+            "status": "degraded",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 337.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:22.739372Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_openrouter_1771756342",
+            "kind": "custom",
+            "metrics": [
+              {
+                "id": "models_visible",
+                "label": "OpenRouter visible models",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 337.0,
+                "window": "probe"
+              }
+            ],
+            "notes": [
+              "OpenRouter models probe succeeded, but no request/token remaining headers were returned."
+            ],
+            "official_records": [
+              "https://openrouter.ai/api/v1/models",
+              "https://openrouter.ai/docs/api-reference/overview"
+            ],
+            "provider": "openrouter",
+            "raw": {
+              "models_count": 337,
+              "probe_url": "https://openrouter.ai/api/v1/models",
+              "rate_limit_headers": {
+                "ratelimit-limit": null,
+                "ratelimit-remaining": null,
+                "x-ratelimit-limit": null,
+                "x-ratelimit-limit-requests": null,
+                "x-ratelimit-limit-tokens": null,
+                "x-ratelimit-remaining": null,
+                "x-ratelimit-remaining-requests": null,
+                "x-ratelimit-remaining-tokens": null
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": null,
+            "actual_current_usage_unit": null,
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:22.740413Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_anthropic_1771756342",
+            "kind": "custom",
+            "metrics": [],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "official_records": [],
+            "provider": "anthropic",
+            "raw": {
+              "configured_env_keys": [
+                "ANTHROPIC_API_KEY",
+                "ANTHROPIC_AUTH_TOKEN"
+              ],
+              "missing_env_keys": []
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 89.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:22.740474Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_openclaw_1771756342",
+            "kind": "custom",
+            "metrics": [
+              {
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 89.0,
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "official_records": [],
+            "provider": "openclaw",
+            "raw": {
+              "configured_env_keys": [
+                "OPENCLAW_API_KEY"
+              ],
+              "missing_env_keys": [],
+              "runtime_task_runs": 89
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": null,
+            "actual_current_usage_unit": null,
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:23.458364Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_cursor_1771756343",
+            "kind": "custom",
+            "metrics": [],
+            "notes": [
+              "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+              "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution."
+            ],
+            "official_records": [],
+            "provider": "cursor",
+            "raw": {
+              "agent_binary": "",
+              "cli_probe_detail": "",
+              "cli_probe_ok": false,
+              "configured_env_keys": [],
+              "limits": {
+                "cursor_subscription_8h_limit": 0,
+                "cursor_subscription_week_limit": 0
+              },
+              "missing_env_keys": [
+                "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+              ]
+            },
+            "status": "unavailable",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": null,
+            "actual_current_usage_unit": null,
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:23.458397Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_supabase_1771756343",
+            "kind": "custom",
+            "metrics": [],
+            "notes": [
+              "Set SUPABASE_ACCESS_TOKEN (or SUPABASE_TOKEN) and SUPABASE_PROJECT_REF."
+            ],
+            "official_records": [
+              "https://supabase.com/docs/reference/api/introduction",
+              "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-counts",
+              "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-requests-count"
+            ],
+            "provider": "supabase",
+            "raw": {
+              "missing_project_ref": true,
+              "missing_token": true
+            },
+            "status": "unavailable",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 1.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-22T10:32:24.299644Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_railway_1771756344",
+            "kind": "custom",
+            "metrics": [
+              {
+                "id": "api_probe",
+                "label": "Railway API probe",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 1.0,
+                "window": "probe"
+              }
+            ],
+            "notes": [
+              "Railway probe succeeded, but no request remaining headers were returned."
+            ],
+            "official_records": [
+              "https://backboard.railway.com/graphql/v2",
+              "https://docs.railway.com/reference/public-api"
+            ],
+            "provider": "railway",
+            "raw": {
+              "probe_url": "https://backboard.railway.com/graphql/v2",
+              "rate_limit_headers": {
+                "ratelimit-limit": null,
+                "ratelimit-remaining": null,
+                "x-ratelimit-limit": null,
+                "x-ratelimit-remaining": null
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          }
+        ],
+        "tracked_providers": 11,
+        "unavailable_providers": [
+          "openai",
+          "cursor",
+          "supabase"
+        ]
+      },
+      "ok": true,
+      "status": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage"
+    },
+    "usage_readiness": {
+      "error": "",
+      "json": {
+        "all_required_ready": false,
+        "blocking_issues": [
+          "openai: status=degraded, configured=True",
+          "supabase: status=unavailable, configured=False"
+        ],
+        "generated_at": "2026-02-22T10:33:42.315640Z",
+        "providers": [
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "provider": "anthropic",
+            "required": false,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "Claude models probe succeeded, but no request/token remaining headers were returned.",
+              "Anthropic messages quota probe failed: Client error '404 Not Found' for url 'https://api.anthropic.com/v1/messages'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "provider": "claude",
+            "required": false,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "internal",
+            "missing_env": [],
+            "notes": [
+              "Execution success rate 100.0%"
+            ],
+            "provider": "coherence-internal",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": false,
+            "kind": "custom",
+            "missing_env": [
+              "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+            ],
+            "notes": [
+              "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+              "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution."
+            ],
+            "provider": "cursor",
+            "required": false,
+            "severity": "warning",
+            "status": "unavailable"
+          },
+          {
+            "configured": true,
+            "kind": "github",
+            "missing_env": [],
+            "notes": [
+              "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "provider": "github",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "openai",
+            "missing_env": [],
+            "notes": [
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+            ],
+            "provider": "openai",
+            "required": true,
+            "severity": "critical",
+            "status": "degraded"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "OpenAI models probe succeeded, but no request/token remaining headers were returned.",
+              "OpenAI responses quota probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+            ],
+            "provider": "openai-codex",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "provider": "openclaw",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "OpenRouter models probe succeeded, but no request/token remaining headers were returned."
+            ],
+            "provider": "openrouter",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "Railway probe succeeded, but no request remaining headers were returned."
+            ],
+            "provider": "railway",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": false,
+            "kind": "custom",
+            "missing_env": [
+              "one_of(SUPABASE_ACCESS_TOKEN,SUPABASE_TOKEN)"
+            ],
+            "notes": [
+              "Set SUPABASE_ACCESS_TOKEN (or SUPABASE_TOKEN) and SUPABASE_PROJECT_REF.",
+              "missing_env=one_of(SUPABASE_ACCESS_TOKEN,SUPABASE_TOKEN)"
+            ],
+            "provider": "supabase",
+            "required": true,
+            "severity": "critical",
+            "status": "unavailable"
+          }
+        ],
+        "recommendations": [
+          "Configure provider 'openai' (connectivity/runtime checks) and re-run /api/automation/usage/readiness.",
+          "Configure provider 'supabase' (one_of(SUPABASE_ACCESS_TOKEN,SUPABASE_TOKEN)) and re-run /api/automation/usage/readiness."
+        ],
+        "required_providers": [
+          "coherence-internal",
+          "github",
+          "openai",
+          "openai-codex",
+          "openclaw",
+          "openrouter",
+          "railway",
+          "supabase"
+        ]
+      },
+      "ok": true,
+      "status": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    }
+  },
+  "repo_root": "/Users/ursmuff/.codex/worktrees/1600/Coherence-Network",
+  "route_decision_matrix": [
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "openrouter",
+      "executor": "auto",
+      "is_paid_provider": false,
+      "model": "openrouter/free",
+      "provider": "openrouter",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "openrouter",
+      "executor": "auto",
+      "is_paid_provider": false,
+      "model": "openrouter/free",
+      "provider": "openrouter",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "openrouter",
+      "executor": "auto",
+      "is_paid_provider": false,
+      "model": "openrouter/free",
+      "provider": "openrouter",
+      "task_type": "heal"
+    }
+  ],
+  "routing_policy_proof": [
+    {
+      "direction": "Change api/app/services/agent_service.py in this repo",
+      "policy_meta": {
+        "policy_applied": true,
+        "reason": "repo_scoped_question",
+        "repo_executor_preference": "cursor",
+        "task_fingerprint": "605bf13d4d901e990e2b10aa900a8d8e2fb10c7d2ed8dbd7c5848009519f3e54"
+      },
+      "selected_executor": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "direction": "What is the long-term market outlook for coding agents?",
+      "policy_meta": {
+        "open_question_executor": "openclaw",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "ee83353db6f4b07ab4043cbb51d5b1f83af6b30a24520d29207607c0e5db14a8"
+      },
+      "selected_executor": "openclaw",
+      "task_type": "spec"
+    },
+    {
+      "direction": "Investigate provider readiness degradation in automation usage",
+      "policy_meta": {
+        "open_question_executor": "openclaw",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "4398b3e2b572f4db4510404c48670ca01df72e639e5561ece349942c717f0edf"
+      },
+      "selected_executor": "openclaw",
+      "task_type": "heal"
+    }
+  ]
+}
