@@ -24,6 +24,62 @@ INPUT_ENDPOINT_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_INPUT_TIMEOU
 HTTP_RETRY_ATTEMPTS = int(os.environ.get("SELF_IMPROVE_HTTP_RETRY_ATTEMPTS", "3"))
 HTTP_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_RETRY_BASE_SECONDS", "0.75"))
 HTTP_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_TIMEOUT_SECONDS", "20.0"))
+CHECKPOINT_FILE = Path(".cache/self_improve_cycle_checkpoint.json")
+CHECKPOINT_MAX_AGE_SECONDS = int(os.environ.get("SELF_IMPROVE_CHECKPOINT_MAX_AGE_SECONDS", "172800"))
+INFRA_PREFLIGHT_SLEEP_SECONDS = int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_SLEEP_SECONDS", "20"))
+
+STAGE_SPECS = {
+    "plan": {"task_type": "spec", "model": PLAN_MODEL},
+    "execute": {"task_type": "impl", "model": EXECUTE_MODEL},
+    "review": {"task_type": "review", "model": REVIEW_MODEL},
+}
+
+
+def _is_infra_error(message: str) -> bool:
+    lowered = (message or "").lower()
+    return (
+        "read operation timed out" in lowered
+        or "timed out" in lowered
+        or "status=none" in lowered
+        or "connection" in lowered
+    )
+
+
+def _maybe_blocked_report(failed_stage: str, exc: Exception, bundle: dict[str, Any]) -> dict[str, Any]:
+    msg = str(exc)
+    if _is_infra_error(msg):
+        return {
+            "status": "infra_blocked",
+            "failed_stage": failed_stage,
+            "failure_error": msg,
+            "stages": [],
+            "data_quality_mode": bundle.get("data_quality_mode", "degraded_usage"),
+            "input_bundle": _input_bundle_summary(bundle),
+            "input_bundle_before": bundle,
+            "input_bundle_after": bundle,
+            "delta_summary": _build_delta_summary(bundle, bundle, "infra_blocked"),
+        }
+    raise
+
+
+def _awareness_reflection(
+    *,
+    status: str,
+    failed_stage: str | None,
+    failure_error: str | None,
+    data_quality_mode: str | None,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "failed_stage": failed_stage or "",
+        "failure_error": failure_error or "",
+        "data_quality_mode": data_quality_mode or "",
+        "questions": [
+            "What was I not aware of that contributed to this failure?",
+            "What should I be aware of next time and why?",
+            "How will I verify that this mistake is less likely to repeat?",
+        ],
+    }
 
 
 def _utcnow() -> str:
@@ -113,13 +169,17 @@ def _safe_get(
     *,
     timeout: float = INPUT_ENDPOINT_TIMEOUT_SECONDS,
     attempts: int = HTTP_RETRY_ATTEMPTS,
+    headers: dict[str, str] | None = None,
 ) -> tuple[bool, Any, str | None, int | None]:
     response: Any | None = None
     status_code: int | None = None
     last_error: str | None = None
     for _ in range(max(1, attempts)):
         try:
-            response = client.get(url, timeout=timeout)
+            if headers:
+                response = client.get(url, timeout=timeout, headers=headers)
+            else:
+                response = client.get(url, timeout=timeout)
             status_code = response.status_code
             if status_code >= 400:
                 return False, None, f"HTTP {status_code}", status_code
@@ -163,6 +223,126 @@ def _coerce_list(value: Any, default: list[Any] | None = None) -> list[Any]:
 
 def _coerce_dict(value: Any, default: dict[str, Any] | None = None) -> dict[str, Any]:
     return dict(value) if isinstance(value, dict) else (dict(default) if default is not None else {})
+
+
+def _extract_records(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if isinstance(payload, dict):
+        for key in ("tasks", "records", "items", "results", "data", "events"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [row for row in value if isinstance(row, dict)]
+    return []
+
+
+def _save_checkpoint(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _load_checkpoint(path: Path) -> dict[str, Any]:
+    try:
+        if not path.exists():
+            return {}
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        payload = _coerce_dict(raw)
+        updated_at = str(payload.get("updated_at") or "")
+        if updated_at:
+            dt = _parse_timestamp(updated_at)
+            if dt is not None:
+                age = (datetime.now(timezone.utc) - dt).total_seconds()
+                if age > CHECKPOINT_MAX_AGE_SECONDS:
+                    return {}
+        return payload
+    except (json.JSONDecodeError, OSError, ValueError):
+        return {}
+
+
+def _stage_checkpoint_view(stage: dict[str, Any]) -> dict[str, Any]:
+    task = stage.get("task") if isinstance(stage.get("task"), dict) else {}
+    return {
+        "stage": str(stage.get("stage") or ""),
+        "task_id": str(stage.get("task_id") or ""),
+        "status": str(stage.get("status") or ""),
+        "executor": str(stage.get("executor") or ""),
+        "model": str(stage.get("model") or ""),
+        "output": str(stage.get("output") or ""),
+        "task": task,
+        "resumed": bool(stage.get("resumed", False)),
+        "resume_source": str(stage.get("resume_source") or ""),
+    }
+
+
+def _restore_stage_from_checkpoint(checkpoint: dict[str, Any], stage_name: str) -> dict[str, Any] | None:
+    stages = checkpoint.get("stages")
+    if not isinstance(stages, list):
+        return None
+    for row in stages:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("stage") or "").strip().lower() != stage_name:
+            continue
+        status = str(row.get("status") or "").strip().lower()
+        output = str(row.get("output") or "")
+        if status != "completed":
+            continue
+        if stage_name in {"plan", "execute"} and not output:
+            continue
+        model = str(row.get("model") or "")
+        expected_model = STAGE_SPECS[stage_name]["model"]
+        if model and model != expected_model:
+            continue
+        restored = dict(row)
+        restored["resumed"] = True
+        restored["resume_source"] = "checkpoint"
+        return restored
+    return None
+
+
+def _infer_stage_name(task: dict[str, Any]) -> str | None:
+    task_type = str(task.get("task_type") or "").strip().lower()
+    model = str(task.get("model") or "")
+    context = _coerce_dict(task.get("context"), {})
+    if not model:
+        model = str(context.get("model_override") or "")
+
+    if task_type == "spec" and model == PLAN_MODEL:
+        return "plan"
+    if task_type == "impl" and model == EXECUTE_MODEL:
+        return "execute"
+    if task_type == "review" and model == REVIEW_MODEL:
+        return "review"
+    return None
+
+
+def _restore_stage_from_input_bundle(bundle: dict[str, Any], stage_name: str) -> dict[str, Any] | None:
+    task_rows = _extract_records(_coerce_dict(bundle.get("tasks"), {}).get("records"))
+    for task in task_rows:
+        if _infer_stage_name(task) != stage_name:
+            continue
+        context = _coerce_dict(task.get("context"), {})
+        if str(context.get("source") or "") != "self_improve_cycle":
+            continue
+        status = str(task.get("status") or "").strip().lower()
+        output = str(task.get("output") or "")
+        if status != "completed":
+            continue
+        if stage_name in {"plan", "execute"} and not output:
+            continue
+        restored = {
+            "stage": stage_name,
+            "task_id": str(task.get("id") or ""),
+            "status": str(task.get("status") or ""),
+            "executor": str(context.get("executor") or "codex"),
+            "model": str(task.get("model") or context.get("model_override") or ""),
+            "task": task,
+            "output": output,
+            "resumed": True,
+            "resume_source": "recent_tasks",
+        }
+        return restored
+    return None
 
 
 def _safe_cache_is_fresh(collected_at: str) -> bool:
@@ -238,25 +418,27 @@ def _collect_input_bundle(
         client,
         f"{base_url}/api/agent/tasks?limit=40",
     )
-    task_records = _coerce_list(tasks_payload_raw, [])
+    task_records = _extract_records(tasks_payload_raw)
 
     needs_decision_ok, needs_decision_payload_raw, needs_decision_error, needs_decision_status_code = _safe_get(
         client,
         f"{base_url}/api/agent/tasks?status=needs_decision&limit=20",
     )
-    needs_decision_records = _coerce_list(needs_decision_payload_raw, [])
+    needs_decision_records = _extract_records(needs_decision_payload_raw)
 
     friction_ok, friction_payload_raw, friction_error, friction_status_code = _safe_get(
         client,
         f"{base_url}/api/friction/events?status=open&limit=50",
     )
-    friction_records = _coerce_list(friction_payload_raw, [])
+    friction_records = _extract_records(friction_payload_raw)
 
     runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
         client,
         f"{base_url}/api/runtime/endpoints/summary?limit=25",
     )
     runtime_payload = _coerce_dict(runtime_payload_raw, {})
+    if isinstance(runtime_payload_raw, list):
+        runtime_payload = {"summary": runtime_payload_raw}
 
     usage_alerts = _coerce_list(usage_payload.get("alerts"), [])
     blocking_alerts: list[dict[str, Any]] = []
@@ -535,6 +717,118 @@ def _run_stage(
     }
 
 
+def _check_active_public_deploy(client: Any) -> tuple[bool, str]:
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+    repo = os.environ.get("GITHUB_REPOSITORY", "seeker71/Coherence-Network")
+    if not token:
+        return False, "token_missing"
+    ok, payload, error, _ = _safe_get(
+        client,
+        f"https://api.github.com/repos/{repo}/actions/workflows/public-deploy-contract.yml/runs?per_page=5",
+        timeout=10.0,
+        attempts=1,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    if not ok:
+        return False, f"github_api_error:{error}"
+    runs = _extract_records(_coerce_dict(payload).get("workflow_runs"))
+    active = [row for row in runs if str(row.get("status") or "").lower() in {"queued", "in_progress"}]
+    if not active:
+        return False, "none"
+    urls = [str(row.get("html_url") or "") for row in active][:2]
+    return True, ";".join([u for u in urls if u])
+
+
+def _infra_preflight(
+    *,
+    client: Any,
+    base_url: str,
+    usage_threshold_ratio: float,
+    usage_cache_path: Path,
+    attempts: int,
+    consecutive_successes: int,
+) -> dict[str, Any]:
+    safe_attempts = max(1, attempts)
+    required_streak = max(1, consecutive_successes)
+    streak = 0
+    history: list[dict[str, Any]] = []
+    last_bundle: dict[str, Any] | None = None
+    for attempt in range(1, safe_attempts + 1):
+        deploy_active, deploy_detail = _check_active_public_deploy(client)
+        health_ok, _, health_error, health_status = _safe_get(
+            client,
+            f"{base_url}/api/health",
+            timeout=10.0,
+            attempts=1,
+        )
+        gate_ok, _, gate_error, gate_status = _safe_get(
+            client,
+            f"{base_url}/api/gates/main-head",
+            timeout=10.0,
+            attempts=1,
+        )
+        bundle = _collect_input_bundle(
+            client,
+            base_url=base_url,
+            threshold_ratio=usage_threshold_ratio,
+            usage_cache_path=usage_cache_path,
+        )
+        last_bundle = bundle
+        tasks_ok = bool(_coerce_dict(bundle.get("tasks")).get("ok"))
+        runtime_ok = bool(_coerce_dict(bundle.get("runtime")).get("ok"))
+        ready = bool(health_ok and gate_ok and tasks_ok and runtime_ok and not deploy_active)
+        if ready:
+            streak += 1
+        else:
+            streak = 0
+
+        history.append(
+            {
+                "attempt": attempt,
+                "ok": ready,
+                "streak": streak,
+                "deploy_active": deploy_active,
+                "deploy_detail": deploy_detail,
+                "health_ok": health_ok,
+                "health_status": health_status,
+                "health_error": health_error or "",
+                "gates_ok": gate_ok,
+                "gates_status": gate_status,
+                "gates_error": gate_error or "",
+                "tasks_ok": tasks_ok,
+                "runtime_ok": runtime_ok,
+                "data_quality_mode": str(bundle.get("data_quality_mode") or ""),
+            }
+        )
+        if streak >= required_streak:
+            return {
+                "allowed": True,
+                "history": history,
+                "required_consecutive_successes": required_streak,
+                "attempts": safe_attempts,
+                "last_bundle": bundle,
+            }
+
+        if attempt < safe_attempts:
+            sleep_seconds = max(5, INFRA_PREFLIGHT_SLEEP_SECONDS)
+            if deploy_active:
+                sleep_seconds = max(sleep_seconds, 30)
+            time.sleep(sleep_seconds)
+
+    return {
+        "allowed": False,
+        "history": history,
+        "required_consecutive_successes": required_streak,
+        "attempts": safe_attempts,
+        "preflight_error": "infra_not_settled_or_deploy_active",
+        "last_bundle": last_bundle or {},
+    }
+
+
 def run_cycle(
     *,
     client: Any,
@@ -545,8 +839,11 @@ def run_cycle(
     execute_token: str,
     usage_threshold_ratio: float,
     usage_cache_path: str = str(USAGE_CACHE_FILE),
+    checkpoint_path: str | None = None,
 ) -> dict[str, Any]:
     threshold_ratio = max(0.0, min(1.0, float(usage_threshold_ratio)))
+    checkpoint_file = Path(checkpoint_path) if checkpoint_path else None
+    checkpoint_state = _load_checkpoint(checkpoint_file) if checkpoint_file else {}
     input_bundle_before = _collect_input_bundle(
         client,
         base_url=base_url,
@@ -554,9 +851,21 @@ def run_cycle(
         usage_cache_path=Path(usage_cache_path),
     )
 
+    def persist_state(*, status: str, stages: list[dict[str, Any]], failure_error: str = "") -> None:
+        if checkpoint_file is None:
+            return
+        checkpoint_payload = {
+            "updated_at": _utcnow(),
+            "status": status,
+            "base_url": base_url,
+            "failure_error": failure_error,
+            "stages": [_stage_checkpoint_view(stage) for stage in stages],
+        }
+        _save_checkpoint(checkpoint_file, checkpoint_payload)
+
     precheck = _usage_limit_precheck(input_bundle_before, threshold_ratio=threshold_ratio)
     if not precheck.get("allowed"):
-        return {
+        report = {
             "status": "skipped",
             "skip_reason": precheck.get("skip_reason"),
             "usage_limit_precheck": precheck,
@@ -565,57 +874,99 @@ def run_cycle(
             "input_bundle_before": input_bundle_before,
             "input_bundle_after": input_bundle_before,
             "stages": [],
+            "awareness_reflection": _awareness_reflection(
+                status="skipped",
+                failed_stage="usage_limit_precheck",
+                failure_error=str(precheck.get("skip_reason") or ""),
+                data_quality_mode=str(input_bundle_before.get("data_quality_mode") or ""),
+            ),
             "delta_summary": _build_delta_summary(
                 input_bundle_before,
                 input_bundle_before,
                 "skipped",
             ),
         }
+        persist_state(status="skipped", stages=[], failure_error=str(report.get("skip_reason") or ""))
+        return report
 
     stages: list[dict[str, Any]] = []
 
-    try:
-        plan_stage = _run_stage(
-            client=client,
-            base_url=base_url,
-            poll_interval_seconds=poll_interval_seconds,
-            timeout_seconds=timeout_seconds,
-            execute_pending=execute_pending,
-            execute_token=execute_token,
-            stage_name="plan",
-            direction=build_plan_direction(),
-            task_type="spec",
-            model_override=PLAN_MODEL,
-        )
-    except Exception as exc:
-        input_bundle_after = _collect_input_bundle(
-            client,
-            base_url=base_url,
-            threshold_ratio=threshold_ratio,
-            usage_cache_path=Path(usage_cache_path),
-        )
-        return {
-            "status": "failed",
-            "failed_stage": "plan_submit_or_wait",
-            "failure_error": str(exc),
-            "stages": stages,
-            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
-            "input_bundle": _input_bundle_summary(input_bundle_after),
-            "input_bundle_before": input_bundle_before,
-            "input_bundle_after": input_bundle_after,
-            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
-        }
+    plan_stage = _restore_stage_from_checkpoint(checkpoint_state, "plan")
+    if plan_stage is None:
+        plan_stage = _restore_stage_from_input_bundle(input_bundle_before, "plan")
+    if plan_stage is None:
+        try:
+            plan_stage = _run_stage(
+                client=client,
+                base_url=base_url,
+                poll_interval_seconds=poll_interval_seconds,
+                timeout_seconds=timeout_seconds,
+                execute_pending=execute_pending,
+                execute_token=execute_token,
+                stage_name="plan",
+                direction=build_plan_direction(),
+                task_type="spec",
+                model_override=PLAN_MODEL,
+            )
+        except Exception as exc:
+            input_bundle_after = _collect_input_bundle(
+                client,
+                base_url=base_url,
+                threshold_ratio=threshold_ratio,
+                usage_cache_path=Path(usage_cache_path),
+            )
+            if _is_infra_error(str(exc)):
+                report = {
+                    "status": "infra_blocked",
+                    "failed_stage": "plan_submit_or_wait",
+                    "failure_error": str(exc),
+                    "stages": stages,
+                    "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                    "input_bundle": _input_bundle_summary(input_bundle_after),
+                    "input_bundle_before": input_bundle_before,
+                    "input_bundle_after": input_bundle_after,
+                    "awareness_reflection": _awareness_reflection(
+                        status="infra_blocked",
+                        failed_stage="plan_submit_or_wait",
+                        failure_error=str(exc),
+                        data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                    ),
+                    "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "infra_blocked"),
+                }
+                persist_state(status="infra_blocked", stages=stages, failure_error=str(exc))
+                return report
+            report = {
+                "status": "failed",
+                "failed_stage": "plan_submit_or_wait",
+                "failure_error": str(exc),
+                "stages": stages,
+                "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                "input_bundle": _input_bundle_summary(input_bundle_after),
+                "input_bundle_before": input_bundle_before,
+                "input_bundle_after": input_bundle_after,
+                "awareness_reflection": _awareness_reflection(
+                    status="failed",
+                    failed_stage="plan_submit_or_wait",
+                    failure_error=str(exc),
+                    data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                ),
+                "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+            }
+            persist_state(status="failed", stages=stages, failure_error=str(exc))
+            return report
+
     stages.append(plan_stage)
+    persist_state(status="running", stages=stages)
     plan_output = str(plan_stage.get("output") or "")
     plan_task = plan_stage["task"]
-    if plan_task.get("status") != "completed":
+    if str(plan_task.get("status") or "").lower() != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
             threshold_ratio=threshold_ratio,
             usage_cache_path=Path(usage_cache_path),
         )
-        return {
+        report = {
             "status": "failed",
             "failed_stage": "plan",
             "stages": stages,
@@ -624,51 +975,93 @@ def run_cycle(
             "input_bundle": _input_bundle_summary(input_bundle_after),
             "input_bundle_before": input_bundle_before,
             "input_bundle_after": input_bundle_after,
+            "awareness_reflection": _awareness_reflection(
+                status="failed",
+                failed_stage="plan",
+                failure_error="plan task did not complete",
+                data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+            ),
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
+        persist_state(status="failed", stages=stages, failure_error="plan task did not complete")
+        return report
 
-    try:
-        execute_stage = _run_stage(
-            client=client,
-            base_url=base_url,
-            poll_interval_seconds=poll_interval_seconds,
-            timeout_seconds=timeout_seconds,
-            execute_pending=execute_pending,
-            execute_token=execute_token,
-            stage_name="execute",
-            direction=build_execute_direction(plan_stage.get("output", "")),
-            task_type="impl",
-            model_override=EXECUTE_MODEL,
-        )
-    except Exception as exc:
-        input_bundle_after = _collect_input_bundle(
-            client,
-            base_url=base_url,
-            threshold_ratio=threshold_ratio,
-            usage_cache_path=Path(usage_cache_path),
-        )
-        return {
-            "status": "failed",
-            "failed_stage": "execute_submit_or_wait",
-            "stages": stages,
-            "failure_error": str(exc),
-            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
-            "input_bundle": _input_bundle_summary(input_bundle_after),
-            "input_bundle_before": input_bundle_before,
-            "input_bundle_after": input_bundle_after,
-            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
-        }
+    execute_stage = _restore_stage_from_checkpoint(checkpoint_state, "execute")
+    if execute_stage is None:
+        execute_stage = _restore_stage_from_input_bundle(input_bundle_before, "execute")
+    if execute_stage is None:
+        try:
+            execute_stage = _run_stage(
+                client=client,
+                base_url=base_url,
+                poll_interval_seconds=poll_interval_seconds,
+                timeout_seconds=timeout_seconds,
+                execute_pending=execute_pending,
+                execute_token=execute_token,
+                stage_name="execute",
+                direction=build_execute_direction(plan_output),
+                task_type="impl",
+                model_override=EXECUTE_MODEL,
+            )
+        except Exception as exc:
+            input_bundle_after = _collect_input_bundle(
+                client,
+                base_url=base_url,
+                threshold_ratio=threshold_ratio,
+                usage_cache_path=Path(usage_cache_path),
+            )
+            if _is_infra_error(str(exc)):
+                report = {
+                    "status": "infra_blocked",
+                    "failed_stage": "execute_submit_or_wait",
+                    "stages": stages,
+                    "failure_error": str(exc),
+                    "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                    "input_bundle": _input_bundle_summary(input_bundle_after),
+                    "input_bundle_before": input_bundle_before,
+                    "input_bundle_after": input_bundle_after,
+                    "awareness_reflection": _awareness_reflection(
+                        status="infra_blocked",
+                        failed_stage="execute_submit_or_wait",
+                        failure_error=str(exc),
+                        data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                    ),
+                    "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "infra_blocked"),
+                }
+                persist_state(status="infra_blocked", stages=stages, failure_error=str(exc))
+                return report
+            report = {
+                "status": "failed",
+                "failed_stage": "execute_submit_or_wait",
+                "stages": stages,
+                "failure_error": str(exc),
+                "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                "input_bundle": _input_bundle_summary(input_bundle_after),
+                "input_bundle_before": input_bundle_before,
+                "input_bundle_after": input_bundle_after,
+                "awareness_reflection": _awareness_reflection(
+                    status="failed",
+                    failed_stage="execute_submit_or_wait",
+                    failure_error=str(exc),
+                    data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                ),
+                "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+            }
+            persist_state(status="failed", stages=stages, failure_error=str(exc))
+            return report
+
     stages.append(execute_stage)
+    persist_state(status="running", stages=stages)
     execute_output = str(execute_stage.get("output") or "")
     execute_task = execute_stage["task"]
-    if execute_stage.get("status") != "completed":
+    if str(execute_stage.get("status") or "").lower() != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
             threshold_ratio=threshold_ratio,
             usage_cache_path=Path(usage_cache_path),
         )
-        return {
+        report = {
             "status": "failed",
             "failed_stage": "execute",
             "stages": stages,
@@ -677,61 +1070,111 @@ def run_cycle(
             "input_bundle": _input_bundle_summary(input_bundle_after),
             "input_bundle_before": input_bundle_before,
             "input_bundle_after": input_bundle_after,
+            "awareness_reflection": _awareness_reflection(
+                status="failed",
+                failed_stage="execute",
+                failure_error="execute task did not complete",
+                data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+            ),
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
         }
+        persist_state(status="failed", stages=stages, failure_error="execute task did not complete")
+        return report
 
-    try:
-        review_stage = _run_stage(
-            client=client,
-            base_url=base_url,
-            poll_interval_seconds=poll_interval_seconds,
-            timeout_seconds=timeout_seconds,
-            execute_pending=execute_pending,
-            execute_token=execute_token,
-            stage_name="review",
-            direction=build_review_direction(plan_stage["output"], execute_stage["output"]),
-            task_type="review",
-            model_override=REVIEW_MODEL,
-        )
-    except Exception as exc:
-        input_bundle_after = _collect_input_bundle(
-            client,
-            base_url=base_url,
-            threshold_ratio=threshold_ratio,
-            usage_cache_path=Path(usage_cache_path),
-        )
-        return {
-            "status": "failed",
-            "failed_stage": "review_submit_or_wait",
-            "stages": stages,
-            "failure_error": str(exc),
-            "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
-            "input_bundle": _input_bundle_summary(input_bundle_after),
-            "input_bundle_before": input_bundle_before,
-            "input_bundle_after": input_bundle_after,
-            "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
-        }
+    review_stage = _restore_stage_from_checkpoint(checkpoint_state, "review")
+    if review_stage is None:
+        review_stage = _restore_stage_from_input_bundle(input_bundle_before, "review")
+    if review_stage is None:
+        try:
+            review_stage = _run_stage(
+                client=client,
+                base_url=base_url,
+                poll_interval_seconds=poll_interval_seconds,
+                timeout_seconds=timeout_seconds,
+                execute_pending=execute_pending,
+                execute_token=execute_token,
+                stage_name="review",
+                direction=build_review_direction(plan_output, execute_output),
+                task_type="review",
+                model_override=REVIEW_MODEL,
+            )
+        except Exception as exc:
+            input_bundle_after = _collect_input_bundle(
+                client,
+                base_url=base_url,
+                threshold_ratio=threshold_ratio,
+                usage_cache_path=Path(usage_cache_path),
+            )
+            if _is_infra_error(str(exc)):
+                report = {
+                    "status": "infra_blocked",
+                    "failed_stage": "review_submit_or_wait",
+                    "stages": stages,
+                    "failure_error": str(exc),
+                    "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                    "input_bundle": _input_bundle_summary(input_bundle_after),
+                    "input_bundle_before": input_bundle_before,
+                    "input_bundle_after": input_bundle_after,
+                    "awareness_reflection": _awareness_reflection(
+                        status="infra_blocked",
+                        failed_stage="review_submit_or_wait",
+                        failure_error=str(exc),
+                        data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                    ),
+                    "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "infra_blocked"),
+                }
+                persist_state(status="infra_blocked", stages=stages, failure_error=str(exc))
+                return report
+            report = {
+                "status": "failed",
+                "failed_stage": "review_submit_or_wait",
+                "stages": stages,
+                "failure_error": str(exc),
+                "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
+                "input_bundle": _input_bundle_summary(input_bundle_after),
+                "input_bundle_before": input_bundle_before,
+                "input_bundle_after": input_bundle_after,
+                "awareness_reflection": _awareness_reflection(
+                    status="failed",
+                    failed_stage="review_submit_or_wait",
+                    failure_error=str(exc),
+                    data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+                ),
+                "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
+            }
+            persist_state(status="failed", stages=stages, failure_error=str(exc))
+            return report
+
     stages.append(review_stage)
+    persist_state(status="running", stages=stages)
     review_output = str(review_stage.get("output") or "")
     review_task = review_stage["task"]
-    if review_task.get("status") != "completed":
+    if str(review_task.get("status") or "").lower() != "completed":
         input_bundle_after = _collect_input_bundle(
             client,
             base_url=base_url,
             threshold_ratio=threshold_ratio,
             usage_cache_path=Path(usage_cache_path),
         )
-        return {
+        report = {
             "status": "failed",
             "failed_stage": "review",
             "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
             "input_bundle": _input_bundle_summary(input_bundle_after),
             "input_bundle_before": input_bundle_before,
             "input_bundle_after": input_bundle_after,
+            "awareness_reflection": _awareness_reflection(
+                status="failed",
+                failed_stage="review",
+                failure_error="review task did not complete",
+                data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+            ),
             "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "failed"),
             "stages": stages,
             "task": review_task,
         }
+        persist_state(status="failed", stages=stages, failure_error="review task did not complete")
+        return report
 
     input_bundle_after = _collect_input_bundle(
         client,
@@ -739,13 +1182,19 @@ def run_cycle(
         threshold_ratio=threshold_ratio,
         usage_cache_path=Path(usage_cache_path),
     )
-    return {
+    report = {
         "status": "completed",
         "usage_limit_precheck": precheck,
         "data_quality_mode": input_bundle_after.get("data_quality_mode", "degraded_usage"),
         "input_bundle": _input_bundle_summary(input_bundle_after),
         "input_bundle_before": input_bundle_before,
         "input_bundle_after": input_bundle_after,
+        "awareness_reflection": _awareness_reflection(
+            status="completed",
+            failed_stage="",
+            failure_error="",
+            data_quality_mode=str(input_bundle_after.get("data_quality_mode") or ""),
+        ),
         "delta_summary": _build_delta_summary(input_bundle_before, input_bundle_after, "completed"),
         "stages": stages,
         "outputs": {
@@ -754,6 +1203,8 @@ def run_cycle(
             "review": _clip(review_output, max_chars=2000),
         },
     }
+    persist_state(status="completed", stages=stages)
+    return report
 
 
 def main() -> int:
@@ -780,6 +1231,11 @@ def main() -> int:
         help="Path to local usage snapshot cache file",
     )
     parser.add_argument(
+        "--checkpoint-file",
+        default=str(CHECKPOINT_FILE),
+        help="Path to self-improve checkpoint file used for stage resume",
+    )
+    parser.add_argument(
         "--infra-preflight-attempts",
         type=int,
         default=int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_ATTEMPTS", "5")),
@@ -795,16 +1251,48 @@ def main() -> int:
 
     base_url = args.base_url.rstrip("/")
     with httpx.Client(timeout=30.0) as client:
-        report = run_cycle(
+        preflight = _infra_preflight(
             client=client,
             base_url=base_url,
-            poll_interval_seconds=max(0, args.poll_interval_seconds),
-            timeout_seconds=max(10, args.timeout_seconds),
-            execute_pending=args.execute_pending,
-            execute_token=args.execute_token,
             usage_threshold_ratio=args.usage_threshold_ratio,
-            usage_cache_path=args.usage_cache_file,
+            usage_cache_path=Path(args.usage_cache_file),
+            attempts=max(1, args.infra_preflight_attempts),
+            consecutive_successes=max(1, args.infra_preflight_consecutive_successes),
         )
+        if not preflight.get("allowed"):
+            preflight_bundle = _coerce_dict(preflight.get("last_bundle"), {})
+            report = {
+                "status": "infra_blocked",
+                "failed_stage": "infra_preflight",
+                "skip_reason": "Deployment unsettled or API health was intermittent during preflight checks.",
+                "failure_error": str(preflight.get("preflight_error") or "infra_preflight_failed"),
+                "infra_preflight": preflight,
+                "data_quality_mode": preflight_bundle.get("data_quality_mode", "degraded_partial"),
+                "input_bundle": _input_bundle_summary(preflight_bundle),
+                "input_bundle_before": preflight_bundle,
+                "input_bundle_after": preflight_bundle,
+                "stages": [],
+                "awareness_reflection": _awareness_reflection(
+                    status="infra_blocked",
+                    failed_stage="infra_preflight",
+                    failure_error=str(preflight.get("preflight_error") or ""),
+                    data_quality_mode=str(preflight_bundle.get("data_quality_mode") or ""),
+                ),
+                "delta_summary": _build_delta_summary(preflight_bundle, preflight_bundle, "infra_blocked"),
+            }
+        else:
+            report = run_cycle(
+                client=client,
+                base_url=base_url,
+                poll_interval_seconds=max(0, args.poll_interval_seconds),
+                timeout_seconds=max(10, args.timeout_seconds),
+                execute_pending=args.execute_pending,
+                execute_token=args.execute_token,
+                usage_threshold_ratio=args.usage_threshold_ratio,
+                usage_cache_path=args.usage_cache_file,
+                checkpoint_path=args.checkpoint_file,
+            )
+            report["infra_preflight"] = preflight
 
     if args.json:
         json.dump(report, sys.stdout, indent=2)
@@ -814,7 +1302,7 @@ def main() -> int:
         for row in report.get("stages", []):
             print(f"- {row.get('stage')}: task={row.get('task_id')} status={row.get('status')}")
 
-    return 0 if report.get("status") in {"completed", "skipped"} else 2
+    return 0 if report.get("status") in {"completed", "skipped", "infra_blocked"} else 2
 
 
 if __name__ == "__main__":
