@@ -57,29 +57,33 @@ curl "http://localhost:8000/api/agent/route?task_type=impl&executor=cursor"
 
 | Task Type | Cursor Model | Env Override |
 |-----------|--------------|--------------|
-| spec, impl, test | composer-1 (fast) | `CURSOR_CLI_MODEL` |
-| review, heal | claude-4-opus (deep) | `CURSOR_CLI_REVIEW_MODEL` |
+| spec, impl, test | `auto` (subscription-aware) | `CURSOR_CLI_MODEL` |
+| review, heal | `auto` (subscription-aware) | `CURSOR_CLI_REVIEW_MODEL` |
 
 Set in `api/.env`:
 
 ```bash
-CURSOR_CLI_MODEL=composer-1
-CURSOR_CLI_REVIEW_MODEL=claude-4-opus
+CURSOR_CLI_MODEL=auto
+CURSOR_CLI_REVIEW_MODEL=auto
+# Optional proactive backoff thresholds:
+# CURSOR_SUBSCRIPTION_8H_LIMIT=225
+# CURSOR_SUBSCRIPTION_WEEK_LIMIT=1200
 ```
 
 ## Command Format
 
 - **Claude Code (default):** `claude -p "direction" --agent dev-engineer --model glm-4.7-flash ...`
-- **Cursor CLI:** `agent "direction" --model composer-1`
+- **Cursor CLI:** `agent "direction" --model auto`
 
 Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed commands and skips Claude/Ollama env overrides so Cursor uses its own auth.
 
 ## Best Practices
 
-1. **Dev/QA cycles:** Use `composer-1` for speed on impl and test; reserve `claude-4-opus` for review.
-2. **Isolation:** Run in a git worktree or DevContainer for safety.
-3. **Context:** Cursor respects `.cursor/rules/` in the repo; ensure rules are in place for consistency.
-4. **Fallback:** If Cursor CLI fails (exit 127), the task is marked failed; use Claude Code as fallback by omitting `--cursor`.
+1. **Default model strategy:** Keep `auto` for most tasks to let Cursor balance quality vs limits.
+2. **Backoff strategy:** Set `CURSOR_SUBSCRIPTION_8H_LIMIT` and `CURSOR_SUBSCRIPTION_WEEK_LIMIT`; monitor `/api/automation/usage` and `/api/automation/usage/alerts` to throttle before hard caps.
+3. **Isolation:** Run in a git worktree or DevContainer for safety.
+4. **Context:** Cursor respects `.cursor/rules/` in the repo; ensure rules are in place for consistency.
+5. **Fallback:** If Cursor CLI fails (exit 127), the task is marked failed; use Claude Code as fallback by omitting `--cursor`.
 
 ## Limitations
 

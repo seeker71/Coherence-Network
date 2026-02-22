@@ -816,6 +816,22 @@ def _cli_ok(command: list[str]) -> bool:
     return completed.returncode == 0
 
 
+def _cli_output(command: list[str]) -> tuple[bool, str]:
+    try:
+        completed = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+        )
+    except Exception as exc:
+        return False, str(exc)
+    output = (completed.stdout or completed.stderr or "").strip()
+    return completed.returncode == 0, output
+
+
 def _gh_auth_available() -> bool:
     if shutil.which("gh") is None:
         return False
@@ -951,6 +967,10 @@ def _required_providers_from_env() -> list[str]:
         for item in str(raw).split(",")
         if str(item).strip()
     ]
+    cheap_executor = str(os.getenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "")).strip().lower()
+    default_executor = str(os.getenv("AGENT_EXECUTOR_DEFAULT", "")).strip().lower()
+    if cheap_executor == "cursor" or default_executor == "cursor":
+        out.append("cursor")
     return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
 
 
@@ -1083,6 +1103,117 @@ def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
         data_source="configuration_only",
         notes=notes,
         raw={"configured_env_keys": present, "missing_env_keys": missing},
+    )
+
+
+def _int_env(name: str, default: int = 0) -> int:
+    raw = str(os.getenv(name, "")).strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _cursor_events_within_window(window_seconds: int) -> int:
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, int(window_seconds)))
+    try:
+        from app.services import runtime_service
+
+        events = runtime_service.list_events(limit=4000)
+    except Exception:
+        events = []
+
+    count = 0
+    for event in events:
+        recorded_at = getattr(event, "recorded_at", None)
+        if not isinstance(recorded_at, datetime) or recorded_at < cutoff:
+            continue
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        executor = str(metadata.get("executor") or "").strip().lower()
+        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
+        model = str(metadata.get("model") or "").strip().lower()
+        if executor == "cursor" or provider == "cursor" or model.startswith("cursor/"):
+            count += 1
+    return count
+
+
+def _build_cursor_snapshot() -> ProviderUsageSnapshot:
+    configured, missing, present, derived_notes = _configured_status("cursor")
+    agent_binary = shutil.which("agent")
+    cli_ok = False
+    cli_detail = ""
+    if agent_binary:
+        cli_ok, cli_detail = _cli_output(["agent", "--version"])
+
+    metrics: list[UsageMetric] = []
+    notes: list[str] = []
+    notes.extend(derived_notes)
+    if missing:
+        notes.append(f"missing_env={','.join(missing)}")
+    elif present:
+        notes.append("configuration keys detected")
+    if agent_binary:
+        if cli_ok:
+            notes.append(f"cursor_cli_ready: {cli_detail[:120]}")
+        else:
+            notes.append(f"cursor_cli_probe_failed: {cli_detail[:160]}")
+    else:
+        notes.append("cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution.")
+
+    limit_8h = max(0, _int_env("CURSOR_SUBSCRIPTION_8H_LIMIT", 0))
+    if limit_8h > 0:
+        used_8h = _cursor_events_within_window(8 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="cursor_subscription_8h",
+                label="Cursor subscription runs (8h)",
+                unit="requests",
+                used=float(min(used_8h, limit_8h)),
+                remaining=float(max(0, limit_8h - used_8h)),
+                limit=float(limit_8h),
+                window="hourly",
+            )
+        )
+
+    limit_week = max(0, _int_env("CURSOR_SUBSCRIPTION_WEEK_LIMIT", 0))
+    if limit_week > 0:
+        used_week = _cursor_events_within_window(7 * 24 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="cursor_subscription_week",
+                label="Cursor subscription runs (7d)",
+                unit="requests",
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+            )
+        )
+
+    status = "ok" if configured and agent_binary and cli_ok else "degraded" if configured else "unavailable"
+    return ProviderUsageSnapshot(
+        id=f"provider_cursor_{int(time.time())}",
+        provider="cursor",
+        kind="custom",
+        status=status,  # type: ignore[arg-type]
+        data_source="provider_cli" if agent_binary else "configuration_only",
+        metrics=metrics,
+        notes=list(dict.fromkeys(notes)),
+        raw={
+            "configured_env_keys": present,
+            "missing_env_keys": missing,
+            "agent_binary": agent_binary or "",
+            "cli_probe_ok": cli_ok,
+            "cli_probe_detail": cli_detail[:200],
+            "limits": {
+                "cursor_subscription_8h_limit": limit_8h,
+                "cursor_subscription_week_limit": limit_week,
+            },
+        },
     )
 
 
@@ -1978,7 +2109,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_openrouter_snapshot(),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
-        _build_config_only_snapshot("cursor"),
+        _build_cursor_snapshot(),
         _build_supabase_snapshot(),
         _build_railway_snapshot(),
     ]

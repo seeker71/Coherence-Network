@@ -14,8 +14,8 @@ _OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "openrouter/free")
 _OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "openrouter/free")
 _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")
 
-_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
-_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
+_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "auto")
+_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
 
 DEFAULT_MODEL_ALIAS_MAP = (
     "gtp-5.3-codex-spark:gpt-5.3-codex-spark,"
