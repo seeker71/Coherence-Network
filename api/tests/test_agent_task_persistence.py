@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
-from app.services import agent_service
+from app.services import agent_service, agent_task_store_service
 
 
 @pytest.mark.asyncio
@@ -222,3 +223,82 @@ def test_db_reload_without_output_does_not_erase_task_output(
     fetched = agent_service.get_task(task_id)
     assert fetched is not None
     assert str(fetched.get("output") or "").endswith("...[truncated]")
+
+
+def test_db_list_tasks_uses_paginated_query_not_full_table_reload(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "agent_tasks_paged.db"
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "1")
+    monkeypatch.setenv("AGENT_TASKS_DATABASE_URL", f"sqlite:///{db_path}")
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="DB paged list task",
+            task_type=TaskType.IMPL,
+        )
+    )
+    task_id = created["id"]
+
+    def _fail_load_tasks(*args, **kwargs):
+        raise AssertionError("full-table load_tasks should not be used in DB paged list flow")
+
+    monkeypatch.setattr(agent_task_store_service, "load_tasks", _fail_load_tasks)
+    rows, total = agent_service.list_tasks(limit=20, offset=0)
+
+    assert total == 1
+    assert rows[0]["id"] == task_id
+
+
+def test_db_update_task_hydrates_single_task_without_full_table_reload(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "agent_tasks_update_single.db"
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "1")
+    monkeypatch.setenv("AGENT_TASKS_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "300")
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="DB single-task update",
+            task_type=TaskType.IMPL,
+        )
+    )
+    task_id = created["id"]
+
+    # Simulate warm cache with empty in-memory map; update should hydrate this task by id only.
+    agent_service._store.clear()
+    agent_service._store_loaded = True
+    agent_service._store_loaded_path = str(agent_service._store_path())
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = time.monotonic()
+
+    def _fail_load_tasks(*args, **kwargs):
+        raise AssertionError("full-table load_tasks should not be used in single-task update flow")
+
+    monkeypatch.setattr(agent_task_store_service, "load_tasks", _fail_load_tasks)
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.RUNNING,
+        worker_id="openai-codex",
+    )
+
+    assert updated is not None
+    assert updated["id"] == task_id
+    assert updated["status"] == TaskStatus.RUNNING
