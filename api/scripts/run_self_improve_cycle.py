@@ -24,6 +24,8 @@ INPUT_ENDPOINT_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_INPUT_TIMEOU
 HTTP_RETRY_ATTEMPTS = int(os.environ.get("SELF_IMPROVE_HTTP_RETRY_ATTEMPTS", "3"))
 HTTP_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_RETRY_BASE_SECONDS", "0.75"))
 HTTP_TIMEOUT_SECONDS = float(os.environ.get("SELF_IMPROVE_HTTP_TIMEOUT_SECONDS", "20.0"))
+STAGE_SUBMIT_ATTEMPTS = int(os.environ.get("SELF_IMPROVE_STAGE_SUBMIT_ATTEMPTS", "4"))
+STAGE_SUBMIT_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_STAGE_SUBMIT_RETRY_BASE_SECONDS", "2.0"))
 CHECKPOINT_FILE = Path(".cache/self_improve_cycle_checkpoint.json")
 CHECKPOINT_MAX_AGE_SECONDS = int(os.environ.get("SELF_IMPROVE_CHECKPOINT_MAX_AGE_SECONDS", "172800"))
 INFRA_PREFLIGHT_SLEEP_SECONDS = int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_SLEEP_SECONDS", "20"))
@@ -662,6 +664,28 @@ def _submit_task(client: Any, base_url: str, payload: dict[str, Any]) -> str:
     return task_id
 
 
+def _submit_task_with_retry(
+    client: Any,
+    *,
+    base_url: str,
+    payload: dict[str, Any],
+    attempts: int = STAGE_SUBMIT_ATTEMPTS,
+) -> str:
+    safe_attempts = max(1, attempts)
+    last_error: Exception | None = None
+    for attempt in range(1, safe_attempts + 1):
+        try:
+            return _submit_task(client, base_url, payload)
+        except Exception as exc:
+            last_error = exc
+            if attempt >= safe_attempts or not _is_infra_error(str(exc)):
+                raise
+            time.sleep(STAGE_SUBMIT_RETRY_BASE_SECONDS * attempt)
+    if last_error is not None:
+        raise RuntimeError(f"task submit failed after {safe_attempts} attempts: {last_error}")
+    raise RuntimeError(f"task submit failed after {safe_attempts} attempts")
+
+
 def _request_execute(client: Any, base_url: str, task_id: str, execute_token: str) -> bool:
     headers = {}
     if execute_token:
@@ -741,7 +765,7 @@ def _run_stage(
         task_type=task_type,
         model_override=model_override,
     )
-    task_id = _submit_task(client, base_url, payload)
+    task_id = _submit_task_with_retry(client, base_url=base_url, payload=payload)
     task = _wait_for_terminal(
         client,
         base_url=base_url,
