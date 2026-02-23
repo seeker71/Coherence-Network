@@ -40,9 +40,10 @@ jobs:
             python api/scripts/run_self_improve_cycle.py \
               --base-url "${SELF_IMPROVE_API_URL}" \
               --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
-              --execute-pending \
-              --infra-preflight-attempts 6 \
-              --infra-preflight-consecutive-successes 2 \
+              --poll-interval-seconds 5 \
+              --timeout-seconds 600 \
+              --infra-preflight-attempts 4 \
+              --infra-preflight-consecutive-successes 1 \
               --checkpoint-file self_improve_checkpoint.json \
               --json > "${report_file}"
             code=$?
