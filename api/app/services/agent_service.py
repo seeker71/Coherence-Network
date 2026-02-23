@@ -458,7 +458,7 @@ def _persistence_enabled() -> bool:
 
 
 def _db_store_reload_ttl_seconds() -> float:
-    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "30").strip()
+    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "120").strip()
     try:
         value = float(raw)
     except ValueError:
@@ -515,8 +515,10 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
     direction = raw.get("direction")
     command = raw.get("command")
     model = raw.get("model")
-    if not all(isinstance(v, str) and v.strip() for v in (task_id, direction, command, model)):
+    if not all(isinstance(v, str) and v.strip() for v in (task_id, direction, model)):
         return None
+    if not isinstance(command, str):
+        command = ""
 
     task_type_raw = raw.get("task_type")
     status_raw = raw.get("status")
@@ -536,7 +538,7 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
         "task_type": task_type,
         "status": status,
         "model": model.strip(),
-        "command": command.strip(),
+        "command": command.strip() or "PATCH /api/agent/tasks/{task_id}",
         "output": raw.get("output"),
         "context": raw.get("context") if isinstance(raw.get("context"), dict) else None,
         "progress_pct": raw.get("progress_pct"),
@@ -716,6 +718,19 @@ def _task_output_text(task: dict[str, Any]) -> str:
                     task["output"] = loaded
                     return loaded
     return str(output or "")
+
+
+def _load_task_from_db(task_id: str, *, include_output: bool) -> dict[str, Any] | None:
+    if not agent_task_store_service.enabled():
+        return None
+    raw = agent_task_store_service.load_task(task_id, include_output=include_output)
+    if not isinstance(raw, dict):
+        return None
+    task = _deserialize_task(raw)
+    if task is None:
+        return None
+    _store[task["id"]] = task
+    return task
 
 
 def _has_completion_tracking_event(task_id: str, final_status: str) -> bool:
@@ -920,10 +935,7 @@ def _resolve_task_route(
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
-    _ensure_store_loaded(
-        force_reload=agent_task_store_service.enabled(),
-        include_output=False,
-    )
+    _ensure_store_loaded(include_output=False)
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
     target_contract = _normalize_target_state_contract(
@@ -1015,12 +1027,9 @@ def get_agent_integration_status() -> dict[str, Any]:
 def get_task(task_id: str) -> Optional[dict]:
     """Get task by id."""
     if agent_task_store_service.enabled():
-        raw = agent_task_store_service.load_task(task_id, include_output=True)
-        if isinstance(raw, dict):
-            task = _deserialize_task(raw)
-            if task is not None:
-                _store[task["id"]] = task
-                return task
+        loaded = _load_task_from_db(task_id, include_output=True)
+        if loaded is not None:
+            return loaded
     _ensure_store_loaded(include_output=True)
     task = _store.get(task_id)
     if task is not None:
@@ -1175,8 +1184,40 @@ def list_tasks(
     offset: int = 0,
 ) -> tuple:
     """List tasks with optional filters. Sorted by created_at descending (newest first)."""
-    force_reload = agent_task_store_service.enabled() and status in ACTIVE_TASK_STATUSES
-    _ensure_store_loaded(force_reload=force_reload, include_output=False)
+    if agent_task_store_service.enabled():
+        status_value = status.value if isinstance(status, TaskStatus) else None
+        task_type_value = task_type.value if isinstance(task_type, TaskType) else None
+        rows, total = agent_task_store_service.load_tasks_page(
+            status=status_value,
+            task_type=task_type_value,
+            limit=limit,
+            offset=offset,
+            include_output=False,
+            include_command=False,
+        )
+        items: list[dict[str, Any]] = []
+        for raw in rows:
+            task = _deserialize_task(raw)
+            if task is None:
+                continue
+            _store[task["id"]] = task
+            items.append(task)
+        # Runtime fallback only when the DB-backed task list is empty and unfiltered.
+        if total == 0 and status is None and task_type is None and offset == 0:
+            events = _runtime_fallback_events_for_tasks(0)
+            seen: set[str] = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
+            for event in events:
+                derived = _runtime_completion_event_to_task(event, seen)
+                if derived is None:
+                    continue
+                items.append(derived)
+                seen.add(str(derived.get("id") or ""))
+            items.sort(key=lambda t: t["created_at"], reverse=True)
+            items = items[:limit]
+            total = len(items)
+        return items, total
+
+    _ensure_store_loaded(include_output=False)
     items = list(_store.values())
     events = _runtime_fallback_events_for_tasks(len(items))
 
@@ -1213,11 +1254,10 @@ def update_task(
     When decision is present and task is needs_decision, set status→running and store decision.
     Note: Caller should trigger Telegram alert for needs_decision/failed (see router).
     """
-    _ensure_store_loaded(
-        force_reload=agent_task_store_service.enabled(),
-        include_output=False,
-    )
-    task = _store.get(task_id)
+    _ensure_store_loaded(include_output=False)
+    task = _load_task_from_db(task_id, include_output=False) if agent_task_store_service.enabled() else None
+    if task is None:
+        task = _store.get(task_id)
     if task is None:
         return None
     previous_status_value = _status_value(task.get("status"))
@@ -1279,6 +1319,16 @@ def update_task(
 
 def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
     """List tasks with status needs_decision or failed (for /attention)."""
+    if agent_task_store_service.enabled():
+        rows, total = agent_task_store_service.load_attention_tasks(limit=limit)
+        items: list[dict[str, Any]] = []
+        for raw in rows:
+            task = _deserialize_task(raw)
+            if task is None:
+                continue
+            _store[task["id"]] = task
+            items.append(task)
+        return items, total
     _ensure_store_loaded(include_output=True)
     items = [
         t
@@ -1293,6 +1343,8 @@ def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
 
 def get_task_count() -> dict[str, Any]:
     """Lightweight task counts for dashboards."""
+    if agent_task_store_service.enabled():
+        return agent_task_store_service.load_status_counts()
     _ensure_store_loaded(include_output=False)
     items = list(_store.values())
     by_status: dict[str, int] = {}
