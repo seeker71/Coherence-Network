@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/docs-hygiene-sweep-20260223",
+  "commit_scope": "Run docs/spec hygiene sweep, normalize stale pinned Claude alias references, and publish a dated findings report.",
+  "files_owned": [
+    "docs/AGENT-DEBUGGING.md",
+    "docs/MODEL-ROUTING.md",
+    "specs/002-agent-orchestration-api.md",
+    "docs/system_audit/docs_hygiene_report_2026-02-23.md",
+    "docs/system_audit/commit_evidence_2026-02-23_docs-hygiene-sweep.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "docs-hygiene-sweep"
+  ],
+  "spec_ids": [
+    "002"
+  ],
+  "task_ids": [
+    "docs-link-hygiene",
+    "docs-fragmentation-audit"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "custom markdown link scan over docs/**/*.md and specs/**/*.md with TOTAL_MISSING=0"
+  ],
+  "change_files": [
+    "docs/AGENT-DEBUGGING.md",
+    "docs/MODEL-ROUTING.md",
+    "specs/002-agent-orchestration-api.md",
+    "docs/system_audit/docs_hygiene_report_2026-02-23.md"
+  ],
+  "change_intent": "docs_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Docs/spec guidance uses a consistent Claude fallback alias and the scanned docs/spec markdown links remain valid.",
+    "public_endpoints": [],
+    "test_flows": [
+      "run markdown link integrity scan over docs and specs (TOTAL_MISSING=0)",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+    ]
+  }
+}

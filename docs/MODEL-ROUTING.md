@@ -8,7 +8,7 @@ Tasks use **local first**, then cloud, then Claude:
 |----------|------|-------|----------------|
 | 1 | local | glm-4.7-flash:latest | `OLLAMA_MODEL` (default) |
 | 2 | cloud | glm-5:cloud | `model_override: "glm-5:cloud"` or `OLLAMA_CLOUD_MODEL` |
-| 3 | claude | claude-3-5-haiku | HEAL tasks, or `model_override: "claude-3-5-haiku-20241022"` |
+| 3 | claude | claude-3-5-haiku | HEAL tasks, or `model_override: "claude-3-5-haiku"` |
 
 Use `context.model_override` when creating a task to force cloud or Claude (e.g. when local fails or is unavailable).
 
@@ -95,7 +95,7 @@ HEAL tasks route to Claude by default. Set `ANTHROPIC_API_KEY` for Claude models
 ## Escalation Rules
 
 - Local fails → use `model_override: "glm-5:cloud"` for next task
-- Cloud unavailable → use `model_override: "claude-3-5-haiku-20241022"` (requires ANTHROPIC_API_KEY)
+- Cloud unavailable → use `model_override: "claude-3-5-haiku"` (requires ANTHROPIC_API_KEY)
 - Security/auth code → Start at Claude
 - Architecture decision → Claude Sonnet/Opus
 
