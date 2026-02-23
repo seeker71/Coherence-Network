@@ -329,6 +329,7 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-test")
@@ -355,10 +356,37 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     assert "OPENAI_BASE_URL" not in env
 
 
+def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch, tmp_path):
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", raising=False)
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    env = {
+        "OPENAI_API_KEY": "sk-test",
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_default_fallback",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_fallback_allowed"] is True
+    assert env.get("OPENAI_API_KEY") == "sk-test"
+    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
+
+
 def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-test")
@@ -395,6 +423,7 @@ def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeyp
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-fallback-runner")
@@ -435,6 +464,47 @@ def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeyp
     assert auth_fallback.get("trigger") == "oauth_refresh_token_reused"
     assert auth_fallback.get("to_mode") == "api_key"
     assert "runner-codex-auth-fallback" in str(pending_patch.get("output") or "")
+
+
+def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):
+    t = [6100.0]
+    popen_calls: list[dict[str, object]] = []
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    def _popen(*args, **kwargs):
+        popen_calls.append(
+            {
+                "command": args[0],
+                "shell": kwargs.get("shell"),
+            }
+        )
+        return _Proc(returncode=0, stdout_text="OK\n")
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_codex_argv",
+        command='codex exec "RUN `echo risky` literal text"',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+    )
+    assert done is True
+    assert popen_calls
+    assert popen_calls[0]["shell"] is False
+    assert isinstance(popen_calls[0]["command"], list)
 
 
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
@@ -497,6 +567,7 @@ def test_run_one_task_records_codex_oauth_auth_context_and_log(monkeypatch, tmp_
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-runner")
@@ -537,6 +608,7 @@ def test_run_one_task_records_codex_oauth_auth_context_and_log(monkeypatch, tmp_
     assert auth.get("requested_mode") == "oauth"
     assert auth.get("effective_mode") == "oauth"
     assert auth.get("oauth_session") is True
+    assert auth.get("oauth_fallback_allowed") is False
     assert auth.get("oauth_missing") is False
 
     log_file = tmp_path / "task_task_oauth.log"
