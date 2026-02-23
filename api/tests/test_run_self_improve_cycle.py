@@ -29,6 +29,13 @@ class _FakeClient:
         friction_payload: object | None = None,
         runtime_payload: object | None = None,
         usage_error: Exception | None = None,
+        tasks_error: Exception | None = None,
+        runtime_error: Exception | None = None,
+        health_error: Exception | None = None,
+        gates_error: Exception | None = None,
+        deploy_active: bool = False,
+        execute_status_code: int = 200,
+        pending_polls_before_complete: int = 0,
         post_error_plan: list[Exception] | None = None,
     ) -> None:
         self.created_payloads: list[dict] = []
@@ -42,6 +49,14 @@ class _FakeClient:
         self.friction_payload = friction_payload if friction_payload is not None else []
         self.runtime_payload = runtime_payload if runtime_payload is not None else {}
         self.usage_error = usage_error
+        self.tasks_error = tasks_error
+        self.runtime_error = runtime_error
+        self.health_error = health_error
+        self.gates_error = gates_error
+        self.deploy_active = deploy_active
+        self.execute_status_code = execute_status_code
+        self.pending_polls_before_complete = max(0, pending_polls_before_complete)
+        self._task_poll_counts: dict[str, int] = {}
 
     def post(
         self,
@@ -63,7 +78,7 @@ class _FakeClient:
             return _FakeResponse(201, {"id": task_id})
 
         if "/execute" in url:
-            return _FakeResponse(200, {"ok": True})
+            return _FakeResponse(self.execute_status_code, {"ok": self.execute_status_code < 400})
 
         raise AssertionError(f"unexpected post url: {url}")
 
@@ -78,21 +93,56 @@ class _FakeClient:
                 raise self.usage_error
             return _FakeResponse(200, self.usage_payload)
 
+        if url.endswith("/api/health"):
+            if self.health_error:
+                raise self.health_error
+            return _FakeResponse(200, {"status": "ok"})
+
+        if url.endswith("/api/gates/main-head"):
+            if self.gates_error:
+                raise self.gates_error
+            return _FakeResponse(200, {"sha": "abc123"})
+
+        if "api.github.com/repos/" in url and "/actions/workflows/public-deploy-contract.yml/runs" in url:
+            workflow_runs = (
+                [{"status": "in_progress", "html_url": "https://github.com/example/redeploy"}]
+                if self.deploy_active
+                else []
+            )
+            return _FakeResponse(200, {"workflow_runs": workflow_runs})
+
         if "/api/agent/tasks?status=needs_decision" in url:
             return _FakeResponse(200, self.needs_decision_payload)
 
         if "/api/agent/tasks?" in url and "/api/agent/tasks/" not in url:
+            if self.tasks_error:
+                raise self.tasks_error
             return _FakeResponse(200, self.tasks_payload)
 
         if "/api/friction/events" in url:
             return _FakeResponse(200, self.friction_payload)
 
         if "/api/runtime/endpoints/summary" in url:
+            if self.runtime_error:
+                raise self.runtime_error
             return _FakeResponse(200, self.runtime_payload)
 
         if "/api/agent/tasks/" in url:
             task_id = url.rsplit("/", 1)[-1]
             if task_id in self._task_order:
+                poll_count = self._task_poll_counts.get(task_id, 0) + 1
+                self._task_poll_counts[task_id] = poll_count
+                if poll_count <= self.pending_polls_before_complete:
+                    return _FakeResponse(
+                        200,
+                        {
+                            "id": task_id,
+                            "status": "pending",
+                            "output": "",
+                            "context": {"executor": "codex"},
+                            "model": "",
+                        },
+                    )
                 idx = int(task_id.split("-")[-1])
                 output = f"stage-{idx}-output"
                 self._task_outputs[task_id] = output
@@ -459,3 +509,48 @@ def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
     assert report["stages"][0]["resumed"] is True
     assert report["stages"][0]["resume_source"] == "checkpoint"
     assert len(client.created_payloads) == 2
+
+
+def test_run_cycle_tolerates_execute_forbidden_when_pending() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        execute_status_code=403,
+        pending_polls_before_complete=1,
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=True,
+        execute_token="invalid",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_execute_forbidden.json",
+    )
+
+    assert report["status"] == "completed"
+    assert [row["stage"] for row in report["stages"]] == ["plan", "execute", "review"]
+
+
+def test_infra_preflight_allows_degraded_observability_when_core_is_healthy() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        tasks_error=RuntimeError("The read operation timed out"),
+        runtime_error=RuntimeError("The read operation timed out"),
+    )
+
+    preflight = run_self_improve_cycle._infra_preflight(
+        client=client,
+        base_url="https://example.test",
+        usage_threshold_ratio=0.15,
+        usage_cache_path=Path("/tmp/self_improve_preflight_usage_cache.json"),
+        attempts=1,
+        consecutive_successes=1,
+    )
+
+    assert preflight["allowed"] is True
+    assert preflight["history"][0]["tasks_ok"] is False
+    assert preflight["history"][0]["runtime_ok"] is False
+    assert preflight["history"][0]["health_ok"] is True
+    assert preflight["history"][0]["gates_ok"] is True
