@@ -458,20 +458,20 @@ def _persistence_enabled() -> bool:
 
 
 def _db_store_reload_ttl_seconds() -> float:
-    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "15").strip()
+    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "30").strip()
     try:
         value = float(raw)
     except ValueError:
-        value = 15.0
+        value = 30.0
     return max(0.0, min(value, 300.0))
 
 
 def _max_task_output_chars() -> int:
-    raw = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "20000").strip()
+    raw = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "4000").strip()
     try:
         value = int(raw)
     except ValueError:
-        value = 20000
+        value = 4000
     return max(500, min(value, 200000))
 
 
@@ -1114,7 +1114,7 @@ def _runtime_fallback_events_for_tasks(existing_count: int) -> list[Any]:
 
         runtime_fallback_limit = max(
             50,
-            min(int(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_LIMIT", "500")), 5000),
+            min(int(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_LIMIT", "200")), 5000),
         )
         return runtime_service.list_events(limit=runtime_fallback_limit)
     except Exception:
