@@ -65,3 +65,14 @@ def test_task_target_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch
     assert context.get("abort_evidence") == ["fatal error", "abort now"]
     assert context.get("observation_window_sec") == 180
     assert isinstance(context.get("target_state_contract"), dict)
+
+
+def test_build_command_escapes_shell_sensitive_direction_tokens() -> None:
+    command = agent_service._build_command(
+        'Check `uname -a` and "$HOME" value',
+        TaskType.IMPL,
+        executor="openclaw",
+    )
+
+    assert "\\`uname -a\\`" in command
+    assert '\\"\\$HOME\\"' in command
