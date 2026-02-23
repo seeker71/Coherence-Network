@@ -1,7 +1,7 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by enabling Codex OAuth->API-key fallback by default, executing codex commands via argv (no shell expansion), and isolating Codex HOME/session in api_key mode so stale oauth sessions are not reused.",
+  "commit_scope": "Unblock hosted self-improve execution by enabling Codex OAuth->API-key fallback by default, executing codex commands via argv (no shell expansion), isolating Codex HOME/session in api_key mode, and mapping OPENAI_API_KEY from OPENAI_API_KEY or OPENAI_ADMIN_API_KEY to avoid missing-bearer failures.",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
@@ -16,7 +16,8 @@
   "task_ids": [
     "task-2026-02-23-self-improve-oauth-refresh-fallback",
     "task-2026-02-23-self-improve-codex-shell-expansion-fix",
-    "task-2026-02-23-self-improve-codex-api-key-home-isolation"
+    "task-2026-02-23-self-improve-codex-api-key-home-isolation",
+    "task-2026-02-23-self-improve-admin-key-fallback"
   ],
   "contributors": [
     {
