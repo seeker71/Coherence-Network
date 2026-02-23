@@ -15,6 +15,7 @@ import logging
 import math
 import os
 import socket
+import shlex
 import shutil
 import subprocess
 import sys
@@ -2659,6 +2660,20 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _prepare_codex_command_for_exec(command: str) -> tuple[str | list[str], bool, str]:
+    """Run codex commands via argv to avoid shell expansion of backticks in prompt text."""
+    cmd = str(command or "")
+    if not _uses_codex_cli(cmd):
+        return cmd, True, "shell"
+    try:
+        argv = shlex.split(cmd, posix=True)
+    except ValueError:
+        return cmd, True, "shell_parse_error"
+    if not argv:
+        return cmd, True, "shell_empty_argv"
+    return argv, False, "argv"
+
+
 def _normalize_codex_auth_mode(raw: Any, *, default: str = "api_key") -> str:
     mode = str(raw or "").strip().lower()
     if mode in CODEX_AUTH_MODE_VALUES:
@@ -2767,7 +2782,7 @@ def _configure_codex_cli_environment(
     openai_admin_key = str(os.environ.get("OPENAI_ADMIN_API_KEY", "")).strip()
     api_key_present = bool(openai_api_key or openai_admin_key)
     oauth_available, oauth_source = _codex_oauth_session_status(env)
-    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0"))
+    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "1"))
 
     effective_mode = requested_mode
     if requested_mode == "auto":
@@ -3463,6 +3478,9 @@ def run_one_task(
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
+    popen_command: str | list[str] = command
+    popen_shell = True
+    command_exec_mode = "shell"
     if _uses_cursor_cli(command):
         # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
@@ -3480,6 +3498,7 @@ def run_one_task(
             )
         if "--dangerously-bypass-approvals-and-sandbox" not in command:
             command = f"{command} --dangerously-bypass-approvals-and-sandbox"
+        popen_command, popen_shell, command_exec_mode = _prepare_codex_command_for_exec(command)
     elif _uses_openclaw_cli(command):
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
@@ -3494,6 +3513,8 @@ def run_one_task(
         env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
         env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
         env.setdefault("ANTHROPIC_API_KEY", "")
+    if _uses_codex_cli(command):
+        log.info("task=%s codex execution mode=%s", task_id, command_exec_mode)
     # Suppress Claude Code requests to unsupported local-model endpoints (GitHub #13949)
     env.setdefault("DISABLE_TELEMETRY", "1")
     env.setdefault("DISABLE_ERROR_REPORTING", "1")
@@ -3778,6 +3799,9 @@ def run_one_task(
             "[runner-model-alias] requested_model="
             f"{codex_model_alias['requested_model']} effective_model={codex_model_alias['effective_model']}\n"
         )
+    exec_mode_note = ""
+    if _uses_codex_cli(command):
+        exec_mode_note = f"[runner-command-exec] mode={command_exec_mode}\n"
 
     def _stream_reader(proc: subprocess.Popen) -> None:
         """Read process stdout line-by-line, write to log file + collect output."""
@@ -3792,6 +3816,9 @@ def run_one_task(
                 if alias_note:
                     f.write(alias_note)
                     output_lines.append(alias_note)
+                if exec_mode_note:
+                    f.write(exec_mode_note)
+                    output_lines.append(exec_mode_note)
                 f.flush()
                 for line in iter(proc.stdout.readline, ""):
                     f.write(line)
@@ -3804,8 +3831,8 @@ def run_one_task(
 
     try:
         process = subprocess.Popen(
-            command,
-            shell=True,
+            popen_command,
+            shell=popen_shell,
             env=env,
             cwd=repo_path,
             stdout=subprocess.PIPE,

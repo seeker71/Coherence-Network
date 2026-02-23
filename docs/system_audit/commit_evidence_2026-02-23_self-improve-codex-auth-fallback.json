@@ -1,7 +1,7 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by auto-falling back from Codex OAuth to API-key auth on refresh_token_reused failures, with per-task auth override support and regression tests for fallback scheduling.",
+  "commit_scope": "Unblock hosted self-improve execution by enabling Codex OAuth->API-key fallback by default, preserving opt-out, and executing codex commands via argv (no shell expansion) so plan text with backticks cannot break impl command execution.",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
@@ -14,7 +14,8 @@
     "096-provider-readiness-contract-automation"
   ],
   "task_ids": [
-    "task-2026-02-23-self-improve-oauth-refresh-fallback"
+    "task-2026-02-23-self-improve-oauth-refresh-fallback",
+    "task-2026-02-23-self-improve-codex-shell-expansion-fix"
   ],
   "contributors": [
     {
@@ -49,7 +50,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"codex_oauth or auth_override or model_not_found_fallback\"",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"codex_oauth or auth_override or oauth_fallback or argv or model_not_found_fallback\"",
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
     ]
   },
