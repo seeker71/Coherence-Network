@@ -79,7 +79,7 @@
     "web/app/api-health/page.tsx",
     "web/app/api/[...path]/route.ts",
     "web/app/api/runtime-beacon/route.ts",
-    "web/app/api/web-version/",
+    "web/app/api/web-version/route.ts",
     "web/app/automation/page.tsx",
     "web/app/contributors/page.tsx",
     "web/app/flow/page.tsx",
