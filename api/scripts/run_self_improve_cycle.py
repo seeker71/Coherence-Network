@@ -33,6 +33,9 @@ AGENT_TASK_DIRECTION_MAX_CHARS = int(os.environ.get("SELF_IMPROVE_AGENT_TASK_DIR
 AGENT_TASK_DIRECTION_SAFE_CHARS = max(400, AGENT_TASK_DIRECTION_MAX_CHARS - 300)
 AGENT_TASK_DIRECTION_422_RETRY_CHARS = max(300, AGENT_TASK_DIRECTION_SAFE_CHARS - 600)
 TASK_DIRECTION_TRUNCATION_NOTE = "[truncated to fit task direction limit]"
+SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE = str(
+    os.environ.get("SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE", "api_key")
+).strip().lower() or "api_key"
 
 STAGE_SPECS = {
     "plan": {"task_type": "spec", "model": PLAN_MODEL},
@@ -191,6 +194,7 @@ def build_task_payload(*, direction: str, task_type: str, model_override: str) -
             "force_paid_providers": True,
             "runner_codex_auth_mode": "api_key",
             "source": "self_improve_cycle",
+            "runner_codex_auth_mode": SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE,
         },
     }
 
