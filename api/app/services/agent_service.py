@@ -795,8 +795,13 @@ def _build_command(
         template = _openclaw_command_template(task_type)
     else:
         template = COMMAND_TEMPLATES[task_type]
-    # Escape direction for shell (double-quoted string)
-    escaped = direction.replace("\\", "\\\\").replace('"', '\\"')
+    # Escape direction for shell in a double-quoted template placeholder.
+    escaped = (
+        direction.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("`", "\\`")
+        .replace("$", "\\$")
+    )
     return template.replace("{{direction}}", escaped)
 
 

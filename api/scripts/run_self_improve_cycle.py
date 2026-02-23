@@ -29,6 +29,10 @@ STAGE_SUBMIT_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_STAGE_SUBMI
 CHECKPOINT_FILE = Path(".cache/self_improve_cycle_checkpoint.json")
 CHECKPOINT_MAX_AGE_SECONDS = int(os.environ.get("SELF_IMPROVE_CHECKPOINT_MAX_AGE_SECONDS", "172800"))
 INFRA_PREFLIGHT_SLEEP_SECONDS = int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_SLEEP_SECONDS", "20"))
+AGENT_TASK_DIRECTION_MAX_CHARS = int(os.environ.get("SELF_IMPROVE_AGENT_TASK_DIRECTION_MAX_CHARS", "5000"))
+AGENT_TASK_DIRECTION_SAFE_CHARS = max(400, AGENT_TASK_DIRECTION_MAX_CHARS - 300)
+AGENT_TASK_DIRECTION_422_RETRY_CHARS = max(300, AGENT_TASK_DIRECTION_SAFE_CHARS - 600)
+TASK_DIRECTION_TRUNCATION_NOTE = "[truncated to fit task direction limit]"
 
 STAGE_SPECS = {
     "plan": {"task_type": "spec", "model": PLAN_MODEL},
@@ -105,6 +109,21 @@ def _clip(text: str, max_chars: int = 12000) -> str:
     return cleaned[:max_chars] + "\n\n[truncated]"
 
 
+def _fit_task_direction(direction: str, *, max_chars: int = AGENT_TASK_DIRECTION_SAFE_CHARS) -> str:
+    text = str(direction or "")
+    safe_max = max(120, max_chars)
+    if len(text) <= safe_max:
+        return text
+    suffix = f"\n\n{TASK_DIRECTION_TRUNCATION_NOTE}"
+    keep = max(1, safe_max - len(suffix))
+    return text[:keep] + suffix
+
+
+def _is_http_status_error(exc: Exception, status_code: int) -> bool:
+    message = str(exc or "").lower()
+    return f"status={status_code}" in message or f"http {status_code}" in message
+
+
 def build_plan_direction() -> str:
     return (
         "You are planning a self-improvement task for this repository.\n"
@@ -136,7 +155,7 @@ def build_execute_direction(plan_output: str) -> str:
         "Keep intent/system/options/failure/meaning/maintainability commitments from the plan explicit in the RESULT section.\n"
         "\n"
         "Plan to execute:\n"
-        f"{_clip(plan_output)}\n"
+        f"{_clip(plan_output, max_chars=3200)}\n"
         "\n"
         "Required output format (exact sections): PLAN, PATCH, RUN, RESULT.\n"
         "Under RUN and RESULT, include concrete proof artifacts for every completed step."
@@ -151,10 +170,10 @@ def build_review_direction(plan_output: str, execute_output: str) -> str:
         "and maintainability drift guidance are present.\n"
         "\n"
         "Original plan:\n"
-        f"{_clip(plan_output, max_chars=8000)}\n"
+        f"{_clip(plan_output, max_chars=1800)}\n"
         "\n"
         "Execution output:\n"
-        f"{_clip(execute_output, max_chars=12000)}\n"
+        f"{_clip(execute_output, max_chars=1800)}\n"
         "\n"
         "Return verdict with sections: PASS_FAIL, FINDINGS, REQUIRED_RETRIES, UNBLOCK_GUIDANCE.\n"
         "In UNBLOCK_GUIDANCE, include common issue playbooks (tests/lint/secrets/rebase/flaky network/dependencies)."
@@ -162,8 +181,9 @@ def build_review_direction(plan_output: str, execute_output: str) -> str:
 
 
 def build_task_payload(*, direction: str, task_type: str, model_override: str) -> dict[str, Any]:
+    bounded_direction = _fit_task_direction(direction, max_chars=AGENT_TASK_DIRECTION_SAFE_CHARS)
     return {
-        "direction": direction,
+        "direction": bounded_direction,
         "task_type": task_type,
         "context": {
             "executor": "codex",
@@ -765,7 +785,18 @@ def _run_stage(
         task_type=task_type,
         model_override=model_override,
     )
-    task_id = _submit_task_with_retry(client, base_url=base_url, payload=payload)
+    submit_payload = payload
+    try:
+        task_id = _submit_task_with_retry(client, base_url=base_url, payload=submit_payload)
+    except Exception as exc:
+        if not _is_http_status_error(exc, 422):
+            raise
+        compacted_payload = dict(submit_payload)
+        compacted_payload["direction"] = _fit_task_direction(
+            str(submit_payload.get("direction") or ""),
+            max_chars=AGENT_TASK_DIRECTION_422_RETRY_CHARS,
+        )
+        task_id = _submit_task_with_retry(client, base_url=base_url, payload=compacted_payload)
     task = _wait_for_terminal(
         client,
         base_url=base_url,

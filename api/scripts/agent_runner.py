@@ -2695,6 +2695,14 @@ def _abs_expanded_path(path: str) -> str:
     return os.path.abspath(os.path.expanduser(value))
 
 
+def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
+    if not str(value or "").strip():
+        return
+    if str(env.get(key, "")).strip():
+        return
+    env[key] = value
+
+
 def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
     candidates: list[str] = []
     seen: set[str] = set()
@@ -2804,9 +2812,9 @@ def _configure_codex_cli_environment(
 
     if effective_mode == "oauth":
         if allow_oauth_fallback:
-            env.setdefault("OPENAI_API_KEY", openai_primary_key)
-            env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-            env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+            _set_env_if_blank(env, "OPENAI_API_KEY", openai_primary_key)
+            _set_env_if_blank(env, "OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+            _set_env_if_blank(env, "OPENAI_BASE_URL", str(env.get("OPENAI_API_BASE") or ""))
         else:
             env.pop("OPENAI_API_KEY", None)
             env.pop("OPENAI_ADMIN_API_KEY", None)
@@ -2816,9 +2824,9 @@ def _configure_codex_cli_environment(
         if _as_bool(os.environ.get("AGENT_CODEX_API_KEY_ISOLATE_HOME", "1")):
             _ensure_codex_api_key_isolated_home(env, task_id=task_id)
             env["AGENT_CODEX_OAUTH_SESSION_FILE"] = ""
-        env.setdefault("OPENAI_API_KEY", openai_primary_key)
-        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+        _set_env_if_blank(env, "OPENAI_API_KEY", openai_primary_key)
+        _set_env_if_blank(env, "OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+        _set_env_if_blank(env, "OPENAI_BASE_URL", str(env.get("OPENAI_API_BASE") or ""))
 
     oauth_available, oauth_source = _codex_oauth_session_status(env)
     oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)

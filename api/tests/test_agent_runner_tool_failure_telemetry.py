@@ -432,6 +432,23 @@ def test_configure_codex_cli_environment_uses_admin_key_when_primary_missing(mon
     assert env.get("OPENAI_API_KEY") == "admin-only-key"
 
 
+def test_configure_codex_cli_environment_overwrites_blank_primary_with_admin_key(monkeypatch):
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-only-key")
+
+    env = {"OPENAI_API_KEY": ""}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_admin_key_blank_primary",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["effective_mode"] == "api_key"
+    assert auth["api_key_present"] is True
+    assert env.get("OPENAI_API_KEY") == "admin-only-key"
+
+
 def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
