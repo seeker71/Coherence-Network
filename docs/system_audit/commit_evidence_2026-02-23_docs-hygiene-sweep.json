@@ -1,11 +1,10 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/docs-hygiene-sweep-20260223",
-  "commit_scope": "Run docs/spec hygiene sweep, normalize stale pinned Claude alias references, and publish a dated findings report.",
+  "commit_scope": "Run docs/spec hygiene sweep, normalize stale pinned Claude alias references in docs, and publish a dated findings report.",
   "files_owned": [
     "docs/AGENT-DEBUGGING.md",
     "docs/MODEL-ROUTING.md",
-    "specs/002-agent-orchestration-api.md",
     "docs/system_audit/docs_hygiene_report_2026-02-23.md",
     "docs/system_audit/commit_evidence_2026-02-23_docs-hygiene-sweep.json"
   ],
@@ -62,7 +61,6 @@
   "change_files": [
     "docs/AGENT-DEBUGGING.md",
     "docs/MODEL-ROUTING.md",
-    "specs/002-agent-orchestration-api.md",
     "docs/system_audit/docs_hygiene_report_2026-02-23.md"
   ],
   "change_intent": "docs_only",
