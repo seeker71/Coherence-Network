@@ -1,7 +1,7 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by forcing self-improve task payloads to request runner_codex_auth_mode=api_key, while preserving prior Codex fallback/argv/home-isolation/admin-key fixes.",
+  "commit_scope": "Unblock hosted self-improve execution by forcing self-improve task payloads to request runner_codex_auth_mode=api_key and ensuring agent runner overwrites blank OPENAI_API_KEY env values when API-key auth is selected.",
   "files_owned": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
@@ -20,7 +20,8 @@
     "task-2026-02-23-self-improve-codex-shell-expansion-fix",
     "task-2026-02-23-self-improve-codex-api-key-home-isolation",
     "task-2026-02-23-self-improve-admin-key-fallback",
-    "task-2026-02-23-self-improve-force-api-key-context"
+    "task-2026-02-23-self-improve-force-api-key-context",
+    "task-2026-02-23-self-improve-blank-openai-key-env-fix"
   ],
   "contributors": [
     {
