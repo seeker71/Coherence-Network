@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.services import metrics_service
@@ -19,7 +20,7 @@ def test_metrics_imports_from_file_to_db_and_purges_legacy_file(
                 "model": "openai-codex",
                 "duration_seconds": 12.5,
                 "status": "completed",
-                "created_at": "2026-02-16T01:00:00Z",
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
         )
         + "\n",

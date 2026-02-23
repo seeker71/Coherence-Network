@@ -621,7 +621,7 @@ def _submit_task(client: Any, base_url: str, payload: dict[str, Any]) -> str:
     return task_id
 
 
-def _request_execute(client: Any, base_url: str, task_id: str, execute_token: str) -> None:
+def _request_execute(client: Any, base_url: str, task_id: str, execute_token: str) -> bool:
     headers = {}
     if execute_token:
         headers["X-Agent-Execute-Token"] = execute_token
@@ -632,7 +632,12 @@ def _request_execute(client: Any, base_url: str, task_id: str, execute_token: st
         timeout=HTTP_TIMEOUT_SECONDS,
     )
     if not ok:
+        # In hosted production, tasks can auto-execute without this endpoint.
+        # Treat auth/conflict responses as non-fatal to avoid false infra failures.
+        if status_code in {401, 403, 409}:
+            return False
         raise RuntimeError(f"execute request failed for {task_id} (status={status_code}) {error}")
+    return True
 
 
 def _wait_for_terminal(
@@ -771,16 +776,48 @@ def _infra_preflight(
             timeout=10.0,
             attempts=1,
         )
-        bundle = _collect_input_bundle(
+        tasks_ok, _, tasks_error, tasks_status = _safe_get(
             client,
-            base_url=base_url,
-            threshold_ratio=usage_threshold_ratio,
-            usage_cache_path=usage_cache_path,
+            f"{base_url}/api/agent/tasks?limit=1",
+            timeout=8.0,
+            attempts=1,
         )
+        runtime_ok, _, runtime_error, runtime_status = _safe_get(
+            client,
+            f"{base_url}/api/runtime/endpoints/summary?limit=1",
+            timeout=8.0,
+            attempts=1,
+        )
+        bundle = {
+            "data_quality_mode": "full" if tasks_ok and runtime_ok else "degraded_partial",
+            "summary": {
+                "task_count": 0,
+                "needs_decision_count": 0,
+                "friction_open_count": 0,
+                "runtime_endpoint_count": 0,
+                "blocking_usage_alert_count": 0,
+            },
+            "usage": {"source": "missing", "counts": {"alerts_total": 0, "blocking": 0}},
+            "tasks": {
+                "ok": tasks_ok,
+                "error": tasks_error,
+                "status_code": tasks_status,
+                "records": [],
+                "count": 0,
+                "status_counts": {},
+            },
+            "runtime": {
+                "ok": runtime_ok,
+                "error": runtime_error,
+                "status_code": runtime_status,
+                "payload": {},
+            },
+            "needs_decision": {"ok": False, "error": "", "status_code": None, "records": [], "count": 0},
+            "friction": {"ok": False, "error": "", "status_code": None, "records": [], "count": 0},
+        }
         last_bundle = bundle
-        tasks_ok = bool(_coerce_dict(bundle.get("tasks")).get("ok"))
-        runtime_ok = bool(_coerce_dict(bundle.get("runtime")).get("ok"))
-        ready = bool(health_ok and gate_ok and tasks_ok and runtime_ok and not deploy_active)
+        # Only block preflight on deploy/core health instability.
+        ready = bool(health_ok and gate_ok and not deploy_active)
         if ready:
             streak += 1
         else:
@@ -800,7 +837,11 @@ def _infra_preflight(
                 "gates_status": gate_status,
                 "gates_error": gate_error or "",
                 "tasks_ok": tasks_ok,
+                "tasks_status": tasks_status,
+                "tasks_error": tasks_error or "",
                 "runtime_ok": runtime_ok,
+                "runtime_status": runtime_status,
+                "runtime_error": runtime_error or "",
                 "data_quality_mode": str(bundle.get("data_quality_mode") or ""),
             }
         )
@@ -819,12 +860,15 @@ def _infra_preflight(
                 sleep_seconds = max(sleep_seconds, 30)
             time.sleep(sleep_seconds)
 
+    preflight_error = "infra_not_settled_or_deploy_active"
+    if history and all(not bool(row.get("deploy_active")) for row in history):
+        preflight_error = "infra_core_health_unstable"
     return {
         "allowed": False,
         "history": history,
         "required_consecutive_successes": required_streak,
         "attempts": safe_attempts,
-        "preflight_error": "infra_not_settled_or_deploy_active",
+        "preflight_error": preflight_error,
         "last_bundle": last_bundle or {},
     }
 

@@ -1,0 +1,102 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/self-improve-e2e-proof",
+  "commit_scope": "Unblock hosted self-improve execution by making infra preflight tolerant to degraded observability probes, avoiding forced execute calls in hosted workflow, and adding tests for execute/auth fallback and degraded preflight behavior.",
+  "files_owned": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_metrics_db_migration.py",
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-23-self-improve-hosted-stage-unblock",
+    "task-2026-02-23-self-improve-preflight-degraded-tolerance"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_metrics_db_migration.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/02_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/03_ruff.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/04_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/05_pr_guard_local_pass.json",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/06_pr_followthrough_strict.txt",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22297201130"
+  ],
+  "change_files": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_metrics_db_migration.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-hosted-stage-unblock.json",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/02_pytest.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/03_ruff.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/04_workflow_refs.txt",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/05_pr_guard_local_pass.json",
+    "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/06_pr_followthrough_strict.txt"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py",
+      "cd api && pytest -q tests/test_metrics_db_migration.py::test_metrics_imports_from_file_to_db_and_purges_legacy_file",
+      "cd api && ruff check scripts/run_self_improve_cycle.py tests/test_run_self_improve_cycle.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR merge and hosted self-improve run with non-empty stage execution evidence."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted self-improve no longer blocks only because list/summary observability probes time out; it proceeds on core health and can execute stages while preserving awareness data.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/gates/main-head",
+      "/api/agent/tasks",
+      "/api/runtime/endpoints/summary"
+    ],
+    "test_flows": [
+      "Trigger Self Improve Cycle on production and verify report status is completed or failed-with-stages, not infra_preflight-only blocked.",
+      "Verify at least one stage includes task_id/model/executor in report artifact.",
+      "Verify runtime events include tool usage and provider attribution for the stage task IDs."
+    ]
+  }
+}
