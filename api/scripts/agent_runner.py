@@ -2695,6 +2695,14 @@ def _abs_expanded_path(path: str) -> str:
     return os.path.abspath(os.path.expanduser(value))
 
 
+def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
+    if not str(value or "").strip():
+        return
+    if str(env.get(key, "")).strip():
+        return
+    env[key] = value
+
+
 def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
     candidates: list[str] = []
     seen: set[str] = set()
