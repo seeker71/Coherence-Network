@@ -25,6 +25,13 @@
       "reason": "Temporary waiver while Change Contract main run is being repaired.",
       "expires_at": "2026-02-23T23:59:59Z",
       "run_url_contains": "actions/runs/22282530504"
+    },
+    {
+      "workflow": "Auto Heal Deploy Gates",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while hosted self-improve execution reliability fix is being rolled out and validated.",
+      "expires_at": "2026-02-23T23:59:59Z",
+      "run_url_contains": "actions/runs/22300432845"
     }
   ]
 }
