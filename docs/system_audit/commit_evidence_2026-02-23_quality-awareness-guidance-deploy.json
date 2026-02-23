@@ -1,0 +1,92 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/c137-egress-usage-fix",
+  "commit_scope": "Close host-runner vs friction observability gaps, add provider usage validation provenance, add full-view render/API cost telemetry surfacing, and add guidance-first quality-awareness summaries with self-improvement integration while keeping policy non-blocking.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/quality_awareness_service.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "web/app/usage/page.tsx",
+    "docs/RUNBOOK.md",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_quality_awareness_service.py"
+  ],
+  "idea_ids": [
+    "coherence-network-value-attribution"
+  ],
+  "spec_ids": [
+    "100-automation-provider-usage-readiness-api"
+  ],
+  "task_ids": [
+    "task-2026-02-23-usage-friction-gap-closure",
+    "task-2026-02-23-quality-awareness-guidance"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "output/playwright/live-snapshot-post-fix-v2-backfill-run.png",
+    "output/playwright/live-validation-snapshot-v3.png",
+    "output/diagnostics/system_daily_summary_post_fix_v2_backfill_run.json",
+    "output/diagnostics/system_daily_summary_post_fix_v3_validation.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260223T093848Z_codex-c137-egress-usage-fix.json"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/quality_awareness_service.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_quality_awareness_service.py",
+    "web/app/usage/page.tsx",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/commit_evidence_2026-02-23_quality-awareness-guidance-deploy.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/auto_heal_start_gate.sh",
+      "cd api && pytest -q tests/test_agent_usage_tracking_api.py tests/test_automation_usage_api.py tests/test_run_self_improve_cycle.py",
+      "cd api && pytest -q tests/test_quality_awareness_service.py",
+      "cd api && pytest -q tests/test_runbook.py",
+      "cd web && npx tsc --noEmit"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, deploy verification, and hosted self-improvement proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Usage daily summary and /usage UI provide validated-vs-derived provider telemetry, full-view runtime/cost visibility, quality-awareness guidance, and reconciled host-runner failure/friction accounting for operator diagnosis.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/daily-summary?window_hours=24&top_n=8",
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/usage"
+    ],
+    "test_flows": [
+      "Verify host_failed == friction_events == failed_worker_events in daily summary after backfill.",
+      "Verify provider rows include validation_state/evidence_source and codex derived-gap disclosure.",
+      "Verify /usage renders quality-awareness guidance and full-view render/API-cost section with non-empty data when telemetry exists.",
+      "Run a hosted self-improvement cycle and verify plan/execute/review stages complete with new guidance contract fields."
+    ]
+  }
+}
