@@ -2793,7 +2793,8 @@ def _configure_codex_cli_environment(
 
     openai_api_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
     openai_admin_key = str(os.environ.get("OPENAI_ADMIN_API_KEY", "")).strip()
-    api_key_present = bool(openai_api_key or openai_admin_key)
+    openai_primary_key = openai_api_key or openai_admin_key
+    api_key_present = bool(openai_primary_key)
     oauth_available_initial, oauth_source_initial = _codex_oauth_session_status(env)
     allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "1"))
 
@@ -2803,7 +2804,7 @@ def _configure_codex_cli_environment(
 
     if effective_mode == "oauth":
         if allow_oauth_fallback:
-            env.setdefault("OPENAI_API_KEY", openai_api_key)
+            env.setdefault("OPENAI_API_KEY", openai_primary_key)
             env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
             env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
         else:
@@ -2815,7 +2816,7 @@ def _configure_codex_cli_environment(
         if _as_bool(os.environ.get("AGENT_CODEX_API_KEY_ISOLATE_HOME", "1")):
             _ensure_codex_api_key_isolated_home(env, task_id=task_id)
             env["AGENT_CODEX_OAUTH_SESSION_FILE"] = ""
-        env.setdefault("OPENAI_API_KEY", openai_api_key)
+        env.setdefault("OPENAI_API_KEY", openai_primary_key)
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
         env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
 
