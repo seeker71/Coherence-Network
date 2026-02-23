@@ -2767,9 +2767,18 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
 def _ensure_codex_api_key_isolated_home(env: dict[str, str], *, task_id: str) -> str:
     """Force Codex API-key mode to ignore stale oauth sessions from the default home."""
     slug = re.sub(r"[^a-zA-Z0-9_.-]", "-", str(task_id or "task")).strip("-") or "task"
-    base_home = os.path.join("/tmp", "agent-runner-codex-api-key", slug)
+    current_home = str(env.get("HOME") or os.path.expanduser("~")).strip() or os.path.expanduser("~")
+    default_root = os.path.join(current_home, ".agent-runner-codex-api-key")
+    home_root = str(os.environ.get("AGENT_CODEX_API_KEY_HOME_ROOT", default_root)).strip() or default_root
+    base_home = os.path.join(home_root, slug)
     codex_home = os.path.join(base_home, ".codex")
-    os.makedirs(codex_home, exist_ok=True)
+    try:
+        os.makedirs(codex_home, exist_ok=True)
+    except OSError:
+        # Last-resort fallback keeps runs alive even when preferred home root is not writable.
+        base_home = os.path.join("/tmp", "agent-runner-codex-api-key", slug)
+        codex_home = os.path.join(base_home, ".codex")
+        os.makedirs(codex_home, exist_ok=True)
     env["HOME"] = base_home
     env["CODEX_HOME"] = codex_home
     return codex_home
