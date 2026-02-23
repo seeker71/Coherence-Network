@@ -18,6 +18,8 @@ async def test_upsert_active_task_creates_once_and_reuses_by_session_key(
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         first = await client.post(
@@ -68,6 +70,8 @@ def test_agent_tasks_persist_and_reload_from_disk(
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     created = agent_service.create_task(
         AgentTaskCreate(
@@ -93,6 +97,8 @@ def test_agent_tasks_persist_and_reload_from_disk(
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     rows, total = agent_service.list_tasks(limit=50, offset=0)
     assert total == 1
@@ -109,6 +115,8 @@ def test_agent_store_isolated_between_pytest_test_contexts(
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
     agent_service._store_loaded_test_context = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     created = agent_service.create_task(
         AgentTaskCreate(
@@ -138,6 +146,8 @@ def test_agent_tasks_persist_and_reload_from_db(
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     created = agent_service.create_task(
         AgentTaskCreate(
@@ -158,8 +168,57 @@ def test_agent_tasks_persist_and_reload_from_db(
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
 
     rows, total = agent_service.list_tasks(limit=50, offset=0)
     assert total == 1
     assert rows[0]["id"] == task_id
     assert rows[0]["status"] == TaskStatus.RUNNING
+
+
+def test_db_reload_without_output_does_not_erase_task_output(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "agent_tasks_output.db"
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "1")
+    monkeypatch.setenv("AGENT_TASKS_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("AGENT_TASK_OUTPUT_MAX_CHARS", "1200")
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Persist and retain output",
+            task_type=TaskType.IMPL,
+        )
+    )
+    task_id = created["id"]
+    long_output = "x" * 2000
+
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.COMPLETED,
+        output=long_output,
+        worker_id="openai-codex",
+    )
+    assert updated is not None
+    assert str(updated.get("output") or "").endswith("...[truncated]")
+
+    # No output provided here; DB row should keep the previously stored output.
+    again = agent_service.update_task(
+        task_id=task_id,
+        current_step="post-completion marker",
+        worker_id="openai-codex",
+    )
+    assert again is not None
+
+    fetched = agent_service.get_task(task_id)
+    assert fetched is not None
+    assert str(fetched.get("output") or "").endswith("...[truncated]")

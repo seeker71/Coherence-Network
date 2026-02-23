@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import shutil
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
@@ -424,6 +425,8 @@ _store: dict[str, dict[str, Any]] = {}
 _store_loaded = False
 _store_loaded_path: str | None = None
 _store_loaded_test_context: str | None = None
+_store_loaded_includes_output = False
+_store_loaded_at_monotonic = 0.0
 ACTIVE_TASK_STATUSES = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.NEEDS_DECISION}
 
 
@@ -452,6 +455,34 @@ def _persistence_enabled() -> bool:
         return configured.strip().lower() not in {"0", "false", "no", "off"}
     # Keep tests deterministic unless explicitly opted in.
     return os.getenv("PYTEST_CURRENT_TEST") is None
+
+
+def _db_store_reload_ttl_seconds() -> float:
+    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "15").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 15.0
+    return max(0.0, min(value, 300.0))
+
+
+def _max_task_output_chars() -> int:
+    raw = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "20000").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 20000
+    return max(500, min(value, 200000))
+
+
+def _sanitize_task_output(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    max_chars = _max_task_output_chars()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n...[truncated]"
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -522,12 +553,12 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
     return task
 
 
-def _load_store_from_disk() -> dict[str, dict[str, Any]]:
+def _load_store_from_disk(*, include_output: bool = True) -> dict[str, dict[str, Any]]:
     if not _persistence_enabled():
         return {}
     if agent_task_store_service.enabled():
         loaded: dict[str, dict[str, Any]] = {}
-        for raw in agent_task_store_service.load_tasks():
+        for raw in agent_task_store_service.load_tasks(include_output=include_output):
             task = _deserialize_task(raw)
             if not task:
                 continue
@@ -567,8 +598,9 @@ def _save_store_to_disk() -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _ensure_store_loaded() -> None:
+def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = False) -> None:
     global _store_loaded, _store_loaded_path, _store_loaded_test_context
+    global _store_loaded_includes_output, _store_loaded_at_monotonic
     current_path = str(_store_path())
     current_test = os.getenv("PYTEST_CURRENT_TEST")
 
@@ -579,23 +611,33 @@ def _ensure_store_loaded() -> None:
         _store_loaded = False
         _store_loaded_path = None
         _store_loaded_test_context = current_test
+        _store_loaded_includes_output = False
+        _store_loaded_at_monotonic = 0.0
 
-    # In DB mode we reload on every call so multi-instance workers observe fresh state.
     if agent_task_store_service.enabled():
-        _store.clear()
-        _store.update(_load_store_from_disk())
-        _store_loaded = True
-        _store_loaded_path = current_path
-        _store_loaded_test_context = current_test
+        now = time.monotonic()
+        need_upgrade = include_output and not _store_loaded_includes_output
+        expired = (now - _store_loaded_at_monotonic) >= _db_store_reload_ttl_seconds()
+        should_reload = force_reload or not _store_loaded or need_upgrade or expired
+        if should_reload:
+            _store.clear()
+            _store.update(_load_store_from_disk(include_output=include_output))
+            _store_loaded = True
+            _store_loaded_path = current_path
+            _store_loaded_test_context = current_test
+            _store_loaded_includes_output = include_output
+            _store_loaded_at_monotonic = now
         return
 
-    if _store_loaded and _store_loaded_path == current_path:
+    if _store_loaded and _store_loaded_path == current_path and not force_reload:
         return
     _store.clear()
-    _store.update(_load_store_from_disk())
+    _store.update(_load_store_from_disk(include_output=include_output))
     _store_loaded = True
     _store_loaded_path = current_path
     _store_loaded_test_context = current_test
+    _store_loaded_includes_output = include_output
+    _store_loaded_at_monotonic = time.monotonic()
 
 
 def _now() -> datetime:
@@ -658,6 +700,22 @@ def _task_duration_ms(task: dict[str, Any]) -> float:
         seconds = max(0.0, float((updated - start_ts).total_seconds()))
         return max(0.1, round(seconds * 1000.0, 4))
     return 0.1
+
+
+def _task_output_text(task: dict[str, Any]) -> str:
+    output = task.get("output")
+    if isinstance(output, str):
+        return output
+    if output is None and agent_task_store_service.enabled():
+        task_id = str(task.get("id") or "").strip()
+        if task_id:
+            raw = agent_task_store_service.load_task(task_id, include_output=True)
+            if isinstance(raw, dict):
+                loaded = raw.get("output")
+                if isinstance(loaded, str):
+                    task["output"] = loaded
+                    return loaded
+    return str(output or "")
 
 
 def _has_completion_tracking_event(task_id: str, final_status: str) -> bool:
@@ -862,7 +920,10 @@ def _resolve_task_route(
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(
+        force_reload=agent_task_store_service.enabled(),
+        include_output=False,
+    )
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
     target_contract = _normalize_target_state_contract(
@@ -953,7 +1014,14 @@ def get_agent_integration_status() -> dict[str, Any]:
 
 def get_task(task_id: str) -> Optional[dict]:
     """Get task by id."""
-    _ensure_store_loaded()
+    if agent_task_store_service.enabled():
+        raw = agent_task_store_service.load_task(task_id, include_output=True)
+        if isinstance(raw, dict):
+            task = _deserialize_task(raw)
+            if task is not None:
+                _store[task["id"]] = task
+                return task
+    _ensure_store_loaded(include_output=True)
     task = _store.get(task_id)
     if task is not None:
         return task
@@ -1107,7 +1175,8 @@ def list_tasks(
     offset: int = 0,
 ) -> tuple:
     """List tasks with optional filters. Sorted by created_at descending (newest first)."""
-    _ensure_store_loaded()
+    force_reload = agent_task_store_service.enabled() and status in ACTIVE_TASK_STATUSES
+    _ensure_store_loaded(force_reload=force_reload, include_output=False)
     items = list(_store.values())
     events = _runtime_fallback_events_for_tasks(len(items))
 
@@ -1144,7 +1213,10 @@ def update_task(
     When decision is present and task is needs_decision, set status→running and store decision.
     Note: Caller should trigger Telegram alert for needs_decision/failed (see router).
     """
-    _ensure_store_loaded()
+    _ensure_store_loaded(
+        force_reload=agent_task_store_service.enabled(),
+        include_output=False,
+    )
     task = _store.get(task_id)
     if task is None:
         return None
@@ -1162,7 +1234,7 @@ def update_task(
             task["status"] = status
 
     if output is not None:
-        task["output"] = output
+        task["output"] = _sanitize_task_output(output)
     if progress_pct is not None:
         task["progress_pct"] = progress_pct
     if current_step is not None:
@@ -1207,7 +1279,7 @@ def update_task(
 
 def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
     """List tasks with status needs_decision or failed (for /attention)."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=True)
     items = [
         t
         for t in _store.values()
@@ -1221,7 +1293,7 @@ def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:
 
 def get_task_count() -> dict[str, Any]:
     """Lightweight task counts for dashboards."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     items = list(_store.values())
     by_status: dict[str, int] = {}
     for t in items:
@@ -1232,7 +1304,7 @@ def get_task_count() -> dict[str, Any]:
 
 def get_review_summary() -> dict[str, Any]:
     """Summary of tasks needing attention (for /status and alerts)."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     items = list(_store.values())
     by_status = {}
     for t in items:
@@ -1545,7 +1617,7 @@ def _record_task_failure_friction(task: dict[str, Any], *, linked_task_ids: set[
         f"claimed_by={_normalize_worker_id(task.get('claimed_by'))}",
         "failure_reason=task transitioned to failed without linked friction event",
     ]
-    output = str(task.get("output") or "").strip()
+    output = _task_output_text(task).strip()
     if output:
         notes_parts.append(f"output_preview={output[:400]}")
 
@@ -1717,7 +1789,7 @@ def _pipeline_latest_activity(
                     "direction": task.get("direction"),
                     "prompt_preview": (task.get("command") or "")[:500],
                 }
-            out = task.get("output") or ""
+            out = _task_output_text(task)
             latest_response = {
                 "task_id": task.get("id"),
                 "status": task.get("status"),
@@ -1751,7 +1823,7 @@ def _pipeline_attention_summary(
     output_empty = False
     for completed_item in completed[:5]:
         t = _store.get(completed_item["id"]) or {}
-        if len(t.get("output") or "") == 0 and _status_value(t) == "completed":
+        if len(_task_output_text(t)) == 0 and _status_value(t) == "completed":
             output_empty = True
             attention_flags.append("output_empty")
             break
@@ -1759,7 +1831,7 @@ def _pipeline_attention_summary(
     executor_fail = False
     for completed_item in completed[:5]:
         t = _store.get(completed_item["id"]) or {}
-        if len(t.get("output") or "") == 0 and _status_value(t) == "failed":
+        if len(_task_output_text(t)) == 0 and _status_value(t) == "failed":
             executor_fail = True
             attention_flags.append("executor_fail")
             break
@@ -1799,7 +1871,7 @@ def _pipeline_attention_summary(
 
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     by_model: dict[str, dict[str, Any]] = {}
     completed_or_failed_task_ids: list[str] = []
     tasks = list(_store.values())
@@ -1876,7 +1948,7 @@ def get_visibility_summary() -> dict[str, Any]:
 
 
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     fingerprint = (task_fingerprint or "").strip()
     if not fingerprint:
         return None
@@ -1892,7 +1964,7 @@ def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | N
 
 
 def find_active_task_by_session_key(session_key: str) -> dict[str, Any] | None:
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     key = (session_key or "").strip()
     if not key:
         return None
@@ -1916,7 +1988,10 @@ def upsert_active_task(
     context: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], bool]:
     """Ensure a running task exists for a unique session key. Returns (task, created)."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(
+        force_reload=agent_task_store_service.enabled(),
+        include_output=False,
+    )
     normalized_key = (session_key or "").strip()
     if not normalized_key:
         raise ValueError("session_key is required")
@@ -1952,7 +2027,7 @@ def upsert_active_task(
 
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     """Pipeline visibility: running, pending with wait times, recent completed with duration."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(include_output=False)
     now = now_utc or datetime.now(timezone.utc)
 
     running, pending, completed = _collect_pipeline_status_items(now)
@@ -1966,7 +2041,10 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
         "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
         "running_by_phase": attention.pop("by_phase"),
         "recent_completed": [
-            {**c, "output_len": len((_store.get(c["id"]) or {}).get("output") or "")}
+            {
+                **c,
+                "output_len": len(_task_output_text(_store.get(c["id"]) or {})),
+            }
             for c in completed[:10]
         ],
         "latest_request": latest_request,
@@ -1984,7 +2062,10 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
 
 def clear_store() -> None:
     """Clear in-memory store (for testing)."""
-    _ensure_store_loaded()
+    _ensure_store_loaded(
+        force_reload=agent_task_store_service.enabled(),
+        include_output=False,
+    )
     _store.clear()
     if agent_task_store_service.enabled():
         agent_task_store_service.clear_tasks()
