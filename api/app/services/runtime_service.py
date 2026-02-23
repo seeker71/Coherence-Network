@@ -21,6 +21,7 @@ from app.models.runtime import (
     IdeaRuntimeSummary,
     RuntimeEvent,
     RuntimeEventCreate,
+    WebViewPerformanceReport,
 )
 from app.services import (
     agent_task_store_service,
@@ -28,6 +29,7 @@ from app.services import (
     route_registry_service,
     runtime_exerciser_service,
     runtime_event_store,
+    runtime_web_view_service,
     telemetry_persistence_service,
     value_lineage_service,
 )
@@ -100,6 +102,10 @@ def _runtime_cost_per_second() -> float:
     return float(os.getenv("RUNTIME_COST_PER_SECOND", "0.002"))
 
 
+def estimate_runtime_cost(runtime_ms: float) -> float:
+    return round((max(0.0, float(runtime_ms)) / 1000.0) * _runtime_cost_per_second(), 8)
+
+
 def _runtime_events_store_cache_key() -> str:
     if runtime_event_store.enabled():
         url = (
@@ -111,12 +117,13 @@ def _runtime_events_store_cache_key() -> str:
     return f"file:{_events_path()}"
 
 
-def _runtime_events_cache_key(limit: int, since: datetime | None) -> str:
+def _runtime_events_cache_key(limit: int, since: datetime | None, source: str | None) -> str:
     cutoff = "all"
     if since is not None:
         since_ts = int(since.timestamp())
         cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
-    return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}"
+    source_value = str(source or "").strip().lower() or "all"
+    return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}|source={source_value}"
 
 
 def _invalidate_runtime_events_cache() -> None:
@@ -313,7 +320,7 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     raw_endpoint = _normalize_path(payload.raw_endpoint or payload.endpoint)
     idea_id = resolve_idea_id(endpoint=payload.endpoint, explicit_idea_id=payload.idea_id, method=payload.method)
     origin_idea_id = resolve_origin_idea_id(idea_id)
-    runtime_cost = round((float(payload.runtime_ms) / 1000.0) * _runtime_cost_per_second(), 8)
+    runtime_cost = estimate_runtime_cost(float(payload.runtime_ms))
     metadata = dict(payload.metadata)
     if raw_endpoint != normalized_endpoint:
         metadata.setdefault("normalized_from", raw_endpoint)
@@ -340,9 +347,14 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     return event
 
 
-def list_events(limit: int = 100, since: datetime | None = None) -> list[RuntimeEvent]:
-    requested_limit = max(1, min(int(limit), 2000))
-    cache_key = _runtime_events_cache_key(requested_limit, since)
+def list_events(
+    limit: int = 100,
+    since: datetime | None = None,
+    source: str | None = None,
+) -> list[RuntimeEvent]:
+    requested_limit = max(1, min(int(limit), 5000))
+    source_value = str(source or "").strip().lower()
+    cache_key = _runtime_events_cache_key(requested_limit, since, source_value or None)
     now = time.time()
     if (
         _RUNTIME_EVENTS_CACHE.get("expires_at", 0.0) > now
@@ -352,12 +364,18 @@ def list_events(limit: int = 100, since: datetime | None = None) -> list[Runtime
         return [row.model_copy(deep=True) for row in _RUNTIME_EVENTS_CACHE["rows"][:requested_limit]]
 
     if runtime_event_store.enabled():
-        rows = runtime_event_store.list_events(limit=max(1, min(requested_limit, 5000)), since=since)
+        rows = runtime_event_store.list_events(
+            limit=max(1, min(requested_limit, 5000)),
+            since=since,
+            source=source_value or None,
+        )
         out: list[RuntimeEvent] = []
         for event in rows:
             try:
                 if not event.raw_endpoint:
                     event.raw_endpoint = event.endpoint
+                if source_value and str(event.source).strip().lower() != source_value:
+                    continue
                 event.endpoint = normalize_endpoint(event.endpoint, event.method)
                 if not event.origin_idea_id:
                     event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
@@ -378,6 +396,8 @@ def list_events(limit: int = 100, since: datetime | None = None) -> list[Runtime
             event = RuntimeEvent(**raw)
             if not event.raw_endpoint:
                 event.raw_endpoint = event.endpoint
+            if source_value and str(event.source).strip().lower() != source_value:
+                continue
             event.endpoint = normalize_endpoint(event.endpoint, event.method)
             if not event.origin_idea_id:
                 event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
@@ -462,6 +482,8 @@ def live_change_token(force_refresh: bool = False) -> dict[str, Any]:
 def summarize_by_idea(
     seconds: int = 3600,
     event_limit: int = 2000,
+    summary_limit: int = 500,
+    summary_offset: int = 0,
     event_rows: list[RuntimeEvent] | None = None,
 ) -> list[IdeaRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
@@ -493,10 +515,12 @@ def summarize_by_idea(
             )
         )
     summaries.sort(key=lambda x: x.runtime_cost_estimate, reverse=True)
-    return summaries
+    safe_offset = max(0, int(summary_offset))
+    safe_limit = max(1, min(int(summary_limit), 2000))
+    return summaries[safe_offset:safe_offset + safe_limit]
 
 
-def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
+def summarize_by_endpoint(seconds: int = 3600, summary_limit: int = 500) -> list[EndpointRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
     rows = list_events(limit=2000, since=cutoff)
@@ -565,7 +589,26 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
             )
         )
     summaries.sort(key=lambda x: (x.runtime_cost_estimate, x.endpoint), reverse=True)
-    return summaries
+    return summaries[: max(1, min(int(summary_limit), 2000))]
+
+
+def summarize_web_view_performance(
+    *,
+    seconds: int = 21600,
+    limit: int = 100,
+    route_prefix: str | None = None,
+    event_limit: int = 5000,
+) -> WebViewPerformanceReport:
+    window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
+    requested_limit = max(1, min(int(limit), 500))
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    rows = list_events(limit=max(1, min(int(event_limit), 5000)), since=cutoff)
+    return runtime_web_view_service.summarize_web_view_performance_from_rows(
+        rows=rows,
+        window_seconds=window_seconds,
+        requested_limit=requested_limit,
+        route_prefix=(route_prefix or "").strip() or None,
+    )
 
 
 def _parse_status_code(value: str) -> int:
@@ -734,7 +777,8 @@ def _build_endpoint_attention_row(
     paid_tool_event_count, paid_tool_failure_count = _endpoint_attention_paid_counts(endpoint_events)
 
     paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
-    friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
+    friction_density_raw = (float(friction_count) / float(event_count)) if event_count else 0.0
+    friction_density = min(max(friction_density_raw, 0.0), 1.0)
 
     idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
     potential_value = _safe_float(idea_data.get("potential_value", 0.0))

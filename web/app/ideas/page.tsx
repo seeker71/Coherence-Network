@@ -27,6 +27,14 @@ type IdeaWithScore = {
   value_gap: number;
 };
 
+type PaginationInfo = {
+  total: number;
+  limit: number;
+  offset: number;
+  returned: number;
+  has_more: boolean;
+};
+
 type IdeasResponse = {
   ideas: IdeaWithScore[];
   summary: {
@@ -37,19 +45,57 @@ type IdeasResponse = {
     total_actual_value: number;
     total_value_gap: number;
   };
+  pagination?: PaginationInfo;
 };
 
-async function loadIdeas(): Promise<IdeasResponse> {
+type IdeasSearchParams = Promise<{
+  page?: string | string[];
+  page_size?: string | string[];
+}>;
+
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+
+export const revalidate = 90;
+
+function parsePositiveInt(raw: string | string[] | undefined, fallback: number): number {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const parsed = Number.parseInt((value || "").trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+async function loadIdeas(limit: number, offset: number): Promise<IdeasResponse> {
   const API = getApiBase();
-  const res = await fetch(`${API}/api/ideas`, { cache: "no-store" });
+  const params = new URLSearchParams({
+    limit: String(Math.max(1, Math.min(limit, MAX_PAGE_SIZE))),
+    offset: String(Math.max(0, offset)),
+  });
+  const res = await fetch(`${API}/api/ideas?${params.toString()}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as IdeasResponse;
 }
 
-export default async function IdeasPage() {
-  const data = await loadIdeas();
+export default async function IdeasPage({ searchParams }: { searchParams: IdeasSearchParams }) {
+  const resolved = await searchParams;
+  const requestedPageSize = parsePositiveInt(resolved.page_size, DEFAULT_PAGE_SIZE);
+  const pageSize = Math.max(1, Math.min(requestedPageSize, MAX_PAGE_SIZE));
+  const requestedPage = parsePositiveInt(resolved.page, 1);
+  const offset = (requestedPage - 1) * pageSize;
 
+  const data = await loadIdeas(pageSize, offset);
   const ideas = [...data.ideas].sort((a, b) => b.free_energy_score - a.free_energy_score);
+  const pagination = data.pagination;
+  const currentPage = Math.max(1, Math.floor((pagination?.offset ?? offset) / (pagination?.limit || pageSize)) + 1);
+  const hasPrevious = currentPage > 1;
+  const hasNext = Boolean(pagination?.has_more) || ideas.length >= pageSize;
+  const pageStart = (pagination?.offset ?? offset) + 1;
+  const pageEnd = (pagination?.offset ?? offset) + ideas.length;
+
+  const prevHref = hasPrevious
+    ? `/ideas?page=${currentPage - 1}&page_size=${pagination?.limit || pageSize}`
+    : "/ideas";
+  const nextHref = `/ideas?page=${currentPage + 1}&page_size=${pagination?.limit || pageSize}`;
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -87,7 +133,7 @@ export default async function IdeasPage() {
       </div>
 
       <h1 className="text-2xl font-bold">Ideas</h1>
-      <p className="text-muted-foreground">Human interface for `GET /api/ideas`.</p>
+      <p className="text-muted-foreground">Paginated `GET /api/ideas` with direct links to full idea detail.</p>
 
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div className="rounded border p-3">
@@ -105,7 +151,30 @@ export default async function IdeasPage() {
       </section>
 
       <section className="rounded border p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">Sorted by free energy score (higher first).</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+          <p>
+            Showing {ideas.length > 0 ? `${pageStart}-${pageEnd}` : "0"} of {pagination?.total ?? data.summary.total_ideas}
+            {" | "}
+            page {currentPage}
+          </p>
+          <div className="flex gap-3">
+            {hasPrevious ? (
+              <Link href={prevHref} className="underline hover:text-foreground">
+                Previous
+              </Link>
+            ) : (
+              <span className="opacity-50">Previous</span>
+            )}
+            {hasNext ? (
+              <Link href={nextHref} className="underline hover:text-foreground">
+                Next
+              </Link>
+            ) : (
+              <span className="opacity-50">Next</span>
+            )}
+          </div>
+        </div>
+
         <ul className="space-y-2">
           {ideas.map((idea) => (
             <li key={idea.id} className="rounded border p-3 space-y-1">
@@ -122,6 +191,7 @@ export default async function IdeasPage() {
               </p>
             </li>
           ))}
+          {ideas.length === 0 ? <li className="text-muted-foreground">No ideas found for this page.</li> : null}
         </ul>
       </section>
     </main>

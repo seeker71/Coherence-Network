@@ -4,10 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getApiBase } from "@/lib/api";
+import { buildSystemLineageSearchParams } from "@/lib/egress";
 import { useLiveRefresh } from "@/lib/live_refresh";
-
-const API_URL = getApiBase();
 
 interface IdeaQuestionRow {
   idea_id: string;
@@ -79,13 +77,10 @@ export default function PortfolioPage() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
+      const lineageParams = buildSystemLineageSearchParams();
       const [inventoryRes, storageRes] = await Promise.all([
-        fetch(`${API_URL}/api/inventory/system-lineage?runtime_window_seconds=86400`, {
-          cache: "no-store",
-        }),
-        fetch(`${API_URL}/api/ideas/storage`, {
-          cache: "no-store",
-        }),
+        fetch(`/api/inventory/system-lineage?${lineageParams.toString()}`),
+        fetch("/api/ideas/storage"),
       ]);
       const inventoryJson = await inventoryRes.json();
       const storageJson = await storageRes.json();
@@ -117,7 +112,7 @@ export default function PortfolioPage() {
     const measuredDelta = deltaRaw ? Number(deltaRaw) : undefined;
     setSubmittingKey(key);
     try {
-      const res = await fetch(`${API_URL}/api/ideas/${encodeURIComponent(question.idea_id)}/questions/answer`, {
+      const res = await fetch(`/api/ideas/${encodeURIComponent(question.idea_id)}/questions/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

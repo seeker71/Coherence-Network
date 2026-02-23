@@ -4,10 +4,13 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveRefresh } from "@/lib/live_refresh";
+import { UI_RUNTIME_EVENTS_LIMIT } from "@/lib/egress";
 
 const REQUEST_TIMEOUT_MS = 12000;
 const EVENTS_TIMEOUT_MS = 8000;
-const EVENTS_LIMIT = 500;
+const EVENTS_LIMIT = UI_RUNTIME_EVENTS_LIMIT;
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
 
 type AgentTask = {
   id: string;
@@ -37,6 +40,7 @@ type RuntimeEvent = {
 type TaskListResponse = {
   tasks?: AgentTask[];
   items?: AgentTask[];
+  total?: number;
 };
 
 type TaskLogResponse = {
@@ -70,6 +74,12 @@ function tailLines(value: string, maxLines: number): string {
   return rows.slice(Math.max(0, rows.length - maxLines)).join("\n");
 }
 
+function parsePositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number.parseInt((value || "").trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
 async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -96,6 +106,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
+  const [totalTasks, setTotalTasks] = useState<number>(0);
   const [selectedTask, setSelectedTask] = useState<AgentTask | null>(null);
   const [selectedTaskLog, setSelectedTaskLog] = useState<string>("");
   const [selectedTaskEvents, setSelectedTaskEvents] = useState<RuntimeEvent[]>([]);
@@ -106,12 +117,24 @@ function TasksPageContent() {
   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);
   const taskIdFilter = useMemo(() => (searchParams.get("task_id") || "").trim(), [searchParams]);
+  const pageSize = useMemo(
+    () => Math.max(1, Math.min(parsePositiveInt(searchParams.get("page_size"), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE)),
+    [searchParams],
+  );
+  const page = useMemo(() => parsePositiveInt(searchParams.get("page"), 1), [searchParams]);
+  const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize]);
 
   const loadRows = useCallback(async () => {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
-      const res = await fetchWithTimeout("/api/agent/tasks");
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String(offset),
+      });
+      if (statusFilter) params.set("status", statusFilter);
+      if (typeFilter) params.set("task_type", typeFilter);
+      const res = await fetchWithTimeout(`/api/agent/tasks?${params.toString()}`);
       const json = (await res.json()) as TaskListResponse;
       if (!res.ok) throw new Error(JSON.stringify(json));
       const taskRows = Array.isArray(json.tasks)
@@ -122,6 +145,8 @@ function TasksPageContent() {
             ? json
             : [];
       setRows(taskRows);
+      const responseTotal = Number.isFinite(Number(json.total)) ? Number(json.total) : taskRows.length;
+      setTotalTasks(Math.max(taskRows.length, responseTotal));
 
       if (!taskIdFilter) {
         setSelectedTask(null);
@@ -186,18 +211,23 @@ function TasksPageContent() {
       setStatus("error");
       setError(String(e));
     }
-  }, [taskIdFilter]);
+  }, [offset, pageSize, statusFilter, taskIdFilter, typeFilter]);
 
   useLiveRefresh(loadRows);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      if (statusFilter && row.status !== statusFilter) return false;
-      if (typeFilter && row.task_type !== typeFilter) return false;
       if (taskIdFilter && row.id !== taskIdFilter) return false;
       return true;
     });
-  }, [rows, statusFilter, typeFilter, taskIdFilter]);
+  }, [rows, taskIdFilter]);
+
+  const pageStart = totalTasks > 0 ? offset + 1 : 0;
+  const pageEnd = totalTasks > 0 ? offset + filteredRows.length : 0;
+  const hasPrevious = page > 1;
+  const hasNext = pageEnd < totalTasks;
+  const previousHref = `/tasks?page=${Math.max(1, page - 1)}&page_size=${pageSize}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${typeFilter ? `&task_type=${encodeURIComponent(typeFilter)}` : ""}`;
+  const nextHref = `/tasks?page=${page + 1}&page_size=${pageSize}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${typeFilter ? `&task_type=${encodeURIComponent(typeFilter)}` : ""}`;
 
   const selectedContext = useMemo(() => asRecord(selectedTask?.context), [selectedTask]);
   const failureHits = toInt(selectedContext.failure_hits);
@@ -284,7 +314,7 @@ function TasksPageContent() {
         <>
           <section className="rounded border p-4 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Total: {filteredRows.length}
+              Showing {pageStart}-{pageEnd} of {totalTasks} | page {page}
               {(statusFilter || typeFilter || taskIdFilter) ? (
                 <>
                   {" "}
@@ -295,8 +325,26 @@ function TasksPageContent() {
                 </>
               ) : null}
             </p>
+            {!taskIdFilter ? (
+              <div className="flex gap-3 text-sm text-muted-foreground">
+                {hasPrevious ? (
+                  <Link href={previousHref} className="underline hover:text-foreground">
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="opacity-50">Previous</span>
+                )}
+                {hasNext ? (
+                  <Link href={nextHref} className="underline hover:text-foreground">
+                    Next
+                  </Link>
+                ) : (
+                  <span className="opacity-50">Next</span>
+                )}
+              </div>
+            ) : null}
             <ul className="space-y-2 text-sm">
-              {filteredRows.slice(0, 50).map((t) => (
+              {filteredRows.map((t) => (
                 <li key={t.id} className="rounded border p-2 space-y-1">
                   <div className="flex justify-between gap-3">
                     <span className="font-medium">

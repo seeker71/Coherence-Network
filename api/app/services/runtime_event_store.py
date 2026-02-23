@@ -157,14 +157,21 @@ def write_event(event: RuntimeEvent) -> None:
         session.add(row)
 
 
-def list_events(limit: int = 100, since: datetime | None = None) -> list[RuntimeEvent]:
+def list_events(
+    limit: int = 100,
+    since: datetime | None = None,
+    source: str | None = None,
+) -> list[RuntimeEvent]:
     ensure_schema()
     if since is not None and since.tzinfo is None:
         since = since.replace(tzinfo=timezone.utc)
+    source_value = str(source or "").strip()
     with _session() as session:
         query = session.query(RuntimeEventRecord)
         if since is not None:
             query = query.filter(RuntimeEventRecord.recorded_at >= since)
+        if source_value:
+            query = query.filter(RuntimeEventRecord.source == source_value)
         query = query.order_by(RuntimeEventRecord.recorded_at.desc()).limit(max(1, min(limit, 5000)))
         rows = query.all()
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
+import { UI_RUNTIME_WINDOW } from "@/lib/egress";
 
 type EndpointTraceabilityItem = {
   path: string;
@@ -140,7 +141,7 @@ export default function ApiCoveragePage() {
     setError(null);
 
     const [traceRes, canonicalRes] = await Promise.all([
-      fetchJson<TraceabilityResponse>(`${API_BASE}/api/inventory/endpoint-traceability?runtime_window_seconds=86400`),
+      fetchJson<TraceabilityResponse>(`${API_BASE}/api/inventory/endpoint-traceability?runtime_window_seconds=${UI_RUNTIME_WINDOW}`),
       fetchJson<CanonicalRoutesResponse>(`${API_BASE}/api/inventory/routes/canonical`),
     ]);
 
