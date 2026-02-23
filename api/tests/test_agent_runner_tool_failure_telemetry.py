@@ -413,6 +413,7 @@ def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch,
     assert env.get("AGENT_CODEX_OAUTH_SESSION_FILE") == ""
     assert "agent-runner-codex-api-key" in str(env.get("HOME") or "")
     assert "agent-runner-codex-api-key" in str(env.get("CODEX_HOME") or "")
+    assert str(env.get("HOME") or "").startswith(str(real_home))
 
 
 def test_configure_codex_cli_environment_uses_admin_key_when_primary_missing(monkeypatch):

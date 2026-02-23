@@ -2775,7 +2775,15 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
 def _ensure_codex_api_key_isolated_home(env: dict[str, str], *, task_id: str) -> str:
     """Force Codex API-key mode to ignore stale oauth sessions from the default home."""
     slug = re.sub(r"[^a-zA-Z0-9_.-]", "-", str(task_id or "task")).strip("-") or "task"
-    base_home = os.path.join("/tmp", "agent-runner-codex-api-key", slug)
+    configured_base = str(os.environ.get("AGENT_CODEX_API_KEY_HOME_BASE", "")).strip()
+    if configured_base:
+        root = _abs_expanded_path(configured_base)
+    else:
+        current_home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+        if not current_home:
+            current_home = "/tmp"
+        root = os.path.join(current_home, ".agent-runner-codex-api-key")
+    base_home = os.path.join(root, slug)
     codex_home = os.path.join(base_home, ".codex")
     os.makedirs(codex_home, exist_ok=True)
     env["HOME"] = base_home
