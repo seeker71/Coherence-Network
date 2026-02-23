@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 import httpx
 
@@ -27,7 +28,7 @@ from app.models.automation_usage import (
     UsageAlertReport,
     UsageMetric,
 )
-from app.services import agent_service, telemetry_persistence_service
+from app.services import agent_service, quality_awareness_service, telemetry_persistence_service
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 120.0
@@ -44,6 +45,7 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
     "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
+    "db-host": {"kind": "custom", "any_of": ["RUNTIME_DATABASE_URL", "DATABASE_URL"]},
 }
 
 _DEFAULT_REQUIRED_PROVIDERS = (
@@ -174,6 +176,9 @@ def _metric(
     remaining: float | None = None,
     limit: float | None = None,
     window: str | None = None,
+    validation_state: str | None = None,
+    validation_detail: str | None = None,
+    evidence_source: str | None = None,
 ) -> UsageMetric:
     return UsageMetric(
         id=id,
@@ -183,6 +188,9 @@ def _metric(
         remaining=(None if remaining is None else max(0.0, float(remaining))),
         limit=(None if limit is None else max(0.0, float(limit))),
         window=window,
+        validation_state=(str(validation_state).strip().lower() if validation_state else None),
+        validation_detail=(str(validation_detail).strip()[:400] if validation_detail else None),
+        evidence_source=(str(evidence_source).strip()[:200] if evidence_source else None),
     )
 
 
@@ -331,6 +339,9 @@ def _append_rate_limit_metrics(
                 remaining=req_remaining,
                 limit=req_limit,
                 window=request_window,
+                validation_state="validated",
+                validation_detail="Directly measured from provider rate-limit response headers.",
+                evidence_source="provider_rate_limit_headers",
             )
         )
         found = True
@@ -348,6 +359,9 @@ def _append_rate_limit_metrics(
                 remaining=tok_remaining,
                 limit=tok_limit,
                 window=token_window,
+                validation_state="validated",
+                validation_detail="Directly measured from provider rate-limit response headers.",
+                evidence_source="provider_rate_limit_headers",
             )
         )
         found = True
@@ -369,6 +383,9 @@ def _runtime_task_runs_snapshot(*, provider: str, kind: str, active_runs: int, n
                 unit="tasks",
                 used=float(active_runs),
                 window="rolling",
+                validation_state="derived",
+                validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
+                evidence_source="runtime_events",
             )
         ],
         notes=[note],
@@ -721,6 +738,10 @@ def _default_official_records(provider: str) -> list[str]:
             "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-counts",
             "https://supabase.com/docs/reference/api/v1-analytics-endpoints-usage-api-requests-count",
         ],
+        "db-host": [
+            "https://www.postgresql.org/docs/current/monitoring-stats.html",
+            "https://docs.railway.com/reference/metrics",
+        ],
     }
     return links.get(provider, [])
 
@@ -758,6 +779,32 @@ def _primary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
     }
     ordered = sorted(metrics, key=lambda item: priority.get(item.id, 20))
     return ordered[0] if ordered else metrics[0]
+
+
+def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
+    if not metrics:
+        return None
+    limited = [metric for metric in metrics if metric.limit is not None and float(metric.limit or 0.0) > 0.0]
+    if limited:
+        priority = {
+            "codex_subscription_5h": 0,
+            "db_host_window_5h": 1,
+            "cursor_subscription_8h": 2,
+            "rest_requests": 3,
+            "codex_subscription_week": 4,
+            "db_host_window_week": 5,
+            "cursor_subscription_week": 6,
+        }
+        validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
+        ordered = sorted(
+            limited,
+            key=lambda item: (
+                validation_priority.get(str(item.validation_state or "unknown").strip().lower(), 2),
+                priority.get(item.id, 20),
+            ),
+        )
+        return ordered[0] if ordered else limited[0]
+    return _primary_metric(metrics)
 
 
 def _finalize_snapshot(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
@@ -1116,20 +1163,30 @@ def _int_env(name: str, default: int = 0) -> int:
         return default
 
 
-def _cursor_events_within_window(window_seconds: int) -> int:
+def _runtime_events_within_window(
+    *,
+    window_seconds: int,
+    source: str | None = None,
+    limit: int = 5000,
+) -> list[Any]:
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, int(window_seconds)))
     try:
         from app.services import runtime_service
 
-        events = runtime_service.list_events(limit=4000)
+        return runtime_service.list_events(
+            limit=max(1, min(int(limit), 5000)),
+            since=cutoff,
+            source=source,
+        )
     except Exception:
-        events = []
+        return []
+
+
+def _cursor_events_within_window(window_seconds: int) -> int:
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
 
     count = 0
     for event in events:
-        recorded_at = getattr(event, "recorded_at", None)
-        if not isinstance(recorded_at, datetime) or recorded_at < cutoff:
-            continue
         metadata = getattr(event, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             continue
@@ -1138,6 +1195,30 @@ def _cursor_events_within_window(window_seconds: int) -> int:
         model = str(metadata.get("model") or "").strip().lower()
         if executor == "cursor" or provider == "cursor" or model.startswith("cursor/"):
             count += 1
+    return count
+
+
+def _codex_events_within_window(window_seconds: int) -> int:
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    count = 0
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        model = str(metadata.get("model") or "").strip().lower()
+        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
+        executor = str(metadata.get("executor") or "").strip().lower()
+        agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        is_codex = bool(metadata.get("is_openai_codex"))
+        if is_codex:
+            count += 1
+            continue
+        if provider == "openai-codex":
+            count += 1
+            continue
+        if "codex" in model and (executor in {"openclaw", "codex"} or "openai-codex" in agent_id):
+            count += 1
+            continue
     return count
 
 
@@ -1217,9 +1298,61 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
     )
 
 
+def _append_codex_subscription_metrics(snapshot: ProviderUsageSnapshot) -> None:
+    if snapshot.provider != "openai-codex":
+        return
+    existing = {metric.id for metric in snapshot.metrics}
+    limit_5h = max(0, _int_env("CODEX_SUBSCRIPTION_5H_LIMIT", 0))
+    if limit_5h > 0 and "codex_subscription_5h" not in existing:
+        used_5h = _codex_events_within_window(5 * 60 * 60)
+        snapshot.metrics.append(
+            _metric(
+                id="codex_subscription_5h",
+                label="Codex task runs (5h)",
+                unit="requests",
+                used=float(min(used_5h, limit_5h)),
+                remaining=float(max(0, limit_5h - used_5h)),
+                limit=float(limit_5h),
+                window="hourly",
+                validation_state="derived",
+                validation_detail=(
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
+                    "not from provider quota headers/API."
+                ),
+                evidence_source="runtime_events+env_limits",
+            )
+        )
+    limit_week = max(0, _int_env("CODEX_SUBSCRIPTION_WEEK_LIMIT", 0))
+    if limit_week > 0 and "codex_subscription_week" not in existing:
+        used_week = _codex_events_within_window(7 * 24 * 60 * 60)
+        snapshot.metrics.append(
+            _metric(
+                id="codex_subscription_week",
+                label="Codex task runs (7d)",
+                unit="requests",
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+                validation_state="derived",
+                validation_detail=(
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
+                    "not from provider quota headers/API."
+                ),
+                evidence_source="runtime_events+env_limits",
+            )
+        )
+    if limit_5h <= 0 and limit_week <= 0:
+        snapshot.notes.append(
+            "Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT to enforce hard Codex window limits."
+        )
+    snapshot.notes = list(dict.fromkeys(snapshot.notes))
+
+
 def _build_internal_snapshot() -> ProviderUsageSnapshot:
     usage = agent_service.get_usage_summary()
     execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    host_runner = usage.get("host_runner") if isinstance(usage.get("host_runner"), dict) else {}
 
     tracked_runs = float(execution.get("tracked_runs") or 0.0)
     failed_runs = float(execution.get("failed_runs") or 0.0)
@@ -1237,6 +1370,28 @@ def _build_internal_snapshot() -> ProviderUsageSnapshot:
         _metric(id="tasks_failed", label="Failed task runs", unit="tasks", used=failed_runs, window="rolling"),
         _metric(id="tasks_untracked", label="Completed/failed tasks without usage", unit="tasks", used=untracked_tasks, window="rolling"),
     ]
+    host_total = float(host_runner.get("total_runs") or 0.0)
+    host_failed = float(host_runner.get("failed_runs") or 0.0)
+    if host_total > 0:
+        metrics.append(
+            _metric(
+                id="host_runner_tasks_24h",
+                label="Host-runner task runs (24h)",
+                unit="tasks",
+                used=host_total,
+                window="daily",
+            )
+        )
+    if host_failed > 0:
+        metrics.append(
+            _metric(
+                id="host_runner_failed_24h",
+                label="Host-runner failed tasks (24h)",
+                unit="tasks",
+                used=host_failed,
+                window="daily",
+            )
+        )
     notes = [f"Execution success rate {round(success_rate * 100.0, 2)}%"]
 
     return ProviderUsageSnapshot(
@@ -1818,6 +1973,111 @@ def _build_supabase_snapshot() -> ProviderUsageSnapshot:
     )
 
 
+def _append_db_host_window_metric(
+    metrics: list[UsageMetric],
+    *,
+    metric_id: str,
+    label: str,
+    window_seconds: int,
+    limit: int,
+    window: str,
+) -> None:
+    if limit <= 0:
+        return
+    used = len(_runtime_events_within_window(window_seconds=window_seconds, source="api", limit=5000))
+    metrics.append(
+        _metric(
+            id=metric_id,
+            label=label,
+            unit="requests",
+            used=float(min(used, limit)),
+            remaining=float(max(0, limit - used)),
+            limit=float(limit),
+            window=window,
+            validation_state="derived",
+            validation_detail="Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
+            evidence_source="runtime_events+env_limits",
+        )
+    )
+
+
+def _build_db_host_snapshot() -> ProviderUsageSnapshot:
+    db_url = (
+        str(os.getenv("RUNTIME_DATABASE_URL", "")).strip()
+        or str(os.getenv("DATABASE_URL", "")).strip()
+    )
+    if not db_url:
+        return ProviderUsageSnapshot(
+            id=f"provider_db_host_{int(time.time())}",
+            provider="db-host",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set DATABASE_URL or RUNTIME_DATABASE_URL to track DB-host usage windows."],
+        )
+
+    parsed = urlparse(db_url)
+    db_host = str(parsed.hostname or "").strip()
+    db_engine = str(parsed.scheme or "").strip()
+    if db_engine.endswith("+psycopg"):
+        db_engine = db_engine.split("+", 1)[0]
+
+    metrics: list[UsageMetric] = []
+    api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api", limit=5000))
+    metrics.append(
+        _metric(
+            id="api_events_24h",
+            label="API events touching DB host (24h)",
+            unit="requests",
+            used=float(api_events_24h),
+            window="daily",
+            validation_state="derived",
+            validation_detail="Derived from API runtime-event counts as an egress-safe proxy for DB load.",
+            evidence_source="runtime_events",
+        )
+    )
+
+    limit_5h = max(0, _int_env("DB_HOST_5H_LIMIT", 0))
+    limit_week = max(0, _int_env("DB_HOST_WEEK_LIMIT", 0))
+    _append_db_host_window_metric(
+        metrics,
+        metric_id="db_host_window_5h",
+        label="DB host request window (5h)",
+        window_seconds=5 * 60 * 60,
+        limit=limit_5h,
+        window="hourly",
+    )
+    _append_db_host_window_metric(
+        metrics,
+        metric_id="db_host_window_week",
+        label="DB host request window (7d)",
+        window_seconds=7 * 24 * 60 * 60,
+        limit=limit_week,
+        window="weekly",
+    )
+
+    notes = [
+        "DB-host usage uses runtime API event counts as an egress-safe proxy for DB load.",
+    ]
+    if limit_5h <= 0 and limit_week <= 0:
+        notes.append("Set DB_HOST_5H_LIMIT and DB_HOST_WEEK_LIMIT for hard host-window tracking.")
+
+    return ProviderUsageSnapshot(
+        id=f"provider_db_host_{int(time.time())}",
+        provider="db-host",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "database_host": db_host,
+            "database_engine": db_engine,
+            "database_present": True,
+        },
+    )
+
+
 def _build_railway_snapshot() -> ProviderUsageSnapshot:
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
@@ -2110,10 +2370,12 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
         _build_cursor_snapshot(),
+        _build_db_host_snapshot(),
         _build_supabase_snapshot(),
         _build_railway_snapshot(),
     ]
     for snapshot in providers:
+        _append_codex_subscription_metrics(snapshot)
         active_count = int(active_usage.get(snapshot.provider, 0))
         if active_count > 0:
             has_metric = any(metric.id == "runtime_task_runs" for metric in snapshot.metrics)
@@ -2125,6 +2387,9 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                         unit="tasks",
                         used=float(active_count),
                         window="rolling",
+                        validation_state="derived",
+                        validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
+                        evidence_source="runtime_events",
                     )
                 )
             snapshot.raw["runtime_task_runs"] = active_count
@@ -2363,6 +2628,208 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
     )
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
+
+
+def _latest_provider_snapshots(limit: int = 800) -> dict[str, ProviderUsageSnapshot]:
+    rows = list_usage_snapshots(limit=max(10, min(int(limit), 2000)))
+    by_provider: dict[str, ProviderUsageSnapshot] = {}
+    for row in rows:
+        provider = _normalize_provider_name(row.provider)
+        if not provider or provider in by_provider:
+            continue
+        by_provider[provider] = row
+    return by_provider
+
+
+def daily_system_summary(
+    *,
+    window_hours: int = 24,
+    top_n: int = 3,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    window_seconds = max(3600, min(int(window_hours) * 3600, 30 * 24 * 3600))
+    top_count = max(1, min(int(top_n), 20))
+    try:
+        host_observability_backfill = agent_service.backfill_host_runner_failure_observability(
+            window_hours=max(1, int(window_seconds / 3600))
+        )
+    except Exception:
+        host_observability_backfill = {
+            "window_hours": max(1, int(window_seconds / 3600)),
+            "host_failed_tasks": 0,
+            "completion_events_backfilled": 0,
+            "friction_events_backfilled": 0,
+            "affected_task_ids": [],
+            "error": "backfill_failed",
+        }
+    usage = agent_service.get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    host_runner = usage.get("host_runner") if isinstance(usage.get("host_runner"), dict) else {}
+
+    try:
+        from app.services import friction_service
+
+        friction_events, _ignored = friction_service.load_events()
+        friction_summary = friction_service.summarize(
+            friction_events,
+            window_days=max(1, int(round(window_seconds / 86400))),
+        )
+        friction_entry_points = friction_service.friction_entry_points(
+            window_days=max(1, int(round(window_seconds / 86400))),
+            limit=20,
+        )
+    except Exception:
+        friction_summary = {
+            "total_events": 0,
+            "open_events": 0,
+            "total_energy_loss": 0.0,
+            "total_cost_of_delay": 0.0,
+            "top_block_types": [],
+            "top_stages": [],
+        }
+        friction_entry_points = {"entry_points": []}
+
+    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    worker_total = len(worker_events)
+    worker_failed = sum(1 for event in worker_events if int(getattr(event, "status_code", 0) or 0) >= 400)
+    tool_counts: dict[str, dict[str, int]] = {}
+    for event in worker_events:
+        endpoint = str(getattr(event, "endpoint", "") or "").strip() or "unknown"
+        row = tool_counts.setdefault(endpoint, {"count": 0, "failed": 0})
+        row["count"] += 1
+        if int(getattr(event, "status_code", 0) or 0) >= 400:
+            row["failed"] += 1
+    top_tools = sorted(
+        (
+            {"tool": tool, "events": values["count"], "failed": values["failed"]}
+            for tool, values in tool_counts.items()
+        ),
+        key=lambda row: (row["events"], row["failed"]),
+        reverse=True,
+    )[: max(5, top_count)]
+
+    try:
+        from app.services import runtime_service
+
+        attention = runtime_service.summarize_endpoint_attention(
+            seconds=window_seconds,
+            min_event_count=1,
+            limit=max(20, top_count),
+        )
+        top_attention = [
+            {
+                "endpoint": row.endpoint,
+                "events": row.event_count,
+                "attention_score": row.attention_score,
+                "runtime_cost_estimate": row.runtime_cost_estimate,
+                "friction_event_count": row.friction_event_count,
+            }
+            for row in attention.endpoints[:top_count]
+        ]
+    except Exception:
+        top_attention = []
+
+    latest_provider_rows = _latest_provider_snapshots(limit=1000)
+    if not latest_provider_rows:
+        overview = collect_usage_overview(force_refresh=force_refresh)
+        latest_provider_rows = {
+            _normalize_provider_name(row.provider): row
+            for row in overview.providers
+            if _normalize_provider_name(row.provider)
+        }
+
+    provider_priority = ["github", "openai-codex", "openrouter", "railway", "db-host", "coherence-internal"]
+    ordered_provider_keys = sorted(
+        latest_provider_rows.keys(),
+        key=lambda name: (provider_priority.index(name) if name in provider_priority else 999, name),
+    )
+    providers: list[dict[str, Any]] = []
+    for provider_name in ordered_provider_keys:
+        row = latest_provider_rows[provider_name]
+        if row.provider == "openai-codex":
+            _append_codex_subscription_metrics(row)
+        metric = _summary_metric(row.metrics)
+        providers.append(
+            {
+                "provider": row.provider,
+                "status": row.status,
+                "data_source": row.data_source,
+                "usage": (
+                    {
+                        "label": metric.label,
+                        "used": metric.used,
+                        "unit": metric.unit,
+                        "remaining": metric.remaining,
+                        "limit": metric.limit,
+                        "window": metric.window,
+                        "validation_state": metric.validation_state,
+                        "validation_detail": metric.validation_detail,
+                        "evidence_source": metric.evidence_source,
+                    }
+                    if metric is not None
+                    else None
+                ),
+                "notes": row.notes[:2],
+            }
+        )
+
+    host_failed = int(host_runner.get("failed_runs") or 0)
+    friction_total = int(friction_summary.get("total_events") or 0)
+    contract_gaps: list[str] = []
+    if host_failed > friction_total:
+        contract_gaps.append(
+            f"failed host-runner tasks ({host_failed}) exceed friction events ({friction_total})"
+        )
+    if host_failed > worker_failed:
+        contract_gaps.append(
+            f"failed host-runner tasks ({host_failed}) exceed failed worker tool events ({worker_failed})"
+        )
+    if int(execution.get("tracked_runs") or 0) == 0 and int(host_runner.get("total_runs") or 0) > 0:
+        contract_gaps.append("execution tracked_runs is zero while host-runner task runs exist")
+    codex_row = next((row for row in providers if row.get("provider") == "openai-codex"), None)
+    codex_usage = codex_row.get("usage") if isinstance(codex_row, dict) else None
+    codex_validation = (
+        str(codex_usage.get("validation_state") or "").strip().lower()
+        if isinstance(codex_usage, dict)
+        else ""
+    )
+    if codex_usage and codex_validation and codex_validation != "validated":
+        contract_gaps.append(
+            "openai-codex usage is derived from runtime telemetry/local limits; provider hard quota headers/API not available."
+        )
+    quality_awareness = quality_awareness_service.build_quality_awareness_summary(
+        top_n=top_count,
+        force_refresh=force_refresh,
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "window_hours": int(window_seconds / 3600),
+        "host_failure_observability_backfill": host_observability_backfill,
+        "host_runner": host_runner,
+        "execution": {
+            "tracked_runs": int(execution.get("tracked_runs") or 0),
+            "failed_runs": int(execution.get("failed_runs") or 0),
+            "success_runs": int(execution.get("success_runs") or 0),
+            "coverage": execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {},
+        },
+        "tool_usage": {
+            "worker_events": worker_total,
+            "worker_failed_events": worker_failed,
+            "top_tools": top_tools,
+        },
+        "friction": {
+            "total_events": friction_total,
+            "open_events": int(friction_summary.get("open_events") or 0),
+            "top_block_types": list(friction_summary.get("top_block_types") or [])[:top_count],
+            "top_stages": list(friction_summary.get("top_stages") or [])[:top_count],
+            "entry_points": list(friction_entry_points.get("entry_points") or [])[:top_count],
+        },
+        "providers": providers,
+        "top_attention_areas": top_attention,
+        "contract_gaps": contract_gaps,
+        "quality_awareness": quality_awareness,
+    }
 
 
 def _provider_limit_guard_result(
@@ -3176,16 +3643,8 @@ def _next_tier(provider: str, current_tier: str) -> str:
     return ladder[idx + 1]
 
 
-def _subscription_plans() -> list[SubscriptionPlanEstimate]:
-    usage = collect_usage_overview(force_refresh=True)
-    provider_by_name = {row.provider.strip().lower(): row for row in usage.providers}
-
-    execution = agent_service.get_usage_summary().get("execution", {})
-    tracked_runs = float(execution.get("tracked_runs") or 0.0) if isinstance(execution, dict) else 0.0
-    failed_runs = float(execution.get("failed_runs") or 0.0) if isinstance(execution, dict) else 0.0
-    success_rate = float(execution.get("success_rate") or 0.0) if isinstance(execution, dict) else 0.0
-
-    rows: list[dict[str, Any]] = [
+def _subscription_plan_inputs() -> list[dict[str, Any]]:
+    return [
         {
             "provider": "openai",
             "detected": _env_flag("OPENAI_ADMIN_API_KEY") or _env_flag("OPENAI_API_KEY"),
@@ -3232,8 +3691,18 @@ def _subscription_plans() -> list[SubscriptionPlanEstimate]:
         },
     ]
 
+
+def _subscription_plans() -> list[SubscriptionPlanEstimate]:
+    usage = collect_usage_overview(force_refresh=True)
+    provider_by_name = {row.provider.strip().lower(): row for row in usage.providers}
+
+    execution = agent_service.get_usage_summary().get("execution", {})
+    tracked_runs = float(execution.get("tracked_runs") or 0.0) if isinstance(execution, dict) else 0.0
+    failed_runs = float(execution.get("failed_runs") or 0.0) if isinstance(execution, dict) else 0.0
+    success_rate = float(execution.get("success_rate") or 0.0) if isinstance(execution, dict) else 0.0
+
     plans: list[SubscriptionPlanEstimate] = []
-    for row in rows:
+    for row in _subscription_plan_inputs():
         provider = str(row["provider"])
         current_tier = str(row["current_tier"]).strip().lower() or "free"
         next_tier = _next_tier(provider, current_tier)

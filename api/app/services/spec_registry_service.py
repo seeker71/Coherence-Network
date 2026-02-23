@@ -207,35 +207,38 @@ def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
     )
 
 
-def list_specs(limit: int = 200) -> list[SpecRegistryEntry]:
+def count_specs() -> int:
+    ensure_schema()
+    with _session() as session:
+        return int(session.query(func.count(SpecRegistryRecord.spec_id)).scalar() or 0)
+
+
+def list_specs(limit: int = 200, offset: int = 0) -> list[SpecRegistryEntry]:
     requested_limit = max(1, min(int(limit), 1000))
+    requested_offset = max(0, int(offset))
+    cache_key = f"{requested_offset}:{requested_limit}"
     now = time.time()
     cached_until = _LIST_SPECS_CACHE.get("expires_at", 0.0)
     cached_map = _LIST_SPECS_CACHE.get("items_by_limit", {})
-    if cached_until > now and isinstance(cached_map, dict) and cached_map:
-        best_fit: list[SpecRegistryEntry] | None = None
-        for cached_limit, cached_rows in cached_map.items():
-            try:
-                cached_size = int(cached_limit)
-            except (TypeError, ValueError):
-                continue
-            if cached_size >= requested_limit and isinstance(cached_rows, list) and len(cached_rows) >= requested_limit:
-                if best_fit is None or cached_size < len(best_fit):
-                    best_fit = cached_rows
-        if best_fit is not None:
-            return [row.model_copy(deep=True) for row in best_fit[:requested_limit]]
+    if (
+        cached_until > now
+        and isinstance(cached_map, dict)
+        and isinstance(cached_map.get(cache_key), list)
+    ):
+        return [row.model_copy(deep=True) for row in cached_map[cache_key]]
 
     ensure_schema()
     with _session() as session:
         rows = (
             session.query(SpecRegistryRecord)
             .order_by(SpecRegistryRecord.updated_at.desc(), SpecRegistryRecord.spec_id.asc())
+            .offset(requested_offset)
             .limit(requested_limit)
             .all()
         )
     payload = [_to_model(row) for row in rows]
     _LIST_SPECS_CACHE["expires_at"] = now + _LIST_SPECS_CACHE_TTL_SECONDS
-    cached_map[requested_limit] = payload
+    cached_map[cache_key] = payload
     _LIST_SPECS_CACHE["items_by_limit"] = cached_map
     return [row.model_copy(deep=True) for row in payload]
 

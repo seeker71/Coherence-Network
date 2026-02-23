@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import {
+  buildRuntimeSummarySearchParams,
+  buildSystemLineageSearchParams,
+} from "@/lib/egress";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
 type IdeaQuestion = {
@@ -150,6 +154,8 @@ const API_NAV_CARDS: Array<{ href: string; title: string; description: string }>
   },
 ];
 
+export const revalidate = 90;
+
 async function loadIdeas(): Promise<IdeasResponse | null> {
   const data = await fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas`, {}, 5000);
   if (!data) {
@@ -159,9 +165,10 @@ async function loadIdeas(): Promise<IdeasResponse | null> {
 }
 
 async function loadInventory(): Promise<InventoryResponse | null> {
+  const params = buildSystemLineageSearchParams();
   const data = await fetchJsonOrNull<InventoryResponse>(
-    `${getApiBase()}/api/inventory/system-lineage?runtime_window_seconds=86400`,
-    { cache: "no-store" },
+    `${getApiBase()}/api/inventory/system-lineage?${params.toString()}`,
+    undefined,
     5000,
   );
   if (!data) {
@@ -171,9 +178,10 @@ async function loadInventory(): Promise<InventoryResponse | null> {
 }
 
 async function loadRuntimeSummary(): Promise<RuntimeSummaryResponse | null> {
+  const params = buildRuntimeSummarySearchParams();
   const data = await fetchJsonOrNull<RuntimeSummaryResponse>(
-    `${getApiBase()}/api/runtime/ideas/summary?seconds=86400`,
-    { cache: "no-store" },
+    `${getApiBase()}/api/runtime/ideas/summary?${params.toString()}`,
+    undefined,
     5000,
   );
   if (!data) {

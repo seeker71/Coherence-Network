@@ -447,6 +447,7 @@ def _record_friction_event(
     event = FrictionEvent(
         id=f"fric_{uuid4().hex[:12]}",
         timestamp=datetime.now(timezone.utc),
+        task_id=task_id,
         endpoint=endpoint,
         stage=stage,
         block_type=block_type,
