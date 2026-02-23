@@ -4,7 +4,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service
+from app.services import runtime_service
 
 
 @pytest.mark.asyncio
@@ -55,3 +57,32 @@ async def test_tasks_list_includes_runtime_completion_events_when_store_empty(tm
         assert body["id"] == task_id
         assert body["status"] == "completed"
         assert body["model"] == "openclaw/openrouter/free"
+
+
+def test_tasks_list_skips_runtime_backfill_when_store_is_populated_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.delenv("AGENT_TASKS_RUNTIME_FALLBACK_MODE", raising=False)
+    monkeypatch.setenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "1")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_test_context = None
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="existing store task should not force runtime backfill",
+            task_type=TaskType.IMPL,
+        )
+    )
+    assert created["id"]
+
+    def _raise_if_called(limit: int = 0):  # noqa: ARG001
+        raise AssertionError("runtime_service.list_events should not be called when store is populated")
+
+    monkeypatch.setattr(runtime_service, "list_events", _raise_if_called)
+
+    rows, total = agent_service.list_tasks(limit=20, offset=0)
+    assert total == 1
+    assert rows[0]["id"] == created["id"]
