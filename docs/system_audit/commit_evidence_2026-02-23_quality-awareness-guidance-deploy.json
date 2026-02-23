@@ -26,7 +26,12 @@
     {
       "contributor_id": "openai-codex",
       "contributor_type": "machine",
-      "roles": ["analysis", "implementation", "testing", "delivery"]
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
     }
   ],
   "agent": {
@@ -41,14 +46,57 @@
     "docs/system_audit/pr_check_failures/pr_check_guard_20260223T093848Z_codex-c137-egress-usage-fix.json"
   ],
   "change_files": [
+    ".playwright-cli/",
+    "api/app/main.py",
+    "api/app/models/automation_usage.py",
+    "api/app/models/friction.py",
+    "api/app/models/idea.py",
+    "api/app/models/runtime.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/runtime.py",
+    "api/app/routers/spec_registry.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_service.py",
     "api/app/services/automation_usage_service.py",
+    "api/app/services/idea_service.py",
     "api/app/services/quality_awareness_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/runtime_web_view_service.py",
+    "api/app/services/spec_registry_service.py",
     "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_agent_usage_tracking_api.py",
     "api/tests/test_automation_usage_api.py",
-    "api/tests/test_run_self_improve_cycle.py",
     "api/tests/test_quality_awareness_service.py",
-    "web/app/usage/page.tsx",
+    "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_runtime_api.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
     "docs/RUNBOOK.md",
+    "output/",
+    "web/app/api-coverage/page.tsx",
+    "web/app/api-health/page.tsx",
+    "web/app/api/[...path]/route.ts",
+    "web/app/api/runtime-beacon/route.ts",
+    "web/app/api/web-version/",
+    "web/app/automation/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/page.tsx",
+    "web/app/portfolio/page.tsx",
+    "web/app/specs/[spec_id]/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/runtime-beacon.tsx",
+    "web/lib/egress.ts",
+    "web/lib/fetch.ts",
+    "web/tsconfig.tsbuildinfo",
     "docs/system_audit/commit_evidence_2026-02-23_quality-awareness-guidance-deploy.json"
   ],
   "change_intent": "runtime_fix",
@@ -76,17 +124,17 @@
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Usage daily summary and /usage UI provide validated-vs-derived provider telemetry, full-view runtime/cost visibility, quality-awareness guidance, and reconciled host-runner failure/friction accounting for operator diagnosis.",
+    "expected_behavior_delta": "Production usage telemetry now reports reconciled host-runner failures/friction, provider usage provenance, full-view API/render cost, and quality-awareness guidance to prevent maintainability drift while shipping features.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/automation/usage/daily-summary?window_hours=24&top_n=8",
       "https://coherence-network-production.up.railway.app/api/automation/usage",
       "https://coherence-network-production.up.railway.app/usage"
     ],
     "test_flows": [
-      "Verify host_failed == friction_events == failed_worker_events in daily summary after backfill.",
-      "Verify provider rows include validation_state/evidence_source and codex derived-gap disclosure.",
-      "Verify /usage renders quality-awareness guidance and full-view render/API-cost section with non-empty data when telemetry exists.",
-      "Run a hosted self-improvement cycle and verify plan/execute/review stages complete with new guidance contract fields."
+      "Verify daily summary shows host failure/friction parity and codex validation provenance notes.",
+      "Verify /usage renders providers, top friction/attention, pagination, full-view render/API cost, and quality-awareness guidance cards.",
+      "Verify /automation page no longer hard-fails prerender when usage endpoints return non-200.",
+      "Run hosted self-improve cycle (plan/execute/review) and confirm completed stages are visible in task/runtime telemetry."
     ]
   }
 }

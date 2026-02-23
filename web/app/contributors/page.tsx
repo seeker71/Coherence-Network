@@ -3,10 +3,11 @@
 import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getApiBase } from "@/lib/api";
+import {
+  buildFlowSearchParams,
+  UI_CONTRIBUTOR_LIMIT,
+} from "@/lib/egress";
 import { useLiveRefresh } from "@/lib/live_refresh";
-
-const API_URL = getApiBase();
 
 type Contributor = {
   id: string;
@@ -50,9 +51,10 @@ function ContributorsPageContent() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
+      const flowParams = buildFlowSearchParams();
       const [contributorsRes, flowRes] = await Promise.all([
-        fetch(`${API_URL}/api/contributors`, { cache: "no-store" }),
-        fetch(`${API_URL}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
+        fetch(`/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`),
+        fetch(`/api/inventory/flow?${flowParams.toString()}`),
       ]);
       const contributorsJson = await contributorsRes.json();
       const flowJson = (await flowRes.json()) as FlowResponse;

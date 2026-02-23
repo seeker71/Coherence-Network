@@ -28,6 +28,7 @@ class _FakeClient:
         needs_decision_payload: object | None = None,
         friction_payload: object | None = None,
         runtime_payload: object | None = None,
+        daily_summary_payload: dict | None = None,
         usage_error: Exception | None = None,
         tasks_error: Exception | None = None,
         runtime_error: Exception | None = None,
@@ -48,6 +49,17 @@ class _FakeClient:
         self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
         self.friction_payload = friction_payload if friction_payload is not None else []
         self.runtime_payload = runtime_payload if runtime_payload is not None else {}
+        self.daily_summary_payload = daily_summary_payload or {
+            "quality_awareness": {
+                "status": "ok",
+                "summary": {"severity": "low", "risk_score": 12},
+                "hotspots": [{"kind": "long_function", "path": "api/app/services/example.py", "detail": "split helper"}],
+                "guidance": ["Use extraction-by-intent for long functions to reduce drift."],
+                "recommended_tasks": [
+                    {"task_id": "architecture-modularization-review", "title": "Architecture modularization review"}
+                ],
+            }
+        }
         self.usage_error = usage_error
         self.tasks_error = tasks_error
         self.runtime_error = runtime_error
@@ -127,6 +139,9 @@ class _FakeClient:
                 raise self.runtime_error
             return _FakeResponse(200, self.runtime_payload)
 
+        if "/api/automation/usage/daily-summary" in url:
+            return _FakeResponse(200, self.daily_summary_payload)
+
         if "/api/agent/tasks/" in url:
             task_id = url.rsplit("/", 1)[-1]
             if task_id in self._task_order:
@@ -176,6 +191,13 @@ def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
     assert "retry" in lowered
     assert "unblock" in lowered
     assert "common blocker" in lowered
+    assert "intent first" in lowered
+    assert "system-level lens" in lowered
+    assert "option thinking" in lowered
+    assert "failure anticipation" in lowered
+    assert "proof of meaning" in lowered
+    assert "maintainability guidance" in lowered
+    assert "quality-awareness" in lowered
 
 
 def test_stage_payloads_pin_expected_models() -> None:
@@ -222,6 +244,8 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
     assert report["data_quality_mode"] in {"full", "degraded_partial", "degraded_usage"}
     assert report["input_bundle"]["blocking_usage_alert_count"] == 0
     assert report["input_bundle"]["usage_source"] == "live"
+    assert report["input_bundle"]["quality_hotspot_count"] == 1
+    assert report["input_bundle"]["quality_guidance_count"] == 1
 
     plan_payload, execute_payload, review_payload = client.created_payloads
     assert plan_payload["task_type"] == "spec"

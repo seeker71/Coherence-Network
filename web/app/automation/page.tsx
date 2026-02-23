@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { UI_RUNTIME_WINDOW } from "@/lib/egress";
 
 type UsageMetric = {
   id: string;
@@ -103,6 +104,60 @@ type ProviderValidationResponse = {
   providers: ProviderValidationRow[];
 };
 
+export const revalidate = 120;
+
+const DEFAULT_USAGE: AutomationUsageResponse = {
+  generated_at: "",
+  providers: [],
+  unavailable_providers: [],
+  tracked_providers: 0,
+  limit_coverage: {
+    providers_considered: 0,
+    providers_with_limit_metrics: 0,
+    providers_with_remaining_metrics: 0,
+    providers_missing_limit_metrics: [],
+    providers_partial_limit_metrics: [],
+    coverage_ratio: 0,
+  },
+};
+
+const DEFAULT_ALERTS: UsageAlertResponse = {
+  generated_at: "",
+  threshold_ratio: 0.2,
+  alerts: [],
+};
+
+const DEFAULT_READINESS: ProviderReadinessResponse = {
+  generated_at: "",
+  required_providers: [],
+  all_required_ready: false,
+  blocking_issues: [],
+  recommendations: [],
+  providers: [],
+};
+
+const DEFAULT_VALIDATION: ProviderValidationResponse = {
+  generated_at: "",
+  required_providers: [],
+  runtime_window_seconds: UI_RUNTIME_WINDOW,
+  min_execution_events: 1,
+  all_required_validated: false,
+  blocking_issues: [],
+  providers: [],
+};
+
+async function fetchJsonOrDefault<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      return fallback;
+    }
+    return (await response.json()) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 async function loadAutomationData(): Promise<{
   usage: AutomationUsageResponse;
   alerts: UsageAlertResponse;
@@ -110,32 +165,20 @@ async function loadAutomationData(): Promise<{
   validation: ProviderValidationResponse;
 }> {
   const api = getApiBase();
-  const [usageRes, alertsRes, readinessRes, validationRes] = await Promise.all([
-    fetch(`${api}/api/automation/usage`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/readiness`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1`, {
-      cache: "no-store",
-    }),
+  const validationParams = new URLSearchParams({
+    runtime_window_seconds: String(UI_RUNTIME_WINDOW),
+    min_execution_events: "1",
+  });
+  const [usage, alerts, readiness, validation] = await Promise.all([
+    fetchJsonOrDefault<AutomationUsageResponse>(`${api}/api/automation/usage`, DEFAULT_USAGE),
+    fetchJsonOrDefault<UsageAlertResponse>(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, DEFAULT_ALERTS),
+    fetchJsonOrDefault<ProviderReadinessResponse>(`${api}/api/automation/usage/readiness`, DEFAULT_READINESS),
+    fetchJsonOrDefault<ProviderValidationResponse>(
+      `${api}/api/automation/usage/provider-validation?${validationParams.toString()}`,
+      DEFAULT_VALIDATION,
+    ),
   ]);
-  if (!usageRes.ok) {
-    throw new Error(`automation usage HTTP ${usageRes.status}`);
-  }
-  if (!alertsRes.ok) {
-    throw new Error(`automation alerts HTTP ${alertsRes.status}`);
-  }
-  if (!readinessRes.ok) {
-    throw new Error(`automation readiness HTTP ${readinessRes.status}`);
-  }
-  if (!validationRes.ok) {
-    throw new Error(`automation provider validation HTTP ${validationRes.status}`);
-  }
-  return {
-    usage: (await usageRes.json()) as AutomationUsageResponse,
-    alerts: (await alertsRes.json()) as UsageAlertResponse,
-    readiness: (await readinessRes.json()) as ProviderReadinessResponse,
-    validation: (await validationRes.json()) as ProviderValidationResponse,
-  };
+  return { usage, alerts, readiness, validation };
 }
 
 export default async function AutomationPage() {
