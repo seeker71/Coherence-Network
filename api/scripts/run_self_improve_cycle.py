@@ -169,6 +169,7 @@ def build_task_payload(*, direction: str, task_type: str, model_override: str) -
             "executor": "codex",
             "model_override": model_override,
             "force_paid_providers": True,
+            "runner_codex_auth_mode": "api_key",
             "source": "self_improve_cycle",
         },
     }
