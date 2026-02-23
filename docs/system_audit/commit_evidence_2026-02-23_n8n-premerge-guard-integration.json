@@ -1,0 +1,87 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/n8n-premerge-guard-integration",
+  "commit_scope": "Implement n8n minimum-version security gate in pre-merge guard and deploy validation scripts, add unit tests, and document standard workflow wiring for deploy/triage/runbook.",
+  "files_owned": [
+    "scripts/worktree_pr_guard.py",
+    "api/scripts/validate_pr_to_public.py",
+    "api/tests/test_worktree_pr_guard.py",
+    "api/tests/test_validate_pr_to_public.py",
+    "docs/DEPLOY.md",
+    "docs/RUNBOOK.md",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "specs/108-n8n-security-and-hitl-hardening.md"
+  ],
+  "idea_ids": [
+    "coherence-network-overall"
+  ],
+  "spec_ids": [
+    "108-n8n-security-and-hitl-hardening",
+    "109-open-responses-interoperability-layer",
+    "110-langgraph-stateschema-adoption"
+  ],
+  "task_ids": [
+    "task-2026-02-23-n8n-security-floor-guard-wiring"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260223T161417Z_codex-n8n-premerge-guard-integration.json"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "api/scripts/validate_pr_to_public.py",
+    "api/tests/test_validate_pr_to_public.py",
+    "api/tests/test_worktree_pr_guard.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/COMMUNITY-RESEARCH-PRIORITIES.md",
+    "docs/DEPLOY.md",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/RUNBOOK.md",
+    "docs/SPEC-TRACKING.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/worktree_pr_guard.py",
+    "specs/006-overnight-backlog.md",
+    "specs/108-n8n-security-and-hitl-hardening.md",
+    "specs/109-open-responses-interoperability-layer.md",
+    "specs/110-langgraph-stateschema-adoption.md",
+    "docs/system_audit/commit_evidence_2026-02-23_n8n-premerge-guard-integration.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -v tests/test_worktree_pr_guard.py tests/test_validate_pr_to_public.py",
+      "python3 scripts/validate_spec_quality.py --file specs/108-n8n-security-and-hitl-hardening.md",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local guard re-run, push, PR checks, and deploy verification."
+  }
+}

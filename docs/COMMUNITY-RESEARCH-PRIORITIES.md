@@ -178,3 +178,15 @@
 - [PLAN.md](PLAN.md) — Product vision and roadmap
 - [AGENT-DEBUGGING.md](AGENT-DEBUGGING.md) — Debugging the pipeline
 - [REFERENCE-REPOS.md](REFERENCE-REPOS.md) — Source material and related work
+
+---
+
+## 7. Ecosystem Pulse Queue (2026-02-23)
+
+High-value items from latest framework/tooling scan, mapped to queued specs:
+
+| Priority | Spec | Improvement | ROI | Effort |
+|----------|------|-------------|-----|--------|
+| P0 | `108` | n8n security patch baseline + HITL hardening | Critical risk reduction | Low-Medium |
+| P1 | `109` | Open Responses-compatible provider normalization | High portability + routing resilience | Medium |
+| P2 | `110` | LangGraph-style StateSchema validation for orchestration state | Medium-High reliability | Medium |

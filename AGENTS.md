@@ -167,6 +167,8 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 make start-gate
 
 # PR check failure prevention + tracking (default before commit/push)
+# Optional for n8n-backed automation flows:
+# export N8N_VERSION=1.123.17
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 # Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
