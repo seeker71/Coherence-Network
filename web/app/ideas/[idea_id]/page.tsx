@@ -2,11 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
+import {
+  buildFlowSearchParams,
+  UI_RUNTIME_SUMMARY_WINDOW,
+} from "@/lib/egress";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
 const FETCH_RETRY_DELAY_MS = 250;
 const FETCH_RETRY_ATTEMPTS = 3;
+export const revalidate = 90;
 
 type IdeaQuestion = {
   question: string;
@@ -131,7 +136,7 @@ async function loadIdea(ideaId: string): Promise<LoadIdeaResult> {
   if (detailResult.status === 404) return { kind: "not_found" };
 
   // Fallback to idea list lookup when detail route is intermittently unavailable.
-  const listUrl = `${API}/api/ideas?limit=200`;
+  const listUrl = `${API}/api/ideas?limit=60`;
   const listResult = await fetchJsonWithRetries<IdeaListPayload>(listUrl);
   const listPayload = listResult.data;
   const ideaRows = Array.isArray(listPayload)
@@ -149,10 +154,7 @@ async function loadIdea(ideaId: string): Promise<LoadIdeaResult> {
 
 async function loadFlowForIdea(ideaId: string): Promise<LoadFlowResult> {
   const API = getApiBase();
-  const params = new URLSearchParams({
-    runtime_window_seconds: "86400",
-    idea_id: ideaId,
-  });
+  const params = buildFlowSearchParams({ ideaId });
   const url = `${API}/api/inventory/flow?${params.toString()}`;
   const result = await fetchJsonWithRetries<FlowResponse>(url);
   if (!result.data || !Array.isArray(result.data.items)) {
@@ -386,7 +388,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           </li>
           <li>
             <a
-              href={`${apiBase}/api/inventory/flow?runtime_window_seconds=86400&idea_id=${encodeURIComponent(idea.id)}`}
+              href={`${apiBase}/api/inventory/flow?${buildFlowSearchParams({ ideaId: idea.id }).toString()}`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
@@ -395,7 +397,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
             </a>
           </li>
           <li>
-            <a href={`${apiBase}/api/runtime/ideas/summary?seconds=86400`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a
+              href={`${apiBase}/api/runtime/ideas/summary?seconds=${UI_RUNTIME_SUMMARY_WINDOW}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
               /api/runtime/ideas/summary
             </a>
           </li>

@@ -57,9 +57,18 @@ class IdeaSummary(BaseModel):
     total_value_gap: float = Field(ge=0.0)
 
 
+class PaginationInfo(BaseModel):
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1)
+    offset: int = Field(ge=0)
+    returned: int = Field(ge=0)
+    has_more: bool = False
+
+
 class IdeaPortfolioResponse(BaseModel):
     ideas: list[IdeaWithScore]
     summary: IdeaSummary
+    pagination: PaginationInfo | None = None
 
 
 class IdeaUpdate(BaseModel):

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.models.agent import TaskStatus, TaskType
 from app.models.automation_usage import (
     ProviderReadinessReport,
     ProviderReadinessRow,
@@ -13,7 +15,7 @@ from app.models.automation_usage import (
     ProviderUsageOverview,
     ProviderUsageSnapshot,
 )
-from app.services import agent_service, automation_usage_service, telemetry_persistence_service
+from app.services import agent_service, automation_usage_service, quality_awareness_service, telemetry_persistence_service
 
 
 def test_configured_status_openai_codex_accepts_oauth_session(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -264,6 +266,116 @@ def test_build_cursor_snapshot_includes_subscription_window_metrics(
     assert metrics["cursor_subscription_8h"].remaining == pytest.approx(30.0, rel=1e-6)
     assert metrics["cursor_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
     assert snapshot.data_source == "provider_cli"
+
+
+def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_codex_test",
+        provider="openai-codex",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setenv("CODEX_SUBSCRIPTION_5H_LIMIT", "100")
+    monkeypatch.setenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", "700")
+
+    def _fake_codex_counts(window_seconds: int) -> int:
+        if window_seconds == 5 * 60 * 60:
+            return 40
+        if window_seconds == 7 * 24 * 60 * 60:
+            return 280
+        return 0
+
+    monkeypatch.setattr(automation_usage_service, "_codex_events_within_window", _fake_codex_counts)
+    automation_usage_service._append_codex_subscription_metrics(snapshot)
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert "codex_subscription_5h" in metrics
+    assert "codex_subscription_week" in metrics
+    assert metrics["codex_subscription_5h"].remaining == pytest.approx(60.0, rel=1e-6)
+    assert metrics["codex_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].validation_state == "derived"
+    assert metrics["codex_subscription_5h"].evidence_source == "runtime_events+env_limits"
+
+
+def test_build_db_host_snapshot_includes_window_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db.example.net:5432/coherence")
+    monkeypatch.setenv("DB_HOST_5H_LIMIT", "1000")
+    monkeypatch.setenv("DB_HOST_WEEK_LIMIT", "5000")
+
+    def _fake_runtime_events_within_window(*, window_seconds: int, source: str | None = None, limit: int = 5000):
+        assert source == "api"
+        if window_seconds == 5 * 60 * 60:
+            return [object()] * 125
+        if window_seconds == 7 * 24 * 60 * 60:
+            return [object()] * 640
+        return [object()] * 320
+
+    monkeypatch.setattr(automation_usage_service, "_runtime_events_within_window", _fake_runtime_events_within_window)
+
+    snapshot = automation_usage_service._build_db_host_snapshot()
+    assert snapshot.provider == "db-host"
+    assert snapshot.status == "ok"
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert "api_events_24h" in metrics
+    assert "db_host_window_5h" in metrics
+    assert "db_host_window_week" in metrics
+    assert metrics["db_host_window_5h"].remaining == pytest.approx(875.0, rel=1e-6)
+    assert metrics["db_host_window_week"].remaining == pytest.approx(4360.0, rel=1e-6)
+
+
+def test_summary_metric_prefers_limit_window_over_runtime_total() -> None:
+    runtime = UsageMetric(
+        id="runtime_task_runs",
+        label="Runtime task runs",
+        unit="tasks",
+        used=180.0,
+        remaining=None,
+        limit=None,
+        window="rolling",
+    )
+    limited = UsageMetric(
+        id="codex_subscription_5h",
+        label="Codex task runs (5h)",
+        unit="requests",
+        used=180.0,
+        remaining=320.0,
+        limit=500.0,
+        window="hourly",
+    )
+    selected = automation_usage_service._summary_metric([runtime, limited])
+    assert selected is not None
+    assert selected.id == "codex_subscription_5h"
+
+
+def test_summary_metric_prefers_validated_limited_metric_over_derived_limit() -> None:
+    derived = UsageMetric(
+        id="codex_subscription_5h",
+        label="Codex task runs (5h)",
+        unit="requests",
+        used=16.0,
+        remaining=484.0,
+        limit=500.0,
+        window="hourly",
+        validation_state="derived",
+        evidence_source="runtime_events+env_limits",
+    )
+    validated = UsageMetric(
+        id="requests_quota",
+        label="OpenAI request quota",
+        unit="requests",
+        used=20.0,
+        remaining=980.0,
+        limit=1000.0,
+        window="minute",
+        validation_state="validated",
+        evidence_source="provider_rate_limit_headers",
+    )
+    selected = automation_usage_service._summary_metric([derived, validated])
+    assert selected is not None
+    assert selected.id == "requests_quota"
 
 
 @pytest.mark.asyncio
@@ -856,6 +968,266 @@ async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
         "runtime_window_seconds": 7200,
         "min_execution_events": 2,
     }
+
+
+def test_daily_summary_backfills_missing_host_failure_observability(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("FRICTION_USE_DB", "0")
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    agent_service._store.clear()
+    agent_service._store_loaded = True
+    agent_service._store_loaded_path = str(agent_service._store_path())
+    agent_service._store_loaded_test_context = os.getenv("PYTEST_CURRENT_TEST")
+    now = agent_service._now()
+    agent_service._store["task_gap_host_1"] = {
+        "id": "task_gap_host_1",
+        "direction": "legacy failed task missing telemetry",
+        "task_type": TaskType.IMPL,
+        "status": TaskStatus.FAILED,
+        "model": "openclaw/openrouter/free",
+        "command": "codex exec",
+        "started_at": now,
+        "output": "failed before friction contract",
+        "context": {"executor": "openclaw"},
+        "progress_pct": None,
+        "current_step": None,
+        "decision_prompt": None,
+        "decision": None,
+        "claimed_by": "openai-codex:railway-runner",
+        "claimed_at": now,
+        "created_at": now,
+        "updated_at": now,
+        "tier": "openrouter",
+    }
+
+    snapshot = ProviderUsageSnapshot(
+        id="provider_coherence_internal_test",
+        provider="coherence-internal",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_latest_provider_snapshots",
+        lambda limit=800: {"coherence-internal": snapshot},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: ProviderUsageOverview(
+            providers=[snapshot],
+            unavailable_providers=[],
+            tracked_providers=1,
+            limit_coverage={},
+        ),
+    )
+
+    summary = automation_usage_service.daily_system_summary(window_hours=24, top_n=3)
+    backfill = summary["host_failure_observability_backfill"]
+    assert backfill["host_failed_tasks"] >= 1
+    assert backfill["completion_events_backfilled"] >= 1
+    assert backfill["friction_events_backfilled"] >= 1
+    assert summary["host_runner"]["failed_runs"] >= 1
+    assert summary["friction"]["total_events"] >= 1
+    assert not any("exceed friction events" in gap for gap in summary["contract_gaps"])
+
+
+def test_daily_summary_includes_quality_awareness_guidance(monkeypatch: pytest.MonkeyPatch) -> None:
+    quality_awareness_service._QUALITY_AWARENESS_CACHE["expires_at"] = 0.0
+    quality_awareness_service._QUALITY_AWARENESS_CACHE["summary"] = None
+    snapshot = ProviderUsageSnapshot(
+        id="provider_coherence_internal_quality",
+        provider="coherence-internal",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_latest_provider_snapshots",
+        lambda limit=800: {"coherence-internal": snapshot},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: ProviderUsageOverview(
+            providers=[snapshot],
+            unavailable_providers=[],
+            tracked_providers=1,
+            limit_coverage={},
+        ),
+    )
+    monkeypatch.setattr(
+        quality_awareness_service.maintainability_audit_service,
+        "load_baseline",
+        lambda path: {},
+    )
+    monkeypatch.setattr(
+        quality_awareness_service.maintainability_audit_service,
+        "build_maintainability_audit",
+        lambda baseline=None: {
+            "generated_at": "2026-02-23T11:22:33Z",
+            "summary": {
+                "severity": "medium",
+                "risk_score": 62,
+                "regression": True,
+                "regression_reasons": ["max_long_function_count: 12 > baseline 10"],
+                "python_module_count": 120,
+                "runtime_file_count": 210,
+                "layer_violation_count": 1,
+                "large_module_count": 2,
+                "very_large_module_count": 1,
+                "long_function_count": 12,
+                "placeholder_count": 0,
+            },
+            "architecture": {
+                "very_large_modules": [{"file": "api/app/services/automation_usage_service.py", "line_count": 2900}],
+                "long_functions": [{"file": "api/app/services/runtime_service.py", "function": "heavy", "line_count": 140}],
+                "layer_violations": [
+                    {
+                        "file": "api/app/models/runtime.py",
+                        "forbidden_import": "app.services.agent_service",
+                        "reason": "models should not depend on services/routers",
+                    }
+                ],
+            },
+            "placeholder_scan": {"findings": []},
+            "recommended_tasks": [
+                {
+                    "task_id": "architecture-modularization-review",
+                    "title": "Architecture modularization review",
+                    "priority": "high",
+                    "roi_estimate": 4.2,
+                    "direction": "Split oversized files and remove cross-layer imports.",
+                }
+            ],
+        },
+    )
+
+    summary = automation_usage_service.daily_system_summary(window_hours=24, top_n=3, force_refresh=True)
+    quality = summary["quality_awareness"]
+    assert quality["status"] == "ok"
+    assert quality["summary"]["risk_score"] == 62
+    assert quality["summary"]["regression"] is True
+    assert quality["hotspots"]
+    assert any("maintainability metrics regressed" in row for row in quality["guidance"])
+    assert quality["recommended_tasks"][0]["task_id"] == "architecture-modularization-review"
+
+
+def test_daily_summary_quality_awareness_falls_back_when_audit_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    quality_awareness_service._QUALITY_AWARENESS_CACHE["expires_at"] = 0.0
+    quality_awareness_service._QUALITY_AWARENESS_CACHE["summary"] = None
+    snapshot = ProviderUsageSnapshot(
+        id="provider_coherence_internal_quality_fallback",
+        provider="coherence-internal",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_latest_provider_snapshots",
+        lambda limit=800: {"coherence-internal": snapshot},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: ProviderUsageOverview(
+            providers=[snapshot],
+            unavailable_providers=[],
+            tracked_providers=1,
+            limit_coverage={},
+        ),
+    )
+    monkeypatch.setattr(
+        quality_awareness_service.maintainability_audit_service,
+        "load_baseline",
+        lambda path: {},
+    )
+    monkeypatch.setattr(
+        quality_awareness_service.maintainability_audit_service,
+        "build_maintainability_audit",
+        lambda baseline=None: (_ for _ in ()).throw(RuntimeError("audit unavailable")),
+    )
+
+    summary = automation_usage_service.daily_system_summary(window_hours=24, top_n=3, force_refresh=True)
+    quality = summary["quality_awareness"]
+    assert quality["status"] == "unavailable"
+    assert quality["hotspots"] == []
+    assert "audit unavailable" in quality["guidance"][0]
+
+
+@pytest.mark.asyncio
+async def test_daily_summary_endpoint_passes_query_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_daily_summary(
+        *,
+        window_hours: int = 24,
+        top_n: int = 3,
+        force_refresh: bool = False,
+    ) -> dict[str, object]:
+        captured["window_hours"] = window_hours
+        captured["top_n"] = top_n
+        captured["force_refresh"] = force_refresh
+        return {
+            "generated_at": "2026-02-23T00:00:00Z",
+            "window_hours": window_hours,
+            "host_runner": {"total_runs": 1, "failed_runs": 0, "completed_runs": 1, "running_runs": 0, "pending_runs": 0, "by_task_type": {"impl": {"total": 1, "completed": 1}}},
+            "execution": {"tracked_runs": 1, "failed_runs": 0, "success_runs": 1, "coverage": {"coverage_rate": 1.0}},
+            "tool_usage": {"worker_events": 1, "worker_failed_events": 0, "top_tools": [{"tool": "tool:agent-task-completion", "events": 1, "failed": 0}]},
+            "friction": {"total_events": 0, "open_events": 0, "top_block_types": [], "top_stages": [], "entry_points": []},
+            "providers": [],
+            "top_attention_areas": [],
+            "contract_gaps": [],
+            "quality_awareness": {
+                "status": "ok",
+                "generated_at": "2026-02-23T00:00:00Z",
+                "intent_focus": ["trust", "clarity", "reuse"],
+                "summary": {
+                    "severity": "low",
+                    "risk_score": 10,
+                    "regression": False,
+                    "regression_reasons": [],
+                    "python_module_count": 10,
+                    "runtime_file_count": 20,
+                    "layer_violations": 0,
+                    "large_modules": 0,
+                    "very_large_modules": 0,
+                    "long_functions": 0,
+                    "placeholder_findings": 0,
+                },
+                "hotspots": [],
+                "guidance": [],
+                "recommended_tasks": [],
+            },
+        }
+
+    monkeypatch.setattr(automation_usage_service, "daily_system_summary", _fake_daily_summary)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/automation/usage/daily-summary",
+            params={"window_hours": 12, "top_n": 5, "force_refresh": True},
+        )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["window_hours"] == 12
+    assert payload["host_runner"]["total_runs"] == 1
+    assert captured == {"window_hours": 12, "top_n": 5, "force_refresh": True}
 
 
 @pytest.mark.asyncio

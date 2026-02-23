@@ -39,7 +39,7 @@ export async function fetchJsonOrNull<T>(
     const response = await fetch(input, {
       ...options,
       signal: timeout,
-      cache: options.cache ?? "no-store",
+      cache: options.cache ?? "force-cache",
     });
     if (!response.ok) {
       return null;

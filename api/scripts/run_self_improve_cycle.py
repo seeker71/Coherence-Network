@@ -116,6 +116,12 @@ def build_plan_direction() -> str:
         "4. For each common blocker, provide exact unblock commands and acceptance proof.\n"
         "5. Keep scope small and deterministic; no speculative refactors.\n"
         "6. Explicitly require the executor to show proof for each completed step before moving on.\n"
+        "7. Intent first: state what is being optimized for (trust, clarity, reuse), not only completion.\n"
+        "8. System-level lens: explain expected behavior change in the running system, not just file deltas.\n"
+        "9. Option thinking: include 2-3 approaches, pick one, and justify long-term tradeoff.\n"
+        "10. Failure anticipation: include how the solution could degrade in two weeks and what guardrails detect it.\n"
+        "11. Proof of meaning: define why this is better for humans/operators, not only that commands passed.\n"
+        "12. Maintainability guidance: use quality-awareness signals (hotspots + recommendations) to reduce code drift.\n"
         "Output only the plan content, no preamble."
     )
 
@@ -125,6 +131,7 @@ def build_execute_direction(plan_output: str) -> str:
         "Execute the plan below exactly and keep output deterministic.\n"
         "You are a cheap, fast executor: follow instructions literally, keep edits minimal, and provide proof for each step.\n"
         "If proof is missing for any step, retry that step until proof exists or you record a concrete blocker with unblock attempts.\n"
+        "Keep intent/system/options/failure/meaning/maintainability commitments from the plan explicit in the RESULT section.\n"
         "\n"
         "Plan to execute:\n"
         f"{_clip(plan_output)}\n"
@@ -138,6 +145,8 @@ def build_review_direction(plan_output: str, execute_output: str) -> str:
     return (
         "Review whether execution followed the plan and proof contract.\n"
         "Reject any step without concrete proof and require retry guidance.\n"
+        "Confirm intent, system behavior change, options rationale, failure guardrails, proof-of-meaning, "
+        "and maintainability drift guidance are present.\n"
         "\n"
         "Original plan:\n"
         f"{_clip(plan_output, max_chars=8000)}\n"
@@ -439,6 +448,15 @@ def _collect_input_bundle(
     runtime_payload = _coerce_dict(runtime_payload_raw, {})
     if isinstance(runtime_payload_raw, list):
         runtime_payload = {"summary": runtime_payload_raw}
+    daily_summary_ok, daily_summary_payload_raw, daily_summary_error, daily_summary_status_code = _safe_get(
+        client,
+        f"{base_url}/api/automation/usage/daily-summary?window_hours=24&top_n=5",
+    )
+    daily_summary_payload = _coerce_dict(daily_summary_payload_raw, {})
+    quality_awareness = _coerce_dict(daily_summary_payload.get("quality_awareness"), {})
+    quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
+    quality_hotspots = _coerce_list(quality_awareness.get("hotspots"), [])
+    quality_guidance = _coerce_list(quality_awareness.get("guidance"), [])
 
     usage_alerts = _coerce_list(usage_payload.get("alerts"), [])
     blocking_alerts: list[dict[str, Any]] = []
@@ -468,7 +486,7 @@ def _collect_input_bundle(
     data_quality_mode = "full"
     if usage_source in {"cached", "missing"}:
         data_quality_mode = "degraded_usage"
-    if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok:
+    if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok or not daily_summary_ok:
         data_quality_mode = "degraded_partial"
 
     return {
@@ -479,6 +497,9 @@ def _collect_input_bundle(
             "friction_open_count": len(friction_records),
             "runtime_endpoint_count": len(_coerce_list(runtime_payload.get("summary"), [])),
             "blocking_usage_alert_count": len(blocking_alerts),
+            "quality_hotspot_count": len(quality_hotspots),
+            "quality_guidance_count": len(quality_guidance),
+            "quality_severity": str(quality_summary.get("severity") or "unknown"),
         },
         "usage": {
             "ok": usage_ok,
@@ -521,19 +542,36 @@ def _collect_input_bundle(
             "status_code": runtime_status_code,
             "payload": runtime_payload,
         },
+        "daily_summary": {
+            "ok": daily_summary_ok,
+            "error": daily_summary_error,
+            "status_code": daily_summary_status_code,
+            "payload": daily_summary_payload,
+        },
+        "quality_awareness": {
+            "status": str(quality_awareness.get("status") or "unavailable"),
+            "summary": quality_summary,
+            "hotspots": quality_hotspots[:10],
+            "guidance": quality_guidance[:8],
+            "recommended_tasks": _coerce_list(quality_awareness.get("recommended_tasks"), [])[:5],
+        },
         "data_quality_mode": data_quality_mode,
     }
 
 
 def _input_bundle_summary(bundle: dict[str, Any]) -> dict[str, Any]:
+    summary = _coerce_dict(bundle.get("summary", {}))
     return {
         "data_quality_mode": bundle.get("data_quality_mode", "degraded_usage"),
         "usage_source": _coerce_dict(bundle.get("usage", {})).get("source", "missing"),
         "usage_alert_count": _coerce_dict(bundle.get("usage", {})).get("counts", {}).get("alerts_total", 0),
         "blocking_usage_alert_count": _coerce_dict(bundle.get("usage", {})).get("counts", {}).get("blocking", 0),
-        "task_count": _coerce_dict(bundle.get("summary", {})).get("task_count", 0),
-        "needs_decision_count": _coerce_dict(bundle.get("summary", {})).get("needs_decision_count", 0),
-        "friction_open_count": _coerce_dict(bundle.get("summary", {})).get("friction_open_count", 0),
+        "task_count": summary.get("task_count", 0),
+        "needs_decision_count": summary.get("needs_decision_count", 0),
+        "friction_open_count": summary.get("friction_open_count", 0),
+        "quality_hotspot_count": summary.get("quality_hotspot_count", 0),
+        "quality_guidance_count": summary.get("quality_guidance_count", 0),
+        "quality_severity": summary.get("quality_severity", "unknown"),
     }
 
 
@@ -584,7 +622,8 @@ def _build_delta_summary(
             f"usage_blocking={before_summary.get('blocking_usage_alert_count', 0)}; "
             f"tasks={before_summary.get('task_count', 0)}; "
             f"needs_decision={before_summary.get('needs_decision_count', 0)}; "
-            f"friction={before_summary.get('friction_open_count', 0)}"
+            f"friction={before_summary.get('friction_open_count', 0)}; "
+            f"quality_hotspots={before_summary.get('quality_hotspot_count', 0)}"
         ),
         "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
         "proof": {
@@ -593,11 +632,13 @@ def _build_delta_summary(
                 "task_count": before_summary.get("task_count", 0),
                 "needs_decision_count": before_summary.get("needs_decision_count", 0),
                 "friction_open_count": before_summary.get("friction_open_count", 0),
+                "quality_hotspot_count": before_summary.get("quality_hotspot_count", 0),
             },
             "after_counts": {
                 "task_count": after_summary.get("task_count", 0),
                 "needs_decision_count": after_summary.get("needs_decision_count", 0),
                 "friction_open_count": after_summary.get("friction_open_count", 0),
+                "quality_hotspot_count": after_summary.get("quality_hotspot_count", 0),
             },
         },
         "before_metrics": before_summary,
