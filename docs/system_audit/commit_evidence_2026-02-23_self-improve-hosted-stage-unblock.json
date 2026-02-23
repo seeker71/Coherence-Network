@@ -8,7 +8,9 @@
     "api/tests/test_run_self_improve_cycle.py",
     "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
-    ".github/workflows/self-improve-cycle.yml"
+    ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
@@ -43,6 +45,8 @@
     "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
     ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/02_pytest.txt",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/03_ruff.txt",
@@ -58,6 +62,8 @@
     "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
     ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/commit_evidence_2026-02-23_self-improve-hosted-stage-unblock.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
@@ -67,7 +73,7 @@
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/05_pr_guard_local_pass.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/06_pr_followthrough_strict.txt"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
