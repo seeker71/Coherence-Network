@@ -382,6 +382,39 @@ def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch,
     assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
 
 
+def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch, tmp_path):
+    class _Completed:
+        returncode = 1
+        stdout = ""
+        stderr = ""
+
+    real_home = tmp_path / "real-home"
+    auth_dir = real_home / ".codex"
+    auth_dir.mkdir(parents=True, exist_ok=True)
+    (auth_dir / "auth.json").write_text('{"token":"oauth"}', encoding="utf-8")
+
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+    monkeypatch.setattr(agent_runner.subprocess, "run", lambda *args, **kwargs: _Completed())
+
+    env = {"HOME": str(real_home)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_api_key_home",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "api_key"
+    assert auth["effective_mode"] == "api_key"
+    assert auth["oauth_session"] is False
+    assert auth["oauth_fallback_allowed"] is True
+    assert env.get("AGENT_CODEX_OAUTH_SESSION_FILE") == ""
+    assert "agent-runner-codex-api-key" in str(env.get("HOME") or "")
+    assert "agent-runner-codex-api-key" in str(env.get("CODEX_HOME") or "")
+
+
 def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
@@ -503,8 +536,9 @@ def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypat
     )
     assert done is True
     assert popen_calls
-    assert popen_calls[0]["shell"] is False
-    assert isinstance(popen_calls[0]["command"], list)
+    codex_call = next(call for call in popen_calls if isinstance(call.get("command"), list))
+    assert not bool(codex_call.get("shell"))
+    assert isinstance(codex_call["command"], list)
 
 
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
