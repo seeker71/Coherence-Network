@@ -2659,11 +2659,18 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
-def _codex_auth_mode() -> str:
-    raw = str(os.environ.get("AGENT_CODEX_AUTH_MODE", "api_key")).strip().lower()
+def _normalize_codex_auth_mode(raw: Any, *, default: str = "api_key") -> str:
+    mode = str(raw or "").strip().lower()
+    if mode in CODEX_AUTH_MODE_VALUES:
+        return mode
+    return default
+
+
+def _codex_auth_mode(override: str | None = None) -> str:
+    raw = override if str(override or "").strip() else os.environ.get("AGENT_CODEX_AUTH_MODE", "api_key")
     if raw in CODEX_AUTH_MODE_VALUES:
-        return raw
-    return "api_key"
+        return str(raw).strip().lower()
+    return _normalize_codex_auth_mode(raw, default="api_key")
 
 
 def _abs_expanded_path(path: str) -> str:
@@ -2745,8 +2752,13 @@ def _configure_codex_cli_environment(
     env: dict[str, str],
     task_id: str,
     log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    requested_mode = _codex_auth_mode()
+    task_auth_override = _normalize_codex_auth_mode(
+        (task_ctx or {}).get("runner_codex_auth_mode"),
+        default="",
+    )
+    requested_mode = _codex_auth_mode(task_auth_override or None)
     codex_home_override = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
     if codex_home_override:
         env["CODEX_HOME"] = _abs_expanded_path(codex_home_override)
@@ -2871,6 +2883,21 @@ def _codex_model_not_found_or_access_error(output: str) -> bool:
     if "do not have access to it" in lowered and "model" in lowered:
         return True
     if "model" in lowered and "does not exist" in lowered:
+        return True
+    return False
+
+
+def _codex_oauth_refresh_token_reused_error(output: str) -> bool:
+    lowered = (output or "").lower()
+    if not lowered:
+        return False
+    if "refresh_token_reused" in lowered:
+        return True
+    if "refresh token has already been used" in lowered:
+        return True
+    if "access token could not be refreshed because your refresh token was already used" in lowered:
+        return True
+    if "failed to refresh token: 401 unauthorized" in lowered:
         return True
     return False
 
@@ -3432,6 +3459,7 @@ def run_one_task(
     task_direction: str = "",
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
+    task_ctx = task_context or {}
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
@@ -3441,7 +3469,7 @@ def run_one_task(
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
         log.info("task=%s using Cursor CLI with OpenRouter", task_id)
     elif _uses_codex_cli(command):
-        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log)
+        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log, task_ctx=task_ctx)
         command, codex_model_alias = _apply_codex_model_alias(command)
         if codex_model_alias:
             log.warning(
@@ -3475,7 +3503,6 @@ def run_one_task(
     executor = _infer_executor(command, model)
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
-    task_ctx = task_context or {}
     target_contract = _normalize_task_target_contract(
         task_ctx,
         task_type=str(task_type or "impl"),
@@ -4278,32 +4305,66 @@ def run_one_task(
         elif (not hold_policy_applied) and (not pr_mode) and status != "completed":
             retry_task_ctx = task_ctx
             retry_context_patch: dict[str, Any] | None = None
-            if _uses_codex_cli(command) and _codex_model_not_found_or_access_error(output):
-                fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
-                fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
-                if fallback_alias and not fallback_already_attempted:
-                    retry_task_ctx = dict(task_ctx)
-                    retry_task_ctx["retry_override_command"] = fallback_command
-                    retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                    requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                    retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                    retry_context_patch = {
-                        "retry_override_command": fallback_command,
-                        "runner_model_not_found_fallback_attempted": True,
-                        "runner_model_not_found_fallback": {
-                            **fallback_alias,
-                            "at": _utc_now_iso(),
-                        },
-                    }
-                    output = (
-                        f"{output}\n[runner-model-fallback] model unavailable; "
-                        f"retrying with --model {fallback_alias['effective_model']}."
-                    )
-                elif fallback_already_attempted:
-                    output = (
-                        f"{output}\n[runner-model-fallback] "
-                        "model unavailable after fallback attempt; not retrying fallback."
-                    )
+            if _uses_codex_cli(command):
+                auth_fallback_already_attempted = _as_bool(task_ctx.get("runner_codex_auth_fallback_attempted"))
+                oauth_retry_eligible = bool(
+                    codex_auth_state
+                    and codex_auth_state.get("effective_mode") == "oauth"
+                    and codex_auth_state.get("api_key_present")
+                )
+                if oauth_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
+                    if not auth_fallback_already_attempted:
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_codex_auth_mode"] = "api_key"
+                        retry_task_ctx["runner_codex_auth_fallback_attempted"] = True
+                        retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                        requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                        retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_codex_auth_mode": "api_key",
+                            "runner_codex_auth_fallback_attempted": True,
+                            "runner_codex_auth_fallback": {
+                                "trigger": "oauth_refresh_token_reused",
+                                "from_mode": "oauth",
+                                "to_mode": "api_key",
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        output = (
+                            f"{output}\n[runner-codex-auth-fallback] oauth refresh token reuse detected; "
+                            "retrying with api_key auth mode."
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-codex-auth-fallback] "
+                            "oauth refresh-token fallback already attempted; not retrying auth fallback."
+                        )
+                if _codex_model_not_found_or_access_error(output):
+                    fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
+                    fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
+                    if fallback_alias and not fallback_already_attempted:
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["retry_override_command"] = fallback_command
+                        retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                        requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                        retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "retry_override_command": fallback_command,
+                            "runner_model_not_found_fallback_attempted": True,
+                            "runner_model_not_found_fallback": {
+                                **fallback_alias,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        output = (
+                            f"{output}\n[runner-model-fallback] model unavailable; "
+                            f"retrying with --model {fallback_alias['effective_model']}."
+                        )
+                    elif fallback_already_attempted:
+                        output = (
+                            f"{output}\n[runner-model-fallback] "
+                            "model unavailable after fallback attempt; not retrying fallback."
+                        )
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
                 task_id=task_id,

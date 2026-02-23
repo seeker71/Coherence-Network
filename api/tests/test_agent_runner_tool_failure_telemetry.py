@@ -355,6 +355,88 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     assert "OPENAI_BASE_URL" not in env
 
 
+def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch, tmp_path):
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-test")
+
+    env = {
+        "OPENAI_API_KEY": "sk-test",
+        "OPENAI_ADMIN_API_KEY": "admin-test",
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_override",
+        log=agent_runner._setup_logging(verbose=False),
+        task_ctx={"runner_codex_auth_mode": "api_key"},
+    )
+
+    assert auth["requested_mode"] == "api_key"
+    assert auth["effective_mode"] == "api_key"
+    assert auth["api_key_present"] is True
+    assert env.get("OPENAI_API_KEY") == "sk-test"
+    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
+
+
+def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeypatch, tmp_path):
+    t = [5200.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-fallback-runner")
+
+    failure_output = (
+        'ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {"error":{"code":"refresh_token_reused"}}\n'
+        "Your refresh token has already been used to generate a new access token.\n"
+    )
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_oauth_refresh_reused",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    assert context.get("runner_codex_auth_mode") == "api_key"
+    assert context.get("runner_codex_auth_fallback_attempted") is True
+    auth_fallback = context.get("runner_codex_auth_fallback") or {}
+    assert auth_fallback.get("trigger") == "oauth_refresh_token_reused"
+    assert auth_fallback.get("to_mode") == "api_key"
+    assert "runner-codex-auth-fallback" in str(pending_patch.get("output") or "")
+
+
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
     t = [4000.0]
 
