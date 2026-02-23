@@ -1,7 +1,7 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by making infra preflight tolerant to degraded observability probes, avoiding forced execute calls in hosted workflow, and adding tests for execute/auth fallback and degraded preflight behavior.",
+  "commit_scope": "Unblock hosted self-improve execution by making infra preflight tolerant to degraded observability probes, adding stage-level task submit retries for transient production timeouts, avoiding forced execute calls in hosted workflow, and extending tests for execute/auth fallback and degraded preflight behavior.",
   "files_owned": [
     "api/scripts/run_self_improve_cycle.py",
     "api/tests/test_run_self_improve_cycle.py",
@@ -16,7 +16,8 @@
   ],
   "task_ids": [
     "task-2026-02-23-self-improve-hosted-stage-unblock",
-    "task-2026-02-23-self-improve-preflight-degraded-tolerance"
+    "task-2026-02-23-self-improve-preflight-degraded-tolerance",
+    "task-2026-02-23-self-improve-stage-submit-retry-hardening"
   ],
   "contributors": [
     {
