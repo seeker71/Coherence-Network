@@ -51,6 +51,13 @@ def _is_infra_error(message: str) -> bool:
         or "timed out" in lowered
         or "status=none" in lowered
         or "connection" in lowered
+        or "http 5" in lowered
+        or "status=5" in lowered
+        or "http 429" in lowered
+        or "status=429" in lowered
+        or "bad gateway" in lowered
+        or "service unavailable" in lowered
+        or "gateway timeout" in lowered
     )
 
 

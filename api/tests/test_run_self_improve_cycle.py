@@ -322,6 +322,29 @@ def test_run_cycle_retries_plan_submit_across_multiple_post_outages() -> None:
     assert len(client.created_payloads) == 3
 
 
+def test_run_cycle_retries_plan_submit_on_http_502_then_completes() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        # First plan submit fails with 502, then plan/execute/review submits succeed.
+        task_post_status_plan=[502, 201, 201, 201],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_retry_502.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.submitted_payloads) == 4
+    assert len(client.created_payloads) == 3
+
+
 def test_run_cycle_returns_infra_blocked_on_plan_submit_timeouts() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
