@@ -1021,6 +1021,85 @@ def get_task(task_id: str) -> Optional[dict]:
     return None
 
 
+def _should_backfill_runtime_tasks(existing_count: int) -> bool:
+    fallback_mode = str(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_MODE", "empty_only")).strip().lower()
+    if fallback_mode in {"0", "off", "false", "disabled", "none"}:
+        return False
+    if fallback_mode in {"always", "all", "1", "on", "true"}:
+        return True
+    return existing_count == 0
+
+
+def _runtime_fallback_events_for_tasks(existing_count: int) -> list[Any]:
+    fallback_in_tests = os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if os.getenv("PYTEST_CURRENT_TEST") and not fallback_in_tests:
+        return []
+    if not _should_backfill_runtime_tasks(existing_count):
+        return []
+    try:
+        from app.services import runtime_service
+
+        runtime_fallback_limit = max(
+            50,
+            min(int(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_LIMIT", "500")), 5000),
+        )
+        return runtime_service.list_events(limit=runtime_fallback_limit)
+    except Exception:
+        return []
+
+
+def _runtime_completion_event_to_task(event: Any, seen: set[str]) -> dict[str, Any] | None:
+    metadata = getattr(event, "metadata", {}) or {}
+    if not isinstance(metadata, dict):
+        return None
+    if str(metadata.get("tracking_kind") or "").strip() != "agent_task_completion":
+        return None
+    task_id = str(metadata.get("task_id") or "").strip()
+    if not task_id or task_id in seen:
+        return None
+    status_raw = str(metadata.get("task_final_status") or "").strip()
+    try:
+        derived_status = TaskStatus(status_raw) if status_raw else TaskStatus.COMPLETED
+    except ValueError:
+        derived_status = TaskStatus.COMPLETED
+    task_type_raw = str(metadata.get("task_type") or "").strip()
+    try:
+        derived_type = TaskType(task_type_raw) if task_type_raw else TaskType.IMPL
+    except ValueError:
+        derived_type = TaskType.IMPL
+    recorded_at = getattr(event, "recorded_at", None) or _now()
+    model = str(metadata.get("model") or "unknown").strip() or "unknown"
+    command = str(metadata.get("repeatable_tool_call") or "").strip()
+    direction = str(metadata.get("direction") or "").strip()
+    if not direction and command:
+        direction = command[:240]
+    return {
+        "id": task_id,
+        "direction": direction or "(tracked completion)",
+        "task_type": derived_type,
+        "status": derived_status,
+        "model": model,
+        "command": command or "PATCH /api/agent/tasks/{task_id}",
+        "started_at": None,
+        "output": None,
+        "context": {"source": "runtime_event_fallback"},
+        "progress_pct": 100 if derived_status == TaskStatus.COMPLETED else None,
+        "current_step": "completed" if derived_status == TaskStatus.COMPLETED else None,
+        "decision_prompt": None,
+        "decision": None,
+        "claimed_by": str(metadata.get("worker_id") or metadata.get("agent_id") or "unknown"),
+        "claimed_at": None,
+        "created_at": recorded_at,
+        "updated_at": recorded_at,
+        "tier": str(metadata.get("provider") or "") or "unknown",
+    }
+
+
 def list_tasks(
     status: Optional[TaskStatus] = None,
     task_type: Optional[TaskType] = None,
@@ -1030,72 +1109,15 @@ def list_tasks(
     """List tasks with optional filters. Sorted by created_at descending (newest first)."""
     _ensure_store_loaded()
     items = list(_store.values())
-
-    # Include tracked completions from the runtime event store so the UI can show tasks across restarts.
-    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() not in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
-        events = []
-    else:
-        try:
-            from app.services import runtime_service
-
-            events = runtime_service.list_events(limit=2000)
-        except Exception:
-            events = []
+    events = _runtime_fallback_events_for_tasks(len(items))
 
     seen: set[str] = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
     for event in events:
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
+        derived = _runtime_completion_event_to_task(event, seen)
+        if derived is None:
             continue
-        if str(metadata.get("tracking_kind") or "").strip() != "agent_task_completion":
-            continue
-        task_id = str(metadata.get("task_id") or "").strip()
-        if not task_id or task_id in seen:
-            continue
-        status_raw = str(metadata.get("task_final_status") or "").strip()
-        try:
-            derived_status = TaskStatus(status_raw) if status_raw else TaskStatus.COMPLETED
-        except ValueError:
-            derived_status = TaskStatus.COMPLETED
-        task_type_raw = str(metadata.get("task_type") or "").strip()
-        try:
-            derived_type = TaskType(task_type_raw) if task_type_raw else TaskType.IMPL
-        except ValueError:
-            derived_type = TaskType.IMPL
-        recorded_at = getattr(event, "recorded_at", None) or _now()
-        model = str(metadata.get("model") or "unknown").strip() or "unknown"
-        command = str(metadata.get("repeatable_tool_call") or "").strip()
-        direction = str(metadata.get("direction") or "").strip()
-        if not direction and command:
-            direction = command[:240]
-        items.append(
-            {
-                "id": task_id,
-                "direction": direction or "(tracked completion)",
-                "task_type": derived_type,
-                "status": derived_status,
-                "model": model,
-                "command": command or "PATCH /api/agent/tasks/{task_id}",
-                "started_at": None,
-                "output": None,
-                "context": {"source": "runtime_event_fallback"},
-                "progress_pct": 100 if derived_status == TaskStatus.COMPLETED else None,
-                "current_step": "completed" if derived_status == TaskStatus.COMPLETED else None,
-                "decision_prompt": None,
-                "decision": None,
-                "claimed_by": str(metadata.get("worker_id") or metadata.get("agent_id") or "unknown"),
-                "claimed_at": None,
-                "created_at": recorded_at,
-                "updated_at": recorded_at,
-                "tier": str(metadata.get("provider") or "") or "unknown",
-            }
-        )
-        seen.add(task_id)
+        items.append(derived)
+        seen.add(str(derived.get("id") or ""))
 
     if status is not None:
         items = [t for t in items if t["status"] == status]
