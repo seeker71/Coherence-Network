@@ -67,6 +67,29 @@ When the pipeline is stuck or the agent runner died:
 - Telegram: `/reply {task_id} yes` (or your decision)
 - API: `curl -X PATCH http://localhost:8000/api/agent/tasks/{id} -H "Content-Type: application/json" -d '{"decision":"yes"}'`
 
+## n8n Security and HITL Operations
+
+Use this when workflow runs involve n8n-powered automation.
+
+Security floor:
+- v1 deployments must be `>=1.123.17`
+- v2 deployments must be `>=2.5.2`
+
+Deploy gate check (from `api/`):
+
+```bash
+.venv/bin/python scripts/validate_pr_to_public.py --branch codex/<thread-name> --wait-public --n8n-version "${N8N_VERSION}"
+```
+
+Expected behavior:
+1. If n8n is below minimum, result is `blocked_n8n_version` and deploy should not proceed.
+2. If n8n is at/above minimum, gate result depends on normal PR/public checks.
+
+HITL contract:
+1. Mark destructive or external-impacting actions as approval-required.
+2. Verify a blocked action remains blocked until explicit approval event is recorded.
+3. If approvals fail to trigger, treat as a deploy blocker and roll back workflow changes enabling direct execution.
+
 ## Self-Improvement Thinking Loop
 
 When running plan/implement/verify cycles, enforce this thinking contract before coding:

@@ -34,6 +34,9 @@ try:  # noqa: SIM105
 except Exception:  # pragma: no cover - best effort import only
     telemetry_persistence_service = None
 
+_N8N_V1_MIN = (1, 123, 17)
+_N8N_V2_MIN = (2, 5, 2)
+
 
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -108,6 +111,11 @@ class FileSnapshot:
 
 def _hint_for_step(name: str, command: str, output: str) -> str:
     lower = f"{name} {command} {output}".lower()
+    if "n8n-security-floor-guard" in lower:
+        return (
+            "Set N8N_VERSION (or --n8n-version) to deployed runtime version and "
+            "upgrade n8n to minimum secure release."
+        )
     if "validate_commit_evidence" in lower:
         return "Add/update docs/system_audit/commit_evidence_*.json and include changed files under change_files."
     if "validate_spec_quality" in lower:
@@ -583,6 +591,93 @@ def _parse_optional_status_contexts(raw: str) -> set[str]:
     return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _format_semver(version: tuple[int, int, int]) -> str:
+    return ".".join(str(part) for part in version)
+
+
+def _parse_semver(raw: str) -> tuple[int, int, int] | None:
+    text = raw.strip()
+    if text.startswith("v"):
+        text = text[1:]
+    parts = text.split(".")
+    if not parts:
+        return None
+    values: list[int] = []
+    for idx in range(3):
+        if idx >= len(parts):
+            values.append(0)
+            continue
+        match = re.match(r"^(\d+)", parts[idx])
+        if not match:
+            return None
+        values.append(int(match.group(1)))
+    return (values[0], values[1], values[2])
+
+
+def _n8n_security_floor_step(n8n_version: str, require_n8n_version: bool) -> StepResult | None:
+    name = "n8n-security-floor-guard"
+    command = "python3 scripts/worktree_pr_guard.py --mode local [--n8n-version ...]"
+    start = time.monotonic()
+
+    version = n8n_version.strip()
+    if not version:
+        if not require_n8n_version:
+            return None
+        return StepResult(
+            name=name,
+            command=command,
+            ok=False,
+            exit_code=1,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=(
+                "ERROR: n8n security floor is required but no version was provided. "
+                "Set N8N_VERSION or pass --n8n-version."
+            ),
+            hint="Set N8N_VERSION (for example 1.123.17) and re-run guard.",
+        )
+
+    parsed = _parse_semver(version)
+    if parsed is None:
+        return StepResult(
+            name=name,
+            command=command,
+            ok=False,
+            exit_code=1,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=f"ERROR: invalid n8n version format: {version}",
+            hint="Provide n8n version in semver form (for example 1.123.17 or 2.5.2).",
+        )
+
+    minimum = _N8N_V1_MIN if parsed[0] <= 1 else _N8N_V2_MIN
+    ok = parsed >= minimum
+    parsed_display = _format_semver(parsed)
+    minimum_display = _format_semver(minimum)
+    detail = f"n8n_version={version} parsed={parsed_display} minimum={minimum_display}"
+    if not ok:
+        detail = f"ERROR: {detail} (below minimum security floor)"
+
+    return StepResult(
+        name=name,
+        command=command,
+        ok=ok,
+        exit_code=0 if ok else 1,
+        duration_seconds=round(time.monotonic() - start, 2),
+        output_tail=detail,
+        hint=(
+            "n8n security floor check passed."
+            if ok
+            else f"Upgrade n8n before push to at least {minimum_display}."
+        ),
+    )
+
+
 def _collect_remote_pr_failures(
     repo: str,
     branch: str,
@@ -792,6 +887,20 @@ def main() -> int:
         default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
         help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
     )
+    parser.add_argument(
+        "--n8n-version",
+        default=os.getenv("N8N_VERSION", ""),
+        help="Optional n8n runtime version to enforce security floor (v1>=1.123.17, v2>=2.5.2).",
+    )
+    parser.add_argument(
+        "--require-n8n-version",
+        action="store_true",
+        default=_env_bool("PR_GUARD_REQUIRE_N8N_VERSION", False),
+        help=(
+            "Fail local preflight when n8n version is missing. "
+            "Defaults from PR_GUARD_REQUIRE_N8N_VERSION."
+        ),
+    )
     args = parser.parse_args()
 
     optional_status_contexts = _parse_optional_status_contexts(args.optional_status_contexts)
@@ -807,6 +916,7 @@ def main() -> int:
         "local_preflight": {"status": "skipped", "steps": []},
         "remote_pr_checks": {"status": "skipped"},
         "deployment_health": {"status": "skipped"},
+        "n8n_security_floor": {"status": "skipped"},
         "optional_status_contexts": sorted(optional_status_contexts),
     }
 
@@ -823,6 +933,7 @@ def main() -> int:
         rebase_step = _run_rebase_freshness_guard(args.base_ref)
         steps.append(rebase_step)
         if not rebase_step.ok:
+            report["n8n_security_floor"] = {"status": "skipped_rebase_failed"}
             report["local_preflight"] = {
                 "status": "fail",
                 "steps": [
@@ -839,6 +950,17 @@ def main() -> int:
                 ],
             }
         else:
+            n8n_step = _n8n_security_floor_step(args.n8n_version, args.require_n8n_version)
+            if n8n_step is None:
+                report["n8n_security_floor"] = {"status": "skipped"}
+            else:
+                steps.append(n8n_step)
+                report["n8n_security_floor"] = {
+                    "status": "pass" if n8n_step.ok else "fail",
+                    "input_version": args.n8n_version.strip() or None,
+                    "output_tail": n8n_step.output_tail,
+                    "hint": n8n_step.hint,
+                }
             for name, command in _local_steps(
                 args.base_ref,
                 args.skip_api_tests,
@@ -846,6 +968,8 @@ def main() -> int:
                 args.require_gh_auth,
                 maintainability_output,
             ):
+                if steps and not steps[-1].ok:
+                    break
                 step = _run_step(name, command, cwd=REPO_ROOT)
                 healed_now = _auto_heal_generated_artifacts(
                     preexisting_changed_paths=preexisting_changed_paths,
@@ -945,6 +1069,7 @@ def main() -> int:
             "local_preflight_status": report["local_preflight"].get("status"),
             "remote_pr_checks_status": report["remote_pr_checks"].get("status"),
             "deployment_health_status": report["deployment_health"].get("status"),
+            "n8n_security_floor_status": report["n8n_security_floor"].get("status"),
             "summary": report["summary"],
         },
     )
@@ -962,6 +1087,7 @@ def main() -> int:
         print(f"local_preflight={local.get('status')}")
         remote_status = report["remote_pr_checks"].get("status")
         print(f"remote_pr_checks={remote_status}")
+        print(f"n8n_security_floor={report['n8n_security_floor'].get('status')}")
 
     return 0 if not blocking else 2
 

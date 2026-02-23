@@ -58,6 +58,7 @@ Start command:
 Run and record:
 
 ```bash
+# Optional for n8n-backed flows: export N8N_VERSION=<deployed-version>
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
@@ -86,6 +87,7 @@ Worktree notes:
 - It writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
 - `thread-runtime.sh run-e2e` does runtime API smoke against the active local API and is cache-aware.
 - Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
+- If `N8N_VERSION` is set (or `--n8n-version` is passed), the local guard enforces n8n security floor (`v1>=1.123.17`, `v2>=2.5.2`) and blocks push when below floor.
 - If running `./scripts/verify_worktree_local_web.sh` directly, npm cache defaults to per-worktree `<worktree>/.cache/npm` (override via `NPM_CACHE=...`).
 
 ### Phase B: CI Validation (required before merge)

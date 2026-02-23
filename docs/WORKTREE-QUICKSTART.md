@@ -55,6 +55,8 @@ git rebase origin/main
 ```
 
 ```bash
+# Optional: set deployed n8n version when automation flows depend on n8n
+# export N8N_VERSION=1.123.17
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
 # optional explicit startup (for manual end-to-end contract check)
@@ -66,6 +68,8 @@ THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
 Optional remote/deploy gate check:
 
 ```bash
+# Optional n8n security-floor enforcement in remote/deploy-aware mode:
+# N8N_VERSION=1.123.17 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
 ```
 

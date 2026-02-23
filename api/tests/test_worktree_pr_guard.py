@@ -78,3 +78,33 @@ def test_auto_heal_generated_artifact_restores_snapshot(monkeypatch, tmp_path) -
     )
     assert healed == ["maintainability_audit_report.json"]
     assert target.read_text(encoding="utf-8") == "before\n"
+
+
+def test_n8n_security_floor_step_skips_when_not_required() -> None:
+    mod = _load_module()
+    step = mod._n8n_security_floor_step("", False)
+    assert step is None
+
+
+def test_n8n_security_floor_step_fails_when_required_missing() -> None:
+    mod = _load_module()
+    step = mod._n8n_security_floor_step("", True)
+    assert step is not None
+    assert step.ok is False
+    assert "no version was provided" in step.output_tail
+
+
+def test_n8n_security_floor_step_blocks_below_floor() -> None:
+    mod = _load_module()
+    step = mod._n8n_security_floor_step("1.123.16", False)
+    assert step is not None
+    assert step.ok is False
+    assert "below minimum security floor" in step.output_tail
+
+
+def test_n8n_security_floor_step_allows_fixed_versions() -> None:
+    mod = _load_module()
+    v1 = mod._n8n_security_floor_step("1.123.17", False)
+    v2 = mod._n8n_security_floor_step("2.5.2", False)
+    assert v1 is not None and v1.ok is True
+    assert v2 is not None and v2.ok is True
