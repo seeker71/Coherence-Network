@@ -1,12 +1,16 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by making infra preflight tolerant to degraded observability probes, adding stage-level task submit retries for transient production timeouts, avoiding forced execute calls in hosted workflow, and extending tests for execute/auth fallback and degraded preflight behavior.",
+  "commit_scope": "Unblock hosted self-improve execution by making infra preflight tolerant to degraded observability probes, adding stage-level task submit retries for transient production timeouts, reducing /api/agent/tasks runtime-event backfill pressure to improve hosted responsiveness, avoiding forced execute calls in hosted workflow, and extending tests for execute/auth fallback and degraded preflight behavior.",
   "files_owned": [
     "api/scripts/run_self_improve_cycle.py",
+    "api/app/services/agent_service.py",
     "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
-    ".github/workflows/self-improve-cycle.yml"
+    ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json"
   ],
   "idea_ids": [
     "coherence-network-agent-pipeline"
@@ -36,9 +40,13 @@
   },
   "evidence_refs": [
     "api/scripts/run_self_improve_cycle.py",
+    "api/app/services/agent_service.py",
     "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
     ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/02_pytest.txt",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/03_ruff.txt",
@@ -49,9 +57,13 @@
   ],
   "change_files": [
     "api/scripts/run_self_improve_cycle.py",
+    "api/app/services/agent_service.py",
     "api/tests/test_run_self_improve_cycle.py",
+    "api/tests/test_agent_tasks_runtime_fallback.py",
     "api/tests/test_metrics_db_migration.py",
     ".github/workflows/self-improve-cycle.yml",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/commit_evidence_2026-02-23_self-improve-hosted-stage-unblock.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/01_start_gate_note.txt",
@@ -61,13 +73,14 @@
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/05_pr_guard_local_pass.json",
     "docs/system_audit/self_improve_campaign_20260223T090257Z_hosted_stage_unblock/06_pr_followthrough_strict.txt"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
       "cd api && pytest -q tests/test_run_self_improve_cycle.py",
+      "cd api && pytest -q tests/test_agent_tasks_runtime_fallback.py",
       "cd api && pytest -q tests/test_metrics_db_migration.py::test_metrics_imports_from_file_to_db_and_purges_legacy_file",
-      "cd api && ruff check scripts/run_self_improve_cycle.py tests/test_run_self_improve_cycle.py",
+      "cd api && ruff check app/services/agent_service.py scripts/run_self_improve_cycle.py tests/test_agent_tasks_runtime_fallback.py tests/test_run_self_improve_cycle.py",
       "python3 scripts/validate_workflow_references.py",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
