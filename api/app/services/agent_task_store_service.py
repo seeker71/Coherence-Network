@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine, func, inspect
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, load_only, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
 
@@ -154,7 +154,7 @@ def _serialize_dt(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
-def _row_to_payload(row: AgentTaskRecord) -> dict[str, Any]:
+def _row_to_payload(row: AgentTaskRecord, *, include_output: bool = True) -> dict[str, Any]:
     try:
         context = json.loads(row.context_json) if row.context_json else {}
     except Exception:
@@ -168,7 +168,7 @@ def _row_to_payload(row: AgentTaskRecord) -> dict[str, Any]:
         "status": row.status,
         "model": row.model,
         "command": row.command,
-        "output": row.output,
+        "output": row.output if include_output else None,
         "context": context,
         "progress_pct": row.progress_pct,
         "current_step": row.current_step,
@@ -183,17 +183,73 @@ def _row_to_payload(row: AgentTaskRecord) -> dict[str, Any]:
     }
 
 
-def load_tasks() -> list[dict[str, Any]]:
+def load_tasks(*, include_output: bool = True) -> list[dict[str, Any]]:
     if not enabled():
         return []
     ensure_schema()
     with _session() as session:
-        rows = (
-            session.query(AgentTaskRecord)
-            .order_by(AgentTaskRecord.created_at.desc())
-            .all()
-        )
-    return [_row_to_payload(row) for row in rows]
+        query = session.query(AgentTaskRecord)
+        if not include_output:
+            query = query.options(
+                load_only(
+                    AgentTaskRecord.id,
+                    AgentTaskRecord.direction,
+                    AgentTaskRecord.task_type,
+                    AgentTaskRecord.status,
+                    AgentTaskRecord.model,
+                    AgentTaskRecord.command,
+                    AgentTaskRecord.context_json,
+                    AgentTaskRecord.progress_pct,
+                    AgentTaskRecord.current_step,
+                    AgentTaskRecord.decision_prompt,
+                    AgentTaskRecord.decision,
+                    AgentTaskRecord.claimed_by,
+                    AgentTaskRecord.claimed_at,
+                    AgentTaskRecord.created_at,
+                    AgentTaskRecord.updated_at,
+                    AgentTaskRecord.started_at,
+                    AgentTaskRecord.tier,
+                )
+            )
+        rows = query.order_by(AgentTaskRecord.created_at.desc()).all()
+    return [_row_to_payload(row, include_output=include_output) for row in rows]
+
+
+def load_task(task_id: str, *, include_output: bool = True) -> dict[str, Any] | None:
+    if not enabled():
+        return None
+    normalized_task_id = str(task_id or "").strip()
+    if not normalized_task_id:
+        return None
+    ensure_schema()
+    with _session() as session:
+        query = session.query(AgentTaskRecord)
+        if not include_output:
+            query = query.options(
+                load_only(
+                    AgentTaskRecord.id,
+                    AgentTaskRecord.direction,
+                    AgentTaskRecord.task_type,
+                    AgentTaskRecord.status,
+                    AgentTaskRecord.model,
+                    AgentTaskRecord.command,
+                    AgentTaskRecord.context_json,
+                    AgentTaskRecord.progress_pct,
+                    AgentTaskRecord.current_step,
+                    AgentTaskRecord.decision_prompt,
+                    AgentTaskRecord.decision,
+                    AgentTaskRecord.claimed_by,
+                    AgentTaskRecord.claimed_at,
+                    AgentTaskRecord.created_at,
+                    AgentTaskRecord.updated_at,
+                    AgentTaskRecord.started_at,
+                    AgentTaskRecord.tier,
+                )
+            )
+        row = query.filter(AgentTaskRecord.id == normalized_task_id).first()
+    if row is None:
+        return None
+    return _row_to_payload(row, include_output=include_output)
 
 
 def upsert_task(payload: dict[str, Any]) -> None:
@@ -233,7 +289,9 @@ def upsert_task(payload: dict[str, Any]) -> None:
         row.status = str(payload.get("status") or row.status)
         row.model = str(payload.get("model") or row.model)
         row.command = str(payload.get("command") or row.command)
-        row.output = payload.get("output")
+        incoming_output = payload.get("output")
+        if incoming_output is not None:
+            row.output = incoming_output
         row.context_json = json.dumps(payload.get("context") if isinstance(payload.get("context"), dict) else {})
         row.progress_pct = payload.get("progress_pct")
         row.current_step = payload.get("current_step")
