@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload self-improve report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: self_improve_cycle_report_${{ github.sha }}
           path: |
