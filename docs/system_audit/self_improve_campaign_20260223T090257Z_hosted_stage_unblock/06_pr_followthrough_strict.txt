@@ -1,0 +1,4 @@
+repo=seeker71/Coherence-Network
+codex_open_prs=0
+stale_threshold_minutes=90.0
+stale_codex_prs=0
