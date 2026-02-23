@@ -39,6 +39,26 @@ Web service (`coherence-web`):
 
 - `NEXT_PUBLIC_API_URL=https://coherence-network-production.up.railway.app`
 
+## n8n Security Baseline and HITL Contract
+
+When automation flows depend on n8n, deployment validation must enforce:
+
+1. Minimum secure n8n version:
+- v1 track: `>=1.123.17`
+- v2 track: `>=2.5.2`
+2. Human-in-the-loop (HITL) approval for destructive/external-impacting tool calls (for example delete/write/send actions).
+
+Optional pre-merge gate command (from `api/`):
+
+```bash
+.venv/bin/python scripts/validate_pr_to_public.py \
+  --branch codex/<thread-name> \
+  --wait-public \
+  --n8n-version "${N8N_VERSION}"
+```
+
+If the provided n8n version is below floor, the script returns non-zero with `result=blocked_n8n_version`.
+
 ## Railway Auto-Deploy Settings
 
 Set in both Railway services:

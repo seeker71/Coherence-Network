@@ -81,3 +81,6 @@ Run `pytest -v` and `npm run build` to verify before updating this doc.
 - `097` — `specs/097-openclaw-citation-and-allowed-file-guard.md`
 - `098` — `specs/098-openclaw-incremental-index-freshness.md`
 - `099` — `specs/099-openclaw-roi-benchmark-and-telemetry-loop.md`
+- `108` — `specs/108-n8n-security-and-hitl-hardening.md`
+- `109` — `specs/109-open-responses-interoperability-layer.md`
+- `110` — `specs/110-langgraph-stateschema-adoption.md`
