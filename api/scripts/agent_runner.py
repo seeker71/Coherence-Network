@@ -2782,6 +2782,20 @@ def _configure_codex_cli_environment(
     log: logging.Logger,
     task_ctx: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    def _set_openai_api_env(target_env: dict[str, str], *, api_key: str) -> None:
+        """Ensure API-key auth uses a non-empty bearer token when one is available."""
+        if api_key:
+            target_env["OPENAI_API_KEY"] = api_key
+        else:
+            target_env.pop("OPENAI_API_KEY", None)
+        api_base = str(os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")).strip()
+        if api_base:
+            target_env["OPENAI_API_BASE"] = api_base
+            target_env["OPENAI_BASE_URL"] = api_base
+        else:
+            target_env.pop("OPENAI_API_BASE", None)
+            target_env.pop("OPENAI_BASE_URL", None)
+
     task_auth_override = _normalize_codex_auth_mode(
         (task_ctx or {}).get("runner_codex_auth_mode"),
         default="",
@@ -2804,9 +2818,7 @@ def _configure_codex_cli_environment(
 
     if effective_mode == "oauth":
         if allow_oauth_fallback:
-            env.setdefault("OPENAI_API_KEY", openai_primary_key)
-            env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-            env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+            _set_openai_api_env(env, api_key=openai_primary_key)
         else:
             env.pop("OPENAI_API_KEY", None)
             env.pop("OPENAI_ADMIN_API_KEY", None)
@@ -2816,9 +2828,7 @@ def _configure_codex_cli_environment(
         if _as_bool(os.environ.get("AGENT_CODEX_API_KEY_ISOLATE_HOME", "1")):
             _ensure_codex_api_key_isolated_home(env, task_id=task_id)
             env["AGENT_CODEX_OAUTH_SESSION_FILE"] = ""
-        env.setdefault("OPENAI_API_KEY", openai_primary_key)
-        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+        _set_openai_api_env(env, api_key=openai_primary_key)
 
     oauth_available, oauth_source = _codex_oauth_session_status(env)
     oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)
