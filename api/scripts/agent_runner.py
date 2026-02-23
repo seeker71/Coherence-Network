@@ -2708,11 +2708,13 @@ def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
         seen.add(candidate)
         candidates.append(candidate)
 
-    explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         _append(explicit_session_file)
 
-    codex_home = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
     if not codex_home:
         codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
     if codex_home:
@@ -2762,6 +2764,17 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
     return False, "missing_codex_oauth_session"
 
 
+def _ensure_codex_api_key_isolated_home(env: dict[str, str], *, task_id: str) -> str:
+    """Force Codex API-key mode to ignore stale oauth sessions from the default home."""
+    slug = re.sub(r"[^a-zA-Z0-9_.-]", "-", str(task_id or "task")).strip("-") or "task"
+    base_home = os.path.join("/tmp", "agent-runner-codex-api-key", slug)
+    codex_home = os.path.join(base_home, ".codex")
+    os.makedirs(codex_home, exist_ok=True)
+    env["HOME"] = base_home
+    env["CODEX_HOME"] = codex_home
+    return codex_home
+
+
 def _configure_codex_cli_environment(
     *,
     env: dict[str, str],
@@ -2781,12 +2794,12 @@ def _configure_codex_cli_environment(
     openai_api_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
     openai_admin_key = str(os.environ.get("OPENAI_ADMIN_API_KEY", "")).strip()
     api_key_present = bool(openai_api_key or openai_admin_key)
-    oauth_available, oauth_source = _codex_oauth_session_status(env)
+    oauth_available_initial, oauth_source_initial = _codex_oauth_session_status(env)
     allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "1"))
 
     effective_mode = requested_mode
     if requested_mode == "auto":
-        effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available else "api_key")
+        effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available_initial else "api_key")
 
     if effective_mode == "oauth":
         if allow_oauth_fallback:
@@ -2799,10 +2812,14 @@ def _configure_codex_cli_environment(
             env.pop("OPENAI_API_BASE", None)
             env.pop("OPENAI_BASE_URL", None)
     else:
+        if _as_bool(os.environ.get("AGENT_CODEX_API_KEY_ISOLATE_HOME", "1")):
+            _ensure_codex_api_key_isolated_home(env, task_id=task_id)
+            env["AGENT_CODEX_OAUTH_SESSION_FILE"] = ""
         env.setdefault("OPENAI_API_KEY", openai_api_key)
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
         env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
 
+    oauth_available, oauth_source = _codex_oauth_session_status(env)
     oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)
     auth_state = {
         "requested_mode": requested_mode,
