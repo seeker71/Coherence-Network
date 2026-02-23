@@ -1,8 +1,10 @@
 {
   "date": "2026-02-23",
   "thread_branch": "codex/self-improve-e2e-proof",
-  "commit_scope": "Unblock hosted self-improve execution by enabling Codex OAuth->API-key fallback by default, executing codex commands via argv (no shell expansion), isolating Codex HOME/session in api_key mode, and mapping OPENAI_API_KEY from OPENAI_API_KEY or OPENAI_ADMIN_API_KEY to avoid missing-bearer failures.",
+  "commit_scope": "Unblock hosted self-improve execution by forcing self-improve task payloads to request runner_codex_auth_mode=api_key, while preserving prior Codex fallback/argv/home-isolation/admin-key fixes.",
   "files_owned": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "docs/system_audit/commit_evidence_2026-02-23_self-improve-codex-auth-fallback.json"
@@ -17,7 +19,8 @@
     "task-2026-02-23-self-improve-oauth-refresh-fallback",
     "task-2026-02-23-self-improve-codex-shell-expansion-fix",
     "task-2026-02-23-self-improve-codex-api-key-home-isolation",
-    "task-2026-02-23-self-improve-admin-key-fallback"
+    "task-2026-02-23-self-improve-admin-key-fallback",
+    "task-2026-02-23-self-improve-force-api-key-context"
   ],
   "contributors": [
     {
@@ -35,6 +38,8 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "output/proof_20260223_hosted_self_improve/pre_fix_self_improve_stages_empty_top.png",
@@ -44,6 +49,8 @@
     "https://github.com/seeker71/Coherence-Network/actions/runs/22304923742"
   ],
   "change_files": [
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "docs/system_audit/commit_evidence_2026-02-23_self-improve-codex-auth-fallback.json"
@@ -52,7 +59,9 @@
   "local_validation": {
     "status": "pass",
     "commands": [
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py",
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/run_self_improve_cycle.py tests/test_run_self_improve_cycle.py",
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
     ]
   },
@@ -66,7 +75,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting merge/deploy of auth fallback and hosted self-improve run artifact proving impl+verify+deploy chain completion."
+    "blocked_reason": "Awaiting merge/deploy of self-improve api_key auth-mode payload override and a fresh hosted self-improve artifact showing plan stage executes without oauth refresh-token reuse."
   },
   "e2e_validation": {
     "status": "pending",

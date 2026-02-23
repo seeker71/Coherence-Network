@@ -223,6 +223,9 @@ def test_stage_payloads_pin_expected_models() -> None:
     assert plan_payload["context"]["executor"] == "codex"
     assert execute_payload["context"]["executor"] == "codex"
     assert review_payload["context"]["executor"] == "codex"
+    assert plan_payload["context"]["runner_codex_auth_mode"] == "api_key"
+    assert execute_payload["context"]["runner_codex_auth_mode"] == "api_key"
+    assert review_payload["context"]["runner_codex_auth_mode"] == "api_key"
 
 
 def test_run_cycle_submits_plan_execute_review_in_order() -> None:
