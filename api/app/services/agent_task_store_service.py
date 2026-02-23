@@ -154,7 +154,12 @@ def _serialize_dt(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
-def _row_to_payload(row: AgentTaskRecord, *, include_output: bool = True) -> dict[str, Any]:
+def _row_to_payload(
+    row: AgentTaskRecord,
+    *,
+    include_output: bool = True,
+    include_command: bool = True,
+) -> dict[str, Any]:
     try:
         context = json.loads(row.context_json) if row.context_json else {}
     except Exception:
@@ -167,7 +172,7 @@ def _row_to_payload(row: AgentTaskRecord, *, include_output: bool = True) -> dic
         "task_type": row.task_type,
         "status": row.status,
         "model": row.model,
-        "command": row.command,
+        "command": row.command if include_command else "",
         "output": row.output if include_output else None,
         "context": context,
         "progress_pct": row.progress_pct,
@@ -183,39 +188,63 @@ def _row_to_payload(row: AgentTaskRecord, *, include_output: bool = True) -> dic
     }
 
 
-def load_tasks(*, include_output: bool = True) -> list[dict[str, Any]]:
+def _minimal_columns(*, include_output: bool, include_command: bool) -> tuple[Any, ...]:
+    columns: list[Any] = [
+        AgentTaskRecord.id,
+        AgentTaskRecord.direction,
+        AgentTaskRecord.task_type,
+        AgentTaskRecord.status,
+        AgentTaskRecord.model,
+        AgentTaskRecord.context_json,
+        AgentTaskRecord.progress_pct,
+        AgentTaskRecord.current_step,
+        AgentTaskRecord.decision_prompt,
+        AgentTaskRecord.decision,
+        AgentTaskRecord.claimed_by,
+        AgentTaskRecord.claimed_at,
+        AgentTaskRecord.created_at,
+        AgentTaskRecord.updated_at,
+        AgentTaskRecord.started_at,
+        AgentTaskRecord.tier,
+    ]
+    if include_command:
+        columns.append(AgentTaskRecord.command)
+    if include_output:
+        columns.append(AgentTaskRecord.output)
+    return tuple(columns)
+
+
+def load_tasks(
+    *,
+    include_output: bool = True,
+    include_command: bool = True,
+) -> list[dict[str, Any]]:
     if not enabled():
         return []
     ensure_schema()
     with _session() as session:
         query = session.query(AgentTaskRecord)
-        if not include_output:
+        if not include_output or not include_command:
             query = query.options(
-                load_only(
-                    AgentTaskRecord.id,
-                    AgentTaskRecord.direction,
-                    AgentTaskRecord.task_type,
-                    AgentTaskRecord.status,
-                    AgentTaskRecord.model,
-                    AgentTaskRecord.command,
-                    AgentTaskRecord.context_json,
-                    AgentTaskRecord.progress_pct,
-                    AgentTaskRecord.current_step,
-                    AgentTaskRecord.decision_prompt,
-                    AgentTaskRecord.decision,
-                    AgentTaskRecord.claimed_by,
-                    AgentTaskRecord.claimed_at,
-                    AgentTaskRecord.created_at,
-                    AgentTaskRecord.updated_at,
-                    AgentTaskRecord.started_at,
-                    AgentTaskRecord.tier,
-                )
+                load_only(*_minimal_columns(include_output=include_output, include_command=include_command))
             )
         rows = query.order_by(AgentTaskRecord.created_at.desc()).all()
-    return [_row_to_payload(row, include_output=include_output) for row in rows]
+    return [
+        _row_to_payload(
+            row,
+            include_output=include_output,
+            include_command=include_command,
+        )
+        for row in rows
+    ]
 
 
-def load_task(task_id: str, *, include_output: bool = True) -> dict[str, Any] | None:
+def load_task(
+    task_id: str,
+    *,
+    include_output: bool = True,
+    include_command: bool = True,
+) -> dict[str, Any] | None:
     if not enabled():
         return None
     normalized_task_id = str(task_id or "").strip()
@@ -224,32 +253,106 @@ def load_task(task_id: str, *, include_output: bool = True) -> dict[str, Any] | 
     ensure_schema()
     with _session() as session:
         query = session.query(AgentTaskRecord)
-        if not include_output:
+        if not include_output or not include_command:
             query = query.options(
-                load_only(
-                    AgentTaskRecord.id,
-                    AgentTaskRecord.direction,
-                    AgentTaskRecord.task_type,
-                    AgentTaskRecord.status,
-                    AgentTaskRecord.model,
-                    AgentTaskRecord.command,
-                    AgentTaskRecord.context_json,
-                    AgentTaskRecord.progress_pct,
-                    AgentTaskRecord.current_step,
-                    AgentTaskRecord.decision_prompt,
-                    AgentTaskRecord.decision,
-                    AgentTaskRecord.claimed_by,
-                    AgentTaskRecord.claimed_at,
-                    AgentTaskRecord.created_at,
-                    AgentTaskRecord.updated_at,
-                    AgentTaskRecord.started_at,
-                    AgentTaskRecord.tier,
-                )
+                load_only(*_minimal_columns(include_output=include_output, include_command=include_command))
             )
         row = query.filter(AgentTaskRecord.id == normalized_task_id).first()
     if row is None:
         return None
-    return _row_to_payload(row, include_output=include_output)
+    return _row_to_payload(
+        row,
+        include_output=include_output,
+        include_command=include_command,
+    )
+
+
+def load_tasks_page(
+    *,
+    status: str | None = None,
+    task_type: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    include_output: bool = False,
+    include_command: bool = False,
+) -> tuple[list[dict[str, Any]], int]:
+    if not enabled():
+        return [], 0
+    ensure_schema()
+    bounded_limit = max(1, min(int(limit), 1000))
+    bounded_offset = max(0, int(offset))
+    with _session() as session:
+        base_query = session.query(AgentTaskRecord)
+        if status:
+            base_query = base_query.filter(AgentTaskRecord.status == str(status))
+        if task_type:
+            base_query = base_query.filter(AgentTaskRecord.task_type == str(task_type))
+        total = int(base_query.count() or 0)
+        query = base_query.options(
+            load_only(*_minimal_columns(include_output=include_output, include_command=include_command))
+        )
+        rows = (
+            query.order_by(AgentTaskRecord.created_at.desc())
+            .offset(bounded_offset)
+            .limit(bounded_limit)
+            .all()
+        )
+    return [
+        _row_to_payload(
+            row,
+            include_output=include_output,
+            include_command=include_command,
+        )
+        for row in rows
+    ], total
+
+
+def load_attention_tasks(limit: int = 20) -> tuple[list[dict[str, Any]], int]:
+    if not enabled():
+        return [], 0
+    ensure_schema()
+    bounded_limit = max(1, min(int(limit), 1000))
+    with _session() as session:
+        base_query = session.query(AgentTaskRecord).filter(
+            AgentTaskRecord.status.in_(("needs_decision", "failed"))
+        )
+        total = int(base_query.count() or 0)
+        rows = (
+            base_query.options(
+                load_only(*_minimal_columns(include_output=True, include_command=False))
+            )
+            .order_by(AgentTaskRecord.created_at.desc())
+            .limit(bounded_limit)
+            .all()
+        )
+    return [
+        _row_to_payload(
+            row,
+            include_output=True,
+            include_command=False,
+        )
+        for row in rows
+    ], total
+
+
+def load_status_counts() -> dict[str, Any]:
+    if not enabled():
+        return {"total": 0, "by_status": {}}
+    ensure_schema()
+    with _session() as session:
+        grouped = (
+            session.query(AgentTaskRecord.status, func.count(AgentTaskRecord.id))
+            .group_by(AgentTaskRecord.status)
+            .all()
+        )
+    by_status: dict[str, int] = {}
+    total = 0
+    for status, count in grouped:
+        key = str(status or "").strip() or "unknown"
+        value = int(count or 0)
+        by_status[key] = value
+        total += value
+    return {"total": total, "by_status": by_status}
 
 
 def upsert_task(payload: dict[str, Any]) -> None:

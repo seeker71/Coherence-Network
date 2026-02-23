@@ -1,0 +1,79 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/db-egress-hotfix-20260223",
+  "commit_scope": "Third-pass DB egress reduction by replacing full-table task reloads in hot API paths with paginated DB queries and single-task hydration for updates.",
+  "files_owned": [
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_task_persistence.py"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-task-orchestration"
+  ],
+  "task_ids": [
+    "task-2026-02-23-db-egress-hotfix-3"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260223T163214Z_codex-db-egress-hotfix-20260223.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_task_persistence.py",
+    "docs/system_audit/commit_evidence_2026-02-23_db-egress-hotfix-v3.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check app/services/agent_task_store_service.py app/services/agent_service.py tests/test_agent_task_persistence.py",
+      "cd api && pytest -q tests/test_agent_task_persistence.py tests/test_agent_usage_tracking_api.py tests/test_agent_visibility_api.py tests/test_agent_tasks_runtime_fallback.py tests/test_agent_execute_endpoint.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, and production endpoint measurements for third-pass egress reduction."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hot task list/update/count/attention paths no longer depend on full-table task-store reloads; DB reads should shift to filtered, paginated, and single-row access.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks?limit=20",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/count",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/attention?limit=20",
+      "https://coherence-network-production.up.railway.app/api/agent/usage"
+    ],
+    "test_flows": [
+      "Verify repeated task-list polling remains healthy with stable response latency.",
+      "Verify task updates still succeed when task is absent from in-memory cache.",
+      "Compare post-deploy endpoint payload/time trends against prior measurements."
+    ]
+  }
+}
