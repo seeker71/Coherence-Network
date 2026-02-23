@@ -236,7 +236,7 @@ List items omit `command` and `output`; full GET includes them.
 | test | ollama/glm-4.7-flash:latest | local |
 | impl | ollama/glm-4.7-flash:latest | local |
 | review | ollama/glm-4.7-flash:latest | local |
-| heal | claude-3-5-haiku | claude |
+| heal | claude-3-5-haiku-20241022 | claude |
 
 Fallback: use `context.model_override` for glm-5:cloud (cloud) or claude (claude). Command template uses `executor`: `claude` (default) or `cursor` (Cursor CLI).
 

@@ -4,7 +4,7 @@
 
 - Scanned `docs/` and `specs/` for stale references, broken internal links, and fragmentation signals.
 - Validated spec-quality gate before and after doc/spec updates.
-- Applied safe, low-risk content updates for stale pinned model alias references.
+- Applied safe, low-risk content updates for stale pinned model alias references in docs.
 
 ## Validation Commands
 
@@ -22,14 +22,13 @@
   - `005, 007, 026, 027, 030, 048, 049, 050, 051, 052, 053, 054`
 
 3. Stale pinned model alias references
-- A pinned alias (`claude-3-5-haiku-20241022`) remained in routing/debug docs and spec table while most docs use unpinned `claude-3-5-haiku`.
+- A pinned alias (`claude-3-5-haiku-20241022`) remained in routing/debug docs while most docs use unpinned `claude-3-5-haiku`.
 
 ## Actions Taken
 
 - Normalized stale pinned Claude fallback references to unpinned alias:
   - `docs/MODEL-ROUTING.md`
   - `docs/AGENT-DEBUGGING.md`
-  - `specs/002-agent-orchestration-api.md`
 - Re-ran spec-quality and markdown-link checks after edits.
 
 ## Proposed Consolidations
@@ -50,4 +49,4 @@
 
 - Start gate and spec-quality checks passed.
 - Internal markdown links remain healthy (`TOTAL_MISSING=0`).
-- Safe stale-content normalization applied without changing runtime code paths.
+- Safe stale-content normalization applied in docs without changing runtime code paths.
