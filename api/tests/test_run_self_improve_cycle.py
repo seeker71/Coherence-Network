@@ -259,10 +259,16 @@ def test_run_cycle_retries_plan_submit_when_transient_error_happens() -> None:
     assert len(client.created_payloads) == 3
 
 
-def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
+def test_run_cycle_retries_plan_submit_across_multiple_post_outages() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
-        post_error_plan=[RuntimeError("timeout"), RuntimeError("timeout"), RuntimeError("timeout")],
+        post_error_plan=[
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+        ],
     )
 
     report = run_self_improve_cycle.run_cycle(
@@ -276,19 +282,16 @@ def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
         usage_cache_path="/tmp/self_improve_cache_retry_fail.json",
     )
 
-    assert report["status"] == "infra_blocked"
-    assert report["failed_stage"] == "plan_submit_or_wait"
-    assert "task submit failed" in str(report["failure_error"])
-    assert report["awareness_reflection"]["status"] == "infra_blocked"
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
 
 
 def test_run_cycle_returns_infra_blocked_on_plan_submit_timeouts() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
         post_error_plan=[
-            RuntimeError("read operation timed out"),
-            RuntimeError("read operation timed out"),
-            RuntimeError("read operation timed out"),
+            RuntimeError("read operation timed out")
+            for _ in range(20)
         ],
     )
 
