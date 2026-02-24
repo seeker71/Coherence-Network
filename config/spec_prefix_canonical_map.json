@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-02-24",
+  "policy": "For duplicated numeric spec prefixes, one file is canonical and all others are treated as aliases for reference compatibility.",
+  "duplicates": {
+    "005": {
+      "canonical": "005-project-manager-pipeline.md",
+      "aliases": ["005-backlog.md"]
+    },
+    "007": {
+      "canonical": "007-meta-pipeline-backlog.md",
+      "aliases": ["007-sprint-0-landing.md"]
+    },
+    "026": {
+      "canonical": "026-pipeline-observability-and-auto-review.md",
+      "aliases": ["026-phase-1-task-metrics.md"]
+    },
+    "027": {
+      "canonical": "027-fully-automated-pipeline.md",
+      "aliases": ["027-auto-update-framework.md"]
+    },
+    "030": {
+      "canonical": "030-pipeline-full-automation.md",
+      "aliases": ["030-spec-coverage-update.md"]
+    },
+    "048": {
+      "canonical": "048-value-lineage-and-payout-attribution.md",
+      "aliases": ["048-contributions-api.md"]
+    },
+    "049": {
+      "canonical": "049-distribution-engine.md",
+      "aliases": ["049-system-lineage-inventory-and-runtime-telemetry.md"]
+    },
+    "050": {
+      "canonical": "050-friction-analysis.md",
+      "aliases": ["050-canonical-route-registry-and-runtime-mapping.md"]
+    },
+    "051": {
+      "canonical": "051-release-gates.md",
+      "aliases": ["051-question-answering-and-minimum-e2e-flow.md"]
+    },
+    "052": {
+      "canonical": "052-assets-api.md",
+      "aliases": ["052-portfolio-cockpit-ui.md"]
+    },
+    "053": {
+      "canonical": "053-ideas-prioritization.md",
+      "aliases": ["053-standing-questions-roi-and-next-task-generation.md"]
+    },
+    "054": {
+      "canonical": "054-commit-provenance-contract-gate.md",
+      "aliases": ["054-postgresql-migration.md"]
+    }
+  }
+}
