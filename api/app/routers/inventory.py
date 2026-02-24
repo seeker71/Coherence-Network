@@ -249,14 +249,15 @@ def spec_process_implementation_validation_flow(
     request: Request,
     idea_id: str | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
-    contributor_limit: int = Query(500, ge=1, le=10000),
-    contribution_limit: int = Query(2000, ge=1, le=20000),
-    asset_limit: int = Query(500, ge=1, le=10000),
-    spec_limit: int = Query(200, ge=1, le=2000),
-    lineage_link_limit: int = Query(300, ge=1, le=1000),
-    usage_event_limit: int = Query(1200, ge=1, le=5000),
-    commit_evidence_limit: int = Query(500, ge=1, le=3000),
-    runtime_event_limit: int = Query(2000, ge=1, le=5000),
+    contributor_limit: int = Query(120, ge=1, le=10000),
+    contribution_limit: int = Query(300, ge=1, le=20000),
+    asset_limit: int = Query(120, ge=1, le=10000),
+    spec_limit: int = Query(160, ge=1, le=2000),
+    lineage_link_limit: int = Query(180, ge=1, le=1000),
+    usage_event_limit: int = Query(350, ge=1, le=5000),
+    commit_evidence_limit: int = Query(200, ge=1, le=3000),
+    runtime_event_limit: int = Query(600, ge=1, le=5000),
+    list_item_limit: int = Query(12, ge=1, le=200),
 ) -> dict:
     store = get_store(request)
     contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=contributor_limit)]
@@ -273,6 +274,7 @@ def spec_process_implementation_validation_flow(
         usage_event_limit=usage_event_limit,
         commit_evidence_limit=commit_evidence_limit,
         runtime_event_limit=runtime_event_limit,
+        list_item_limit=list_item_limit,
     )
 
 

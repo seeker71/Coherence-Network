@@ -43,6 +43,7 @@ _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
 }
 _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
 _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
+_RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -86,6 +87,8 @@ _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
     "weekly": 0.1,
     "monthly": 0.1,
 }
+
+_USAGE_ALERT_MESSAGE_MAX_LEN = 480
 
 
 def _normalize_provider_name(value: str | None) -> str:
@@ -219,6 +222,33 @@ def _normalize_ratio_threshold(value: Any, *, default: float) -> float:
     if parsed is None:
         return default
     return max(0.0, min(float(parsed), 1.0))
+
+
+def _truncate_text(value: Any, *, max_len: int) -> str:
+    raw = str(value or "").strip()
+    if len(raw) <= max_len:
+        return raw
+    if max_len <= 3:
+        return raw[:max_len]
+    return f"{raw[: max_len - 3]}..."
+
+
+def _runtime_events_cache_ttl_seconds() -> float:
+    parsed = _coerce_float(os.getenv("AUTOMATION_RUNTIME_EVENTS_CACHE_SECONDS"))
+    if parsed is None:
+        return 20.0
+    return max(0.0, min(float(parsed), 300.0))
+
+
+def _runtime_event_scan_limit(default: int = 1500) -> int:
+    parsed = _coerce_float(os.getenv("AUTOMATION_RUNTIME_EVENT_SCAN_LIMIT"))
+    if parsed is None:
+        return max(100, min(int(default), 5000))
+    return max(100, min(int(parsed), 5000))
+
+
+def _trim_usage_alert_message(message: str) -> str:
+    return _truncate_text(message, max_len=_USAGE_ALERT_MESSAGE_MAX_LEN)
 
 
 def _metric_window_bucket(window: str | None) -> str:
@@ -1186,23 +1216,60 @@ def _runtime_events_within_window(
     *,
     window_seconds: int,
     source: str | None = None,
-    limit: int = 5000,
+    limit: int = 1500,
 ) -> list[Any]:
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, int(window_seconds)))
+    normalized_window = max(60, int(window_seconds))
+    normalized_limit = max(1, min(int(limit), _runtime_event_scan_limit()))
+    normalized_source = source if isinstance(source, str) and source.strip() else None
+    cache_ttl = _runtime_events_cache_ttl_seconds()
+    cache_key = (normalized_window, normalized_source, normalized_limit)
+    now = time.time()
+
+    if cache_ttl > 0:
+        cached = _RUNTIME_EVENTS_WINDOW_CACHE.get(cache_key)
+        if cached and float(cached.get("expires_at") or 0.0) > now:
+            events = cached.get("events")
+            if isinstance(events, list):
+                return events
+
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=normalized_window)
     try:
         from app.services import runtime_service
 
-        return runtime_service.list_events(
-            limit=max(1, min(int(limit), 5000)),
+        events = runtime_service.list_events(
+            limit=normalized_limit,
             since=cutoff,
-            source=source,
+            source=normalized_source,
         )
     except Exception:
-        return []
+        events = []
+
+    if cache_ttl > 0:
+        _RUNTIME_EVENTS_WINDOW_CACHE[cache_key] = {
+            "expires_at": now + cache_ttl,
+            "events": events,
+        }
+        # Keep cache bounded to avoid unbounded growth on variable windows.
+        if len(_RUNTIME_EVENTS_WINDOW_CACHE) > 48:
+            stale_keys = [
+                key
+                for key, row in _RUNTIME_EVENTS_WINDOW_CACHE.items()
+                if float(row.get("expires_at") or 0.0) <= now
+            ]
+            for key in stale_keys[:24]:
+                _RUNTIME_EVENTS_WINDOW_CACHE.pop(key, None)
+            if len(_RUNTIME_EVENTS_WINDOW_CACHE) > 48:
+                oldest = sorted(
+                    _RUNTIME_EVENTS_WINDOW_CACHE.items(),
+                    key=lambda item: float(item[1].get("expires_at") or 0.0),
+                )
+                for key, _row in oldest[: len(_RUNTIME_EVENTS_WINDOW_CACHE) - 48]:
+                    _RUNTIME_EVENTS_WINDOW_CACHE.pop(key, None)
+    return events
 
 
 def _cursor_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
 
     count = 0
     for event in events:
@@ -1218,7 +1285,7 @@ def _cursor_events_within_window(window_seconds: int) -> int:
 
 
 def _codex_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
     count = 0
     for event in events:
         metadata = getattr(event, "metadata", {}) or {}
@@ -2003,7 +2070,7 @@ def _append_db_host_window_metric(
 ) -> None:
     if limit <= 0:
         return
-    used = len(_runtime_events_within_window(window_seconds=window_seconds, source="api", limit=5000))
+    used = len(_runtime_events_within_window(window_seconds=window_seconds, source="api"))
     metrics.append(
         _metric(
             id=metric_id,
@@ -2213,7 +2280,7 @@ def _db_host_context(db_url: str) -> tuple[str, str, str, dict[str, Any]]:
 
 
 def _append_db_host_runtime_proxy_metrics(metrics: list[UsageMetric]) -> tuple[int, int]:
-    api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api", limit=5000))
+    api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api"))
     metrics.append(
         _metric(
             id="api_events_24h",
@@ -2750,6 +2817,87 @@ def collect_usage_overview(force_refresh: bool = False) -> ProviderUsageOverview
     return overview
 
 
+def compact_usage_overview_payload(
+    overview: ProviderUsageOverview,
+    *,
+    include_raw: bool = False,
+    max_metrics_per_provider: int = 16,
+    max_notes_per_provider: int = 4,
+    max_official_records: int = 4,
+) -> dict[str, Any]:
+    payload = overview.model_dump(mode="json")
+    providers = payload.get("providers")
+    if not isinstance(providers, list):
+        return payload
+
+    bounded_metrics = max(1, min(int(max_metrics_per_provider), 64))
+    bounded_notes = max(0, min(int(max_notes_per_provider), 16))
+    bounded_records = max(0, min(int(max_official_records), 16))
+
+    compacted: list[dict[str, Any]] = []
+    for row in providers:
+        if not isinstance(row, dict):
+            continue
+        normalized = dict(row)
+
+        metrics = normalized.get("metrics")
+        if isinstance(metrics, list):
+            trimmed_metrics: list[dict[str, Any]] = []
+            for metric in metrics[:bounded_metrics]:
+                if not isinstance(metric, dict):
+                    continue
+                metric_row = dict(metric)
+                metric_row["validation_detail"] = _truncate_text(
+                    metric_row.get("validation_detail"), max_len=200
+                )
+                trimmed_metrics.append(metric_row)
+            normalized["metrics"] = trimmed_metrics
+
+        notes = normalized.get("notes")
+        if isinstance(notes, list):
+            normalized["notes"] = [
+                _truncate_text(item, max_len=180)
+                for item in notes[:bounded_notes]
+                if str(item or "").strip()
+            ]
+
+        official_records = normalized.get("official_records")
+        if isinstance(official_records, list):
+            normalized["official_records"] = [
+                str(item).strip()
+                for item in official_records[:bounded_records]
+                if str(item or "").strip()
+            ]
+
+        if not include_raw:
+            normalized["raw"] = {}
+        else:
+            raw_row = normalized.get("raw")
+            if isinstance(raw_row, dict):
+                normalized["raw"] = {
+                    key: value
+                    for key, value in raw_row.items()
+                    if key in {
+                        "database_host",
+                        "database_name",
+                        "database_engine",
+                        "egress_measurement_mode",
+                        "monthly_limit_gb",
+                        "monthly_used_gb",
+                        "delta_rows_since_last_sample",
+                        "avg_row_bytes",
+                        "safety_factor",
+                    }
+                }
+            else:
+                normalized["raw"] = {}
+
+        compacted.append(normalized)
+
+    payload["providers"] = compacted
+    return payload
+
+
 def list_usage_snapshots(limit: int = 200) -> list[ProviderUsageSnapshot]:
     rows = _read_store()
     out: list[ProviderUsageSnapshot] = []
@@ -2811,7 +2959,9 @@ def _append_usage_alerts_for_provider(
                     provider=provider.provider,
                     metric_id="provider_status",
                     severity="warning" if provider.status == "degraded" else "critical",
-                    message=f"{provider.provider} usage provider status={provider.status}",
+                    message=_trim_usage_alert_message(
+                        f"{provider.provider} usage provider status={provider.status}"
+                    ),
                 )
             )
             seen_alert_ids.add(alert_id)
@@ -2832,7 +2982,7 @@ def _append_usage_alerts_for_provider(
                 provider=provider.provider,
                 metric_id=metric.id,
                 severity=severity,  # type: ignore[arg-type]
-                message=(
+                message=_trim_usage_alert_message(
                     f"{provider.provider} {metric.label} low remaining: "
                     f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
                 ),
@@ -2854,7 +3004,7 @@ def _append_usage_alerts_for_provider(
                     provider=provider.provider,
                     metric_id="remaining_tracking_gap",
                     severity="warning" if provider_name in required else "info",
-                    message=(
+                    message=_trim_usage_alert_message(
                         f"{provider.provider} has no remaining/limit telemetry. "
                         "Configure quota metrics to track usage remaining before reset windows."
                     ),
@@ -2890,7 +3040,7 @@ def _append_readiness_alerts(
                 provider=provider_name,
                 metric_id="provider_readiness",
                 severity=severity,  # type: ignore[arg-type]
-                message=(
+                message=_trim_usage_alert_message(
                     f"{provider_name} readiness blocking: status={row.status}, configured={row.configured}. "
                     f"Notes: {', '.join(notes[:2]) if notes else 'none'}"
                 ),
@@ -2987,7 +3137,7 @@ def daily_system_summary(
         }
         friction_entry_points = {"entry_points": []}
 
-    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
     worker_total = len(worker_events)
     worker_failed = sum(1 for event in worker_events if int(getattr(event, "status_code", 0) or 0) >= 400)
     tool_counts: dict[str, dict[str, int]] = {}

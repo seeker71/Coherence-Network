@@ -148,7 +148,7 @@ const DEFAULT_VALIDATION: ProviderValidationResponse = {
 
 async function fetchJsonOrDefault<T>(url: string, fallback: T): Promise<T> {
   try {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, { cache: "force-cache" });
     if (!response.ok) {
       return fallback;
     }
@@ -170,7 +170,7 @@ async function loadAutomationData(): Promise<{
     min_execution_events: "1",
   });
   const [usage, alerts, readiness, validation] = await Promise.all([
-    fetchJsonOrDefault<AutomationUsageResponse>(`${api}/api/automation/usage`, DEFAULT_USAGE),
+    fetchJsonOrDefault<AutomationUsageResponse>(`${api}/api/automation/usage?compact=true`, DEFAULT_USAGE),
     fetchJsonOrDefault<UsageAlertResponse>(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, DEFAULT_ALERTS),
     fetchJsonOrDefault<ProviderReadinessResponse>(`${api}/api/automation/usage/readiness`, DEFAULT_READINESS),
     fetchJsonOrDefault<ProviderValidationResponse>(
