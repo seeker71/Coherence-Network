@@ -34,6 +34,7 @@
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/app/services/agent_service.py",
     "api/tests/test_agent_integration_api.py",
+    "config/start_gate_main_workflow_waivers.json",
     "config/start_gate_workflow_owners.json",
     "docs/system_audit/commit_evidence_2026-02-24_langgraph-stateschema-adoption.json"
   ],

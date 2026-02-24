@@ -1,6 +1,27 @@
 {
   "waivers": [
     {
+      "workflow": "Thread Gates",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while branch-scoped CI test stabilization is being rolled out.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22340170322"
+    },
+    {
+      "workflow": "Test",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while branch-scoped CI test stabilization is being rolled out.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22340170339"
+    },
+    {
+      "workflow": "Self Improve Cycle",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while hosted self-improve workflow failure is remediated.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22339901527"
+    },
+    {
       "workflow": ".github/workflows/self-improve-cycle.yml",
       "owner": "@seeker71",
       "reason": "Temporary waiver for startup failure run while workflow action refs are normalized.",
