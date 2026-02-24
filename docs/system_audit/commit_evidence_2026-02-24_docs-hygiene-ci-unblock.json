@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/docs-hygiene-sweep-20260223-pass2",
+  "commit_scope": "Unblock docs-hygiene PR CI by hardening Codex auth-status detection to avoid environment-dependent false negatives.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "docs/system_audit/commit_evidence_2026-02-24_docs-hygiene-ci-unblock.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "docs-hygiene-sweep"
+  ],
+  "spec_ids": [
+    "002"
+  ],
+  "task_ids": [
+    "ci-flake-unblock",
+    "docs-hygiene-followthrough"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_api_key_login",
+    "cd api && pytest -q",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Codex auth status now requires explicit authenticated markers from CLI status output, avoiding false-positive/false-negative session detection differences across environments.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/",
+      "https://coherence-network-production.up.railway.app/docs"
+    ],
+    "test_flows": [
+      "run targeted auth telemetry tests",
+      "run full API test suite"
+    ]
+  }
+}
