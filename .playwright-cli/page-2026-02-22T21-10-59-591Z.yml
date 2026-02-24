@@ -1,0 +1,315 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fseeker71%2FCoherence-Network%2Factions%2Fruns%2F22284846204%2Fjob%2F64461273177
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E%2Factions%2Fjob%2Findex&source=header-repo&source_repo=seeker71%2FCoherence-Network
+            - button "Appearance settings" [ref=e58] [cursor=pointer]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e67]:
+            - img [ref=e68]
+            - link "seeker71" [ref=e71] [cursor=pointer]:
+              - /url: /seeker71
+            - generic [ref=e72]: /
+            - strong [ref=e73]:
+              - link "Coherence-Network" [ref=e74] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network
+            - generic [ref=e75]: Public
+          - generic [ref=e76]:
+            - list:
+              - listitem [ref=e77]:
+                - link "You must be signed in to change notification settings" [ref=e78] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fseeker71%2FCoherence-Network
+                  - img [ref=e79]
+                  - text: Notifications
+              - listitem [ref=e81]:
+                - link "Fork 0" [ref=e82] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fseeker71%2FCoherence-Network
+                  - img [ref=e83]
+                  - text: Fork
+                  - generic "0" [ref=e85]
+              - listitem [ref=e86]:
+                - link "You must be signed in to star a repository" [ref=e88] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fseeker71%2FCoherence-Network
+                  - img [ref=e89]
+                  - text: Star
+                  - generic "0 users starred this repository" [ref=e91]: "0"
+        - navigation "Repository" [ref=e92]:
+          - list [ref=e93]:
+            - listitem [ref=e94]:
+              - link "Code" [ref=e95] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network
+                - img [ref=e96]
+                - generic [ref=e98]: Code
+            - listitem [ref=e99]:
+              - link "Issues 5" [ref=e100] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/issues
+                - img [ref=e101]
+                - generic [ref=e104]: Issues
+                - generic "5" [ref=e105]
+            - listitem [ref=e106]:
+              - link "Pull requests" [ref=e107] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/pulls
+                - img [ref=e108]
+                - generic [ref=e110]: Pull requests
+            - listitem [ref=e111]:
+              - link "Actions" [ref=e112] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/actions
+                - img [ref=e113]
+                - generic [ref=e115]: Actions
+            - listitem [ref=e116]:
+              - link "Projects" [ref=e117] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/projects
+                - img [ref=e118]
+                - generic [ref=e120]: Projects
+            - listitem [ref=e121]:
+              - link "Security" [ref=e122] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/security
+                - img [ref=e123]
+                - generic [ref=e125]: Security
+            - listitem [ref=e126]:
+              - link "Insights" [ref=e127] [cursor=pointer]:
+                - /url: /seeker71/Coherence-Network/pulse
+                - img [ref=e128]
+                - generic [ref=e130]: Insights
+      - generic [ref=e135]:
+        - generic [ref=e138]:
+          - link "Public Deploy Contract" [ref=e141] [cursor=pointer]:
+            - /url: /seeker71/Coherence-Network/actions/workflows/public-deploy-contract.yml
+            - img [ref=e142]
+            - generic [ref=e144]: Public Deploy Contract
+          - generic [ref=e145]:
+            - generic [ref=e146]:
+              - img "completed successfully:" [ref=e150]
+              - 'heading "Public Deploy Contract #395" [level=1] [ref=e152]':
+                - generic [ref=e153]: "Public Deploy Contract #395"
+            - link "Sign in to view logs" [ref=e156] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fseeker71%2FCoherence-Network%2Factions%2Fruns%2F22284846204%2Fjob%2F64461273177
+        - generic [ref=e157]:
+          - navigation "Workflow run" [ref=e163]:
+            - list [ref=e164]:
+              - listitem [ref=e165]:
+                - link "Summary" [ref=e166] [cursor=pointer]:
+                  - /url: /seeker71/Coherence-Network/actions/runs/22284846204
+                  - generic:
+                    - img
+                  - generic [ref=e168]: Summary
+              - generic [ref=e169]:
+                - heading "All jobs" [level=4] [ref=e170]
+                - button "Filter by job status" [ref=e171] [cursor=pointer]:
+                  - img [ref=e172]
+              - listitem [ref=e174]
+              - listitem [ref=e175]:
+                - list [ref=e176]:
+                  - listitem [ref=e177]:
+                    - generic "Loading" [ref=e178]:
+                      - generic [ref=e182]:
+                        - img [ref=e183]
+                        - generic [ref=e186]: Loading
+              - listitem [ref=e187]
+              - listitem [ref=e188]:
+                - heading "Run details" [level=3] [ref=e190]
+                - list "Run details" [ref=e191]:
+                  - listitem [ref=e192]:
+                    - link "Usage" [ref=e193] [cursor=pointer]:
+                      - /url: /seeker71/Coherence-Network/actions/runs/22284846204/usage
+                      - generic:
+                        - img
+                      - generic [ref=e195]: Usage
+                  - listitem [ref=e196]:
+                    - link "Workflow file" [ref=e197] [cursor=pointer]:
+                      - /url: /seeker71/Coherence-Network/actions/runs/22284846204/workflow
+                      - generic:
+                        - img
+                      - generic [ref=e199]: Workflow file
+          - region "Check run summary" [ref=e201]:
+            - generic [ref=e203]:
+              - generic [ref=e205]:
+                - link "validate-public-deploy" [ref=e208] [cursor=pointer]:
+                  - /url: "#logs"
+                  - generic [ref=e209]: validate-public-deploy
+                - generic [ref=e210]: succeeded Feb 22, 202629 minutes ago in 5m 10s
+              - generic [ref=e212]:
+                - generic [ref=e213]:
+                  - group:
+                    - generic "Set up job 2s":
+                      - generic:
+                        - img
+                        - generic: Set up job
+                        - generic: 2s
+                - generic [ref=e214]:
+                  - group:
+                    - generic "Run actions/checkout@v4 1s":
+                      - generic:
+                        - img
+                        - generic: Run actions/checkout@v4
+                        - generic: 1s
+                - generic [ref=e215]:
+                  - group:
+                    - generic "Set up Python 0s":
+                      - generic:
+                        - img
+                        - generic: Set up Python
+                        - generic: 0s
+                - generic [ref=e216]:
+                  - group:
+                    - generic "Set up Node.js (Railway CLI runtime) 1s":
+                      - generic:
+                        - img
+                        - generic: Set up Node.js (Railway CLI runtime)
+                        - generic: 1s
+                - generic [ref=e217]:
+                  - group:
+                    - generic "Install API dependencies 13s":
+                      - generic:
+                        - img
+                        - generic: Install API dependencies
+                        - generic: 13s
+                - generic [ref=e218]:
+                  - group:
+                    - generic "Validate public deployment contract 50s":
+                      - generic:
+                        - img
+                        - generic: Validate public deployment contract
+                        - generic: 50s
+                - generic [ref=e219]:
+                  - group:
+                    - generic "Install Railway CLI 2s":
+                      - generic:
+                        - img
+                        - generic: Install Railway CLI
+                        - generic: 2s
+                - generic [ref=e220]:
+                  - group:
+                    - generic "Trigger Railway redeploy 1s":
+                      - generic:
+                        - img
+                        - generic: Trigger Railway redeploy
+                        - generic: 1s
+                - generic [ref=e221]:
+                  - group:
+                    - generic "Re-validate after Railway redeploy 3m 52s":
+                      - generic:
+                        - img
+                        - generic: Re-validate after Railway redeploy
+                        - generic: 3m 52s
+                - generic [ref=e222]:
+                  - group:
+                    - generic "Select effective contract result 0s":
+                      - generic:
+                        - img
+                        - generic: Select effective contract result
+                        - generic: 0s
+                - generic [ref=e223]:
+                  - group:
+                    - generic "Upload public deploy report 1s":
+                      - generic:
+                        - img
+                        - generic: Upload public deploy report
+                        - generic: 1s
+                - generic [ref=e224]:
+                  - group:
+                    - generic "Upload Railway redeploy artifacts 1s":
+                      - generic:
+                        - img
+                        - generic: Upload Railway redeploy artifacts
+                        - generic: 1s
+                - generic [ref=e225]:
+                  - group:
+                    - generic "Create or update deploy drift issue 0s":
+                      - generic:
+                        - img
+                        - generic: Create or update deploy drift issue
+                        - generic: 0s
+                - generic [ref=e226]:
+                  - group:
+                    - generic "Resolve deploy drift issue when contract passes 2s":
+                      - generic:
+                        - img
+                        - generic: Resolve deploy drift issue when contract passes
+                        - generic: 2s
+                - generic [ref=e227]:
+                  - group:
+                    - generic "Dispatch auto-heal workflow 0s":
+                      - generic:
+                        - img
+                        - generic: Dispatch auto-heal workflow
+                        - generic: 0s
+                - generic [ref=e228]:
+                  - group:
+                    - generic "Fail when contract is not satisfied 0s":
+                      - generic:
+                        - img
+                        - generic: Fail when contract is not satisfied
+                        - generic: 0s
+                - generic [ref=e229]:
+                  - group:
+                    - generic "Post Set up Node.js (Railway CLI runtime) 0s":
+                      - generic:
+                        - img
+                        - generic: Post Set up Node.js (Railway CLI runtime)
+                        - generic: 0s
+                - generic [ref=e230]:
+                  - group:
+                    - generic "Post Set up Python 0s":
+                      - generic:
+                        - img
+                        - generic: Post Set up Python
+                        - generic: 0s
+                - generic [ref=e231]:
+                  - group:
+                    - generic "Post Run actions/checkout@v4 1s":
+                      - generic:
+                        - img
+                        - generic: Post Run actions/checkout@v4
+                        - generic: 1s
+                - generic [ref=e232]:
+                  - group:
+                    - generic "Complete job 0s":
+                      - generic:
+                        - img
+                        - generic: Complete job
+                        - generic: 0s

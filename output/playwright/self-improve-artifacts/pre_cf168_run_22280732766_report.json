@@ -1,0 +1,162 @@
+{
+  "status": "failed",
+  "failed_stage": "plan_submit_or_wait",
+  "failure_error": "execute request failed for task_812f46dcd52f1a96 (status=403) HTTP 403",
+  "stages": [],
+  "data_quality_mode": "degraded_partial",
+  "input_bundle": {
+    "data_quality_mode": "degraded_partial",
+    "usage_source": "missing",
+    "usage_alert_count": 0,
+    "blocking_usage_alert_count": 0,
+    "task_count": 0,
+    "needs_decision_count": 0,
+    "friction_open_count": 0
+  },
+  "input_bundle_before": {
+    "collected_at": "2026-02-22T16:21:01+00:00",
+    "summary": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "usage": {
+      "ok": false,
+      "source": "missing",
+      "payload": {
+        "threshold_ratio": 0.15,
+        "alerts": []
+      },
+      "error": "The read operation timed out",
+      "status_code": null,
+      "threshold_ratio": 0.15,
+      "blocking_alerts": [],
+      "counts": {
+        "alerts_total": 0,
+        "blocking": 0
+      }
+    },
+    "tasks": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0,
+      "status_counts": {}
+    },
+    "needs_decision": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "friction": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "runtime": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "payload": {}
+    },
+    "data_quality_mode": "degraded_partial"
+  },
+  "input_bundle_after": {
+    "collected_at": "2026-02-22T16:24:40+00:00",
+    "summary": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "usage": {
+      "ok": false,
+      "source": "missing",
+      "payload": {
+        "threshold_ratio": 0.15,
+        "alerts": []
+      },
+      "error": "The read operation timed out",
+      "status_code": null,
+      "threshold_ratio": 0.15,
+      "blocking_alerts": [],
+      "counts": {
+        "alerts_total": 0,
+        "blocking": 0
+      }
+    },
+    "tasks": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0,
+      "status_counts": {}
+    },
+    "needs_decision": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "friction": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "runtime": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "payload": {}
+    },
+    "data_quality_mode": "degraded_partial"
+  },
+  "delta_summary": {
+    "status": "failed",
+    "data_quality_mode": {
+      "before": "degraded_partial",
+      "after": "degraded_partial"
+    },
+    "problem": "usage_blocking=0; tasks=0; needs_decision=0; friction=0",
+    "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
+    "proof": {
+      "status": "failed",
+      "before_counts": {
+        "task_count": 0,
+        "needs_decision_count": 0,
+        "friction_open_count": 0
+      },
+      "after_counts": {
+        "task_count": 0,
+        "needs_decision_count": 0,
+        "friction_open_count": 0
+      }
+    },
+    "before_metrics": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "after_metrics": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    }
+  }
+}
