@@ -219,9 +219,9 @@ def test_apply_codex_model_alias_supports_gtp_typo_default_map():
     )
     assert alias == {
         "requested_model": "gtp-5.3-codex",
-        "effective_model": "gpt-5.3-codex",
+        "effective_model": "gpt-5-codex",
     }
-    assert "--model gpt-5.3-codex" in remapped
+    assert "--model gpt-5-codex" in remapped
     assert "--model gtp-5.3-codex" not in remapped
 
 
@@ -244,9 +244,9 @@ def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatc
     )
     assert alias == {
         "requested_model": "gtp-5.3-codex",
-        "effective_model": "gpt-5.3-codex",
+        "effective_model": "gpt-5-codex",
     }
-    assert "--model gpt-5.3-codex" in remapped
+    assert "--model gpt-5-codex" in remapped
     assert "--model gtp-5.3-codex" not in remapped
 
 
@@ -283,6 +283,8 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
     monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:test-runner")
     monkeypatch.delenv("AGENT_CODEX_MODEL_ALIAS_MAP", raising=False)
     monkeypatch.delenv("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", raising=False)
+    # Force model-not-found path to exercise retry fallback logic (bypass default alias remap).
+    monkeypatch.setattr(agent_runner, "_codex_model_alias_map", lambda: {})
 
     def _popen(*args, **kwargs):
         return _Proc(
