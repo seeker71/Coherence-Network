@@ -248,6 +248,12 @@ DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "gtp-5.3-codex:gpt-5-codex,"
     "gtp-5.3-codex-spark:gpt-5-codex"
 )
+MANDATORY_CODEX_MODEL_ALIAS_MAP = {
+    "gpt-5.3-codex": "gpt-5-codex",
+    "gpt-5.3-codex-spark": "gpt-5-codex",
+    "gtp-5.3-codex": "gpt-5-codex",
+    "gtp-5.3-codex-spark": "gpt-5-codex",
+}
 DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
     "gpt-5.3-codex-spark:gpt-5-codex,"
@@ -2976,7 +2982,10 @@ def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
     requested_model = _codex_command_model(command)
     if not requested_model:
         return command, None
-    target_model = _codex_model_alias_map().get(requested_model.lower(), "").strip()
+    requested_model_key = requested_model.lower()
+    target_model = MANDATORY_CODEX_MODEL_ALIAS_MAP.get(requested_model_key, "").strip()
+    if not target_model:
+        target_model = _codex_model_alias_map().get(requested_model_key, "").strip()
     if not target_model or target_model.lower() == requested_model.lower():
         return command, None
     match = CODEX_MODEL_ARG_RE.search(command or "")
