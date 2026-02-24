@@ -413,6 +413,7 @@ def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch,
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+    monkeypatch.setattr(agent_runner.shutil, "which", lambda _cmd: "/usr/local/bin/codex")
     monkeypatch.setattr(agent_runner.subprocess, "run", lambda *args, **kwargs: _Completed())
 
     env = {"HOME": str(real_home)}
