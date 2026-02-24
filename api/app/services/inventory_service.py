@@ -3605,19 +3605,29 @@ def _direct_idea_ids_from_contribution_metadata(metadata: Any) -> list[str]:
     return sorted(out)
 
 
+def _sorted_limited(values: set[str], *, limit: int) -> tuple[list[str], int, bool]:
+    rows = sorted(values)
+    total = len(rows)
+    if total <= limit:
+        return rows, total, False
+    return rows[:limit], total, True
+
+
 def build_spec_process_implementation_validation_flow(
     idea_id: str | None = None,
     runtime_window_seconds: int = 86400,
     contributor_rows: list[dict[str, Any]] | None = None,
     contribution_rows: list[dict[str, Any]] | None = None,
     asset_rows: list[dict[str, Any]] | None = None,
-    spec_registry_limit: int = 500,
-    lineage_link_limit: int = 300,
-    usage_event_limit: int = 1200,
-    commit_evidence_limit: int = 500,
-    runtime_event_limit: int = 2000,
+    spec_registry_limit: int = 200,
+    lineage_link_limit: int = 180,
+    usage_event_limit: int = 350,
+    commit_evidence_limit: int = 200,
+    runtime_event_limit: int = 600,
+    list_item_limit: int = 12,
 ) -> dict[str, Any]:
     start_ms = time.perf_counter()
+    bounded_list_item_limit = max(1, min(int(list_item_limit), 200))
     cache_key = _cache_key(
         "flow",
         idea_id or "",
@@ -3627,6 +3637,7 @@ def build_spec_process_implementation_validation_flow(
         usage_event_limit,
         commit_evidence_limit,
         runtime_event_limit,
+        bounded_list_item_limit,
         _inventory_environment_cache_key(),
         _row_signature(contributor_rows),
         _row_signature(contribution_rows),
@@ -4005,6 +4016,49 @@ def build_spec_process_implementation_validation_flow(
             )
             unblock_queue.append(queue_candidate)
 
+        task_ids, task_ids_total, task_ids_truncated = _sorted_limited(
+            flow["_task_ids"], limit=bounded_list_item_limit
+        )
+        thread_branches, thread_branches_total, thread_branches_truncated = _sorted_limited(
+            flow["_thread_branches"], limit=bounded_list_item_limit
+        )
+        change_intents, change_intents_total, change_intents_truncated = _sorted_limited(
+            flow["_change_intents"], limit=bounded_list_item_limit
+        )
+        evidence_refs, evidence_refs_total, evidence_refs_truncated = _sorted_limited(
+            flow["_evidence_refs"], limit=bounded_list_item_limit
+        )
+        source_files, source_files_total, source_files_truncated = _sorted_limited(
+            flow["_source_files"], limit=bounded_list_item_limit
+        )
+        lineage_ids, lineage_ids_total, lineage_ids_truncated = _sorted_limited(
+            flow["_lineage_ids"], limit=bounded_list_item_limit
+        )
+        implementation_refs, implementation_refs_total, implementation_refs_truncated = _sorted_limited(
+            flow["_implementation_refs"], limit=bounded_list_item_limit
+        )
+        public_endpoints, public_endpoints_total, public_endpoints_truncated = _sorted_limited(
+            flow["_public_endpoints"], limit=bounded_list_item_limit
+        )
+        contributor_registry_ids, contributor_registry_ids_total, contributor_registry_ids_truncated = _sorted_limited(
+            flow["_contributor_registry_ids"], limit=bounded_list_item_limit
+        )
+        contribution_ids, contribution_ids_total, contribution_ids_truncated = _sorted_limited(
+            flow["_contribution_ids"], limit=bounded_list_item_limit
+        )
+        asset_ids, asset_ids_total, asset_ids_truncated = _sorted_limited(
+            flow["_asset_ids"], limit=bounded_list_item_limit
+        )
+        contributor_roles: dict[str, list[str]] = {}
+        contributor_roles_meta: dict[str, dict[str, Any]] = {}
+        for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0]):
+            role_ids, role_total, role_truncated = _sorted_limited(ids, limit=bounded_list_item_limit)
+            contributor_roles[role] = role_ids
+            contributor_roles_meta[role] = {
+                "total": role_total,
+                "truncated": role_truncated,
+            }
+
         items.append(
             {
                 "idea_id": current_idea_id,
@@ -4017,17 +4071,31 @@ def build_spec_process_implementation_validation_flow(
                 "process": {
                     "tracked": process_tracked,
                     "evidence_count": flow["process_evidence_count"],
-                    "task_ids": sorted(flow["_task_ids"]),
-                    "thread_branches": sorted(flow["_thread_branches"]),
-                    "change_intents": sorted(flow["_change_intents"]),
-                    "evidence_refs": sorted(flow["_evidence_refs"]),
-                    "source_files": sorted(flow["_source_files"]),
+                    "task_ids": task_ids,
+                    "task_ids_total": task_ids_total,
+                    "task_ids_truncated": task_ids_truncated,
+                    "thread_branches": thread_branches,
+                    "thread_branches_total": thread_branches_total,
+                    "thread_branches_truncated": thread_branches_truncated,
+                    "change_intents": change_intents,
+                    "change_intents_total": change_intents_total,
+                    "change_intents_truncated": change_intents_truncated,
+                    "evidence_refs": evidence_refs,
+                    "evidence_refs_total": evidence_refs_total,
+                    "evidence_refs_truncated": evidence_refs_truncated,
+                    "source_files": source_files,
+                    "source_files_total": source_files_total,
+                    "source_files_truncated": source_files_truncated,
                 },
                 "implementation": {
                     "tracked": implementation_tracked,
                     "lineage_link_count": len(flow["_lineage_ids"]),
-                    "lineage_ids": sorted(flow["_lineage_ids"]),
-                    "implementation_refs": sorted(flow["_implementation_refs"]),
+                    "lineage_ids": lineage_ids,
+                    "lineage_ids_total": lineage_ids_total,
+                    "lineage_ids_truncated": lineage_ids_truncated,
+                    "implementation_refs": implementation_refs,
+                    "implementation_refs_total": implementation_refs_total,
+                    "implementation_refs_truncated": implementation_refs_truncated,
                     "runtime_events_count": flow["runtime_events_count"],
                     "runtime_total_ms": round(float(flow["runtime_total_ms"]), 4),
                     "runtime_cost_estimate": round(float(flow["runtime_cost_estimate"]), 8),
@@ -4039,17 +4107,19 @@ def build_spec_process_implementation_validation_flow(
                     "deploy": flow["validation_counts"]["deploy"],
                     "e2e": flow["validation_counts"]["e2e"],
                     "phase_gate": flow["phase_gate"],
-                    "public_endpoints": sorted(flow["_public_endpoints"]),
+                    "public_endpoints": public_endpoints,
+                    "public_endpoints_total": public_endpoints_total,
+                    "public_endpoints_truncated": public_endpoints_truncated,
                 },
                 "contributors": {
                     "tracked": contributors_tracked,
                     "total_unique": len(flow["_contributors_all"]),
                     "all": sorted(flow["_contributors_all"]),
-                    "registry_ids": sorted(flow["_contributor_registry_ids"]),
-                    "by_role": {
-                        role: sorted(ids)
-                        for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0])
-                    },
+                    "registry_ids": contributor_registry_ids,
+                    "registry_ids_total": contributor_registry_ids_total,
+                    "registry_ids_truncated": contributor_registry_ids_truncated,
+                    "by_role": contributor_roles,
+                    "by_role_meta": contributor_roles_meta,
                 },
                 "contributions": {
                     "tracked": contributions_tracked,
@@ -4057,12 +4127,16 @@ def build_spec_process_implementation_validation_flow(
                     "measured_value_total": round(float(flow["measured_value_total"]), 4),
                     "registry_contribution_count": registry_contribution_count,
                     "registry_total_cost": registry_cost_total,
-                    "contribution_ids": sorted(flow["_contribution_ids"]),
+                    "contribution_ids": contribution_ids,
+                    "contribution_ids_total": contribution_ids_total,
+                    "contribution_ids_truncated": contribution_ids_truncated,
                 },
                 "assets": {
                     "tracked": len(flow["_asset_ids"]) > 0,
                     "count": len(flow["_asset_ids"]),
-                    "asset_ids": sorted(flow["_asset_ids"]),
+                    "asset_ids": asset_ids,
+                    "asset_ids_total": asset_ids_total,
+                    "asset_ids_truncated": asset_ids_truncated,
                 },
                 "chain": {
                     "spec": "tracked" if spec_count > 0 else "missing",
