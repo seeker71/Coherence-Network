@@ -6,6 +6,8 @@
     "Public Deploy Contract": "@seeker71",
     "Auto Heal Deploy Gates": "@seeker71",
     "CI": "@seeker71",
-    "Change Contract": "@seeker71"
+    "Change Contract": "@seeker71",
+    "Thread Gates": "@seeker71",
+    "Test": "@seeker71"
   }
 }

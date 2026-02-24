@@ -1,0 +1,333 @@
+{
+  "status": "infra_blocked",
+  "failed_stage": "infra_preflight",
+  "skip_reason": "Deployment unsettled or API health was intermittent during preflight checks.",
+  "failure_error": "infra_not_settled_or_deploy_active",
+  "infra_preflight": {
+    "allowed": false,
+    "history": [
+      {
+        "attempt": 1,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": true,
+        "health_status": 200,
+        "health_error": "",
+        "gates_ok": true,
+        "gates_status": 200,
+        "gates_error": "",
+        "tasks_ok": false,
+        "runtime_ok": true,
+        "data_quality_mode": "degraded_partial"
+      },
+      {
+        "attempt": 2,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": true,
+        "health_status": 200,
+        "health_error": "",
+        "gates_ok": true,
+        "gates_status": 200,
+        "gates_error": "",
+        "tasks_ok": false,
+        "runtime_ok": false,
+        "data_quality_mode": "degraded_partial"
+      },
+      {
+        "attempt": 3,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": true,
+        "health_status": 200,
+        "health_error": "",
+        "gates_ok": true,
+        "gates_status": 200,
+        "gates_error": "",
+        "tasks_ok": false,
+        "runtime_ok": false,
+        "data_quality_mode": "degraded_partial"
+      },
+      {
+        "attempt": 4,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": false,
+        "health_status": null,
+        "health_error": "The read operation timed out",
+        "gates_ok": false,
+        "gates_status": null,
+        "gates_error": "The read operation timed out",
+        "tasks_ok": false,
+        "runtime_ok": false,
+        "data_quality_mode": "degraded_partial"
+      },
+      {
+        "attempt": 5,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": false,
+        "health_status": null,
+        "health_error": "The read operation timed out",
+        "gates_ok": false,
+        "gates_status": null,
+        "gates_error": "The read operation timed out",
+        "tasks_ok": false,
+        "runtime_ok": false,
+        "data_quality_mode": "degraded_partial"
+      },
+      {
+        "attempt": 6,
+        "ok": false,
+        "streak": 0,
+        "deploy_active": false,
+        "deploy_detail": "none",
+        "health_ok": false,
+        "health_status": null,
+        "health_error": "The read operation timed out",
+        "gates_ok": false,
+        "gates_status": null,
+        "gates_error": "The read operation timed out",
+        "tasks_ok": false,
+        "runtime_ok": false,
+        "data_quality_mode": "degraded_partial"
+      }
+    ],
+    "required_consecutive_successes": 2,
+    "attempts": 6,
+    "preflight_error": "infra_not_settled_or_deploy_active",
+    "last_bundle": {
+      "collected_at": "2026-02-23T02:18:44+00:00",
+      "summary": {
+        "task_count": 0,
+        "needs_decision_count": 0,
+        "friction_open_count": 0,
+        "runtime_endpoint_count": 0,
+        "blocking_usage_alert_count": 0
+      },
+      "usage": {
+        "ok": false,
+        "source": "missing",
+        "payload": {
+          "threshold_ratio": 0.15,
+          "alerts": []
+        },
+        "error": "The read operation timed out",
+        "status_code": null,
+        "threshold_ratio": 0.15,
+        "blocking_alerts": [],
+        "counts": {
+          "alerts_total": 0,
+          "blocking": 0
+        }
+      },
+      "tasks": {
+        "ok": false,
+        "error": "The read operation timed out",
+        "status_code": null,
+        "records": [],
+        "count": 0,
+        "status_counts": {}
+      },
+      "needs_decision": {
+        "ok": false,
+        "error": "The read operation timed out",
+        "status_code": null,
+        "records": [],
+        "count": 0
+      },
+      "friction": {
+        "ok": false,
+        "error": "The read operation timed out",
+        "status_code": null,
+        "records": [],
+        "count": 0
+      },
+      "runtime": {
+        "ok": false,
+        "error": "The read operation timed out",
+        "status_code": null,
+        "payload": {}
+      },
+      "data_quality_mode": "degraded_partial"
+    }
+  },
+  "data_quality_mode": "degraded_partial",
+  "input_bundle": {
+    "data_quality_mode": "degraded_partial",
+    "usage_source": "missing",
+    "usage_alert_count": 0,
+    "blocking_usage_alert_count": 0,
+    "task_count": 0,
+    "needs_decision_count": 0,
+    "friction_open_count": 0
+  },
+  "input_bundle_before": {
+    "collected_at": "2026-02-23T02:18:44+00:00",
+    "summary": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "usage": {
+      "ok": false,
+      "source": "missing",
+      "payload": {
+        "threshold_ratio": 0.15,
+        "alerts": []
+      },
+      "error": "The read operation timed out",
+      "status_code": null,
+      "threshold_ratio": 0.15,
+      "blocking_alerts": [],
+      "counts": {
+        "alerts_total": 0,
+        "blocking": 0
+      }
+    },
+    "tasks": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0,
+      "status_counts": {}
+    },
+    "needs_decision": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "friction": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "runtime": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "payload": {}
+    },
+    "data_quality_mode": "degraded_partial"
+  },
+  "input_bundle_after": {
+    "collected_at": "2026-02-23T02:18:44+00:00",
+    "summary": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "usage": {
+      "ok": false,
+      "source": "missing",
+      "payload": {
+        "threshold_ratio": 0.15,
+        "alerts": []
+      },
+      "error": "The read operation timed out",
+      "status_code": null,
+      "threshold_ratio": 0.15,
+      "blocking_alerts": [],
+      "counts": {
+        "alerts_total": 0,
+        "blocking": 0
+      }
+    },
+    "tasks": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0,
+      "status_counts": {}
+    },
+    "needs_decision": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "friction": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "records": [],
+      "count": 0
+    },
+    "runtime": {
+      "ok": false,
+      "error": "The read operation timed out",
+      "status_code": null,
+      "payload": {}
+    },
+    "data_quality_mode": "degraded_partial"
+  },
+  "stages": [],
+  "awareness_reflection": {
+    "status": "infra_blocked",
+    "failed_stage": "infra_preflight",
+    "failure_error": "infra_not_settled_or_deploy_active",
+    "data_quality_mode": "degraded_partial",
+    "questions": [
+      "What was I not aware of that contributed to this failure?",
+      "What should I be aware of next time and why?",
+      "How will I verify that this mistake is less likely to repeat?"
+    ]
+  },
+  "delta_summary": {
+    "status": "infra_blocked",
+    "data_quality_mode": {
+      "before": "degraded_partial",
+      "after": "degraded_partial"
+    },
+    "problem": "usage_blocking=0; tasks=0; needs_decision=0; friction=0",
+    "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
+    "proof": {
+      "status": "infra_blocked",
+      "before_counts": {
+        "task_count": 0,
+        "needs_decision_count": 0,
+        "friction_open_count": 0
+      },
+      "after_counts": {
+        "task_count": 0,
+        "needs_decision_count": 0,
+        "friction_open_count": 0
+      }
+    },
+    "before_metrics": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    },
+    "after_metrics": {
+      "task_count": 0,
+      "needs_decision_count": 0,
+      "friction_open_count": 0,
+      "runtime_endpoint_count": 0,
+      "blocking_usage_alert_count": 0
+    }
+  }
+}

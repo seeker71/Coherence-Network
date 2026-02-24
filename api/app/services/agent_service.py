@@ -1993,6 +1993,190 @@ def get_usage_summary() -> dict[str, Any]:
     }
 
 
+def _friction_note_value(notes: str, key: str) -> str:
+    pattern = rf"(?:^|\s){re.escape(key)}=([^\s]+)"
+    match = re.search(pattern, notes or "")
+    if not match:
+        return ""
+    return str(match.group(1) or "").strip()
+
+
+def _friction_rate(numerator: int, denominator: int) -> float:
+    if denominator <= 0:
+        return 1.0
+    return round(float(numerator) / float(denominator), 4)
+
+
+def _event_has_task_model_tool_trace(event: Any) -> bool:
+    notes = str(getattr(event, "notes", "") or "")
+    task_id = str(getattr(event, "task_id", "") or "").strip() or _friction_note_value(notes, "task_id")
+    model = str(getattr(event, "model", "") or "").strip() or _friction_note_value(notes, "model")
+    tool = str(getattr(event, "tool", "") or "").strip() or _friction_note_value(notes, "tool")
+    return bool(task_id and model and tool)
+
+
+def _partition_events_by_recent(
+    events: list[Any],
+    *,
+    cutoff: datetime,
+    timestamp_field: str = "timestamp",
+) -> tuple[list[Any], list[Any]]:
+    recent: list[Any] = []
+    prior: list[Any] = []
+    for event in events:
+        ts = getattr(event, timestamp_field, None)
+        if not isinstance(ts, datetime):
+            prior.append(event)
+            continue
+        ts_norm = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+        if ts_norm >= cutoff:
+            recent.append(event)
+        else:
+            prior.append(event)
+    return recent, prior
+
+
+def _resolved_with_action(event: Any) -> bool:
+    return (
+        str(getattr(event, "status", "")).strip() == "resolved"
+        and bool(str(getattr(event, "resolution_action", "") or "").strip())
+    )
+
+
+def _count_runs_with_provider_trace(recent_runs: list[dict[str, Any]]) -> int:
+    traced = 0
+    for run in recent_runs:
+        if not isinstance(run, dict):
+            continue
+        if (
+            str(run.get("task_id") or "").strip()
+            and str(run.get("tool") or "").strip()
+            and str(run.get("provider") or "").strip()
+        ):
+            traced += 1
+    return traced
+
+
+def _visibility_area_rows(
+    *,
+    hosted_events: list[Any],
+    hosted_recent: list[Any],
+    hosted_prior: list[Any],
+    hosted_with_trace: int,
+    hosted_recent_with_trace: int,
+    hosted_prior_with_trace: int,
+    recent_runs: list[dict[str, Any]],
+    recent_with_provider: int,
+    recoverable_events: list[Any],
+    recoverable_recent: list[Any],
+    recoverable_prior: list[Any],
+    recovered_or_learned: int,
+    recovered_recent: int,
+    recovered_prior: int,
+    threshold: float,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "hosted_failure_reporting",
+            "label": "Hosted Worker Failure Reporting",
+            "numerator": hosted_with_trace,
+            "denominator": len(hosted_events),
+            "rate": _friction_rate(hosted_with_trace, len(hosted_events)),
+            "recent_rate": _friction_rate(hosted_recent_with_trace, len(hosted_recent)),
+            "prior_rate": _friction_rate(hosted_prior_with_trace, len(hosted_prior)),
+            "threshold": threshold,
+        },
+        {
+            "id": "provider_task_visibility",
+            "label": "Task-Provider Visibility",
+            "numerator": recent_with_provider,
+            "denominator": len(recent_runs),
+            "rate": _friction_rate(recent_with_provider, len(recent_runs)),
+            "recent_rate": _friction_rate(recent_with_provider, len(recent_runs)),
+            "prior_rate": None,
+            "threshold": threshold,
+        },
+        {
+            "id": "recovery_learning_capture",
+            "label": "Recovery/Learning Capture",
+            "numerator": recovered_or_learned,
+            "denominator": len(recoverable_events),
+            "rate": _friction_rate(recovered_or_learned, len(recoverable_events)),
+            "recent_rate": _friction_rate(recovered_recent, len(recoverable_recent)),
+            "prior_rate": _friction_rate(recovered_prior, len(recoverable_prior)),
+            "threshold": threshold,
+        },
+    ]
+
+
+def _visibility_proof_summary(usage: dict[str, Any]) -> dict[str, Any]:
+    from app.services import friction_service
+
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    recent_runs = execution.get("recent_runs") if isinstance(execution.get("recent_runs"), list) else []
+    events, _ignored = friction_service.load_events()
+    now = datetime.now(timezone.utc)
+    recent_cutoff = now - timedelta(days=3)
+
+    hosted_events = [
+        event for event in events if str(getattr(event, "stage", "")).strip() == "agent_runner"
+    ]
+    hosted_recent, hosted_prior = _partition_events_by_recent(hosted_events, cutoff=recent_cutoff)
+    hosted_with_trace = sum(1 for event in hosted_events if _event_has_task_model_tool_trace(event))
+    hosted_recent_with_trace = sum(1 for event in hosted_recent if _event_has_task_model_tool_trace(event))
+    hosted_prior_with_trace = sum(1 for event in hosted_prior if _event_has_task_model_tool_trace(event))
+    recent_with_provider = _count_runs_with_provider_trace(recent_runs)
+
+    recoverable_events = [
+        event for event in hosted_events if str(getattr(event, "block_type", "")).strip() == "tool_failure"
+    ]
+    recoverable_recent, recoverable_prior = _partition_events_by_recent(
+        recoverable_events,
+        cutoff=recent_cutoff,
+    )
+    recovered_or_learned = sum(1 for event in recoverable_events if _resolved_with_action(event))
+    recovered_recent = sum(1 for event in recoverable_recent if _resolved_with_action(event))
+    recovered_prior = sum(1 for event in recoverable_prior if _resolved_with_action(event))
+
+    threshold = 0.75
+    areas = _visibility_area_rows(
+        hosted_events=hosted_events,
+        hosted_recent=hosted_recent,
+        hosted_prior=hosted_prior,
+        hosted_with_trace=hosted_with_trace,
+        hosted_recent_with_trace=hosted_recent_with_trace,
+        hosted_prior_with_trace=hosted_prior_with_trace,
+        recent_runs=recent_runs,
+        recent_with_provider=recent_with_provider,
+        recoverable_events=recoverable_events,
+        recoverable_recent=recoverable_recent,
+        recoverable_prior=recoverable_prior,
+        recovered_or_learned=recovered_or_learned,
+        recovered_recent=recovered_recent,
+        recovered_prior=recovered_prior,
+        threshold=threshold,
+    )
+    for row in areas:
+        row["pass"] = bool(row["rate"] >= row["threshold"])
+        row["guidance_status"] = "on_track" if row["pass"] else "below_target"
+        row["progress_to_target"] = round(min(1.0, float(row["rate"]) / float(row["threshold"])), 4)
+        row["gap_to_target"] = round(max(0.0, float(row["threshold"]) - float(row["rate"])), 4)
+        prior_rate = row.get("prior_rate")
+        if isinstance(prior_rate, (int, float)):
+            row["trend_delta"] = round(float(row["recent_rate"]) - float(prior_rate), 4)
+        else:
+            row["trend_delta"] = None
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "threshold": threshold,
+        "all_pass": all(bool(row["pass"]) for row in areas),
+        "mode": "guidance",
+        "note": "Guidance target only: these metrics are for awareness and prioritization, not automatic blocking.",
+        "areas": areas,
+    }
+
+
 def get_visibility_summary() -> dict[str, Any]:
     """Combined pipeline + usage visibility with remaining tracking gap."""
     pipeline = get_pipeline_status()
@@ -2035,6 +2219,7 @@ def get_visibility_summary() -> dict[str, Any]:
             "attention_flags": attention_flags,
         },
         "usage": usage,
+        "proof": _visibility_proof_summary(usage),
         "remaining_usage": {
             "coverage_rate": coverage_rate,
             "remaining_to_full_coverage": remaining_to_full_coverage,
