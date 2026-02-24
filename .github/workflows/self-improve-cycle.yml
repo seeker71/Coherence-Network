@@ -14,6 +14,9 @@ jobs:
     env:
       SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://coherence-network-production.up.railway.app' }}
       SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
+      SELF_IMPROVE_STAGE_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_STAGE_TIMEOUT_SECONDS || '300' }}
+      SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS || '900' }}
+      SELF_IMPROVE_MAX_ATTEMPTS: ${{ vars.SELF_IMPROVE_MAX_ATTEMPTS || '3' }}
       AGENT_EXECUTE_TOKEN: ${{ secrets.AGENT_EXECUTE_TOKEN }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
@@ -34,14 +37,15 @@ jobs:
           set +e
           final_status="unknown"
           final_code=2
+          max_attempts="${SELF_IMPROVE_MAX_ATTEMPTS}"
           : > self_improve_cycle_attempts.jsonl
-          for attempt in 1 2 3; do
+          for attempt in $(seq 1 "${max_attempts}"); do
             report_file="self_improve_cycle_report_attempt_${attempt}.json"
-            python api/scripts/run_self_improve_cycle.py \
+            timeout "${SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS}" python api/scripts/run_self_improve_cycle.py \
               --base-url "${SELF_IMPROVE_API_URL}" \
               --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
               --poll-interval-seconds 5 \
-              --timeout-seconds 600 \
+              --timeout-seconds "${SELF_IMPROVE_STAGE_TIMEOUT_SECONDS}" \
               --infra-preflight-attempts 4 \
               --infra-preflight-consecutive-successes 1 \
               --checkpoint-file self_improve_checkpoint.json \
@@ -84,7 +88,7 @@ jobs:
             if [ "${status}" = "completed" ] || [ "${status}" = "skipped" ]; then
               break
             fi
-            if [ "${attempt}" -lt 3 ]; then
+            if [ "${attempt}" -lt "${max_attempts}" ]; then
               sleep_seconds=$((20 * attempt))
               sleep "${sleep_seconds}"
             fi

@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/minimal-self-improve-unblock",
+  "commit_scope": "Unblock hosted self-improve stage execution by bootstrapping Codex API-key login in isolated HOME, broadening session-status detection to login/auth status variants, and adding a regression test that enforces API-key login bootstrap behavior.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-api-key-login-bootstrap.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-23-self-improve-api-key-login-bootstrap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-api-key-login-bootstrap.json",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22317404843"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-api-key-login-bootstrap.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_run_self_improve_cycle.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting workflow evidence that self-improve reaches completed status without codex auth-header failures."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted Codex task runs in api_key mode now establish an authenticated Codex session in isolated HOME so stage execution can proceed beyond plan instead of failing with missing bearer auth header.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/runtime/endpoints/summary",
+      "/api/health",
+      "/api/gates/main-head"
+    ],
+    "test_flows": [
+      "Dispatch Self Improve Cycle and confirm report no longer fails with 401 missing bearer auth-header signature.",
+      "Confirm plan stage task output includes requested_mode=api_key with successful stage progression evidence.",
+      "Confirm workflow exits without creating a new self-improve failure issue for auth-header failure class."
+    ]
+  }
+}

@@ -2695,6 +2695,14 @@ def _abs_expanded_path(path: str) -> str:
     return os.path.abspath(os.path.expanduser(value))
 
 
+def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
+    if not str(value or "").strip():
+        return
+    if str(env.get(key, "")).strip():
+        return
+    env[key] = value
+
+
 def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
     candidates: list[str] = []
     seen: set[str] = set()
@@ -2744,20 +2752,25 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
 
     codex_binary = shutil.which("codex")
     if codex_binary:
-        try:
-            completed = subprocess.run(
-                ["codex", "auth", "status"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True,
-                timeout=8,
-                env=env,
-            )
-            if completed.returncode == 0:
-                return True, "codex_auth_status"
-        except Exception:
-            pass
+        status_commands = (
+            (["codex", "login", "status"], "codex_login_status"),
+            (["codex", "auth", "status"], "codex_auth_status"),
+        )
+        for argv, source in status_commands:
+            try:
+                completed = subprocess.run(
+                    argv,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True,
+                    timeout=8,
+                    env=env,
+                )
+                if completed.returncode == 0:
+                    return True, source
+            except Exception:
+                continue
 
     if candidates:
         return False, f"missing_session_file:{candidates[0]}"
@@ -2767,12 +2780,62 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
 def _ensure_codex_api_key_isolated_home(env: dict[str, str], *, task_id: str) -> str:
     """Force Codex API-key mode to ignore stale oauth sessions from the default home."""
     slug = re.sub(r"[^a-zA-Z0-9_.-]", "-", str(task_id or "task")).strip("-") or "task"
-    base_home = os.path.join("/tmp", "agent-runner-codex-api-key", slug)
+    configured_base = str(os.environ.get("AGENT_CODEX_API_KEY_HOME_BASE", "")).strip()
+    if configured_base:
+        root = _abs_expanded_path(configured_base)
+    else:
+        current_home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+        if not current_home:
+            current_home = "/tmp"
+        root = os.path.join(current_home, ".agent-runner-codex-api-key")
+    base_home = os.path.join(root, slug)
     codex_home = os.path.join(base_home, ".codex")
     os.makedirs(codex_home, exist_ok=True)
     env["HOME"] = base_home
     env["CODEX_HOME"] = codex_home
     return codex_home
+
+
+def _bootstrap_codex_api_key_login(
+    *,
+    env: dict[str, str],
+    api_key: str,
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    key = str(api_key or "").strip()
+    if not key:
+        return False, "missing_api_key"
+
+    login_commands = (
+        (["codex", "login", "--with-api-key"], "codex_login_with_api_key"),
+        (["codex", "auth", "login", "--with-api-key"], "codex_auth_login_with_api_key"),
+    )
+    last_error = "login_command_failed"
+    for argv, source in login_commands:
+        try:
+            completed = subprocess.run(
+                argv,
+                input=f"{key}\n",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=20,
+                env=env,
+            )
+        except Exception as exc:
+            last_error = f"{source}_exception:{type(exc).__name__}"
+            continue
+        if completed.returncode == 0:
+            return True, source
+        stderr = str(completed.stderr or "").strip()
+        stdout = str(completed.stdout or "").strip()
+        detail = (stderr or stdout or "unknown_error")[:180]
+        last_error = f"{source}_rc{completed.returncode}:{detail}"
+
+    log.warning("task=%s codex api-key login bootstrap failed detail=%s", task_id, last_error)
+    return False, last_error
 
 
 def _configure_codex_cli_environment(
@@ -2811,6 +2874,8 @@ def _configure_codex_cli_environment(
     api_key_present = bool(openai_primary_key)
     oauth_available_initial, oauth_source_initial = _codex_oauth_session_status(env)
     allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "1"))
+    api_key_login_bootstrapped = False
+    api_key_login_source = ""
 
     effective_mode = requested_mode
     if requested_mode == "auto":
@@ -2829,6 +2894,12 @@ def _configure_codex_cli_environment(
             _ensure_codex_api_key_isolated_home(env, task_id=task_id)
             env["AGENT_CODEX_OAUTH_SESSION_FILE"] = ""
         _set_openai_api_env(env, api_key=openai_primary_key)
+        api_key_login_bootstrapped, api_key_login_source = _bootstrap_codex_api_key_login(
+            env=env,
+            api_key=str(env.get("OPENAI_API_KEY", "")),
+            task_id=task_id,
+            log=log,
+        )
 
     oauth_available, oauth_source = _codex_oauth_session_status(env)
     oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)
@@ -2840,6 +2911,8 @@ def _configure_codex_cli_environment(
         "api_key_present": bool(api_key_present),
         "oauth_fallback_allowed": bool(allow_oauth_fallback),
         "oauth_missing": oauth_missing,
+        "api_key_login_bootstrapped": bool(api_key_login_bootstrapped),
+        "api_key_login_source": api_key_login_source,
     }
     if oauth_missing:
         log.warning(
