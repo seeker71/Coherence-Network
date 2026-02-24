@@ -87,6 +87,17 @@ def _parse_optional_status_contexts(raw: str) -> set[str]:
     return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
 
 
+def _matches_branch_filter(branch: str, *, head_prefix: str, head_ref: str) -> bool:
+    branch_name = str(branch or "")
+    exact = str(head_ref or "").strip()
+    if exact:
+        return branch_name == exact
+    prefix = str(head_prefix or "")
+    if prefix:
+        return branch_name.startswith(prefix)
+    return True
+
+
 def _check_run_to_item(run: dict[str, Any]) -> dict[str, Any]:
     name = str(run.get("name") or "unknown")
     details_url = run.get("details_url")
@@ -117,6 +128,7 @@ def _open_pr_payload(
     repo: str,
     base: str,
     head_prefix: str,
+    head_ref: str,
     token: str,
     optional_status_contexts: set[str],
 ) -> list[dict[str, Any]]:
@@ -128,7 +140,7 @@ def _open_pr_payload(
     for pr in pulls:
         head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
         branch = str(head.get("ref") or "")
-        if head_prefix and not branch.startswith(head_prefix):
+        if not _matches_branch_filter(branch, head_prefix=head_prefix, head_ref=head_ref):
             continue
         sha = str(head.get("sha") or "")
         if not sha:
@@ -259,6 +271,11 @@ def main() -> int:
     parser.add_argument("--repo", default="seeker71/Coherence-Network")
     parser.add_argument("--base", default="main")
     parser.add_argument("--head-prefix", default="codex/")
+    parser.add_argument(
+        "--head-ref",
+        default="",
+        help="Exact head branch to evaluate (takes precedence over --head-prefix).",
+    )
     parser.add_argument("--output-dir", default=str(REPO_ROOT / "docs" / "system_audit" / "pr_check_failures"))
     parser.add_argument("--fail-on-detected", action="store_true")
     parser.add_argument("--rerun-failed-actions", action="store_true")
@@ -291,13 +308,21 @@ def main() -> int:
 
     optional_status_contexts = _parse_optional_status_contexts(args.optional_status_contexts)
 
-    open_prs = _open_pr_payload(args.repo, args.base, args.head_prefix, token, optional_status_contexts)
+    open_prs = _open_pr_payload(
+        args.repo,
+        args.base,
+        args.head_prefix,
+        args.head_ref,
+        token,
+        optional_status_contexts,
+    )
     report: dict[str, Any] = {
         "generated_at": _now_utc(),
         "tool": "scripts/pr_check_failure_triage.py",
         "repo": args.repo,
         "base": args.base,
         "head_prefix": args.head_prefix,
+        "head_ref": args.head_ref,
         "status": "ok",
         "open_prs": open_prs,
         "summary": _short_summary(open_prs),
@@ -309,7 +334,14 @@ def main() -> int:
         report["auto_rerun_actions"] = _rerun_failed_actions(args.repo, open_prs, token)
         deadline = time.time() + max(0, args.rerun_settle_seconds)
         while time.time() < deadline:
-            refreshed = _open_pr_payload(args.repo, args.base, args.head_prefix, token, optional_status_contexts)
+            refreshed = _open_pr_payload(
+                args.repo,
+                args.base,
+                args.head_prefix,
+                args.head_ref,
+                token,
+                optional_status_contexts,
+            )
             if not _has_blocking_failures(refreshed):
                 open_prs = refreshed
                 report["open_prs"] = refreshed
@@ -322,7 +354,7 @@ def main() -> int:
         tool_name="pr-check-failure-triage",
         provider="github-actions",
         operation="run",
-        resource=f"{args.repo}:{args.base}:{args.head_prefix}",
+        resource=f"{args.repo}:{args.base}:{args.head_ref or args.head_prefix}",
         status="error" if report["has_blocking_failures"] else "success",
         payload={
             "open_pr_count": len(report["open_prs"]),
