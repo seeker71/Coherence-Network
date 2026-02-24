@@ -1,0 +1,73 @@
+{
+  "repository": "seeker71/Coherence-Network",
+  "branch": "main",
+  "expected_sha": "cf1683624dd1f85e7b3ae2d3b7bded10d502447c",
+  "result": "public_contract_passed",
+  "failing_checks": [],
+  "warning_checks": [],
+  "checks": [
+    {
+      "name": "railway_health",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/health",
+      "timestamp": "2026-02-22T20:41:05Z",
+      "sha_match": null,
+      "api_status": null
+    },
+    {
+      "name": "railway_gates_main_head",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/gates/main-head",
+      "timestamp": null,
+      "sha_match": true,
+      "api_status": null
+    },
+    {
+      "name": "railway_web_gates_page",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-web-production.up.railway.app/gates",
+      "timestamp": null,
+      "sha_match": null,
+      "api_status": null
+    },
+    {
+      "name": "railway_web_health_proxy",
+      "ok": false,
+      "status_code": 200,
+      "url": "https://coherence-web-production.up.railway.app/api/health-proxy",
+      "timestamp": null,
+      "sha_match": null,
+      "api_status": "ok"
+    },
+    {
+      "name": "railway_telegram_alert_config",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "timestamp": null,
+      "sha_match": null,
+      "api_status": null
+    },
+    {
+      "name": "railway_value_lineage_e2e",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/value-lineage/links/lnk_380a0d1fe832",
+      "timestamp": null,
+      "sha_match": null,
+      "api_status": null
+    },
+    {
+      "name": "railway_api_execute_paid_override_header",
+      "ok": true,
+      "status_code": 200,
+      "url": "https://coherence-network-production.up.railway.app/openapi.json",
+      "timestamp": null,
+      "sha_match": null,
+      "api_status": null
+    }
+  ]
+}

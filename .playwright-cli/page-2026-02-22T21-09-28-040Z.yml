@@ -1,0 +1,138 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "ON"
+      - text: "| path"
+      - code [ref=e34]: /gates
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /gates
+      - text: "| idea"
+      - code [ref=e41]: deployment-gate-reliability
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e45] [cursor=pointer]:
+        - /url: /flow
+      - link "Contribute" [ref=e46] [cursor=pointer]:
+        - /url: /contribute
+      - link "Ideas" [ref=e47] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e48] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e49] [cursor=pointer]:
+        - /url: /usage
+      - link "Automation" [ref=e50] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e51] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e52] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e53] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e54] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e55] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e56] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e57] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e58] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e59] [cursor=pointer]:
+        - /url: /api-health
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/deployment-gate-reliability
+      - link "Main contract" [ref=e61] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/gates/main-contract
+      - link "Public deploy contract" [ref=e62] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract
+      - link "Commit traceability" [ref=e63] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/gates/commit-traceability
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - link "← Coherence Network" [ref=e66] [cursor=pointer]:
+        - /url: /
+      - link "Tasks" [ref=e67] [cursor=pointer]:
+        - /url: /tasks
+      - link "Flow" [ref=e68] [cursor=pointer]:
+        - /url: /flow
+      - link "Usage" [ref=e69] [cursor=pointer]:
+        - /url: /usage
+    - heading "Gate Status" [level=1] [ref=e70]
+    - paragraph [ref=e71]: "Human interface for release/public gate inspection. Machine clients should use the `/api/gates/*` endpoints directly."
+    - generic [ref=e72]:
+      - heading "PR → Public Readiness" [level=2] [ref=e73]
+      - generic [ref=e74]:
+        - textbox "branch name" [ref=e75]: main
+        - button "Check PR Gate" [disabled]
+    - generic [ref=e76]:
+      - heading "Merged Change Contract" [level=2] [ref=e77]
+      - generic [ref=e78]:
+        - textbox "merged commit SHA" [ref=e79]
+        - button "Check SHA Contract" [disabled]
+        - button "Check Main HEAD" [disabled]
+    - generic [ref=e80]:
+      - heading "Public Deploy Contract" [level=2] [ref=e81]
+      - button "Check Public Deploy Contract" [disabled]
+      - button "Refresh All Live Reports" [disabled]
+    - generic [ref=e82]:
+      - heading "Endpoint Traceability Coverage" [level=2] [ref=e83]
+      - paragraph [ref=e84]: Verify every endpoint is mapped to idea, spec, process, and validation signals.
+      - button "Check Endpoint Traceability" [disabled]
+  - alert [ref=e85]
