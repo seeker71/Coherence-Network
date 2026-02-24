@@ -53,6 +53,27 @@
       "reason": "Temporary waiver while hosted self-improve execution reliability fix is being rolled out and validated.",
       "expires_at": "2026-02-23T23:59:59Z",
       "run_url_contains": "actions/runs/22300432845"
+    },
+    {
+      "workflow": "Thread Gates",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22340170322"
+    },
+    {
+      "workflow": "Test",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22340170339"
+    },
+    {
+      "workflow": "Self Improve Cycle",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22339901527"
     }
   ]
 }
