@@ -1,0 +1,94 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/docs-hygiene-sweep-20260224-pass4",
+  "commit_scope": "Fix duplicate-prefix ambiguity by defining canonical spec mapping and validator, and publish pass-4 hygiene report.",
+  "files_owned": [
+    "config/spec_prefix_canonical_map.json",
+    "scripts/validate_spec_prefix_canonicalization.py",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/docs_hygiene_report_2026-02-24_pass4.md",
+    "docs/system_audit/commit_evidence_2026-02-24_docs-hygiene-pass4-canonicalization.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "docs-hygiene-sweep"
+  ],
+  "spec_ids": [
+    "005",
+    "007",
+    "026",
+    "027",
+    "030",
+    "048",
+    "049",
+    "050",
+    "051",
+    "052",
+    "053",
+    "054"
+  ],
+  "task_ids": [
+    "docs-fragmentation-audit",
+    "duplicate-prefix-canonicalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "START_GATE_REQUIRE_WORKFLOW_OWNER=0 START_GATE_MAIN_FAILURE_WAIVERS_FILE=/tmp/start_gate_waivers_docs_hygiene_20260224_pass4.json make start-gate",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_spec_prefix_canonicalization.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build",
+    "custom markdown link scan over docs/**/*.md and specs/**/*.md with TOTAL_MISSING=0"
+  ],
+  "change_files": [
+    "config/spec_prefix_canonical_map.json",
+    "scripts/validate_spec_prefix_canonicalization.py",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/docs_hygiene_report_2026-02-24_pass4.md"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Duplicate spec prefixes now have explicit canonical ownership with machine validation, reducing stale/fragmented reference risk.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/",
+      "https://coherence-network-production.up.railway.app/docs"
+    ],
+    "test_flows": [
+      "run canonicalization validator",
+      "run markdown link integrity scan",
+      "run spec-quality validation"
+    ]
+  }
+}
