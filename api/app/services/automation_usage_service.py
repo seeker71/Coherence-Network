@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -14,6 +15,8 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 import httpx
+from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 
 from app.models.automation_usage import (
     ProviderValidationReport,
@@ -32,6 +35,14 @@ from app.services import agent_service, quality_awareness_service, telemetry_per
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 120.0
+_DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
+    "url": "",
+    "sample": None,
+    "error": "",
+    "expires_at": 0.0,
+}
+_DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
+_DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -788,12 +799,13 @@ def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
     if limited:
         priority = {
             "codex_subscription_5h": 0,
-            "db_host_window_5h": 1,
-            "cursor_subscription_8h": 2,
-            "rest_requests": 3,
-            "codex_subscription_week": 4,
-            "db_host_window_week": 5,
-            "cursor_subscription_week": 6,
+            "db_host_egress_monthly_estimated": 1,
+            "db_host_window_5h": 2,
+            "cursor_subscription_8h": 3,
+            "rest_requests": 4,
+            "codex_subscription_week": 5,
+            "db_host_window_week": 6,
+            "cursor_subscription_week": 7,
         }
         validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
         ordered = sorted(
@@ -1160,6 +1172,13 @@ def _int_env(name: str, default: int = 0) -> int:
     try:
         return int(raw)
     except ValueError:
+        return default
+
+
+def _coerce_nonnegative_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return max(0, int(float(value)))
+    except (TypeError, ValueError):
         return default
 
 
@@ -2001,28 +2020,199 @@ def _append_db_host_window_metric(
     )
 
 
-def _build_db_host_snapshot() -> ProviderUsageSnapshot:
-    db_url = (
-        str(os.getenv("RUNTIME_DATABASE_URL", "")).strip()
-        or str(os.getenv("DATABASE_URL", "")).strip()
-    )
-    if not db_url:
-        return ProviderUsageSnapshot(
-            id=f"provider_db_host_{int(time.time())}",
-            provider="db-host",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set DATABASE_URL or RUNTIME_DATABASE_URL to track DB-host usage windows."],
-        )
+def _db_host_monthly_limit_gb() -> float | None:
+    for env_name in ("DB_EGRESS_MONTHLY_LIMIT_GB", "DB_HOST_MONTHLY_EGRESS_LIMIT_GB", "SUPABASE_EGRESS_LIMIT_GB"):
+        value = _coerce_float(os.getenv(env_name))
+        if value is not None and value > 0:
+            return float(value)
+    return None
 
+
+def _db_host_monthly_seed_gb() -> float:
+    for env_name in ("DB_EGRESS_MONTHLY_USED_GB", "SUPABASE_EGRESS_USED_GB"):
+        value = _coerce_float(os.getenv(env_name))
+        if value is not None and value >= 0:
+            return float(value)
+    return 0.0
+
+
+def _db_host_tracker_key(*, db_host: str, db_name: str) -> str:
+    combined = f"{db_host or 'unknown'}:{db_name or 'unknown'}".strip().lower()
+    normalized = re.sub(r"[^a-z0-9_.:-]+", "_", combined)
+    return f"db_egress_tracker::{normalized}"
+
+
+def _load_db_host_tracker_state(key: str) -> dict[str, Any]:
+    try:
+        raw = telemetry_persistence_service.get_meta_value(key)
+    except Exception:
+        return {}
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _save_db_host_tracker_state(key: str, payload: dict[str, Any]) -> None:
+    try:
+        telemetry_persistence_service.set_meta_value(key, json.dumps(payload, sort_keys=True))
+    except Exception:
+        return
+
+
+def _db_host_egress_engine(db_url: str):
+    if _DB_HOST_EGRESS_ENGINE_CACHE["engine"] is not None and _DB_HOST_EGRESS_ENGINE_CACHE["url"] == db_url:
+        return _DB_HOST_EGRESS_ENGINE_CACHE["engine"]
+    kwargs: dict[str, Any] = {"pool_pre_ping": True}
+    if db_url.startswith("sqlite"):
+        kwargs["connect_args"] = {"check_same_thread": False}
+        kwargs["poolclass"] = NullPool
+    elif db_url.startswith("postgres"):
+        kwargs["connect_args"] = {
+            "connect_timeout": max(1, min(_int_env("DB_EGRESS_DB_CONNECT_TIMEOUT_SECONDS", 3), 15))
+        }
+        kwargs["poolclass"] = NullPool
+    engine = create_engine(db_url, **kwargs)
+    _DB_HOST_EGRESS_ENGINE_CACHE["url"] = db_url
+    _DB_HOST_EGRESS_ENGINE_CACHE["engine"] = engine
+    return engine
+
+
+def _collect_postgres_db_egress_sample(
+    db_url: str,
+    *,
+    force_refresh: bool = False,
+) -> tuple[dict[str, Any] | None, str | None]:
+    if "postgres" not in db_url.lower():
+        return None, "db_not_postgresql"
+    now = time.time()
+    if (
+        not force_refresh
+        and _DB_HOST_EGRESS_SAMPLE_CACHE.get("url") == db_url
+        and float(_DB_HOST_EGRESS_SAMPLE_CACHE.get("expires_at") or 0.0) > now
+    ):
+        cached_sample = _DB_HOST_EGRESS_SAMPLE_CACHE.get("sample")
+        cached_error = str(_DB_HOST_EGRESS_SAMPLE_CACHE.get("error") or "").strip()
+        return (cached_sample if isinstance(cached_sample, dict) else None), (cached_error or None)
+
+    try:
+        engine = _db_host_egress_engine(db_url)
+        with engine.connect() as connection:
+            stats_row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        current_database() AS database_name,
+                        COALESCE(tup_returned, 0) AS tup_returned,
+                        COALESCE(tup_fetched, 0) AS tup_fetched,
+                        stats_reset
+                    FROM pg_stat_database
+                    WHERE datname = current_database()
+                    LIMIT 1
+                    """
+                )
+            ).mappings().first()
+            row_size = connection.execute(
+                text(
+                    """
+                    SELECT
+                        COALESCE(
+                            SUM(pg_relation_size(c.oid)) / NULLIF(SUM(NULLIF(c.reltuples, 0)), 0),
+                            0
+                        ) AS avg_row_bytes
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE c.relkind = 'r'
+                    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    """
+                )
+            ).scalar()
+        if not stats_row:
+            raise RuntimeError("pg_stat_database row for current_database() was not found")
+        stats_reset = stats_row.get("stats_reset")
+        sample = {
+            "database_name": str(stats_row.get("database_name") or "").strip(),
+            "tup_returned": int(float(stats_row.get("tup_returned") or 0)),
+            "tup_fetched": int(float(stats_row.get("tup_fetched") or 0)),
+            "stats_reset": (stats_reset.isoformat() if isinstance(stats_reset, datetime) else str(stats_reset or "")),
+            "avg_row_bytes": float(row_size or 0.0),
+            "collected_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _DB_HOST_EGRESS_SAMPLE_CACHE.update(
+            {
+                "url": db_url,
+                "sample": sample,
+                "error": "",
+                "expires_at": now + _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS,
+            }
+        )
+        return sample, None
+    except Exception as exc:
+        message = str(exc)
+        _DB_HOST_EGRESS_SAMPLE_CACHE.update(
+            {
+                "url": db_url,
+                "sample": None,
+                "error": message,
+                "expires_at": now + _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS,
+            }
+        )
+        return None, message
+
+
+def _estimate_db_host_monthly_bytes(
+    *,
+    state: dict[str, Any],
+    month_key: str,
+    seed_gb: float,
+    current_returned: int,
+    current_fetched: int,
+    avg_row_bytes: float,
+    safety_factor: float,
+) -> tuple[float, int, list[str]]:
+    notes: list[str] = []
+    state_month = str(state.get("month") or "").strip()
+    if state_month == month_key:
+        estimated_monthly_bytes = max(0.0, _coerce_float(state.get("estimated_monthly_bytes")) or 0.0)
+    else:
+        estimated_monthly_bytes = max(0.0, seed_gb) * (1024.0 ** 3)
+        if seed_gb > 0:
+            notes.append("Seeded monthly DB egress estimate from DB_EGRESS_MONTHLY_USED_GB/SUPABASE_EGRESS_USED_GB.")
+
+    previous_returned = _coerce_nonnegative_int(state.get("last_tup_returned"), default=current_returned)
+    previous_fetched = _coerce_nonnegative_int(state.get("last_tup_fetched"), default=current_fetched)
+
+    delta_rows = 0
+    if state_month != month_key:
+        notes.append("Initialized monthly DB egress tracker baseline for current month.")
+    elif current_returned < previous_returned or current_fetched < previous_fetched:
+        notes.append("Detected pg_stat_database counter reset; refreshed DB egress baseline.")
+    else:
+        delta_rows = max(0, current_returned - previous_returned) + max(0, current_fetched - previous_fetched)
+        estimated_monthly_bytes += float(delta_rows) * avg_row_bytes * safety_factor
+    return estimated_monthly_bytes, delta_rows, notes
+
+
+def _db_host_context(db_url: str) -> tuple[str, str, str, dict[str, Any]]:
     parsed = urlparse(db_url)
     db_host = str(parsed.hostname or "").strip()
+    db_name = str(parsed.path or "").strip().lstrip("/") or "default"
     db_engine = str(parsed.scheme or "").strip()
     if db_engine.endswith("+psycopg"):
         db_engine = db_engine.split("+", 1)[0]
+    raw = {
+        "database_host": db_host,
+        "database_name": db_name,
+        "database_engine": db_engine,
+        "database_present": True,
+    }
+    return db_host, db_name, db_engine, raw
 
-    metrics: list[UsageMetric] = []
+
+def _append_db_host_runtime_proxy_metrics(metrics: list[UsageMetric]) -> tuple[int, int]:
     api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api", limit=5000))
     metrics.append(
         _metric(
@@ -2055,10 +2245,122 @@ def _build_db_host_snapshot() -> ProviderUsageSnapshot:
         limit=limit_week,
         window="weekly",
     )
+    return limit_5h, limit_week
 
-    notes = [
-        "DB-host usage uses runtime API event counts as an egress-safe proxy for DB load.",
-    ]
+
+def _build_db_host_monthly_egress_metric(
+    *,
+    db_url: str,
+    db_host: str,
+    db_name: str,
+) -> tuple[UsageMetric | None, dict[str, Any], list[str]]:
+    sample, sample_error = _collect_postgres_db_egress_sample(db_url)
+    if sample is None:
+        return None, {"egress_measurement_mode": "runtime_event_proxy", "pg_sample_error": sample_error or ""}, []
+
+    now = datetime.now(timezone.utc)
+    month_key = now.strftime("%Y-%m")
+    tracker_key = _db_host_tracker_key(db_host=db_host, db_name=db_name)
+    state = _load_db_host_tracker_state(tracker_key)
+    limit_gb = _db_host_monthly_limit_gb()
+    seed_gb = _db_host_monthly_seed_gb()
+    fallback_row_bytes = max(64.0, _coerce_float(os.getenv("DB_EGRESS_FALLBACK_BYTES_PER_ROW")) or 512.0)
+    safety_factor = max(1.0, _coerce_float(os.getenv("DB_EGRESS_ESTIMATE_SAFETY_FACTOR")) or 1.25)
+    avg_row_bytes = max(64.0, _coerce_float(sample.get("avg_row_bytes")) or fallback_row_bytes)
+
+    current_returned = _coerce_nonnegative_int(sample.get("tup_returned"))
+    current_fetched = _coerce_nonnegative_int(sample.get("tup_fetched"))
+    estimated_monthly_bytes, delta_rows, notes = _estimate_db_host_monthly_bytes(
+        state=state,
+        month_key=month_key,
+        seed_gb=seed_gb,
+        current_returned=current_returned,
+        current_fetched=current_fetched,
+        avg_row_bytes=avg_row_bytes,
+        safety_factor=safety_factor,
+    )
+
+    updated_state = {
+        "month": month_key,
+        "estimated_monthly_bytes": round(float(estimated_monthly_bytes), 3),
+        "last_tup_returned": current_returned,
+        "last_tup_fetched": current_fetched,
+        "last_avg_row_bytes": round(float(avg_row_bytes), 3),
+        "safety_factor": round(float(safety_factor), 4),
+        "updated_at": now.isoformat(),
+        "stats_reset": str(sample.get("stats_reset") or ""),
+    }
+    _save_db_host_tracker_state(tracker_key, updated_state)
+
+    used_gb = max(0.0, estimated_monthly_bytes / (1024.0 ** 3))
+    remaining_gb = max(0.0, limit_gb - used_gb) if limit_gb is not None and limit_gb > 0 else None
+    if limit_gb is None:
+        notes.append("Set DB_EGRESS_MONTHLY_LIMIT_GB (or DB_HOST_MONTHLY_EGRESS_LIMIT_GB) for hard monthly GB enforcement.")
+
+    metric = _metric(
+        id="db_host_egress_monthly_estimated",
+        label="DB host estimated egress (monthly)",
+        unit="gb",
+        used=used_gb,
+        remaining=remaining_gb,
+        limit=limit_gb,
+        window="monthly",
+        validation_state="inferred",
+        validation_detail=(
+            "Estimated from pg_stat_database tuple deltas and relation-size-derived row bytes, "
+            f"with safety factor {round(safety_factor, 3)}."
+        ),
+        evidence_source="pg_stat_database+telemetry_meta",
+    )
+    raw = {
+        "egress_measurement_mode": "pg_stat_database_delta_estimate",
+        "estimator_state_key": tracker_key,
+        "monthly_limit_gb": limit_gb,
+        "monthly_used_gb": round(used_gb, 6),
+        "delta_rows_since_last_sample": int(delta_rows),
+        "avg_row_bytes": round(avg_row_bytes, 3),
+        "safety_factor": round(safety_factor, 4),
+        "pg_stats_reset": str(sample.get("stats_reset") or ""),
+        "pg_sample_collected_at": str(sample.get("collected_at") or ""),
+    }
+    return metric, raw, notes
+
+
+def _build_db_host_snapshot() -> ProviderUsageSnapshot:
+    db_url = (
+        str(os.getenv("RUNTIME_DATABASE_URL", "")).strip()
+        or str(os.getenv("DATABASE_URL", "")).strip()
+    )
+    if not db_url:
+        return ProviderUsageSnapshot(
+            id=f"provider_db_host_{int(time.time())}",
+            provider="db-host",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set DATABASE_URL or RUNTIME_DATABASE_URL to track DB-host usage windows."],
+        )
+
+    db_host, db_name, _db_engine, raw = _db_host_context(db_url)
+    metrics: list[UsageMetric] = []
+    notes: list[str] = []
+    monthly_metric, monthly_raw, monthly_notes = _build_db_host_monthly_egress_metric(
+        db_url=db_url,
+        db_host=db_host,
+        db_name=db_name,
+    )
+    if monthly_metric is not None:
+        metrics.append(monthly_metric)
+    if isinstance(monthly_raw, dict):
+        raw.update(monthly_raw)
+    notes.extend(monthly_notes)
+
+    limit_5h, limit_week = _append_db_host_runtime_proxy_metrics(metrics)
+
+    if monthly_metric is None:
+        notes.append("Monthly DB egress estimate unavailable; falling back to runtime event proxy metrics.")
+    else:
+        notes.append("DB-host monthly egress metric is estimated from PostgreSQL counters; request windows are safety proxies.")
     if limit_5h <= 0 and limit_week <= 0:
         notes.append("Set DB_HOST_5H_LIMIT and DB_HOST_WEEK_LIMIT for hard host-window tracking.")
 
@@ -2067,14 +2369,10 @@ def _build_db_host_snapshot() -> ProviderUsageSnapshot:
         provider="db-host",
         kind="custom",
         status="ok",
-        data_source="runtime_events",
+        data_source="provider_api" if monthly_metric is not None else "runtime_events",
         metrics=metrics,
-        notes=notes,
-        raw={
-            "database_host": db_host,
-            "database_engine": db_engine,
-            "database_present": True,
-        },
+        notes=list(dict.fromkeys(notes)),
+        raw=raw,
     )
 
 

@@ -233,6 +233,24 @@ def _meta_set(session: Session, key: str, value: str) -> None:
         session.add(row)
 
 
+def get_meta_value(key: str) -> str:
+    ensure_schema()
+    normalized = str(key or "").strip()
+    if not normalized:
+        return ""
+    with _session() as session:
+        return _meta_get(session, normalized)
+
+
+def set_meta_value(key: str, value: str) -> None:
+    ensure_schema()
+    normalized = str(key or "").strip()
+    if not normalized:
+        return
+    with _session() as session:
+        _meta_set(session, normalized, str(value or ""))
+
+
 def append_automation_snapshot(payload: dict[str, Any], max_rows: int = 800) -> None:
     ensure_schema()
     snapshot_id = str(payload.get("id") or "")
