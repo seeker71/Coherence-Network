@@ -304,6 +304,11 @@ def test_build_db_host_snapshot_includes_window_limits(monkeypatch: pytest.Monke
     monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db.example.net:5432/coherence")
     monkeypatch.setenv("DB_HOST_5H_LIMIT", "1000")
     monkeypatch.setenv("DB_HOST_WEEK_LIMIT", "5000")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_build_db_host_monthly_egress_metric",
+        lambda **kwargs: (None, {"egress_measurement_mode": "runtime_event_proxy"}, []),
+    )
 
     def _fake_runtime_events_within_window(*, window_seconds: int, source: str | None = None, limit: int = 5000):
         assert source == "api"
@@ -324,6 +329,45 @@ def test_build_db_host_snapshot_includes_window_limits(monkeypatch: pytest.Monke
     assert "db_host_window_week" in metrics
     assert metrics["db_host_window_5h"].remaining == pytest.approx(875.0, rel=1e-6)
     assert metrics["db_host_window_week"].remaining == pytest.approx(4360.0, rel=1e-6)
+
+
+def test_build_db_host_snapshot_includes_monthly_egress_estimate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db.example.net:5432/coherence")
+    monkeypatch.setenv("DB_HOST_5H_LIMIT", "1000")
+    monkeypatch.setenv("DB_HOST_WEEK_LIMIT", "5000")
+
+    monthly_metric = UsageMetric(
+        id="db_host_egress_monthly_estimated",
+        label="DB host estimated egress (monthly)",
+        unit="gb",
+        used=3.5,
+        remaining=1.5,
+        limit=5.0,
+        window="monthly",
+        validation_state="inferred",
+        evidence_source="pg_stat_database+telemetry_meta",
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_build_db_host_monthly_egress_metric",
+        lambda **kwargs: (
+            monthly_metric,
+            {"egress_measurement_mode": "pg_stat_database_delta_estimate"},
+            ["monthly estimator active"],
+        ),
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runtime_events_within_window",
+        lambda **kwargs: [object()] * 10,
+    )
+
+    snapshot = automation_usage_service._build_db_host_snapshot()
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert snapshot.data_source == "provider_api"
+    assert "db_host_egress_monthly_estimated" in metrics
+    assert metrics["db_host_egress_monthly_estimated"].remaining == pytest.approx(1.5, rel=1e-6)
+    assert snapshot.raw["egress_measurement_mode"] == "pg_stat_database_delta_estimate"
 
 
 def test_summary_metric_prefers_limit_window_over_runtime_total() -> None:
@@ -376,6 +420,32 @@ def test_summary_metric_prefers_validated_limited_metric_over_derived_limit() ->
     selected = automation_usage_service._summary_metric([derived, validated])
     assert selected is not None
     assert selected.id == "requests_quota"
+
+
+def test_summary_metric_prefers_db_monthly_egress_over_db_window_proxy() -> None:
+    monthly = UsageMetric(
+        id="db_host_egress_monthly_estimated",
+        label="DB host estimated egress (monthly)",
+        unit="gb",
+        used=4.2,
+        remaining=0.8,
+        limit=5.0,
+        window="monthly",
+        validation_state="inferred",
+    )
+    proxy_window = UsageMetric(
+        id="db_host_window_5h",
+        label="DB host request window (5h)",
+        unit="requests",
+        used=200.0,
+        remaining=50.0,
+        limit=250.0,
+        window="hourly",
+        validation_state="derived",
+    )
+    selected = automation_usage_service._summary_metric([proxy_window, monthly])
+    assert selected is not None
+    assert selected.id == "db_host_egress_monthly_estimated"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,88 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/db-egress-measure-gap-20260224",
+  "commit_scope": "Close DB egress measurement gap by adding PostgreSQL-counter-based monthly GB estimation with persisted deltas, while keeping short-window runtime proxy safeguards.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-task-orchestration"
+  ],
+  "task_ids": [
+    "task-2026-02-24-db-egress-measurement-gap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260224T070845Z_codex-db-egress-measure-gap-20260224.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "config/start_gate_workflow_owners.json",
+    "config/start_gate_main_workflow_waivers.json",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-24_db-egress-measurement-gap.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check app/services/automation_usage_service.py app/services/telemetry_persistence_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, and production usage endpoint verification for monthly DB egress estimate telemetry."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "DB-host provider reports monthly estimated GB egress from pg_stat_database counter deltas with persisted tracker state, and guard-compatible remaining/limit metrics.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage?force_refresh=true",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/alerts?threshold_ratio=0.2&force_refresh=true",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness?force_refresh=true"
+    ],
+    "test_flows": [
+      "Verify db-host metrics include db_host_egress_monthly_estimated with used/remaining/limit in GB.",
+      "Verify guard decision for db-host blocks when monthly remaining ratio crosses configured threshold.",
+      "Verify fallback request-window proxy metrics remain present when PG stats probe is unavailable."
+    ]
+  }
+}
