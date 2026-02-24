@@ -193,3 +193,41 @@ def test_open_question_prefers_openclaw(monkeypatch: pytest.MonkeyPatch) -> None
     assert context.get("executor") == "openclaw"
     assert policy.get("reason") == "open_question_default"
     assert str(task["model"]).startswith("openclaw/")
+
+
+def test_open_responses_normalization_is_shared_across_executors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    cursor_task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize responses across providers",
+            task_type=TaskType.IMPL,
+            context={"executor": "cursor"},
+        )
+    )
+    openclaw_task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize responses across providers",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw"},
+        )
+    )
+
+    cursor_ctx = cursor_task.get("context") or {}
+    claw_ctx = openclaw_task.get("context") or {}
+    cursor_call = cursor_ctx.get("normalized_response_call") or {}
+    claw_call = claw_ctx.get("normalized_response_call") or {}
+
+    assert cursor_call.get("request_schema") == "open_responses_v1"
+    assert claw_call.get("request_schema") == "open_responses_v1"
+    assert cursor_call.get("input")[0]["content"][0]["type"] == "input_text"
+    assert claw_call.get("input")[0]["content"][0]["type"] == "input_text"
+    assert (
+        cursor_call.get("input")[0]["content"][0]["text"]
+        == claw_call.get("input")[0]["content"][0]["text"]
+    )
+    assert (cursor_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
+    assert (claw_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
