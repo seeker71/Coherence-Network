@@ -1,7 +1,9 @@
 {
   "workflow_owners": {
     ".github/workflows/self-improve-cycle.yml": "@seeker71",
+    ".github/workflows/external-tools-audit.yml": "@seeker71",
     "Self Improve Cycle": "@seeker71",
+    "External Tools Audit": "@seeker71",
     "Maintainability Architecture Audit": "@seeker71",
     "Public Deploy Contract": "@seeker71",
     "Auto Heal Deploy Gates": "@seeker71",

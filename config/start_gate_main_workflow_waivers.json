@@ -75,6 +75,13 @@
       "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
       "expires_at": "2026-02-25T23:59:59Z",
       "run_url_contains": "actions/runs/22339901527"
+    },
+    {
+      "workflow": "External Tools Audit",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while external-tools registry drift issue from run 22345229221 is remediated; required to unblock worktree start-gate flow.",
+      "expires_at": "2026-02-25T23:59:59Z",
+      "run_url_contains": "actions/runs/22345229221"
     }
   ]
 }
