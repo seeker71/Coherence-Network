@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/n8n-premerge-guard-integration",
+  "commit_scope": "Add agent graph-state schema contract and transition validation with actionable diagnostics, plus integration tests for persisted schema and invalid-state error reporting.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_integration_api.py"
+  ],
+  "idea_ids": [
+    "coherence-network-overall"
+  ],
+  "spec_ids": [
+    "110-langgraph-stateschema-adoption"
+  ],
+  "task_ids": [
+    "task-2026-02-24-agent-graph-state-schema"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_integration_api.py"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_integration_api.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/system_audit/commit_evidence_2026-02-24_langgraph-stateschema-adoption.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -v tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_api_key_login tests/test_agent_integration_api.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Each task now carries an explicit graph-state schema contract and validation status to support deterministic orchestration diagnostics.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "Create task and verify context.agent_graph_state_schema + required fields.",
+      "Patch malformed agent_graph_state and verify actionable validation errors in task context."
+    ]
+  }
+}

@@ -50,6 +50,15 @@ except ValueError:
     _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
 _TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
 _TARGET_STATE_MAX_TEXT = 600
+_AGENT_GRAPH_STATE_SCHEMA_ID = "coherence_agent_graph_state_v1"
+_AGENT_GRAPH_STATE_REQUIRED_FIELDS: tuple[str, ...] = ("task_id", "task_type", "phase", "direction")
+_AGENT_GRAPH_STATE_ALLOWED_PHASES: tuple[str, ...] = (
+    "queued",
+    "running",
+    "needs_decision",
+    "completed",
+    "failed",
+)
 # Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -704,6 +713,78 @@ def _task_duration_ms(task: dict[str, Any]) -> float:
     return 0.1
 
 
+def _phase_for_status(status: Any) -> str:
+    value = _status_value(status).strip().lower()
+    if value in _AGENT_GRAPH_STATE_ALLOWED_PHASES:
+        return value
+    return "queued"
+
+
+def _build_agent_graph_state(task: dict[str, Any], *, phase: str | None = None) -> dict[str, Any]:
+    status_phase = phase.strip().lower() if isinstance(phase, str) and phase.strip() else _phase_for_status(task.get("status"))
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route_decision = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+    attempt = context.get("retry_count", 0)
+    try:
+        normalized_attempt = max(0, int(attempt))
+    except (TypeError, ValueError):
+        normalized_attempt = 0
+    return {
+        "task_id": str(task.get("id") or "").strip(),
+        "task_type": _status_value(task.get("task_type")).strip(),
+        "phase": status_phase,
+        "direction": str(task.get("direction") or "").strip(),
+        "attempt": normalized_attempt,
+        "model": str(task.get("model") or "").strip(),
+        "provider": str(route_decision.get("provider") or "").strip(),
+        "route_decision": route_decision,
+    }
+
+
+def _validate_agent_graph_state_schema(state: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for field in _AGENT_GRAPH_STATE_REQUIRED_FIELDS:
+        value = state.get(field)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"missing_or_invalid_required_field:{field}")
+
+    phase = str(state.get("phase") or "").strip().lower()
+    if phase and phase not in _AGENT_GRAPH_STATE_ALLOWED_PHASES:
+        errors.append(f"invalid_phase:{phase}")
+
+    if "attempt" in state:
+        attempt = state.get("attempt")
+        if not isinstance(attempt, int) or attempt < 0:
+            errors.append("invalid_attempt_non_negative_int_required")
+
+    route_decision = state.get("route_decision")
+    if route_decision is not None and not isinstance(route_decision, dict):
+        errors.append("invalid_route_decision_object_required")
+    return errors
+
+
+def _apply_agent_graph_state_contract(task: dict[str, Any], *, preferred_state: dict[str, Any] | None = None) -> None:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    candidate = preferred_state if isinstance(preferred_state, dict) else _build_agent_graph_state(task)
+    errors = _validate_agent_graph_state_schema(candidate)
+    context["agent_graph_state_schema"] = {
+        "schema_id": _AGENT_GRAPH_STATE_SCHEMA_ID,
+        "required_fields": list(_AGENT_GRAPH_STATE_REQUIRED_FIELDS),
+        "allowed_phases": list(_AGENT_GRAPH_STATE_ALLOWED_PHASES),
+    }
+    context["agent_graph_state"] = candidate
+    context["agent_graph_state_errors"] = errors
+    if errors:
+        context["agent_graph_state_status"] = "invalid"
+        context["agent_graph_state_last_error"] = (
+            "State schema validation failed; update task context/phase before retry."
+        )
+    else:
+        context["agent_graph_state_status"] = "valid"
+        context.pop("agent_graph_state_last_error", None)
+    task["context"] = context
+
+
 def _task_output_text(task: dict[str, Any]) -> str:
     output = task.get("output")
     if isinstance(output, str):
@@ -1042,6 +1123,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "updated_at": None,
         "tier": tier,
     }
+    _apply_agent_graph_state_contract(task)
     _store[task_id] = task
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))
@@ -1350,6 +1432,11 @@ def update_task(
             next_context.update(normalized_contract)
             next_context["target_state_contract"] = dict(normalized_contract)
         task["context"] = next_context
+    preferred_graph_state = None
+    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    if isinstance(task_context.get("agent_graph_state"), dict):
+        preferred_graph_state = dict(task_context.get("agent_graph_state") or {})
+    _apply_agent_graph_state_contract(task, preferred_state=preferred_graph_state)
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
     current_status_value = _status_value(task.get("status"))
