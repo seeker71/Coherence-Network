@@ -216,6 +216,28 @@ cd api && .venv/bin/python scripts/analyze_pipeline_failures.py
 
 Save artifacts under `docs/system_audit/` and update `docs/SYSTEM-QUESTION-LEDGER.md` each cycle.
 
+## Awareness Questions (Cost + Improvement)
+
+Ask these once per daily operations review. Treat any "no" as a priority improvement signal: record owner, next command, and target date, then track trend each cycle.
+
+### Hosted worker failure reporting
+
+1. Were at least 75% of hosted worker failures recorded with `task_id`, `tool`, `model`, and provider fields in friction events?
+2. Is every open hosted worker failure linked to an explicit `unblock_condition` and owner?
+3. Did we reduce failure recurrence cost (energy loss + cost of delay) versus the prior check window?
+
+### Task-provider visibility
+
+1. Are at least 75% of recent tracked runs showing both `provider` and `billing_provider` alongside `task_id`?
+2. Can an operator answer "which task used which provider" from `/agent` or `/tasks` without querying raw logs?
+3. Are untracked completed/failed tasks trending down week-over-week?
+
+### Recovery and learning capture
+
+1. Are at least 75% of recoverable tool failures either `resolved` or mapped to a concrete `resolution_action`?
+2. For each unresolved failure cluster, is there a documented next command and owner?
+3. Did we add at least one prevention action (prompt guard, route policy, or monitor) for each repeated failure pattern?
+
 ## Check Pipeline Status
 
 ```bash

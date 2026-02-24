@@ -133,6 +133,40 @@ def _task_route_provider(task: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _friction_metadata_from_task(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route_decision = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+
+    provider = str(
+        route_decision.get("provider")
+        or route_decision.get("billing_provider")
+        or _task_route_provider(task)
+    ).strip()
+    billing_provider = str(
+        route_decision.get("billing_provider")
+        or route_decision.get("provider")
+        or provider
+    ).strip()
+
+    task_model = str(task.get("model") or "").strip()
+    normalized_tool = "agent-task-execution-summary"
+    run_id = str(
+        context.get("active_run_id")
+        or context.get("run_id")
+        or context.get("last_run_id")
+        or ""
+    ).strip()
+
+    return {
+        "task_id": (task_id or "").strip() or None,
+        "run_id": run_id or None,
+        "provider": provider or None,
+        "billing_provider": billing_provider or None,
+        "tool": normalized_tool,
+        "model": task_model or None,
+    }
+
+
 def _finish_task(
     *,
     task_id: str,
@@ -444,11 +478,17 @@ def _record_friction_event(
     severity: str = "high",
     energy_loss_estimate: float = 0.0,
 ) -> None:
+    metadata = _friction_metadata_from_task(task_id, task)
     event = FrictionEvent(
         id=f"fric_{uuid4().hex[:12]}",
         timestamp=datetime.now(timezone.utc),
         task_id=task_id,
         endpoint=endpoint,
+        run_id=metadata.get("run_id"),
+        provider=metadata.get("provider"),
+        billing_provider=metadata.get("billing_provider"),
+        tool=metadata.get("tool"),
+        model=metadata.get("model"),
         stage=stage,
         block_type=block_type,
         severity=severity,
@@ -462,7 +502,6 @@ def _record_friction_event(
         time_open_hours=None,
         resolution_action=None,
     )
-    _ = task
     try:
         friction_service.append_event(event)
     except Exception:

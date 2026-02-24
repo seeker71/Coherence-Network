@@ -35,11 +35,35 @@ type AgentVisibility = {
         status_code: number;
         executor: string;
         agent_id: string;
+        provider: string;
+        billing_provider: string;
         is_openai_codex: boolean;
         runtime_ms: number;
         recorded_at: string;
       }>;
     };
+  };
+  proof: {
+    generated_at: string;
+    threshold: number;
+    all_pass: boolean;
+    mode?: string;
+    note?: string;
+    areas: Array<{
+      id: string;
+      label: string;
+      numerator: number;
+      denominator: number;
+      rate: number;
+      recent_rate: number;
+      prior_rate?: number | null;
+      threshold: number;
+      pass: boolean;
+      guidance_status?: string;
+      progress_to_target?: number;
+      gap_to_target?: number;
+      trend_delta?: number | null;
+    }>;
   };
   remaining_usage: {
     coverage_rate: number;
@@ -60,6 +84,12 @@ async function loadAgentVisibility(): Promise<AgentVisibility> {
 
 export default async function AgentPage() {
   const data = await loadAgentVisibility();
+  const proof = data.proof ?? {
+    generated_at: "",
+    threshold: 0.75,
+    all_pass: true,
+    areas: [],
+  };
   const execution = data.usage.execution;
   const modelRows = Object.entries(data.usage.by_model).sort((a, b) => b[1].count - a[1].count);
   const executorRows = Object.entries(execution?.by_executor ?? {}).sort((a, b) => b[1].count - a[1].count);
@@ -88,6 +118,28 @@ export default async function AgentPage() {
       <p className="text-muted-foreground">
         Pipeline execution status, usage telemetry, and remaining usage tracking gap for safe agent operation.
       </p>
+
+      <section className="rounded border p-4 space-y-2 text-sm">
+        <h2 className="font-semibold">Visibility Progress (target &gt;=75%, guidance only)</h2>
+        <p className="text-muted-foreground">
+          threshold {(proof.threshold * 100).toFixed(0)}% | all_pass {proof.all_pass ? "yes" : "no"}
+        </p>
+        {proof.note && <p className="text-muted-foreground">{proof.note}</p>}
+        <ul className="space-y-1">
+          {proof.areas.map((area) => (
+            <li key={area.id} className="flex justify-between rounded border p-2">
+              <span>{area.label}</span>
+              <span className={area.pass ? "text-emerald-600" : "text-amber-700"}>
+                {area.numerator}/{area.denominator} | {(area.rate * 100).toFixed(1)}% |{" "}
+                {((area.progress_to_target ?? 0) * 100).toFixed(1)}% to target |{" "}
+                {area.guidance_status === "on_track" ? "on track" : "below target"}
+                {typeof area.trend_delta === "number" ? ` | trend ${(area.trend_delta * 100).toFixed(1)}%` : ""}
+              </span>
+            </li>
+          ))}
+          {proof.areas.length === 0 && <li className="text-muted-foreground">Proof metrics unavailable on this API.</li>}
+        </ul>
+      </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
         <h2 className="font-semibold">Pipeline Snapshot</h2>
@@ -219,7 +271,8 @@ export default async function AgentPage() {
                 {run.endpoint}
               </span>
               <span className="text-muted-foreground">
-                {run.tool} | {run.executor} | status {run.status_code} | {run.runtime_ms.toFixed(1)}ms
+                {run.tool} | {run.executor} | provider {run.provider}/{run.billing_provider} | status {run.status_code} |{" "}
+                {run.runtime_ms.toFixed(1)}ms
               </span>
             </li>
           ))}

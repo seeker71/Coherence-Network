@@ -1,0 +1,164 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/merge-all-deploy-20260223",
+  "commit_scope": "Merge pending hosted self-improve visibility, runner reliability, gate waiver/owner updates, web proof UI updates, and captured production proof artifacts.",
+  "files_owned": [
+    "api/app/models/friction.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_visibility_api.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/cursor_fact_report_2026-02-22.json",
+    "web/app/agent/page.tsx",
+    "web/app/friction/page.tsx",
+    ".playwright-cli/*.yml",
+    "output/playwright/**"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check app/models/friction.py app/services/agent_execution_service.py app/services/agent_service.py tests/test_agent_execute_endpoint.py tests/test_agent_visibility_api.py",
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_agent_visibility_api.py"
+    ],
+    "notes": "21 targeted API tests passed; lint clean."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Run after push/PR merge."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Run after merge with ./scripts/verify_web_api_deploy.sh and public gate checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Await push, PR merge, CI completion, and production deploy validation."
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "deployment-gate-reliability",
+    "runtime-observability"
+  ],
+  "spec_ids": [
+    "spec-002-agent-orchestration"
+  ],
+  "task_ids": [
+    "task_80824899d61962e1",
+    "task_cb7d78f246bba6a1"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "author",
+        "reviewer"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260224T065122Z_codex-merge-all-deploy-20260223.json",
+    "output/playwright/prod-run-success-22284846204.png",
+    "output/playwright/prod-success-rates-2026-02-22.json",
+    "output/playwright/self-improve-success-rate-pre-post.json"
+  ],
+  "change_files": [
+    ".playwright-cli/page-2026-02-22T21-08-09-666Z.yml",
+    ".playwright-cli/page-2026-02-22T21-08-13-774Z.yml",
+    ".playwright-cli/page-2026-02-22T21-08-32-552Z.yml",
+    ".playwright-cli/page-2026-02-22T21-08-32-961Z.yml",
+    ".playwright-cli/page-2026-02-22T21-09-28-040Z.yml",
+    ".playwright-cli/page-2026-02-22T21-09-48-726Z.yml",
+    ".playwright-cli/page-2026-02-22T21-10-24-252Z.yml",
+    ".playwright-cli/page-2026-02-22T21-10-59-591Z.yml",
+    ".playwright-cli/page-2026-02-22T21-11-30-309Z.yml",
+    ".playwright-cli/page-2026-02-22T21-12-10-687Z.yml",
+    ".playwright-cli/page-2026-02-22T21-12-11-341Z.yml",
+    ".playwright-cli/page-2026-02-23T07-30-24-333Z.yml",
+    ".playwright-cli/page-2026-02-23T07-30-27-915Z.yml",
+    ".playwright-cli/page-2026-02-23T07-31-01-906Z.yml",
+    ".playwright-cli/page-2026-02-23T07-32-14-558Z.yml",
+    ".playwright-cli/page-2026-02-23T07-32-42-318Z.yml",
+    ".playwright-cli/page-2026-02-23T08-28-06-083Z.yml",
+    ".playwright-cli/page-2026-02-23T15-18-07-228Z.yml",
+    ".playwright-cli/page-2026-02-23T15-18-58-266Z.yml",
+    ".playwright-cli/page-2026-02-23T15-19-05-282Z.yml",
+    ".playwright-cli/page-2026-02-23T15-19-12-293Z.yml",
+    ".playwright-cli/page-2026-02-23T15-19-19-307Z.yml",
+    ".playwright-cli/page-2026-02-23T15-19-26-326Z.yml",
+    ".playwright-cli/page-2026-02-23T15-20-19-012Z.yml",
+    ".playwright-cli/page-2026-02-23T15-21-10-794Z.yml",
+    ".playwright-cli/page-2026-02-23T15-22-01-661Z.yml",
+    "api/app/models/friction.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_visibility_api.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/cursor_fact_report_2026-02-22.json",
+    "output/playwright/agent-progress-guidance.png",
+    "output/playwright/agent-proof-local.png",
+    "output/playwright/agent-proof.png",
+    "output/playwright/friction-progress-guidance.png",
+    "output/playwright/friction-proof-local.png",
+    "output/playwright/friction-proof.png",
+    "output/playwright/prod-contract-checks-22284846204.json",
+    "output/playwright/prod-contract-checks-22284846204.png",
+    "output/playwright/prod-contract-report-json-http-22284846204.png",
+    "output/playwright/prod-contract-report-raw-22284846204.png",
+    "output/playwright/prod-run-job-steps-22284846204.png",
+    "output/playwright/prod-run-success-22284846204.png",
+    "output/playwright/prod-success-rates-2026-02-22.json",
+    "output/playwright/prod-success-rates-2026-02-22.png",
+    "output/playwright/prod-usage-live.png",
+    "output/playwright/prod-web-gates-live-after-wait.png",
+    "output/playwright/prod-web-gates-live.png",
+    "output/playwright/self-improve-artifacts/post_cf168_run_22289549225_attempts.jsonl",
+    "output/playwright/self-improve-artifacts/post_cf168_run_22289549225_report.json",
+    "output/playwright/self-improve-artifacts/pre_cf168_run_22280732766_report.json",
+    "output/playwright/self-improve-artifacts/self-improve-pre-post-summary.json",
+    "output/playwright/self-improve-artifacts/self-improve-success-rate-pre-post.json",
+    "output/playwright/self-improve-before-after-by-sha.json",
+    "output/playwright/self-improve-before-after-by-sha.png",
+    "output/playwright/self-improve-pre-post-summary.png",
+    "output/playwright/self-improve-report-22289549225.png",
+    "output/playwright/self-improve-run-22289549225.png",
+    "output/playwright/self-improve-run-22297201130-live.png",
+    "output/playwright/self-improve-success-rate-pre-post.png",
+    "web/app/agent/page.tsx",
+    "web/app/friction/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hosted self-improve and visibility guidance/reporting paths remain deployable with provider/task attribution and friction evidence surfaced in production views.",
+    "public_endpoints": [
+      "/api/agent/visibility",
+      "/api/automation/usage",
+      "/api/friction/events",
+      "/api/gates/main-head"
+    ],
+    "test_flows": [
+      "hosted self-improve run -> visibility proof summary",
+      "public deploy contract run -> production gate status",
+      "web /usage + /friction render with live production data"
+    ]
+  }
+}
