@@ -67,6 +67,57 @@ def test_task_target_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch
     assert isinstance(context.get("target_state_contract"), dict)
 
 
+def test_task_graph_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Validate graph state schema on creation",
+            task_type=TaskType.IMPL,
+        )
+    )
+    context = task.get("context") or {}
+    graph_state = context.get("agent_graph_state") or {}
+    schema = context.get("agent_graph_state_schema") or {}
+    assert schema.get("schema_id") == "coherence_agent_graph_state_v1"
+    assert set(schema.get("required_fields") or []) == {"task_id", "task_type", "phase", "direction"}
+    assert graph_state.get("task_id") == task.get("id")
+    assert graph_state.get("task_type") == "impl"
+    assert graph_state.get("phase") == "queued"
+    assert graph_state.get("direction") == "Validate graph state schema on creation"
+    assert context.get("agent_graph_state_status") == "valid"
+    assert context.get("agent_graph_state_errors") == []
+
+
+def test_update_task_graph_state_validation_reports_actionable_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Validate graph state schema on update",
+            task_type=TaskType.IMPL,
+        )
+    )
+    updated = agent_service.update_task(
+        str(task.get("id")),
+        context={"agent_graph_state": {"task_id": "", "phase": "invalid", "attempt": -1}},
+    )
+    assert updated is not None
+    context = updated.get("context") or {}
+    errors = context.get("agent_graph_state_errors") or []
+    assert context.get("agent_graph_state_status") == "invalid"
+    assert "missing_or_invalid_required_field:task_id" in errors
+    assert "missing_or_invalid_required_field:task_type" in errors
+    assert "missing_or_invalid_required_field:direction" in errors
+    assert "invalid_phase:invalid" in errors
+    assert "invalid_attempt_non_negative_int_required" in errors
+    assert "State schema validation failed" in str(context.get("agent_graph_state_last_error") or "")
+
+
 def test_build_command_escapes_shell_sensitive_direction_tokens() -> None:
     command = agent_service._build_command(
         'Check `uname -a` and "$HOME" value',
