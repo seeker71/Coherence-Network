@@ -413,6 +413,56 @@ def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch,
     assert env.get("AGENT_CODEX_OAUTH_SESSION_FILE") == ""
     assert "agent-runner-codex-api-key" in str(env.get("HOME") or "")
     assert "agent-runner-codex-api-key" in str(env.get("CODEX_HOME") or "")
+    assert str(env.get("HOME") or "").startswith(str(real_home))
+
+
+def test_configure_codex_cli_environment_bootstraps_api_key_login(monkeypatch, tmp_path):
+    class _Completed:
+        def __init__(self, returncode: int, stdout: str = "", stderr: str = ""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    real_home = tmp_path / "real-home"
+    real_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(real_home))
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    calls: list[list[str]] = []
+    state = {"logged_in": False}
+
+    def _run(argv, *args, **kwargs):
+        cmd = [str(part) for part in (argv or [])]
+        calls.append(cmd)
+        if cmd[:3] == ["codex", "login", "--with-api-key"]:
+            state["logged_in"] = True
+            return _Completed(0, stdout="Successfully logged in\n")
+        if cmd[:3] == ["codex", "login", "status"]:
+            if state["logged_in"]:
+                return _Completed(0, stdout="Logged in using an API key\n")
+            return _Completed(1, stderr="Not logged in\n")
+        if cmd[:3] == ["codex", "auth", "status"]:
+            return _Completed(1, stderr="unknown command\n")
+        return _Completed(1, stderr="unexpected command\n")
+
+    monkeypatch.setattr(agent_runner.subprocess, "run", _run)
+
+    env = {"HOME": str(real_home)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_api_key_bootstrap",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["effective_mode"] == "api_key"
+    assert auth["api_key_present"] is True
+    assert auth["api_key_login_bootstrapped"] is True
+    assert auth["api_key_login_source"] == "codex_login_with_api_key"
+    assert auth["oauth_session"] is True
+    assert env.get("OPENAI_API_KEY") == "sk-test"
+    assert ["codex", "login", "--with-api-key"] in calls
 
 
 def test_configure_codex_cli_environment_uses_admin_key_when_primary_missing(monkeypatch):

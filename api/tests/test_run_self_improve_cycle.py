@@ -38,12 +38,17 @@ class _FakeClient:
         execute_status_code: int = 200,
         pending_polls_before_complete: int = 0,
         post_error_plan: list[Exception] | None = None,
+        task_post_status_plan: list[int] | None = None,
+        stage_output_overrides: dict[int, str] | None = None,
     ) -> None:
         self.created_payloads: list[dict] = []
+        self.submitted_payloads: list[dict] = []
         self._task_counter = 0
         self._task_order: list[str] = []
         self._task_outputs: dict[str, str] = {}
         self._post_error_plan = list(post_error_plan or [])
+        self._task_post_status_plan = list(task_post_status_plan or [])
+        self._stage_output_overrides = dict(stage_output_overrides or {})
         self.usage_payload = usage_payload
         self.tasks_payload = tasks_payload if tasks_payload is not None else []
         self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
@@ -81,9 +86,13 @@ class _FakeClient:
             raise self._post_error_plan.pop(0)
 
         if url.endswith("/api/agent/tasks"):
+            payload = dict(json or {})
+            self.submitted_payloads.append(payload)
+            status_code = self._task_post_status_plan.pop(0) if self._task_post_status_plan else 201
+            if status_code >= 400:
+                return _FakeResponse(status_code, {"error": f"forced status {status_code}"})
             self._task_counter += 1
             task_id = f"task-{self._task_counter}"
-            payload = dict(json or {})
             payload["_task_id"] = task_id
             self.created_payloads.append(payload)
             self._task_order.append(task_id)
@@ -159,7 +168,7 @@ class _FakeClient:
                         },
                     )
                 idx = int(task_id.split("-")[-1])
-                output = f"stage-{idx}-output"
+                output = self._stage_output_overrides.get(idx, f"stage-{idx}-output")
                 self._task_outputs[task_id] = output
                 payload = self.created_payloads[idx - 1]
                 context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
@@ -310,6 +319,29 @@ def test_run_cycle_retries_plan_submit_across_multiple_post_outages() -> None:
     )
 
     assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+
+
+def test_run_cycle_retries_plan_submit_on_http_502_then_completes() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        # First plan submit fails with 502, then plan/execute/review submits succeed.
+        task_post_status_plan=[502, 201, 201, 201],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_retry_502.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.submitted_payloads) == 4
     assert len(client.created_payloads) == 3
 
 
@@ -584,3 +616,65 @@ def test_infra_preflight_allows_degraded_observability_when_core_is_healthy() ->
     assert preflight["history"][0]["runtime_ok"] is False
     assert preflight["history"][0]["health_ok"] is True
     assert preflight["history"][0]["gates_ok"] is True
+
+
+def test_run_cycle_caps_review_direction_below_agent_task_limit() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        stage_output_overrides={
+            1: "PLAN-" + ("A" * 4000),
+            2: "EXEC-" + ("B" * 4000),
+        },
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_direction_cap.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+    review_payload = client.created_payloads[2]
+    assert review_payload["task_type"] == "review"
+    assert len(review_payload["direction"]) <= run_self_improve_cycle.AGENT_TASK_DIRECTION_SAFE_CHARS
+    assert "Original plan:" in review_payload["direction"]
+    assert "Execution output:" in review_payload["direction"]
+
+
+def test_run_cycle_recovers_from_422_with_compacted_direction_retry() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        stage_output_overrides={
+            1: "PLAN-" + ("A" * 4000),
+            2: "EXEC-" + ("B" * 4000),
+        },
+        # plan success, execute success, review submit 422, review submit retry success
+        task_post_status_plan=[201, 201, 422, 201],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_review_422_retry.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+    # Four submit attempts total with one failed review submit.
+    assert len(client.submitted_payloads) == 4
+    failed_review_submit = client.submitted_payloads[2]
+    retried_review_submit = client.submitted_payloads[3]
+    assert failed_review_submit["task_type"] == "review"
+    assert retried_review_submit["task_type"] == "review"
+    assert len(retried_review_submit["direction"]) <= len(failed_review_submit["direction"])

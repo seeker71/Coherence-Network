@@ -1,0 +1,61 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/minimal-self-improve-unblock",
+  "commit_scope": "Prevent self-improve workflow hang amplification by adding per-attempt wall timeout and configurable stage timeout/max-attempt controls in CI workflow so runs terminate deterministically and keep producing validation artifacts.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-workflow-wall-timeout.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-23-self-improve-workflow-wall-timeout"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-workflow-wall-timeout.json",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22318854247"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-23_self-improve-workflow-wall-timeout.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting new workflow run proof that the cycle exits deterministically with artifact output under timeout pressure."
+  }
+}
