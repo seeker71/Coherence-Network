@@ -213,6 +213,19 @@ def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
     assert "--model gpt-5.3-codex" not in remapped
 
 
+def test_apply_codex_model_alias_enforces_mandatory_remap_over_env_override(monkeypatch):
+    monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5.3-codex")
+    remapped, alias = agent_runner._apply_codex_model_alias(
+        'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
+    )
+    assert alias == {
+        "requested_model": "gpt-5.3-codex",
+        "effective_model": "gpt-5-codex",
+    }
+    assert "--model gpt-5-codex" in remapped
+    assert "--model gpt-5.3-codex" not in remapped
+
+
 def test_apply_codex_model_alias_supports_gtp_typo_default_map():
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model gtp-5.3-codex "Output exactly MODEL_OK."'
@@ -284,6 +297,7 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
     monkeypatch.delenv("AGENT_CODEX_MODEL_ALIAS_MAP", raising=False)
     monkeypatch.delenv("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", raising=False)
     # Force model-not-found path to exercise retry fallback logic (bypass default alias remap).
+    monkeypatch.setattr(agent_runner, "MANDATORY_CODEX_MODEL_ALIAS_MAP", {})
     monkeypatch.setattr(agent_runner, "_codex_model_alias_map", lambda: {})
 
     def _popen(*args, **kwargs):
