@@ -15,6 +15,7 @@ async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
@@ -81,6 +82,8 @@ async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
         payload = visibility.json()
 
         assert payload["pipeline"]["recent_completed_count"] == 2
+        assert payload["proof"]["all_pass"] is True
+        assert payload["proof"]["areas"]
         assert payload["usage"]["execution"]["tracked_runs"] == 3
         assert payload["usage"]["execution"]["success_rate"] == 1.0
         assert payload["usage"]["execution"]["codex_runs"] == 2
@@ -101,6 +104,7 @@ async def test_agent_visibility_reports_green_when_all_completed_tasks_are_track
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
@@ -151,6 +155,7 @@ async def test_agent_visibility_reports_green_when_all_completed_tasks_are_track
         assert payload["remaining_usage"]["remaining_to_full_coverage"] == 0
         assert payload["remaining_usage"]["health"] == "green"
         assert payload["usage"]["execution"]["by_tool"]["agent-task-completion"]["count"] == 1
+        assert payload["proof"]["all_pass"] is True
 
 
 @pytest.mark.asyncio
@@ -161,6 +166,7 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
@@ -229,3 +235,4 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
         assert execution["by_tool"]["pytest"]["count"] == 1
         assert execution["by_tool"]["pytest"]["failed"] == 1
         assert execution["by_tool"]["pytest"]["success_rate"] == 0.0
+        assert payload["proof"]["all_pass"] is True
