@@ -225,6 +225,17 @@ class RouteResponse(BaseModel):
     is_paid_provider: Optional[bool] = None
 
 
+class NormalizedResponseCall(BaseModel):
+    """Provider-agnostic Open Responses-compatible task call envelope."""
+
+    task_id: str
+    executor: str
+    provider: str
+    model: str
+    request_schema: str = "open_responses_v1"
+    input: List[Dict[str, Any]]
+
+
 class AgentRunStateClaim(BaseModel):
     task_id: str = Field(..., min_length=1, max_length=200)
     run_id: str = Field(..., min_length=1, max_length=200)

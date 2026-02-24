@@ -146,6 +146,9 @@ async def test_completed_agent_tasks_emit_repeatable_completion_tool_calls(
         assert metadata["repeatable_tool_call_sha256"]
         assert metadata["task_final_status"] == "completed"
         assert metadata["provider"] == "openai-codex"
+        assert metadata["request_schema"] == "open_responses_v1"
+        assert metadata["normalized_model"]
+        assert metadata["normalized_provider"]
 
 
 @pytest.mark.asyncio
