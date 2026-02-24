@@ -30,6 +30,8 @@
     "api/tests/test_agent_integration_api.py"
   ],
   "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/app/services/agent_service.py",
     "api/tests/test_agent_integration_api.py",
     "docs/system_audit/commit_evidence_2026-02-24_langgraph-stateschema-adoption.json"
