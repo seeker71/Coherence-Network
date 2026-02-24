@@ -58,9 +58,10 @@
     "custom markdown link scan over docs/**/*.md and specs/**/*.md with TOTAL_MISSING=0"
   ],
   "change_files": [
-    "docs/system_audit/docs_hygiene_report_2026-02-24.md"
+    "docs/system_audit/docs_hygiene_report_2026-02-24.md",
+    "api/scripts/agent_runner.py"
   ],
-  "change_intent": "docs_only",
+  "change_intent": "process_only",
   "e2e_validation": {
     "status": "pass",
     "expected_behavior_delta": "Pass-3 docs hygiene status is documented with a repeatable start-gate self-unblock method that does not dirty tracked files.",
