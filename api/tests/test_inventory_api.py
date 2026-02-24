@@ -513,6 +513,49 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
 
 
 @pytest.mark.asyncio
+async def test_flow_endpoint_forwards_list_item_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeStore:
+        def list_contributors(self, limit: int = 0) -> list[object]:
+            return []
+
+        def list_contributions(self, limit: int = 0) -> list[object]:
+            return []
+
+        def list_assets(self, limit: int = 0) -> list[object]:
+            return []
+
+    def _fake_build_spec_process_implementation_validation_flow(**kwargs):
+        captured.update(kwargs)
+        return {
+            "generated_at": "2026-02-24T00:00:00+00:00",
+            "runtime_window_seconds": int(kwargs.get("runtime_window_seconds") or 0),
+            "filter": {"idea_id": kwargs.get("idea_id")},
+            "summary": {"ideas": 0},
+            "unblock_queue": [],
+            "items": [],
+        }
+
+    monkeypatch.setattr(app.state, "graph_store", _FakeStore())
+    monkeypatch.setattr(
+        inventory_service,
+        "build_spec_process_implementation_validation_flow",
+        _fake_build_spec_process_implementation_validation_flow,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/inventory/flow", params={"list_item_limit": 7})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["summary"]["ideas"] == 0
+
+    assert int(captured.get("list_item_limit") or 0) == 7
+
+
+@pytest.mark.asyncio
 async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -524,6 +524,73 @@ async def test_automation_usage_alerts_raise_on_low_remaining_ratio(
 
 
 @pytest.mark.asyncio
+async def test_automation_usage_endpoint_compact_mode_trims_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    metrics = [
+        UsageMetric(
+            id=f"metric_{idx}",
+            label=f"Metric {idx}",
+            unit="requests",
+            used=float(idx),
+            remaining=100.0 - float(idx),
+            limit=100.0,
+            window="daily",
+            validation_detail="x" * 320,
+        )
+        for idx in range(30)
+    ]
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_dbhost_compact_test",
+                provider="db-host",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=metrics,
+                notes=["note " + ("n" * 220)] * 8,
+                official_records=[f"https://example.com/doc/{idx}" for idx in range(8)],
+                raw={
+                    "database_host": "db.internal",
+                    "database_name": "coherence",
+                    "database_engine": "postgres",
+                    "monthly_limit_gb": 5.0,
+                    "extra_large_blob": "y" * 1000,
+                },
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={"providers_considered": 1},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        compact = await client.get("/api/automation/usage", params={"compact": True, "include_raw": False})
+        assert compact.status_code == 200
+        compact_payload = compact.json()
+        compact_provider = compact_payload["providers"][0]
+        assert len(compact_provider["metrics"]) == 16
+        assert all(len(str(row.get("validation_detail") or "")) <= 200 for row in compact_provider["metrics"])
+        assert len(compact_provider["notes"]) == 4
+        assert all(len(note) <= 180 for note in compact_provider["notes"])
+        assert len(compact_provider["official_records"]) == 4
+        assert compact_provider["raw"] == {}
+
+        compact_with_raw = await client.get("/api/automation/usage", params={"compact": True, "include_raw": True})
+        assert compact_with_raw.status_code == 200
+        raw_payload = compact_with_raw.json()
+        raw_provider = raw_payload["providers"][0]
+        assert "database_host" in raw_provider["raw"]
+        assert "extra_large_blob" not in raw_provider["raw"]
+
+
+@pytest.mark.asyncio
 async def test_automation_usage_snapshots_endpoint_returns_persisted_rows(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

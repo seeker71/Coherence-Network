@@ -10,8 +10,17 @@ router = APIRouter()
 
 
 @router.get("/automation/usage")
-async def get_automation_usage(force_refresh: bool = Query(False)) -> dict:
+async def get_automation_usage(
+    force_refresh: bool = Query(False),
+    compact: bool = Query(False, description="Return a trimmed payload for lower-bandwidth clients"),
+    include_raw: bool = Query(False, description="Include provider raw payload in compact mode"),
+) -> dict:
     overview = automation_usage_service.collect_usage_overview(force_refresh=force_refresh)
+    if compact:
+        return automation_usage_service.compact_usage_overview_payload(
+            overview,
+            include_raw=include_raw,
+        )
     return overview.model_dump(mode="json")
 
 
