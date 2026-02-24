@@ -243,9 +243,10 @@ _last_idle_task_generation_ts = 0.0
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "openrouter/free:gpt-5-codex,"
-    "gpt-5.3-codex-spark:gpt-5.3-codex,"
-    "gtp-5.3-codex-spark:gpt-5.3-codex,"
-    "gtp-5.3-codex:gpt-5.3-codex"
+    "gpt-5.3-codex:gpt-5-codex,"
+    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gtp-5.3-codex:gpt-5-codex,"
+    "gtp-5.3-codex-spark:gpt-5-codex"
 )
 DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
