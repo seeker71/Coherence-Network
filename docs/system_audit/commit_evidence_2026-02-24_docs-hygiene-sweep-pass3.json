@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/docs-hygiene-sweep-20260223-pass2",
+  "commit_scope": "Continue docs hygiene sweep after merge, capture pass-3 findings, and document start-gate self-unblock method.",
+  "files_owned": [
+    "docs/system_audit/docs_hygiene_report_2026-02-24.md",
+    "docs/system_audit/commit_evidence_2026-02-24_docs-hygiene-sweep-pass3.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "docs-hygiene-sweep"
+  ],
+  "spec_ids": [
+    "002"
+  ],
+  "task_ids": [
+    "docs-link-hygiene",
+    "docs-fragmentation-audit"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "git fetch origin main && git rebase origin/main",
+    "START_GATE_MAIN_FAILURE_WAIVERS_FILE=/tmp/start_gate_waivers_docs_hygiene_20260224.json make start-gate",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build",
+    "custom markdown link scan over docs/**/*.md and specs/**/*.md with TOTAL_MISSING=0"
+  ],
+  "change_files": [
+    "docs/system_audit/docs_hygiene_report_2026-02-24.md",
+    "api/scripts/agent_runner.py"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Pass-3 docs hygiene status is documented with a repeatable start-gate self-unblock method that does not dirty tracked files.",
+    "public_endpoints": [],
+    "test_flows": [
+      "run markdown link integrity scan over docs and specs (TOTAL_MISSING=0)",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+    ]
+  }
+}

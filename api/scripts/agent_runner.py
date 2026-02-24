@@ -2757,27 +2757,29 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
         except OSError:
             continue
 
-    codex_binary = shutil.which("codex")
-    if codex_binary:
-        status_commands = (
-            (["codex", "login", "status"], "codex_login_status"),
-            (["codex", "auth", "status"], "codex_auth_status"),
-        )
-        for argv, source in status_commands:
-            try:
-                completed = subprocess.run(
-                    argv,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=False,
-                    text=True,
-                    timeout=8,
-                    env=env,
-                )
-                if completed.returncode == 0:
-                    return True, source
-            except Exception:
-                continue
+    status_commands = (
+        (["codex", "login", "status"], "codex_login_status"),
+        (["codex", "auth", "status"], "codex_auth_status"),
+    )
+    success_markers = ("logged in", "authenticated", "api key", "oauth")
+    for argv, source in status_commands:
+        try:
+            completed = subprocess.run(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=8,
+                env=env,
+            )
+        except Exception:
+            continue
+        if completed.returncode != 0:
+            continue
+        output = f"{completed.stdout or ''}\n{completed.stderr or ''}".lower()
+        if any(marker in output for marker in success_markers):
+            return True, source
 
     if candidates:
         return False, f"missing_session_file:{candidates[0]}"
