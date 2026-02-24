@@ -1,0 +1,60 @@
+{
+  "date": "2026-02-24",
+  "thread_branch": "codex/n8n-premerge-guard-integration",
+  "commit_scope": "Scope PR failure triage to the active PR branch so Thread Gates no longer fail due unrelated open codex PRs.",
+  "files_owned": [
+    "scripts/pr_check_failure_triage.py",
+    ".github/workflows/thread-gates.yml",
+    "api/tests/test_pr_check_failure_triage.py"
+  ],
+  "idea_ids": [
+    "coherence-network-overall"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api"
+  ],
+  "task_ids": [
+    "task-2026-02-24-thread-gates-pr-scope"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_pr_check_failure_triage.py"
+  ],
+  "change_files": [
+    "scripts/pr_check_failure_triage.py",
+    ".github/workflows/thread-gates.yml",
+    "api/tests/test_pr_check_failure_triage.py",
+    "docs/system_audit/commit_evidence_2026-02-24_pr-triage-head-ref-scope.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_pr_check_failure_triage.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and deploy verification."
+  }
+}
