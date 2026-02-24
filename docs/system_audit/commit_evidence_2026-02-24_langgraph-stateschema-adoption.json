@@ -34,13 +34,14 @@
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
     "api/app/services/agent_service.py",
     "api/tests/test_agent_integration_api.py",
+    "config/start_gate_workflow_owners.json",
     "docs/system_audit/commit_evidence_2026-02-24_langgraph-stateschema-adoption.json"
   ],
   "change_intent": "runtime_feature",
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -v tests/test_agent_integration_api.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py",
+      "cd api && pytest -v tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_api_key_login tests/test_agent_integration_api.py tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ]
