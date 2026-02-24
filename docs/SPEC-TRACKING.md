@@ -74,6 +74,28 @@ cd web && npm run build      # 11 routes
 
 Run `pytest -v` and `npm run build` to verify before updating this doc.
 
+## Duplicate Prefix Canonicalization
+
+The duplicate numeric prefixes are now managed by explicit canonical mapping:
+
+- Mapping file: `config/spec_prefix_canonical_map.json`
+- Validator: `python3 scripts/validate_spec_prefix_canonicalization.py`
+
+| Prefix | Canonical Spec | Alias Spec |
+|------|-----------------|------------|
+| 005 | `005-project-manager-pipeline.md` | `005-backlog.md` |
+| 007 | `007-meta-pipeline-backlog.md` | `007-sprint-0-landing.md` |
+| 026 | `026-pipeline-observability-and-auto-review.md` | `026-phase-1-task-metrics.md` |
+| 027 | `027-fully-automated-pipeline.md` | `027-auto-update-framework.md` |
+| 030 | `030-pipeline-full-automation.md` | `030-spec-coverage-update.md` |
+| 048 | `048-value-lineage-and-payout-attribution.md` | `048-contributions-api.md` |
+| 049 | `049-distribution-engine.md` | `049-system-lineage-inventory-and-runtime-telemetry.md` |
+| 050 | `050-friction-analysis.md` | `050-canonical-route-registry-and-runtime-mapping.md` |
+| 051 | `051-release-gates.md` | `051-question-answering-and-minimum-e2e-flow.md` |
+| 052 | `052-assets-api.md` | `052-portfolio-cockpit-ui.md` |
+| 053 | `053-ideas-prioritization.md` | `053-standing-questions-roi-and-next-task-generation.md` |
+| 054 | `054-commit-provenance-contract-gate.md` | `054-postgresql-migration.md` |
+
 ## Queued ROI Specs (Not Implemented Yet)
 
 - `095` — `specs/095-openclaw-repo-context-index-foundation.md`
