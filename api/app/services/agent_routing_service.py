@@ -259,6 +259,41 @@ def apply_model_override(command: str, override: str) -> tuple[str, str]:
     return command.rstrip() + f" --model {cleaned}", cleaned
 
 
+def normalize_open_responses_model(model: str) -> str:
+    cleaned = str(model or "").strip()
+    if "/" in cleaned:
+        prefix, _, suffix = cleaned.partition("/")
+        if prefix in {"openclaw", "clawwork", "cursor"} and suffix.strip():
+            return suffix.strip()
+    return cleaned
+
+
+def build_normalized_response_call(
+    *,
+    task_id: str,
+    executor: str,
+    provider: str,
+    model: str,
+    direction: str,
+) -> dict[str, Any]:
+    """Build a provider-agnostic Open Responses-compatible request envelope."""
+    normalized_model = normalize_open_responses_model(model)
+    prompt = str(direction or "").strip()
+    return {
+        "task_id": str(task_id or "").strip(),
+        "executor": normalize_executor(executor, default="claude"),
+        "provider": str(provider or "").strip().lower() or "unknown",
+        "model": normalized_model,
+        "request_schema": "open_responses_v1",
+        "input": [
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": prompt}],
+            }
+        ],
+    }
+
+
 def classify_provider(*, executor: str, model: str, command: str, worker_id: str | None) -> tuple[str, str, bool]:
     normalized_executor = normalize_executor(executor, default=(executor or "").strip().lower())
     lower_model = (model or "").strip().lower()

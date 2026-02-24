@@ -778,6 +778,31 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     )
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
+    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route_decision = (
+        task_context.get("route_decision")
+        if isinstance(task_context.get("route_decision"), dict)
+        else {}
+    )
+    normalized_response_call = (
+        task_context.get("normalized_response_call")
+        if isinstance(task_context.get("normalized_response_call"), dict)
+        else {}
+    )
+    request_schema = str(
+        route_decision.get("request_schema")
+        or normalized_response_call.get("request_schema")
+        or "open_responses_v1"
+    ).strip()
+    normalized_model = str(
+        normalized_response_call.get("model")
+        or routing_service.normalize_open_responses_model(str(task.get("model") or ""))
+    ).strip()
+    normalized_provider = str(
+        normalized_response_call.get("provider")
+        or route_decision.get("provider")
+        or provider
+    ).strip()
 
     try:
         from app.services import runtime_service
@@ -805,6 +830,9 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                     "is_paid_provider": is_paid_provider,
                     "is_openai_codex": worker_id == "openai-codex"
                     or worker_id.startswith("openai-codex:"),
+                    "request_schema": request_schema,
+                    "normalized_model": normalized_model,
+                    "normalized_provider": normalized_provider,
                     "tracking_kind": "agent_task_completion",
                     "repeatable_tool_name": "agent_task_completion",
                     "repeatable_tool_call": command or "PATCH /api/agent/tasks/{task_id}",
@@ -881,7 +909,7 @@ def _resolve_task_route(
     ctx: dict[str, Any],
     primary_agent: str | None,
     guard_agents: list[str],
-) -> tuple[str, str, str, dict[str, Any]]:
+) -> tuple[str, str, str, dict[str, Any], dict[str, Any]]:
     route_info = routing_service.route_for_executor(
         data.task_type,
         executor,
@@ -894,6 +922,7 @@ def _resolve_task_route(
         if isinstance(data.context, dict)
         else None
     )
+    normalized_direction = data.direction
     if not command:
         direction = _with_agent_roles(
             data.direction,
@@ -901,6 +930,7 @@ def _resolve_task_route(
             primary_agent=primary_agent,
             guard_agents=guard_agents,
         )
+        normalized_direction = direction
         command = _build_command(direction, data.task_type, executor=executor)
         if ctx.get("model_override"):
             override = str(ctx["model_override"]).strip()
@@ -928,9 +958,17 @@ def _resolve_task_route(
         "provider": provider,
         "billing_provider": billing_provider,
         "is_paid_provider": is_paid_provider,
+        "request_schema": "open_responses_v1",
         "policy": policy_meta,
     }
-    return model, tier, str(command), route_decision
+    normalized_response_call = routing_service.build_normalized_response_call(
+        task_id="",
+        executor=executor,
+        provider=provider,
+        model=model,
+        direction=normalized_direction,
+    )
+    return model, tier, str(command), route_decision, normalized_response_call
 
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
@@ -967,7 +1005,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if guard_agents:
         ctx["guard_agents"] = list(guard_agents)
 
-    model, tier, command, route_decision = _resolve_task_route(
+    model, tier, command, route_decision, normalized_response_call = _resolve_task_route(
         data=data,
         executor=executor,
         policy_meta=policy_meta,
@@ -975,7 +1013,9 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         primary_agent=primary_agent,
         guard_agents=guard_agents,
     )
+    normalized_response_call["task_id"] = task_id
     ctx["route_decision"] = route_decision
+    ctx["normalized_response_call"] = normalized_response_call
     now = _now()
     task = {
         "id": task_id,
