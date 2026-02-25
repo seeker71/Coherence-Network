@@ -66,6 +66,30 @@ def _load_workflow_owners(path: Path) -> dict[str, str]:
     return out
 
 
+def _extract_declared_workflow_names(workflows_dir: Path) -> list[str]:
+    if not workflows_dir.exists() or not workflows_dir.is_dir():
+        return []
+    names: list[str] = []
+    for path in sorted(workflows_dir.glob("*.y*ml")):
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        match = re.search(r"(?m)^name:\s*(.+?)\s*$", content)
+        if not match:
+            continue
+        raw_name = str(match.group(1) or "").strip()
+        if (
+            len(raw_name) >= 2
+            and raw_name[0] == raw_name[-1]
+            and raw_name[0] in {"'", '"'}
+        ):
+            raw_name = raw_name[1:-1].strip()
+        if raw_name:
+            names.append(raw_name)
+    return names
+
+
 def _load_active_waivers(path: Path, now: datetime) -> tuple[dict[str, list[dict]], list[str]]:
     payload = _load_json_file(path)
     if payload is None:
@@ -175,8 +199,22 @@ def main() -> None:
         )
     )
     require_workflow_owner = env_flag("START_GATE_REQUIRE_WORKFLOW_OWNER", default=True)
+    require_declared_workflow_owners = env_flag(
+        "START_GATE_REQUIRE_DECLARED_WORKFLOW_OWNERS", default=True
+    )
     now = datetime.now(timezone.utc)
     workflow_owners = _load_workflow_owners(owners_file)
+    if require_declared_workflow_owners:
+        declared_workflow_names = _extract_declared_workflow_names(Path(".github/workflows"))
+        missing_declared_owner = [
+            name for name in declared_workflow_names if name.strip().lower() not in workflow_owners
+        ]
+        if missing_declared_owner:
+            missing_text = ", ".join(sorted(set(missing_declared_owner)))
+            raise SystemExit(
+                "start-gate: missing owner mappings for declared workflows: "
+                f"{missing_text}. Update {owners_file}."
+            )
     active_waivers, waiver_warnings = _load_active_waivers(waivers_file, now)
     for warning in waiver_warnings:
         print(warning)
