@@ -12,6 +12,57 @@ CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
+VERIFY_RETRY_ATTEMPTS="${VERIFY_RETRY_ATTEMPTS:-3}"
+VERIFY_RETRY_DELAY_SEC="${VERIFY_RETRY_DELAY_SEC:-4}"
+
+should_retry_status() {
+  local status="${1:-}"
+  case "$status" in
+    408|425|429|500|502|503|504|522|524)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+retry_sleep() {
+  local attempt="$1"
+  local delay=$(( VERIFY_RETRY_DELAY_SEC * attempt ))
+  sleep "$delay"
+}
+
+request_with_retry() {
+  local headers_file="$1"
+  local body_file="$2"
+  shift 2
+
+  local attempt=1
+  while true; do
+    if curl -sS -L -D "$headers_file" -o "$body_file" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$@" >/dev/null; then
+      local status
+      status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
+      if [[ "$attempt" -lt "$VERIFY_RETRY_ATTEMPTS" ]] && should_retry_status "$status"; then
+        echo "WARN: transient HTTP ${status:-unknown}; retrying (${attempt}/${VERIFY_RETRY_ATTEMPTS})..."
+        retry_sleep "$attempt"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      return 0
+    fi
+
+    if [[ "$attempt" -ge "$VERIFY_RETRY_ATTEMPTS" ]]; then
+      return 1
+    fi
+    echo "WARN: request error; retrying (${attempt}/${VERIFY_RETRY_ATTEMPTS})..."
+    retry_sleep "$attempt"
+    attempt=$((attempt + 1))
+  done
+}
 
 check_url() {
   local name="$1"
@@ -24,10 +75,7 @@ check_url() {
   echo
   echo "==> ${name}: ${url}"
 
-  if ! curl -sS -L -D "$headers_file" -o "$body_file" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$url" >/dev/null; then
+  if ! request_with_retry "$headers_file" "$body_file" "$url"; then
     echo "FAIL: request error"
     sed -n '1,12p' "$headers_file" 2>/dev/null || true
     return 1
@@ -70,10 +118,7 @@ check_cors() {
   echo
   echo "==> CORS check: ${api_health_url} with Origin ${web_origin}"
 
-  if ! curl -sS -D "$headers_file" -o /dev/null \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    -H "Origin: ${web_origin}" "$api_health_url" >/dev/null; then
+  if ! request_with_retry "$headers_file" /dev/null -H "Origin: ${web_origin}" "$api_health_url"; then
     echo "FAIL: request error"
     return 1
   fi
@@ -96,15 +141,17 @@ check_cors() {
 
 check_persistence_contract() {
   local url="$1"
+  local headers_file="$TMP_DIR/persistence_contract.headers.txt"
   local body_file="$TMP_DIR/persistence_contract.body.json"
   local status
 
   echo
   echo "==> Persistence contract: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$url" || true)"
+  if ! request_with_retry "$headers_file" "$body_file" "$url"; then
+    status=""
+  else
+    status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
+  fi
   echo "HTTP status: ${status:-unknown}"
   if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
     echo "FAIL: persistence contract endpoint unavailable"
@@ -139,15 +186,17 @@ check_persistence_contract() {
 
 check_telegram_alert_config() {
   local url="$1"
+  local headers_file="$TMP_DIR/telegram_diagnostics.headers.txt"
   local body_file="$TMP_DIR/telegram_diagnostics.body.json"
   local status
 
   echo
   echo "==> Telegram alert diagnostics: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$url" || true)"
+  if ! request_with_retry "$headers_file" "$body_file" "$url"; then
+    status=""
+  else
+    status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
+  fi
   echo "HTTP status: ${status:-unknown}"
   if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
     echo "FAIL: diagnostics endpoint unavailable"

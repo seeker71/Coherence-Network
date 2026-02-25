@@ -30,7 +30,7 @@ Spec → Test → Implement → CI → Review → Merge
      - Owner mappings for blocking workflows must exist in `config/start_gate_workflow_owners.json`.
      - Waivers are short-lived and must be removed after root-cause repair.
 3. Pre-commit local gate (required)
-   - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
+   - Run: `./scripts/fetch_origin_main.sh && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
    - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
    - If either fails, do not commit.
@@ -142,7 +142,7 @@ Spec → Test → Implement → CI → Review → Merge
 make start-gate
 
 # Worktree setup for Codex thread start
-git fetch origin main
+./scripts/fetch_origin_main.sh
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 make start-gate

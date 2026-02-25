@@ -29,7 +29,7 @@ Non-negotiable:
 Minimum startup sequence:
 
 ```bash
-git fetch origin main
+./scripts/fetch_origin_main.sh
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main

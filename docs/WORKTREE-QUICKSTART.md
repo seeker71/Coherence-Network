@@ -14,7 +14,7 @@ Purpose: remove repeated setup mistakes by making every Codex/Claude thread foll
 From primary workspace:
 
 ```bash
-git fetch origin main
+./scripts/fetch_origin_main.sh
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 ```
 
@@ -50,7 +50,7 @@ make install-pre-push-hook
 Always rebase to latest main first:
 
 ```bash
-git fetch origin main
+./scripts/fetch_origin_main.sh
 git rebase origin/main
 ```
 
