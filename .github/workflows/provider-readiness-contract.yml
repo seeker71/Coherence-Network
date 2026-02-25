@@ -24,6 +24,7 @@ jobs:
       GITHUB_BILLING_SCOPE: ${{ vars.GITHUB_BILLING_SCOPE }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
       CURSOR_CLI_MODEL: ${{ vars.CURSOR_CLI_MODEL }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -40,6 +41,14 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Set up Node.js (for Claude Code CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Install API dependencies
         run: |
           cd api && pip install -e ".[dev]"
@@ -53,7 +62,7 @@ jobs:
           if [ -z "${REQUIRED// /}" ]; then
             # Keep the contract meaningful even when repo variables are unset.
             # Default to providers that are expected to be configured in CI.
-            REQUIRED="coherence-internal,railway"
+            REQUIRED="coherence-internal,github,railway,claude-code"
           fi
           python scripts/check_provider_readiness.py \
             --required-providers "$REQUIRED" \
