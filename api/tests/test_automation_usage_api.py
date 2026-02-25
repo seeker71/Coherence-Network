@@ -226,6 +226,121 @@ def test_provider_limit_guard_decision_blocks_low_monthly_remaining(
     assert decision["blocked_metrics"][0]["remaining_ratio"] == pytest.approx(0.04, rel=1e-6)
 
 
+def test_limit_coverage_summary_marks_required_provider_without_validated_remaining(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    providers = [
+        ProviderUsageSnapshot(
+            id="provider_openrouter_limit_gap",
+            provider="openrouter",
+            kind="custom",
+            status="ok",
+            data_source="provider_api",
+            metrics=[
+                UsageMetric(
+                    id="requests_quota",
+                    label="OpenRouter request quota",
+                    unit="requests",
+                    used=40.0,
+                    remaining=60.0,
+                    limit=100.0,
+                    window="daily",
+                    validation_state="derived",
+                    evidence_source="runtime_events+env_limits",
+                )
+            ],
+        ),
+        ProviderUsageSnapshot(
+            id="provider_openai_hard_ready",
+            provider="openai",
+            kind="openai",
+            status="ok",
+            data_source="provider_api",
+            metrics=[
+                UsageMetric(
+                    id="requests_quota",
+                    label="OpenAI request quota",
+                    unit="requests",
+                    used=10.0,
+                    remaining=90.0,
+                    limit=100.0,
+                    window="minute",
+                    validation_state="validated",
+                    evidence_source="provider_rate_limit_headers",
+                )
+            ],
+        ),
+    ]
+    monkeypatch.setattr(automation_usage_service, "_required_providers_from_env", lambda: ["openrouter"])
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openrouter": 2})
+
+    summary = automation_usage_service._limit_coverage_summary(
+        providers,
+        required_providers=["openrouter"],
+        active_usage_counts={"openrouter": 2},
+    )
+
+    assert summary["providers_with_validated_remaining_metrics"] == 1
+    assert summary["hard_limit_claim_ready"] is False
+    assert "openrouter" in summary["required_or_active_missing_hard_limit_telemetry"]
+    status = summary["required_or_active_provider_status"]["openrouter"]
+    assert status["required"] is True
+    assert status["state"] == "derived_or_unvalidated"
+    assert status["has_validated_remaining"] is False
+
+
+def test_provider_readiness_can_block_on_limit_telemetry_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openrouter_limit_gap",
+                provider="openrouter",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="requests_quota",
+                        label="OpenRouter request quota",
+                        unit="requests",
+                        used=80.0,
+                        remaining=20.0,
+                        limit=100.0,
+                        window="daily",
+                        validation_state="derived",
+                        evidence_source="runtime_events+env_limits",
+                    )
+                ],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", "1")
+    monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openrouter": 1})
+
+    report = automation_usage_service.provider_readiness_report(
+        required_providers=["openrouter"],
+        force_refresh=False,
+    )
+
+    assert report.all_required_ready is False
+    assert "openrouter: limit_telemetry_state=derived_or_unvalidated" in report.blocking_issues
+    assert "openrouter" in report.limit_telemetry["required_or_active_missing_hard_limit_telemetry"]
+    provider_row = next(row for row in report.providers if row.provider == "openrouter")
+    assert "limit_telemetry_state=derived_or_unvalidated" in provider_row.notes
+
+
 def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -573,6 +573,59 @@ def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
     assert len(client.created_payloads) == 2
 
 
+def test_run_cycle_reuses_inflight_plan_task_before_submitting_new_plan() -> None:
+    client = _FakeClient(usage_payload=_default_usage_payload())
+    client.created_payloads.append(
+        {
+            "task_type": "spec",
+            "direction": "existing plan direction",
+            "context": {
+                "executor": "codex",
+                "source": "self_improve_cycle",
+                "model_override": "gpt-5.3-codex",
+            },
+        }
+    )
+    client._task_order.append("task-1")
+    client._task_counter = 1
+    client.tasks_payload = {
+        "tasks": [
+            {
+                "id": "task-1",
+                "task_type": "spec",
+                "status": "running",
+                "model": "gpt-5.3-codex",
+                "context": {
+                    "executor": "codex",
+                    "source": "self_improve_cycle",
+                    "model_override": "gpt-5.3-codex",
+                },
+                "output": "",
+                "updated_at": "2099-01-01T00:00:00+00:00",
+            }
+        ]
+    }
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_inflight_resume.json",
+    )
+
+    assert report["status"] == "completed"
+    assert report["stages"][0]["stage"] == "plan"
+    assert report["stages"][0]["task_id"] == "task-1"
+    assert report["stages"][0]["resumed"] is True
+    assert report["stages"][0]["resume_source"] == "recent_tasks"
+    # Existing inflight plan is reused; only execute + review are newly submitted.
+    assert len(client.submitted_payloads) == 2
+
+
 def test_run_cycle_tolerates_execute_forbidden_when_pending() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
