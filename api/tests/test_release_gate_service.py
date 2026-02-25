@@ -332,6 +332,7 @@ def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     assert "railway_web_health_proxy" in check_names
     assert "railway_value_lineage_e2e" in check_names
     assert "railway_api_execute_paid_override_header" in check_names
+    assert "railway_provider_readiness" in check_names
     assert out["result"] in {"public_contract_passed", "blocked"}
     assert isinstance(out.get("failing_checks"), list)
     assert isinstance(out.get("warnings"), list)
@@ -541,6 +542,157 @@ def test_public_deploy_contract_can_require_telegram_config(monkeypatch) -> None
 
     assert report["result"] == "blocked"
     assert report.get("failing_checks", []) == ["railway_telegram_alert_config"]
+
+
+def test_public_deploy_contract_warns_when_provider_readiness_blocked_if_not_required(monkeypatch) -> None:
+    expected_sha = "p" * 40
+    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", raising=False)
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
+        del timeout
+        if url.endswith("/api/health"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": expected_sha}}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": expected_sha}},
+            }
+        if url.endswith("/api/agent/telegram/diagnostics"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"config": {"has_token": True, "chat_ids": ["123"]}},
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {"parameters": [{"name": "X-Force-Paid-Providers", "in": "header"}]}
+                        }
+                    }
+                },
+            }
+        if url.endswith("/api/automation/usage/readiness"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "all_required_ready": False,
+                    "blocking_issues": ["openai: status=degraded, configured=True"],
+                },
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "public_contract_passed"
+    assert "railway_provider_readiness_blocked" in report.get("warnings", [])
+    assert "railway_provider_readiness" not in report.get("failing_checks", [])
+
+
+def test_public_deploy_contract_blocks_when_provider_readiness_required(monkeypatch) -> None:
+    expected_sha = "q" * 40
+    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", "1")
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
+        del timeout
+        if url.endswith("/api/health"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+        if url.endswith("/api/gates/main-head"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"sha": expected_sha}}
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"api": {"status": "ok"}, "web": {"updated_at": expected_sha}},
+            }
+        if url.endswith("/api/agent/telegram/diagnostics"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"config": {"has_token": True, "chat_ids": ["123"]}},
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {"parameters": [{"name": "X-Force-Paid-Providers", "in": "header"}]}
+                        }
+                    }
+                },
+            }
+        if url.endswith("/api/automation/usage/readiness"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "all_required_ready": False,
+                    "blocking_issues": ["openai: status=degraded, configured=True"],
+                },
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "blocked"
+    assert report.get("failing_checks", []) == ["railway_provider_readiness"]
 
 
 def test_public_deploy_verification_jobs_complete_when_contract_passes(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2768,30 +2768,126 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
     return providers
 
 
-def _limit_coverage_summary(providers: list[ProviderUsageSnapshot]) -> dict[str, Any]:
-    candidates = [p for p in providers if p.provider != "coherence-internal"]
-    with_limit = []
-    with_remaining = []
-    missing = []
-    partial = []
+def _provider_limit_telemetry_state(snapshot: ProviderUsageSnapshot) -> dict[str, Any]:
+    quota_metrics = [metric for metric in snapshot.metrics if metric.limit is not None and metric.limit > 0]
+    with_remaining = [metric for metric in quota_metrics if metric.remaining is not None]
+    validated_with_remaining = [
+        metric
+        for metric in with_remaining
+        if str(metric.validation_state or "").strip().lower() == "validated"
+    ]
+    validated_quota = [
+        metric
+        for metric in quota_metrics
+        if str(metric.validation_state or "").strip().lower() == "validated"
+    ]
+
+    if not quota_metrics:
+        state = "missing_limits"
+    elif not with_remaining:
+        state = "missing_remaining"
+    elif validated_with_remaining:
+        state = "hard_limit_ready"
+    else:
+        state = "derived_or_unvalidated"
+
+    return {
+        "state": state,
+        "has_limit_metrics": bool(quota_metrics),
+        "has_remaining_metrics": bool(with_remaining),
+        "has_validated_quota": bool(validated_quota),
+        "has_validated_remaining": bool(validated_with_remaining),
+        "quota_metric_ids": sorted({metric.id for metric in quota_metrics}),
+        "evidence_sources": sorted(
+            {
+                str(metric.evidence_source).strip()
+                for metric in quota_metrics
+                if str(metric.evidence_source or "").strip()
+            }
+        ),
+    }
+
+
+def _limit_coverage_summary(
+    providers: list[ProviderUsageSnapshot],
+    *,
+    required_providers: list[str] | None = None,
+    active_usage_counts: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    candidates = [p for p in providers if _normalize_provider_name(p.provider) != "coherence-internal"]
+    with_limit: list[str] = []
+    with_remaining: list[str] = []
+    with_validated_remaining: list[str] = []
+    missing: list[str] = []
+    partial: list[str] = []
+
+    required = {
+        _normalize_provider_name(name)
+        for name in (required_providers or [])
+        if _normalize_provider_name(name)
+    }
+    active_counts = {
+        _normalize_provider_name(name): int(value)
+        for name, value in (active_usage_counts or {}).items()
+        if _normalize_provider_name(name)
+    }
+
+    required_or_active_status: dict[str, dict[str, Any]] = {}
+    required_or_active_missing_hard: list[str] = []
     for provider in candidates:
-        has_limit = any(metric.limit is not None and metric.limit > 0 for metric in provider.metrics)
-        has_remaining = any(metric.remaining is not None for metric in provider.metrics)
+        provider_name = _normalize_provider_name(provider.provider)
+        telemetry = _provider_limit_telemetry_state(provider)
+        has_limit = bool(telemetry.get("has_limit_metrics"))
+        has_remaining = bool(telemetry.get("has_remaining_metrics"))
+        has_validated_remaining = bool(telemetry.get("has_validated_remaining"))
+
         if has_limit:
             with_limit.append(provider.provider)
         if has_remaining:
             with_remaining.append(provider.provider)
+        if has_validated_remaining:
+            with_validated_remaining.append(provider.provider)
         if has_limit and not has_remaining:
             partial.append(provider.provider)
         if not has_limit:
             missing.append(provider.provider)
+
+        active_usage = max(0, int(active_counts.get(provider_name, 0)))
+        is_required = provider_name in required
+        is_required_or_active = is_required or active_usage > 0
+        if not is_required_or_active:
+            continue
+
+        required_or_active_status[provider_name] = {
+            "state": str(telemetry.get("state") or "missing_limits"),
+            "required": is_required,
+            "active_usage": active_usage,
+            "has_limit_metrics": has_limit,
+            "has_remaining_metrics": has_remaining,
+            "has_validated_remaining": has_validated_remaining,
+            "quota_metric_ids": list(telemetry.get("quota_metric_ids") or []),
+            "evidence_sources": list(telemetry.get("evidence_sources") or []),
+        }
+        if not has_validated_remaining:
+            required_or_active_missing_hard.append(provider_name)
+
+    required_or_active_list = sorted(required_or_active_status.keys())
+    missing_hard_sorted = sorted(set(required_or_active_missing_hard))
     return {
         "providers_considered": len(candidates),
         "providers_with_limit_metrics": len(with_limit),
         "providers_with_remaining_metrics": len(with_remaining),
+        "providers_with_validated_remaining_metrics": len(with_validated_remaining),
         "providers_missing_limit_metrics": sorted(set(missing)),
         "providers_partial_limit_metrics": sorted(set(partial)),
         "coverage_ratio": round((len(with_limit) / len(candidates)), 4) if candidates else 1.0,
+        "hard_limit_coverage_ratio": (
+            round((len(with_validated_remaining) / len(candidates)), 4) if candidates else 1.0
+        ),
+        "required_or_active_providers": required_or_active_list,
+        "required_or_active_provider_status": required_or_active_status,
+        "required_or_active_missing_hard_limit_telemetry": missing_hard_sorted,
+        "hard_limit_claim_ready": len(missing_hard_sorted) == 0,
     }
 
 
@@ -2805,12 +2901,18 @@ def collect_usage_overview(force_refresh: bool = False) -> ProviderUsageOverview
         return ProviderUsageOverview(**_CACHE["overview"])
 
     providers = _collect_provider_snapshots()
+    required_providers = _required_providers_from_env()
+    active_usage = _active_provider_usage_counts()
     unavailable = [p.provider for p in providers if p.status != "ok"]
     overview = ProviderUsageOverview(
         providers=providers,
         unavailable_providers=unavailable,
         tracked_providers=len(providers),
-        limit_coverage=_limit_coverage_summary(providers),
+        limit_coverage=_limit_coverage_summary(
+            providers,
+            required_providers=required_providers,
+            active_usage_counts=active_usage,
+        ),
     )
     _CACHE["overview"] = overview.model_dump(mode="json")
     _CACHE["expires_at"] = now + _CACHE_TTL_SECONDS
@@ -3441,13 +3543,13 @@ def provider_limit_guard_decision(provider: str, *, force_refresh: bool = False)
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+    active_counts = _active_provider_usage_counts()
     required = [
         _normalize_provider_name(item)
         for item in (required_providers or _required_providers_from_env())
         if str(item).strip()
     ]
     if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
-        active_counts = _active_provider_usage_counts()
         for provider_name, count in active_counts.items():
             if count > 0:
                 required.append(provider_name)
@@ -3497,12 +3599,53 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
             )
         )
 
+    limit_telemetry = _limit_coverage_summary(
+        overview.providers,
+        required_providers=sorted(required_set),
+        active_usage_counts=active_counts,
+    )
+    strict_limit_telemetry = _env_truthy(
+        "AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY",
+        default=False,
+    )
+    provider_limit_status = (
+        limit_telemetry.get("required_or_active_provider_status")
+        if isinstance(limit_telemetry, dict)
+        else {}
+    )
+    if not isinstance(provider_limit_status, dict):
+        provider_limit_status = {}
+
+    for row in rows:
+        provider_name = _normalize_provider_name(row.provider)
+        state_row = provider_limit_status.get(provider_name)
+        if not isinstance(state_row, dict):
+            continue
+        state = str(state_row.get("state") or "").strip()
+        if not state:
+            continue
+        row.notes = list(dict.fromkeys([*row.notes, f"limit_telemetry_state={state}"]))
+        if row.required and state != "hard_limit_ready":
+            if row.severity == "info":
+                row.severity = "warning"  # type: ignore[assignment]
+            recommendations.append(
+                (
+                    f"Add validated limit+remaining telemetry for '{provider_name}' "
+                    f"(current_state={state}) before making numeric-limit claims."
+                )
+            )
+            if strict_limit_telemetry:
+                blocking.append(f"{provider_name}: limit_telemetry_state={state}")
+
+    blocking = list(dict.fromkeys(blocking))
+    recommendations = list(dict.fromkeys(recommendations))
     return ProviderReadinessReport(
         required_providers=sorted(required_set),
         all_required_ready=len(blocking) == 0,
         blocking_issues=blocking,
         recommendations=recommendations,
         providers=rows,
+        limit_telemetry=limit_telemetry,
     )
 
 

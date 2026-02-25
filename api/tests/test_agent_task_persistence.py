@@ -302,3 +302,67 @@ def test_db_update_task_hydrates_single_task_without_full_table_reload(
     assert updated is not None
     assert updated["id"] == task_id
     assert updated["status"] == TaskStatus.RUNNING
+
+
+def test_update_task_backfills_failed_output_from_context_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Fail with context error",
+            task_type=TaskType.IMPL,
+        )
+    )
+    task_id = created["id"]
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.FAILED,
+        context={"error": "Execution timed out while waiting for provider response"},
+    )
+
+    assert updated is not None
+    output = str(updated.get("output") or "")
+    assert output.startswith("Failure diagnostic (context.error):")
+    assert "timed out" in output.lower()
+    context = updated.get("context") if isinstance(updated.get("context"), dict) else {}
+    assert context.get("failure_diagnostics_present") is True
+    assert context.get("failure_diagnostics_source") == "context.error"
+    assert context.get("failure_reason_bucket") == "timeout"
+
+
+def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Fail without explicit output",
+            task_type=TaskType.REVIEW,
+        )
+    )
+    task_id = created["id"]
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.FAILED,
+    )
+
+    assert updated is not None
+    output = str(updated.get("output") or "")
+    assert output.startswith("Task failed without explicit error output.")
+    context = updated.get("context") if isinstance(updated.get("context"), dict) else {}
+    assert context.get("failure_diagnostics_present") is True
+    assert context.get("failure_diagnostics_source") == "fallback"
+    assert context.get("failure_reason_bucket") in {"other", "empty_output"}
