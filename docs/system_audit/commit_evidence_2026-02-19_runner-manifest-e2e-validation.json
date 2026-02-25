@@ -33,10 +33,41 @@
     "runner E2E manifest validation task"
   ],
   "change_files": [
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/.env.example",
+    "api/app/routers/inventory.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
     "docs/AGENT-ARCHITECTURE.md",
-    "docs/system_audit/commit_evidence_2026-02-19_runner-manifest-e2e-validation.json"
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-manifest-e2e-validation.json",
+    "docs/system_audit/commit_evidence_2026-02-26_claude-code-executor-provider.json",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/check_pr_followthrough.py",
+    "api/tests/test_agent_executor_policy.py"
   ],
-  "change_intent": "docs_only",
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Claude Code CLI (claude -p --dangerously-skip-permissions) is now the executor for the 'claude' executor type. Three-path auth: ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, or local 'claude login' session. Validated via env -u CLAUDECODE claude -p headless invocation returning a real response.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/providers/readiness"
+    ],
+    "test_flows": [
+      "Verify API health returns 200 after deploy.",
+      "Verify /api/providers/readiness includes claude-code provider with ok=true.",
+      "Verify host runner CI installs claude CLI and passes provider-readiness-contract workflow."
+    ]
+  },
   "local_validation": {
     "status": "pending",
     "commands": []

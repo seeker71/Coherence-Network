@@ -1,0 +1,105 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "claude/inspiring-hugle",
+  "commit_scope": "Enable Claude Code CLI as executor provider with local session auth (three-path auth: API key, OAuth token, or claude login session).",
+  "files_owned": [
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/.env.example",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/agent_runner.py",
+    "docs/system_audit/commit_evidence_2026-02-26_claude-code-executor-provider.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-code",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "2.1.42"
+  },
+  "evidence_refs": [
+    "which claude && claude --version",
+    "CLAUDECODE= claude auth status --json",
+    "env -u CLAUDECODE claude -p 'say: hello from claude code agent test' --dangerously-skip-permissions",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    ".github/workflows/provider-readiness-contract.yml",
+    "api/.env.example",
+    "api/app/routers/inventory.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/inventory_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "api/tests/test_inventory_api.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/AGENT-ARCHITECTURE.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-manifest-e2e-validation.json",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/check_pr_followthrough.py",
+    "api/tests/test_agent_executor_policy.py"
+  ],
+  "idea_ids": [
+    "claude-code-executor-provider"
+  ],
+  "spec_ids": [
+    "claude-code-executor-provider"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "which claude && claude --version",
+      "CLAUDECODE= claude auth status --json",
+      "env -u CLAUDECODE claude -p 'say: hello from claude code agent test' --dangerously-skip-permissions"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Claude Code CLI (claude -p --dangerously-skip-permissions) is now the executor for the 'claude' executor type. The readiness/validation pipeline tracks it as the 'claude-code' provider with three-path auth: ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, or local 'claude login' session (firstParty/subscription billing). No Ollama fallback for the claude executor branch.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/providers/readiness"
+    ],
+    "test_flows": [
+      "Verify API health returns 200 after deploy.",
+      "Verify /api/providers/readiness includes claude-code provider with ok=true when ANTHROPIC_API_KEY is set.",
+      "Verify /api/automation/usage shows claude-code provider snapshot with status=ok.",
+      "Verify host runner CI installs claude CLI and passes provider-readiness-contract workflow with claude-code probe ok."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deployment validation pending"
+  },
+  "task_ids": [
+    "task_claude_code_executor_2026_02_26"
+  ]
+}

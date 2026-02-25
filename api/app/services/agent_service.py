@@ -37,8 +37,8 @@ GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
 # --allowedTools + --dangerously-skip-permissions required for headless (-p) so Edit runs without prompts
 # _COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
 # _COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
-_COMMAND_LOCAL_AGENT = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
-_COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
+_COMMAND_LOCAL_AGENT = 'claude -p "{{direction}}" --dangerously-skip-permissions'
+_COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 
 # Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
@@ -120,7 +120,7 @@ def _executor_binary_name(executor: str) -> str:
                 return candidate
         configured = os.environ.get("OPENCLAW_EXECUTABLE")
         return configured.strip() if configured else "openclaw"
-    return "aider"
+    return "claude"
 
 
 def _executor_available(executor: str) -> bool:
@@ -353,7 +353,7 @@ def _integration_gaps() -> dict[str, Any]:
     )
 
     binary_checks = {
-        "aider": _executor_available("claude"),
+        "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
         "openclaw": _executor_available("openclaw"),
     }
@@ -1050,6 +1050,8 @@ def _build_command(
         template = _cursor_command_template(task_type)
     elif executor == "openclaw":
         template = _openclaw_command_template(task_type)
+    elif executor == "claude":
+        template = routing_service.claude_command_template(task_type)
     else:
         template = COMMAND_TEMPLATES[task_type]
     # Escape direction for shell in a double-quoted template placeholder.
