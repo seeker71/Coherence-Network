@@ -1411,6 +1411,7 @@ def evaluate_public_deploy_contract_report(
 
     checks: list[dict[str, Any]] = []
     require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
+    require_provider_readiness = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
@@ -1480,12 +1481,41 @@ def evaluate_public_deploy_contract_report(
     paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
     checks.append(paid_override_header_check)
 
+    provider_readiness_url = f"{report['api_base']}/api/automation/usage/readiness"
+    provider_readiness = check_http_json_endpoint(provider_readiness_url, timeout=timeout)
+    provider_readiness["name"] = "railway_provider_readiness"
+    provider_readiness["required"] = require_provider_readiness
+    if provider_readiness.get("ok") and isinstance(provider_readiness.get("json"), dict):
+        payload = provider_readiness["json"]
+        all_required_ready = payload.get("all_required_ready")
+        blocking_payload = payload.get("blocking_issues")
+        blocking_issues = (
+            [str(item) for item in blocking_payload if str(item).strip()]
+            if isinstance(blocking_payload, list)
+            else []
+        )
+        provider_readiness["all_required_ready"] = all_required_ready if isinstance(all_required_ready, bool) else None
+        provider_readiness["blocking_issues_count"] = len(blocking_issues)
+        provider_readiness["blocking_issues"] = blocking_issues[:20]
+        if require_provider_readiness and all_required_ready is not True:
+            provider_readiness["ok"] = False
+            provider_readiness["error"] = "provider_readiness_blocked"
+    elif require_provider_readiness:
+        provider_readiness["ok"] = False
+    checks.append(provider_readiness)
+
     report["checks"] = checks
     warnings: list[str] = []
     failing: list[str] = []
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
+            if (
+                name == "railway_provider_readiness"
+                and not require_provider_readiness
+                and check.get("all_required_ready") is False
+            ):
+                warnings.append("railway_provider_readiness_blocked")
             if (
                 name == "railway_telegram_alert_config"
                 and not require_telegram_alerts
@@ -1514,6 +1544,9 @@ def evaluate_public_deploy_contract_report(
             )
         ):
             warnings.append("railway_gates_main_head_unavailable")
+            continue
+        if name == "railway_provider_readiness" and not require_provider_readiness:
+            warnings.append("railway_provider_readiness_unavailable")
             continue
         failing.append(str(name))
     report["warnings"] = warnings

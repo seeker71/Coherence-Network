@@ -1955,6 +1955,31 @@ def _to_int(value: object, default: int) -> int:
         return default
 
 
+_TASK_RUNTIME_DEFAULTS = {
+    "spec": 1200,
+    "impl": 2400,
+    "test": 1800,
+    "review": 1200,
+    "heal": 1200,
+}
+_TASK_RUNTIME_ENV_BY_TYPE = {
+    "spec": "AGENT_TASK_TIMEOUT_SPEC",
+    "impl": "AGENT_TASK_TIMEOUT_IMPL",
+    "test": "AGENT_TASK_TIMEOUT_TEST",
+    "review": "AGENT_TASK_TIMEOUT_REVIEW",
+    "heal": "AGENT_TASK_TIMEOUT_HEAL",
+}
+
+
+def _default_runtime_seconds_for_task_type(task_type: str) -> int:
+    task_type_normalized = str(task_type or "").strip().lower()
+    baseline = _TASK_RUNTIME_DEFAULTS.get(task_type_normalized, TASK_TIMEOUT)
+    env_name = _TASK_RUNTIME_ENV_BY_TYPE.get(task_type_normalized)
+    if env_name:
+        baseline = _to_int(os.environ.get(env_name), baseline)
+    return max(30, min(TASK_TIMEOUT, baseline))
+
+
 def _read_run_records() -> dict[str, Any]:
     if not os.path.exists(RUN_RECORDS_FILE):
         return {"runs": []}
@@ -3956,7 +3981,8 @@ def run_one_task(
         reader = threading.Thread(target=_stream_reader, args=(process,), daemon=False)
         reader.start()
 
-        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), TASK_TIMEOUT)
+        default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
+        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
         max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
         timed_out = False
         stopped_for_usage = False
