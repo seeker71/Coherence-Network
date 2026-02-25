@@ -49,6 +49,7 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
     "openai-codex": {"kind": "custom", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
     "claude": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
+    "claude-code": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"]},
     "openai": {"kind": "openai", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
     "github": {"kind": "github", "any_of": ["GITHUB_TOKEN", "GH_TOKEN"]},
     "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
@@ -74,6 +75,7 @@ _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "github",
     "railway",
     "claude",
+    "claude-code",
 )
 
 _PROVIDER_ALIASES: dict[str, str] = {
@@ -768,6 +770,9 @@ def _default_official_records(provider: str) -> list[str]:
         "claude": [
             "https://docs.anthropic.com/en/api/models-list",
         ],
+        "claude-code": [
+            "https://docs.anthropic.com/en/api/models-list",
+        ],
         "railway": [
             "https://docs.railway.com/reference/public-api",
         ],
@@ -1134,7 +1139,7 @@ def _active_provider_usage_counts() -> dict[str, int]:
         "cursor": "cursor",
         "openclaw": "openclaw",
         "clawwork": "openclaw",
-        "claude": "claude",
+        "claude": "claude-code",
     }
     for executor_name, row in executor_rows.items():
         provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
@@ -2459,6 +2464,167 @@ def _build_db_host_snapshot() -> ProviderUsageSnapshot:
     )
 
 
+def _claude_code_cli_available() -> bool:
+    return shutil.which("claude") is not None
+
+
+def _claude_code_cli_logged_in() -> tuple[bool, str]:
+    """Check whether the local claude CLI has an active auth session.
+
+    Returns (logged_in, auth_method) where auth_method is e.g. 'oauth_token' or ''.
+    Uses `claude auth status --json`; falls back to False on any error.
+    """
+    if not _claude_code_cli_available():
+        return False, ""
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status", "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env={**os.environ, "CLAUDECODE": ""},  # prevent nested-session guard
+        )
+        if result.returncode != 0:
+            return False, ""
+        data = json.loads(result.stdout.strip())
+        if isinstance(data, dict) and data.get("loggedIn"):
+            return True, str(data.get("authMethod", ""))
+        return False, ""
+    except Exception:
+        return False, ""
+
+
+def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
+    """Snapshot for the Claude Code CLI executor (claude -p)."""
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    cli_available = _claude_code_cli_available()
+
+    if not cli_available:
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            return _runtime_task_runs_snapshot(
+                provider="claude-code",
+                kind="custom",
+                active_runs=active,
+                note="Claude Code CLI not found in PATH; using runtime execution evidence.",
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_claude_code_{int(time.time())}",
+            provider="claude-code",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Claude Code CLI ('claude') not found in PATH. Install via 'npm install -g @anthropic-ai/claude-code'."],
+        )
+
+    # Resolve auth method: env key > env OAuth token > local CLI session
+    cli_logged_in, cli_auth_method = (False, "")
+    if not api_key and not oauth_token:
+        cli_logged_in, cli_auth_method = _claude_code_cli_logged_in()
+
+    if not api_key and not oauth_token and not cli_logged_in:
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            return _runtime_task_runs_snapshot(
+                provider="claude-code",
+                kind="custom",
+                active_runs=active,
+                note="Claude Code CLI available but no auth configured; using runtime execution evidence.",
+            )
+        return ProviderUsageSnapshot(
+            id=f"provider_claude_code_{int(time.time())}",
+            provider="claude-code",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, or run 'claude login' to authenticate."],
+            raw={"cli_available": True},
+        )
+
+    if api_key:
+        auth_method = "api_key"
+    elif oauth_token:
+        auth_method = "oauth_token_env"
+    else:
+        auth_method = f"cli_session:{cli_auth_method}" if cli_auth_method else "cli_session"
+
+    # CLI is present and auth is resolved; probe the Anthropic models endpoint to confirm connectivity.
+    # Only send auth headers when we have explicit env credentials — for CLI session, the probe
+    # confirms network reachability; the CLI itself handles auth internally at execution time.
+    models_url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
+    probe_headers = _claude_code_headers() if (api_key or oauth_token) else {
+        "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
+    }
+    try:
+        with httpx.Client(timeout=8.0, headers=probe_headers) as client:
+            response = client.get(models_url)
+            response.raise_for_status()
+            payload = response.json() if isinstance(response.json(), dict) else {}
+    except Exception as exc:
+        if cli_logged_in:
+            # CLI session is confirmed; network probe failure is non-fatal.
+            return ProviderUsageSnapshot(
+                id=f"provider_claude_code_{int(time.time())}",
+                provider="claude-code",
+                kind="custom",
+                status="ok",
+                data_source="provider_cli",
+                metrics=[_metric(id="api_probe", label="Claude Code CLI session", unit="requests", used=1.0, window="probe")],
+                notes=[f"auth_method={auth_method}", f"models_probe_skipped:{exc}"],
+                raw={"cli_available": True, "cli_logged_in": True},
+            )
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            snapshot = _runtime_task_runs_snapshot(
+                provider="claude-code",
+                kind="custom",
+                active_runs=active,
+                note=f"Claude Code models probe failed ({exc}); using runtime execution evidence.",
+            )
+            snapshot.raw["cli_available"] = True
+            return snapshot
+        return ProviderUsageSnapshot(
+            id=f"provider_claude_code_{int(time.time())}",
+            provider="claude-code",
+            kind="custom",
+            status="degraded",
+            data_source="provider_api",
+            notes=[f"Claude Code models probe failed: {exc}"],
+            raw={"probe_url": models_url, "cli_available": True},
+        )
+
+    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
+    snapshot = _build_models_visibility_snapshot(
+        provider="claude-code",
+        label="Claude Code visible models",
+        models_url=models_url,
+        rows=rows,
+        headers=response.headers,
+        request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
+        request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
+        request_window="minute",
+        request_label="Claude Code request quota",
+        token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
+        token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
+        token_window="minute",
+        token_label="Claude Code token quota",
+        rate_header_keys=(
+            "anthropic-ratelimit-requests-limit",
+            "anthropic-ratelimit-requests-remaining",
+            "anthropic-ratelimit-tokens-limit",
+            "anthropic-ratelimit-tokens-remaining",
+        ),
+        no_header_note="Claude Code models probe succeeded, but no rate-limit headers were returned.",
+    )
+    snapshot.raw["cli_available"] = True
+    snapshot.raw["cli_logged_in"] = cli_logged_in
+    snapshot.notes.append(f"auth_method={auth_method}")
+    return snapshot
+
+
 def _build_railway_snapshot() -> ProviderUsageSnapshot:
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
@@ -2770,6 +2936,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
     providers = [
         _build_internal_snapshot(),
         _build_claude_snapshot(),
+        _build_claude_code_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
         _build_openrouter_snapshot(),
@@ -3830,6 +3997,67 @@ def _probe_claude() -> tuple[bool, str]:
         return False, f"claude_probe_failed:{exc}"
 
 
+def _claude_code_headers() -> dict[str, str]:
+    """Build Anthropic API headers preferring ANTHROPIC_API_KEY, then CLAUDE_CODE_OAUTH_TOKEN."""
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if api_key:
+        return {
+            "x-api-key": api_key,
+            "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
+        }
+    oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    if oauth_token:
+        return {
+            "Authorization": f"Bearer {oauth_token}",
+            "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
+        }
+    return {"anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01")}
+
+
+def _probe_claude_code() -> tuple[bool, str]:
+    """Probe for Claude Code CLI executor: verify binary + auth.
+
+    Auth resolution order (mirrors _build_claude_code_snapshot):
+      1. ANTHROPIC_API_KEY  — confirmed via Anthropic models endpoint
+      2. CLAUDE_CODE_OAUTH_TOKEN  — confirmed via Anthropic models endpoint
+      3. Local CLI session (`claude auth status --json`)  — session presence is sufficient;
+         the CLI handles auth internally at execution time, no HTTP probe needed
+    """
+    if not _claude_code_cli_available():
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_no_cli"
+        return False, "claude_cli_not_in_path"
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+
+    if not api_key and not oauth_token:
+        # Fall back to local CLI session before reporting missing auth.
+        cli_logged_in, cli_auth_method = _claude_code_cli_logged_in()
+        if cli_logged_in:
+            label = f"cli_session:{cli_auth_method}" if cli_auth_method else "cli_session"
+            return True, f"ok_cli_session_{label}"
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_no_auth_env"
+        return False, "missing_anthropic_key_or_claude_code_oauth_token_and_no_cli_session"
+
+    # Confirm API connectivity via models endpoint using the appropriate auth header.
+    url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
+    try:
+        with httpx.Client(timeout=8.0, headers=_claude_code_headers()) as client:
+            response = client.get(url)
+            response.raise_for_status()
+        auth_method = "api_key" if api_key else "oauth_token"
+        return True, f"ok_cli_and_{auth_method}"
+    except Exception as exc:
+        active = int(_active_provider_usage_counts().get("claude-code", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_after_api_error"
+        return False, f"claude_code_probe_failed:{exc}"
+
+
 def _probe_internal() -> tuple[bool, str]:
     return True, "ok"
 
@@ -3871,6 +4099,7 @@ def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
         "github": _probe_github,
         "railway": _probe_railway,
         "claude": _probe_claude,
+        "claude-code": _probe_claude_code,
     }
 
 

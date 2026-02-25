@@ -2670,6 +2670,11 @@ def _try_commit(task_id: str, task_type: str, log: logging.Logger) -> None:
         log.warning("commit_progress error: %s", e)
 
 
+def _uses_claude_cli(command: str) -> bool:
+    """True if command uses Claude Code CLI (claude -p ...)."""
+    return command.strip().startswith("claude ")
+
+
 def _uses_anthropic_cloud(command: str) -> bool:
     """True if command uses Anthropic cloud (e.g. HEAL with claude-3-5-haiku), not Ollama."""
     if "ollama/" in command:
@@ -3084,9 +3089,7 @@ def _infer_executor(command: str, model: str) -> str:
         return "openai-codex"
     if _uses_openclaw_cli(command) or model_value.startswith(("openclaw/", "clawwork/")):
         return "openclaw"
-    if s.startswith("aider "):
-        return "aider"
-    if s.startswith("claude "):
+    if _uses_claude_cli(command) or model_value.startswith("claude/"):
         return "claude"
     return "unknown"
 
@@ -3641,6 +3644,30 @@ def run_one_task(
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
+    elif _uses_claude_cli(command):
+        # Claude Code CLI auth resolution order:
+        #   1. ANTHROPIC_API_KEY  — explicit cloud key
+        #   2. CLAUDE_CODE_OAUTH_TOKEN  — explicit OAuth env token
+        #   3. Local CLI session (`claude login`) — inherited automatically; no env override needed
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+        if api_key:
+            env["ANTHROPIC_API_KEY"] = api_key
+            env.pop("ANTHROPIC_AUTH_TOKEN", None)
+            env.pop("ANTHROPIC_BASE_URL", None)
+            log.info("task=%s using Claude Code CLI (API key)", task_id)
+        elif oauth_token:
+            env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
+            env.pop("ANTHROPIC_AUTH_TOKEN", None)
+            env.pop("ANTHROPIC_BASE_URL", None)
+            log.info("task=%s using Claude Code CLI (OAuth token)", task_id)
+        else:
+            # No explicit auth env vars — let the CLI use its own session (from `claude login`).
+            # Clear any Ollama overrides that would confuse the Claude Code CLI.
+            env.pop("ANTHROPIC_AUTH_TOKEN", None)
+            env.pop("ANTHROPIC_BASE_URL", None)
+            env.pop("ANTHROPIC_API_KEY", None)
+            log.info("task=%s using Claude Code CLI (inherited session)", task_id)
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)

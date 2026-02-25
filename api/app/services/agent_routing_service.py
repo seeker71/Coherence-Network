@@ -66,6 +66,9 @@ _OPENCLAW_MODEL_DEFAULT = normalize_model_name(
 )
 _OPENCLAW_MODEL_REVIEW = normalize_model_name(os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT))
 
+_CLAUDE_CODE_MODEL_DEFAULT = os.environ.get("CLAUDE_CODE_MODEL", "")
+_CLAUDE_CODE_MODEL_REVIEW = os.environ.get("CLAUDE_CODE_REVIEW_MODEL", _CLAUDE_CODE_MODEL_DEFAULT)
+
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (_OLLAMA_MODEL, "openrouter"),
     TaskType.TEST: (_OLLAMA_CLOUD_MODEL, "openrouter"),
@@ -88,6 +91,14 @@ OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
     TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
     TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
+}
+
+CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
+    TaskType.SPEC: _CLAUDE_CODE_MODEL_DEFAULT,
+    TaskType.TEST: _CLAUDE_CODE_MODEL_DEFAULT,
+    TaskType.IMPL: _CLAUDE_CODE_MODEL_DEFAULT,
+    TaskType.REVIEW: _CLAUDE_CODE_MODEL_REVIEW,
+    TaskType.HEAL: _CLAUDE_CODE_MODEL_REVIEW,
 }
 
 _CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
@@ -159,7 +170,7 @@ def executor_binary_name(executor: str) -> str:
                 return candidate
         configured = os.environ.get("OPENCLAW_EXECUTABLE")
         return configured.strip() if configured else "openclaw"
-    return "aider"
+    return "claude"
 
 
 def executor_available(executor: str) -> bool:
@@ -217,6 +228,18 @@ def openclaw_command_template(task_type: TaskType) -> str:
     return template.replace("{{model}}", model)
 
 
+def claude_command_template(task_type: TaskType) -> str:
+    """Claude Code CLI template: headless -p mode with --dangerously-skip-permissions."""
+    model = CLAUDE_CODE_MODEL_BY_TYPE[task_type]
+    template = os.environ.get("CLAUDE_CODE_COMMAND_TEMPLATE", "")
+    if template:
+        if "{{direction}}" not in template:
+            template = template.strip() + ' "{{direction}}"'
+        return template.replace("{{model}}", model)
+    model_flag = f" --model {model}" if model else ""
+    return 'claude -p "{{direction}}"' + model_flag + " --dangerously-skip-permissions"
+
+
 def route_for_executor(task_type: TaskType, executor: str, default_command_template: str) -> dict[str, Any]:
     normalized = normalize_executor(executor, default="claude")
     if normalized == "cursor":
@@ -228,6 +251,11 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
         model = f"openclaw/{resolved_model}"
         template = openclaw_command_template(task_type)
         tier = "openclaw"
+    elif normalized == "claude":
+        cc_model = CLAUDE_CODE_MODEL_BY_TYPE[task_type]
+        model = f"claude/{cc_model}" if cc_model else "claude/default"
+        template = claude_command_template(task_type)
+        tier = "claude"
     else:
         model, tier = ROUTING[task_type]
         template = default_command_template

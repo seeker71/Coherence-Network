@@ -49,7 +49,7 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -62,8 +62,8 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
         AgentTaskCreate(direction="Fix flaky endpoint test", task_type=TaskType.TEST)
     )
 
-    assert str(second["model"]).startswith("openrouter/")
-    assert str(second["command"]).startswith("aider ")
+    assert str(second["model"]).startswith("claude/")
+    assert str(second["command"]).startswith("claude ")
     context = second.get("context") or {}
     assert context.get("executor") == "claude"
     policy = context.get("executor_policy") or {}
