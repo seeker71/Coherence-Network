@@ -1412,10 +1412,28 @@ def evaluate_public_deploy_contract_report(
     checks: list[dict[str, Any]] = []
     require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
     require_provider_readiness = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", default=False)
+    require_api_health_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
     api_health["name"] = "railway_health"
+    api_health["required_sha"] = require_api_health_sha
+    if api_health.get("ok") and isinstance(api_health.get("json"), dict):
+        health_payload = api_health["json"]
+        observed_sha = ""
+        for key in ("deployed_sha", "updated_at", "commit_sha", "git_sha"):
+            candidate = str(health_payload.get(key) or "").strip()
+            if candidate:
+                observed_sha = candidate
+                api_health["observed_sha_key"] = key
+                break
+        api_health["observed_sha"] = observed_sha or None
+        if observed_sha:
+            api_health["sha_match"] = observed_sha == target_sha
+            api_health["ok"] = bool(api_health["ok"] and api_health["sha_match"])
+        elif require_api_health_sha:
+            api_health["ok"] = False
+            api_health["error"] = "missing_api_health_sha"
     checks.append(api_health)
 
     api_gates_head_url = f"{report['api_base']}/api/gates/main-head"
@@ -1510,6 +1528,13 @@ def evaluate_public_deploy_contract_report(
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
+            if name == "railway_health":
+                observed_raw = str(check.get("observed_sha") or "").strip().lower()
+                if (
+                    not require_api_health_sha
+                    and observed_raw in {"", "unknown", "none", "n/a"}
+                ):
+                    warnings.append("railway_health_unknown_sha")
             if (
                 name == "railway_provider_readiness"
                 and not require_provider_readiness
@@ -1545,6 +1570,11 @@ def evaluate_public_deploy_contract_report(
         ):
             warnings.append("railway_gates_main_head_unavailable")
             continue
+        if name == "railway_health":
+            observed_raw = str(check.get("observed_sha") or "").strip().lower()
+            if not require_api_health_sha and observed_raw in {"", "unknown", "none", "n/a"}:
+                warnings.append("railway_health_unknown_sha")
+                continue
         if name == "railway_provider_readiness" and not require_provider_readiness:
             warnings.append("railway_provider_readiness_unavailable")
             continue
