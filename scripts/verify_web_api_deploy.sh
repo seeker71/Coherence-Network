@@ -12,6 +12,7 @@ CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
+VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 
 check_url() {
   local name="$1"
@@ -175,6 +176,61 @@ check_telegram_alert_config() {
   return 1
 }
 
+check_provider_readiness() {
+  local url="$1"
+  local required="${2:-0}"
+  local body_file="$TMP_DIR/provider_readiness.body.json"
+  local status
+
+  echo
+  echo "==> Provider readiness: ${url} (required=${required})"
+  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" || true)"
+  echo "HTTP status: ${status:-unknown}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: readiness endpoint unavailable"
+      head -c 300 "$body_file" || true
+      echo
+      return 1
+    fi
+    echo "WARN: readiness endpoint unavailable (non-blocking)"
+    return 0
+  fi
+
+  local all_ready blocking_count
+  if command -v jq >/dev/null 2>&1; then
+    all_ready="$(jq -r 'if has("all_required_ready") then (.all_required_ready | tostring) else "unknown" end' "$body_file" 2>/dev/null || echo "unknown")"
+    blocking_count="$(jq -r '(.blocking_issues // []) | length' "$body_file" 2>/dev/null || echo "0")"
+  else
+    all_ready="$(grep -q '"all_required_ready"[[:space:]]*:[[:space:]]*true' "$body_file" && echo "true" || echo "false")"
+    blocking_count="$(grep -o '"blocking_issues"[[:space:]]*:[[:space:]]*\\[[^]]*\\]' "$body_file" | grep -o ',' | wc -l | tr -d ' ')"
+  fi
+  echo "all_required_ready: ${all_ready} | blocking_issues: ${blocking_count}"
+
+  if [[ "$all_ready" == "true" ]]; then
+    echo "PASS"
+    return 0
+  fi
+
+  if [[ "$required" == "1" ]]; then
+    echo "FAIL: required provider readiness is not healthy"
+    if command -v jq >/dev/null 2>&1; then
+      jq '.blocking_issues // []' "$body_file" 2>/dev/null || true
+    else
+      head -c 300 "$body_file" || true
+      echo
+    fi
+    return 1
+  fi
+
+  echo "WARN: provider readiness has blocking issues (non-blocking)"
+  return 0
+}
+
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
@@ -189,6 +245,7 @@ else
   echo
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
+check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
 check_url "Railway web root" "${WEB_URL%/}/" || fail=1
 check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1

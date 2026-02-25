@@ -801,6 +801,81 @@ def _task_output_text(task: dict[str, Any]) -> str:
     return str(output or "")
 
 
+def _context_failure_detail(context: dict[str, Any], key: str) -> str | None:
+    value = context.get(key)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned or None
+    if isinstance(value, dict):
+        for nested_key in ("error", "message", "detail", "reason"):
+            nested = value.get(nested_key)
+            if isinstance(nested, str) and nested.strip():
+                return nested.strip()
+        return None
+    if isinstance(value, list):
+        parts = [str(item).strip() for item in value if str(item).strip()]
+        return "; ".join(parts) if parts else None
+    return None
+
+
+def _derive_failed_task_output(task: dict[str, Any]) -> tuple[str, str]:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    if isinstance(context, dict):
+        for key in (
+            "error",
+            "last_error",
+            "failure_reason",
+            "runner_error",
+            "exception",
+            "details",
+            "message",
+            "agent_graph_state_last_error",
+        ):
+            detail = _context_failure_detail(context, key)
+            if detail:
+                return f"Failure diagnostic (context.{key}): {detail}", f"context.{key}"
+
+        graph_errors = context.get("agent_graph_state_errors")
+        if isinstance(graph_errors, list):
+            normalized = [str(item).strip() for item in graph_errors if str(item).strip()]
+            if normalized:
+                joined = "; ".join(normalized[:3])
+                return (
+                    f"Failure diagnostic (context.agent_graph_state_errors): {joined}",
+                    "context.agent_graph_state_errors",
+                )
+
+    task_type = _status_value(task.get("task_type")) or "unknown"
+    worker = _normalize_worker_id(task.get("claimed_by"))
+    step = str(task.get("current_step") or "").strip() or "unknown"
+    return (
+        (
+            "Task failed without explicit error output. "
+            f"task_type={task_type}; worker={worker}; step={step}."
+        ),
+        "fallback",
+    )
+
+
+def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
+    if _status_value(task.get("status")) != "failed":
+        return
+
+    output_text = _task_output_text(task).strip()
+    source = "output"
+    if not output_text:
+        synthesized, source = _derive_failed_task_output(task)
+        task["output"] = _sanitize_task_output(synthesized)
+        output_text = _task_output_text(task).strip()
+
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    next_context = dict(context) if isinstance(context, dict) else {}
+    next_context["failure_reason_bucket"] = _failure_reason_bucket(task)
+    next_context["failure_diagnostics_source"] = source
+    next_context["failure_diagnostics_present"] = bool(output_text)
+    task["context"] = next_context
+
+
 def _load_task_from_db(task_id: str, *, include_output: bool) -> dict[str, Any] | None:
     if not agent_task_store_service.enabled():
         return None
@@ -1437,6 +1512,7 @@ def update_task(
     if isinstance(task_context.get("agent_graph_state"), dict):
         preferred_graph_state = dict(task_context.get("agent_graph_state") or {})
     _apply_agent_graph_state_contract(task, preferred_state=preferred_graph_state)
+    _ensure_failed_task_diagnostics(task)
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
     current_status_value = _status_value(task.get("status"))
@@ -2053,6 +2129,102 @@ def _pipeline_attention_summary(
     }
 
 
+def _task_type_name(value: Any) -> str:
+    if hasattr(value, "value"):
+        return str(getattr(value, "value") or "").strip().lower()
+    return str(value or "").strip().lower()
+
+
+def _failure_reason_bucket(task: dict[str, Any]) -> str:
+    output = _task_output_text(task).lower()
+    if not output:
+        return "empty_output"
+    if "timeout" in output or "timed out" in output:
+        return "timeout"
+    if (
+        "unauthorized" in output
+        or "forbidden" in output
+        or "api key" in output
+        or "invalid api key" in output
+        or "status=401" in output
+        or "status=403" in output
+    ):
+        return "auth"
+    if "rate limit" in output or "429" in output or "quota" in output:
+        return "rate_limit"
+    if (
+        "command not found" in output
+        or "module not found" in output
+        or "no module named" in output
+        or "no such file or directory" in output
+    ):
+        return "dependency_or_tooling"
+    if "assertionerror" in output or "test failed" in output or "pytest" in output:
+        return "test_failure"
+    if "merge conflict" in output or "rebase" in output:
+        return "git_conflict"
+    return "other"
+
+
+def _pipeline_queue_diagnostics(
+    running: list[dict[str, Any]],
+    pending: list[dict[str, Any]],
+    completed: list[dict[str, Any]],
+) -> dict[str, Any]:
+    pending_by_task_type: dict[str, int] = {}
+    running_by_task_type: dict[str, int] = {}
+    for item in pending:
+        task_type = _task_type_name(item.get("task_type"))
+        key = task_type or "unknown"
+        pending_by_task_type[key] = pending_by_task_type.get(key, 0) + 1
+    for item in running:
+        task_type = _task_type_name(item.get("task_type"))
+        key = task_type or "unknown"
+        running_by_task_type[key] = running_by_task_type.get(key, 0) + 1
+
+    reason_counts: dict[str, int] = {}
+    recent_failed: list[dict[str, Any]] = []
+    for completed_item in completed[:12]:
+        task = _store.get(completed_item["id"]) or {}
+        if _status_value(task.get("status")) != "failed":
+            continue
+        reason = _failure_reason_bucket(task)
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        recent_failed.append(
+            {
+                "task_id": task.get("id"),
+                "task_type": _task_type_name(task.get("task_type")) or "unknown",
+                "reason": reason,
+            }
+        )
+
+    recent_failed_reasons = [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(reason_counts.items(), key=lambda row: (-row[1], row[0]))
+    ]
+
+    total_pending = sum(pending_by_task_type.values())
+    dominant_pending_type = ""
+    dominant_pending_share = 0.0
+    if total_pending > 0:
+        dominant_pending_type, dominant_count = max(
+            pending_by_task_type.items(),
+            key=lambda row: row[1],
+        )
+        dominant_pending_share = round(float(dominant_count) / float(total_pending), 4)
+    queue_mix_warning = bool(total_pending >= 5 and dominant_pending_share >= 0.8)
+
+    return {
+        "pending_by_task_type": pending_by_task_type,
+        "running_by_task_type": running_by_task_type,
+        "recent_failed_count": len(recent_failed),
+        "recent_failed_reasons": recent_failed_reasons,
+        "queue_mix_warning": queue_mix_warning,
+        "dominant_pending_task_type": dominant_pending_type,
+        "dominant_pending_share": dominant_pending_share,
+    }
+
+
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
     _ensure_store_loaded(include_output=False)
@@ -2404,6 +2576,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
 
     latest_request, latest_response = _pipeline_latest_activity(running, completed)
     attention = _pipeline_attention_summary(running, pending, completed)
+    diagnostics = _pipeline_queue_diagnostics(running, pending, completed)
 
     return {
         "running": running[:10],
@@ -2426,6 +2599,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
             "low_success_rate": attention["low_success_rate"],
             "flags": attention["flags"],
         },
+        "diagnostics": diagnostics,
     }
 
 

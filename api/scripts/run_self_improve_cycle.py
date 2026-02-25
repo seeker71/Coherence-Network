@@ -28,6 +28,7 @@ STAGE_SUBMIT_ATTEMPTS = int(os.environ.get("SELF_IMPROVE_STAGE_SUBMIT_ATTEMPTS",
 STAGE_SUBMIT_RETRY_BASE_SECONDS = float(os.environ.get("SELF_IMPROVE_STAGE_SUBMIT_RETRY_BASE_SECONDS", "2.0"))
 CHECKPOINT_FILE = Path(".cache/self_improve_cycle_checkpoint.json")
 CHECKPOINT_MAX_AGE_SECONDS = int(os.environ.get("SELF_IMPROVE_CHECKPOINT_MAX_AGE_SECONDS", "172800"))
+INFLIGHT_STAGE_MAX_AGE_SECONDS = int(os.environ.get("SELF_IMPROVE_INFLIGHT_STAGE_MAX_AGE_SECONDS", "7200"))
 INFRA_PREFLIGHT_SLEEP_SECONDS = int(os.environ.get("SELF_IMPROVE_INFRA_PREFLIGHT_SLEEP_SECONDS", "20"))
 AGENT_TASK_DIRECTION_MAX_CHARS = int(os.environ.get("SELF_IMPROVE_AGENT_TASK_DIRECTION_MAX_CHARS", "5000"))
 AGENT_TASK_DIRECTION_SAFE_CHARS = max(400, AGENT_TASK_DIRECTION_MAX_CHARS - 300)
@@ -110,6 +111,25 @@ def _parse_timestamp(raw: str) -> datetime | None:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def _task_age_seconds(task: dict[str, Any]) -> int | None:
+    for key in ("updated_at", "started_at", "created_at"):
+        raw_value = task.get(key)
+        if raw_value is None:
+            continue
+        dt = _parse_timestamp(str(raw_value))
+        if dt is None:
+            continue
+        return int((datetime.now(timezone.utc) - dt).total_seconds())
+    return None
+
+
+def _task_is_fresh_for_resume(task: dict[str, Any]) -> bool:
+    age_seconds = _task_age_seconds(task)
+    if age_seconds is None:
+        return True
+    return age_seconds <= max(60, INFLIGHT_STAGE_MAX_AGE_SECONDS)
 
 
 def _clip(text: str, max_chars: int = 12000) -> str:
@@ -316,10 +336,18 @@ def _stage_checkpoint_view(stage: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _restore_stage_from_checkpoint(checkpoint: dict[str, Any], stage_name: str) -> dict[str, Any] | None:
+def _restore_stage_from_checkpoint(
+    checkpoint: dict[str, Any],
+    stage_name: str,
+    *,
+    include_inflight: bool = False,
+) -> dict[str, Any] | None:
     stages = checkpoint.get("stages")
     if not isinstance(stages, list):
         return None
+    allowed_statuses = {"completed"}
+    if include_inflight:
+        allowed_statuses.update({"pending", "running"})
     for row in stages:
         if not isinstance(row, dict):
             continue
@@ -327,15 +355,23 @@ def _restore_stage_from_checkpoint(checkpoint: dict[str, Any], stage_name: str) 
             continue
         status = str(row.get("status") or "").strip().lower()
         output = str(row.get("output") or "")
-        if status != "completed":
+        if status not in allowed_statuses:
             continue
-        if stage_name in {"plan", "execute"} and not output:
+        if status == "completed" and stage_name in {"plan", "execute"} and not output:
             continue
+        task = _coerce_dict(row.get("task"), {})
+        task_id = str(row.get("task_id") or task.get("id") or "").strip()
+        if status in {"pending", "running"}:
+            if not task_id:
+                continue
+            if task and not _task_is_fresh_for_resume(task):
+                continue
         model = str(row.get("model") or "")
         expected_model = STAGE_SPECS[stage_name]["model"]
         if model and model != expected_model:
             continue
         restored = dict(row)
+        restored["task_id"] = task_id
         restored["resumed"] = True
         restored["resume_source"] = "checkpoint"
         return restored
@@ -358,8 +394,16 @@ def _infer_stage_name(task: dict[str, Any]) -> str | None:
     return None
 
 
-def _restore_stage_from_input_bundle(bundle: dict[str, Any], stage_name: str) -> dict[str, Any] | None:
+def _restore_stage_from_input_bundle(
+    bundle: dict[str, Any],
+    stage_name: str,
+    *,
+    include_inflight: bool = False,
+) -> dict[str, Any] | None:
     task_rows = _extract_records(_coerce_dict(bundle.get("tasks"), {}).get("records"))
+    allowed_statuses = {"completed"}
+    if include_inflight:
+        allowed_statuses.update({"pending", "running"})
     for task in task_rows:
         if _infer_stage_name(task) != stage_name:
             continue
@@ -368,13 +412,19 @@ def _restore_stage_from_input_bundle(bundle: dict[str, Any], stage_name: str) ->
             continue
         status = str(task.get("status") or "").strip().lower()
         output = str(task.get("output") or "")
-        if status != "completed":
+        if status not in allowed_statuses:
             continue
-        if stage_name in {"plan", "execute"} and not output:
+        if status == "completed" and stage_name in {"plan", "execute"} and not output:
             continue
+        task_id = str(task.get("id") or "").strip()
+        if status in {"pending", "running"}:
+            if not task_id:
+                continue
+            if not _task_is_fresh_for_resume(task):
+                continue
         restored = {
             "stage": stage_name,
-            "task_id": str(task.get("id") or ""),
+            "task_id": task_id,
             "status": str(task.get("status") or ""),
             "executor": str(context.get("executor") or "codex"),
             "model": str(task.get("model") or context.get("model_override") or ""),
@@ -778,6 +828,41 @@ def _wait_for_terminal(
         time.sleep(max(0, poll_interval_seconds))
 
 
+def _resume_inflight_stage(
+    *,
+    stage: dict[str, Any],
+    client: Any,
+    base_url: str,
+    poll_interval_seconds: int,
+    timeout_seconds: int,
+    execute_pending: bool,
+    execute_token: str,
+) -> dict[str, Any]:
+    task_id = str(stage.get("task_id") or _coerce_dict(stage.get("task"), {}).get("id") or "").strip()
+    if not task_id:
+        raise RuntimeError("inflight stage missing task id")
+    task = _wait_for_terminal(
+        client,
+        base_url=base_url,
+        task_id=task_id,
+        poll_interval_seconds=poll_interval_seconds,
+        timeout_seconds=timeout_seconds,
+        execute_pending=execute_pending,
+        execute_token=execute_token,
+    )
+    task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    resumed = dict(stage)
+    resumed["task_id"] = task_id
+    resumed["status"] = str(task.get("status") or "")
+    resumed["executor"] = str(task_ctx.get("executor") or resumed.get("executor") or "")
+    resumed["model"] = str(task.get("model") or resumed.get("model") or "")
+    resumed["task"] = task
+    resumed["output"] = str(task.get("output") or "")
+    resumed["resumed"] = True
+    resumed.setdefault("resume_source", "active_task")
+    return resumed
+
+
 def _run_stage(
     *,
     client: Any,
@@ -1046,19 +1131,41 @@ def run_cycle(
     if plan_stage is None:
         plan_stage = _restore_stage_from_input_bundle(input_bundle_before, "plan")
     if plan_stage is None:
-        try:
-            plan_stage = _run_stage(
-                client=client,
-                base_url=base_url,
-                poll_interval_seconds=poll_interval_seconds,
-                timeout_seconds=timeout_seconds,
-                execute_pending=execute_pending,
-                execute_token=execute_token,
-                stage_name="plan",
-                direction=build_plan_direction(),
-                task_type="spec",
-                model_override=PLAN_MODEL,
+        inflight_plan_stage = _restore_stage_from_checkpoint(
+            checkpoint_state,
+            "plan",
+            include_inflight=True,
+        )
+        if inflight_plan_stage is None:
+            inflight_plan_stage = _restore_stage_from_input_bundle(
+                input_bundle_before,
+                "plan",
+                include_inflight=True,
             )
+        try:
+            if inflight_plan_stage is not None:
+                plan_stage = _resume_inflight_stage(
+                    stage=inflight_plan_stage,
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                )
+            else:
+                plan_stage = _run_stage(
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                    stage_name="plan",
+                    direction=build_plan_direction(),
+                    task_type="spec",
+                    model_override=PLAN_MODEL,
+                )
         except Exception as exc:
             input_bundle_after = _collect_input_bundle(
                 client,
@@ -1141,19 +1248,41 @@ def run_cycle(
     if execute_stage is None:
         execute_stage = _restore_stage_from_input_bundle(input_bundle_before, "execute")
     if execute_stage is None:
-        try:
-            execute_stage = _run_stage(
-                client=client,
-                base_url=base_url,
-                poll_interval_seconds=poll_interval_seconds,
-                timeout_seconds=timeout_seconds,
-                execute_pending=execute_pending,
-                execute_token=execute_token,
-                stage_name="execute",
-                direction=build_execute_direction(plan_output),
-                task_type="impl",
-                model_override=EXECUTE_MODEL,
+        inflight_execute_stage = _restore_stage_from_checkpoint(
+            checkpoint_state,
+            "execute",
+            include_inflight=True,
+        )
+        if inflight_execute_stage is None:
+            inflight_execute_stage = _restore_stage_from_input_bundle(
+                input_bundle_before,
+                "execute",
+                include_inflight=True,
             )
+        try:
+            if inflight_execute_stage is not None:
+                execute_stage = _resume_inflight_stage(
+                    stage=inflight_execute_stage,
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                )
+            else:
+                execute_stage = _run_stage(
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                    stage_name="execute",
+                    direction=build_execute_direction(plan_output),
+                    task_type="impl",
+                    model_override=EXECUTE_MODEL,
+                )
         except Exception as exc:
             input_bundle_after = _collect_input_bundle(
                 client,
@@ -1236,19 +1365,41 @@ def run_cycle(
     if review_stage is None:
         review_stage = _restore_stage_from_input_bundle(input_bundle_before, "review")
     if review_stage is None:
-        try:
-            review_stage = _run_stage(
-                client=client,
-                base_url=base_url,
-                poll_interval_seconds=poll_interval_seconds,
-                timeout_seconds=timeout_seconds,
-                execute_pending=execute_pending,
-                execute_token=execute_token,
-                stage_name="review",
-                direction=build_review_direction(plan_output, execute_output),
-                task_type="review",
-                model_override=REVIEW_MODEL,
+        inflight_review_stage = _restore_stage_from_checkpoint(
+            checkpoint_state,
+            "review",
+            include_inflight=True,
+        )
+        if inflight_review_stage is None:
+            inflight_review_stage = _restore_stage_from_input_bundle(
+                input_bundle_before,
+                "review",
+                include_inflight=True,
             )
+        try:
+            if inflight_review_stage is not None:
+                review_stage = _resume_inflight_stage(
+                    stage=inflight_review_stage,
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                )
+            else:
+                review_stage = _run_stage(
+                    client=client,
+                    base_url=base_url,
+                    poll_interval_seconds=poll_interval_seconds,
+                    timeout_seconds=timeout_seconds,
+                    execute_pending=execute_pending,
+                    execute_token=execute_token,
+                    stage_name="review",
+                    direction=build_review_direction(plan_output, execute_output),
+                    task_type="review",
+                    model_override=REVIEW_MODEL,
+                )
         except Exception as exc:
             input_bundle_after = _collect_input_bundle(
                 client,
