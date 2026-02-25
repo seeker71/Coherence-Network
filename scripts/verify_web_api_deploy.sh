@@ -13,6 +13,7 @@ VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
+VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 
 check_url() {
   local name="$1"
@@ -231,6 +232,85 @@ check_provider_readiness() {
   return 0
 }
 
+check_api_runtime_sha() {
+  local health_url="$1"
+  local main_head_url="$2"
+  local required="${3:-0}"
+  local health_body="$TMP_DIR/api_health_sha.body.json"
+  local main_head_body="$TMP_DIR/api_main_head_sha.body.json"
+  local health_status main_head_status
+
+  echo
+  echo "==> API runtime SHA parity: ${health_url} vs ${main_head_url} (required=${required})"
+  health_status="$(curl -sS -o "$health_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$health_url" || true)"
+  main_head_status="$(curl -sS -o "$main_head_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$main_head_url" || true)"
+  echo "health status: ${health_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+  if [[ -z "$health_status" || "$health_status" -lt 200 || "$health_status" -ge 400 ]]; then
+    echo "FAIL: api health endpoint unavailable for SHA parity check"
+    return 1
+  fi
+  if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: main-head endpoint unavailable for required SHA parity check"
+      return 1
+    fi
+    echo "WARN: main-head endpoint unavailable (non-blocking SHA parity check)"
+    return 0
+  fi
+
+  local expected_sha observed_sha
+  expected_sha=""
+  observed_sha=""
+  if command -v jq >/dev/null 2>&1; then
+    expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
+    observed_sha="$(
+      jq -r '(.deployed_sha // .updated_at // .commit_sha // .git_sha // "")' "$health_body" 2>/dev/null || true
+    )"
+  else
+    expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$health_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+  fi
+  expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
+  observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
+  echo "expected_sha: ${expected_sha:-<missing>}"
+  echo "observed_sha: ${observed_sha:-<missing>}"
+
+  if [[ -z "$expected_sha" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: expected SHA is missing from main-head response"
+      return 1
+    fi
+    echo "WARN: expected SHA missing from main-head response"
+    return 0
+  fi
+
+  local observed_normalized
+  observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
+  if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: API health does not expose deployed SHA (required)"
+      return 1
+    fi
+    echo "WARN: API health does not expose deployed SHA (non-blocking)"
+    return 0
+  fi
+
+  if [[ "$observed_sha" != "$expected_sha" ]]; then
+    echo "FAIL: API deployed SHA does not match expected main-head SHA"
+    return 1
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
@@ -239,6 +319,10 @@ else
   echo
   echo "==> Skipping Railway gates main head check (VERIFY_REQUIRE_GATES_MAIN_HEAD=0)"
 fi
+check_api_runtime_sha \
+  "${API_URL%/}/api/health" \
+  "${API_URL%/}/api/gates/main-head" \
+  "$VERIFY_REQUIRE_API_HEALTH_SHA" || fail=1
 if [[ "$VERIFY_REQUIRE_PERSISTENCE_CHECK" == "1" ]]; then
   check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
 else
