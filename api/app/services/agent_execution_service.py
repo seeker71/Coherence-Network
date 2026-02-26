@@ -18,6 +18,7 @@ from app.models.agent import TaskStatus
 from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
 from app.services import (
+    agent_execution_codex_service,
     agent_service,
     automation_usage_service,
     friction_service,
@@ -282,6 +283,19 @@ def _run_openrouter(
             "cost_slack_ratio": cost_budget.get("cost_slack_ratio"),
         }
     except OpenRouterError as exc:
+        fallback_error = str(exc)
+        if agent_execution_codex_service.should_fallback_to_codex_exec(model, fallback_error):
+            fallback_result = agent_execution_codex_service.run_codex_exec(
+                task_id=task_id,
+                model=model,
+                prompt=prompt,
+                route_is_paid=route_is_paid,
+                started_perf=started_perf,
+                cost_budget=cost_budget,
+            )
+            if fallback_result.get("ok") is True:
+                return fallback_result
+
         elapsed_ms = max(1, int(round((time.perf_counter() - started_perf) * 1000)))
         _record_openrouter_tool_event(
             task_id=task_id,
@@ -290,9 +304,9 @@ def _run_openrouter(
             elapsed_ms=elapsed_ms,
             ok=False,
             actual_cost_usd=_runtime_cost_usd(elapsed_ms),
-            error=str(exc),
+            error=fallback_error,
         )
-        return {"ok": False, "elapsed_ms": elapsed_ms, "error": f"Execution failed (OpenRouter): {exc}"}
+        return {"ok": False, "elapsed_ms": elapsed_ms, "error": f"Execution failed (OpenRouter): {fallback_error}"}
 
 
 def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:

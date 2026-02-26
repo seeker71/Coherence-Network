@@ -142,6 +142,37 @@ def _force_paid_override(
     )
 
 
+def _task_status(task: dict[str, Any]) -> TaskStatus | None:
+    raw = task.get("status")
+    if isinstance(raw, TaskStatus):
+        return raw
+    if raw is None:
+        return None
+    try:
+        return TaskStatus(str(raw))
+    except ValueError:
+        return None
+
+
+def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+    status = _task_status(task)
+    if status not in {TaskStatus.FAILED, TaskStatus.COMPLETED}:
+        return task
+
+    refreshed = agent_service.update_task(
+        task_id,
+        status=TaskStatus.PENDING,
+        current_step="requeued for manual execute",
+        context={
+            "manual_reexecute_requested": True,
+            "manual_reexecute_from_status": status.value,
+        },
+    )
+    if isinstance(refreshed, dict):
+        return refreshed
+    return task
+
+
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
@@ -392,6 +423,7 @@ async def execute_task(
     task = agent_service.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    task = _requeue_terminal_task_for_execute(task_id, task)
 
     from app.services import agent_execution_service
 
@@ -464,6 +496,7 @@ async def pickup_and_execute_task(
         task = agent_service.get_task(task_id)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
+        task = _requeue_terminal_task_for_execute(task_id, task)
     else:
         pending, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
         if not pending:
