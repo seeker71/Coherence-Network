@@ -2488,6 +2488,237 @@ def get_visibility_summary() -> dict[str, Any]:
     }
 
 
+def _route_guidance_view(route: dict[str, Any]) -> dict[str, Any]:
+    executor = str(route.get("executor") or "").strip()
+    return {
+        "executor": executor,
+        "tool": _executor_binary_name(executor) if executor else "",
+        "model": str(route.get("model") or ""),
+        "tier": str(route.get("tier") or ""),
+        "provider": str(route.get("provider") or ""),
+        "is_paid_provider": bool(route.get("is_paid_provider")),
+        "command_template": str(route.get("command_template") or ""),
+    }
+
+
+def _orchestration_route_matrix(cheap_executor: str, escalation_executor: str) -> dict[str, Any]:
+    matrix: dict[str, Any] = {}
+    for task_type in TaskType:
+        cheap_route = get_route(task_type, executor=cheap_executor)
+        escalation_route = get_route(task_type, executor=escalation_executor)
+        matrix[task_type.value] = {
+            "cheap": _route_guidance_view(cheap_route),
+            "escalation": _route_guidance_view(escalation_route),
+            "escalation_changes_route": bool(
+                cheap_route.get("executor") != escalation_route.get("executor")
+                or cheap_route.get("model") != escalation_route.get("model")
+            ),
+        }
+    return matrix
+
+
+def _top_failing_tools(execution: dict[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
+    by_tool = execution.get("by_tool") if isinstance(execution.get("by_tool"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    for tool, payload in by_tool.items():
+        if not isinstance(payload, dict):
+            continue
+        failed = int(payload.get("failed") or 0)
+        if failed <= 0:
+            continue
+        rows.append(
+            {
+                "tool": str(tool or ""),
+                "failed": failed,
+                "count": int(payload.get("count") or 0),
+                "success_rate": float(payload.get("success_rate") or 0.0),
+            }
+        )
+    rows.sort(key=lambda row: (-int(row["failed"]), float(row["success_rate"]), -int(row["count"]), str(row["tool"])))
+    return rows[:limit]
+
+
+def _guidance_item(
+    *,
+    item_id: str,
+    severity: str,
+    title: str,
+    detail: str,
+    action: str,
+) -> dict[str, str]:
+    return {
+        "id": item_id,
+        "severity": severity,
+        "title": title,
+        "detail": detail,
+        "action": action,
+    }
+
+
+def _dedupe_guidance_rows(guidance_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in guidance_rows:
+        item_id = str(row.get("id") or "").strip()
+        if item_id and item_id in seen_ids:
+            continue
+        if item_id:
+            seen_ids.add(item_id)
+        deduped.append(row)
+    return deduped
+
+
+def _lifecycle_awareness_snapshot(window_seconds: int, sample_limit: int) -> dict[str, Any]:
+    from app.services import agent_execution_hooks
+
+    lifecycle = agent_execution_hooks.summarize_lifecycle_events(
+        seconds=window_seconds,
+        limit=sample_limit,
+        source="auto",
+    )
+    by_event = lifecycle.get("by_event") if isinstance(lifecycle.get("by_event"), dict) else {}
+    by_status = lifecycle.get("by_status") if isinstance(lifecycle.get("by_status"), dict) else {}
+    finalized_events = int(by_event.get("finalized") or 0)
+    failed_finalized_events = int(by_status.get("failed") or 0)
+    lifecycle_failure_ratio = (
+        round(float(failed_finalized_events) / float(finalized_events), 4) if finalized_events > 0 else 0.0
+    )
+    return {
+        "lifecycle": lifecycle,
+        "finalized_events": finalized_events,
+        "failed_finalized_events": failed_finalized_events,
+        "lifecycle_failure_ratio": lifecycle_failure_ratio,
+    }
+
+
+def _build_orchestration_guidance_rows(
+    *,
+    execution_success_rate: float,
+    coverage_rate: float,
+    top_failing_tools: list[dict[str, Any]],
+    finalized_events: int,
+    lifecycle_failure_ratio: float,
+    lifecycle_guidance: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    guidance_rows: list[dict[str, Any]] = [dict(row) for row in lifecycle_guidance[:5] if isinstance(row, dict)]
+
+    if execution_success_rate < 0.8:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="execution_success_low",
+                severity="medium",
+                title="Execution success rate is below target",
+                detail=f"Execution success rate is {round(execution_success_rate * 100.0, 1)}% in the current window.",
+                action="Prefer cheap executor path first, narrow task scopes, and escalate once for reasoning-heavy failures.",
+            )
+        )
+    if coverage_rate < 0.95:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="coverage_gap",
+                severity="medium",
+                title="Execution tracking coverage is incomplete",
+                detail=f"Coverage rate is {round(coverage_rate * 100.0, 1)}% for completed/failed tasks.",
+                action="Ensure worker runtime events include task_id, executor, and provider metadata.",
+            )
+        )
+    if top_failing_tools:
+        top_tools = ", ".join(str(row.get("tool") or "") for row in top_failing_tools[:3] if str(row.get("tool") or ""))
+        guidance_rows.append(
+            _guidance_item(
+                item_id="tool_failure_hotspots",
+                severity="medium",
+                title="Tool failure hotspots detected",
+                detail=f"Most frequent failing tools: {top_tools or 'unknown'}.",
+                action="Run failing tools in smaller deterministic loops before broad orchestration retries.",
+            )
+        )
+    if finalized_events > 0 and lifecycle_failure_ratio >= 0.25:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="lifecycle_failures_present",
+                severity="medium",
+                title="Lifecycle failures are elevated",
+                detail=f"Lifecycle finalized failure ratio is {round(lifecycle_failure_ratio * 100.0, 1)}%.",
+                action="Inspect /api/agent/lifecycle/summary guidance and resolve repeated guard/validation causes first.",
+            )
+        )
+    if not guidance_rows:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="stable_guidance_baseline",
+                severity="info",
+                title="Signals are stable",
+                detail="Current orchestration signals are stable and guidance targets are on track.",
+                action="Continue cheap-first routing with one escalation only when needed.",
+            )
+        )
+    return _dedupe_guidance_rows(guidance_rows)
+
+
+def get_orchestration_guidance_summary(*, seconds: int = 6 * 3600, limit: int = 500) -> dict[str, Any]:
+    """Guidance-first orchestration summary for model/tool routing and awareness signals."""
+    from app.services import friction_service
+
+    window_seconds = max(300, min(int(seconds), 30 * 24 * 3600))
+    sample_limit = max(1, min(int(limit), 5000))
+    window_days = max(1, min(30, int((window_seconds + 86399) // 86400)))
+
+    cheap_executor = _cheap_executor_default()
+    escalation_executor = _escalation_executor_default()
+    usage = get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    coverage = execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {}
+    execution_success_rate = float(execution.get("success_rate") or 0.0)
+    coverage_rate = float(coverage.get("coverage_rate") or 0.0)
+    top_failing_tools = _top_failing_tools(execution, limit=5)
+
+    lifecycle_snapshot = _lifecycle_awareness_snapshot(window_seconds, sample_limit)
+    lifecycle = lifecycle_snapshot["lifecycle"]
+    finalized_events = int(lifecycle_snapshot["finalized_events"])
+    failed_finalized_events = int(lifecycle_snapshot["failed_finalized_events"])
+    lifecycle_failure_ratio = float(lifecycle_snapshot["lifecycle_failure_ratio"])
+
+    friction_events, _ignored = friction_service.load_events()
+    friction_summary = friction_service.summarize(friction_events, window_days=window_days)
+    top_friction_blocks = list(friction_summary.get("top_block_types") or [])[:5]
+    lifecycle_guidance = lifecycle.get("guidance") if isinstance(lifecycle.get("guidance"), list) else []
+    guidance = _build_orchestration_guidance_rows(
+        execution_success_rate=execution_success_rate,
+        coverage_rate=coverage_rate,
+        top_failing_tools=top_failing_tools,
+        finalized_events=finalized_events,
+        lifecycle_failure_ratio=lifecycle_failure_ratio,
+        lifecycle_guidance=lifecycle_guidance,
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "guidance",
+        "enforcement": "advisory",
+        "window_seconds": window_seconds,
+        "defaults": {
+            "cheap_executor": cheap_executor,
+            "escalation_executor": escalation_executor,
+            "repo_question_executor": routing_service.repo_question_executor_default(),
+            "open_question_executor": routing_service.open_question_executor_default(),
+        },
+        "recommended_routes": _orchestration_route_matrix(cheap_executor, escalation_executor),
+        "awareness": {
+            "execution_success_rate": round(execution_success_rate, 4),
+            "coverage_rate": round(coverage_rate, 4),
+            "lifecycle_failure_ratio": lifecycle_failure_ratio,
+            "finalized_events": finalized_events,
+            "failed_finalized_events": failed_finalized_events,
+            "subscribers": lifecycle.get("subscribers") if isinstance(lifecycle.get("subscribers"), dict) else {},
+            "summary_source": str(lifecycle.get("summary_source") or "none"),
+            "top_failing_tools": top_failing_tools,
+            "top_friction_blocks": top_friction_blocks,
+        },
+        "guidance": guidance[:10],
+    }
+
+
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
     _ensure_store_loaded(include_output=False)
     fingerprint = (task_fingerprint or "").strip()
