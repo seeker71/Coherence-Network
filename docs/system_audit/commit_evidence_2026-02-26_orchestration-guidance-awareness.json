@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/guidance-coherence-20260226",
+  "commit_scope": "Add guidance-first orchestration awareness summary with advisory model/tool routing recommendations and telemetry-backed awareness signals.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_visibility_api.py",
+    "specs/112-orchestration-guidance-awareness.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "112-orchestration-guidance-awareness"
+  ],
+  "task_ids": [
+    "task-2026-02-26-orchestration-guidance-awareness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "specs/112-orchestration-guidance-awareness.md"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_visibility_api.py",
+    "specs/112-orchestration-guidance-awareness.md",
+    "docs/system_audit/commit_evidence_2026-02-26_orchestration-guidance-awareness.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/112-orchestration-guidance-awareness.md",
+      "cd api && pytest -q tests/test_agent_visibility_api.py -k \"orchestration_guidance\"",
+      "cd api && pytest -q tests/test_agent_visibility_api.py",
+      "cd api && ruff check app/services/agent_service.py app/routers/agent.py tests/test_agent_visibility_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting guard chain, commit/push, PR checks, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Advisory orchestration guidance endpoint returns route matrix, awareness metrics, and actionable guidance without introducing hard-blocking execution rules.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/orchestration/guidance",
+      "https://coherence-network-production.up.railway.app/api/agent/visibility"
+    ],
+    "test_flows": [
+      "Call /api/agent/orchestration/guidance and verify mode/enforcement/advisory payload keys.",
+      "Generate a failed runtime tool event and verify execution-success guidance appears."
+    ]
+  }
+}
