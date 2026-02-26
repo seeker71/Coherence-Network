@@ -4,7 +4,16 @@ import { fetchJsonOrNull } from "@/lib/fetch";
 
 const API_URL = getApiBase();
 const WEB_STARTED_AT = new Date();
-const WEB_UPDATED_AT = process.env.WEB_UPDATED_AT || process.env.VERCEL_GIT_COMMIT_SHA || "unknown";
+const WEB_DEPLOYED_SHA_ENV_KEYS = [
+  "WEB_DEPLOYED_SHA",
+  "WEB_UPDATED_AT",
+  "RAILWAY_GIT_COMMIT_SHA",
+  "RAILWAY_GIT_SHA",
+  "VERCEL_GIT_COMMIT_SHA",
+  "GIT_COMMIT_SHA",
+  "COMMIT_SHA",
+  "SOURCE_VERSION",
+] as const;
 const UPSTREAM_TIMEOUT_MS = 15000;
 const HEALTH_PROXY_FAILURE_THRESHOLD = Math.max(
   1,
@@ -17,6 +26,18 @@ const HEALTH_PROXY_COOLDOWN_MS = Math.max(
 
 let healthProxyConsecutiveFailures = 0;
 let healthProxyCooldownUntilMs = 0;
+
+function resolveWebDeployedSha(): { value: string; source: string } {
+  for (const key of WEB_DEPLOYED_SHA_ENV_KEYS) {
+    const candidate = process.env[key]?.trim();
+    if (candidate) {
+      return { value: candidate, source: key };
+    }
+  }
+  return { value: "unknown", source: "unknown" };
+}
+
+const WEB_DEPLOYED_SHA = resolveWebDeployedSha();
 
 function uptimeSeconds() {
   return Math.max(0, Math.floor((Date.now() - WEB_STARTED_AT.getTime()) / 1000));
@@ -84,7 +105,9 @@ export async function GET() {
           status: "degraded",
           started_at: WEB_STARTED_AT.toISOString(),
           uptime_seconds: uptimeSeconds(),
-          updated_at: WEB_UPDATED_AT,
+          updated_at: WEB_DEPLOYED_SHA.value,
+          deployed_sha: WEB_DEPLOYED_SHA.value,
+          deployed_sha_source: WEB_DEPLOYED_SHA.source,
         },
         retry_after_seconds: retryAfterSeconds,
       },
@@ -116,7 +139,9 @@ export async function GET() {
         started_at: WEB_STARTED_AT.toISOString(),
         uptime_seconds: up,
         uptime_human: uptimeHuman(up),
-        updated_at: WEB_UPDATED_AT,
+        updated_at: WEB_DEPLOYED_SHA.value,
+        deployed_sha: WEB_DEPLOYED_SHA.value,
+        deployed_sha_source: WEB_DEPLOYED_SHA.source,
       },
       checked_at: new Date().toISOString(),
     });
@@ -136,7 +161,9 @@ export async function GET() {
           status: "degraded",
           started_at: WEB_STARTED_AT.toISOString(),
           uptime_seconds: uptimeSeconds(),
-          updated_at: WEB_UPDATED_AT,
+          updated_at: WEB_DEPLOYED_SHA.value,
+          deployed_sha: WEB_DEPLOYED_SHA.value,
+          deployed_sha_source: WEB_DEPLOYED_SHA.source,
         },
         details: String(error),
         retry_after_seconds: retryAfterSeconds,
