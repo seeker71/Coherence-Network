@@ -137,6 +137,27 @@ async def sync_spec_implementation_gap_tasks(
     return payload
 
 
+@router.post("/inventory/roi/sync-progress")
+async def sync_roi_progress_tasks(
+    background_tasks: BackgroundTasks,
+    create_task: bool = Query(False),
+    per_category: int = Query(4, ge=1, le=20),
+    normalize_missing_roi: bool = Query(True),
+    calibrate_estimators: bool = Query(True),
+    calibration_alpha: float = Query(0.35, ge=0.0, le=1.0),
+) -> dict:
+    payload = inventory_service.sync_roi_progress_tasks(
+        create_task=create_task,
+        per_category=per_category,
+        normalize_missing_roi=normalize_missing_roi,
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=calibration_alpha,
+    )
+    if create_task:
+        _queue_inventory_auto_execute(payload, background_tasks)
+    return payload
+
+
 @router.get("/inventory/questions/proactive")
 async def proactive_questions(
     limit: int = Query(20, ge=1, le=200),
