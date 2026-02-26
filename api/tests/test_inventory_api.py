@@ -1553,3 +1553,293 @@ async def test_sync_process_gap_tasks_creates_and_dedupes_blocker_tasks(
         second_payload = second.json()
         assert second_payload["created_count"] == 0
         assert second_payload["skipped_existing_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_sync_roi_progress_tasks_creates_four_per_category_and_calibrates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    idea_rows = [
+        SimpleNamespace(
+            id="idea-top",
+            name="Top idea",
+            potential_value=120.0,
+            estimated_cost=6.0,
+            actual_value=36.0,
+            actual_cost=12.0,
+            free_energy_score=9.0,
+        ),
+        SimpleNamespace(
+            id="idea-mid",
+            name="Mid idea",
+            potential_value=60.0,
+            estimated_cost=6.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=6.0,
+        ),
+        SimpleNamespace(
+            id="idea-low",
+            name="Low idea",
+            potential_value=40.0,
+            estimated_cost=8.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=3.0,
+        ),
+        SimpleNamespace(
+            id="idea-floor",
+            name="Needs floor",
+            potential_value=0.0,
+            estimated_cost=0.0,
+            actual_value=2.0,
+            actual_cost=1.0,
+            free_energy_score=2.0,
+        ),
+        SimpleNamespace(
+            id="idea-extra",
+            name="Extra idea",
+            potential_value=20.0,
+            estimated_cost=10.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=1.0,
+        ),
+    ]
+
+    spec_rows = [
+        SimpleNamespace(
+            spec_id="spec-top",
+            title="Top spec",
+            potential_value=90.0,
+            estimated_cost=5.0,
+            actual_value=20.0,
+            actual_cost=8.0,
+            estimated_roi=18.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-mid",
+            title="Mid spec",
+            potential_value=40.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=8.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-low",
+            title="Low spec",
+            potential_value=30.0,
+            estimated_cost=6.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=5.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-floor",
+            title="Needs floor",
+            potential_value=0.0,
+            estimated_cost=0.0,
+            actual_value=1.0,
+            actual_cost=1.0,
+            estimated_roi=0.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-extra",
+            title="Extra spec",
+            potential_value=10.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=2.0,
+        ),
+    ]
+
+    impl_candidates = [
+        {
+            "spec_id": "impl-030",
+            "title": "Impl 030",
+            "source_path": "specs/030-pipeline.md",
+            "estimated_roi": 11.2,
+            "task_fingerprint": "spec_implementation_gap::030",
+        },
+        {
+            "spec_id": "impl-026",
+            "title": "Impl 026",
+            "source_path": "specs/026-metrics.md",
+            "estimated_roi": 8.2,
+            "task_fingerprint": "spec_implementation_gap::026",
+        },
+        {
+            "spec_id": "impl-033",
+            "title": "Impl 033",
+            "source_path": "specs/033-readme.md",
+            "estimated_roi": 4.7,
+            "task_fingerprint": "spec_implementation_gap::033",
+        },
+        {
+            "spec_id": "impl-052",
+            "title": "Impl 052",
+            "source_path": "specs/052-lineage.md",
+            "estimated_roi": 3.9,
+            "task_fingerprint": "spec_implementation_gap::052",
+        },
+        {
+            "spec_id": "impl-089",
+            "title": "Impl 089",
+            "source_path": "specs/089-traceability.md",
+            "estimated_roi": 1.5,
+            "task_fingerprint": "spec_implementation_gap::089",
+        },
+    ]
+
+    monkeypatch.setattr(
+        inventory_service.idea_service,
+        "list_ideas",
+        lambda only_unvalidated=False, limit=None, offset=0: SimpleNamespace(ideas=idea_rows),
+    )
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000, offset=0: spec_rows,
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_spec_implementation_gap_candidates",
+        lambda limit=200: impl_candidates[:limit],
+    )
+
+    idea_updates: list[tuple[str, dict[str, float]]] = []
+    spec_updates: list[tuple[str, dict[str, float]]] = []
+
+    def _fake_update_idea(idea_id: str, **kwargs):
+        payload = {k: float(v) for k, v in kwargs.items() if isinstance(v, (int, float))}
+        idea_updates.append((idea_id, payload))
+        return SimpleNamespace(id=idea_id, **payload)
+
+    def _fake_update_spec(spec_id: str, data):
+        payload = {
+            k: float(v)
+            for k, v in data.model_dump(exclude_none=True).items()
+            if isinstance(v, (int, float))
+        }
+        spec_updates.append((spec_id, payload))
+        return SimpleNamespace(spec_id=spec_id, **payload)
+
+    monkeypatch.setattr(inventory_service.idea_service, "update_idea", _fake_update_idea)
+    monkeypatch.setattr(inventory_service.spec_registry_service, "update_spec", _fake_update_spec)
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/inventory/roi/sync-progress",
+            params={"create_task": True, "per_category": 4},
+        )
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["result"] == "roi_progress_tasks_synced"
+    assert payload["created"]["ideas_count"] == 4
+    assert payload["created"]["specs_count"] == 4
+    assert payload["created"]["implementations_count"] == 4
+    assert payload["created"]["total_count"] == 12
+    assert payload["requested_per_category"] == 4
+    assert payload["created"]["per_category_met"] is True
+
+    idea_rois = [float(row["estimated_roi"]) for row in payload["candidates"]["ideas"]]
+    assert idea_rois == sorted(idea_rois, reverse=True)
+    spec_rois = [float(row["estimated_roi"]) for row in payload["candidates"]["specs"]]
+    assert spec_rois == sorted(spec_rois, reverse=True)
+    assert payload["candidates"]["implementations"][0]["spec_id"] == "impl-030"
+
+    assert payload["normalization"]["ideas"]["normalized_count"] >= 1
+    assert payload["normalization"]["specs"]["normalized_count"] >= 1
+    assert payload["calibration"]["ideas"]["updated_count"] >= 1
+    assert payload["calibration"]["specs"]["updated_count"] >= 1
+    assert any(idea_id == "idea-floor" for idea_id, _ in idea_updates)
+    assert any(spec_id == "spec-floor" for spec_id, _ in spec_updates)
+
+
+@pytest.mark.asyncio
+async def test_sync_roi_progress_tasks_preview_reports_roi_coverage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_service.idea_service,
+        "list_ideas",
+        lambda only_unvalidated=False, limit=None, offset=0: SimpleNamespace(
+            ideas=[
+                SimpleNamespace(
+                    id="idea-a",
+                    name="Idea A",
+                    potential_value=10.0,
+                    estimated_cost=2.0,
+                    actual_value=0.0,
+                    actual_cost=0.0,
+                    free_energy_score=1.0,
+                ),
+                SimpleNamespace(
+                    id="idea-b",
+                    name="Idea B",
+                    potential_value=9.0,
+                    estimated_cost=3.0,
+                    actual_value=0.0,
+                    actual_cost=0.0,
+                    free_energy_score=0.9,
+                ),
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000, offset=0: [
+            SimpleNamespace(
+                spec_id="spec-a",
+                title="Spec A",
+                potential_value=12.0,
+                estimated_cost=3.0,
+                actual_value=0.0,
+                actual_cost=0.0,
+                estimated_roi=4.0,
+            ),
+            SimpleNamespace(
+                spec_id="spec-b",
+                title="Spec B",
+                potential_value=6.0,
+                estimated_cost=3.0,
+                actual_value=0.0,
+                actual_cost=0.0,
+                estimated_roi=2.0,
+            ),
+        ],
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_spec_implementation_gap_candidates",
+        lambda limit=200: [
+            {
+                "spec_id": "impl-a",
+                "title": "Impl A",
+                "source_path": "specs/impl-a.md",
+                "estimated_roi": 3.5,
+                "task_fingerprint": "spec_implementation_gap::impl-a",
+            }
+        ],
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/inventory/roi/sync-progress",
+            params={"create_task": False, "per_category": 4},
+        )
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["result"] == "roi_progress_tasks_synced"
+    assert payload["created"]["total_count"] == 0
+    assert payload["created"]["per_category_met"] is False
+    assert payload["roi_coverage"]["ideas_total"] == 2
+    assert payload["roi_coverage"]["ideas_with_potential_roi"] == 2
+    assert payload["roi_coverage"]["specs_total"] >= 2
+    assert payload["roi_coverage"]["specs_with_potential_roi"] == payload["roi_coverage"]["specs_total"]
