@@ -867,6 +867,157 @@ def test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning(monkey
     assert "railway_web_health_proxy_unknown_sha" in report.get("warnings", [])
 
 
+def test_public_deploy_contract_accepts_web_deployed_sha_field(monkeypatch) -> None:
+    expected_sha = "d" * 40
+    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", raising=False)
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
+        if url.endswith("/api/health"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"status": "ok", "deployed_sha": expected_sha},
+            }
+        if url.endswith("/api/gates/main-head"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"sha": expected_sha},
+            }
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "api": {"status": "ok"},
+                    "web": {"deployed_sha": expected_sha, "updated_at": "unknown"},
+                },
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {
+                                "parameters": [
+                                    {"name": "X-Force-Paid-Providers", "in": "header"},
+                                    {"name": "X-Agent-Execute-Token", "in": "header"},
+                                ]
+                            }
+                        }
+                    }
+                },
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "public_contract_passed"
+    assert "railway_web_health_proxy" not in report.get("failing_checks", [])
+    assert "railway_web_health_proxy_unknown_sha" not in report.get("warnings", [])
+
+
+def test_public_deploy_contract_blocks_when_web_proxy_sha_required_and_missing(monkeypatch) -> None:
+    expected_sha = "w" * 40
+    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", "1")
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
+        if url.endswith("/api/health"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"status": "ok", "deployed_sha": expected_sha},
+            }
+        if url.endswith("/api/gates/main-head"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"sha": expected_sha},
+            }
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "api": {"status": "ok"},
+                    "web": {"updated_at": "unknown"},
+                },
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {
+                                "parameters": [
+                                    {"name": "X-Force-Paid-Providers", "in": "header"},
+                                    {"name": "X-Agent-Execute-Token", "in": "header"},
+                                ]
+                            }
+                        }
+                    }
+                },
+            }
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "blocked"
+    assert "railway_web_health_proxy" in report.get("failing_checks", [])
+
+
 def test_public_deploy_contract_warns_when_api_health_sha_unknown(monkeypatch) -> None:
     expected_sha = "h" * 40
     monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", raising=False)
