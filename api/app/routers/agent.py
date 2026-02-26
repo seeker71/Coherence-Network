@@ -677,6 +677,15 @@ async def get_visibility() -> dict:
     return agent_service.get_visibility_summary()
 
 
+@router.get("/agent/orchestration/guidance")
+async def get_orchestration_guidance(
+    seconds: int = Query(21600, ge=300, le=2592000),
+    limit: int = Query(500, ge=1, le=5000),
+) -> dict:
+    """Guidance-first routing and awareness summary (advisory, non-blocking)."""
+    return agent_service.get_orchestration_guidance_summary(seconds=seconds, limit=limit)
+
+
 @router.get("/agent/integration")
 async def get_agent_integration() -> dict:
     """Role-agent integration coverage and remaining gaps."""
