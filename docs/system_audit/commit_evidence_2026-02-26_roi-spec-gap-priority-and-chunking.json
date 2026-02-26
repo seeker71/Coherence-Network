@@ -3,6 +3,7 @@
   "thread_branch": "codex/roi-progress-4x-20260226073027",
   "commit_scope": "Prioritize high-ROI ideas without linked specs and chunk spec-progress tasks for cheap-model execution with bounded token budgets.",
   "files_owned": [
+    "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
     "api/tests/test_inventory_api.py"
   ],
@@ -37,10 +38,13 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180745Z_codex-roi-progress-4x-20260226073027.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180528Z_codex-roi-progress-4x-20260226073027.json",
     "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180453Z_codex-roi-progress-4x-20260226073027.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "change_files": [
+    "api/app/routers/inventory.py",
     "api/app/services/inventory_service.py",
     "api/tests/test_inventory_api.py",
     "docs/system_audit/commit_evidence_2026-02-26_roi-spec-gap-priority-and-chunking.json",
