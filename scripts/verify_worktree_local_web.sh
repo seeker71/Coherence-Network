@@ -17,6 +17,7 @@ WEB_PID=""
 API_STARTED=0
 WEB_STARTED=0
 START_SERVERS=0
+AUTO_HEAL=0
 SHOW_PORTS=0
 
 THREAD_RUNTIME_HELPER="${ROOT_DIR}/scripts/thread_runtime_ports.sh"
@@ -28,17 +29,21 @@ fi
 usage() {
   cat <<'USAGE'
 Usage:
-  ./scripts/verify_worktree_local_web.sh [--start|--thread-ports]
+  ./scripts/verify_worktree_local_web.sh [--start|--auto-heal|--thread-ports]
 
 Options:
   --start
       Start missing API/web services and then validate.
+  --auto-heal
+      If services are not ready, start missing services automatically and continue.
   --thread-ports
       Print thread-runtime port usage snapshot before validation.
 
 Environment:
   THREAD_RUNTIME_START_SERVERS=1
       Same as --start.
+  THREAD_RUNTIME_AUTO_HEAL=1
+      Same as --auto-heal.
   THREAD_RUNTIME_API_BASE_PORT / THREAD_RUNTIME_WEB_BASE_PORT
       Thread-specific base offsets used to avoid collisions across threads.
   API_PORT / WEB_PORT
@@ -52,6 +57,9 @@ parse_args() {
     case "${arg}" in
       --start)
         START_SERVERS=1
+        ;;
+      --auto-heal)
+        AUTO_HEAL=1
         ;;
       --thread-ports)
         SHOW_PORTS=1
@@ -70,6 +78,9 @@ parse_args() {
 
   if [[ "${THREAD_RUNTIME_START_SERVERS:-0}" == "1" ]]; then
     START_SERVERS=1
+  fi
+  if [[ "${THREAD_RUNTIME_AUTO_HEAL:-0}" == "1" ]]; then
+    AUTO_HEAL=1
   fi
 }
 
@@ -331,6 +342,10 @@ fi
 if api_ready && web_ready; then
   echo "Local services already running; performing route checks only."
 elif (( START_SERVERS == 1 )); then
+  start_api_if_needed
+  start_web_if_needed
+elif (( AUTO_HEAL == 1 )); then
+  echo "Services are not fully ready; auto-heal enabled, starting missing services."
   start_api_if_needed
   start_web_if_needed
 else
