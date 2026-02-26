@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/self-improve-proof-20260226",
+  "commit_scope": "Add auto-heal flow for local worktree web validation and prove failure->fix->retry loop.",
+  "files_owned": [
+    "Makefile",
+    "scripts/verify_worktree_local_web.sh",
+    "docs/system_audit/commit_evidence_2026-02-26_worktree-validate-auto-heal.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "./scripts/verify_worktree_local_web.sh",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make web-worktree-validate",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "Makefile",
+    "scripts/verify_worktree_local_web.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "worktree-validation-self-heal"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make web-worktree-validate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deployment validation pending"
+  },
+  "task_ids": [
+    "task_self_improve_phase_2026_02_26"
+  ]
+}
