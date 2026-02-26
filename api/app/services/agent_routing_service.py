@@ -210,7 +210,7 @@ def openclaw_command_template(task_type: TaskType) -> str:
     model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --model {{model}} --reasoning-effort high --worktree --skip-git-repo-check --json',
+        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

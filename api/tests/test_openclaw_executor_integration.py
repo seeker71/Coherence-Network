@@ -97,7 +97,39 @@ def test_create_task_openclaw_default_template_includes_model(monkeypatch: pytes
     )
 
     assert task["model"] == "openclaw/openrouter/free"
+    assert task["command"].startswith("codex exec ")
     assert "--model openrouter/free" in task["command"]
+    assert "--skip-git-repo-check" in task["command"]
+    assert "--worktree" not in task["command"]
+    assert "--reasoning-effort" not in task["command"]
+
+
+def test_create_task_openclaw_default_template_avoids_unsupported_reasoning_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.delenv("OPENCLAW_COMMAND_TEMPLATE", raising=False)
+    monkeypatch.setattr(
+        agent_service.routing_service,
+        "OPENCLAW_MODEL_BY_TYPE",
+        {task_type: "gpt-5-codex" for task_type in TaskType},
+    )
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Validate codex command compatibility flags",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw"},
+        )
+    )
+
+    assert task["command"].startswith("codex exec ")
+    assert "--worktree" not in task["command"]
+    assert "--skip-git-repo-check" in task["command"]
+    assert "--reasoning-effort" not in task["command"]
 
 
 def test_create_task_openclaw_model_override_adds_model_flag(monkeypatch: pytest.MonkeyPatch) -> None:
