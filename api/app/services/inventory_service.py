@@ -91,6 +91,27 @@ _ASSET_MODULARITY_LIMITS: dict[str, int] = {
     "implementation_file_lines": 450,
 }
 
+_ROI_SPEC_CHEAP_MODEL = "openai/gpt-4o-mini"
+_ROI_SPEC_TASK_INPUT_MAX_TOKENS = 1200
+_ROI_SPEC_TASK_OUTPUT_MAX_TOKENS = 300
+_ROI_SPEC_CHUNK_PLAN: tuple[tuple[str, str, str], ...] = (
+    (
+        "scope_roi",
+        "Scope and ROI frame",
+        "Constrain to a small deliverable and restate explicit ROI signal assumptions.",
+    ),
+    (
+        "process_pseudocode",
+        "Process and pseudocode",
+        "Write process+pseudocode for the narrowed scope only; avoid broad refactors.",
+    ),
+    (
+        "validation_rollout",
+        "Validation and rollout",
+        "Define measurable validation plus rollout guardrails tied to ROI updates.",
+    ),
+)
+
 logger = logging.getLogger("coherence.inventory")
 
 _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
@@ -1208,9 +1229,12 @@ def _spec_row_metrics(row: Any) -> dict[str, Any] | None:
     spec_id = str(getattr(row, "spec_id", "") or "").strip()
     if not spec_id:
         return None
+    source_path = str(getattr(row, "source_path", "") or "").strip() or _spec_source_path_for_id(spec_id) or ""
     return {
         "spec_id": spec_id,
         "title": str(getattr(row, "title", "") or "").strip() or spec_id,
+        "idea_id": str(getattr(row, "idea_id", "") or "").strip(),
+        "source_path": source_path,
         "potential_value": _numeric(getattr(row, "potential_value", 0.0)),
         "estimated_cost": _numeric(getattr(row, "estimated_cost", 0.0)),
         "actual_value": _numeric(getattr(row, "actual_value", 0.0)),
@@ -1338,6 +1362,8 @@ def _build_spec_roi_candidate(
     candidate = {
         "spec_id": spec_id,
         "title": metrics["title"],
+        "idea_id": metrics["idea_id"],
+        "source_path": metrics["source_path"],
         "potential_value": round(potential_value, 4),
         "estimated_cost": round(estimated_cost, 4),
         "actual_value": round(float(metrics["actual_value"]), 4),
@@ -1568,6 +1594,7 @@ def _supplement_spec_candidates_from_discovery(
             {
                 "spec_id": spec_id,
                 "title": title,
+                "idea_id": "",
                 "potential_value": potential_value,
                 "estimated_cost": estimated_cost,
                 "actual_value": 0.0,
@@ -1685,41 +1712,132 @@ def _ensure_implementation_candidate_floor(
     )
 
 
+def _idea_ids_with_linked_specs(spec_candidates: list[dict[str, Any]]) -> set[str]:
+    out: set[str] = set()
+    for row in spec_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        if idea_id:
+            out.add(idea_id)
+    return out
+
+
+def _prioritize_idea_candidates_for_spec_gaps(
+    idea_candidates: list[dict[str, Any]],
+    spec_candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    idea_ids_with_specs = _idea_ids_with_linked_specs(spec_candidates)
+    prioritized: list[dict[str, Any]] = []
+    for row in idea_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        has_linked_spec = bool(idea_id and idea_id in idea_ids_with_specs)
+        enriched = dict(row)
+        enriched["has_linked_spec"] = has_linked_spec
+        enriched["spec_gap_priority"] = bool(not has_linked_spec and float(enriched.get("estimated_roi") or 0.0) > 0.0)
+        prioritized.append(enriched)
+    prioritized.sort(
+        key=lambda item: (
+            not bool(item.get("spec_gap_priority")),
+            -float(item.get("estimated_roi") or 0.0),
+            -float(item.get("free_energy_score") or 0.0),
+            str(item.get("idea_id") or ""),
+        )
+    )
+    return prioritized
+
+
+def _spec_chunk_rows_for_cheap_execution(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    chunk_total = len(_ROI_SPEC_CHUNK_PLAN)
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        spec_id = str(row.get("spec_id") or "").strip()
+        if not spec_id:
+            continue
+        for chunk_index, (chunk_key, chunk_label, chunk_goal) in enumerate(_ROI_SPEC_CHUNK_PLAN, start=1):
+            chunk_row = dict(row)
+            chunk_row["task_fingerprint"] = f"roi_spec_progress::{spec_id}::{chunk_key}"
+            chunk_row["spec_chunk"] = {
+                "chunk_key": chunk_key,
+                "chunk_label": chunk_label,
+                "chunk_goal": chunk_goal,
+                "chunk_index": chunk_index,
+                "chunk_total": chunk_total,
+            }
+            out.append(chunk_row)
+    out.sort(
+        key=lambda item: (
+            int((item.get("spec_chunk") or {}).get("chunk_index") or 99),
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+    return out
+
+
+def _build_idea_progress_direction(row: dict[str, Any]) -> str:
+    gap_hint = ""
+    if not bool(row.get("has_linked_spec")):
+        gap_hint = " No linked spec exists yet; seed a focused spec with explicit ROI estimates first."
+    return (
+        f"Advance high-ROI idea '{row['idea_id']}' ({row['name']})."
+        f"{gap_hint} "
+        "Define the next measurable spec checkpoint, acceptance tests, and expected ROI signal updates."
+    )
+
+
+def _build_spec_progress_direction(row: dict[str, Any]) -> str:
+    chunk = row.get("spec_chunk") if isinstance(row.get("spec_chunk"), dict) else {}
+    chunk_index = int(chunk.get("chunk_index") or 1)
+    chunk_total = int(chunk.get("chunk_total") or len(_ROI_SPEC_CHUNK_PLAN))
+    chunk_label = str(chunk.get("chunk_label") or "Spec slice").strip()
+    chunk_goal = str(chunk.get("chunk_goal") or "").strip()
+    return (
+        f"Advance high-ROI spec '{row['spec_id']}' ({row['title']}) part {chunk_index}/{chunk_total}: {chunk_label}. "
+        f"{chunk_goal} Keep this chunk small enough for cheap-model execution with concrete ROI evidence updates."
+    )
+
+
 def _create_idea_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
     return _create_progress_tasks(
         rows=rows,
         per_category=requested,
         task_type=TaskType.SPEC,
         source="roi_progress_idea",
-        direction_builder=lambda row: (
-            f"Advance high-ROI idea '{row['idea_id']}' ({row['name']}). "
-            "Define the next measurable spec checkpoint, acceptance tests, and expected ROI signal updates."
-        ),
+        direction_builder=_build_idea_progress_direction,
         context_builder=lambda row: {
             "idea_id": row["idea_id"],
             "idea_name": row["name"],
             "estimated_roi": row["estimated_roi"],
             "actual_roi": row["actual_roi"],
+            "has_linked_spec": bool(row.get("has_linked_spec")),
+            "spec_gap_priority": bool(row.get("spec_gap_priority")),
             "category": "idea",
         },
     )
 
 
 def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    chunk_rows = _spec_chunk_rows_for_cheap_execution(rows)
     return _create_progress_tasks(
-        rows=rows,
+        rows=chunk_rows,
         per_category=requested,
         task_type=TaskType.SPEC,
         source="roi_progress_spec",
-        direction_builder=lambda row: (
-            f"Advance high-ROI spec '{row['spec_id']}' ({row['title']}). "
-            "Tighten process/pseudocode/implementation sections and add measurable verification checks."
-        ),
+        direction_builder=_build_spec_progress_direction,
         context_builder=lambda row: {
             "spec_id": row["spec_id"],
             "spec_title": row["title"],
             "estimated_roi": row["estimated_roi"],
             "actual_roi": row["actual_roi"],
+            "model_override": _ROI_SPEC_CHEAP_MODEL,
+            "max_input_tokens": _ROI_SPEC_TASK_INPUT_MAX_TOKENS,
+            "max_output_tokens": _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS,
+            "spec_chunk": row.get("spec_chunk"),
             "category": "spec",
         },
     )
@@ -1912,7 +2030,8 @@ def sync_roi_progress_tasks(
         spec_candidates=spec_candidates,
         requested=requested,
     )
-    selected_ideas = idea_candidates[:requested]
+    prioritized_idea_candidates = _prioritize_idea_candidates_for_spec_gaps(idea_candidates, spec_candidates)
+    selected_ideas = prioritized_idea_candidates[:requested]
     selected_specs = spec_candidates[:requested]
     selected_implementations = implementation_candidates[:requested]
     (

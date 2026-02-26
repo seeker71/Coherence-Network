@@ -1843,3 +1843,146 @@ async def test_sync_roi_progress_tasks_preview_reports_roi_coverage(
     assert payload["roi_coverage"]["ideas_with_potential_roi"] == 2
     assert payload["roi_coverage"]["specs_total"] >= 2
     assert payload["roi_coverage"]["specs_with_potential_roi"] == payload["roi_coverage"]["specs_total"]
+
+
+@pytest.mark.asyncio
+async def test_sync_roi_progress_prioritizes_no_spec_ideas_and_chunks_spec_tasks_for_cheap_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    idea_rows = [
+        SimpleNamespace(
+            id="idea-covered-high",
+            name="Covered high ROI",
+            potential_value=200.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=9.0,
+        ),
+        SimpleNamespace(
+            id="idea-gap-high",
+            name="Gap high ROI",
+            potential_value=150.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=8.0,
+        ),
+        SimpleNamespace(
+            id="idea-gap-mid",
+            name="Gap mid ROI",
+            potential_value=70.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=7.0,
+        ),
+        SimpleNamespace(
+            id="idea-covered-low",
+            name="Covered lower ROI",
+            potential_value=60.0,
+            estimated_cost=6.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            free_energy_score=3.0,
+        ),
+    ]
+
+    spec_rows = [
+        SimpleNamespace(
+            spec_id="spec-covered-high",
+            title="Spec for covered high",
+            idea_id="idea-covered-high",
+            potential_value=90.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=18.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-covered-low",
+            title="Spec for covered low",
+            idea_id="idea-covered-low",
+            potential_value=40.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=8.0,
+        ),
+        SimpleNamespace(
+            spec_id="spec-extra",
+            title="Extra spec",
+            idea_id=None,
+            potential_value=30.0,
+            estimated_cost=5.0,
+            actual_value=0.0,
+            actual_cost=0.0,
+            estimated_roi=6.0,
+        ),
+    ]
+
+    monkeypatch.setattr(
+        inventory_service.idea_service,
+        "list_ideas",
+        lambda only_unvalidated=False, limit=None, offset=0: SimpleNamespace(ideas=idea_rows),
+    )
+    monkeypatch.setattr(
+        inventory_service.spec_registry_service,
+        "list_specs",
+        lambda limit=5000, offset=0: spec_rows,
+    )
+    monkeypatch.setattr(
+        inventory_service,
+        "_spec_implementation_gap_candidates",
+        lambda limit=200: [
+            {
+                "spec_id": "spec-covered-high",
+                "title": "Impl covered high",
+                "source_path": "specs/010-covered-high.md",
+                "estimated_roi": 9.0,
+                "task_fingerprint": "spec_implementation_gap::010",
+            },
+            {
+                "spec_id": "spec-covered-low",
+                "title": "Impl covered low",
+                "source_path": "specs/020-covered-low.md",
+                "estimated_roi": 5.0,
+                "task_fingerprint": "spec_implementation_gap::020",
+            },
+        ],
+    )
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/inventory/roi/sync-progress",
+            params={"create_task": True, "per_category": 2},
+        )
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["result"] == "roi_progress_tasks_synced"
+    assert payload["created"]["ideas_count"] == 2
+    assert payload["created"]["specs_count"] == 2
+    assert payload["created"]["implementations_count"] == 2
+
+    selected_idea_ids = [str(row["idea_id"]) for row in payload["candidates"]["ideas"]]
+    assert selected_idea_ids == ["idea-gap-high", "idea-gap-mid"]
+    assert payload["candidates"]["ideas"][0]["has_linked_spec"] is False
+    assert payload["candidates"]["ideas"][0]["spec_gap_priority"] is True
+
+    spec_task_ids = [str(row["task_id"]) for row in payload["created_tasks"]["specs"]]
+    assert len(spec_task_ids) == 2
+    for task_id in spec_task_ids:
+        task = agent_service._store[task_id]
+        context = task.get("context") if isinstance(task, dict) else {}
+        assert isinstance(context, dict)
+        assert context.get("source") == "roi_progress_spec"
+        assert context.get("model_override") == "openai/gpt-4o-mini"
+        assert context.get("max_input_tokens") == 1200
+        assert context.get("max_output_tokens") == 300
+        chunk = context.get("spec_chunk")
+        assert isinstance(chunk, dict)
+        assert int(chunk.get("chunk_index", 0)) >= 1
+        assert int(chunk.get("chunk_total", 0)) >= 2
+        assert str(chunk.get("chunk_key") or "").strip() != ""
