@@ -341,6 +341,59 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_for_codex_model(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (_ for _ in ()).throw(
+            agent_execution_service.OpenRouterError("OPENROUTER_API_KEY is not configured")
+        ),
+    )
+
+    monkeypatch.setattr(
+        agent_execution_service.agent_execution_codex_service,
+        "run_codex_exec",
+        lambda **_: {
+            "ok": True,
+            "elapsed_ms": 9,
+            "content": "spark-ok",
+            "usage_json": '{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}',
+            "provider_request_id": "",
+            "actual_cost_usd": 0.0009,
+            "max_cost_usd": None,
+            "cost_slack_ratio": None,
+        },
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{task['id']}/execute?force_paid_providers=true")
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        assert payload["status"] == "completed"
+        assert payload["output"] == "spark-ok"
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
@@ -394,6 +447,64 @@ async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_k
         alt_completed_payload = alt_completed.json()
         assert alt_completed_payload["status"] == "completed"
         assert alt_completed_payload["output"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_requeues_failed_task_for_manual_rerun(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    state = {"mode": "fail", "calls": 0}
+
+    def _fail_then_pass(**_):
+        state["calls"] += 1
+        if state["mode"] == "fail":
+            raise agent_execution_service.OpenRouterError("first run failure")
+        return (
+            "second-pass",
+            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
+            {"elapsed_ms": 7, "provider_request_id": "req_second", "response_id": "resp_second"},
+        )
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _fail_then_pass)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Rerun failed task",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first_execute = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert first_execute.status_code == 200
+
+        first_task = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert first_task.status_code == 200
+        first_payload = first_task.json()
+        assert first_payload["status"] == "failed"
+        assert "first run failure" in str(first_payload["output"] or "")
+
+        state["mode"] = "pass"
+        second_execute = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert second_execute.status_code == 200
+
+        second_task = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert second_task.status_code == 200
+        second_payload = second_task.json()
+        assert second_payload["status"] == "completed"
+        assert second_payload["output"] == "second-pass"
+        assert state["calls"] >= 2
 
 
 @pytest.mark.asyncio
