@@ -37,7 +37,13 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_run_state_service, agent_runner_registry_service, agent_service, runner_orphan_recovery_service
+from app.services import (
+    agent_execution_hooks,
+    agent_run_state_service,
+    agent_runner_registry_service,
+    agent_service,
+    runner_orphan_recovery_service,
+)
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -333,6 +339,21 @@ async def list_runners(
     return AgentRunnerList(
         runners=[AgentRunnerSnapshot(**row) for row in rows],
         total=len(rows),
+    )
+
+
+@router.get("/agent/lifecycle/summary")
+async def agent_lifecycle_summary(
+    seconds: int = Query(3600, ge=60, le=2592000),
+    limit: int = Query(500, ge=1, le=5000),
+    task_id: str | None = Query(None),
+    source: str = Query("auto"),
+) -> dict:
+    return agent_execution_hooks.summarize_lifecycle_events(
+        seconds=seconds,
+        limit=limit,
+        task_id=task_id,
+        source=source,
     )
 
 

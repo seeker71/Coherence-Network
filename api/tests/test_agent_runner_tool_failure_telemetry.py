@@ -410,6 +410,35 @@ def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch,
     assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
 
 
+def test_configure_codex_cli_environment_oauth_without_api_key_strips_openai_env(monkeypatch, tmp_path):
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", raising=False)
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_ADMIN_API_KEY", raising=False)
+
+    env = {
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_oauth_no_api_key",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_fallback_allowed"] is True
+    assert auth["api_key_present"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
+
+
 def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch, tmp_path):
     class _Completed:
         returncode = 1
