@@ -91,6 +91,27 @@ _ASSET_MODULARITY_LIMITS: dict[str, int] = {
     "implementation_file_lines": 450,
 }
 
+_ROI_SPEC_CHEAP_MODEL = "openai/gpt-4o-mini"
+_ROI_SPEC_TASK_INPUT_MAX_TOKENS = 1200
+_ROI_SPEC_TASK_OUTPUT_MAX_TOKENS = 300
+_ROI_SPEC_CHUNK_PLAN: tuple[tuple[str, str, str], ...] = (
+    (
+        "scope_roi",
+        "Scope and ROI frame",
+        "Constrain to a small deliverable and restate explicit ROI signal assumptions.",
+    ),
+    (
+        "process_pseudocode",
+        "Process and pseudocode",
+        "Write process+pseudocode for the narrowed scope only; avoid broad refactors.",
+    ),
+    (
+        "validation_rollout",
+        "Validation and rollout",
+        "Define measurable validation plus rollout guardrails tied to ROI updates.",
+    ),
+)
+
 logger = logging.getLogger("coherence.inventory")
 
 _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
@@ -1111,6 +1132,942 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
         "task_type": task["task_type"].value if hasattr(task["task_type"], "value") else str(task["task_type"]),
     }
     return report
+
+
+def _numeric(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _roi_from_fields(potential_value: float, estimated_cost: float) -> float:
+    if estimated_cost <= 0:
+        return 0.0
+    return round(float(potential_value) / float(estimated_cost), 4)
+
+
+def _normalize_roi_fields(
+    *,
+    potential_value: float,
+    estimated_cost: float,
+    actual_value: float,
+    actual_cost: float,
+    normalize_missing_roi: bool,
+) -> tuple[float, float, dict[str, float]]:
+    if not normalize_missing_roi:
+        return potential_value, estimated_cost, {}
+    update_data: dict[str, float] = {}
+    if potential_value <= 0:
+        update_data["potential_value"] = round(max(actual_value, 1.0), 4)
+    if estimated_cost <= 0:
+        update_data["estimated_cost"] = round(max(actual_cost, 1.0), 4)
+    if actual_value > max(potential_value, update_data.get("potential_value", 0.0)):
+        update_data["potential_value"] = round(max(actual_value, 1.0), 4)
+    return (
+        float(update_data.get("potential_value", potential_value)),
+        float(update_data.get("estimated_cost", estimated_cost)),
+        update_data,
+    )
+
+
+def _calibrate_estimated_cost_toward_actual(
+    *,
+    potential_value: float,
+    estimated_cost: float,
+    estimated_roi: float,
+    actual_value: float,
+    actual_cost: float,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> dict[str, float] | None:
+    actual_roi = _roi_from_fields(actual_value, actual_cost)
+    if not (
+        calibrate_estimators
+        and potential_value > 0
+        and estimated_cost > 0
+        and actual_value > 0
+        and actual_cost > 0
+        and actual_roi > 0
+    ):
+        return None
+    target_estimated_cost = potential_value / actual_roi
+    blended_cost = round(
+        max(0.1, estimated_cost + (target_estimated_cost - estimated_cost) * max(0.0, min(calibration_alpha, 1.0))),
+        4,
+    )
+    before_gap = abs(estimated_roi - actual_roi)
+    after_roi = _roi_from_fields(potential_value, blended_cost)
+    after_gap = abs(after_roi - actual_roi)
+    if blended_cost == estimated_cost or after_gap >= before_gap:
+        return None
+    return {
+        "estimated_cost_after": blended_cost,
+        "estimated_roi_after": after_roi,
+        "actual_roi": actual_roi,
+        "error_before": round(before_gap, 4),
+        "error_after": round(after_gap, 4),
+    }
+
+
+def _idea_row_metrics(row: Any) -> dict[str, Any] | None:
+    idea_id = str(getattr(row, "id", "") or "").strip()
+    if not idea_id:
+        return None
+    return {
+        "idea_id": idea_id,
+        "name": str(getattr(row, "name", "") or "").strip() or idea_id,
+        "potential_value": _numeric(getattr(row, "potential_value", 0.0)),
+        "estimated_cost": _numeric(getattr(row, "estimated_cost", 0.0)),
+        "actual_value": _numeric(getattr(row, "actual_value", 0.0)),
+        "actual_cost": _numeric(getattr(row, "actual_cost", 0.0)),
+        "free_energy_score": _numeric(getattr(row, "free_energy_score", 0.0)),
+    }
+
+
+def _spec_row_metrics(row: Any) -> dict[str, Any] | None:
+    spec_id = str(getattr(row, "spec_id", "") or "").strip()
+    if not spec_id:
+        return None
+    source_path = str(getattr(row, "source_path", "") or "").strip() or _spec_source_path_for_id(spec_id) or ""
+    return {
+        "spec_id": spec_id,
+        "title": str(getattr(row, "title", "") or "").strip() or spec_id,
+        "idea_id": str(getattr(row, "idea_id", "") or "").strip(),
+        "source_path": source_path,
+        "potential_value": _numeric(getattr(row, "potential_value", 0.0)),
+        "estimated_cost": _numeric(getattr(row, "estimated_cost", 0.0)),
+        "actual_value": _numeric(getattr(row, "actual_value", 0.0)),
+        "actual_cost": _numeric(getattr(row, "actual_cost", 0.0)),
+    }
+
+
+def _build_idea_roi_candidate(
+    row: Any,
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    metrics = _idea_row_metrics(row)
+    if metrics is None:
+        return None, None, None
+    idea_id = str(metrics["idea_id"])
+    potential_value, estimated_cost, update_data = _normalize_roi_fields(
+        potential_value=float(metrics["potential_value"]),
+        estimated_cost=float(metrics["estimated_cost"]),
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        normalize_missing_roi=normalize_missing_roi,
+    )
+    normalized_update: dict[str, Any] | None = None
+    if update_data:
+        idea_service.update_idea(
+            idea_id,
+            potential_value=update_data.get("potential_value"),
+            estimated_cost=update_data.get("estimated_cost"),
+        )
+        normalized_update = {"idea_id": idea_id, **update_data}
+
+    estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+    calibration_data = _calibrate_estimated_cost_toward_actual(
+        potential_value=potential_value,
+        estimated_cost=estimated_cost,
+        estimated_roi=estimated_roi,
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=calibration_alpha,
+    )
+    calibration_update: dict[str, Any] | None = None
+    if calibration_data is not None:
+        idea_service.update_idea(idea_id, estimated_cost=calibration_data["estimated_cost_after"])
+        calibration_update = {
+            "idea_id": idea_id,
+            "estimated_cost_before": round(estimated_cost, 4),
+            "estimated_cost_after": calibration_data["estimated_cost_after"],
+            "estimated_roi_before": estimated_roi,
+            "estimated_roi_after": calibration_data["estimated_roi_after"],
+            "actual_roi": calibration_data["actual_roi"],
+            "error_before": calibration_data["error_before"],
+            "error_after": calibration_data["error_after"],
+        }
+        estimated_cost = float(calibration_data["estimated_cost_after"])
+        estimated_roi = float(calibration_data["estimated_roi_after"])
+
+    candidate = {
+        "idea_id": idea_id,
+        "name": metrics["name"],
+        "potential_value": round(potential_value, 4),
+        "estimated_cost": round(estimated_cost, 4),
+        "actual_value": round(float(metrics["actual_value"]), 4),
+        "actual_cost": round(float(metrics["actual_cost"]), 4),
+        "estimated_roi": estimated_roi,
+        "actual_roi": _roi_from_fields(float(metrics["actual_value"]), float(metrics["actual_cost"])),
+        "free_energy_score": round(float(metrics["free_energy_score"]), 4),
+        "task_fingerprint": f"roi_idea_progress::{idea_id}",
+    }
+    return candidate, normalized_update, calibration_update
+
+
+def _build_spec_roi_candidate(
+    row: Any,
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    metrics = _spec_row_metrics(row)
+    if metrics is None:
+        return None, None, None
+    spec_id = str(metrics["spec_id"])
+    potential_value, estimated_cost, update_data = _normalize_roi_fields(
+        potential_value=float(metrics["potential_value"]),
+        estimated_cost=float(metrics["estimated_cost"]),
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        normalize_missing_roi=normalize_missing_roi,
+    )
+    normalized_update: dict[str, Any] | None = None
+    if update_data:
+        spec_registry_service.update_spec(spec_id, SpecRegistryUpdate(**update_data))
+        normalized_update = {"spec_id": spec_id, **update_data}
+
+    estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+    calibration_data = _calibrate_estimated_cost_toward_actual(
+        potential_value=potential_value,
+        estimated_cost=estimated_cost,
+        estimated_roi=estimated_roi,
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=calibration_alpha,
+    )
+    calibration_update: dict[str, Any] | None = None
+    if calibration_data is not None:
+        spec_registry_service.update_spec(spec_id, SpecRegistryUpdate(estimated_cost=calibration_data["estimated_cost_after"]))
+        calibration_update = {
+            "spec_id": spec_id,
+            "estimated_cost_before": round(estimated_cost, 4),
+            "estimated_cost_after": calibration_data["estimated_cost_after"],
+            "estimated_roi_before": estimated_roi,
+            "estimated_roi_after": calibration_data["estimated_roi_after"],
+            "actual_roi": calibration_data["actual_roi"],
+            "error_before": calibration_data["error_before"],
+            "error_after": calibration_data["error_after"],
+        }
+        estimated_cost = float(calibration_data["estimated_cost_after"])
+        estimated_roi = float(calibration_data["estimated_roi_after"])
+
+    candidate = {
+        "spec_id": spec_id,
+        "title": metrics["title"],
+        "idea_id": metrics["idea_id"],
+        "source_path": metrics["source_path"],
+        "potential_value": round(potential_value, 4),
+        "estimated_cost": round(estimated_cost, 4),
+        "actual_value": round(float(metrics["actual_value"]), 4),
+        "actual_cost": round(float(metrics["actual_cost"]), 4),
+        "estimated_roi": estimated_roi,
+        "actual_roi": _roi_from_fields(float(metrics["actual_value"]), float(metrics["actual_cost"])),
+        "task_fingerprint": f"roi_spec_progress::{spec_id}",
+    }
+    return candidate, normalized_update, calibration_update
+
+
+def _apply_idea_roi_normalization_and_calibration(
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+    limit: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, float]]:
+    response = idea_service.list_ideas(limit=max(1, min(limit, 500)), offset=0)
+    rows = list(getattr(response, "ideas", []) or [])
+    normalized_updates: list[dict[str, Any]] = []
+    calibration_updates: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    roi_map: dict[str, float] = {}
+    ideas_with_potential_roi = 0
+
+    for row in rows:
+        candidate, normalized_update, calibration_update = _build_idea_roi_candidate(
+            row,
+            normalize_missing_roi=normalize_missing_roi,
+            calibrate_estimators=calibrate_estimators,
+            calibration_alpha=calibration_alpha,
+        )
+        if candidate is None:
+            continue
+        if normalized_update is not None:
+            normalized_updates.append(normalized_update)
+        if calibration_update is not None:
+            calibration_updates.append(calibration_update)
+        if float(candidate["potential_value"]) > 0 and float(candidate["estimated_cost"]) > 0:
+            ideas_with_potential_roi += 1
+        roi_map[str(candidate["idea_id"])] = float(candidate["estimated_roi"])
+        candidates.append(candidate)
+
+    candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            -float(item.get("free_energy_score") or 0.0),
+            str(item.get("idea_id") or ""),
+        )
+    )
+
+    normalization = {
+        "normalized_count": len(normalized_updates),
+        "updates": normalized_updates,
+    }
+    calibration = {
+        "evaluated_count": sum(
+            1 for row in candidates if float(row.get("actual_value") or 0.0) > 0 and float(row.get("actual_cost") or 0.0) > 0
+        ),
+        "updated_count": len(calibration_updates),
+        "updates": calibration_updates,
+    }
+    coverage = {
+        "total": len(candidates),
+        "with_potential_roi": ideas_with_potential_roi,
+    }
+    return candidates, normalization, calibration, coverage
+
+
+def _apply_spec_roi_normalization_and_calibration(
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+    limit: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, float], dict[str, float]]:
+    rows = spec_registry_service.list_specs(limit=max(1, min(limit, 5000)), offset=0)
+    normalized_updates: list[dict[str, Any]] = []
+    calibration_updates: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    roi_map: dict[str, float] = {}
+    specs_with_potential_roi = 0
+
+    for row in rows:
+        candidate, normalized_update, calibration_update = _build_spec_roi_candidate(
+            row,
+            normalize_missing_roi=normalize_missing_roi,
+            calibrate_estimators=calibrate_estimators,
+            calibration_alpha=calibration_alpha,
+        )
+        if candidate is None:
+            continue
+        if normalized_update is not None:
+            normalized_updates.append(normalized_update)
+        if calibration_update is not None:
+            calibration_updates.append(calibration_update)
+        if float(candidate["potential_value"]) > 0 and float(candidate["estimated_cost"]) > 0:
+            specs_with_potential_roi += 1
+        roi_map[str(candidate["spec_id"])] = float(candidate["estimated_roi"])
+        candidates.append(candidate)
+
+    candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+
+    normalization = {
+        "normalized_count": len(normalized_updates),
+        "updates": normalized_updates,
+    }
+    calibration = {
+        "evaluated_count": sum(
+            1 for row in candidates if float(row.get("actual_value") or 0.0) > 0 and float(row.get("actual_cost") or 0.0) > 0
+        ),
+        "updated_count": len(calibration_updates),
+        "updates": calibration_updates,
+    }
+    coverage = {
+        "total": len(candidates),
+        "with_potential_roi": specs_with_potential_roi,
+    }
+    return candidates, normalization, calibration, coverage, roi_map
+
+
+def _build_implementation_roi_candidates(
+    *,
+    limit: int,
+    fallback_roi_by_spec: dict[str, float],
+) -> list[dict[str, Any]]:
+    candidates = _spec_implementation_gap_candidates(limit=max(1, min(limit, 1000)))
+    rows: list[dict[str, Any]] = []
+    for row in candidates:
+        spec_id = str(row.get("spec_id") or "").strip()
+        if not spec_id:
+            continue
+        estimated_roi = _numeric(row.get("estimated_roi"), default=0.0)
+        if estimated_roi <= 0:
+            estimated_roi = _numeric(fallback_roi_by_spec.get(spec_id), default=0.0)
+        title = str(row.get("title") or "").strip() or spec_id
+        source_path = str(row.get("source_path") or "").strip()
+        rows.append(
+            {
+                "spec_id": spec_id,
+                "title": title,
+                "source_path": source_path,
+                "estimated_roi": round(estimated_roi, 4),
+                "task_fingerprint": f"roi_impl_progress::{spec_id}",
+            }
+        )
+    rows.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+    return rows
+
+
+def _supplement_spec_candidates_from_discovery(
+    *,
+    needed: int,
+    existing_spec_ids: set[str],
+    seed_registry: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if needed <= 0:
+        return [], []
+    discovered, _ = _discover_specs(limit=max(needed * 12, 120))
+    supplemental: list[dict[str, Any]] = []
+    seeded_updates: list[dict[str, Any]] = []
+
+    for row in discovered:
+        raw_spec_id = str(row.get("spec_id") or "").strip()
+        if not raw_spec_id or raw_spec_id in existing_spec_ids:
+            continue
+        match = re.match(r"^(\d{3})", raw_spec_id)
+        if not match:
+            continue
+        spec_id = match.group(1)
+        if spec_id in existing_spec_ids:
+            continue
+
+        title = str(row.get("title") or "").strip() or spec_id
+        source_path = str(row.get("source_path") or row.get("path") or "").strip()
+        skip_check_text = f"{source_path} {title}".lower()
+        if any(hint in skip_check_text for hint in _SPEC_COVERAGE_SKIP_HINTS):
+            continue
+
+        potential_value = 24.0
+        estimated_cost = 4.0
+        estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+
+        if seed_registry:
+            try:
+                created = spec_registry_service.create_spec(
+                    SpecRegistryCreate(
+                        spec_id=spec_id,
+                        title=title,
+                        summary=(
+                            "Auto-seeded ROI baseline from spec discovery so prioritized ROI planning can "
+                            "include this spec in queue generation."
+                        ),
+                        potential_value=potential_value,
+                        estimated_cost=estimated_cost,
+                        actual_value=0.0,
+                        actual_cost=0.0,
+                        idea_id=_TRACEABILITY_GAP_DEFAULT_IDEA_ID,
+                        process_summary="Auto-seeded process summary for ROI queueing.",
+                        pseudocode_summary="Auto-seeded pseudocode summary for ROI queueing.",
+                        implementation_summary="Auto-seeded implementation summary for ROI queueing.",
+                    )
+                )
+                if created is not None:
+                    seeded_updates.append(
+                        {
+                            "spec_id": spec_id,
+                            "source": "discovered_spec_seed",
+                            "potential_value": potential_value,
+                            "estimated_cost": estimated_cost,
+                        }
+                    )
+            except Exception:
+                pass
+
+        supplemental.append(
+            {
+                "spec_id": spec_id,
+                "title": title,
+                "idea_id": "",
+                "potential_value": potential_value,
+                "estimated_cost": estimated_cost,
+                "actual_value": 0.0,
+                "actual_cost": 0.0,
+                "estimated_roi": estimated_roi,
+                "actual_roi": 0.0,
+                "source_path": source_path,
+                "task_fingerprint": f"roi_spec_progress::{spec_id}",
+                "roi_source": "spec_discovery_default",
+            }
+        )
+        existing_spec_ids.add(spec_id)
+        if len(supplemental) >= needed:
+            break
+
+    return supplemental, seeded_updates
+
+
+def _create_progress_tasks(
+    *,
+    rows: list[dict[str, Any]],
+    per_category: int,
+    task_type: TaskType,
+    source: str,
+    direction_builder: Any,
+    context_builder: Any,
+) -> tuple[list[dict[str, Any]], int]:
+    created: list[dict[str, Any]] = []
+    skipped_existing = 0
+    for row in rows[:per_category]:
+        fingerprint = str(row.get("task_fingerprint") or "").strip()
+        if fingerprint and agent_service.find_active_task_by_fingerprint(fingerprint) is not None:
+            skipped_existing += 1
+            continue
+        direction = str(direction_builder(row)).strip()
+        context = context_builder(row)
+        context = dict(context) if isinstance(context, dict) else {}
+        context["source"] = source
+        context["task_fingerprint"] = fingerprint
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction=direction,
+                task_type=task_type,
+                context=context,
+            )
+        )
+        created.append(
+            {
+                "task_id": task["id"],
+                "task_type": task_type.value,
+                "fingerprint": fingerprint,
+                "estimated_roi": float(row.get("estimated_roi") or 0.0),
+            }
+        )
+    return created, skipped_existing
+
+
+def _merge_supplemental_spec_candidates(
+    *,
+    spec_candidates: list[dict[str, Any]],
+    spec_normalization: dict[str, Any],
+    spec_coverage: dict[str, Any],
+    spec_roi_map: dict[str, float],
+    supplemental_specs: list[dict[str, Any]],
+    seeded_spec_updates: list[dict[str, Any]],
+) -> None:
+    if not supplemental_specs:
+        return
+    spec_candidates.extend(supplemental_specs)
+    spec_candidates.sort(key=lambda item: (-float(item.get("estimated_roi") or 0.0), str(item.get("spec_id") or "")))
+    spec_coverage["total"] = int(spec_coverage.get("total", 0)) + len(supplemental_specs)
+    spec_coverage["with_potential_roi"] = int(spec_coverage.get("with_potential_roi", 0)) + len(supplemental_specs)
+    spec_normalization["normalized_count"] = int(spec_normalization.get("normalized_count", 0)) + len(seeded_spec_updates)
+    spec_normalization.setdefault("updates", [])
+    if isinstance(spec_normalization["updates"], list):
+        spec_normalization["updates"].extend(seeded_spec_updates)
+    for row in supplemental_specs:
+        spec_id = str(row.get("spec_id") or "").strip()
+        if spec_id and spec_id not in spec_roi_map:
+            spec_roi_map[spec_id] = float(row.get("estimated_roi") or 0.0)
+
+
+def _ensure_implementation_candidate_floor(
+    *,
+    implementation_candidates: list[dict[str, Any]],
+    spec_candidates: list[dict[str, Any]],
+    requested: int,
+) -> None:
+    if len(implementation_candidates) >= requested:
+        return
+    existing_impl_specs = {
+        str(row.get("spec_id") or "").strip() for row in implementation_candidates if str(row.get("spec_id") or "").strip()
+    }
+    for spec_row in spec_candidates:
+        spec_id = str(spec_row.get("spec_id") or "").strip()
+        if not spec_id or spec_id in existing_impl_specs:
+            continue
+        implementation_candidates.append(
+            {
+                "spec_id": spec_id,
+                "title": str(spec_row.get("title") or spec_id),
+                "source_path": str(spec_row.get("source_path") or _spec_source_path_for_id(spec_id) or ""),
+                "estimated_roi": round(float(spec_row.get("estimated_roi") or 0.0), 4),
+                "task_fingerprint": f"roi_impl_progress::{spec_id}",
+            }
+        )
+        existing_impl_specs.add(spec_id)
+        if len(implementation_candidates) >= requested:
+            break
+    implementation_candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+
+
+def _idea_ids_with_linked_specs(spec_candidates: list[dict[str, Any]]) -> set[str]:
+    out: set[str] = set()
+    for row in spec_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        if idea_id:
+            out.add(idea_id)
+    return out
+
+
+def _prioritize_idea_candidates_for_spec_gaps(
+    idea_candidates: list[dict[str, Any]],
+    spec_candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    idea_ids_with_specs = _idea_ids_with_linked_specs(spec_candidates)
+    prioritized: list[dict[str, Any]] = []
+    for row in idea_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        has_linked_spec = bool(idea_id and idea_id in idea_ids_with_specs)
+        enriched = dict(row)
+        enriched["has_linked_spec"] = has_linked_spec
+        enriched["spec_gap_priority"] = bool(not has_linked_spec and float(enriched.get("estimated_roi") or 0.0) > 0.0)
+        prioritized.append(enriched)
+    prioritized.sort(
+        key=lambda item: (
+            not bool(item.get("spec_gap_priority")),
+            -float(item.get("estimated_roi") or 0.0),
+            -float(item.get("free_energy_score") or 0.0),
+            str(item.get("idea_id") or ""),
+        )
+    )
+    return prioritized
+
+
+def _spec_chunk_rows_for_cheap_execution(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    chunk_total = len(_ROI_SPEC_CHUNK_PLAN)
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        spec_id = str(row.get("spec_id") or "").strip()
+        if not spec_id:
+            continue
+        for chunk_index, (chunk_key, chunk_label, chunk_goal) in enumerate(_ROI_SPEC_CHUNK_PLAN, start=1):
+            chunk_row = dict(row)
+            chunk_row["task_fingerprint"] = f"roi_spec_progress::{spec_id}::{chunk_key}"
+            chunk_row["spec_chunk"] = {
+                "chunk_key": chunk_key,
+                "chunk_label": chunk_label,
+                "chunk_goal": chunk_goal,
+                "chunk_index": chunk_index,
+                "chunk_total": chunk_total,
+            }
+            out.append(chunk_row)
+    out.sort(
+        key=lambda item: (
+            int((item.get("spec_chunk") or {}).get("chunk_index") or 99),
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+    return out
+
+
+def _build_idea_progress_direction(row: dict[str, Any]) -> str:
+    gap_hint = ""
+    if not bool(row.get("has_linked_spec")):
+        gap_hint = " No linked spec exists yet; seed a focused spec with explicit ROI estimates first."
+    return (
+        f"Advance high-ROI idea '{row['idea_id']}' ({row['name']})."
+        f"{gap_hint} "
+        "Define the next measurable spec checkpoint, acceptance tests, and expected ROI signal updates."
+    )
+
+
+def _build_spec_progress_direction(row: dict[str, Any]) -> str:
+    chunk = row.get("spec_chunk") if isinstance(row.get("spec_chunk"), dict) else {}
+    chunk_index = int(chunk.get("chunk_index") or 1)
+    chunk_total = int(chunk.get("chunk_total") or len(_ROI_SPEC_CHUNK_PLAN))
+    chunk_label = str(chunk.get("chunk_label") or "Spec slice").strip()
+    chunk_goal = str(chunk.get("chunk_goal") or "").strip()
+    return (
+        f"Advance high-ROI spec '{row['spec_id']}' ({row['title']}) part {chunk_index}/{chunk_total}: {chunk_label}. "
+        f"{chunk_goal} Keep this chunk small enough for cheap-model execution with concrete ROI evidence updates."
+    )
+
+
+def _create_idea_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    return _create_progress_tasks(
+        rows=rows,
+        per_category=requested,
+        task_type=TaskType.SPEC,
+        source="roi_progress_idea",
+        direction_builder=_build_idea_progress_direction,
+        context_builder=lambda row: {
+            "idea_id": row["idea_id"],
+            "idea_name": row["name"],
+            "estimated_roi": row["estimated_roi"],
+            "actual_roi": row["actual_roi"],
+            "has_linked_spec": bool(row.get("has_linked_spec")),
+            "spec_gap_priority": bool(row.get("spec_gap_priority")),
+            "category": "idea",
+        },
+    )
+
+
+def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    chunk_rows = _spec_chunk_rows_for_cheap_execution(rows)
+    return _create_progress_tasks(
+        rows=chunk_rows,
+        per_category=requested,
+        task_type=TaskType.SPEC,
+        source="roi_progress_spec",
+        direction_builder=_build_spec_progress_direction,
+        context_builder=lambda row: {
+            "spec_id": row["spec_id"],
+            "spec_title": row["title"],
+            "estimated_roi": row["estimated_roi"],
+            "actual_roi": row["actual_roi"],
+            "model_override": _ROI_SPEC_CHEAP_MODEL,
+            "max_input_tokens": _ROI_SPEC_TASK_INPUT_MAX_TOKENS,
+            "max_output_tokens": _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS,
+            "spec_chunk": row.get("spec_chunk"),
+            "category": "spec",
+        },
+    )
+
+
+def _create_implementation_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    return _create_progress_tasks(
+        rows=rows,
+        per_category=requested,
+        task_type=TaskType.IMPL,
+        source="roi_progress_implementation",
+        direction_builder=lambda row: (
+            f"Implement highest-ROI pending spec gap '{row['spec_id']}' ({row['title']}) "
+            f"from {row.get('source_path') or 'tracked spec source'}. "
+            "Run focused validation and record measurable ROI evidence."
+        ),
+        context_builder=lambda row: {
+            "spec_id": row["spec_id"],
+            "spec_title": row["title"],
+            "spec_path": row.get("source_path") or "",
+            "estimated_roi": row["estimated_roi"],
+            "category": "implementation",
+        },
+    )
+
+
+def _progress_count(
+    *,
+    create_task: bool,
+    selected_rows: list[dict[str, Any]],
+    created_rows: list[dict[str, Any]],
+    skipped_existing: int,
+) -> int:
+    if not create_task:
+        return len(selected_rows)
+    return len(created_rows) + skipped_existing
+
+
+def _create_roi_progress_task_sets(
+    *,
+    create_task: bool,
+    selected_ideas: list[dict[str, Any]],
+    selected_specs: list[dict[str, Any]],
+    selected_implementations: list[dict[str, Any]],
+    requested: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int, int, int]:
+    created_idea_tasks: list[dict[str, Any]] = []
+    created_spec_tasks: list[dict[str, Any]] = []
+    created_impl_tasks: list[dict[str, Any]] = []
+    skipped_existing_ideas = 0
+    skipped_existing_specs = 0
+    skipped_existing_implementations = 0
+    if create_task:
+        created_idea_tasks, skipped_existing_ideas = _create_idea_progress_tasks(selected_ideas, requested)
+        created_spec_tasks, skipped_existing_specs = _create_spec_progress_tasks(selected_specs, requested)
+        created_impl_tasks, skipped_existing_implementations = _create_implementation_progress_tasks(
+            selected_implementations, requested
+        )
+    return (
+        created_idea_tasks,
+        created_spec_tasks,
+        created_impl_tasks,
+        skipped_existing_ideas,
+        skipped_existing_specs,
+        skipped_existing_implementations,
+    )
+
+
+def _build_roi_sync_report(
+    *,
+    requested: int,
+    create_task: bool,
+    idea_coverage: dict[str, Any],
+    spec_coverage: dict[str, Any],
+    idea_normalization: dict[str, Any],
+    spec_normalization: dict[str, Any],
+    idea_calibration: dict[str, Any],
+    spec_calibration: dict[str, Any],
+    bounded_alpha: float,
+    selected_ideas: list[dict[str, Any]],
+    selected_specs: list[dict[str, Any]],
+    selected_implementations: list[dict[str, Any]],
+    created_idea_tasks: list[dict[str, Any]],
+    created_spec_tasks: list[dict[str, Any]],
+    created_impl_tasks: list[dict[str, Any]],
+    skipped_existing_ideas: int,
+    skipped_existing_specs: int,
+    skipped_existing_implementations: int,
+) -> dict[str, Any]:
+    idea_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_ideas,
+        created_rows=created_idea_tasks,
+        skipped_existing=skipped_existing_ideas,
+    )
+    spec_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_specs,
+        created_rows=created_spec_tasks,
+        skipped_existing=skipped_existing_specs,
+    )
+    impl_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_implementations,
+        created_rows=created_impl_tasks,
+        skipped_existing=skipped_existing_implementations,
+    )
+    total_created = len(created_idea_tasks) + len(created_spec_tasks) + len(created_impl_tasks)
+    return {
+        "result": "roi_progress_tasks_synced",
+        "requested_per_category": requested,
+        "create_task": bool(create_task),
+        "roi_coverage": {
+            "ideas_total": int(idea_coverage["total"]),
+            "ideas_with_potential_roi": int(idea_coverage["with_potential_roi"]),
+            "specs_total": int(spec_coverage["total"]),
+            "specs_with_potential_roi": int(spec_coverage["with_potential_roi"]),
+        },
+        "normalization": {"ideas": idea_normalization, "specs": spec_normalization},
+        "calibration": {"ideas": idea_calibration, "specs": spec_calibration, "alpha": bounded_alpha},
+        "candidates": {
+            "ideas": selected_ideas,
+            "specs": selected_specs,
+            "implementations": selected_implementations,
+        },
+        "created": {
+            "ideas_count": len(created_idea_tasks),
+            "specs_count": len(created_spec_tasks),
+            "implementations_count": len(created_impl_tasks),
+            "total_count": total_created,
+            "skipped_existing_ideas": skipped_existing_ideas,
+            "skipped_existing_specs": skipped_existing_specs,
+            "skipped_existing_implementations": skipped_existing_implementations,
+            "per_category_met": (
+                idea_progress_count >= requested
+                and spec_progress_count >= requested
+                and impl_progress_count >= requested
+            ),
+        },
+        "created_tasks": {
+            "ideas": created_idea_tasks,
+            "specs": created_spec_tasks,
+            "implementations": created_impl_tasks,
+        },
+    }
+
+
+def sync_roi_progress_tasks(
+    *,
+    create_task: bool = False,
+    per_category: int = 4,
+    normalize_missing_roi: bool = True,
+    calibrate_estimators: bool = True,
+    calibration_alpha: float = 0.35,
+) -> dict[str, Any]:
+    requested = max(1, min(int(per_category), 20))
+    bounded_alpha = max(0.0, min(float(calibration_alpha), 1.0))
+    idea_candidates, idea_normalization, idea_calibration, idea_coverage = _apply_idea_roi_normalization_and_calibration(
+        normalize_missing_roi=normalize_missing_roi,
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=bounded_alpha,
+        limit=500,
+    )
+    spec_candidates, spec_normalization, spec_calibration, spec_coverage, spec_roi_map = _apply_spec_roi_normalization_and_calibration(
+        normalize_missing_roi=normalize_missing_roi,
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=bounded_alpha,
+        limit=5000,
+    )
+    spec_ids = {str(row.get("spec_id") or "").strip() for row in spec_candidates if str(row.get("spec_id") or "").strip()}
+    supplemental_specs, seeded_spec_updates = _supplement_spec_candidates_from_discovery(
+        needed=max(0, requested - len(spec_candidates)),
+        existing_spec_ids=spec_ids,
+        seed_registry=normalize_missing_roi,
+    )
+    _merge_supplemental_spec_candidates(
+        spec_candidates=spec_candidates,
+        spec_normalization=spec_normalization,
+        spec_coverage=spec_coverage,
+        spec_roi_map=spec_roi_map,
+        supplemental_specs=supplemental_specs,
+        seeded_spec_updates=seeded_spec_updates,
+    )
+    implementation_candidates = _build_implementation_roi_candidates(
+        limit=max(requested * 5, 200),
+        fallback_roi_by_spec=spec_roi_map,
+    )
+    _ensure_implementation_candidate_floor(
+        implementation_candidates=implementation_candidates,
+        spec_candidates=spec_candidates,
+        requested=requested,
+    )
+    prioritized_idea_candidates = _prioritize_idea_candidates_for_spec_gaps(idea_candidates, spec_candidates)
+    selected_ideas = prioritized_idea_candidates[:requested]
+    selected_specs = spec_candidates[:requested]
+    selected_implementations = implementation_candidates[:requested]
+    (
+        created_idea_tasks,
+        created_spec_tasks,
+        created_impl_tasks,
+        skipped_existing_ideas,
+        skipped_existing_specs,
+        skipped_existing_implementations,
+    ) = _create_roi_progress_task_sets(
+        create_task=create_task,
+        selected_ideas=selected_ideas,
+        selected_specs=selected_specs,
+        selected_implementations=selected_implementations,
+        requested=requested,
+    )
+    return _build_roi_sync_report(
+        requested=requested,
+        create_task=create_task,
+        idea_coverage=idea_coverage,
+        spec_coverage=spec_coverage,
+        idea_normalization=idea_normalization,
+        spec_normalization=spec_normalization,
+        idea_calibration=idea_calibration,
+        spec_calibration=spec_calibration,
+        bounded_alpha=bounded_alpha,
+        selected_ideas=selected_ideas,
+        selected_specs=selected_specs,
+        selected_implementations=selected_implementations,
+        created_idea_tasks=created_idea_tasks,
+        created_spec_tasks=created_spec_tasks,
+        created_impl_tasks=created_impl_tasks,
+        skipped_existing_ideas=skipped_existing_ideas,
+        skipped_existing_specs=skipped_existing_specs,
+        skipped_existing_implementations=skipped_existing_implementations,
+    )
 
 
 def _commit_evidence_dir() -> Path:
