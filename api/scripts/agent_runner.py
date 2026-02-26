@@ -2916,7 +2916,7 @@ def _configure_codex_cli_environment(
         effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available_initial else "api_key")
 
     if effective_mode == "oauth":
-        if allow_oauth_fallback:
+        if allow_oauth_fallback and api_key_present:
             _set_openai_api_env(env, api_key=openai_primary_key)
         else:
             env.pop("OPENAI_API_KEY", None)
