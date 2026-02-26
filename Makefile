@@ -15,7 +15,7 @@ lint:
 	cd api && .venv/bin/ruff check . 2>/dev/null || true
 
 web-worktree-validate:
-	./scripts/verify_worktree_local_web.sh
+	THREAD_RUNTIME_AUTO_HEAL=1 ./scripts/verify_worktree_local_web.sh
 
 spec-quality:
 	python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
