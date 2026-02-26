@@ -1,0 +1,95 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/enable-strict-sha-gates-20260225",
+  "commit_scope": "Enable strict API/web deployed-SHA enforcement in deploy-contract workflow defaults, apply strict flags in production Railway env, and validate end-to-end rollout behavior.",
+  "files_owned": [
+    ".github/workflows/public-deploy-contract.yml",
+    "docs/DEPLOY.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-26-strict-sha-contract-enforcement"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T005554Z_codex-next-24h-gap-20260225-02f0.json"
+  ],
+  "change_files": [
+    ".github/workflows/public-deploy-contract.yml",
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-02-26_strict-sha-contract-enforcement.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "VERIFY_REQUIRE_API_HEALTH_SHA=1 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 ./scripts/verify_web_api_deploy.sh",
+      "PYTHONPATH=api PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA=1 PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 python3 api/scripts/validate_public_deploy_contract.py --repo seeker71/Coherence-Network --branch main --json"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-production",
+    "commands": [
+      "railway link -p \"Coherency Network\" -e production --json",
+      "railway variable set -s coherence-network -e production PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA=1 PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 --json",
+      "curl -sS https://coherence-network-production.up.railway.app/api/health",
+      "curl -sS https://coherence-web-production.up.railway.app/api/health-proxy",
+      "curl -sS https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract"
+    ],
+    "proof": {
+      "api_health_deployed_sha": "d2aa387381067525f5ea70aa8e595c7cb5122ff7",
+      "web_proxy_deployed_sha": "d2aa387381067525f5ea70aa8e595c7cb5122ff7",
+      "public_contract_result": "public_contract_passed",
+      "railway_health_required_sha": true,
+      "railway_web_health_proxy_required_sha": true
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push/PR merge of workflow+docs enforcement updates."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public deploy contract now requires API and web deployed SHA parity by default in workflow execution and runtime environment, preventing silent stale-runtime false-greens.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-web-production.up.railway.app/api/health-proxy",
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract"
+    ],
+    "test_flows": [
+      "Verify API health returns deployed_sha/deployed_sha_source and matches main-head SHA.",
+      "Verify web health-proxy returns web.deployed_sha/deployed_sha_source and matches main-head SHA.",
+      "Verify public deploy contract reports required_sha=true for railway_health and railway_web_health_proxy and returns public_contract_passed.",
+      "Verify strict script mode (VERIFY_REQUIRE_API_HEALTH_SHA=1, VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1) passes against production endpoints."
+    ]
+  }
+}
