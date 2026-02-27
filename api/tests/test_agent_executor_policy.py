@@ -104,7 +104,7 @@ def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None
     assert policy == {}
 
 
-def test_explicit_executor_falls_back_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_explicit_executor_is_forced_when_unavailable_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
@@ -113,6 +113,28 @@ def test_explicit_executor_falls_back_when_unavailable(monkeypatch: pytest.Monke
     task = agent_service.create_task(
         AgentTaskCreate(
             direction="Run with explicit unavailable executor",
+            task_type=TaskType.IMPL,
+            context={"executor": "claude"},
+        )
+    )
+    context = task.get("context") or {}
+    assert context.get("executor") == "claude"
+    policy = context.get("executor_policy") or {}
+    assert policy.get("reason") == "explicit_executor_forced"
+    assert policy.get("explicit_executor") == "claude"
+    assert policy.get("availability") == "unavailable_on_api_node"
+
+
+def test_explicit_executor_falls_back_when_unavailable_and_forcing_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "0")
+    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Run with explicit unavailable executor and forcing disabled",
             task_type=TaskType.IMPL,
             context={"executor": "claude"},
         )
