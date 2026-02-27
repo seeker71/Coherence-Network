@@ -2707,6 +2707,101 @@ def _non_root_min_uid() -> int:
     return max(1, value)
 
 
+def _non_root_auto_create_enabled() -> bool:
+    return _as_bool(os.getenv("AGENT_RUN_AS_AUTO_CREATE", "1"))
+
+
+def _auto_create_non_root_exec_user(*, min_uid: int, preferred_user: str = "") -> tuple[str, int, int, str]:
+    try:
+        if os.geteuid() != 0:
+            return "", -1, -1, ""
+    except Exception:
+        return "", -1, -1, ""
+    if not _non_root_auto_create_enabled():
+        return "", -1, -1, ""
+
+    configured = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_USER", "")).strip()
+    user_name = configured or str(preferred_user or "").strip() or "runner"
+    if not user_name:
+        user_name = "runner"
+    user_name = re.sub(r"[^a-zA-Z0-9_.-]", "-", user_name).strip("-") or "runner"
+    home_dir = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_HOME", f"/home/{user_name}")).strip() or f"/home/{user_name}"
+    shell = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_SHELL", "/bin/sh")).strip() or "/bin/sh"
+    try:
+        requested_uid = int(os.getenv("AGENT_RUN_AS_AUTO_CREATE_UID", str(min_uid)))
+    except Exception:
+        requested_uid = min_uid
+    requested_uid = max(min_uid, requested_uid)
+
+    try:
+        existing = pwd.getpwnam(user_name)
+        if int(existing.pw_uid) >= min_uid:
+            home = str(existing.pw_dir or "").strip()
+            if home and os.path.isdir(home):
+                return str(existing.pw_name), int(existing.pw_uid), int(existing.pw_gid), home
+    except KeyError:
+        pass
+    except Exception:
+        pass
+
+    create_commands: list[list[str]] = []
+    if shutil.which("useradd"):
+        create_commands.extend(
+            [
+                ["useradd", "-m", "-d", home_dir, "-s", shell, "-u", str(requested_uid), user_name],
+                ["useradd", "-m", "-d", home_dir, "-s", shell, user_name],
+            ]
+        )
+    elif shutil.which("adduser"):
+        create_commands.extend(
+            [
+                ["adduser", "-D", "-h", home_dir, "-s", shell, "-u", str(requested_uid), user_name],
+                ["adduser", "-D", "-h", home_dir, "-s", shell, user_name],
+            ]
+        )
+    else:
+        return "", -1, -1, ""
+
+    for argv in create_commands:
+        try:
+            proc = subprocess.run(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=20,
+            )
+        except Exception:
+            continue
+        output = f"{proc.stdout or ''}\n{proc.stderr or ''}".lower()
+        if proc.returncode == 0 or "already exists" in output:
+            break
+    else:
+        return "", -1, -1, ""
+
+    try:
+        created = pwd.getpwnam(user_name)
+    except Exception:
+        return "", -1, -1, ""
+    uid = int(created.pw_uid)
+    gid = int(created.pw_gid)
+    if uid < min_uid:
+        return "", -1, -1, ""
+    home = str(created.pw_dir or "").strip() or home_dir
+    try:
+        os.makedirs(home, exist_ok=True)
+    except Exception:
+        pass
+    if not os.path.isdir(home):
+        return "", -1, -1, ""
+    try:
+        os.chown(home, uid, gid)
+    except Exception:
+        pass
+    return str(created.pw_name), uid, gid, home
+
+
 def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str]:
     min_uid = _non_root_min_uid()
     candidates: list[str] = []
@@ -2735,7 +2830,7 @@ def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str
         return str(row.pw_name), int(row.pw_uid), int(row.pw_gid), home
 
     if not _as_bool(os.getenv("AGENT_RUN_AS_AUTO_DISCOVER", "1")):
-        return "", -1, -1, ""
+        return _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
 
     try:
         for row in sorted(pwd.getpwall(), key=lambda item: int(item.pw_uid)):
@@ -2750,8 +2845,11 @@ def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str
                 continue
             return str(row.pw_name), uid, int(row.pw_gid), home
     except Exception:
-        return "", -1, -1, ""
+        return _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
 
+    created_user = _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
+    if created_user[0]:
+        return created_user
     return "", -1, -1, ""
 
 
