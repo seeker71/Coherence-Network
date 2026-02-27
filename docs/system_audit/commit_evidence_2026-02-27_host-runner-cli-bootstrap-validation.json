@@ -1,7 +1,7 @@
 {
   "date": "2026-02-27",
   "thread_branch": "codex/host-runner-provider-proof-20260227",
-  "commit_scope": "Enforce strict CLI presence in provider auto-heal install mode and add package-manager bootstrap commands so host runner can install missing curl/npm prerequisites for cursor and claude-code installers.",
+  "commit_scope": "Harden provider CLI bootstrap end-to-end: strict no-runtime-only CLI acceptance, package-manager prerequisite bootstrap, and post-install binary discovery/PATH normalization for cursor/claude host execution.",
   "files_owned": [
     "api/app/services/automation_usage_service.py",
     "api/app/routers/automation_usage.py",
@@ -40,7 +40,8 @@
     "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
     "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
     "https://github.com/seeker71/Coherence-Network/pull/347",
-    "https://github.com/seeker71/Coherence-Network/pull/348"
+    "https://github.com/seeker71/Coherence-Network/pull/348",
+    "https://github.com/seeker71/Coherence-Network/pull/349"
   ],
   "change_files": [
     "api/app/services/automation_usage_service.py",
@@ -65,7 +66,7 @@
   },
   "ci_validation": {
     "status": "pass",
-    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22488454084"
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22488842306"
   },
   "deploy_validation": {
     "status": "pass",
@@ -73,11 +74,11 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting merged package-bootstrap patch rollout and host-runner task proof for codex/claude/cursor after installer prerequisites are available."
+    "blocked_reason": "Awaiting merged cursor-path normalization patch rollout and host-runner executor proof for codex/claude/cursor."
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Provider-heal install mode can bootstrap missing curl/npm prerequisites, install cursor/claude CLIs, and validate with non-runtime-only provider proofs.",
+    "expected_behavior_delta": "Provider-heal can install claude/cursor CLIs, resolve installed binary paths, and expose executors as available on host runner.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
       "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
@@ -85,7 +86,7 @@
       "https://coherence-network-production.up.railway.app/api/agent/tasks"
     ],
     "test_flows": [
-      "Run provider-heal with enable_cli_installs=true for openai,claude-code,cursor and verify install_cli attempts no longer fail on missing curl/npm.",
+      "Run provider-heal with enable_cli_installs=true for openai,claude-code,cursor and verify claude/cursor no longer report runtime-only no-cli details.",
       "Run provider-validation for openai,claude-code,cursor and capture probe details.",
       "Execute one host task per executor (openclaw/codex, claude, cursor) and verify completed statuses plus command prefixes."
     ]
