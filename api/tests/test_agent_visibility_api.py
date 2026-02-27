@@ -239,6 +239,45 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
 
 
 @pytest.mark.asyncio
+async def test_task_list_exposes_failed_task_diagnostics_fields(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Fail and expose diagnostics in list", "task_type": "impl"},
+        )
+        assert created.status_code == 201
+        task_id = created.json()["id"]
+
+        failed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={
+                "status": "failed",
+                "context": {"error": "Request timed out while waiting for execution result"},
+            },
+        )
+        assert failed.status_code == 200
+
+        listed = await client.get("/api/agent/tasks", params={"limit": 20})
+        assert listed.status_code == 200
+        tasks = listed.json().get("tasks") or []
+        row = next(item for item in tasks if item.get("id") == task_id)
+        assert row["failure_reason_bucket"] == "timeout"
+        assert row["failure_diagnostics_present"] is True
+        assert row["failure_diagnostics_source"] == "context.error"
+        assert "Failure diagnostic" in str(row.get("failure_output_preview") or "")
+
+
+@pytest.mark.asyncio
 async def test_agent_orchestration_guidance_exposes_defaults_and_route_matrix(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

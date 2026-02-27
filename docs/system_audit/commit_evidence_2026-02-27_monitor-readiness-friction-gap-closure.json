@@ -1,0 +1,104 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/self-improve-gap-closure-20260227-0955",
+  "commit_scope": "Close high-ROI self-improvement gaps by adding monitor-triggered stale-task recovery, readiness policy cleanup for Codex/Railway flow, guidance-mode limit telemetry, failed-task diagnostic visibility, and friction actionability metadata.",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/models/friction.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
+    "api/tests/test_agent_monitor_status_fallback_api.py",
+    "api/tests/test_agent_visibility_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_friction_api.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-02-27_monitor-readiness-friction-gap-closure.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "050-friction-analysis",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-monitor-readiness-friction-gap-closure"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T101155Z_codex-self-improve-gap-closure-20260227-0955.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T101730Z_codex-self-improve-gap-closure-20260227-0955.json"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/models/friction.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/runner_orphan_recovery_service.py",
+    "api/tests/test_agent_monitor_status_fallback_api.py",
+    "api/tests/test_agent_visibility_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_friction_api.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-02-27_monitor-readiness-friction-gap-closure.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "pytest -q api/tests/test_agent_monitor_status_fallback_api.py api/tests/test_agent_runner_registry_api.py api/tests/test_agent_visibility_api.py api/tests/test_friction_api.py api/tests/test_automation_usage_api.py",
+      "cd api && ruff check app/models/agent.py app/models/friction.py app/routers/agent.py app/services/agent_service.py app/services/automation_usage_service.py app/services/friction_service.py app/services/runner_orphan_recovery_service.py tests/test_agent_monitor_status_fallback_api.py tests/test_agent_visibility_api.py tests/test_automation_usage_api.py tests/test_friction_api.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_monitor-readiness-friction-gap-closure.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push/PR checks and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Monitor fallback can auto-heal stale running tasks; readiness no longer hard-blocks inactive providers for hard-limit telemetry; failed-task diagnostics and friction ROI/actionability are visible for low-friction self-improvement flow.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/monitor-issues",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/friction/entry-points"
+    ],
+    "test_flows": [
+      "Create stale running task and call /api/agent/monitor-issues; verify auto_recovered_stale_running metadata and task transition to failed.",
+      "Call /api/automation/usage/readiness with coherence-internal requirement and active OpenRouter usage; verify readiness guidance mode and no unrelated hard blocks.",
+      "List /api/agent/tasks after a failed task and verify failure_reason_bucket/failure diagnostics fields are present.",
+      "Call /api/friction/entry-points and verify semantic_domain + potential_roi + cheap_model_split_hint fields exist for prioritization."
+    ]
+  }
+}

@@ -58,6 +58,100 @@ def _fallback_alert(task: dict[str, Any]) -> str:
     return f"⚠️ *orphan recovered*\nTask ID: `{task_id}`\nStatus: `failed`"
 
 
+def _threshold_seconds() -> int:
+    fallback_threshold = _int_env(
+        "ORPHAN_RUNNING_SEC",
+        _int_env(
+            "PIPELINE_ORPHAN_RUNNING_SECONDS",
+            _int_env("PIPELINE_STALE_RUNNING_SECONDS", 1800, minimum=60, maximum=7 * 24 * 3600),
+            minimum=60,
+            maximum=7 * 24 * 3600,
+        ),
+        minimum=60,
+        maximum=7 * 24 * 3600,
+    )
+    return _int_env(
+        "AGENT_ORPHAN_RUNNING_SEC",
+        fallback_threshold,
+        minimum=60,
+        maximum=7 * 24 * 3600,
+    )
+
+
+def _max_recoveries() -> int:
+    return _int_env("AGENT_ORPHAN_REAP_MAX_TASKS", 10, minimum=1, maximum=50)
+
+
+def recover_stale_running_tasks(
+    *,
+    trigger: str,
+    reason: str,
+    runner_id: str | None = None,
+    claimed_by_runner_only: bool = False,
+) -> list[dict[str, Any]]:
+    """Auto-fail stale running tasks so queue flow can resume."""
+    threshold_seconds = _threshold_seconds()
+    max_recoveries = _max_recoveries()
+    running_tasks, _ = agent_service.list_tasks(status=TaskStatus.RUNNING, limit=500, offset=0)
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat().replace("+00:00", "Z")
+
+    normalized_runner = str(runner_id or "").strip()
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    for task in running_tasks:
+        if not isinstance(task, dict):
+            continue
+        claimed_by = str(task.get("claimed_by") or "").strip()
+        if claimed_by_runner_only and (not normalized_runner or claimed_by != normalized_runner):
+            continue
+        running_seconds = _running_seconds(task, now)
+        if running_seconds is None or running_seconds < threshold_seconds:
+            continue
+        candidates.append((running_seconds, task))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    recovered: list[dict[str, Any]] = []
+    for running_seconds, task in candidates[:max_recoveries]:
+        task_id = str(task.get("id") or "").strip()
+        if not task_id:
+            continue
+        worker_id = normalized_runner or str(task.get("claimed_by") or "").strip() or "orphan-recovery"
+        output = (
+            "Orphan: stale running task auto-recovered; "
+            f"source={trigger}; reason={reason}; running_for={running_seconds}s "
+            f"(threshold {threshold_seconds}s)."
+        )
+        context: dict[str, Any] = {
+            "orphan_recovered_at": now_iso,
+            "orphan_recovered_trigger": trigger,
+            "orphan_recovered_reason": reason,
+            "orphan_recovered_running_seconds": running_seconds,
+            "orphan_recovered_threshold_seconds": threshold_seconds,
+        }
+        if normalized_runner:
+            context["orphan_recovered_by_runner"] = normalized_runner
+        updated = agent_service.update_task(
+            task_id,
+            status=TaskStatus.FAILED,
+            output=output,
+            context=context,
+            worker_id=worker_id,
+        )
+        if updated is not None:
+            recovered.append(updated)
+
+    if recovered:
+        logger.warning(
+            "runner_orphan_recovery_applied trigger=%s reason=%s recovered=%s threshold_seconds=%s claimed_by_runner_only=%s",
+            trigger,
+            reason,
+            len(recovered),
+            threshold_seconds,
+            claimed_by_runner_only,
+        )
+    return recovered
+
+
 async def maybe_recover_on_idle_heartbeat(
     *,
     snapshot: dict[str, Any],
@@ -72,61 +166,14 @@ async def maybe_recover_on_idle_heartbeat(
         if status != "idle" or active_task_id or not runner_id:
             return []
 
-        threshold_seconds = _int_env(
-            "AGENT_ORPHAN_RUNNING_SEC",
-            _int_env("ORPHAN_RUNNING_SEC", 1800, minimum=60, maximum=7 * 24 * 3600),
-            minimum=60,
-            maximum=7 * 24 * 3600,
+        recovered = recover_stale_running_tasks(
+            trigger="runner_idle_heartbeat",
+            reason="runner_reported_idle_no_active_task",
+            runner_id=runner_id,
+            claimed_by_runner_only=True,
         )
-        max_recoveries = _int_env("AGENT_ORPHAN_REAP_MAX_TASKS", 10, minimum=1, maximum=50)
-
-        running_tasks, _ = agent_service.list_tasks(status=TaskStatus.RUNNING, limit=500, offset=0)
-        now = datetime.now(timezone.utc)
-        candidates: list[tuple[int, dict[str, Any]]] = []
-        for task in running_tasks:
-            if not isinstance(task, dict):
-                continue
-            if str(task.get("claimed_by") or "").strip() != runner_id:
-                continue
-            running_seconds = _running_seconds(task, now)
-            if running_seconds is None or running_seconds < threshold_seconds:
-                continue
-            candidates.append((running_seconds, task))
-
-        candidates.sort(key=lambda item: item[0], reverse=True)
-        recovered: list[dict[str, Any]] = []
-        now_iso = now.isoformat().replace("+00:00", "Z")
-        for running_seconds, task in candidates[:max_recoveries]:
-            task_id = str(task.get("id") or "").strip()
-            if not task_id:
-                continue
-            output = (
-                "Orphan: runner heartbeat reported idle/no active task; "
-                f"auto-recovered stale running task after {running_seconds}s "
-                f"(threshold {threshold_seconds}s)."
-            )
-            updated = agent_service.update_task(
-                task_id,
-                status=TaskStatus.FAILED,
-                output=output,
-                context={
-                    "orphan_recovered_at": now_iso,
-                    "orphan_recovered_by_runner": runner_id,
-                    "orphan_recovered_running_seconds": running_seconds,
-                    "orphan_recovered_threshold_seconds": threshold_seconds,
-                },
-                worker_id=runner_id,
-            )
-            if updated is not None:
-                recovered.append(updated)
 
         if recovered:
-            logger.warning(
-                "runner_orphan_recovery_applied runner_id=%s recovered=%s threshold_seconds=%s",
-                runner_id,
-                len(recovered),
-                threshold_seconds,
-            )
             if telegram_adapter.is_configured():
                 for task in recovered:
                     try:

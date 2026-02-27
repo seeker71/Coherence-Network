@@ -861,14 +861,15 @@ def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
     if _status_value(task.get("status")) != "failed":
         return
 
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    existing_source = str(context.get("failure_diagnostics_source") or "").strip() if isinstance(context, dict) else ""
     output_text = _task_output_text(task).strip()
-    source = "output"
+    source = existing_source or "output"
     if not output_text:
         synthesized, source = _derive_failed_task_output(task)
         task["output"] = _sanitize_task_output(synthesized)
         output_text = _task_output_text(task).strip()
 
-    context = task.get("context") if isinstance(task.get("context"), dict) else {}
     next_context = dict(context) if isinstance(context, dict) else {}
     next_context["failure_reason_bucket"] = _failure_reason_bucket(task)
     next_context["failure_diagnostics_source"] = source
@@ -1418,6 +1419,7 @@ def list_tasks(
             task = _deserialize_task(raw)
             if task is None:
                 continue
+            _ensure_failed_task_diagnostics(task)
             _store[task["id"]] = task
             items.append(task)
         # Runtime fallback only when the DB-backed task list is empty and unfiltered.
@@ -1428,6 +1430,7 @@ def list_tasks(
                 derived = _runtime_completion_event_to_task(event, seen)
                 if derived is None:
                     continue
+                _ensure_failed_task_diagnostics(derived)
                 items.append(derived)
                 seen.add(str(derived.get("id") or ""))
             items.sort(key=lambda t: t["created_at"], reverse=True)
@@ -1444,8 +1447,13 @@ def list_tasks(
         derived = _runtime_completion_event_to_task(event, seen)
         if derived is None:
             continue
+        _ensure_failed_task_diagnostics(derived)
         items.append(derived)
         seen.add(str(derived.get("id") or ""))
+
+    for task in items:
+        if isinstance(task, dict):
+            _ensure_failed_task_diagnostics(task)
 
     if status is not None:
         items = [t for t in items if t["status"] == status]

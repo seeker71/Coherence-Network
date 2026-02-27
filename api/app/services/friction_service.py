@@ -212,6 +212,64 @@ def _severity_from_rank(rank: int) -> str:
     return "info"
 
 
+def _semantic_domain_for_entry(*, key: str, title: str, recommended_action: str) -> str:
+    text = f"{key} {title} {recommended_action}".lower()
+    if any(token in text for token in ("auth", "oauth", "token", "session")):
+        return "auth_stability"
+    if any(token in text for token in ("orphan", "runner", "heartbeat", "stale_running")):
+        return "runner_stability"
+    if any(
+        token in text
+        for token in ("provider", "readiness", "openrouter", "openai", "cursor", "railway", "quota", "limit")
+    ):
+        return "provider_readiness"
+    if key.startswith("failed-tasks:") or "tool_failure" in text or "task_failure" in text:
+        return "execution_quality"
+    if any(token in text for token in ("spec", "backlog", "queue", "triage", "review")):
+        return "spec_first_flow"
+    if any(token in text for token in ("github-actions", "workflow", "ci")):
+        return "ci_reliability"
+    return "flow_friction"
+
+
+def _roi_calibration_by_domain(events: list[FrictionEvent], *, since: datetime) -> dict[str, float]:
+    ratios_by_domain: dict[str, list[float]] = defaultdict(list)
+    for event in events:
+        if event.timestamp < since or str(event.status).strip().lower() != "resolved":
+            continue
+        estimated = max(0.0, float(event.energy_loss_estimate)) + max(0.0, float(event.cost_of_delay))
+        measured = max(0.0, float(event.time_open_hours or 0.0))
+        if estimated <= 0.0 or measured <= 0.0:
+            continue
+        domain = _semantic_domain_for_entry(
+            key=f"friction:{event.block_type}",
+            title=f"Friction block: {event.block_type}",
+            recommended_action=event.unblock_condition,
+        )
+        ratios_by_domain[domain].append(measured / estimated)
+    calibrated: dict[str, float] = {}
+    for domain, ratios in ratios_by_domain.items():
+        if not ratios:
+            continue
+        mean_ratio = sum(ratios) / len(ratios)
+        calibrated[domain] = round(max(0.2, min(mean_ratio, 5.0)), 4)
+    return calibrated
+
+
+def _cheap_model_split_hint(*, domain: str, event_count: int, wasted_minutes: float) -> str:
+    if event_count >= 5 or wasted_minutes >= 45.0:
+        return (
+            f"Split {domain} into small specs (detect, policy, verify) so a cheap model can execute each step deterministically."
+        )
+    return f"Keep {domain} as one scoped spec + one implementation card for cheap-model execution."
+
+
+def _potential_roi(*, event_count: int, energy_loss: float, cost_of_delay: float, wasted_minutes: float, calibration: float) -> float:
+    impact = max(0.0, float(energy_loss)) + max(0.0, float(cost_of_delay)) + max(0.0, float(wasted_minutes))
+    effort = max(1.0, 0.8 + (0.35 * max(1, int(event_count))))
+    return round((impact / effort) * max(0.2, float(calibration or 1.0)), 4)
+
+
 def _parse_time(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None
@@ -417,22 +475,51 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
                 source="github_actions_health",
             )
 
+    calibration_by_domain = _roi_calibration_by_domain(events, since=since)
     rows: list[dict[str, Any]] = []
     for row in entries.values():
         severity_rank = int(row.get("severity_rank") or 0)
+        key = str(row.get("key") or "")
+        title = str(row.get("title") or "")
+        recommended_action = str(row.get("recommended_action") or "Investigate and resolve.")
+        event_count = _safe_int(row.get("event_count"))
+        energy_loss = round(_safe_float(row.get("energy_loss")), 4)
+        cost_of_delay = round(_safe_float(row.get("cost_of_delay")), 4)
+        wasted_minutes = round(_safe_float(row.get("wasted_minutes")), 4)
+        domain = _semantic_domain_for_entry(
+            key=key,
+            title=title,
+            recommended_action=recommended_action,
+        )
+        calibration_ratio = calibration_by_domain.get(domain, 1.0)
         rows.append(
             {
-                "key": str(row.get("key") or ""),
-                "title": str(row.get("title") or ""),
+                "key": key,
+                "title": title,
                 "severity": _severity_from_rank(severity_rank),
                 "status": str(row.get("status") or "open"),
-                "event_count": _safe_int(row.get("event_count")),
-                "energy_loss": round(_safe_float(row.get("energy_loss")), 4),
-                "cost_of_delay": round(_safe_float(row.get("cost_of_delay")), 4),
-                "wasted_minutes": round(_safe_float(row.get("wasted_minutes")), 4),
-                "recommended_action": str(row.get("recommended_action") or "Investigate and resolve."),
+                "event_count": event_count,
+                "energy_loss": energy_loss,
+                "cost_of_delay": cost_of_delay,
+                "wasted_minutes": wasted_minutes,
+                "recommended_action": recommended_action,
                 "evidence_links": [str(item) for item in row.get("evidence_links", [])],
                 "sources": [str(item) for item in row.get("sources", [])],
+                "semantic_domain": domain,
+                "potential_roi": _potential_roi(
+                    event_count=event_count,
+                    energy_loss=energy_loss,
+                    cost_of_delay=cost_of_delay,
+                    wasted_minutes=wasted_minutes,
+                    calibration=calibration_ratio,
+                ),
+                "roi_estimator": "friction_energy_cost_minutes_v2",
+                "roi_calibration_ratio": round(float(calibration_ratio), 4),
+                "cheap_model_split_hint": _cheap_model_split_hint(
+                    domain=domain,
+                    event_count=event_count,
+                    wasted_minutes=wasted_minutes,
+                ),
                 "_severity_rank": severity_rank,
             }
         )
@@ -465,6 +552,13 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
                 ),
                 "evidence_links": ["/api/agent/monitor-issues", "/api/agent/metrics", "/api/friction/events"],
                 "sources": ["friction_gap_detector"],
+                "semantic_domain": "flow_friction",
+                "potential_roi": 0.0,
+                "roi_estimator": "friction_energy_cost_minutes_v2",
+                "roi_calibration_ratio": 1.0,
+                "cheap_model_split_hint": (
+                    "Create one setup spec (telemetry enablement) and one verification spec so a cheap model can run both."
+                ),
             }
         ]
     limited = rows[: max(1, min(limit, 200))]

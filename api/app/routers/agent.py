@@ -176,6 +176,14 @@ def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> di
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    status_value = task.get("status")
+    status_name = status_value.value if hasattr(status_value, "value") else str(status_value or "")
+    is_failed = str(status_name).strip().lower() == "failed"
+    failure_preview = None
+    if is_failed:
+        output = str(task.get("output") or "").strip()
+        if output:
+            failure_preview = output[:240]
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -190,6 +198,10 @@ def _task_to_item(task: dict) -> dict:
         "success_evidence": ctx.get("success_evidence"),
         "abort_evidence": ctx.get("abort_evidence"),
         "observation_window_sec": ctx.get("observation_window_sec"),
+        "failure_reason_bucket": ctx.get("failure_reason_bucket") if is_failed else None,
+        "failure_diagnostics_present": ctx.get("failure_diagnostics_present") if is_failed else None,
+        "failure_diagnostics_source": ctx.get("failure_diagnostics_source") if is_failed else None,
+        "failure_output_preview": failure_preview,
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
@@ -814,6 +826,10 @@ def _monitor_max_age_seconds() -> int:
         return 900
 
 
+def _monitor_auto_recover_stale_running_enabled() -> bool:
+    return _truthy(os.environ.get("AGENT_MONITOR_AUTO_RECOVER_STALE_RUNNING", "1"))
+
+
 def _status_report_max_age_seconds() -> int:
     raw = os.environ.get("PIPELINE_STATUS_REPORT_MAX_AGE_SECONDS", str(_monitor_max_age_seconds()))
     try:
@@ -1041,12 +1057,31 @@ def _resolve_monitor_issues_payload(logs_dir: str, *, now: datetime) -> dict[str
         prior_last_check = raw_payload.get("last_check")
 
     status = agent_service.get_pipeline_status()
-    return _derived_monitor_payload(
+    recovered: list[dict[str, Any]] = []
+    if _monitor_auto_recover_stale_running_enabled():
+        recovered = runner_orphan_recovery_service.recover_stale_running_tasks(
+            trigger="monitor_issues_fallback",
+            reason=reason,
+            claimed_by_runner_only=False,
+        )
+        if recovered:
+            status = agent_service.get_pipeline_status()
+
+    payload = _derived_monitor_payload(
         status,
         now=now,
         fallback_reason=reason,
         prior_last_check=prior_last_check,
     )
+    if recovered:
+        task_ids = [str(row.get("id") or "").strip() for row in recovered if str(row.get("id") or "").strip()]
+        payload["auto_recovered_stale_running"] = {
+            "count": len(recovered),
+            "task_ids": task_ids[:20],
+            "trigger": "monitor_issues_fallback",
+            "reason": reason,
+        }
+    return payload
 
 
 def _build_fallback_status_report(

@@ -199,6 +199,10 @@ class AgentTaskListItem(BaseModel):
     success_evidence: Optional[List[str]] = None
     abort_evidence: Optional[List[str]] = None
     observation_window_sec: Optional[int] = None
+    failure_reason_bucket: Optional[str] = None
+    failure_diagnostics_present: Optional[bool] = None
+    failure_diagnostics_source: Optional[str] = None
+    failure_output_preview: Optional[str] = None
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
     created_at: datetime
