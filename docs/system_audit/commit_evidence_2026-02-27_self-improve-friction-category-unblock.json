@@ -1,0 +1,89 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/self-improve-friction-unblock-20260226-232117",
+  "commit_scope": "Add friction-category awareness and unblock-queue learning to self-improvement flow, including category API coverage and prompt-level friction prioritization guidance.",
+  "files_owned": [
+    "api/app/models/friction.py",
+    "api/app/routers/friction.py",
+    "api/app/services/friction_service.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_friction_api.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/commit_evidence_2026-02-27_self-improve-friction-category-unblock.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "050-friction-analysis",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-self-improve-friction-category-unblock"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T092906Z_codex-self-improve-friction-unblock-20260226-232117.json"
+  ],
+  "change_files": [
+    "api/app/models/friction.py",
+    "api/app/routers/friction.py",
+    "api/app/services/friction_service.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_friction_api.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-02-27_self-improve-friction-category-unblock.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_friction_api.py tests/test_run_self_improve_cycle.py",
+      "cd api && ruff check app/models/friction.py app/routers/friction.py app/services/friction_service.py scripts/run_self_improve_cycle.py tests/test_friction_api.py tests/test_run_self_improve_cycle.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self-improve planning uses friction-category evidence and unblock/ROI queue awareness to prioritize high-impact, spec-first unblocks and reduce repeated friction loops.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/friction/categories",
+      "https://coherence-network-production.up.railway.app/api/friction/entry-points",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/daily-summary"
+    ],
+    "test_flows": [
+      "Call /api/friction/categories and confirm grouped categories include friction, monitor, failed-tasks, and github-actions when source evidence exists.",
+      "Run self-improve cycle and confirm plan direction includes friction-category focus plus flow_unblock/roi_queue guidance lines.",
+      "Confirm run reports include friction_category_count and awareness_gap_count in input bundle summary and delta proof."
+    ]
+  }
+}

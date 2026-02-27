@@ -27,7 +27,10 @@ class _FakeClient:
         tasks_payload: object | None = None,
         needs_decision_payload: object | None = None,
         friction_payload: object | None = None,
+        friction_categories_payload: object | None = None,
         runtime_payload: object | None = None,
+        unblock_payload: dict | None = None,
+        roi_payload: dict | None = None,
         daily_summary_payload: dict | None = None,
         usage_error: Exception | None = None,
         tasks_error: Exception | None = None,
@@ -53,7 +56,34 @@ class _FakeClient:
         self.tasks_payload = tasks_payload if tasks_payload is not None else []
         self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
         self.friction_payload = friction_payload if friction_payload is not None else []
+        self.friction_categories_payload = friction_categories_payload if friction_categories_payload is not None else {
+            "categories": [
+                {
+                    "key": "failed-tasks",
+                    "severity": "high",
+                    "entry_point_count": 1,
+                    "open_entry_points": 1,
+                    "event_count": 2,
+                    "energy_loss": 12.0,
+                    "cost_of_delay": 8.0,
+                    "wasted_minutes": 12.0,
+                    "recommended_actions": ["Reduce repeated failed task retries."],
+                }
+            ]
+        }
         self.runtime_payload = runtime_payload if runtime_payload is not None else {}
+        self.unblock_payload = unblock_payload or {
+            "result": "task_suggested",
+            "blocking_stage": "spec",
+            "unblock_priority_score": 2.2,
+            "direction": "Create a spec-first unblock task for the top flow gap.",
+        }
+        self.roi_payload = roi_payload or {
+            "result": "task_suggested",
+            "question_roi": 2.6,
+            "answer_roi": 0.0,
+            "question": "What is the highest-ROI next implementation task?",
+        }
         self.daily_summary_payload = daily_summary_payload or {
             "quality_awareness": {
                 "status": "ok",
@@ -84,6 +114,12 @@ class _FakeClient:
     ) -> _FakeResponse:  # noqa: ARG002
         if self._post_error_plan:
             raise self._post_error_plan.pop(0)
+
+        if "/api/inventory/flow/next-unblock-task" in url:
+            return _FakeResponse(200, self.unblock_payload)
+
+        if "/api/inventory/questions/next-highest-roi-task" in url:
+            return _FakeResponse(200, self.roi_payload)
 
         if url.endswith("/api/agent/tasks"):
             payload = dict(json or {})
@@ -142,6 +178,9 @@ class _FakeClient:
 
         if "/api/friction/events" in url:
             return _FakeResponse(200, self.friction_payload)
+
+        if "/api/friction/categories" in url:
+            return _FakeResponse(200, self.friction_categories_payload)
 
         if "/api/runtime/endpoints/summary" in url:
             if self.runtime_error:
@@ -207,6 +246,39 @@ def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
     assert "proof of meaning" in lowered
     assert "maintainability guidance" in lowered
     assert "quality-awareness" in lowered
+    assert "friction-category prioritization" in lowered
+
+
+def test_plan_prompt_includes_friction_focus_when_bundle_present() -> None:
+    prompt = run_self_improve_cycle.build_plan_direction(
+        {
+            "friction_categories": {
+                "records": [
+                    {
+                        "key": "monitor",
+                        "severity": "high",
+                        "event_count": 4,
+                        "wasted_minutes": 22.0,
+                        "recommended_actions": ["Fix monitor issue root cause first."],
+                    }
+                ]
+            },
+            "unblock_queue": {"payload": {"result": "task_suggested", "blocking_stage": "spec", "direction": "Ship spec"}},
+            "roi_next_task": {
+                "payload": {
+                    "result": "task_suggested",
+                    "question_roi": 3.1,
+                    "answer_roi": 0.0,
+                    "question": "Highest ROI item",
+                }
+            },
+        }
+    )
+
+    assert "Current friction-category signals to prioritize:" in prompt
+    assert "monitor" in prompt
+    assert "flow_unblock" in prompt
+    assert "roi_queue" in prompt
 
 
 def test_stage_payloads_pin_expected_models() -> None:
@@ -508,6 +580,21 @@ def test_collect_input_bundle_parses_dict_task_payloads() -> None:
         tasks_payload={"tasks": [{"id": "t1", "status": "pending"}]},
         needs_decision_payload={"tasks": [{"id": "t2", "status": "needs_decision"}]},
         friction_payload={"events": [{"id": "f1", "block_type": "paid_provider_blocked"}]},
+        friction_categories_payload={
+            "categories": [
+                {
+                    "key": "failed-tasks",
+                    "severity": "high",
+                    "entry_point_count": 1,
+                    "open_entry_points": 1,
+                    "event_count": 2,
+                    "energy_loss": 9.0,
+                    "cost_of_delay": 3.0,
+                    "wasted_minutes": 9.0,
+                    "recommended_actions": ["Reduce failed loops."],
+                }
+            ]
+        },
         runtime_payload={"summary": [{"route": "/api/health"}]},
     )
 
@@ -521,7 +608,47 @@ def test_collect_input_bundle_parses_dict_task_payloads() -> None:
     assert bundle["summary"]["task_count"] == 1
     assert bundle["summary"]["needs_decision_count"] == 1
     assert bundle["summary"]["friction_open_count"] == 1
+    assert bundle["summary"]["friction_category_count"] == 1
+    assert bundle["summary"]["top_friction_categories"] == ["failed-tasks"]
+    assert bundle["summary"]["awareness_gap_count"] == 0
     assert bundle["summary"]["runtime_endpoint_count"] == 1
+
+
+def test_run_cycle_plan_prompt_includes_friction_category_focus() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        friction_categories_payload={
+            "categories": [
+                {
+                    "key": "monitor",
+                    "severity": "critical",
+                    "entry_point_count": 2,
+                    "open_entry_points": 2,
+                    "event_count": 7,
+                    "energy_loss": 10.0,
+                    "cost_of_delay": 12.0,
+                    "wasted_minutes": 30.0,
+                    "recommended_actions": ["Repair monitor routing first."],
+                }
+            ]
+        },
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_friction_focus.json",
+    )
+
+    assert report["status"] == "completed"
+    plan_payload = client.created_payloads[0]
+    assert "Current friction-category signals to prioritize:" in plan_payload["direction"]
+    assert "monitor" in plan_payload["direction"]
 
 
 def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
