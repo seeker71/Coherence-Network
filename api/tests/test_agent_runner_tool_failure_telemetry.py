@@ -272,6 +272,68 @@ def test_prepare_non_root_execution_for_command_fails_when_no_user(monkeypatch):
     assert preexec is None
 
 
+def test_resolve_non_root_exec_user_skips_low_uid_candidates(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+            self.pw_shell = shell
+
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "runner,app")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "0")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path in {"/home/runner", "/home/app"})
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+
+    def _getpwnam(name: str):
+        if name == "runner":
+            return _PwdRow("runner", 500, 500, "/home/runner", "/bin/bash")
+        if name == "app":
+            return _PwdRow("app", 1001, 1001, "/home/app", "/bin/bash")
+        raise KeyError(name)
+
+    monkeypatch.setattr(fake_accounts, "getpwnam", _getpwnam, raising=False)
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "app"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/app"
+
+
+def test_resolve_non_root_exec_user_auto_discover_skips_system_users(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+            self.pw_shell = shell
+
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "1")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path in {"/bin", "/home/app"})
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+    monkeypatch.setattr(fake_accounts, "getpwnam", lambda name: (_ for _ in ()).throw(KeyError(name)), raising=False)
+    monkeypatch.setattr(
+        fake_accounts,
+        "getpwall",
+        lambda: [
+            _PwdRow("sync", 4, 65534, "/bin", "/bin/sync"),
+            _PwdRow("app", 1001, 1001, "/home/app", "/bin/bash"),
+        ],
+        raising=False,
+    )
+
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "app"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/app"
+
+
 def test_cli_install_provider_for_command_detects_supported_providers():
     assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
     assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
