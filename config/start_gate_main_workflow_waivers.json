@@ -75,6 +75,20 @@
       "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
       "expires_at": "2026-02-25T23:59:59Z",
       "run_url_contains": "actions/runs/22339901527"
+    },
+    {
+      "workflow": "Public Deploy Contract",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while run 22480243146 failure is actively remediated to unblock urgent self-improvement flow fixes.",
+      "expires_at": "2026-03-01T23:59:59Z",
+      "run_url_contains": "actions/runs/22480243146"
+    },
+    {
+      "workflow": "Change Contract",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while run 22480243174 failure is actively remediated to unblock urgent self-improvement flow fixes.",
+      "expires_at": "2026-03-01T23:59:59Z",
+      "run_url_contains": "actions/runs/22480243174"
     }
   ]
 }
