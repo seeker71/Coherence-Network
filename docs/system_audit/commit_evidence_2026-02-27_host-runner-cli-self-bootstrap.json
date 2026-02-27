@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/host-runner-provider-proof-20260227",
+  "commit_scope": "Add host-runner task-time CLI self-bootstrap for cursor/claude/codex executors so missing binaries are auto-installed and PATH-normalized before command execution.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-self-bootstrap.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-host-runner-cli-self-bootstrap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://coherence-network-production.up.railway.app/api/agent/tasks/task_3aad4111718a1f1c",
+    "https://coherence-network-production.up.railway.app/api/agent/runners",
+    "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-self-bootstrap.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting deploy and host-runner smoke proof that codex/claude/cursor tasks all complete successfully."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When runner receives cursor/claude/codex tasks and required binary is missing, it attempts configured install commands, updates PATH, and executes without immediate 'command not found'.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
+      "https://coherence-network-production.up.railway.app/api/agent/runners"
+    ],
+    "test_flows": [
+      "Create one cursor task and verify it no longer fails with '/bin/sh: 1: agent: not found'.",
+      "Create one claude task and verify completion from railway runner.",
+      "Create one codex task and verify completion from railway runner."
+    ]
+  }
+}
