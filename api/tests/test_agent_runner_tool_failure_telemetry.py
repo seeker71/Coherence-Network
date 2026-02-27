@@ -334,6 +334,69 @@ def test_resolve_non_root_exec_user_auto_discover_skips_system_users(monkeypatch
     assert home == "/home/app"
 
 
+def test_auto_create_non_root_exec_user_creates_account_when_missing(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+
+    state = {"created": False}
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+
+    def _getpwnam(name: str):
+        if name == "runner" and state["created"]:
+            return _PwdRow("runner", 1001, 1001, "/home/runner")
+        raise KeyError(name)
+
+    monkeypatch.setattr(fake_accounts, "getpwnam", _getpwnam, raising=False)
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE", "1")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE_USER", "runner")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE_UID", "1001")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path == "/home/runner")
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary: "/usr/sbin/useradd" if binary == "useradd" else None,
+    )
+
+    class _RunResult:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def _run(argv, **kwargs):
+        assert argv[0] == "useradd"
+        state["created"] = True
+        return _RunResult()
+
+    monkeypatch.setattr(agent_runner.subprocess, "run", _run)
+
+    user, uid, gid, home = agent_runner._auto_create_non_root_exec_user(min_uid=1000)
+    assert user == "runner"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/runner"
+
+
+def test_resolve_non_root_exec_user_uses_auto_create_when_discovery_off(monkeypatch):
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "0")
+    monkeypatch.setattr(
+        agent_runner,
+        "_auto_create_non_root_exec_user",
+        lambda *, min_uid, preferred_user="": ("runner", 1001, 1001, "/home/runner"),
+    )
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "runner"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/runner"
+
+
 def test_cli_install_provider_for_command_detects_supported_providers():
     assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
     assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
