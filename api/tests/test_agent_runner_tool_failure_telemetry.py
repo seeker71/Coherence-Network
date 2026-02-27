@@ -204,23 +204,54 @@ def test_infer_executor_detects_clawwork_alias():
     assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
 
 
-def test_sanitize_claude_command_for_root_strips_dangerous_flag(monkeypatch):
+def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
-    command, changed = agent_runner._sanitize_claude_command_for_root(
-        'claude -p "smoke" --dangerously-skip-permissions'
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("runner", 1001, 1001, "/home/runner"),
     )
-    assert changed is True
-    assert "--dangerously-skip-permissions" not in command
-    assert command.startswith("claude -p")
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is True
+    assert detail == "runner_non_root_exec_user:runner:1001:1001"
+    assert callable(preexec)
+    assert env["HOME"] == "/home/runner"
+    assert env["USER"] == "runner"
+    assert env["LOGNAME"] == "runner"
+    assert env["PATH"].startswith("/home/runner/.local/bin:")
 
 
-def test_sanitize_claude_command_for_non_root_keeps_flag(monkeypatch):
+def test_prepare_non_root_execution_for_command_noop_when_not_root(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 1000)
-    command, changed = agent_runner._sanitize_claude_command_for_root(
-        'claude -p "smoke" --dangerously-skip-permissions'
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
     )
-    assert changed is False
-    assert "--dangerously-skip-permissions" in command
+    assert ok is True
+    assert detail == ""
+    assert preexec is None
+
+
+def test_prepare_non_root_execution_for_command_fails_when_no_user(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("", -1, -1, ""),
+    )
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is False
+    assert detail == "runner_non_root_user_unavailable"
+    assert preexec is None
 
 
 def test_cli_install_provider_for_command_detects_supported_providers():
