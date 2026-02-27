@@ -311,3 +311,22 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 1. Create bot via @BotFather, get token. Get your chat ID from @userinfobot.
 2. Set webhook: `curl "https://api.telegram.org/bot{TOKEN}/setWebhook?url={API_URL}/api/agent/telegram/webhook"`
 3. Commands: `/status`, `/tasks`, `/task {id}`, `/direction "..."` or type a direction to create a task.
+
+## Cursor Cloud specific instructions
+
+### Services overview
+
+| Service | Command | Port | Notes |
+|---------|---------|------|-------|
+| FastAPI API | `cd api && .venv/bin/uvicorn app.main:app --reload --port 8000` | 8000 | Core backend; uses in-memory store when no `DATABASE_URL` is set |
+| Next.js Web | `cd web && npm run dev` | 3000 | Requires `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` |
+
+### Gotchas
+
+- `python3.12-venv` is not installed by default on the VM; the update script handles this.
+- `ruff` is not listed in `pyproject.toml` dev dependencies but is required for `make lint`. The update script installs it into the API venv.
+- `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
+- No external databases (PostgreSQL, Neo4j) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
+- Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
+- Lint runs with: `cd api && .venv/bin/ruff check .`
+- The `.env` files are not committed. Copy from `.env.example` for API (`api/.env`) and create `web/.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:8000`.
