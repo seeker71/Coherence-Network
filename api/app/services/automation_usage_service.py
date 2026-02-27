@@ -4292,12 +4292,68 @@ def _run_shell_command(command: str, *, timeout_seconds: int) -> tuple[bool, str
     return result.returncode == 0, combined[:400]
 
 
+def _candidate_binary_paths(binary: str) -> list[str]:
+    home = str(Path.home())
+    candidates = [
+        os.path.join(home, ".local", "bin", binary),
+        os.path.join(home, ".cursor", "bin", binary),
+        os.path.join(home, ".cursor", "agent", "bin", binary),
+        os.path.join(home, "bin", binary),
+        f"/usr/local/bin/{binary}",
+        f"/usr/bin/{binary}",
+    ]
+    out: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = str(Path(candidate).expanduser())
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return out
+
+
+def _resolve_binary_path(binary: str) -> str:
+    discovered = shutil.which(binary)
+    if discovered:
+        return discovered
+    for candidate in _candidate_binary_paths(binary):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return ""
+
+
+def _prepend_binary_dir_to_path(binary_path: str) -> None:
+    directory = str(Path(binary_path).parent)
+    current = str(os.environ.get("PATH", ""))
+    parts = [item for item in current.split(os.pathsep) if item]
+    if directory in parts:
+        return
+    os.environ["PATH"] = directory + (os.pathsep + current if current else "")
+
+
+def _ensure_binary_symlink(binary: str, source_path: str) -> None:
+    targets = [f"/usr/local/bin/{binary}", f"/usr/bin/{binary}"]
+    for target in targets:
+        try:
+            target_path = Path(target)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            if target_path.exists() or target_path.is_symlink():
+                target_path.unlink()
+            target_path.symlink_to(Path(source_path))
+            return
+        except Exception:
+            continue
+
+
 def _install_provider_cli(provider: str) -> tuple[bool, str]:
     binary = _provider_install_binary(provider)
     if not binary:
         return False, "install_cli_unsupported_provider"
-    if shutil.which(binary):
-        return False, f"install_cli_skipped_present:{binary}"
+    resolved = _resolve_binary_path(binary)
+    if resolved:
+        _prepend_binary_dir_to_path(resolved)
+        return False, f"install_cli_skipped_present:{binary}:{resolved}"
 
     commands = _provider_install_commands(provider)
     if not commands:
@@ -4311,8 +4367,15 @@ def _install_provider_cli(provider: str) -> tuple[bool, str]:
     for index, command in enumerate(commands, start=1):
         ok, detail = _run_shell_command(command, timeout_seconds=timeout_seconds)
         details.append(f"cmd{index}:{'ok' if ok else 'fail'}:{detail}")
-        if ok and shutil.which(binary):
-            probe_ok, probe_detail = _cli_output([binary, "--version"])
+        if not ok:
+            continue
+        resolved = _resolve_binary_path(binary)
+        if resolved and not shutil.which(binary):
+            _ensure_binary_symlink(binary, resolved)
+            _prepend_binary_dir_to_path(resolved)
+        resolved = _resolve_binary_path(binary)
+        if resolved:
+            probe_ok, probe_detail = _cli_output([resolved, "--version"])
             if probe_ok:
                 return True, f"install_cli_ok:{binary}:{probe_detail[:200]}"
             return True, f"install_cli_ok_version_probe_failed:{probe_detail[:200]}"
