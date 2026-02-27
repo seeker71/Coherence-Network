@@ -3899,6 +3899,23 @@ def _probe_openclaw() -> tuple[bool, str]:
     return False, "missing_openclaw_key_and_openai_codex_backend"
 
 
+def _probe_cursor() -> tuple[bool, str]:
+    if shutil.which("agent") is None:
+        active = int(_active_provider_usage_counts().get("cursor", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_no_cli"
+        return False, "cursor_cli_not_in_path"
+
+    cli_ok, cli_detail = _cli_output(["agent", "--version"])
+    if cli_ok:
+        return True, f"ok_cursor_cli:{cli_detail[:120]}"
+
+    active = int(_active_provider_usage_counts().get("cursor", 0))
+    if active > 0:
+        return True, "ok_via_runtime_usage_after_cli_error"
+    return False, f"cursor_cli_probe_failed:{cli_detail[:200]}"
+
+
 def _probe_github() -> tuple[bool, str]:
     token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
     if token:
@@ -4094,6 +4111,7 @@ def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
         "openai": _probe_openai,
         "openai-codex": _probe_openai,
         "openclaw": _probe_openclaw,
+        "cursor": _probe_cursor,
         "openrouter": _probe_openrouter,
         "supabase": _probe_supabase,
         "github": _probe_github,
@@ -4185,6 +4203,109 @@ def _heal_strategy_runtime_validation(
     )
 
 
+def _provider_cli_install_enabled(*, explicit: bool | None = None) -> bool:
+    if explicit is not None:
+        return bool(explicit)
+    return _env_truthy("AUTOMATION_PROVIDER_HEAL_ENABLE_INSTALLS", default=False)
+
+
+def _provider_install_binary(provider: str) -> str:
+    return {
+        "cursor": "agent",
+        "claude-code": "claude",
+    }.get(provider, "")
+
+
+def _provider_cli_missing_for_auto_heal(provider: str) -> bool:
+    binary = _provider_install_binary(provider)
+    if not binary:
+        return False
+    return shutil.which(binary) is None
+
+
+def _provider_install_commands(provider: str) -> list[str]:
+    env_overrides = {
+        "cursor": "AUTOMATION_CURSOR_INSTALL_COMMANDS",
+        "claude-code": "AUTOMATION_CLAUDE_CODE_INSTALL_COMMANDS",
+    }
+    default_commands = {
+        "cursor": ["curl -fsSL https://cursor.com/install | bash"],
+        "claude-code": [
+            "curl -fsSL https://claude.ai/install.sh | bash",
+            "npm install -g @anthropic-ai/claude-code",
+        ],
+    }
+    raw = str(os.getenv(env_overrides.get(provider, ""), "")).strip()
+    if raw:
+        return [item.strip() for item in raw.split("||") if item.strip()]
+    return list(default_commands.get(provider, []))
+
+
+def _run_shell_command(command: str, *, timeout_seconds: int) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-lc", command],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        return False, str(exc)
+
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    combined = stdout if stdout else stderr
+    if not combined:
+        combined = f"exit_code={result.returncode}"
+    return result.returncode == 0, combined[:400]
+
+
+def _install_provider_cli(provider: str) -> tuple[bool, str]:
+    binary = _provider_install_binary(provider)
+    if not binary:
+        return False, "install_cli_unsupported_provider"
+    if shutil.which(binary):
+        return False, f"install_cli_skipped_present:{binary}"
+
+    commands = _provider_install_commands(provider)
+    if not commands:
+        return False, "install_cli_no_commands_configured"
+
+    timeout_seconds = max(
+        30,
+        min(int(os.getenv("AUTOMATION_PROVIDER_INSTALL_TIMEOUT_SECONDS", "300")), 900),
+    )
+    details: list[str] = []
+    for index, command in enumerate(commands, start=1):
+        ok, detail = _run_shell_command(command, timeout_seconds=timeout_seconds)
+        details.append(f"cmd{index}:{'ok' if ok else 'fail'}:{detail}")
+        if ok and shutil.which(binary):
+            probe_ok, probe_detail = _cli_output([binary, "--version"])
+            if probe_ok:
+                return True, f"install_cli_ok:{binary}:{probe_detail[:200]}"
+            return True, f"install_cli_ok_version_probe_failed:{probe_detail[:200]}"
+    return False, f"install_cli_failed:{'; '.join(details)[:500]}"
+
+
+def _provider_cli_install_strategy(
+    provider: str,
+    *,
+    attempts: list[dict[str, Any]],
+    enable_cli_installs: bool,
+) -> tuple[str, Callable[[], tuple[bool, str]]] | None:
+    if not enable_cli_installs:
+        return None
+    if any(str(row.get("strategy", "")).startswith("install_cli") for row in attempts):
+        return None
+    if not _provider_cli_missing_for_auto_heal(provider):
+        return None
+    if not _provider_install_binary(provider):
+        return None
+    return ("install_cli", lambda: _install_provider_cli(provider))
+
+
 def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
     required = [
         _normalize_provider_name(item)
@@ -4213,6 +4334,7 @@ def run_provider_auto_heal(
     max_rounds: int = 2,
     runtime_window_seconds: int = 86400,
     min_execution_events: int = 1,
+    enable_cli_installs: bool | None = None,
 ) -> dict[str, Any]:
     requested = required_providers or [
         *_required_providers_from_env(),
@@ -4235,6 +4357,7 @@ def run_provider_auto_heal(
         0,
         min(int(os.getenv("AUTOMATION_PROVIDER_HEAL_RETRY_DELAY_SECONDS", "2")), 30),
     )
+    enable_installs = _provider_cli_install_enabled(explicit=enable_cli_installs)
     probe_map = _provider_probe_map()
 
     provider_rows: list[dict[str, Any]] = []
@@ -4261,17 +4384,26 @@ def run_provider_auto_heal(
         healed = False
         final_detail = "not_attempted"
         for round_index in range(1, rounds + 1):
-            strategy_runs = (
-                ("direct_probe", lambda: probe()),
-                ("refresh_and_reprobe", lambda: _heal_strategy_refresh_and_reprobe(provider, probe)),
-                (
-                    "runtime_validation",
-                    lambda: _heal_strategy_runtime_validation(
-                        provider,
-                        runtime_window_seconds=validation_window,
-                        min_execution_events=min_events,
+            strategy_runs: list[tuple[str, Callable[[], tuple[bool, str]]]] = [("direct_probe", lambda: probe())]
+            install_strategy = _provider_cli_install_strategy(
+                provider,
+                attempts=attempts,
+                enable_cli_installs=enable_installs,
+            )
+            if install_strategy is not None:
+                strategy_runs.append(install_strategy)
+            strategy_runs.extend(
+                [
+                    ("refresh_and_reprobe", lambda: _heal_strategy_refresh_and_reprobe(provider, probe)),
+                    (
+                        "runtime_validation",
+                        lambda: _heal_strategy_runtime_validation(
+                            provider,
+                            runtime_window_seconds=validation_window,
+                            min_execution_events=min_events,
+                        ),
                     ),
-                ),
+                ]
             )
             for strategy_name, runner in strategy_runs:
                 started = time.perf_counter()
@@ -4324,6 +4456,7 @@ def run_provider_auto_heal(
         "required_providers": providers,
         "external_provider_count": len(providers),
         "max_rounds": rounds,
+        "enable_cli_installs": enable_installs,
         "all_healthy": len(blocking_issues) == 0,
         "blocking_issues": blocking_issues,
         "providers": provider_rows,
