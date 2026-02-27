@@ -63,6 +63,10 @@ python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ./scripts/thread-runtime.sh check
+
+# Optional auto-heal (only for merge-ready stale codex PRs):
+# python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict \
+#   --auto-merge-ready-stale --auto-merge-method merge
 ```
 
 Gate status:
