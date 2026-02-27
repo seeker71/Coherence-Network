@@ -2699,7 +2699,16 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _non_root_min_uid() -> int:
+    try:
+        value = int(os.getenv("AGENT_RUN_AS_MIN_UID", "1000"))
+    except Exception:
+        value = 1000
+    return max(1, value)
+
+
 def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str]:
+    min_uid = _non_root_min_uid()
     candidates: list[str] = []
     preferred = str(preferred_user or "").strip()
     if preferred:
@@ -2718,7 +2727,7 @@ def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str
             continue
         except Exception:
             continue
-        if int(row.pw_uid) <= 0:
+        if int(row.pw_uid) < min_uid:
             continue
         home = str(row.pw_dir or "").strip()
         if not home or not os.path.isdir(home):
@@ -2731,7 +2740,7 @@ def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str
     try:
         for row in sorted(pwd.getpwall(), key=lambda item: int(item.pw_uid)):
             uid = int(row.pw_uid)
-            if uid <= 0:
+            if uid < min_uid:
                 continue
             shell = str(row.pw_shell or "").strip().lower()
             if shell.endswith("nologin") or shell.endswith("false"):

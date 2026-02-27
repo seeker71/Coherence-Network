@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/dangerous-skip-nonroot-20260227",
+  "commit_scope": "Keep --dangerously-skip-permissions for autonomous host-runner commands while demoting root execution to a safe non-root account; avoid low-UID system-user selection and keep gate ownership/waiver metadata current.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-dangerous-skip-nonroot.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-host-runner-dangerous-skip-nonroot"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22499270717",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22499647143",
+    "https://coherence-network-production.up.railway.app/api/agent/runners"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "config/start_gate_workflow_owners.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting branch push/PR checks and production host-runner smoke that verifies claude/codex/cursor execution claims under non-root demotion policy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When a root host-runner receives a command containing --dangerously-skip-permissions, the command keeps the flag but is executed as a non-root user with UID >= AGENT_RUN_AS_MIN_UID (default 1000), preventing low-UID system-user demotion.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
+      "https://coherence-network-production.up.railway.app/api/agent/runners"
+    ],
+    "test_flows": [
+      "Create a claude task that includes --dangerously-skip-permissions and verify task context contains runner_exec_user with non-root UID >= 1000.",
+      "Create a codex task and verify completion from railway-runner without runner_exec_user_unavailable.",
+      "Create a cursor task and verify claim path succeeds and failures, if any, are auth/token related rather than binary/root rejection."
+    ]
+  }
+}
