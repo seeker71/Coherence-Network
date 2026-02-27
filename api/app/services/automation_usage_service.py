@@ -4306,6 +4306,24 @@ def _provider_cli_install_strategy(
     return ("install_cli", lambda: _install_provider_cli(provider))
 
 
+def _provider_requires_cli_binary(provider: str, *, enable_cli_installs: bool) -> bool:
+    return enable_cli_installs and bool(_provider_install_binary(provider))
+
+
+def _detail_indicates_missing_cli(detail: str) -> bool:
+    text = str(detail or "").strip().lower()
+    if not text:
+        return False
+    markers = (
+        "no_cli",
+        "cli_not_in_path",
+        "cli_missing",
+        "command not found",
+        "not found",
+    )
+    return any(marker in text for marker in markers)
+
+
 def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
     required = [
         _normalize_provider_name(item)
@@ -4408,6 +4426,13 @@ def run_provider_auto_heal(
             for strategy_name, runner in strategy_runs:
                 started = time.perf_counter()
                 ok, detail = runner()
+                if (
+                    ok
+                    and _provider_requires_cli_binary(provider, enable_cli_installs=enable_installs)
+                    and _detail_indicates_missing_cli(detail)
+                ):
+                    ok = False
+                    detail = f"cli_binary_required:{detail}"
                 elapsed_ms = round((time.perf_counter() - started) * 1000.0, 4)
                 _record_provider_heal_event(
                     provider=provider,
