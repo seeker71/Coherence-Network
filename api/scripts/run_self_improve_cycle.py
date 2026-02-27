@@ -34,6 +34,9 @@ AGENT_TASK_DIRECTION_MAX_CHARS = int(os.environ.get("SELF_IMPROVE_AGENT_TASK_DIR
 AGENT_TASK_DIRECTION_SAFE_CHARS = max(400, AGENT_TASK_DIRECTION_MAX_CHARS - 300)
 AGENT_TASK_DIRECTION_422_RETRY_CHARS = max(300, AGENT_TASK_DIRECTION_SAFE_CHARS - 600)
 TASK_DIRECTION_TRUNCATION_NOTE = "[truncated to fit task direction limit]"
+FRICTION_CATEGORY_WINDOW_DAYS = int(os.environ.get("SELF_IMPROVE_FRICTION_WINDOW_DAYS", "14"))
+FRICTION_CATEGORY_LIMIT = int(os.environ.get("SELF_IMPROVE_FRICTION_CATEGORY_LIMIT", "12"))
+UNBLOCK_QUEUE_WINDOW_SECONDS = int(os.environ.get("SELF_IMPROVE_UNBLOCK_WINDOW_SECONDS", "86400"))
 SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE = str(
     os.environ.get("SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE", "api_key")
 ).strip().lower() or "api_key"
@@ -43,6 +46,13 @@ STAGE_SPECS = {
     "execute": {"task_type": "impl", "model": EXECUTE_MODEL},
     "review": {"task_type": "review", "model": REVIEW_MODEL},
 }
+
+
+def _safe_text(value: Any, max_chars: int = 200) -> str:
+    text = str(value or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[: max(1, max_chars - 3)] + "..."
 
 
 def _is_infra_error(message: str) -> bool:
@@ -154,7 +164,55 @@ def _is_http_status_error(exc: Exception, status_code: int) -> bool:
     return f"status={status_code}" in message or f"http {status_code}" in message
 
 
-def build_plan_direction() -> str:
+def _friction_focus_lines(input_bundle: dict[str, Any] | None, *, max_items: int = 4) -> list[str]:
+    bundle = _coerce_dict(input_bundle, {})
+    categories = _extract_records(_coerce_dict(bundle.get("friction_categories"), {}).get("records"))
+    lines: list[str] = []
+    for row in categories[: max(1, max_items)]:
+        key = _safe_text(row.get("key") or "unknown", max_chars=60)
+        severity = _safe_text(row.get("severity") or "unknown", max_chars=20)
+        events = int(float(row.get("event_count") or 0))
+        wasted = round(float(row.get("wasted_minutes") or 0.0), 2)
+        actions = [str(item).strip() for item in row.get("recommended_actions", []) if str(item).strip()]
+        action = _safe_text(actions[0] if actions else "", max_chars=120)
+        detail = f"- {key}: severity={severity}, events={events}, wasted_minutes={wasted}"
+        if action:
+            detail += f", action={action}"
+        lines.append(detail)
+
+    unblock_payload = _coerce_dict(_coerce_dict(bundle.get("unblock_queue"), {}).get("payload"), {})
+    unblock_result = str(unblock_payload.get("result") or "").strip().lower()
+    if unblock_result in {"task_suggested", "task_already_active"}:
+        blocking_stage = _safe_text(unblock_payload.get("blocking_stage") or "unknown", max_chars=30)
+        unblock_score = round(float(unblock_payload.get("unblock_priority_score") or 0.0), 4)
+        direction = _safe_text(unblock_payload.get("direction") or "", max_chars=140)
+        lines.append(
+            f"- flow_unblock: stage={blocking_stage}, priority={unblock_score}, direction={direction}"
+        )
+
+    roi_payload = _coerce_dict(_coerce_dict(bundle.get("roi_next_task"), {}).get("payload"), {})
+    roi_result = str(roi_payload.get("result") or "").strip().lower()
+    if roi_result in {"task_suggested", "task_already_active"}:
+        question_roi = round(float(roi_payload.get("question_roi") or 0.0), 4)
+        answer_roi = round(float(roi_payload.get("answer_roi") or 0.0), 4)
+        question = _safe_text(roi_payload.get("question") or "", max_chars=140)
+        lines.append(f"- roi_queue: question_roi={question_roi}, answer_roi={answer_roi}, question={question}")
+    return lines
+
+
+def _friction_focus_text(input_bundle: dict[str, Any] | None, *, header: str) -> str:
+    lines = _friction_focus_lines(input_bundle, max_items=4)
+    if not lines:
+        return ""
+    body = "\n".join(lines[:6])
+    return f"{header}\n{body}\n"
+
+
+def build_plan_direction(input_bundle: dict[str, Any] | None = None) -> str:
+    focus_text = _friction_focus_text(
+        input_bundle,
+        header="Current friction-category signals to prioritize:",
+    )
     return (
         "You are planning a self-improvement task for this repository.\n"
         "Assume the execution model is cheap and fast, and may miss constraints unless they are explicit.\n"
@@ -173,11 +231,17 @@ def build_plan_direction() -> str:
         "10. Failure anticipation: include how the solution could degrade in two weeks and what guardrails detect it.\n"
         "11. Proof of meaning: define why this is better for humans/operators, not only that commands passed.\n"
         "12. Maintainability guidance: use quality-awareness signals (hotspots + recommendations) to reduce code drift.\n"
+        "13. Friction-category prioritization: start with highest-ROI category signals and prefer spec-first unblock steps for gaps.\n"
+        f"{focus_text}"
         "Output only the plan content, no preamble."
     )
 
 
-def build_execute_direction(plan_output: str) -> str:
+def build_execute_direction(plan_output: str, input_bundle: dict[str, Any] | None = None) -> str:
+    focus_text = _friction_focus_text(
+        input_bundle,
+        header="Friction-category focus (address highest-impact items first):",
+    )
     return (
         "Execute the plan below exactly and keep output deterministic.\n"
         "You are a cheap, fast executor: follow instructions literally, keep edits minimal, and provide proof for each step.\n"
@@ -187,12 +251,22 @@ def build_execute_direction(plan_output: str) -> str:
         "Plan to execute:\n"
         f"{_clip(plan_output, max_chars=3200)}\n"
         "\n"
+        f"{focus_text}"
+        "\n"
         "Required output format (exact sections): PLAN, PATCH, RUN, RESULT.\n"
         "Under RUN and RESULT, include concrete proof artifacts for every completed step."
     )
 
 
-def build_review_direction(plan_output: str, execute_output: str) -> str:
+def build_review_direction(
+    plan_output: str,
+    execute_output: str,
+    input_bundle: dict[str, Any] | None = None,
+) -> str:
+    focus_text = _friction_focus_text(
+        input_bundle,
+        header="Expected friction-category coverage in review:",
+    )
     return (
         "Review whether execution followed the plan and proof contract.\n"
         "Reject any step without concrete proof and require retry guidance.\n"
@@ -204,6 +278,8 @@ def build_review_direction(plan_output: str, execute_output: str) -> str:
         "\n"
         "Execution output:\n"
         f"{_clip(execute_output, max_chars=1800)}\n"
+        "\n"
+        f"{focus_text}"
         "\n"
         "Return verdict with sections: PASS_FAIL, FINDINGS, REQUIRED_RETRIES, UNBLOCK_GUIDANCE.\n"
         "In UNBLOCK_GUIDANCE, include common issue playbooks (tests/lint/secrets/rebase/flaky network/dependencies)."
@@ -291,7 +367,7 @@ def _extract_records(payload: Any) -> list[dict[str, Any]]:
     if isinstance(payload, list):
         return [row for row in payload if isinstance(row, dict)]
     if isinstance(payload, dict):
-        for key in ("tasks", "records", "items", "results", "data", "events"):
+        for key in ("tasks", "records", "items", "results", "data", "events", "categories", "entry_points"):
             value = payload.get(key)
             if isinstance(value, list):
                 return [row for row in value if isinstance(row, dict)]
@@ -523,6 +599,34 @@ def _collect_input_bundle(
         f"{base_url}/api/friction/events?status=open&limit=50",
     )
     friction_records = _extract_records(friction_payload_raw)
+    friction_categories_ok, friction_categories_payload_raw, friction_categories_error, friction_categories_status_code = (
+        _safe_get(
+            client,
+            f"{base_url}/api/friction/categories?window_days={max(1, FRICTION_CATEGORY_WINDOW_DAYS)}&limit={max(1, FRICTION_CATEGORY_LIMIT)}",
+        )
+    )
+    friction_category_records = _extract_records(friction_categories_payload_raw)
+    top_friction_categories = [
+        str(row.get("key") or "").strip()
+        for row in friction_category_records[:4]
+        if str(row.get("key") or "").strip()
+    ]
+
+    unblock_ok, unblock_payload_raw, unblock_error, unblock_status_code = _safe_post(
+        client,
+        f"{base_url}/api/inventory/flow/next-unblock-task"
+        f"?create_task=false&runtime_window_seconds={max(60, UNBLOCK_QUEUE_WINDOW_SECONDS)}",
+        json=None,
+        attempts=1,
+    )
+    unblock_payload = _coerce_dict(unblock_payload_raw, {})
+    roi_ok, roi_payload_raw, roi_error, roi_status_code = _safe_post(
+        client,
+        f"{base_url}/api/inventory/questions/next-highest-roi-task?create_task=false",
+        json=None,
+        attempts=1,
+    )
+    roi_payload = _coerce_dict(roi_payload_raw, {})
 
     runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
         client,
@@ -572,17 +676,28 @@ def _collect_input_bundle(
     if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok or not daily_summary_ok:
         data_quality_mode = "degraded_partial"
 
+    awareness_gaps: list[str] = []
+    if not friction_categories_ok:
+        awareness_gaps.append("friction_categories_unavailable")
+    if not unblock_ok:
+        awareness_gaps.append("flow_unblock_queue_unavailable")
+    if not roi_ok:
+        awareness_gaps.append("roi_queue_unavailable")
+
     return {
         "collected_at": _utcnow(),
         "summary": {
             "task_count": len(task_records),
             "needs_decision_count": len(needs_decision_records),
             "friction_open_count": len(friction_records),
+            "friction_category_count": len(friction_category_records),
+            "top_friction_categories": top_friction_categories,
             "runtime_endpoint_count": len(_coerce_list(runtime_payload.get("summary"), [])),
             "blocking_usage_alert_count": len(blocking_alerts),
             "quality_hotspot_count": len(quality_hotspots),
             "quality_guidance_count": len(quality_guidance),
             "quality_severity": str(quality_summary.get("severity") or "unknown"),
+            "awareness_gap_count": len(awareness_gaps),
         },
         "usage": {
             "ok": usage_ok,
@@ -619,6 +734,25 @@ def _collect_input_bundle(
             "records": friction_records,
             "count": len(friction_records),
         },
+        "friction_categories": {
+            "ok": friction_categories_ok,
+            "error": friction_categories_error,
+            "status_code": friction_categories_status_code,
+            "records": friction_category_records[:20],
+            "count": len(friction_category_records),
+        },
+        "unblock_queue": {
+            "ok": unblock_ok,
+            "error": unblock_error,
+            "status_code": unblock_status_code,
+            "payload": unblock_payload,
+        },
+        "roi_next_task": {
+            "ok": roi_ok,
+            "error": roi_error,
+            "status_code": roi_status_code,
+            "payload": roi_payload,
+        },
         "runtime": {
             "ok": runtime_ok,
             "error": runtime_error,
@@ -638,6 +772,7 @@ def _collect_input_bundle(
             "guidance": quality_guidance[:8],
             "recommended_tasks": _coerce_list(quality_awareness.get("recommended_tasks"), [])[:5],
         },
+        "awareness_gaps": awareness_gaps,
         "data_quality_mode": data_quality_mode,
     }
 
@@ -652,9 +787,12 @@ def _input_bundle_summary(bundle: dict[str, Any]) -> dict[str, Any]:
         "task_count": summary.get("task_count", 0),
         "needs_decision_count": summary.get("needs_decision_count", 0),
         "friction_open_count": summary.get("friction_open_count", 0),
+        "friction_category_count": summary.get("friction_category_count", 0),
+        "top_friction_categories": summary.get("top_friction_categories", []),
         "quality_hotspot_count": summary.get("quality_hotspot_count", 0),
         "quality_guidance_count": summary.get("quality_guidance_count", 0),
         "quality_severity": summary.get("quality_severity", "unknown"),
+        "awareness_gap_count": summary.get("awareness_gap_count", 0),
     }
 
 
@@ -706,6 +844,8 @@ def _build_delta_summary(
             f"tasks={before_summary.get('task_count', 0)}; "
             f"needs_decision={before_summary.get('needs_decision_count', 0)}; "
             f"friction={before_summary.get('friction_open_count', 0)}; "
+            f"friction_categories={before_summary.get('friction_category_count', 0)}; "
+            f"awareness_gaps={before_summary.get('awareness_gap_count', 0)}; "
             f"quality_hotspots={before_summary.get('quality_hotspot_count', 0)}"
         ),
         "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
@@ -715,12 +855,16 @@ def _build_delta_summary(
                 "task_count": before_summary.get("task_count", 0),
                 "needs_decision_count": before_summary.get("needs_decision_count", 0),
                 "friction_open_count": before_summary.get("friction_open_count", 0),
+                "friction_category_count": before_summary.get("friction_category_count", 0),
+                "awareness_gap_count": before_summary.get("awareness_gap_count", 0),
                 "quality_hotspot_count": before_summary.get("quality_hotspot_count", 0),
             },
             "after_counts": {
                 "task_count": after_summary.get("task_count", 0),
                 "needs_decision_count": after_summary.get("needs_decision_count", 0),
                 "friction_open_count": after_summary.get("friction_open_count", 0),
+                "friction_category_count": after_summary.get("friction_category_count", 0),
+                "awareness_gap_count": after_summary.get("awareness_gap_count", 0),
                 "quality_hotspot_count": after_summary.get("quality_hotspot_count", 0),
             },
         },
@@ -1162,7 +1306,7 @@ def run_cycle(
                     execute_pending=execute_pending,
                     execute_token=execute_token,
                     stage_name="plan",
-                    direction=build_plan_direction(),
+                    direction=build_plan_direction(input_bundle_before),
                     task_type="spec",
                     model_override=PLAN_MODEL,
                 )
@@ -1279,7 +1423,7 @@ def run_cycle(
                     execute_pending=execute_pending,
                     execute_token=execute_token,
                     stage_name="execute",
-                    direction=build_execute_direction(plan_output),
+                    direction=build_execute_direction(plan_output, input_bundle_before),
                     task_type="impl",
                     model_override=EXECUTE_MODEL,
                 )
@@ -1396,7 +1540,7 @@ def run_cycle(
                     execute_pending=execute_pending,
                     execute_token=execute_token,
                     stage_name="review",
-                    direction=build_review_direction(plan_output, execute_output),
+                    direction=build_review_direction(plan_output, execute_output, input_bundle_before),
                     task_type="review",
                     model_override=REVIEW_MODEL,
                 )
