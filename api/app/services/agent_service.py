@@ -1132,6 +1132,19 @@ def _resolve_task_route(
     return model, tier, str(command), route_decision, normalized_response_call
 
 
+def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None:
+    if executor != "openclaw":
+        return
+    current = str(ctx.get("runner_codex_auth_mode") or "").strip().lower()
+    if current in {"api_key", "oauth", "auto"}:
+        ctx["runner_codex_auth_mode"] = current
+        return
+    configured = str(os.environ.get("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", "api_key")).strip().lower()
+    if configured not in {"api_key", "oauth", "auto"}:
+        configured = "api_key"
+    ctx["runner_codex_auth_mode"] = configured
+
+
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     _ensure_store_loaded(include_output=False)
@@ -1159,6 +1172,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if "task_fingerprint" in policy_meta:
         ctx.setdefault("task_fingerprint", policy_meta["task_fingerprint"])
     ctx["executor"] = executor
+    _apply_runner_auth_mode_defaults(ctx, executor)
     primary_agent = AGENT_BY_TASK_TYPE.get(data.task_type)
     guard_agents = GUARD_AGENTS_BY_TASK_TYPE.get(data.task_type, [])
     if primary_agent:
