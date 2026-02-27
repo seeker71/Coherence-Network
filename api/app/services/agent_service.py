@@ -132,7 +132,77 @@ def _first_available_executor(preferred: list[str]) -> str:
         candidate = _normalize_executor(executor, default="")
         if candidate and _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+    configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
+    if configured_default and _executor_available(configured_default):
+        return configured_default
+    # Final deterministic safety net: prefer codex/openclaw when available.
+    for candidate in ("openclaw", "cursor", "claude"):
+        if _executor_available(candidate):
+            return candidate
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="openclaw")
+
+
+def _executor_fallback_candidates() -> list[str]:
+    return [
+        _cheap_executor_default(),
+        _escalation_executor_default(),
+        "openclaw",
+        "cursor",
+        "claude",
+    ]
+
+
+def _select_executor_with_retry_policy(
+    *,
+    task_fingerprint: str,
+    context: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
+    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
+    cheap = _cheap_executor_default()
+    escalate_to = _escalation_executor_default()
+    if escalate_to == cheap:
+        escalate_to = "claude" if cheap != "claude" else "openclaw"
+
+    stats = _prior_attempt_stats(task_fingerprint)
+    retry_hint = _task_retry_hint(context)
+    effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
+    should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
+    selected = escalate_to if should_escalate else cheap
+    reason = "retry_threshold" if should_escalate and effective_retry_count >= retry_threshold else (
+        "failure_threshold" if should_escalate else "cheap_default"
+    )
+    if not _executor_available(selected):
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "openclaw"])
+        return fallback, {
+            "policy_applied": True,
+            "reason": "selected_executor_unavailable",
+            "selected_executor": selected,
+            "fallback_executor": fallback,
+            "task_fingerprint": task_fingerprint,
+            "retry_threshold": retry_threshold,
+            "failure_threshold": failure_threshold,
+            "historical_attempts": stats["attempts"],
+            "historical_failures": stats["failed"],
+            "retry_hint": retry_hint,
+            "effective_retry_count": effective_retry_count,
+            "cheap_executor": cheap,
+            "escalation_executor": escalate_to,
+        }
+
+    return selected, {
+        "policy_applied": True,
+        "reason": reason,
+        "task_fingerprint": task_fingerprint,
+        "retry_threshold": retry_threshold,
+        "failure_threshold": failure_threshold,
+        "historical_attempts": stats["attempts"],
+        "historical_failures": stats["failed"],
+        "retry_hint": retry_hint,
+        "effective_retry_count": effective_retry_count,
+        "cheap_executor": cheap,
+        "escalation_executor": escalate_to,
+    }
 
 
 def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
@@ -201,11 +271,27 @@ def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
 def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     explicit = _normalize_executor(context.get("executor"), default="")
     if explicit:
-        return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        if _executor_available(explicit):
+            return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        fallback = _first_available_executor(_executor_fallback_candidates())
+        return fallback, {
+            "policy_applied": True,
+            "reason": "explicit_executor_unavailable",
+            "explicit_executor": explicit,
+            "fallback_executor": fallback,
+        }
 
     if not _executor_policy_enabled():
         default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
-        return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+        if _executor_available(default_executor):
+            return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+        fallback = _first_available_executor(_executor_fallback_candidates())
+        return fallback, {
+            "policy_applied": True,
+            "reason": "policy_disabled_default_unavailable",
+            "default_executor": default_executor,
+            "fallback_executor": fallback,
+        }
 
     task_fingerprint = str(context.get("task_fingerprint") or "").strip()
     if not task_fingerprint:
@@ -239,54 +325,10 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
             "task_fingerprint": task_fingerprint,
             "open_question_executor": selected_open,
         }
-
-    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
-    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
-    cheap = _cheap_executor_default()
-    escalate_to = _escalation_executor_default()
-    if escalate_to == cheap:
-        escalate_to = "claude" if cheap != "claude" else "openclaw"
-
-    stats = _prior_attempt_stats(task_fingerprint)
-    retry_hint = _task_retry_hint(context)
-    effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
-
-    should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
-    selected = escalate_to if should_escalate else cheap
-    reason = "cheap_default"
-    if should_escalate:
-        reason = "retry_threshold" if effective_retry_count >= retry_threshold else "failure_threshold"
-    if not _executor_available(selected):
-        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "openclaw"])
-        return fallback, {
-            "policy_applied": True,
-            "reason": "selected_executor_unavailable",
-            "selected_executor": selected,
-            "fallback_executor": fallback,
-            "task_fingerprint": task_fingerprint,
-            "retry_threshold": retry_threshold,
-            "failure_threshold": failure_threshold,
-            "historical_attempts": stats["attempts"],
-            "historical_failures": stats["failed"],
-            "retry_hint": retry_hint,
-            "effective_retry_count": effective_retry_count,
-            "cheap_executor": cheap,
-            "escalation_executor": escalate_to,
-        }
-
-    return selected, {
-        "policy_applied": True,
-        "reason": reason,
-        "task_fingerprint": task_fingerprint,
-        "retry_threshold": retry_threshold,
-        "failure_threshold": failure_threshold,
-        "historical_attempts": stats["attempts"],
-        "historical_failures": stats["failed"],
-        "retry_hint": retry_hint,
-        "effective_retry_count": effective_retry_count,
-        "cheap_executor": cheap,
-        "escalation_executor": escalate_to,
-    }
+    return _select_executor_with_retry_policy(
+        task_fingerprint=task_fingerprint,
+        context=context,
+    )
 
 
 def _command_template(task_type: TaskType) -> str:
