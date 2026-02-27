@@ -243,6 +243,51 @@ def test_create_task_openclaw_model_override_openai_prefix_normalizes_for_codex(
     assert task["model"] == "openclaw/gpt-4o-mini"
 
 
+def test_create_task_openclaw_defaults_runner_codex_auth_mode_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.delenv("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", raising=False)
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Default to api_key runner auth mode",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw"},
+        )
+    )
+
+    assert task["context"]["runner_codex_auth_mode"] == "api_key"
+
+
+def test_create_task_openclaw_preserves_explicit_runner_codex_auth_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    monkeypatch.setenv("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", "api_key")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Keep explicit oauth override",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "runner_codex_auth_mode": "oauth"},
+        )
+    )
+
+    assert task["context"]["runner_codex_auth_mode"] == "oauth"
+
+
 @pytest.mark.asyncio
 async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
