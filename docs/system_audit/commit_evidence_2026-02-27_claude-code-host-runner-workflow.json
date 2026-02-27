@@ -1,0 +1,51 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "main",
+  "commit_scope": "Add claude-code-host-runner-task.yml workflow for direct claude -p task dispatch on GitHub Actions host runners.",
+  "files_owned": [
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_claude-code-host-runner-workflow.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-code",
+      "contributor_type": "machine",
+      "roles": ["implementation"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["decision"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "2.1.42"
+  },
+  "evidence_refs": [
+    "git push origin main",
+    "workflow_dispatch to claude-code-host-runner-task.yml"
+  ],
+  "change_files": [
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_claude-code-host-runner-workflow.json"
+  ],
+  "idea_ids": ["claude-code-executor-provider"],
+  "spec_ids": ["claude-code-executor-provider"],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": ["git push origin main"]
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI validation pending"
+  },
+  "task_ids": ["task_claude_code_host_runner_workflow_2026_02_27"]
+}
