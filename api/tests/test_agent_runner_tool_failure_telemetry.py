@@ -204,6 +204,73 @@ def test_infer_executor_detects_clawwork_alias():
     assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
 
 
+def test_cli_install_provider_for_command_detects_supported_providers():
+    assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
+    assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
+    assert agent_runner._cli_install_provider_for_command('codex exec "run" --json') == "codex"
+    assert agent_runner._cli_install_provider_for_command("pytest -q") == ""
+
+
+def test_ensure_cli_for_command_installs_cursor_when_missing(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setenv("AGENT_RUNNER_CURSOR_INSTALL_COMMANDS", "echo install-cursor")
+
+    install_state = {"installed": False}
+
+    def _which(binary: str, path: str | None = None):
+        if binary == "agent" and install_state["installed"]:
+            return str(tmp_path / "bin" / "agent")
+        return None
+
+    def _run_install(command: str, *, env: dict[str, str], timeout_seconds: int):
+        assert "install-cursor" in command
+        install_state["installed"] = True
+        return True, "installed"
+
+    monkeypatch.setattr(agent_runner.shutil, "which", _which)
+    monkeypatch.setattr(agent_runner, "_run_cli_install_command", _run_install)
+
+    env = {"PATH": "/usr/bin", "HOME": str(tmp_path)}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='agent "smoke" --model auto',
+        env=env,
+        task_id="task_cursor_install",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+    assert ok is True
+    assert detail.startswith("runner_cli_install_ok:cursor:agent:")
+    assert str(tmp_path / "bin") in env["PATH"]
+
+
+def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/usr/local/bin/claude" if binary == "claude" else None,
+    )
+    install_called = {"value": False}
+
+    def _run_install(command: str, *, env: dict[str, str], timeout_seconds: int):
+        install_called["value"] = True
+        return True, "unexpected"
+
+    monkeypatch.setattr(agent_runner, "_run_cli_install_command", _run_install)
+
+    env = {"PATH": "/usr/bin:/usr/local/bin"}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='claude -p "smoke"',
+        env=env,
+        task_id="task_claude_present",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+    assert ok is True
+    assert detail.startswith("runner_cli_present:claude:claude:")
+    assert install_called["value"] is False
+
+
 def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monkeypatch):
     monkeypatch.delenv("AGENT_TASK_TIMEOUT_SPEC", raising=False)
     monkeypatch.setattr(agent_runner, "TASK_TIMEOUT", 3600)

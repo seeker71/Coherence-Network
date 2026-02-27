@@ -26,6 +26,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -2697,6 +2698,204 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _cli_auto_install_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST") and not _as_bool(os.getenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "0")):
+        return False
+    return _as_bool(os.getenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1"))
+
+
+def _cli_install_timeout_seconds() -> int:
+    try:
+        value = int(os.getenv("AGENT_RUNNER_INSTALL_TIMEOUT_SECONDS", "300"))
+    except Exception:
+        value = 300
+    return max(30, min(value, 900))
+
+
+def _cli_install_provider_for_command(command: str) -> str:
+    if _uses_cursor_cli(command):
+        return "cursor"
+    if _uses_claude_cli(command):
+        return "claude"
+    if _uses_codex_cli(command):
+        return "codex"
+    return ""
+
+
+def _cli_binary_for_provider(provider: str) -> str:
+    mapping = {
+        "cursor": "agent",
+        "claude": "claude",
+        "codex": "codex",
+    }
+    return mapping.get(provider, "")
+
+
+def _cli_install_commands(provider: str) -> list[str]:
+    def _package_bootstrap(packages: list[str]) -> str:
+        joined = " ".join(packages)
+        return (
+            "if command -v apt-get >/dev/null 2>&1; then "
+            "apt-get update && DEBIAN_FRONTEND=noninteractive "
+            f"apt-get install -y --no-install-recommends {joined}; "
+            "elif command -v apk >/dev/null 2>&1; then "
+            f"apk add --no-cache {joined}; "
+            "elif command -v dnf >/dev/null 2>&1; then "
+            f"dnf install -y {joined}; "
+            "elif command -v yum >/dev/null 2>&1; then "
+            f"yum install -y {joined}; "
+            "else echo 'no_supported_pkg_manager'; exit 1; fi"
+        )
+
+    ensure_curl_cmd = (
+        "if ! command -v curl >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['curl'])}; "
+        "fi"
+    )
+    ensure_node_cmd = (
+        "if ! command -v npm >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['nodejs', 'npm'])}; "
+        "fi"
+    )
+
+    env_overrides = {
+        "cursor": "AGENT_RUNNER_CURSOR_INSTALL_COMMANDS",
+        "claude": "AGENT_RUNNER_CLAUDE_INSTALL_COMMANDS",
+        "codex": "AGENT_RUNNER_CODEX_INSTALL_COMMANDS",
+    }
+    default_commands = {
+        "cursor": [
+            ensure_curl_cmd,
+            "curl -fsSL https://cursor.com/install | bash",
+        ],
+        "claude": [
+            ensure_curl_cmd,
+            ensure_node_cmd,
+            "curl -fsSL https://claude.ai/install.sh | bash",
+            "npm install -g @anthropic-ai/claude-code",
+        ],
+        "codex": [
+            ensure_node_cmd,
+            "npm install -g @openai/codex",
+        ],
+    }
+
+    override_key = env_overrides.get(provider, "")
+    override_raw = str(os.getenv(override_key, "")).strip() if override_key else ""
+    if override_raw:
+        return [item.strip() for item in override_raw.split("||") if item.strip()]
+    return list(default_commands.get(provider, []))
+
+
+def _candidate_cli_paths(binary: str, env: dict[str, str]) -> list[str]:
+    home = str(env.get("HOME", "")).strip() or str(Path.home())
+    candidates = [
+        os.path.join(home, ".local", "bin", binary),
+        os.path.join(home, ".cursor", "bin", binary),
+        os.path.join(home, ".cursor", "agent", "bin", binary),
+        os.path.join(home, ".npm-global", "bin", binary),
+        os.path.join(home, "bin", binary),
+        f"/usr/local/bin/{binary}",
+        f"/usr/bin/{binary}",
+    ]
+    out: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return out
+
+
+def _resolve_cli_binary(binary: str, env: dict[str, str]) -> str:
+    discovered = shutil.which(binary, path=str(env.get("PATH", "")))
+    if discovered:
+        return discovered
+    for candidate in _candidate_cli_paths(binary, env):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return ""
+
+
+def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
+    directory = os.path.dirname(binary_path)
+    if not directory:
+        return
+    current = str(env.get("PATH", ""))
+    parts = [item for item in current.split(os.pathsep) if item]
+    if directory not in parts:
+        env["PATH"] = directory + (os.pathsep + current if current else "")
+    process_current = str(os.environ.get("PATH", ""))
+    process_parts = [item for item in process_current.split(os.pathsep) if item]
+    if directory not in process_parts:
+        os.environ["PATH"] = directory + (os.pathsep + process_current if process_current else "")
+
+
+def _run_cli_install_command(command: str, *, env: dict[str, str], timeout_seconds: int) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-lc", command],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        return False, str(exc)
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    combined = stdout if stdout else stderr
+    if not combined:
+        combined = f"exit_code={result.returncode}"
+    return result.returncode == 0, combined[:400]
+
+
+def _ensure_cli_for_command(
+    *,
+    command: str,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    provider = _cli_install_provider_for_command(command)
+    if not provider:
+        return True, ""
+    binary = _cli_binary_for_provider(provider)
+    if not binary:
+        return True, ""
+
+    existing = _resolve_cli_binary(binary, env)
+    if existing:
+        _prepend_cli_path(existing, env)
+        return True, f"runner_cli_present:{provider}:{binary}:{existing}"
+
+    if not _cli_auto_install_enabled():
+        return False, f"runner_cli_missing_auto_install_disabled:{provider}:{binary}"
+
+    commands = _cli_install_commands(provider)
+    if not commands:
+        return False, f"runner_cli_missing_no_install_commands:{provider}:{binary}"
+
+    timeout_seconds = _cli_install_timeout_seconds()
+    notes: list[str] = []
+    for index, install_command in enumerate(commands, start=1):
+        ok, detail = _run_cli_install_command(install_command, env=env, timeout_seconds=timeout_seconds)
+        notes.append(f"cmd{index}:{'ok' if ok else 'fail'}:{detail}")
+        if not ok:
+            continue
+        resolved = _resolve_cli_binary(binary, env)
+        if resolved:
+            _prepend_cli_path(resolved, env)
+            return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}"
+
+    log.warning("task=%s cli install failed provider=%s notes=%s", task_id, provider, "; ".join(notes)[:500])
+    return False, f"runner_cli_install_failed:{provider}:{binary}:{'; '.join(notes)[:500]}"
+
+
 def _prepare_codex_command_for_exec(command: str) -> tuple[str | list[str], bool, str]:
     """Run codex commands via argv to avoid shell expansion of backticks in prompt text."""
     cmd = str(command or "")
@@ -3081,7 +3280,6 @@ def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dic
 
 
 def _infer_executor(command: str, model: str) -> str:
-    s = (command or "").strip()
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
@@ -3619,6 +3817,19 @@ def run_one_task(
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
+    cli_bootstrap_ok = True
+    cli_bootstrap_detail = ""
+    cli_bootstrap_ok, cli_bootstrap_detail = _ensure_cli_for_command(
+        command=command,
+        env=env,
+        task_id=task_id,
+        log=log,
+    )
+    if cli_bootstrap_detail:
+        if cli_bootstrap_ok:
+            log.info("task=%s %s", task_id, cli_bootstrap_detail)
+        else:
+            log.warning("task=%s %s", task_id, cli_bootstrap_detail)
     popen_command: str | list[str] = command
     popen_shell = True
     command_exec_mode = "shell"
@@ -3835,6 +4046,12 @@ def run_one_task(
         "active_branch": branch_name if pr_mode else "",
         "last_attempt": attempt,
     }
+    if cli_bootstrap_detail:
+        running_context["runner_cli_bootstrap"] = {
+            "ok": bool(cli_bootstrap_ok),
+            "detail": cli_bootstrap_detail,
+            "at": _utc_now_iso(),
+        }
     if codex_auth_state:
         running_context["runner_codex_auth"] = {
             **codex_auth_state,
