@@ -87,7 +87,7 @@ async def test_route_auto_executor_uses_policy_default(monkeypatch: pytest.Monke
 
 def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -102,6 +102,46 @@ def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None
     assert context.get("executor") == "openclaw"
     policy = context.get("executor_policy") or {}
     assert policy == {}
+
+
+def test_explicit_executor_falls_back_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Run with explicit unavailable executor",
+            task_type=TaskType.IMPL,
+            context={"executor": "claude"},
+        )
+    )
+    context = task.get("context") or {}
+    assert context.get("executor") == "openclaw"
+    policy = context.get("executor_policy") or {}
+    assert policy.get("reason") == "explicit_executor_unavailable"
+    assert policy.get("explicit_executor") == "claude"
+    assert policy.get("fallback_executor") == "openclaw"
+
+
+def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "claude")
+    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(direction="Policy disabled fallback path", task_type=TaskType.IMPL)
+    )
+    context = task.get("context") or {}
+    assert context.get("executor") == "openclaw"
+    policy = context.get("executor_policy") or {}
+    assert policy.get("reason") == "policy_disabled_default_unavailable"
+    assert policy.get("default_executor") == "claude"
+    assert policy.get("fallback_executor") == "openclaw"
 
 
 def test_explicit_clawwork_executor_alias_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
