@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.friction import FrictionEvent
-from app.services import metrics_service, telemetry_persistence_service
+from app.services import friction_actionability_service, metrics_service, telemetry_persistence_service
 
 
 def _default_path() -> Path:
@@ -210,64 +210,6 @@ def _severity_from_rank(rank: int) -> str:
     if rank >= 1:
         return "low"
     return "info"
-
-
-def _semantic_domain_for_entry(*, key: str, title: str, recommended_action: str) -> str:
-    text = f"{key} {title} {recommended_action}".lower()
-    if any(token in text for token in ("auth", "oauth", "token", "session")):
-        return "auth_stability"
-    if any(token in text for token in ("orphan", "runner", "heartbeat", "stale_running")):
-        return "runner_stability"
-    if any(
-        token in text
-        for token in ("provider", "readiness", "openrouter", "openai", "cursor", "railway", "quota", "limit")
-    ):
-        return "provider_readiness"
-    if key.startswith("failed-tasks:") or "tool_failure" in text or "task_failure" in text:
-        return "execution_quality"
-    if any(token in text for token in ("spec", "backlog", "queue", "triage", "review")):
-        return "spec_first_flow"
-    if any(token in text for token in ("github-actions", "workflow", "ci")):
-        return "ci_reliability"
-    return "flow_friction"
-
-
-def _roi_calibration_by_domain(events: list[FrictionEvent], *, since: datetime) -> dict[str, float]:
-    ratios_by_domain: dict[str, list[float]] = defaultdict(list)
-    for event in events:
-        if event.timestamp < since or str(event.status).strip().lower() != "resolved":
-            continue
-        estimated = max(0.0, float(event.energy_loss_estimate)) + max(0.0, float(event.cost_of_delay))
-        measured = max(0.0, float(event.time_open_hours or 0.0))
-        if estimated <= 0.0 or measured <= 0.0:
-            continue
-        domain = _semantic_domain_for_entry(
-            key=f"friction:{event.block_type}",
-            title=f"Friction block: {event.block_type}",
-            recommended_action=event.unblock_condition,
-        )
-        ratios_by_domain[domain].append(measured / estimated)
-    calibrated: dict[str, float] = {}
-    for domain, ratios in ratios_by_domain.items():
-        if not ratios:
-            continue
-        mean_ratio = sum(ratios) / len(ratios)
-        calibrated[domain] = round(max(0.2, min(mean_ratio, 5.0)), 4)
-    return calibrated
-
-
-def _cheap_model_split_hint(*, domain: str, event_count: int, wasted_minutes: float) -> str:
-    if event_count >= 5 or wasted_minutes >= 45.0:
-        return (
-            f"Split {domain} into small specs (detect, policy, verify) so a cheap model can execute each step deterministically."
-        )
-    return f"Keep {domain} as one scoped spec + one implementation card for cheap-model execution."
-
-
-def _potential_roi(*, event_count: int, energy_loss: float, cost_of_delay: float, wasted_minutes: float, calibration: float) -> float:
-    impact = max(0.0, float(energy_loss)) + max(0.0, float(cost_of_delay)) + max(0.0, float(wasted_minutes))
-    effort = max(1.0, 0.8 + (0.35 * max(1, int(event_count))))
-    return round((impact / effort) * max(0.2, float(calibration or 1.0)), 4)
 
 
 def _parse_time(value: Any) -> datetime | None:
@@ -475,7 +417,7 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
                 source="github_actions_health",
             )
 
-    calibration_by_domain = _roi_calibration_by_domain(events, since=since)
+    calibration_by_domain = friction_actionability_service.roi_calibration_by_domain(events, since=since)
     rows: list[dict[str, Any]] = []
     for row in entries.values():
         severity_rank = int(row.get("severity_rank") or 0)
@@ -486,40 +428,36 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
         energy_loss = round(_safe_float(row.get("energy_loss")), 4)
         cost_of_delay = round(_safe_float(row.get("cost_of_delay")), 4)
         wasted_minutes = round(_safe_float(row.get("wasted_minutes")), 4)
-        domain = _semantic_domain_for_entry(
-            key=key,
-            title=title,
-            recommended_action=recommended_action,
-        )
-        calibration_ratio = calibration_by_domain.get(domain, 1.0)
-        rows.append(
+        actionability = friction_actionability_service.build_actionability_fields(
             {
                 "key": key,
                 "title": title,
-                "severity": _severity_from_rank(severity_rank),
-                "status": str(row.get("status") or "open"),
                 "event_count": event_count,
                 "energy_loss": energy_loss,
                 "cost_of_delay": cost_of_delay,
                 "wasted_minutes": wasted_minutes,
                 "recommended_action": recommended_action,
+            },
+            calibration_by_domain=calibration_by_domain,
+        )
+        rows.append(
+            {
+                "key": actionability["key"],
+                "title": actionability["title"],
+                "severity": _severity_from_rank(severity_rank),
+                "status": str(row.get("status") or "open"),
+                "event_count": actionability["event_count"],
+                "energy_loss": actionability["energy_loss"],
+                "cost_of_delay": actionability["cost_of_delay"],
+                "wasted_minutes": actionability["wasted_minutes"],
+                "recommended_action": actionability["recommended_action"],
                 "evidence_links": [str(item) for item in row.get("evidence_links", [])],
                 "sources": [str(item) for item in row.get("sources", [])],
-                "semantic_domain": domain,
-                "potential_roi": _potential_roi(
-                    event_count=event_count,
-                    energy_loss=energy_loss,
-                    cost_of_delay=cost_of_delay,
-                    wasted_minutes=wasted_minutes,
-                    calibration=calibration_ratio,
-                ),
-                "roi_estimator": "friction_energy_cost_minutes_v2",
-                "roi_calibration_ratio": round(float(calibration_ratio), 4),
-                "cheap_model_split_hint": _cheap_model_split_hint(
-                    domain=domain,
-                    event_count=event_count,
-                    wasted_minutes=wasted_minutes,
-                ),
+                "semantic_domain": actionability["semantic_domain"],
+                "potential_roi": actionability["potential_roi"],
+                "roi_estimator": actionability["roi_estimator"],
+                "roi_calibration_ratio": actionability["roi_calibration_ratio"],
+                "cheap_model_split_hint": actionability["cheap_model_split_hint"],
                 "_severity_rank": severity_rank,
             }
         )
@@ -537,6 +475,7 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
     for row in rows:
         row.pop("_severity_rank", None)
     if not rows:
+        default_gap = friction_actionability_service.default_gap_actionability()
         rows = [
             {
                 "key": "tracking:no-friction-telemetry",
@@ -552,13 +491,11 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
                 ),
                 "evidence_links": ["/api/agent/monitor-issues", "/api/agent/metrics", "/api/friction/events"],
                 "sources": ["friction_gap_detector"],
-                "semantic_domain": "flow_friction",
-                "potential_roi": 0.0,
-                "roi_estimator": "friction_energy_cost_minutes_v2",
-                "roi_calibration_ratio": 1.0,
-                "cheap_model_split_hint": (
-                    "Create one setup spec (telemetry enablement) and one verification spec so a cheap model can run both."
-                ),
+                "semantic_domain": default_gap["semantic_domain"],
+                "potential_roi": default_gap["potential_roi"],
+                "roi_estimator": default_gap["roi_estimator"],
+                "roi_calibration_ratio": default_gap["roi_calibration_ratio"],
+                "cheap_model_split_hint": default_gap["cheap_model_split_hint"],
             }
         ]
     limited = rows[: max(1, min(limit, 200))]
@@ -577,106 +514,17 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
         "ignored_lines": ignored,
     }
 
-
-def _entry_point_category(key: str) -> str:
-    normalized = str(key or "").strip()
-    if not normalized:
-        return "unknown"
-    if ":" in normalized:
-        return normalized.split(":", 1)[0].strip() or "unknown"
-    return normalized
-
-
-def _new_category_rollup(key: str) -> dict[str, Any]:
-    return {
-        "key": key,
-        "_severity_rank": 0,
-        "entry_point_count": 0,
-        "open_entry_points": 0,
-        "event_count": 0,
-        "energy_loss": 0.0,
-        "cost_of_delay": 0.0,
-        "wasted_minutes": 0.0,
-        "top_entry_keys": [],
-        "recommended_actions": [],
-    }
-
-
-def _merge_category_rollup(category: dict[str, Any], row: dict[str, Any]) -> None:
-    severity_rank = _severity_rank(str(row.get("severity") or ""))
-    category["_severity_rank"] = max(int(category.get("_severity_rank") or 0), severity_rank)
-    category["entry_point_count"] = _safe_int(category.get("entry_point_count")) + 1
-    if str(row.get("status") or "").strip().lower() == "open":
-        category["open_entry_points"] = _safe_int(category.get("open_entry_points")) + 1
-    category["event_count"] = _safe_int(category.get("event_count")) + _safe_int(row.get("event_count"))
-    category["energy_loss"] = _safe_float(category.get("energy_loss")) + _safe_float(row.get("energy_loss"))
-    category["cost_of_delay"] = _safe_float(category.get("cost_of_delay")) + _safe_float(row.get("cost_of_delay"))
-    category["wasted_minutes"] = _safe_float(category.get("wasted_minutes")) + _safe_float(row.get("wasted_minutes"))
-
-    entry_key = str(row.get("key") or "").strip()
-    if entry_key:
-        keys = list(category.get("top_entry_keys") or [])
-        if entry_key not in keys:
-            keys.append(entry_key)
-        category["top_entry_keys"] = keys[:5]
-
-    action = str(row.get("recommended_action") or "").strip()
-    if action:
-        actions = list(category.get("recommended_actions") or [])
-        if action not in actions:
-            actions.append(action)
-        category["recommended_actions"] = actions[:4]
-
-
-def _render_sorted_category_rows(categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for row in categories.values():
-        severity_rank = int(row.get("_severity_rank") or 0)
-        rows.append(
-            {
-                "key": str(row.get("key") or "unknown"),
-                "severity": _severity_from_rank(severity_rank),
-                "entry_point_count": _safe_int(row.get("entry_point_count")),
-                "open_entry_points": _safe_int(row.get("open_entry_points")),
-                "event_count": _safe_int(row.get("event_count")),
-                "energy_loss": round(_safe_float(row.get("energy_loss")), 4),
-                "cost_of_delay": round(_safe_float(row.get("cost_of_delay")), 4),
-                "wasted_minutes": round(_safe_float(row.get("wasted_minutes")), 4),
-                "top_entry_keys": [str(item) for item in (row.get("top_entry_keys") or [])],
-                "recommended_actions": [str(item) for item in (row.get("recommended_actions") or [])],
-                "_severity_rank": severity_rank,
-            }
-        )
-
-    rows.sort(
-        key=lambda item: (
-            int(item.get("_severity_rank") or 0),
-            _safe_float(item.get("wasted_minutes"))
-            + _safe_float(item.get("energy_loss"))
-            + _safe_float(item.get("cost_of_delay")),
-            _safe_int(item.get("event_count")),
-        ),
-        reverse=True,
-    )
-    for row in rows:
-        row.pop("_severity_rank", None)
-    return rows
-
-
 def friction_categories(window_days: int = 7, limit: int = 20) -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     base = friction_entry_points(window_days=window_days, limit=max(200, limit * 10))
-    entry_points = base.get("entry_points") if isinstance(base.get("entry_points"), list) else []
-
-    categories: dict[str, dict[str, Any]] = {}
-    for row in entry_points:
-        if not isinstance(row, dict):
-            continue
-        key = _entry_point_category(str(row.get("key") or ""))
-        category = categories.setdefault(key, _new_category_rollup(key))
-        _merge_category_rollup(category, row)
-
-    rows = _render_sorted_category_rows(categories)
+    entry_points = [row for row in (base.get("entry_points") or []) if isinstance(row, dict)]
+    rows = friction_actionability_service.build_category_rows(
+        entry_points,
+        safe_int=_safe_int,
+        safe_float=_safe_float,
+        severity_rank=_severity_rank,
+        severity_from_rank=_severity_from_rank,
+    )
     limited = rows[: max(1, min(limit, 200))]
     return {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
