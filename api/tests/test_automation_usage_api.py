@@ -1050,7 +1050,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
         ),
     )
     monkeypatch.setattr(automation_usage_service, "_probe_internal", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_openai_codex", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_openclaw", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_github", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_railway", lambda: (True, "ok"))
@@ -1550,8 +1550,8 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
         payload = report.json()
         assert payload["all_required_validated"] is True
         rows = {row["provider"]: row for row in payload["providers"]}
-        assert rows["openai-codex"]["usage_events"] >= 1
-        assert rows["openai-codex"]["validated_execution"] is True
+        assert rows["openai"]["usage_events"] >= 1
+        assert rows["openai"]["validated_execution"] is True
         assert rows["openclaw"]["usage_events"] >= 1
         assert rows["openclaw"]["validated_execution"] is True
 
@@ -1624,8 +1624,8 @@ async def test_provider_validation_infers_clawwork_executor_alias_as_openclaw(
         payload = report.json()
         assert payload["all_required_validated"] is True
         rows = {row["provider"]: row for row in payload["providers"]}
-        assert rows["openai-codex"]["usage_events"] >= 1
-        assert rows["openai-codex"]["validated_execution"] is True
+        assert rows["openai"]["usage_events"] >= 1
+        assert rows["openai"]["validated_execution"] is True
         assert rows["openclaw"]["usage_events"] >= 1
         assert rows["openclaw"]["validated_execution"] is True
 
