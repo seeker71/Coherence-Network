@@ -112,6 +112,10 @@ def test_agent_runner_posts_runtime_and_friction_events(monkeypatch, tmp_path, r
         assert f["block_type"] == "tool_failure"
         assert f["status"] == "resolved"
         assert f["energy_loss_estimate"] >= 0
+        assert any(
+            url.endswith("/api/agent/tasks/task_test") and patch.get("status") == "failed"
+            for url, patch in client.patches
+        )
     else:
         assert friction_posts == []
 
@@ -342,6 +346,12 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "pending"
     )
+    failed_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "failed"
+    ]
+    assert failed_patches == []
     context = pending_patch.get("context") or {}
     assert "retry_override_command" in context
     assert "--model gpt-5-codex" in context["retry_override_command"]
@@ -641,6 +651,12 @@ def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeyp
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
     )
+    failed_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
+    ]
+    assert failed_patches == []
     context = pending_patch.get("context") or {}
     assert context.get("runner_codex_auth_mode") == "api_key"
     assert context.get("runner_codex_auth_fallback_attempted") is True
