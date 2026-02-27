@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/fix-host-runner-executor-20260227",
+  "commit_scope": "Prevent host runner command generation from selecting unavailable executors (notably claude) by adding explicit/default fallback to available executors and regression tests.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-executor-fallback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-host-runner-executor-fallback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://coherence-network-production.up.railway.app/api/agent/status-report",
+    "https://coherence-network-production.up.railway.app/api/agent/tasks/task_2027550b17c0124f/log"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-executor-fallback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_executor_policy.py",
+      "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_host-runner-executor-fallback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push/PR checks and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When explicit/default executor is unavailable, new tasks are routed to an available executor (prefer openclaw/cursor) rather than producing guaranteed-fail claude commands.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/status-report"
+    ],
+    "test_flows": [
+      "Create tasks with explicit/default claude executor on host where claude binary is absent and verify executor fallback chooses an available executor.",
+      "Confirm host runner no longer emits repeated '/bin/sh: 1: claude: not found' for newly created tasks.",
+      "Confirm status-report no longer raises orphan-running alerts after stale cleanup and fallback routing fix rollout."
+    ]
+  }
+}
