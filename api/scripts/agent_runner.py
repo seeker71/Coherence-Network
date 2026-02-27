@@ -4407,10 +4407,11 @@ def run_one_task(
             if manifest_context_patch:
                 _patch_task_context(client, task_id=task_id, context_patch=manifest_context_patch)
 
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={"status": status, "output": output[:4000]},
-        )
+        if status == "completed" and not pr_mode:
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": status, "output": output[:4000]},
+            )
         _sync_run_state(
             client,
             task_id=task_id,
@@ -4618,6 +4619,10 @@ def run_one_task(
                     require_owner=True,
                 )
             else:
+                client.patch(
+                    f"{BASE}/api/agent/tasks/{task_id}",
+                    json={"status": status, "output": output[:4000]},
+                )
                 _sync_run_state(
                     client,
                     task_id=task_id,
