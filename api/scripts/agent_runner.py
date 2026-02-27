@@ -2769,6 +2769,8 @@ def _prepare_non_root_execution_for_command(
     env["LOGNAME"] = user_name
     local_bin = os.path.join(home, ".local", "bin")
     current_path = str(env.get("PATH", ""))
+    filtered_parts = [part for part in current_path.split(os.pathsep) if part and not part.startswith("/root/")]
+    current_path = os.pathsep.join(filtered_parts)
     if local_bin and not current_path.startswith(local_bin):
         env["PATH"] = f"{local_bin}{os.pathsep}{current_path}" if current_path else local_bin
 
@@ -2894,6 +2896,18 @@ def _candidate_cli_paths(binary: str, env: dict[str, str]) -> list[str]:
     return out
 
 
+def _promote_binary_to_shared_path(binary: str, source_path: str) -> str:
+    for target in (f"/usr/local/bin/{binary}", f"/usr/bin/{binary}"):
+        try:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copy2(source_path, target)
+            os.chmod(target, 0o755)
+            return target
+        except Exception:
+            continue
+    return ""
+
+
 def _resolve_cli_binary(binary: str, env: dict[str, str]) -> str:
     discovered = shutil.which(binary, path=str(env.get("PATH", "")))
     if discovered:
@@ -2955,6 +2969,13 @@ def _ensure_cli_for_command(
 
     existing = _resolve_cli_binary(binary, env)
     if existing:
+        try:
+            if os.geteuid() == 0:
+                promoted = _promote_binary_to_shared_path(binary, existing)
+                if promoted:
+                    existing = promoted
+        except Exception:
+            pass
         _prepend_cli_path(existing, env)
         return True, f"runner_cli_present:{provider}:{binary}:{existing}"
 
@@ -2974,6 +2995,13 @@ def _ensure_cli_for_command(
             continue
         resolved = _resolve_cli_binary(binary, env)
         if resolved:
+            try:
+                if os.geteuid() == 0:
+                    promoted = _promote_binary_to_shared_path(binary, resolved)
+                    if promoted:
+                        resolved = promoted
+            except Exception:
+                pass
             _prepend_cli_path(resolved, env)
             return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}"
 
