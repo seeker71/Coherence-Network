@@ -225,6 +225,24 @@ def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypat
     assert env["PATH"].startswith("/home/runner/.local/bin:")
 
 
+def test_prepare_non_root_execution_for_command_filters_root_paths(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("runner", 1001, 1001, "/home/runner"),
+    )
+    env = {"PATH": "/root/.local/bin:/usr/local/bin:/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is True
+    assert detail == "runner_non_root_exec_user:runner:1001:1001"
+    assert callable(preexec)
+    assert "/root/.local/bin" not in env["PATH"]
+
+
 def test_prepare_non_root_execution_for_command_noop_when_not_root(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 1000)
     env = {"PATH": "/usr/bin"}
