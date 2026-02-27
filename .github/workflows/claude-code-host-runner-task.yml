@@ -113,7 +113,7 @@ jobs:
           claude -p "$(cat /tmp/phase1_task.txt)" \
             --model claude-opus-4-5 \
             --dangerously-skip-permissions \
-            --output-format json 2>/tmp/phase1_raw.json
+            --output-format json >/tmp/phase1_raw.json
 
           # Extract text result and usage
           python3 << 'PYEOF'
@@ -225,7 +225,7 @@ jobs:
           claude -p "$(cat /tmp/phase2_task.txt)" \
             --model claude-sonnet-4-5-20250929 \
             --dangerously-skip-permissions \
-            --output-format json 2>/tmp/phase2_raw.json
+            --output-format json >/tmp/phase2_raw.json
 
           python3 << 'PYEOF'
           import json
@@ -279,7 +279,7 @@ jobs:
           claude -p "$(cat /tmp/phase3_task.txt)" \
             --model claude-opus-4-5 \
             --dangerously-skip-permissions \
-            --output-format json 2>/tmp/phase3_raw.json
+            --output-format json >/tmp/phase3_raw.json
 
           python3 << 'PYEOF'
           import json
