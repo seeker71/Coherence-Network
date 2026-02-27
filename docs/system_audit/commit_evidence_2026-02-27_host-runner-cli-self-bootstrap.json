@@ -1,7 +1,7 @@
 {
   "date": "2026-02-27",
   "thread_branch": "codex/host-runner-provider-proof-20260227",
-  "commit_scope": "Add host-runner task-time CLI self-bootstrap for cursor/claude/codex and stop API-side silent explicit-executor rewrites when binaries are missing only on the API node.",
+  "commit_scope": "Add host-runner task-time CLI self-bootstrap for cursor/claude/codex, stop API-side silent explicit-executor rewrites, and sanitize Claude root-runner flags that hard-fail execution.",
   "files_owned": [
     "api/app/services/agent_service.py",
     "api/scripts/agent_runner.py",
@@ -56,7 +56,8 @@
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
-      "cd api && pytest -q tests/test_agent_executor_policy.py"
+      "cd api && pytest -q tests/test_agent_executor_policy.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"sanitize_claude_command_for_root\""
     ]
   },
   "ci_validation": {
@@ -73,7 +74,7 @@
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "When runner receives cursor/claude/codex tasks and required binary is missing, it attempts configured install commands, updates PATH, and executes without immediate 'command not found'; explicit executor requests are preserved instead of API-node fallback rewrites.",
+    "expected_behavior_delta": "When runner receives cursor/claude/codex tasks and required binary is missing, it attempts configured install commands, updates PATH, and executes without immediate 'command not found'; explicit executor requests are preserved instead of API-node fallback rewrites; Claude commands no longer fail on root-only '--dangerously-skip-permissions' rejection.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
       "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
