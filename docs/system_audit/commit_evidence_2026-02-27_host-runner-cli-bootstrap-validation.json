@@ -1,7 +1,7 @@
 {
   "date": "2026-02-27",
   "thread_branch": "codex/host-runner-provider-proof-20260227",
-  "commit_scope": "Add provider auto-heal CLI install strategy and validation wiring for cursor/claude-code, expose install toggle via API/script, and add regression tests.",
+  "commit_scope": "Add provider auto-heal CLI install strategy and cursor probe coverage, then enforce strict CLI presence in install mode so runtime-only no-CLI signals do not mask missing host binaries.",
   "files_owned": [
     "api/app/services/automation_usage_service.py",
     "api/app/routers/automation_usage.py",
@@ -38,7 +38,8 @@
   },
   "evidence_refs": [
     "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
-    "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+    "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
+    "https://github.com/seeker71/Coherence-Network/pull/347"
   ],
   "change_files": [
     "api/app/services/automation_usage_service.py",
@@ -54,34 +55,38 @@
     "commands": [
       "cd api && pytest -q tests/test_automation_usage_api.py",
       "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py scripts/check_provider_readiness.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled or provider_auto_heal_run_endpoint_passes_query_arguments\"",
       "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.host_runner_provider_bootstrap.json --fail-on-regression",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --json",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-bootstrap-validation.json"
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "run_url": ""
+    "status": "pass",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22488077143"
   },
   "deploy_validation": {
-    "status": "pending",
+    "status": "pass",
     "environment": "railway-production"
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting push/PR checks and production host-runner validation proof for codex/claude/cursor."
+    "blocked_reason": "Awaiting merged follow-up patch rollout and host-runner executor proof for codex/claude/cursor after strict CLI enforcement." 
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Provider auto-heal can bootstrap missing Cursor/Claude Code CLIs and validate provider readiness/probes with install evidence in attempt logs.",
+    "expected_behavior_delta": "Provider auto-heal with enable_cli_installs=true must install/verify cursor+claude-code CLIs instead of passing on runtime no-CLI fallback.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
       "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
-      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks"
     ],
     "test_flows": [
-      "Run provider-heal with enable_cli_installs=true for openai,claude-code,cursor and verify all_healthy=true.",
-      "Run provider-validation for openai,claude-code,cursor and verify readiness + validated execution evidence via host task runs.",
-      "Execute one host task per executor (openclaw/codex, claude, cursor) and verify completed statuses."
+      "Run provider-heal with enable_cli_installs=true for openai,claude-code,cursor and verify no provider returns runtime-only no-cli success.",
+      "Run provider-validation for openai,claude-code,cursor and capture probe details.",
+      "Execute one host task per executor (openclaw/codex, claude, cursor) and verify completed statuses plus command prefixes." 
     ]
   }
 }
