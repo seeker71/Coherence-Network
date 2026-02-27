@@ -2698,6 +2698,21 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _sanitize_claude_command_for_root(command: str) -> tuple[str, bool]:
+    text = str(command or "")
+    if "--dangerously-skip-permissions" not in text:
+        return text, False
+    try:
+        is_root = os.geteuid() == 0
+    except Exception:
+        is_root = False
+    if not is_root:
+        return text, False
+    sanitized = text.replace(" --dangerously-skip-permissions", "")
+    sanitized = sanitized.replace("--dangerously-skip-permissions", "")
+    return sanitized.strip(), True
+
+
 def _cli_auto_install_enabled() -> bool:
     if os.getenv("PYTEST_CURRENT_TEST") and not _as_bool(os.getenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "0")):
         return False
@@ -3856,6 +3871,10 @@ def run_one_task(
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
     elif _uses_claude_cli(command):
+        command, sanitized_for_root = _sanitize_claude_command_for_root(command)
+        if sanitized_for_root:
+            popen_command = command
+            log.info("task=%s removed --dangerously-skip-permissions for root runner context", task_id)
         # Claude Code CLI auth resolution order:
         #   1. ANTHROPIC_API_KEY  — explicit cloud key
         #   2. CLAUDE_CODE_OAUTH_TOKEN  — explicit OAuth env token
