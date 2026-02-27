@@ -1,0 +1,68 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/docs-hygiene-sweep-20260227",
+  "commit_scope": "Docs/spec hygiene sweep with safe canonicalization fix, validation reruns, and blocker capture.",
+  "files_owned": [
+    "docs/system_audit/docs_hygiene_report_2026-02-27.md",
+    "docs/system_audit/commit_evidence_2026-02-27_docs-hygiene-sweep.json"
+  ],
+  "local_validation": {
+    "status": "fail"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "docs-hygiene-sweep"
+  ],
+  "spec_ids": [
+    "002"
+  ],
+  "task_ids": [
+    "docs-link-hygiene",
+    "spec-prefix-canonicalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_spec_prefix_canonicalization.py",
+    "custom markdown link scan over docs/**/*.md and specs/**/*.md with FILES_SCANNED=152 and TOTAL_MISSING=0",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build"
+  ],
+  "change_files": [
+    "config/spec_prefix_canonical_map.json",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/docs_hygiene_report_2026-02-27.md",
+    "docs/system_audit/commit_evidence_2026-02-27_docs-hygiene-sweep.json"
+  ],
+  "change_intent": "docs_only"
+}
