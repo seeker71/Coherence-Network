@@ -608,7 +608,7 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert "github" in providers
         assert "openai" in providers
         assert "openrouter" in providers
-        assert "supabase" in providers
+        assert "supabase" not in providers
         assert providers["coherence-internal"]["status"] == "ok"
         assert any(m["id"] == "tasks_tracked" for m in providers["coherence-internal"]["metrics"])
         assert providers["coherence-internal"]["actual_current_usage"] is not None
