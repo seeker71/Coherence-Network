@@ -3,6 +3,7 @@
   "thread_branch": "codex/self-improve-friction-unblock-20260226-232117",
   "commit_scope": "Add friction-category awareness and unblock-queue learning to self-improvement flow, including category API coverage and prompt-level friction prioritization guidance.",
   "files_owned": [
+    "config/start_gate_main_workflow_waivers.json",
     "api/app/models/friction.py",
     "api/app/routers/friction.py",
     "api/app/services/friction_service.py",
@@ -42,6 +43,7 @@
     "docs/system_audit/pr_check_failures/pr_check_guard_20260227T092906Z_codex-self-improve-friction-unblock-20260226-232117.json"
   ],
   "change_files": [
+    "config/start_gate_main_workflow_waivers.json",
     "api/app/models/friction.py",
     "api/app/routers/friction.py",
     "api/app/services/friction_service.py",
