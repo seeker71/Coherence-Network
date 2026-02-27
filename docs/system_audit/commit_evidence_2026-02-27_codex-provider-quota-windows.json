@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/codex-provider-quota-windows-20260227",
+  "commit_scope": "Integrate OpenClaw-style Codex provider quota window telemetry (real provider windows via Codex OAuth usage endpoint) into automation usage/readiness, keeping runtime-derived counters as secondary signals.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-27_codex-provider-quota-windows.json",
+    "docs/system_audit/cursor_fact_report_2026-02-27.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100-automation-provider-usage-readiness-api"
+  ],
+  "task_ids": [
+    "task-2026-02-27-codex-provider-quota-windows"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/cursor_fact_report_2026-02-27.json",
+    "https://chatgpt.com/backend-api/wham/usage"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/cursor_fact_report_2026-02-27.json",
+    "docs/system_audit/commit_evidence_2026-02-27_codex-provider-quota-windows.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate (with temporary waiver file for upstream main workflow failures)",
+      "git fetch origin main && git rebase origin/main",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && python3 - <<'PY' ... _codex_provider_usage_payload(force_refresh=True) ... PY",
+      "cd api && python3 - <<'PY' ... collect_usage_overview(force_refresh=True) ... PY"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR creation, and hosted checks."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "OpenAI usage snapshots now include validated Codex provider windows (primary/secondary) sourced from provider API telemetry, while runtime-derived 5h/7d counters remain as secondary execution volume signals.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Call /api/automation/usage and verify openai metrics contain codex_provider_window_primary and codex_provider_window_secondary with validation_state=validated and evidence_source=provider_api_wham_usage.",
+      "Call /api/automation/usage/readiness and verify openai limit_telemetry_state is hard_limit_ready when provider windows are present.",
+      "Run local codex usage probe helper and confirm returned windows include 5h and 7d labels with non-null remaining percentages."
+    ]
+  }
+}
