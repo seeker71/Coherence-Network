@@ -80,6 +80,7 @@ _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
 
 _PROVIDER_ALIASES: dict[str, str] = {
     "clawwork": "openclaw",
+    "openai-codex": "openai",
 }
 
 _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
@@ -761,6 +762,7 @@ def _default_official_records(provider: str) -> list[str]:
         "openai": [
             "https://platform.openai.com/docs/api-reference/usage",
             "https://platform.openai.com/docs/api-reference/costs",
+            "https://platform.openai.com/docs/api-reference/models/list",
         ],
         "openai-codex": [
             "https://platform.openai.com/docs/api-reference/models/list",
@@ -1016,7 +1018,7 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
     if configured:
         return configured, missing, present, notes
 
-    provider_name = provider.strip().lower()
+    provider_name = _normalize_provider_name(provider)
     active_counts = _active_provider_usage_counts()
     active_runs = int(active_counts.get(provider_name, 0))
 
@@ -1024,19 +1026,19 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
         return True, [], ["gh_auth"], ["Configured via gh CLI auth session."]
     if provider_name == "railway" and _railway_auth_available():
         return True, [], ["railway_cli_auth"], ["Configured via Railway CLI auth session."]
-    if provider_name == "openai-codex":
+    if provider_name == "openai":
         oauth_ok, oauth_detail = _codex_oauth_available()
         if oauth_ok:
             return True, [], ["codex_oauth_session"], [f"Configured via Codex OAuth session ({oauth_detail})."]
         if active_runs > 0:
-            notes.append("OpenAI Codex observed in runtime usage; treating as configured by active execution context.")
+            notes.append("OpenAI observed in runtime usage; treating as configured by active execution context.")
             return True, [], present, notes
     if provider_name == "openclaw" and active_runs > 0:
         openai_key = bool(
             os.getenv("OPENAI_ADMIN_API_KEY", "").strip()
             or os.getenv("OPENAI_API_KEY", "").strip()
         )
-        codex_active = int(active_counts.get("openai-codex", 0)) > 0
+        codex_active = int(active_counts.get("openai", 0)) > 0
         if openai_key or codex_active:
             notes.append(
                 "OpenClaw observed with Codex/OpenAI execution context; treating as configured for runtime validation."
@@ -1086,7 +1088,7 @@ def _infer_provider_from_model(model_name: str) -> str:
     if not model:
         return ""
     if "codex" in model:
-        return "openai-codex"
+        return "openai"
     if model.startswith("cursor/"):
         return "cursor"
     if model.startswith("clawwork/"):
@@ -1149,7 +1151,7 @@ def _active_provider_usage_counts() -> dict[str, int]:
         agent = str(agent_name).strip().lower()
         provider = ""
         if agent.startswith("openai-codex"):
-            provider = "openai-codex"
+            provider = "openai"
         elif agent.startswith("claude"):
             provider = "claude"
         if not provider:
@@ -1171,7 +1173,14 @@ def _active_provider_usage_counts() -> dict[str, int]:
             continue
         counts[provider] = counts.get(provider, 0) + 1
 
-    return {k: v for k, v in counts.items() if v > 0}
+    normalized_counts: dict[str, int] = {}
+    for provider_name, value in counts.items():
+        canonical = _normalize_provider_name(provider_name)
+        if not canonical or value <= 0:
+            continue
+        normalized_counts[canonical] = max(normalized_counts.get(canonical, 0), int(value))
+
+    return normalized_counts
 
 
 def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
@@ -1295,11 +1304,16 @@ def _codex_events_within_window(window_seconds: int) -> int:
         provider = _normalize_provider_name(str(metadata.get("provider") or ""))
         executor = str(metadata.get("executor") or "").strip().lower()
         agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
         is_codex = bool(metadata.get("is_openai_codex"))
         if is_codex:
             count += 1
             continue
-        if provider == "openai-codex":
+        if provider == "openai" and (
+            "codex" in model
+            or "openai-codex" in agent_id
+            or repeatable_tool_call.startswith("codex ")
+        ):
             count += 1
             continue
         if "codex" in model and (executor in {"openclaw", "codex"} or "openai-codex" in agent_id):
@@ -1385,7 +1399,7 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
 
 
 def _append_codex_subscription_metrics(snapshot: ProviderUsageSnapshot) -> None:
-    if snapshot.provider != "openai-codex":
+    if _normalize_provider_name(snapshot.provider) != "openai":
         return
     existing = {metric.id for metric in snapshot.metrics}
     limit_5h = max(0, _int_env("CODEX_SUBSCRIPTION_5H_LIMIT", 0))
@@ -2537,6 +2551,32 @@ def _openai_headers() -> dict[str, str]:
 def _build_openai_snapshot() -> ProviderUsageSnapshot:
     api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
+        oauth_ok, oauth_detail = _codex_oauth_available()
+        active = int(_active_provider_usage_counts().get("openai", 0))
+        if oauth_ok:
+            if active > 0:
+                return _runtime_task_runs_snapshot(
+                    provider="openai",
+                    kind="openai",
+                    active_runs=active,
+                    note=f"Using runtime OpenAI/Codex execution evidence with OAuth session ({oauth_detail}).",
+                )
+            return ProviderUsageSnapshot(
+                id=f"provider_openai_{int(time.time())}",
+                provider="openai",
+                kind="openai",
+                status="ok",
+                data_source="configuration_only",
+                notes=[f"Configured via Codex OAuth session ({oauth_detail})."],
+                raw={"auth_mode": "oauth", "oauth_detail": oauth_detail},
+            )
+        if active > 0:
+            return _runtime_task_runs_snapshot(
+                provider="openai",
+                kind="openai",
+                active_runs=active,
+                note="Using runtime OpenAI/Codex execution evidence (no direct OpenAI API key in environment).",
+            )
         return ProviderUsageSnapshot(
             id=f"provider_openai_{int(time.time())}",
             provider="openai",
@@ -2727,7 +2767,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
     active_usage = _active_provider_usage_counts()
     providers = [
         _build_internal_snapshot(),
-        _build_openai_codex_snapshot(),
         _build_claude_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
@@ -2741,7 +2780,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
     ]
     for snapshot in providers:
         _append_codex_subscription_metrics(snapshot)
-        active_count = int(active_usage.get(snapshot.provider, 0))
+        active_count = int(active_usage.get(_normalize_provider_name(snapshot.provider), 0))
         if active_count > 0:
             has_metric = any(metric.id == "runtime_task_runs" for metric in snapshot.metrics)
             if not has_metric:
@@ -3288,7 +3327,7 @@ def daily_system_summary(
             if _normalize_provider_name(row.provider)
         }
 
-    provider_priority = ["github", "openai-codex", "openrouter", "railway", "db-host", "coherence-internal"]
+    provider_priority = ["github", "openai", "openrouter", "railway", "db-host", "coherence-internal"]
     ordered_provider_keys = sorted(
         latest_provider_rows.keys(),
         key=lambda name: (provider_priority.index(name) if name in provider_priority else 999, name),
@@ -3296,12 +3335,12 @@ def daily_system_summary(
     providers: list[dict[str, Any]] = []
     for provider_name in ordered_provider_keys:
         row = latest_provider_rows[provider_name]
-        if row.provider == "openai-codex":
+        if _normalize_provider_name(row.provider) == "openai":
             _append_codex_subscription_metrics(row)
         metric = _summary_metric(row.metrics)
         providers.append(
             {
-                "provider": row.provider,
+                "provider": _normalize_provider_name(row.provider),
                 "status": row.status,
                 "data_source": row.data_source,
                 "usage": (
@@ -3336,7 +3375,7 @@ def daily_system_summary(
         )
     if int(execution.get("tracked_runs") or 0) == 0 and int(host_runner.get("total_runs") or 0) > 0:
         contract_gaps.append("execution tracked_runs is zero while host-runner task runs exist")
-    codex_row = next((row for row in providers if row.get("provider") == "openai-codex"), None)
+    codex_row = next((row for row in providers if row.get("provider") == "openai"), None)
     codex_usage = codex_row.get("usage") if isinstance(codex_row, dict) else None
     codex_validation = (
         str(codex_usage.get("validation_state") or "").strip().lower()
@@ -3345,7 +3384,7 @@ def daily_system_summary(
     )
     if codex_usage and codex_validation and codex_validation != "validated":
         contract_gaps.append(
-            "openai-codex usage is derived from runtime telemetry/local limits; provider hard quota headers/API not available."
+            "openai usage is derived from runtime telemetry/local limits; provider hard quota headers/API not available."
         )
     quality_awareness = quality_awareness_service.build_quality_awareness_summary(
         top_n=top_count,
@@ -3650,28 +3689,15 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
 
 
 def _probe_openai_codex() -> tuple[bool, str]:
-    api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        oauth_ok, oauth_detail = _codex_oauth_available()
-        if oauth_ok:
-            return True, f"ok_via_codex_oauth_session:{oauth_detail}"
-        active = int(_active_provider_usage_counts().get("openai-codex", 0))
-        if active > 0:
-            return True, "ok_via_runtime_usage"
-        return False, "missing_openai_key"
-    url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
-    try:
-        with httpx.Client(timeout=8.0, headers=_openai_headers()) as client:
-            response = client.get(url)
-            response.raise_for_status()
-        return True, "ok"
-    except Exception as exc:
-        return False, f"openai_probe_failed:{exc}"
+    return _probe_openai()
 
 
 def _probe_openai() -> tuple[bool, str]:
     api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
+        oauth_ok, oauth_detail = _codex_oauth_available()
+        if oauth_ok:
+            return True, f"ok_via_codex_oauth_session:{oauth_detail}"
         active = int(_active_provider_usage_counts().get("openai", 0))
         if active > 0:
             return True, "ok_via_runtime_usage"
@@ -3696,9 +3722,9 @@ def _probe_openclaw() -> tuple[bool, str]:
 
     active = _active_provider_usage_counts()
     openclaw_active = int(active.get("openclaw", 0))
-    openai_codex_active = int(active.get("openai-codex", 0))
-    openai_ok, openai_detail = _probe_openai_codex()
-    if openai_ok and (openclaw_active > 0 or openai_codex_active > 0):
+    openai_active = int(active.get("openai", 0))
+    openai_ok, openai_detail = _probe_openai()
+    if openai_ok and (openclaw_active > 0 or openai_active > 0):
         return True, f"ok_via_openai_codex_backend:{openai_detail}"
     return False, "missing_openclaw_key_and_openai_codex_backend"
 
@@ -3835,7 +3861,7 @@ def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
     return {
         "coherence-internal": _probe_internal,
         "openai": _probe_openai,
-        "openai-codex": _probe_openai_codex,
+        "openai-codex": _probe_openai,
         "openclaw": _probe_openclaw,
         "openrouter": _probe_openrouter,
         "supabase": _probe_supabase,
@@ -4095,9 +4121,9 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         if executor == "openclaw":
             providers.add("openclaw")
         if worker_id.startswith("openai-codex") or agent_id.startswith("openai-codex"):
-            providers.add("openai-codex")
+            providers.add("openai")
         if "codex" in model.lower() or repeatable_tool_call.startswith("codex "):
-            providers.add("openai-codex")
+            providers.add("openai")
 
         return {item for item in providers if item}
 
@@ -4148,7 +4174,11 @@ def provider_validation_report(
         if str(item).strip()
     ]
     readiness = provider_readiness_report(required_providers=required, force_refresh=force_refresh)
-    readiness_by_provider = {row.provider.strip().lower(): row for row in readiness.providers}
+    readiness_by_provider = {
+        _normalize_provider_name(row.provider): row
+        for row in readiness.providers
+        if _normalize_provider_name(row.provider)
+    }
     runtime_rows = _runtime_validation_rows(required_providers=required, runtime_window_seconds=runtime_window_seconds)
 
     rows: list[ProviderValidationRow] = []
