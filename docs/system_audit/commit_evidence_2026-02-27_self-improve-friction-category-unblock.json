@@ -40,7 +40,8 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
-    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T092906Z_codex-self-improve-friction-unblock-20260226-232117.json"
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T093627Z_codex-self-improve-friction-unblock-20260226-232117.json",
+    "api/logs/maintainability_audit_report.worktree_guard.json"
   ],
   "change_files": [
     "config/start_gate_main_workflow_waivers.json",
@@ -58,7 +59,11 @@
     "status": "pass",
     "commands": [
       "cd api && pytest -q tests/test_friction_api.py tests/test_run_self_improve_cycle.py",
-      "cd api && ruff check app/models/friction.py app/routers/friction.py app/services/friction_service.py scripts/run_self_improve_cycle.py tests/test_friction_api.py tests/test_run_self_improve_cycle.py"
+      "cd api && ruff check app/models/friction.py app/routers/friction.py app/services/friction_service.py scripts/run_self_improve_cycle.py tests/test_friction_api.py tests/test_run_self_improve_cycle.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_self-improve-friction-category-unblock.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ]
   },
   "ci_validation": {
@@ -71,7 +76,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting commit/push, PR checks, and production deploy verification."
+    "blocked_reason": "Awaiting push/PR checks and production deploy verification."
   },
   "e2e_validation": {
     "status": "pending",
