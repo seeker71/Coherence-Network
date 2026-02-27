@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload provider readiness report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: provider_readiness_report_${{ github.sha }}
           path: provider_readiness_report.json
