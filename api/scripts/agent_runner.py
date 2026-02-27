@@ -14,6 +14,7 @@ import argparse
 import logging
 import math
 import os
+import pwd
 import socket
 import shlex
 import shutil
@@ -27,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from urllib.parse import quote
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -2698,19 +2699,88 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
-def _sanitize_claude_command_for_root(command: str) -> tuple[str, bool]:
-    text = str(command or "")
-    if "--dangerously-skip-permissions" not in text:
-        return text, False
+def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str]:
+    candidates: list[str] = []
+    preferred = str(preferred_user or "").strip()
+    if preferred:
+        candidates.append(preferred)
+    fallback_raw = str(os.getenv("AGENT_RUN_AS_USER_FALLBACKS", "agent,app,coder,runner,ubuntu")).strip()
+    if fallback_raw:
+        for raw in fallback_raw.split(","):
+            candidate = str(raw or "").strip()
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+    for candidate in candidates:
+        try:
+            row = pwd.getpwnam(candidate)
+        except KeyError:
+            continue
+        except Exception:
+            continue
+        if int(row.pw_uid) <= 0:
+            continue
+        home = str(row.pw_dir or "").strip()
+        if not home or not os.path.isdir(home):
+            continue
+        return str(row.pw_name), int(row.pw_uid), int(row.pw_gid), home
+
+    if not _as_bool(os.getenv("AGENT_RUN_AS_AUTO_DISCOVER", "1")):
+        return "", -1, -1, ""
+
     try:
-        is_root = os.geteuid() == 0
+        for row in sorted(pwd.getpwall(), key=lambda item: int(item.pw_uid)):
+            uid = int(row.pw_uid)
+            if uid <= 0:
+                continue
+            shell = str(row.pw_shell or "").strip().lower()
+            if shell.endswith("nologin") or shell.endswith("false"):
+                continue
+            home = str(row.pw_dir or "").strip()
+            if not home or not os.path.isdir(home):
+                continue
+            return str(row.pw_name), uid, int(row.pw_gid), home
     except Exception:
-        is_root = False
-    if not is_root:
-        return text, False
-    sanitized = text.replace(" --dangerously-skip-permissions", "")
-    sanitized = sanitized.replace("--dangerously-skip-permissions", "")
-    return sanitized.strip(), True
+        return "", -1, -1, ""
+
+    return "", -1, -1, ""
+
+
+def _prepare_non_root_execution_for_command(
+    *,
+    command: str,
+    env: dict[str, str],
+) -> tuple[bool, str, Callable[[], None] | None]:
+    if "--dangerously-skip-permissions" not in str(command or ""):
+        return True, "", None
+    try:
+        if os.geteuid() != 0:
+            return True, "", None
+    except Exception:
+        return True, "", None
+
+    preferred = str(os.getenv("AGENT_RUN_AS_USER", "")).strip()
+    user_name, uid, gid, home = _resolve_non_root_exec_user(preferred)
+    if not user_name or uid <= 0:
+        return False, "runner_non_root_user_unavailable", None
+
+    env["HOME"] = home
+    env["USER"] = user_name
+    env["LOGNAME"] = user_name
+    local_bin = os.path.join(home, ".local", "bin")
+    current_path = str(env.get("PATH", ""))
+    if local_bin and not current_path.startswith(local_bin):
+        env["PATH"] = f"{local_bin}{os.pathsep}{current_path}" if current_path else local_bin
+
+    def _demote() -> None:
+        os.setgid(gid)
+        try:
+            os.initgroups(user_name, gid)
+        except Exception:
+            pass
+        os.setuid(uid)
+
+    return True, f"runner_non_root_exec_user:{user_name}:{uid}:{gid}", _demote
 
 
 def _cli_auto_install_enabled() -> bool:
@@ -3847,6 +3917,7 @@ def run_one_task(
             log.warning("task=%s %s", task_id, cli_bootstrap_detail)
     popen_command: str | list[str] = command
     popen_shell = True
+    popen_preexec_fn: Callable[[], None] | None = None
     command_exec_mode = "shell"
     if _uses_cursor_cli(command):
         # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
@@ -3871,10 +3942,6 @@ def run_one_task(
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
     elif _uses_claude_cli(command):
-        command, sanitized_for_root = _sanitize_claude_command_for_root(command)
-        if sanitized_for_root:
-            popen_command = command
-            log.info("task=%s removed --dangerously-skip-permissions for root runner context", task_id)
         # Claude Code CLI auth resolution order:
         #   1. ANTHROPIC_API_KEY  — explicit cloud key
         #   2. CLAUDE_CODE_OAUTH_TOKEN  — explicit OAuth env token
@@ -3914,6 +3981,17 @@ def run_one_task(
     env.setdefault("DISABLE_TELEMETRY", "1")
     env.setdefault("DISABLE_ERROR_REPORTING", "1")
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
+
+    non_root_ok, non_root_detail, non_root_preexec = _prepare_non_root_execution_for_command(
+        command=command,
+        env=env,
+    )
+    if non_root_detail:
+        if non_root_ok:
+            log.info("task=%s %s", task_id, non_root_detail)
+            popen_preexec_fn = non_root_preexec
+        else:
+            log.warning("task=%s %s", task_id, non_root_detail)
 
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     executor = _infer_executor(command, model)
@@ -4081,6 +4159,12 @@ def run_one_task(
             **codex_model_alias,
             "at": _utc_now_iso(),
         }
+    if non_root_detail:
+        running_context["runner_exec_user"] = {
+            "ok": bool(non_root_ok),
+            "detail": non_root_detail,
+            "at": _utc_now_iso(),
+        }
     r = client.patch(
         f"{BASE}/api/agent/tasks/{task_id}",
         json={
@@ -4231,11 +4315,53 @@ def run_one_task(
             reader_done.set()
 
     try:
+        if not non_root_ok:
+            failure_output = (
+                "[runner-exec-user] root execution blocked for --dangerously-skip-permissions: "
+                f"{non_root_detail}. Configure AGENT_RUN_AS_USER to an existing non-root account."
+            )
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": "failed", "output": failure_output},
+            )
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "task_id": task_id,
+                    "attempt": attempt,
+                    "status": "failed",
+                    "worker_id": worker_id,
+                    "task_type": task_type,
+                    "direction": task_direction,
+                    "branch": branch_name,
+                    "repo_path": repo_path,
+                    "failure_class": "runner_exec_user_unavailable",
+                    "next_action": "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=False,
+            )
+            _runner_heartbeat(
+                client,
+                runner_id=worker_id,
+                status="degraded",
+                active_task_id="",
+                active_run_id="",
+                last_error="runner_exec_user_unavailable",
+                metadata={"task_id": task_id, "task_type": task_type},
+            )
+            return True
+
         process = subprocess.Popen(
             popen_command,
             shell=popen_shell,
             env=env,
             cwd=repo_path,
+            preexec_fn=popen_preexec_fn,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
