@@ -1,0 +1,87 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/host-runner-provider-proof-20260227",
+  "commit_scope": "Add provider auto-heal CLI install strategy and validation wiring for cursor/claude-code, expose install toggle via API/script, and add regression tests.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/app/routers/automation_usage.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-bootstrap-validation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-host-runner-cli-bootstrap-validation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
+    "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/app/routers/automation_usage.py",
+    "api/scripts/check_provider_readiness.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-bootstrap-validation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py scripts/check_provider_readiness.py tests/test_automation_usage_api.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.host_runner_provider_bootstrap.json --fail-on-regression",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_host-runner-cli-bootstrap-validation.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push/PR checks and production host-runner validation proof for codex/claude/cursor."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Provider auto-heal can bootstrap missing Cursor/Claude Code CLIs and validate provider readiness/probes with install evidence in attempt logs.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-heal/run",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+    ],
+    "test_flows": [
+      "Run provider-heal with enable_cli_installs=true for openai,claude-code,cursor and verify all_healthy=true.",
+      "Run provider-validation for openai,claude-code,cursor and verify readiness + validated execution evidence via host task runs.",
+      "Execute one host task per executor (openclaw/codex, claude, cursor) and verify completed statuses."
+    ]
+  }
+}
