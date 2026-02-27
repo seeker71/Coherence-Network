@@ -840,6 +840,8 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("GH_TOKEN", "")
     monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+    monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get("/api/automation/usage/readiness")

@@ -32,6 +32,8 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T011139Z_codex-unify-openai-codex-20260226145300.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T010923Z_codex-unify-openai-codex-20260226145300.json",
     "docs/system_audit/pr_check_failures/pr_check_guard_20260227T010206Z_codex-unify-openai-codex-20260226145300.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
