@@ -1159,6 +1159,34 @@ def test_provider_auto_heal_runs_cli_install_strategy_when_enabled(monkeypatch: 
     assert row["final_detail"].startswith("install_cli_ok:")
 
 
+def test_provider_auto_heal_requires_cli_binary_when_install_mode_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTOMATION_PROVIDER_HEAL_RETRY_DELAY_SECONDS", "0")
+    monkeypatch.setattr(automation_usage_service, "_probe_cursor", lambda: (True, "ok_via_runtime_usage_no_cli"))
+    monkeypatch.setattr(automation_usage_service, "_record_provider_heal_event", lambda **kwargs: None)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_provider_cli_install_strategy",
+        lambda provider, *, attempts, enable_cli_installs: (
+            ("install_cli", lambda: (True, "install_cli_ok:agent:1.0.0"))
+            if provider == "cursor" and enable_cli_installs and not attempts
+            else None
+        ),
+    )
+
+    report = automation_usage_service.run_provider_auto_heal(
+        required_providers=["cursor"],
+        max_rounds=1,
+        enable_cli_installs=True,
+    )
+    assert report["all_healthy"] is True
+    row = report["providers"][0]
+    assert row["healed"] is True
+    assert row["strategies_tried"] == ["direct_probe", "install_cli"]
+    assert row["attempts"][0]["ok"] is False
+    assert str(row["attempts"][0]["detail"]).startswith("cli_binary_required:")
+    assert row["final_detail"].startswith("install_cli_ok:")
+
+
 def test_provider_auto_heal_uses_multiple_strategies(monkeypatch: pytest.MonkeyPatch) -> None:
     probe_calls = {"count": 0}
 
