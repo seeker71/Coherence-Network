@@ -44,6 +44,8 @@ _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
 _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
 _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 _RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
+_CODEX_PROVIDER_USAGE_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": None}
+_CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS = 90.0
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -763,9 +765,13 @@ def _default_official_records(provider: str) -> list[str]:
             "https://platform.openai.com/docs/api-reference/usage",
             "https://platform.openai.com/docs/api-reference/costs",
             "https://platform.openai.com/docs/api-reference/models/list",
+            "https://help.openai.com/en/articles/11369540-using-codex-with-chatgpt",
+            "https://openai.com/index/introducing-upgrades-to-codex/",
         ],
         "openai-codex": [
             "https://platform.openai.com/docs/api-reference/models/list",
+            "https://help.openai.com/en/articles/11369540-using-codex-with-chatgpt",
+            "https://openai.com/index/introducing-upgrades-to-codex/",
         ],
         "claude": [
             "https://docs.anthropic.com/en/api/models-list",
@@ -833,14 +839,16 @@ def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
     limited = [metric for metric in metrics if metric.limit is not None and float(metric.limit or 0.0) > 0.0]
     if limited:
         priority = {
-            "codex_subscription_5h": 0,
-            "db_host_egress_monthly_estimated": 1,
-            "db_host_window_5h": 2,
-            "cursor_subscription_8h": 3,
-            "rest_requests": 4,
-            "codex_subscription_week": 5,
-            "db_host_window_week": 6,
-            "cursor_subscription_week": 7,
+            "codex_provider_window_primary": 0,
+            "codex_provider_window_secondary": 1,
+            "codex_subscription_5h": 2,
+            "db_host_egress_monthly_estimated": 3,
+            "db_host_window_5h": 4,
+            "cursor_subscription_8h": 5,
+            "rest_requests": 6,
+            "codex_subscription_week": 7,
+            "db_host_window_week": 8,
+            "cursor_subscription_week": 9,
         }
         validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
         ordered = sorted(
@@ -994,6 +1002,285 @@ def _codex_oauth_available() -> tuple[bool, str]:
     if candidates:
         return False, f"missing_session_file:{candidates[0]}"
     return False, "missing_codex_oauth_session"
+
+
+def _load_json_file_dict(path: str) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _codex_usage_probe_enabled() -> bool:
+    raw = str(os.getenv("AUTOMATION_CODEX_USAGE_API_ENABLED", "1")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _codex_oauth_access_context() -> tuple[str | None, str | None, str | None]:
+    for candidate in _codex_oauth_session_candidates():
+        payload = _load_json_file_dict(candidate)
+        if not payload:
+            continue
+        tokens = payload.get("tokens") if isinstance(payload.get("tokens"), dict) else {}
+        access_token = str(
+            tokens.get("access_token")
+            or payload.get("access_token")
+            or tokens.get("id_token")
+            or payload.get("id_token")
+            or "",
+        ).strip()
+        if not access_token:
+            continue
+        if access_token.lower().startswith("bearer "):
+            access_token = access_token[7:].strip()
+        account_id = str(
+            tokens.get("account_id")
+            or payload.get("account_id")
+            or payload.get("chatgpt_account_id")
+            or "",
+        ).strip()
+        return access_token, (account_id or None), f"session_file:{candidate}"
+    return None, None, None
+
+
+def _codex_window_label(limit_window_seconds: int, fallback: str) -> str:
+    seconds = max(0, int(limit_window_seconds))
+    if seconds <= 0:
+        return str(fallback or "window").strip() or "window"
+    if seconds % (7 * 24 * 3600) == 0:
+        weeks = max(1, int(seconds / (7 * 24 * 3600)))
+        return "7d" if weeks == 1 else f"{weeks}w"
+    if seconds % (24 * 3600) == 0:
+        days = max(1, int(seconds / (24 * 3600)))
+        return "24h" if days == 1 else f"{days}d"
+    if seconds % 3600 == 0:
+        return f"{max(1, int(seconds / 3600))}h"
+    if seconds % 60 == 0:
+        return f"{max(1, int(seconds / 60))}m"
+    return f"{seconds}s"
+
+
+def _parse_codex_usage_windows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rate_limit = payload.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        return []
+
+    out: list[dict[str, Any]] = []
+    for key in ("primary_window", "secondary_window"):
+        row = rate_limit.get(key)
+        if not isinstance(row, dict):
+            continue
+        used_percent = _coerce_float(row.get("used_percent"))
+        if used_percent is None:
+            used_percent = _coerce_float(row.get("utilization"))
+        if used_percent is None:
+            remaining_percent = _coerce_float(row.get("remaining_percent") or row.get("percent_remaining"))
+            if remaining_percent is not None:
+                used_percent = 100.0 - remaining_percent
+        if used_percent is None:
+            continue
+
+        used_percent = max(0.0, min(float(used_percent), 100.0))
+        limit_seconds = _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0)
+        reset_at_unix = _coerce_nonnegative_int(row.get("reset_at"), default=0)
+        reset_at_iso: str | None = None
+        if reset_at_unix > 0:
+            try:
+                reset_at_iso = (
+                    datetime.fromtimestamp(reset_at_unix, timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+            except Exception:
+                reset_at_iso = None
+
+        label = _codex_window_label(limit_seconds, key)
+        out.append(
+            {
+                "metric_id": f"codex_provider_window_{'primary' if key == 'primary_window' else 'secondary'}",
+                "source_key": key,
+                "label": label,
+                "window": label,
+                "used_percent": used_percent,
+                "remaining_percent": max(0.0, 100.0 - used_percent),
+                "limit_window_seconds": limit_seconds,
+                "reset_at_unix": reset_at_unix or None,
+                "reset_at_iso": reset_at_iso,
+            }
+        )
+    return out
+
+
+def _codex_provider_usage_payload(*, force_refresh: bool = False) -> dict[str, Any]:
+    now = time.time()
+    cached_payload = _CODEX_PROVIDER_USAGE_CACHE.get("payload")
+    if (
+        not force_refresh
+        and isinstance(cached_payload, dict)
+        and float(_CODEX_PROVIDER_USAGE_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return dict(cached_payload)
+
+    usage_url = str(os.getenv("CODEX_USAGE_URL", "https://chatgpt.com/backend-api/wham/usage")).strip()
+    payload: dict[str, Any] = {
+        "status": "unavailable",
+        "error": "",
+        "windows": [],
+        "plan": None,
+        "usage_url": usage_url,
+        "auth_source": "",
+    }
+
+    if not _codex_usage_probe_enabled():
+        payload["status"] = "disabled"
+        payload["error"] = "codex_usage_probe_disabled"
+    else:
+        token, account_id, auth_source = _codex_oauth_access_context()
+        payload["auth_source"] = auth_source or ""
+        if not token:
+            payload["error"] = "missing_codex_oauth_access_token"
+        else:
+            headers: dict[str, str] = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "User-Agent": "coherence-network-automation-usage/1.0",
+            }
+            if account_id:
+                headers["ChatGPT-Account-Id"] = account_id
+            started = time.perf_counter()
+            try:
+                with httpx.Client(timeout=10.0, headers=headers) as client:
+                    response = client.get(usage_url)
+                    status_code = int(response.status_code)
+                    response.raise_for_status()
+                    body = response.json()
+                duration_ms = int((time.perf_counter() - started) * 1000)
+                _record_external_tool_usage(
+                    tool_name="codex-api",
+                    provider="openai",
+                    operation="usage_windows",
+                    resource=usage_url,
+                    status="success",
+                    http_status=status_code,
+                    duration_ms=duration_ms,
+                )
+                body_dict = body if isinstance(body, dict) else {}
+                payload["windows"] = _parse_codex_usage_windows(body_dict)
+                plan = str(body_dict.get("plan_type") or "").strip()
+                credits = body_dict.get("credits")
+                if isinstance(credits, dict) and credits.get("balance") is not None:
+                    balance = _coerce_float(credits.get("balance"))
+                    if balance is not None:
+                        plan = f"{plan} (${balance:.2f})" if plan else f"${balance:.2f}"
+                payload["plan"] = plan or None
+                payload["status"] = "ok"
+                if not payload["windows"]:
+                    payload["error"] = "codex_usage_windows_missing"
+            except Exception as exc:
+                status_code = None
+                response = getattr(exc, "response", None)
+                if response is not None:
+                    status_code = int(getattr(response, "status_code", 0) or 0) or None
+                duration_ms = int((time.perf_counter() - started) * 1000)
+                _record_external_tool_usage(
+                    tool_name="codex-api",
+                    provider="openai",
+                    operation="usage_windows",
+                    resource=usage_url,
+                    status="error",
+                    http_status=status_code,
+                    duration_ms=duration_ms,
+                    payload={"error": str(exc)},
+                )
+                payload["status"] = "error"
+                payload["error"] = str(exc)
+
+    _CODEX_PROVIDER_USAGE_CACHE["payload"] = dict(payload)
+    _CODEX_PROVIDER_USAGE_CACHE["expires_at"] = now + _CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS
+    return payload
+
+
+def _append_codex_provider_window_metrics(snapshot: ProviderUsageSnapshot) -> bool:
+    if _normalize_provider_name(snapshot.provider) != "openai":
+        return False
+
+    probe = _codex_provider_usage_payload()
+    windows = probe.get("windows") if isinstance(probe.get("windows"), list) else []
+    existing_ids = {metric.id for metric in snapshot.metrics}
+    appended = False
+    raw_windows: list[dict[str, Any]] = []
+
+    for row in windows:
+        if not isinstance(row, dict):
+            continue
+        metric_id = str(row.get("metric_id") or "").strip()
+        if not metric_id or metric_id in existing_ids:
+            continue
+        used_percent = _coerce_float(row.get("used_percent"))
+        if used_percent is None:
+            continue
+        used_percent = max(0.0, min(float(used_percent), 100.0))
+        remaining_percent = max(0.0, 100.0 - used_percent)
+        label = str(row.get("label") or "window").strip() or "window"
+        window = str(row.get("window") or label).strip() or label
+        source_key = str(row.get("source_key") or "window").strip() or "window"
+        reset_at_iso = str(row.get("reset_at_iso") or "").strip()
+        reset_suffix = f"; resets_at={reset_at_iso}" if reset_at_iso else ""
+        snapshot.metrics.append(
+            _metric(
+                id=metric_id,
+                label=f"Codex provider quota ({label})",
+                unit="requests",
+                used=used_percent,
+                remaining=remaining_percent,
+                limit=100.0,
+                window=window,
+                validation_state="validated",
+                validation_detail=(
+                    "Validated from Codex provider usage API window telemetry "
+                    f"({source_key}, percentage of window capacity){reset_suffix}."
+                ),
+                evidence_source="provider_api_wham_usage",
+            )
+        )
+        raw_windows.append(
+            {
+                "metric_id": metric_id,
+                "source_key": source_key,
+                "label": label,
+                "window": window,
+                "used_percent": round(used_percent, 6),
+                "remaining_percent": round(remaining_percent, 6),
+                "limit_window_seconds": _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0) or None,
+                "reset_at_unix": _coerce_nonnegative_int(row.get("reset_at_unix"), default=0) or None,
+                "reset_at_iso": reset_at_iso or None,
+            }
+        )
+        existing_ids.add(metric_id)
+        appended = True
+
+    if appended:
+        snapshot.notes.append(
+            "Codex provider quota windows are sourced from provider API telemetry (percentage-based windows)."
+        )
+        snapshot.raw["codex_usage_windows"] = raw_windows
+        if str(probe.get("plan") or "").strip():
+            snapshot.raw["codex_usage_plan"] = str(probe["plan"]).strip()
+        if str(probe.get("auth_source") or "").strip():
+            snapshot.raw["codex_usage_auth_source"] = str(probe["auth_source"]).strip()
+        if str(probe.get("usage_url") or "").strip():
+            snapshot.raw["codex_usage_url"] = str(probe["usage_url"]).strip()
+    elif str(probe.get("status") or "") == "error":
+        error = _truncate_text(probe.get("error"), max_len=180)
+        if error:
+            snapshot.notes.append(f"Codex provider usage probe failed: {error}")
+
+    snapshot.notes = list(dict.fromkeys(snapshot.notes))
+    return appended
 
 
 def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
@@ -1304,6 +1591,15 @@ def _codex_events_within_window(window_seconds: int) -> int:
     events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
     count = 0
     for event in events:
+        endpoint = str(getattr(event, "endpoint", "") or "").strip().lower()
+        # Avoid double-counting task wrappers; only track execution-like events.
+        if endpoint in {
+            "/tool:agent-task-completion",
+            "tool:agent-task-completion",
+            "/tool:agent-task-execution-summary",
+            "tool:agent-task-execution-summary",
+        }:
+            continue
         metadata = getattr(event, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             continue
@@ -1408,50 +1704,70 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
 def _append_codex_subscription_metrics(snapshot: ProviderUsageSnapshot) -> None:
     if _normalize_provider_name(snapshot.provider) != "openai":
         return
+    has_provider_windows = _append_codex_provider_window_metrics(snapshot)
     existing = {metric.id for metric in snapshot.metrics}
     limit_5h = max(0, _int_env("CODEX_SUBSCRIPTION_5H_LIMIT", 0))
-    if limit_5h > 0 and "codex_subscription_5h" not in existing:
-        used_5h = _codex_events_within_window(5 * 60 * 60)
+    limit_week = max(0, _int_env("CODEX_SUBSCRIPTION_WEEK_LIMIT", 0))
+    used_5h = _codex_events_within_window(5 * 60 * 60)
+    used_week = _codex_events_within_window(7 * 24 * 60 * 60)
+    if "codex_subscription_5h" not in existing:
+        has_limit_5h = limit_5h > 0
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_5h",
                 label="Codex task runs (5h)",
                 unit="requests",
-                used=float(min(used_5h, limit_5h)),
-                remaining=float(max(0, limit_5h - used_5h)),
-                limit=float(limit_5h),
-                window="hourly",
+                used=float(used_5h),
+                remaining=(float(max(0, limit_5h - used_5h)) if has_limit_5h else None),
+                limit=(float(limit_5h) if has_limit_5h else None),
+                window="rolling_5h",
                 validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
-                    "not from provider quota headers/API."
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration."
+                    if has_limit_5h
+                    else (
+                        "Derived from runtime worker-event counts for execution volume tracking."
+                        if has_provider_windows
+                        else (
+                            "Derived from runtime worker-event counts. No hard Codex 5h limit is configured, "
+                            "so remaining quota cannot be computed."
+                        )
+                    )
                 ),
-                evidence_source="runtime_events+env_limits",
+                evidence_source=("runtime_events+env_limits" if has_limit_5h else "runtime_events"),
             )
         )
-    limit_week = max(0, _int_env("CODEX_SUBSCRIPTION_WEEK_LIMIT", 0))
-    if limit_week > 0 and "codex_subscription_week" not in existing:
-        used_week = _codex_events_within_window(7 * 24 * 60 * 60)
+    if "codex_subscription_week" not in existing:
+        has_limit_week = limit_week > 0
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_week",
                 label="Codex task runs (7d)",
                 unit="requests",
-                used=float(min(used_week, limit_week)),
-                remaining=float(max(0, limit_week - used_week)),
-                limit=float(limit_week),
-                window="weekly",
+                used=float(used_week),
+                remaining=(float(max(0, limit_week - used_week)) if has_limit_week else None),
+                limit=(float(limit_week) if has_limit_week else None),
+                window="rolling_7d",
                 validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
-                    "not from provider quota headers/API."
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration."
+                    if has_limit_week
+                    else (
+                        "Derived from runtime worker-event counts for execution volume tracking."
+                        if has_provider_windows
+                        else (
+                            "Derived from runtime worker-event counts. No hard Codex weekly limit is configured, "
+                            "so remaining quota cannot be computed."
+                        )
+                    )
                 ),
-                evidence_source="runtime_events+env_limits",
+                evidence_source=("runtime_events+env_limits" if has_limit_week else "runtime_events"),
             )
         )
-    if limit_5h <= 0 and limit_week <= 0:
+    if limit_5h <= 0 and limit_week <= 0 and not has_provider_windows:
         snapshot.notes.append(
-            "Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT to enforce hard Codex window limits."
+            "Codex subscription limits vary by plan and demand. Set CODEX_SUBSCRIPTION_5H_LIMIT and "
+            "CODEX_SUBSCRIPTION_WEEK_LIMIT from your Codex usage dashboard to compute remaining quota."
         )
     snapshot.notes = list(dict.fromkeys(snapshot.notes))
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -44,6 +45,31 @@ def test_probe_openai_codex_accepts_oauth_without_api_key(monkeypatch: pytest.Mo
     ok, detail = automation_usage_service._probe_openai_codex()
     assert ok is True
     assert detail.startswith("ok_via_codex_oauth_session:")
+
+
+def test_codex_oauth_access_context_reads_access_token_and_account(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text(
+        json.dumps(
+            {
+                "auth_mode": "oauth",
+                "tokens": {
+                    "access_token": "access-token-123",
+                    "account_id": "account-456",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+
+    token, account_id, source = automation_usage_service._codex_oauth_access_context()
+    assert token == "access-token-123"
+    assert account_id == "account-456"
+    assert source == f"session_file:{session_file}"
 
 
 def test_evaluate_usage_alerts_skips_optional_unavailable_provider(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -404,6 +430,11 @@ def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
             return 280
         return 0
 
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_provider_usage_payload",
+        lambda force_refresh=False: {"status": "unavailable", "windows": [], "error": ""},
+    )
     monkeypatch.setattr(automation_usage_service, "_codex_events_within_window", _fake_codex_counts)
     automation_usage_service._append_codex_subscription_metrics(snapshot)
     metrics = {row.id: row for row in snapshot.metrics}
@@ -413,6 +444,181 @@ def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
     assert metrics["codex_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
     assert metrics["codex_subscription_5h"].validation_state == "derived"
     assert metrics["codex_subscription_5h"].evidence_source == "runtime_events+env_limits"
+
+
+def test_append_codex_subscription_metrics_tracks_usage_without_limit_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_codex_usage_only",
+        provider="openai",
+        kind="openai",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
+
+    def _fake_codex_counts(window_seconds: int) -> int:
+        if window_seconds == 5 * 60 * 60:
+            return 11
+        if window_seconds == 7 * 24 * 60 * 60:
+            return 52
+        return 0
+
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_provider_usage_payload",
+        lambda force_refresh=False: {"status": "unavailable", "windows": [], "error": ""},
+    )
+    monkeypatch.setattr(automation_usage_service, "_codex_events_within_window", _fake_codex_counts)
+    automation_usage_service._append_codex_subscription_metrics(snapshot)
+
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert "codex_subscription_5h" in metrics
+    assert "codex_subscription_week" in metrics
+    assert metrics["codex_subscription_5h"].used == pytest.approx(11.0, rel=1e-6)
+    assert metrics["codex_subscription_week"].used == pytest.approx(52.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].limit is None
+    assert metrics["codex_subscription_5h"].remaining is None
+    assert metrics["codex_subscription_5h"].validation_state == "derived"
+    assert metrics["codex_subscription_5h"].evidence_source == "runtime_events"
+    assert any("Codex subscription limits vary by plan and demand" in note for note in snapshot.notes)
+
+
+def test_append_codex_subscription_metrics_adds_provider_api_windows_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_codex_provider_windows",
+        provider="openai",
+        kind="openai",
+        status="ok",
+        data_source="provider_api",
+        metrics=[],
+    )
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_provider_usage_payload",
+        lambda force_refresh=False: {
+            "status": "ok",
+            "usage_url": "https://chatgpt.com/backend-api/wham/usage",
+            "auth_source": "session_file:/tmp/codex-auth.json",
+            "plan": "plus",
+            "windows": [
+                {
+                    "metric_id": "codex_provider_window_primary",
+                    "source_key": "primary_window",
+                    "label": "5h",
+                    "window": "5h",
+                    "used_percent": 25.0,
+                    "remaining_percent": 75.0,
+                    "limit_window_seconds": 5 * 60 * 60,
+                    "reset_at_unix": 1_700_000_000,
+                    "reset_at_iso": "2023-11-14T22:13:20Z",
+                },
+                {
+                    "metric_id": "codex_provider_window_secondary",
+                    "source_key": "secondary_window",
+                    "label": "7d",
+                    "window": "7d",
+                    "used_percent": 40.0,
+                    "remaining_percent": 60.0,
+                    "limit_window_seconds": 7 * 24 * 60 * 60,
+                    "reset_at_unix": 1_700_060_000,
+                    "reset_at_iso": "2023-11-15T14:53:20Z",
+                },
+            ],
+            "error": "",
+        },
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_events_within_window",
+        lambda window_seconds: 8 if window_seconds == 5 * 60 * 60 else 20,
+    )
+
+    automation_usage_service._append_codex_subscription_metrics(snapshot)
+
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert metrics["codex_provider_window_primary"].validation_state == "validated"
+    assert metrics["codex_provider_window_primary"].limit == pytest.approx(100.0, rel=1e-6)
+    assert metrics["codex_provider_window_primary"].remaining == pytest.approx(75.0, rel=1e-6)
+    assert metrics["codex_provider_window_primary"].evidence_source == "provider_api_wham_usage"
+    assert metrics["codex_provider_window_secondary"].remaining == pytest.approx(60.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].used == pytest.approx(8.0, rel=1e-6)
+    assert metrics["codex_subscription_week"].used == pytest.approx(20.0, rel=1e-6)
+    assert not any("Set CODEX_SUBSCRIPTION_5H_LIMIT" in note for note in snapshot.notes)
+    assert snapshot.raw["codex_usage_plan"] == "plus"
+    assert len(snapshot.raw["codex_usage_windows"]) == 2
+
+
+def test_parse_codex_usage_windows_maps_primary_and_secondary() -> None:
+    payload = {
+        "rate_limit": {
+            "primary_window": {
+                "limit_window_seconds": 18_000,
+                "used_percent": 12,
+                "reset_at": 1_700_000_100,
+            },
+            "secondary_window": {
+                "limit_window_seconds": 604_800,
+                "used_percent": 55.5,
+                "reset_at": 1_700_700_100,
+            },
+        }
+    }
+    windows = automation_usage_service._parse_codex_usage_windows(payload)
+    assert len(windows) == 2
+    primary = next(row for row in windows if row["metric_id"] == "codex_provider_window_primary")
+    secondary = next(row for row in windows if row["metric_id"] == "codex_provider_window_secondary")
+    assert primary["label"] == "5h"
+    assert primary["remaining_percent"] == pytest.approx(88.0, rel=1e-6)
+    assert secondary["label"] == "7d"
+    assert secondary["remaining_percent"] == pytest.approx(44.5, rel=1e-6)
+    assert primary["reset_at_iso"].endswith("Z")
+    assert secondary["reset_at_iso"].endswith("Z")
+
+
+def test_codex_events_within_window_ignores_agent_completion_duplicates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events = [
+        SimpleNamespace(
+            endpoint="/tool:codex",
+            metadata={"is_openai_codex": True, "task_id": "task-1"},
+        ),
+        SimpleNamespace(
+            endpoint="/tool:agent-task-completion",
+            metadata={"is_openai_codex": True, "task_id": "task-1"},
+        ),
+        SimpleNamespace(
+            endpoint="/tool:codex",
+            metadata={
+                "provider": "openai-codex",
+                "model": "openclaw/gpt-5.3-codex-spark",
+                "task_id": "task-2",
+            },
+        ),
+        SimpleNamespace(
+            endpoint="/tool:agent-task-completion",
+            metadata={"provider": "openai-codex", "task_id": "task-2"},
+        ),
+        SimpleNamespace(
+            endpoint="/tool:agent",
+            metadata={"model": "gpt-5.3-codex", "executor": "codex"},
+        ),
+    ]
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runtime_events_within_window",
+        lambda window_seconds, source=None, limit=5000: events,
+    )
+
+    assert automation_usage_service._codex_events_within_window(5 * 60 * 60) == 3
 
 
 def test_build_db_host_snapshot_includes_window_limits(monkeypatch: pytest.MonkeyPatch) -> None:
