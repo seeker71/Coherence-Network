@@ -127,6 +127,11 @@ def _executor_available(executor: str) -> bool:
     return shutil.which(_executor_binary_name(executor)) is not None
 
 
+def _allow_unavailable_explicit_executor() -> bool:
+    raw = os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def _first_available_executor(preferred: list[str]) -> str:
     for executor in preferred:
         candidate = _normalize_executor(executor, default="")
@@ -273,6 +278,13 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
     if explicit:
         if _executor_available(explicit):
             return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        if _allow_unavailable_explicit_executor():
+            return explicit, {
+                "policy_applied": True,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": explicit,
+                "availability": "unavailable_on_api_node",
+            }
         fallback = _first_available_executor(_executor_fallback_candidates())
         return fallback, {
             "policy_applied": True,
