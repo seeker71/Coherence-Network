@@ -96,6 +96,20 @@
       "reason": "Temporary waiver while run 22480736529 failure is actively remediated to unblock urgent self-improvement flow gap-closure work.",
       "expires_at": "2026-03-01T23:59:59Z",
       "run_url_contains": "actions/runs/22480736529"
+    },
+    {
+      "workflow": "Change Contract",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while run 22482283831 failure is actively remediated to unblock requested findings implementation in this thread.",
+      "expires_at": "2026-03-02T23:59:59Z",
+      "run_url_contains": "actions/runs/22482283831"
+    },
+    {
+      "workflow": "Claude Code Host Runner Task",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while run 22482077227 failure is actively remediated to unblock requested findings implementation in this thread.",
+      "expires_at": "2026-03-02T23:59:59Z",
+      "run_url_contains": "actions/runs/22482077227"
     }
   ]
 }
