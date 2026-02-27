@@ -54,14 +54,30 @@ jobs:
       - name: Install API dependencies
         run: cd api && pip install -e ".[dev]"
 
+      - name: Write task to file
+        run: |
+          cat > /tmp/claude_task.txt << 'TASKEOF'
+          Replace the runtime placeholder in api/app/models/coherence.py.
+
+          The field components_with_data has description text that ends with "rest are 0.5 stub (spec 020 data confidence)".
+          This is a tracked placeholder. Spec 020 documents that non-data components default to 0.5.
+
+          Your task:
+          1. Update the field description to remove the stub language. New description:
+             "Number of components with real computed scores; others default to 0.5 (neutral prior)."
+          2. Update the class docstring to note that 0.5 is the neutral prior for uncomputed components, not a stub.
+          3. Run tests: cd api && python3 -m pytest tests/ -x -q --tb=short 2>&1 | tail -8
+          4. Show the final git diff of the changed file.
+          5. Do NOT commit anything.
+          TASKEOF
+          echo "=== Task written to /tmp/claude_task.txt ==="
+          cat /tmp/claude_task.txt
+
       - name: Run task with Claude Code
         id: claude_task
         run: |
-          TASK="${{ inputs.task_description }}"
-          echo "=== Task ==="
-          echo "$TASK"
           echo "=== Running claude -p ==="
-          claude -p "$TASK" \
+          claude -p "$(cat /tmp/claude_task.txt)" \
             --dangerously-skip-permissions \
             --output-format text 2>&1
         env:

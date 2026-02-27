@@ -27,8 +27,7 @@
     "workflow_dispatch to claude-code-host-runner-task.yml"
   ],
   "change_files": [
-    ".github/workflows/claude-code-host-runner-task.yml",
-    "docs/system_audit/commit_evidence_2026-02-27_claude-code-host-runner-workflow.json"
+    ".github/workflows/claude-code-host-runner-task.yml"
   ],
   "idea_ids": ["claude-code-executor-provider"],
   "spec_ids": ["claude-code-executor-provider"],
