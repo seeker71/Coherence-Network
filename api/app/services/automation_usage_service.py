@@ -576,7 +576,9 @@ def _openai_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers 
 
 def _claude_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers | None, str | None]:
     probe_url = os.getenv("ANTHROPIC_MESSAGES_URL", "https://api.anthropic.com/v1/messages")
-    model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-3-5-haiku-latest").strip() or "claude-3-5-haiku-latest"
+    # claude-haiku-4-5 is the cheapest current model for quota probes.
+    # claude-3-5-haiku-latest is not valid as of the claude-4 generation.
+    model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-haiku-4-5").strip() or "claude-haiku-4-5"
     payload = {
         "model": model,
         "max_tokens": 1,
@@ -2622,6 +2624,38 @@ def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
     snapshot.raw["cli_available"] = True
     snapshot.raw["cli_logged_in"] = cli_logged_in
     snapshot.notes.append(f"auth_method={auth_method}")
+
+    # Subscription usage limits (5h/weekly windows) are tracked server-side by Anthropic.
+    # They are NOT exposed via API headers — only visible in the Anthropic console.
+    # Strategy: use --max-budget-usd (CLAUDE_CODE_MAX_BUDGET_USD, default $2/run) to cap per-run cost.
+    # Use --output-format json to capture per-model costUSD in task metadata for accumulation.
+    max_budget = os.getenv("CLAUDE_CODE_MAX_BUDGET_USD", "2.00")
+    snapshot.notes.append(
+        f"Subscription usage limits (5h/weekly windows) are server-side only. "
+        f"Per-run cap: --max-budget-usd ${max_budget} (CLAUDE_CODE_MAX_BUDGET_USD). "
+        f"Set CLAUDE_CODE_MODEL=claude-sonnet-4-5-20250929 (SPEC/TEST/IMPL) and "
+        f"CLAUDE_CODE_REVIEW_MODEL=claude-opus-4-5 (REVIEW/HEAL) to enable model-tier routing."
+    )
+
+    # Apply quota probe from messages endpoint if we have explicit API key credentials.
+    # This gets real per-minute rate limit headers (not available from models GET endpoint).
+    if api_key or oauth_token:
+        quota_probe_headers, probe_error = _claude_quota_probe_headers(probe_headers)
+        snapshot = _apply_quota_probe_to_snapshot(
+            snapshot=snapshot,
+            probe_headers=quota_probe_headers,
+            probe_error=probe_error,
+            request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
+            request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
+            request_label="Claude Code API requests quota (per minute)",
+            token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
+            token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
+            token_label="Claude Code API token quota (per minute)",
+            success_note="Rate limit headers sourced from Anthropic messages probe (not models endpoint).",
+            no_headers_note="Anthropic messages probe completed, but no rate limit headers were returned.",
+            error_note_prefix="Claude Code messages quota probe failed",
+        )
+
     return snapshot
 
 
@@ -4001,12 +4035,19 @@ def _probe_claude() -> tuple[bool, str]:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
     if not api_key:
         return False, "missing_anthropic_key"
-    url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
+    # Use the messages endpoint (POST) for the probe — it returns real rate limit headers
+    # and confirms API key validity for the actual execution path.
+    # The models GET endpoint does NOT return rate limit headers.
+    probe_url = os.getenv("ANTHROPIC_MESSAGES_URL", "https://api.anthropic.com/v1/messages")
+    probe_model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-haiku-4-5").strip() or "claude-haiku-4-5"
     try:
         with httpx.Client(timeout=8.0, headers=_anthropic_headers()) as client:
-            response = client.get(url)
+            response = client.post(
+                probe_url,
+                json={"model": probe_model, "max_tokens": 1, "messages": [{"role": "user", "content": "probe"}]},
+            )
             response.raise_for_status()
-        return True, "ok"
+        return True, "ok_api_key"
     except Exception as exc:
         active = int(_active_provider_usage_counts().get("claude", 0))
         if active > 0:

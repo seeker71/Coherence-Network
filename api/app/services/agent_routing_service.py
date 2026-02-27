@@ -66,8 +66,12 @@ _OPENCLAW_MODEL_DEFAULT = normalize_model_name(
 )
 _OPENCLAW_MODEL_REVIEW = normalize_model_name(os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT))
 
-_CLAUDE_CODE_MODEL_DEFAULT = os.environ.get("CLAUDE_CODE_MODEL", "")
-_CLAUDE_CODE_MODEL_REVIEW = os.environ.get("CLAUDE_CODE_REVIEW_MODEL", _CLAUDE_CODE_MODEL_DEFAULT)
+# Claude Code CLI model tiers:
+# SPEC/TEST/IMPL → sonnet (fast, cheap, strong at code generation)
+# REVIEW/HEAL    → opus  (strongest reasoning, best for correctness checking)
+# Env vars allow override without code changes.
+_CLAUDE_CODE_MODEL_DEFAULT = os.environ.get("CLAUDE_CODE_MODEL", "claude-sonnet-4-5-20250929")
+_CLAUDE_CODE_MODEL_REVIEW = os.environ.get("CLAUDE_CODE_REVIEW_MODEL", "claude-opus-4-5")
 
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (_OLLAMA_MODEL, "openrouter"),
@@ -229,7 +233,14 @@ def openclaw_command_template(task_type: TaskType) -> str:
 
 
 def claude_command_template(task_type: TaskType) -> str:
-    """Claude Code CLI template: headless -p mode with --dangerously-skip-permissions."""
+    """Claude Code CLI template: headless -p mode with --dangerously-skip-permissions.
+
+    Uses --output-format json so the orchestrator can parse modelUsage (per-model
+    token counts and costUSD) from the response for usage tracking and cost observability.
+
+    Uses --max-budget-usd from CLAUDE_CODE_MAX_BUDGET_USD env (default 2.00) to cap
+    per-run cost. This is the primary guard against runaway subscription usage.
+    """
     model = CLAUDE_CODE_MODEL_BY_TYPE[task_type]
     template = os.environ.get("CLAUDE_CODE_COMMAND_TEMPLATE", "")
     if template:
@@ -237,7 +248,14 @@ def claude_command_template(task_type: TaskType) -> str:
             template = template.strip() + ' "{{direction}}"'
         return template.replace("{{model}}", model)
     model_flag = f" --model {model}" if model else ""
-    return 'claude -p "{{direction}}"' + model_flag + " --dangerously-skip-permissions"
+    budget = os.environ.get("CLAUDE_CODE_MAX_BUDGET_USD", "2.00")
+    return (
+        'claude -p "{{direction}}"'
+        + model_flag
+        + " --dangerously-skip-permissions"
+        + " --output-format json"
+        + f" --max-budget-usd {budget}"
+    )
 
 
 def route_for_executor(task_type: TaskType, executor: str, default_command_template: str) -> dict[str, Any]:
