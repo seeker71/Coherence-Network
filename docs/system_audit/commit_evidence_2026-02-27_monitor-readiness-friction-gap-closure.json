@@ -49,7 +49,8 @@
   "evidence_refs": [
     "docs/system_audit/pr_check_failures/pr_check_guard_20260227T101155Z_codex-self-improve-gap-closure-20260227-0955.json",
     "docs/system_audit/pr_check_failures/pr_check_guard_20260227T101730Z_codex-self-improve-gap-closure-20260227-0955.json",
-    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T102513Z_codex-self-improve-gap-closure-20260227-0955.json"
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T102513Z_codex-self-improve-gap-closure-20260227-0955.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T102957Z_codex-self-improve-gap-closure-20260227-0955.json"
   ],
   "change_files": [
     "config/start_gate_main_workflow_waivers.json",
@@ -73,6 +74,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
+      "git fetch origin main && git rebase origin/main",
       "cd api && pytest -q tests/test_friction_api.py",
       "cd api && ruff check app/services/friction_service.py app/services/friction_actionability_service.py tests/test_friction_api.py",
       "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
