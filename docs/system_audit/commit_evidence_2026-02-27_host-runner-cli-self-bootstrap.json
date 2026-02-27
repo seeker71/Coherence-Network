@@ -57,7 +57,8 @@
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
       "cd api && pytest -q tests/test_agent_executor_policy.py",
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"prepare_non_root_execution_for_command\""
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"prepare_non_root_execution_for_command\"",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"filters_root_paths\""
     ]
   },
   "ci_validation": {
@@ -74,7 +75,7 @@
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "When runner receives cursor/claude/codex tasks and required binary is missing, it attempts configured install commands, updates PATH, and executes without immediate 'command not found'; explicit executor requests are preserved instead of API-node fallback rewrites; commands using --dangerously-skip-permissions run under a non-root account on host runner.",
+    "expected_behavior_delta": "When runner receives cursor/claude/codex tasks and required binary is missing, it attempts configured install commands, updates PATH, and executes without immediate 'command not found'; explicit executor requests are preserved instead of API-node fallback rewrites; commands using --dangerously-skip-permissions run under a non-root account and avoid root-only CLI paths.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
       "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
