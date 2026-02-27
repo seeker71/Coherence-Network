@@ -254,9 +254,14 @@ def apply_model_override(command: str, override: str) -> tuple[str, str]:
     cleaned = normalize_model_name(override.strip())
     if not cleaned:
         return command, ""
+    applied = cleaned
+    if command.lstrip().startswith("codex ") and cleaned.startswith("openai/"):
+        _, _, codex_model = cleaned.partition("/")
+        if codex_model.strip():
+            applied = codex_model.strip()
     if re.search(r"--model\s+\S+", command):
-        return re.sub(r"--model\s+\S+", f"--model {cleaned}", command), cleaned
-    return command.rstrip() + f" --model {cleaned}", cleaned
+        return re.sub(r"--model\s+\S+", f"--model {applied}", command), applied
+    return command.rstrip() + f" --model {applied}", applied
 
 
 def normalize_open_responses_model(model: str) -> str:

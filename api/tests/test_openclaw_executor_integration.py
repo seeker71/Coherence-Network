@@ -220,6 +220,29 @@ def test_create_task_openclaw_model_override_normalizes_alias_with_partial_env_m
     assert task["model"] == "openclaw/gpt-5.3-codex"
 
 
+def test_create_task_openclaw_model_override_openai_prefix_normalizes_for_codex(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("OPENCLAW_MODEL", "gpt-5-codex")
+    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Normalize OpenAI-prefixed model for codex",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openai/gpt-4o-mini"},
+        )
+    )
+
+    assert "--model gpt-4o-mini" in task["command"]
+    assert "--model openai/gpt-4o-mini" not in task["command"]
+    assert task["model"] == "openclaw/gpt-4o-mini"
+
+
 @pytest.mark.asyncio
 async def test_agent_route_endpoint_accepts_openclaw_executor() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

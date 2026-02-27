@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/prod-unblock-20260226142014",
+  "commit_scope": "Normalize OpenAI-prefixed model overrides for codex command templates and add regression coverage to keep production task execution unblocked.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/tests/test_openclaw_executor_integration.py"
+  ],
+  "idea_ids": [
+    "idea-codex-model-override-normalization"
+  ],
+  "spec_ids": [
+    "spec-openclaw-codex-model-override-compatibility"
+  ],
+  "task_ids": [
+    "task-2026-02-27-codex-model-override-normalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T002202Z_codex-prod-unblock-20260226142014.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-27_codex-model-override-normalization.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "cd api && ruff check app/services/agent_routing_service.py tests/test_openclaw_executor_integration.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "OpenAI-prefixed model overrides are normalized for codex execution, preventing model_not_found failures while preserving openclaw task metadata.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/pipeline-status",
+      "https://coherence-network-production.up.railway.app/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "Create an impl task with context.executor=openclaw and context.model_override=openai/gpt-4o-mini and confirm command uses --model gpt-4o-mini.",
+      "Execute the created task and confirm it completes without model_not_found errors tied to the prefixed override.",
+      "Confirm pipeline-status has no stuck pending tasks after the smoke execution."
+    ]
+  }
+}
