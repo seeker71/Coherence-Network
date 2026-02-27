@@ -1,12 +1,10 @@
 {
   "date": "2026-02-27",
   "thread_branch": "codex/dangerous-skip-nonroot-20260227",
-  "commit_scope": "Keep --dangerously-skip-permissions for autonomous host-runner commands while demoting root execution to a safe non-root account; avoid low-UID system-user selection and keep gate ownership/waiver metadata current.",
+  "commit_scope": "Keep --dangerously-skip-permissions for autonomous host-runner commands by demoting root execution to non-root and auto-provisioning a dedicated non-root user when none is available on the host runner.",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
-    "config/start_gate_main_workflow_waivers.json",
-    "config/start_gate_workflow_owners.json",
     "docs/system_audit/commit_evidence_2026-02-27_host-runner-dangerous-skip-nonroot.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
@@ -37,15 +35,13 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
-    "https://github.com/seeker71/Coherence-Network/actions/runs/22499270717",
-    "https://github.com/seeker71/Coherence-Network/actions/runs/22499647143",
+    "https://github.com/seeker71/Coherence-Network/pull/357",
+    "https://coherence-network-production.up.railway.app/api/agent/tasks/task_ab32d86db939b1a5",
     "https://coherence-network-production.up.railway.app/api/agent/runners"
   ],
   "change_files": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
-    "config/start_gate_main_workflow_waivers.json",
-    "config/start_gate_workflow_owners.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "change_intent": "process_only",
@@ -67,18 +63,18 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting branch push/PR checks and production host-runner smoke that verifies claude/codex/cursor execution claims under non-root demotion policy."
+    "blocked_reason": "Awaiting branch push/PR checks plus production host-runner smoke after redeploy to verify auto-created non-root user path clears runner_non_root_user_unavailable."
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "When a root host-runner receives a command containing --dangerously-skip-permissions, the command keeps the flag but is executed as a non-root user with UID >= AGENT_RUN_AS_MIN_UID (default 1000), preventing low-UID system-user demotion.",
+    "expected_behavior_delta": "When a root host-runner receives a command containing --dangerously-skip-permissions and no eligible non-root user exists, the runner auto-creates a dedicated non-root account and executes the command under that account while keeping the flag.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
       "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
       "https://coherence-network-production.up.railway.app/api/agent/runners"
     ],
     "test_flows": [
-      "Create a claude task that includes --dangerously-skip-permissions and verify task context contains runner_exec_user with non-root UID >= 1000.",
+      "Create a claude task that includes --dangerously-skip-permissions and verify task context contains runner_exec_user with an auto-created non-root account instead of runner_non_root_user_unavailable.",
       "Create a codex task and verify completion from railway-runner without runner_exec_user_unavailable.",
       "Create a cursor task and verify claim path succeeds and failures, if any, are auth/token related rather than binary/root rejection."
     ]
