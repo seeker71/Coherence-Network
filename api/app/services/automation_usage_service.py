@@ -52,7 +52,7 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "claude-code": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"]},
     "openai": {"kind": "openai", "any_of": ["OPENAI_ADMIN_API_KEY", "OPENAI_API_KEY"]},
     "github": {"kind": "github", "any_of": ["GITHUB_TOKEN", "GH_TOKEN"]},
-    "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
+    "openrouter": {"kind": "custom", "any_of": ["OPENROUTER_API_KEY", "CURSOR_CLI_MODEL", "CURSOR_API_KEY"]},
     "anthropic": {"kind": "custom", "any_of": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]},
     "cursor": {"kind": "custom", "any_of": ["CURSOR_API_KEY", "CURSOR_CLI_MODEL"]},
     "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
@@ -97,6 +97,13 @@ def _normalize_provider_name(value: str | None) -> str:
     if not candidate:
         return ""
     return _PROVIDER_ALIASES.get(candidate, candidate)
+
+
+def _normalize_required_provider_name(value: str | None) -> str:
+    normalized = _normalize_provider_name(value)
+    if normalized == "openai":
+        return "openai-codex"
+    return normalized
 
 
 def _snapshots_path() -> Path:
@@ -1057,7 +1064,7 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
 def _required_providers_from_env() -> list[str]:
     raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
     out = [
-        _normalize_provider_name(item)
+        _normalize_required_provider_name(item)
         for item in str(raw).split(",")
         if str(item).strip()
     ]
@@ -1065,7 +1072,9 @@ def _required_providers_from_env() -> list[str]:
     default_executor = str(os.getenv("AGENT_EXECUTOR_DEFAULT", "")).strip().lower()
     if cheap_executor == "cursor" or default_executor == "cursor":
         out.append("cursor")
-    return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
+    if not out:
+        return list(_DEFAULT_REQUIRED_PROVIDERS)
+    return list(dict.fromkeys(out))
 
 
 def _validation_required_providers_from_env() -> list[str]:
@@ -1888,14 +1897,13 @@ def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
                 active_runs=active,
                 note="Using runtime OpenRouter execution evidence (no direct OpenRouter key in environment).",
             )
-        return ProviderUsageSnapshot(
-            id=f"provider_openrouter_{int(time.time())}",
-            provider="openrouter",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set OPENROUTER_API_KEY to validate OpenRouter provider access."],
-        )
+        snapshot = _build_config_only_snapshot("openrouter")
+        if snapshot.status == "ok":
+            snapshot.notes.append(
+                "OpenRouter readiness is satisfied via routed executor context (Cursor/Codex); direct OPENROUTER_API_KEY is optional."
+            )
+            snapshot.notes = list(dict.fromkeys(snapshot.notes))
+        return snapshot
 
     models_url = os.getenv("OPENROUTER_MODELS_URL", "https://openrouter.ai/api/v1/models")
     try:
@@ -3754,7 +3762,7 @@ def provider_limit_guard_decision(provider: str, *, force_refresh: bool = False)
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
     active_counts = _active_provider_usage_counts()
     required = [
-        _normalize_provider_name(item)
+        _normalize_required_provider_name(item)
         for item in (required_providers or _required_providers_from_env())
         if str(item).strip()
     ]
@@ -3776,6 +3784,18 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         kind = snapshot.kind if snapshot is not None else str(_PROVIDER_CONFIG_RULES.get(provider, {}).get("kind", "custom"))
         status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
         is_required = provider in required_set
+        active_usage = max(0, int(active_counts.get(provider, 0)))
+        if provider == "openrouter" and (not configured) and active_usage > 0 and status == "ok":
+            configured = True
+            missing = []
+            configured_notes = list(
+                dict.fromkeys(
+                    [
+                        *configured_notes,
+                        "OpenRouter runtime usage detected with healthy status; direct OPENROUTER_API_KEY not required.",
+                    ]
+                )
+            )
 
         if is_required and (not configured or status != "ok"):
             severity = "critical"
@@ -3817,6 +3837,10 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         "AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY",
         default=False,
     )
+    if isinstance(limit_telemetry, dict):
+        limit_telemetry = dict(limit_telemetry)
+        limit_telemetry["enforcement_mode"] = "strict_active_only" if strict_limit_telemetry else "guidance"
+        limit_telemetry["strict_blocks_only_active"] = True
     provider_limit_status = (
         limit_telemetry.get("required_or_active_provider_status")
         if isinstance(limit_telemetry, dict)
@@ -3835,6 +3859,8 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
             continue
         row.notes = list(dict.fromkeys([*row.notes, f"limit_telemetry_state={state}"]))
         if row.required and state != "hard_limit_ready":
+            active_usage = max(0, int(state_row.get("active_usage") or 0))
+            enforce_block = strict_limit_telemetry and active_usage > 0
             if row.severity == "info":
                 row.severity = "warning"  # type: ignore[assignment]
             recommendations.append(
@@ -3843,7 +3869,19 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
                     f"(current_state={state}) before making numeric-limit claims."
                 )
             )
-            if strict_limit_telemetry:
+            row.notes = list(
+                dict.fromkeys(
+                    [
+                        *row.notes,
+                        (
+                            "limit_telemetry_enforcement=blocking"
+                            if enforce_block
+                            else "limit_telemetry_enforcement=guidance"
+                        ),
+                    ]
+                )
+            )
+            if enforce_block:
                 blocking.append(f"{provider_name}: limit_telemetry_state={state}")
 
     blocking = list(dict.fromkeys(blocking))
@@ -3922,10 +3960,16 @@ def _probe_github() -> tuple[bool, str]:
 def _probe_openrouter() -> tuple[bool, str]:
     api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not api_key:
+        configured, _missing, _present, notes = _configured_status("openrouter")
+        if configured:
+            detail = "ok_via_routed_executor_context"
+            if notes:
+                detail = f"{detail}:{notes[0]}"
+            return True, detail
         active = int(_active_provider_usage_counts().get("openrouter", 0))
         if active > 0:
             return True, "ok_via_runtime_usage"
-        return False, "missing_openrouter_key"
+        return False, "missing_openrouter_routing_context"
     url = os.getenv("OPENROUTER_MODELS_URL", "https://openrouter.ai/api/v1/models")
     try:
         with httpx.Client(timeout=8.0, headers=_openrouter_headers()) as client:

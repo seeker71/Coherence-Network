@@ -341,12 +341,68 @@ def test_provider_readiness_can_block_on_limit_telemetry_when_enabled(
     assert "limit_telemetry_state=derived_or_unvalidated" in provider_row.notes
 
 
+def test_provider_readiness_strict_limit_telemetry_stays_guidance_for_inactive_required_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openrouter_guidance_only",
+                provider="openrouter",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="requests_quota",
+                        label="OpenRouter request quota",
+                        unit="requests",
+                        used=80.0,
+                        remaining=20.0,
+                        limit=100.0,
+                        window="daily",
+                        validation_state="derived",
+                        evidence_source="runtime_events+env_limits",
+                    )
+                ],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", "1")
+    monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+
+    report = automation_usage_service.provider_readiness_report(
+        required_providers=["openrouter"],
+        force_refresh=False,
+    )
+
+    assert report.all_required_ready is True
+    assert report.blocking_issues == []
+    assert report.limit_telemetry["enforcement_mode"] == "strict_active_only"
+    provider_row = next(row for row in report.providers if row.provider == "openrouter")
+    assert provider_row.severity == "warning"
+    assert "limit_telemetry_state=derived_or_unvalidated" in provider_row.notes
+    assert "limit_telemetry_enforcement=guidance" in provider_row.notes
+
+
 def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
     required = automation_usage_service._required_providers_from_env()
+    assert "openai-codex" in required
+    assert "openai" not in required
     assert "cursor" in required
 
 
@@ -840,6 +896,7 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("GH_TOKEN", "")
     monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+    monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing"))
     monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
     monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
 
@@ -849,7 +906,7 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
         payload = report.json()
         assert payload["all_required_ready"] is False
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert providers["openai"]["severity"] == "critical"
+        assert providers["openai-codex"]["severity"] == "critical"
         assert providers["github"]["severity"] == "critical"
         assert providers["coherence-internal"]["severity"] in {"info", "warning"}
 
@@ -886,12 +943,13 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
 
 
 @pytest.mark.asyncio
-async def test_provider_in_active_use_requires_key_for_readiness(
+async def test_provider_in_active_use_can_be_ready_via_runtime_context_without_direct_key(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "1")
+    monkeypatch.setenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", "0")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "")
@@ -915,6 +973,7 @@ async def test_provider_in_active_use_requires_key_for_readiness(
             },
         },
     )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openrouter": 4})
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
@@ -924,10 +983,10 @@ async def test_provider_in_active_use_requires_key_for_readiness(
         assert report.status_code == 200
         payload = report.json()
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert payload["all_required_ready"] is False
+        assert payload["all_required_ready"] is True
         assert providers["openrouter"]["required"] is True
-        assert providers["openrouter"]["severity"] == "critical"
-        assert providers["openrouter"]["configured"] is False
+        assert providers["openrouter"]["configured"] is True
+        assert providers["openrouter"]["severity"] in {"info", "warning"}
 
 
 @pytest.mark.asyncio

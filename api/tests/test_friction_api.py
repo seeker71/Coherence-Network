@@ -160,6 +160,13 @@ async def test_friction_entry_points_include_monitor_and_failed_cost_sources(
     keys = {row["key"] for row in body["entry_points"]}
     assert "monitor:github_actions_high_failure_rate" in keys
     assert "github-actions:failure-rate" in keys
+    monitor_entry = next(row for row in body["entry_points"] if row["key"] == "monitor:github_actions_high_failure_rate")
+    assert monitor_entry["semantic_domain"] in {"ci_reliability", "flow_friction"}
+    assert monitor_entry["roi_estimator"] == "friction_energy_cost_minutes_v2"
+    assert float(monitor_entry["potential_roi"]) >= 0.0
+    assert float(monitor_entry["roi_calibration_ratio"]) >= 0.2
+    split_hint = str(monitor_entry["cheap_model_split_hint"]).lower()
+    assert "cheap" in split_hint and "model" in split_hint
 
 
 @pytest.mark.asyncio
