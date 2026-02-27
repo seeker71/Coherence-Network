@@ -108,6 +108,7 @@ async def run_provider_auto_heal(
     max_rounds: int = Query(2, ge=1, le=6),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     min_execution_events: int = Query(1, ge=1, le=10),
+    enable_cli_installs: bool = Query(False, description="Attempt provider-specific CLI installers when binaries are missing"),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     report = automation_usage_service.run_provider_auto_heal(
@@ -115,6 +116,7 @@ async def run_provider_auto_heal(
         max_rounds=max_rounds,
         runtime_window_seconds=runtime_window_seconds,
         min_execution_events=min_execution_events,
+        enable_cli_installs=enable_cli_installs,
     )
     return report
 

@@ -1100,6 +1100,21 @@ def test_provider_validation_run_supports_openrouter_and_supabase(monkeypatch: p
     assert providers["supabase"]["ok"] is True
 
 
+def test_provider_validation_run_supports_cursor_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(automation_usage_service, "_probe_cursor", lambda: (True, "ok_cursor_cli:1.0.0"))
+    monkeypatch.setattr(automation_usage_service, "_record_provider_probe_event", lambda **kwargs: None)
+
+    report = automation_usage_service.run_provider_validation_probes(
+        required_providers=["cursor"],
+    )
+    assert report["required_providers"] == ["cursor"]
+    assert len(report["probes"]) == 1
+    row = report["probes"][0]
+    assert row["provider"] == "cursor"
+    assert row["ok"] is True
+    assert row["detail"].startswith("ok_cursor_cli:")
+
+
 def test_provider_validation_run_supports_openai_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_record_provider_probe_event", lambda **kwargs: None)
@@ -1114,6 +1129,34 @@ def test_provider_validation_run_supports_openai_provider(monkeypatch: pytest.Mo
     assert row["ok"] is True
     assert row["detail"] == "ok"
     assert float(row["runtime_ms"]) >= 0.0
+
+
+def test_provider_auto_heal_runs_cli_install_strategy_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTOMATION_PROVIDER_HEAL_RETRY_DELAY_SECONDS", "0")
+    monkeypatch.setattr(automation_usage_service, "_probe_cursor", lambda: (False, "cursor_cli_not_in_path"))
+    monkeypatch.setattr(automation_usage_service, "_record_provider_heal_event", lambda **kwargs: None)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_provider_cli_install_strategy",
+        lambda provider, *, attempts, enable_cli_installs: (
+            ("install_cli", lambda: (True, "install_cli_ok:agent:1.0.0"))
+            if provider == "cursor" and enable_cli_installs and not attempts
+            else None
+        ),
+    )
+
+    report = automation_usage_service.run_provider_auto_heal(
+        required_providers=["cursor"],
+        max_rounds=1,
+        enable_cli_installs=True,
+    )
+    assert report["all_healthy"] is True
+    assert report["enable_cli_installs"] is True
+    row = report["providers"][0]
+    assert row["provider"] == "cursor"
+    assert row["healed"] is True
+    assert row["strategies_tried"] == ["direct_probe", "install_cli"]
+    assert row["final_detail"].startswith("install_cli_ok:")
 
 
 def test_provider_auto_heal_uses_multiple_strategies(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1187,15 +1230,18 @@ async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
         max_rounds: int = 2,
         runtime_window_seconds: int = 86400,
         min_execution_events: int = 1,
+        enable_cli_installs: bool | None = None,
     ) -> dict:
         captured["required_providers"] = required_providers
         captured["max_rounds"] = max_rounds
         captured["runtime_window_seconds"] = runtime_window_seconds
         captured["min_execution_events"] = min_execution_events
+        captured["enable_cli_installs"] = enable_cli_installs
         return {
             "required_providers": required_providers or [],
             "external_provider_count": len(required_providers or []),
             "max_rounds": max_rounds,
+            "enable_cli_installs": bool(enable_cli_installs),
             "all_healthy": True,
             "blocking_issues": [],
             "providers": [],
@@ -1211,6 +1257,7 @@ async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
                 "max_rounds": 3,
                 "runtime_window_seconds": 7200,
                 "min_execution_events": 2,
+                "enable_cli_installs": True,
             },
         )
     assert response.status_code == 200
@@ -1221,6 +1268,7 @@ async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
         "max_rounds": 3,
         "runtime_window_seconds": 7200,
         "min_execution_events": 2,
+        "enable_cli_installs": True,
     }
 
 
