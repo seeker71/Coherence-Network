@@ -3,6 +3,7 @@
   "thread_branch": "codex/self-improve-gap-closure-20260227-0955",
   "commit_scope": "Close high-ROI self-improvement gaps by adding monitor-triggered stale-task recovery, readiness policy cleanup for Codex/Railway flow, guidance-mode limit telemetry, failed-task diagnostic visibility, and friction actionability metadata.",
   "files_owned": [
+    "config/start_gate_main_workflow_waivers.json",
     "api/app/models/agent.py",
     "api/app/models/friction.py",
     "api/app/routers/agent.py",
@@ -48,6 +49,7 @@
     "docs/system_audit/pr_check_failures/pr_check_guard_20260227T101730Z_codex-self-improve-gap-closure-20260227-0955.json"
   ],
   "change_files": [
+    "config/start_gate_main_workflow_waivers.json",
     "api/app/models/agent.py",
     "api/app/models/friction.py",
     "api/app/routers/agent.py",
