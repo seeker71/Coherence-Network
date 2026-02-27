@@ -493,56 +493,48 @@ def _entry_point_category(key: str) -> str:
     return normalized
 
 
-def friction_categories(window_days: int = 7, limit: int = 20) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
-    base = friction_entry_points(window_days=window_days, limit=max(200, limit * 10))
-    entry_points = base.get("entry_points") if isinstance(base.get("entry_points"), list) else []
+def _new_category_rollup(key: str) -> dict[str, Any]:
+    return {
+        "key": key,
+        "_severity_rank": 0,
+        "entry_point_count": 0,
+        "open_entry_points": 0,
+        "event_count": 0,
+        "energy_loss": 0.0,
+        "cost_of_delay": 0.0,
+        "wasted_minutes": 0.0,
+        "top_entry_keys": [],
+        "recommended_actions": [],
+    }
 
-    categories: dict[str, dict[str, Any]] = {}
-    for row in entry_points:
-        if not isinstance(row, dict):
-            continue
-        key = _entry_point_category(str(row.get("key") or ""))
-        category = categories.get(key)
-        if category is None:
-            category = {
-                "key": key,
-                "_severity_rank": 0,
-                "entry_point_count": 0,
-                "open_entry_points": 0,
-                "event_count": 0,
-                "energy_loss": 0.0,
-                "cost_of_delay": 0.0,
-                "wasted_minutes": 0.0,
-                "top_entry_keys": [],
-                "recommended_actions": [],
-            }
-            categories[key] = category
 
-        severity_rank = _severity_rank(str(row.get("severity") or ""))
-        category["_severity_rank"] = max(int(category.get("_severity_rank") or 0), severity_rank)
-        category["entry_point_count"] = _safe_int(category.get("entry_point_count")) + 1
-        if str(row.get("status") or "").strip().lower() == "open":
-            category["open_entry_points"] = _safe_int(category.get("open_entry_points")) + 1
-        category["event_count"] = _safe_int(category.get("event_count")) + _safe_int(row.get("event_count"))
-        category["energy_loss"] = _safe_float(category.get("energy_loss")) + _safe_float(row.get("energy_loss"))
-        category["cost_of_delay"] = _safe_float(category.get("cost_of_delay")) + _safe_float(row.get("cost_of_delay"))
-        category["wasted_minutes"] = _safe_float(category.get("wasted_minutes")) + _safe_float(row.get("wasted_minutes"))
+def _merge_category_rollup(category: dict[str, Any], row: dict[str, Any]) -> None:
+    severity_rank = _severity_rank(str(row.get("severity") or ""))
+    category["_severity_rank"] = max(int(category.get("_severity_rank") or 0), severity_rank)
+    category["entry_point_count"] = _safe_int(category.get("entry_point_count")) + 1
+    if str(row.get("status") or "").strip().lower() == "open":
+        category["open_entry_points"] = _safe_int(category.get("open_entry_points")) + 1
+    category["event_count"] = _safe_int(category.get("event_count")) + _safe_int(row.get("event_count"))
+    category["energy_loss"] = _safe_float(category.get("energy_loss")) + _safe_float(row.get("energy_loss"))
+    category["cost_of_delay"] = _safe_float(category.get("cost_of_delay")) + _safe_float(row.get("cost_of_delay"))
+    category["wasted_minutes"] = _safe_float(category.get("wasted_minutes")) + _safe_float(row.get("wasted_minutes"))
 
-        entry_key = str(row.get("key") or "").strip()
-        if entry_key:
-            keys = list(category.get("top_entry_keys") or [])
-            if entry_key not in keys:
-                keys.append(entry_key)
-            category["top_entry_keys"] = keys[:5]
+    entry_key = str(row.get("key") or "").strip()
+    if entry_key:
+        keys = list(category.get("top_entry_keys") or [])
+        if entry_key not in keys:
+            keys.append(entry_key)
+        category["top_entry_keys"] = keys[:5]
 
-        action = str(row.get("recommended_action") or "").strip()
-        if action:
-            actions = list(category.get("recommended_actions") or [])
-            if action not in actions:
-                actions.append(action)
-            category["recommended_actions"] = actions[:4]
+    action = str(row.get("recommended_action") or "").strip()
+    if action:
+        actions = list(category.get("recommended_actions") or [])
+        if action not in actions:
+            actions.append(action)
+        category["recommended_actions"] = actions[:4]
 
+
+def _render_sorted_category_rows(categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in categories.values():
         severity_rank = int(row.get("_severity_rank") or 0)
@@ -574,7 +566,23 @@ def friction_categories(window_days: int = 7, limit: int = 20) -> dict[str, Any]
     )
     for row in rows:
         row.pop("_severity_rank", None)
+    return rows
 
+
+def friction_categories(window_days: int = 7, limit: int = 20) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    base = friction_entry_points(window_days=window_days, limit=max(200, limit * 10))
+    entry_points = base.get("entry_points") if isinstance(base.get("entry_points"), list) else []
+
+    categories: dict[str, dict[str, Any]] = {}
+    for row in entry_points:
+        if not isinstance(row, dict):
+            continue
+        key = _entry_point_category(str(row.get("key") or ""))
+        category = categories.setdefault(key, _new_category_rollup(key))
+        _merge_category_rollup(category, row)
+
+    rows = _render_sorted_category_rows(categories)
     limited = rows[: max(1, min(limit, 200))]
     return {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
