@@ -4224,13 +4224,43 @@ def _provider_cli_missing_for_auto_heal(provider: str) -> bool:
 
 
 def _provider_install_commands(provider: str) -> list[str]:
+    def _package_bootstrap(packages: list[str]) -> str:
+        joined = " ".join(packages)
+        return (
+            "if command -v apt-get >/dev/null 2>&1; then "
+            "apt-get update && DEBIAN_FRONTEND=noninteractive "
+            f"apt-get install -y --no-install-recommends {joined}; "
+            "elif command -v apk >/dev/null 2>&1; then "
+            f"apk add --no-cache {joined}; "
+            "elif command -v dnf >/dev/null 2>&1; then "
+            f"dnf install -y {joined}; "
+            "elif command -v yum >/dev/null 2>&1; then "
+            f"yum install -y {joined}; "
+            "else echo 'no_supported_pkg_manager'; exit 1; fi"
+        )
+
+    ensure_curl_cmd = (
+        "if ! command -v curl >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['curl'])}; "
+        "fi"
+    )
+    ensure_node_cmd = (
+        "if ! command -v npm >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['nodejs', 'npm'])}; "
+        "fi"
+    )
     env_overrides = {
         "cursor": "AUTOMATION_CURSOR_INSTALL_COMMANDS",
         "claude-code": "AUTOMATION_CLAUDE_CODE_INSTALL_COMMANDS",
     }
     default_commands = {
-        "cursor": ["curl -fsSL https://cursor.com/install | bash"],
+        "cursor": [
+            ensure_curl_cmd,
+            "curl -fsSL https://cursor.com/install | bash",
+        ],
         "claude-code": [
+            ensure_curl_cmd,
+            ensure_node_cmd,
             "curl -fsSL https://claude.ai/install.sh | bash",
             "npm install -g @anthropic-ai/claude-code",
         ],
