@@ -204,6 +204,25 @@ def test_infer_executor_detects_clawwork_alias():
     assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
 
 
+def test_sanitize_claude_command_for_root_strips_dangerous_flag(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    command, changed = agent_runner._sanitize_claude_command_for_root(
+        'claude -p "smoke" --dangerously-skip-permissions'
+    )
+    assert changed is True
+    assert "--dangerously-skip-permissions" not in command
+    assert command.startswith("claude -p")
+
+
+def test_sanitize_claude_command_for_non_root_keeps_flag(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 1000)
+    command, changed = agent_runner._sanitize_claude_command_for_root(
+        'claude -p "smoke" --dangerously-skip-permissions'
+    )
+    assert changed is False
+    assert "--dangerously-skip-permissions" in command
+
+
 def test_cli_install_provider_for_command_detects_supported_providers():
     assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
     assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
