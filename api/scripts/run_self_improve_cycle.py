@@ -555,7 +555,7 @@ def _status_for_records(records: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _collect_input_bundle(
+def _collect_usage_snapshot(
     client: Any,
     *,
     base_url: str,
@@ -568,7 +568,6 @@ def _collect_input_bundle(
     )
     usage_payload = _coerce_dict(usage_payload_raw, {})
     usage_source = "live"
-
     if not usage_ok:
         cache_ok, cache_payload = _load_cached_usage_payload(usage_cache_path)
         if cache_ok:
@@ -581,69 +580,6 @@ def _collect_input_bundle(
 
     if usage_source == "live" and usage_ok and usage_status_code == 200:
         _save_cached_usage_payload(usage_cache_path, usage_payload)
-
-    task_ok, tasks_payload_raw, task_error, task_status_code = _safe_get(
-        client,
-        f"{base_url}/api/agent/tasks?limit=40",
-    )
-    task_records = _extract_records(tasks_payload_raw)
-
-    needs_decision_ok, needs_decision_payload_raw, needs_decision_error, needs_decision_status_code = _safe_get(
-        client,
-        f"{base_url}/api/agent/tasks?status=needs_decision&limit=20",
-    )
-    needs_decision_records = _extract_records(needs_decision_payload_raw)
-
-    friction_ok, friction_payload_raw, friction_error, friction_status_code = _safe_get(
-        client,
-        f"{base_url}/api/friction/events?status=open&limit=50",
-    )
-    friction_records = _extract_records(friction_payload_raw)
-    friction_categories_ok, friction_categories_payload_raw, friction_categories_error, friction_categories_status_code = (
-        _safe_get(
-            client,
-            f"{base_url}/api/friction/categories?window_days={max(1, FRICTION_CATEGORY_WINDOW_DAYS)}&limit={max(1, FRICTION_CATEGORY_LIMIT)}",
-        )
-    )
-    friction_category_records = _extract_records(friction_categories_payload_raw)
-    top_friction_categories = [
-        str(row.get("key") or "").strip()
-        for row in friction_category_records[:4]
-        if str(row.get("key") or "").strip()
-    ]
-
-    unblock_ok, unblock_payload_raw, unblock_error, unblock_status_code = _safe_post(
-        client,
-        f"{base_url}/api/inventory/flow/next-unblock-task"
-        f"?create_task=false&runtime_window_seconds={max(60, UNBLOCK_QUEUE_WINDOW_SECONDS)}",
-        json=None,
-        attempts=1,
-    )
-    unblock_payload = _coerce_dict(unblock_payload_raw, {})
-    roi_ok, roi_payload_raw, roi_error, roi_status_code = _safe_post(
-        client,
-        f"{base_url}/api/inventory/questions/next-highest-roi-task?create_task=false",
-        json=None,
-        attempts=1,
-    )
-    roi_payload = _coerce_dict(roi_payload_raw, {})
-
-    runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
-        client,
-        f"{base_url}/api/runtime/endpoints/summary?limit=25",
-    )
-    runtime_payload = _coerce_dict(runtime_payload_raw, {})
-    if isinstance(runtime_payload_raw, list):
-        runtime_payload = {"summary": runtime_payload_raw}
-    daily_summary_ok, daily_summary_payload_raw, daily_summary_error, daily_summary_status_code = _safe_get(
-        client,
-        f"{base_url}/api/automation/usage/daily-summary?window_hours=24&top_n=5",
-    )
-    daily_summary_payload = _coerce_dict(daily_summary_payload_raw, {})
-    quality_awareness = _coerce_dict(daily_summary_payload.get("quality_awareness"), {})
-    quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
-    quality_hotspots = _coerce_list(quality_awareness.get("hotspots"), [])
-    quality_guidance = _coerce_list(quality_awareness.get("guidance"), [])
 
     usage_alerts = _coerce_list(usage_payload.get("alerts"), [])
     blocking_alerts: list[dict[str, Any]] = []
@@ -670,11 +606,53 @@ def _collect_input_bundle(
                 }
             )
 
-    data_quality_mode = "full"
-    if usage_source in {"cached", "missing"}:
-        data_quality_mode = "degraded_usage"
-    if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok or not daily_summary_ok:
-        data_quality_mode = "degraded_partial"
+    return {
+        "ok": usage_ok,
+        "source": usage_source,
+        "payload": usage_payload,
+        "error": usage_error,
+        "status_code": usage_status_code,
+        "threshold_ratio": threshold_ratio,
+        "blocking_alerts": blocking_alerts,
+        "counts": {
+            "alerts_total": len(usage_alerts),
+            "blocking": len(blocking_alerts),
+        },
+    }
+
+
+def _collect_friction_awareness_snapshot(client: Any, *, base_url: str) -> dict[str, Any]:
+    friction_ok, friction_payload_raw, friction_error, friction_status_code = _safe_get(
+        client,
+        f"{base_url}/api/friction/events?status=open&limit=50",
+    )
+    friction_records = _extract_records(friction_payload_raw)
+    friction_categories_ok, friction_categories_payload_raw, friction_categories_error, friction_categories_status_code = (
+        _safe_get(
+            client,
+            f"{base_url}/api/friction/categories?window_days={max(1, FRICTION_CATEGORY_WINDOW_DAYS)}&limit={max(1, FRICTION_CATEGORY_LIMIT)}",
+        )
+    )
+    friction_category_records = _extract_records(friction_categories_payload_raw)
+    top_friction_categories = [
+        str(row.get("key") or "").strip()
+        for row in friction_category_records[:4]
+        if str(row.get("key") or "").strip()
+    ]
+
+    unblock_ok, unblock_payload_raw, unblock_error, unblock_status_code = _safe_post(
+        client,
+        f"{base_url}/api/inventory/flow/next-unblock-task"
+        f"?create_task=false&runtime_window_seconds={max(60, UNBLOCK_QUEUE_WINDOW_SECONDS)}",
+        json=None,
+        attempts=1,
+    )
+    roi_ok, roi_payload_raw, roi_error, roi_status_code = _safe_post(
+        client,
+        f"{base_url}/api/inventory/questions/next-highest-roi-task?create_task=false",
+        json=None,
+        attempts=1,
+    )
 
     awareness_gaps: list[str] = []
     if not friction_categories_ok:
@@ -685,48 +663,6 @@ def _collect_input_bundle(
         awareness_gaps.append("roi_queue_unavailable")
 
     return {
-        "collected_at": _utcnow(),
-        "summary": {
-            "task_count": len(task_records),
-            "needs_decision_count": len(needs_decision_records),
-            "friction_open_count": len(friction_records),
-            "friction_category_count": len(friction_category_records),
-            "top_friction_categories": top_friction_categories,
-            "runtime_endpoint_count": len(_coerce_list(runtime_payload.get("summary"), [])),
-            "blocking_usage_alert_count": len(blocking_alerts),
-            "quality_hotspot_count": len(quality_hotspots),
-            "quality_guidance_count": len(quality_guidance),
-            "quality_severity": str(quality_summary.get("severity") or "unknown"),
-            "awareness_gap_count": len(awareness_gaps),
-        },
-        "usage": {
-            "ok": usage_ok,
-            "source": usage_source,
-            "payload": usage_payload,
-            "error": usage_error,
-            "status_code": usage_status_code,
-            "threshold_ratio": threshold_ratio,
-            "blocking_alerts": blocking_alerts,
-            "counts": {
-                "alerts_total": len(usage_alerts),
-                "blocking": len(blocking_alerts),
-            },
-        },
-        "tasks": {
-            "ok": task_ok,
-            "error": task_error,
-            "status_code": task_status_code,
-            "records": task_records[:20],
-            "count": len(task_records),
-            "status_counts": _status_for_records(task_records),
-        },
-        "needs_decision": {
-            "ok": needs_decision_ok,
-            "error": needs_decision_error,
-            "status_code": needs_decision_status_code,
-            "records": needs_decision_records,
-            "count": len(needs_decision_records),
-        },
         "friction": {
             "ok": friction_ok,
             "error": friction_error,
@@ -745,14 +681,39 @@ def _collect_input_bundle(
             "ok": unblock_ok,
             "error": unblock_error,
             "status_code": unblock_status_code,
-            "payload": unblock_payload,
+            "payload": _coerce_dict(unblock_payload_raw, {}),
         },
         "roi_next_task": {
             "ok": roi_ok,
             "error": roi_error,
             "status_code": roi_status_code,
-            "payload": roi_payload,
+            "payload": _coerce_dict(roi_payload_raw, {}),
         },
+        "top_friction_categories": top_friction_categories,
+        "awareness_gaps": awareness_gaps,
+    }
+
+
+def _collect_quality_snapshot(client: Any, *, base_url: str) -> dict[str, Any]:
+    runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
+        client,
+        f"{base_url}/api/runtime/endpoints/summary?limit=25",
+    )
+    runtime_payload = _coerce_dict(runtime_payload_raw, {})
+    if isinstance(runtime_payload_raw, list):
+        runtime_payload = {"summary": runtime_payload_raw}
+
+    daily_summary_ok, daily_summary_payload_raw, daily_summary_error, daily_summary_status_code = _safe_get(
+        client,
+        f"{base_url}/api/automation/usage/daily-summary?window_hours=24&top_n=5",
+    )
+    daily_summary_payload = _coerce_dict(daily_summary_payload_raw, {})
+    quality_awareness = _coerce_dict(daily_summary_payload.get("quality_awareness"), {})
+    quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
+    quality_hotspots = _coerce_list(quality_awareness.get("hotspots"), [])
+    quality_guidance = _coerce_list(quality_awareness.get("guidance"), [])
+
+    return {
         "runtime": {
             "ok": runtime_ok,
             "error": runtime_error,
@@ -772,6 +733,98 @@ def _collect_input_bundle(
             "guidance": quality_guidance[:8],
             "recommended_tasks": _coerce_list(quality_awareness.get("recommended_tasks"), [])[:5],
         },
+    }
+
+
+def _collect_input_bundle(
+    client: Any,
+    *,
+    base_url: str,
+    threshold_ratio: float,
+    usage_cache_path: Path,
+) -> dict[str, Any]:
+    usage = _collect_usage_snapshot(
+        client,
+        base_url=base_url,
+        threshold_ratio=threshold_ratio,
+        usage_cache_path=usage_cache_path,
+    )
+    task_ok, tasks_payload_raw, task_error, task_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?limit=40",
+    )
+    task_records = _extract_records(tasks_payload_raw)
+
+    needs_decision_ok, needs_decision_payload_raw, needs_decision_error, needs_decision_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?status=needs_decision&limit=20",
+    )
+    needs_decision_records = _extract_records(needs_decision_payload_raw)
+
+    friction_awareness = _collect_friction_awareness_snapshot(client, base_url=base_url)
+    quality = _collect_quality_snapshot(client, base_url=base_url)
+
+    data_quality_mode = "full"
+    if str(usage.get("source") or "") in {"cached", "missing"}:
+        data_quality_mode = "degraded_usage"
+    if (
+        not task_ok
+        or not needs_decision_ok
+        or not bool(_coerce_dict(friction_awareness.get("friction"), {}).get("ok"))
+        or not bool(_coerce_dict(quality.get("runtime"), {}).get("ok"))
+        or not bool(_coerce_dict(quality.get("daily_summary"), {}).get("ok"))
+    ):
+        data_quality_mode = "degraded_partial"
+    quality_awareness = _coerce_dict(quality.get("quality_awareness"), {})
+    quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
+    awareness_gaps = _coerce_list(friction_awareness.get("awareness_gaps"), [])
+    blocking_alerts = _coerce_list(_coerce_dict(usage).get("blocking_alerts"), [])
+    friction_records = _extract_records(_coerce_dict(friction_awareness.get("friction"), {}).get("records"))
+    friction_category_records = _extract_records(
+        _coerce_dict(friction_awareness.get("friction_categories"), {}).get("records")
+    )
+    runtime_summary_rows = _coerce_list(_coerce_dict(_coerce_dict(quality.get("runtime"), {}).get("payload")).get("summary"))
+    quality_hotspots = _coerce_list(quality_awareness.get("hotspots"), [])
+    quality_guidance = _coerce_list(quality_awareness.get("guidance"), [])
+
+    return {
+        "collected_at": _utcnow(),
+        "summary": {
+            "task_count": len(task_records),
+            "needs_decision_count": len(needs_decision_records),
+            "friction_open_count": len(friction_records),
+            "friction_category_count": len(friction_category_records),
+            "top_friction_categories": _coerce_list(friction_awareness.get("top_friction_categories"), [])[:4],
+            "runtime_endpoint_count": len(runtime_summary_rows),
+            "blocking_usage_alert_count": len(blocking_alerts),
+            "quality_hotspot_count": len(quality_hotspots),
+            "quality_guidance_count": len(quality_guidance),
+            "quality_severity": str(quality_summary.get("severity") or "unknown"),
+            "awareness_gap_count": len(awareness_gaps),
+        },
+        "usage": usage,
+        "tasks": {
+            "ok": task_ok,
+            "error": task_error,
+            "status_code": task_status_code,
+            "records": task_records[:20],
+            "count": len(task_records),
+            "status_counts": _status_for_records(task_records),
+        },
+        "needs_decision": {
+            "ok": needs_decision_ok,
+            "error": needs_decision_error,
+            "status_code": needs_decision_status_code,
+            "records": needs_decision_records,
+            "count": len(needs_decision_records),
+        },
+        "friction": _coerce_dict(friction_awareness.get("friction"), {}),
+        "friction_categories": _coerce_dict(friction_awareness.get("friction_categories"), {}),
+        "unblock_queue": _coerce_dict(friction_awareness.get("unblock_queue"), {}),
+        "roi_next_task": _coerce_dict(friction_awareness.get("roi_next_task"), {}),
+        "runtime": _coerce_dict(quality.get("runtime"), {}),
+        "daily_summary": _coerce_dict(quality.get("daily_summary"), {}),
+        "quality_awareness": quality_awareness,
         "awareness_gaps": awareness_gaps,
         "data_quality_mode": data_quality_mode,
     }
