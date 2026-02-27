@@ -66,13 +66,11 @@ _DEFAULT_REQUIRED_PROVIDERS = (
     "openai",
     "openrouter",
     "railway",
-    "supabase",
 )
 _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "coherence-internal",
     "openai-codex",
     "openrouter",
-    "supabase",
     "github",
     "railway",
     "claude",
@@ -1081,6 +1079,10 @@ def _validation_required_providers_from_env() -> list[str]:
 def _env_truthy(name: str, default: bool = False) -> bool:
     raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def _supabase_tracking_enabled() -> bool:
+    return _env_truthy("AUTOMATION_TRACK_SUPABASE", default=False)
 
 
 def _infer_provider_from_model(model_name: str) -> str:
@@ -2775,9 +2777,10 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_config_only_snapshot("openclaw"),
         _build_cursor_snapshot(),
         _build_db_host_snapshot(),
-        _build_supabase_snapshot(),
         _build_railway_snapshot(),
     ]
+    if _supabase_tracking_enabled():
+        providers.append(_build_supabase_snapshot())
     for snapshot in providers:
         _append_codex_subscription_metrics(snapshot)
         active_count = int(active_usage.get(_normalize_provider_name(snapshot.provider), 0))

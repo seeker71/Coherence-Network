@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/disable-supabase-tracking-20260226151735",
+  "commit_scope": "Disable default Supabase provider tracking/requirements for automation usage since execution now runs on Railway; keep Supabase support available via explicit opt-in.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "idea_ids": [
+    "idea-disable-default-supabase-tracking"
+  ],
+  "spec_ids": [
+    "spec-provider-defaults-railway-only"
+  ],
+  "task_ids": [
+    "task-2026-02-27-disable-default-supabase-tracking"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T012203Z_codex-disable-supabase-tracking-20260226151735.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-27_disable-default-supabase-tracking.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Supabase is no longer tracked or required by default in automation usage/readiness/validation flows; Railway-focused providers remain tracked. Supabase tracking remains available via explicit opt-in settings.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/provider-validation"
+    ],
+    "test_flows": [
+      "Call /api/automation/usage and verify provider list does not include supabase when AUTOMATION_TRACK_SUPABASE is unset.",
+      "Call /api/automation/usage/readiness with default required providers and verify supabase is not in required_providers.",
+      "Call provider validation with explicit required_providers=openrouter,supabase and verify supabase probe still works (explicit opt-in path)."
+    ]
+  }
+}
