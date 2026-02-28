@@ -471,6 +471,42 @@ def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
     assert install_called["value"] is False
 
 
+def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/root/.local/bin/agent" if binary == "agent" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner,
+        "_ensure_cursor_node_shim",
+        lambda *, env, cursor_binary="": (True, "cursor_node_shim_present:/root/.local/bin/node"),
+    )
+    promote_called = {"value": False}
+
+    def _promote(binary: str, source_path: str):
+        promote_called["value"] = True
+        return "/usr/local/bin/agent"
+
+    monkeypatch.setattr(agent_runner, "_promote_binary_to_shared_path", _promote)
+
+    env = {"PATH": "/usr/bin:/root/.local/bin", "HOME": "/root"}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='agent "smoke" --model auto',
+        env=env,
+        task_id="task_cursor_no_promote",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert ok is True
+    assert promote_called["value"] is False
+    assert "/root/.local/bin/agent" in detail
+    assert "/usr/local/bin/agent" not in detail
+
+
 def test_resolve_node_binary_prefers_non_shim_candidate(monkeypatch):
     monkeypatch.setattr(
         agent_runner.shutil,
