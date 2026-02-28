@@ -867,7 +867,7 @@ def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch
     assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
 
 
-def test_run_one_task_does_not_schedule_api_key_auth_fallback_when_disallowed(monkeypatch, tmp_path):
+def test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback(monkeypatch, tmp_path):
     t = [5200.0]
 
     def _mono():
@@ -908,29 +908,20 @@ def test_run_one_task_does_not_schedule_api_key_auth_fallback_when_disallowed(mo
     )
     assert done is True
 
-    pending_patches = [
+    pending_patch = next(
         patch
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
-    ]
-    assert pending_patches == []
-
-    failed_patch = next(
-        patch
-        for url, patch in client.patches
-        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
     )
-    failed_patches = [
-        patch
-        for url, patch in client.patches
-        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
-    ]
-    assert len(failed_patches) == 1
-    context = failed_patch.get("context") or {}
-    assert context.get("runner_codex_auth_mode") != "api_key"
+    context = pending_patch.get("context") or {}
+    assert context.get("runner_codex_auth_mode") == "oauth"
+    assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
+    retry_meta = context.get("runner_codex_oauth_refresh_retry") or {}
+    assert retry_meta.get("trigger") == "oauth_refresh_token_reused"
+    assert retry_meta.get("mode") == "oauth"
     assert context.get("runner_codex_auth_fallback_attempted") is not True
     assert (context.get("runner_codex_auth_fallback") or {}) == {}
-    assert "retrying with api_key auth mode" not in str(failed_patch.get("output") or "")
+    assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
 
 
 def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):
