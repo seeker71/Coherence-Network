@@ -1195,9 +1195,9 @@ def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None
     if current in {"api_key", "oauth", "auto"}:
         ctx["runner_codex_auth_mode"] = current
         return
-    configured = str(os.environ.get("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", "api_key")).strip().lower()
+    configured = str(os.environ.get("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", "oauth")).strip().lower()
     if configured not in {"api_key", "oauth", "auto"}:
-        configured = "api_key"
+        configured = "oauth"
     ctx["runner_codex_auth_mode"] = configured
 
 

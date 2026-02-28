@@ -3130,7 +3130,7 @@ def _prepare_codex_command_for_exec(command: str) -> tuple[str | list[str], bool
     return argv, False, "argv"
 
 
-def _normalize_codex_auth_mode(raw: Any, *, default: str = "api_key") -> str:
+def _normalize_codex_auth_mode(raw: Any, *, default: str = "oauth") -> str:
     mode = str(raw or "").strip().lower()
     if mode in CODEX_AUTH_MODE_VALUES:
         return mode
@@ -3138,10 +3138,10 @@ def _normalize_codex_auth_mode(raw: Any, *, default: str = "api_key") -> str:
 
 
 def _codex_auth_mode(override: str | None = None) -> str:
-    raw = override if str(override or "").strip() else os.environ.get("AGENT_CODEX_AUTH_MODE", "api_key")
+    raw = override if str(override or "").strip() else os.environ.get("AGENT_CODEX_AUTH_MODE", "oauth")
     if raw in CODEX_AUTH_MODE_VALUES:
         return str(raw).strip().lower()
-    return _normalize_codex_auth_mode(raw, default="api_key")
+    return _normalize_codex_auth_mode(raw, default="oauth")
 
 
 def _abs_expanded_path(path: str) -> str:
@@ -3331,22 +3331,24 @@ def _configure_codex_cli_environment(
     openai_primary_key = openai_api_key or openai_admin_key
     api_key_present = bool(openai_primary_key)
     oauth_available_initial, oauth_source_initial = _codex_oauth_session_status(env)
-    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "1"))
+    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0"))
     api_key_login_bootstrapped = False
     api_key_login_source = ""
 
     effective_mode = requested_mode
     if requested_mode == "auto":
-        effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available_initial else "api_key")
+        if oauth_available_initial:
+            effective_mode = "oauth"
+        elif allow_oauth_fallback and api_key_present:
+            effective_mode = "api_key"
+        else:
+            effective_mode = "oauth"
 
     if effective_mode == "oauth":
-        if allow_oauth_fallback and api_key_present:
-            _set_openai_api_env(env, api_key=openai_primary_key)
-        else:
-            env.pop("OPENAI_API_KEY", None)
-            env.pop("OPENAI_ADMIN_API_KEY", None)
-            env.pop("OPENAI_API_BASE", None)
-            env.pop("OPENAI_BASE_URL", None)
+        env.pop("OPENAI_API_KEY", None)
+        env.pop("OPENAI_ADMIN_API_KEY", None)
+        env.pop("OPENAI_API_BASE", None)
+        env.pop("OPENAI_BASE_URL", None)
     else:
         if _as_bool(os.environ.get("AGENT_CODEX_API_KEY_ISOLATE_HOME", "1")):
             _ensure_codex_api_key_isolated_home(env, task_id=task_id)
@@ -4998,10 +5000,12 @@ def run_one_task(
             retry_context_patch: dict[str, Any] | None = None
             if _uses_codex_cli(command):
                 auth_fallback_already_attempted = _as_bool(task_ctx.get("runner_codex_auth_fallback_attempted"))
+                oauth_fallback_allowed = bool(codex_auth_state and codex_auth_state.get("oauth_fallback_allowed"))
                 oauth_retry_eligible = bool(
                     codex_auth_state
                     and codex_auth_state.get("effective_mode") == "oauth"
                     and codex_auth_state.get("api_key_present")
+                    and oauth_fallback_allowed
                 )
                 if oauth_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
                     if not auth_fallback_already_attempted:
