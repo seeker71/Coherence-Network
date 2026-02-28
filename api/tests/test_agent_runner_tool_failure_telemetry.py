@@ -418,14 +418,24 @@ def test_ensure_cli_for_command_installs_cursor_when_missing(monkeypatch, tmp_pa
 
     install_state = {"installed": False}
 
+    agent_bin = tmp_path / "bin" / "agent"
+    runtime_node = tmp_path / "bin" / "node"
+    runtime_index = tmp_path / "bin" / "index.js"
+
     def _which(binary: str, path: str | None = None):
         if binary == "agent" and install_state["installed"]:
-            return str(tmp_path / "bin" / "agent")
+            return str(agent_bin)
         return None
 
     def _run_install(command: str, *, env: dict[str, str], timeout_seconds: int):
         assert "install-cursor" in command
         install_state["installed"] = True
+        agent_bin.parent.mkdir(parents=True, exist_ok=True)
+        agent_bin.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        runtime_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        runtime_index.write_text("console.log('ok')\n", encoding="utf-8")
+        agent_bin.chmod(0o755)
+        runtime_node.chmod(0o755)
         return True, "installed"
 
     monkeypatch.setattr(agent_runner.shutil, "which", _which)
@@ -471,14 +481,25 @@ def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
     assert install_called["value"] is False
 
 
-def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeypatch):
+def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    cursor_home = tmp_path / "cursor-home"
+    runtime_dir = cursor_home / ".local" / "bin"
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    agent_bin = runtime_dir / "agent"
+    runtime_node = runtime_dir / "node"
+    runtime_index = runtime_dir / "index.js"
+    agent_bin.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    runtime_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    runtime_index.write_text("console.log('ok')\n", encoding="utf-8")
+    agent_bin.chmod(0o755)
+    runtime_node.chmod(0o755)
     monkeypatch.setattr(
         agent_runner.shutil,
         "which",
-        lambda binary, path=None: "/root/.local/bin/agent" if binary == "agent" else None,
+        lambda binary, path=None: str(agent_bin) if binary == "agent" else None,
     )
     monkeypatch.setattr(
         agent_runner,
@@ -493,7 +514,7 @@ def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeyp
 
     monkeypatch.setattr(agent_runner, "_promote_binary_to_shared_path", _promote)
 
-    env = {"PATH": "/usr/bin:/root/.local/bin", "HOME": "/root"}
+    env = {"PATH": f"/usr/bin:{runtime_dir}", "HOME": str(cursor_home)}
     ok, detail = agent_runner._ensure_cli_for_command(
         command='agent "smoke" --model auto',
         env=env,
@@ -503,7 +524,7 @@ def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeyp
 
     assert ok is True
     assert promote_called["value"] is False
-    assert "/root/.local/bin/agent" in detail
+    assert str(agent_bin) in detail
     assert "/usr/local/bin/agent" not in detail
 
 
@@ -574,6 +595,34 @@ def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_syste
     assert "--use-system-ca" in content
     assert "exec /usr/bin/node \"$@\"" in content
     assert os.access(shim_path, os.X_OK)
+
+
+def test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout(monkeypatch, tmp_path):
+    bad_dir = tmp_path / "bad"
+    good_dir = tmp_path / "good"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    good_dir.mkdir(parents=True, exist_ok=True)
+
+    bad_agent = bad_dir / "agent"
+    good_agent = good_dir / "agent"
+    good_node = good_dir / "node"
+    good_index = good_dir / "index.js"
+
+    bad_agent.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_agent.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_index.write_text("console.log('ok')\n", encoding="utf-8")
+    bad_agent.chmod(0o755)
+    good_agent.chmod(0o755)
+    good_node.chmod(0o755)
+
+    monkeypatch.setattr(agent_runner, "_candidate_cli_paths", lambda binary, env: [str(bad_agent), str(good_agent)])
+    monkeypatch.setattr(agent_runner.shutil, "which", lambda binary, path=None: str(bad_agent))
+
+    resolved, layout_ok, layout_detail = agent_runner._resolve_cursor_cli_binary("agent", {"PATH": str(bad_dir)})
+    assert resolved == str(good_agent)
+    assert layout_ok is True
+    assert layout_detail.startswith("cursor_runtime_layout_ok:")
 
 
 def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monkeypatch):
