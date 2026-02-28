@@ -12,7 +12,11 @@ from app.main import app
 from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor, ContributorType
-from app.services.contributor_hygiene import is_test_contributor_email
+from app.services.contributor_hygiene import (
+    is_internal_contributor_email,
+    is_test_contributor_email,
+    normalize_contributor_email,
+)
 
 
 def test_is_test_contributor_email_recognizes_reserved_domains() -> None:
@@ -20,6 +24,17 @@ def test_is_test_contributor_email_recognizes_reserved_domains() -> None:
     assert is_test_contributor_email("alice@example.org") is True
     assert is_test_contributor_email("dev@example.net") is True
     assert is_test_contributor_email("alice@coherence.network") is False
+
+
+def test_normalize_contributor_email_collapses_plus_alias_by_default() -> None:
+    assert normalize_contributor_email("Urs-Muff+abc123@coherence.network") == "urs-muff@coherence.network"
+    assert normalize_contributor_email("alice@example.com") == "alice@example.com"
+
+
+def test_is_internal_contributor_email_detects_system_prefixes() -> None:
+    assert is_internal_contributor_email("deploy-test@coherence.network") is True
+    assert is_internal_contributor_email("machine-reviewer-1@coherence.network") is True
+    assert is_internal_contributor_email("urs-muff@coherence.network") is False
 
 
 @pytest.mark.asyncio
