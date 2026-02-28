@@ -38,8 +38,8 @@ FRICTION_CATEGORY_WINDOW_DAYS = int(os.environ.get("SELF_IMPROVE_FRICTION_WINDOW
 FRICTION_CATEGORY_LIMIT = int(os.environ.get("SELF_IMPROVE_FRICTION_CATEGORY_LIMIT", "12"))
 UNBLOCK_QUEUE_WINDOW_SECONDS = int(os.environ.get("SELF_IMPROVE_UNBLOCK_WINDOW_SECONDS", "86400"))
 SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE = str(
-    os.environ.get("SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE", "api_key")
-).strip().lower() or "api_key"
+    os.environ.get("SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE", "oauth")
+).strip().lower() or "oauth"
 
 STAGE_SPECS = {
     "plan": {"task_type": "spec", "model": PLAN_MODEL},
