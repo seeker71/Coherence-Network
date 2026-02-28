@@ -410,6 +410,11 @@ def test_ensure_cli_for_command_installs_cursor_when_missing(monkeypatch, tmp_pa
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
     monkeypatch.setenv("AGENT_RUNNER_CURSOR_INSTALL_COMMANDS", "echo install-cursor")
+    monkeypatch.setattr(
+        agent_runner,
+        "_ensure_cursor_node_shim",
+        lambda *, env, cursor_binary="": (True, "cursor_node_shim_created:/usr/local/bin/node->/usr/bin/node"),
+    )
 
     install_state = {"installed": False}
 
@@ -512,6 +517,27 @@ def test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary(monkeypa
 
     resolved = agent_runner._resolve_node_binary({"PATH": "/mise/shims"})
     assert resolved == "/mise/shims/node"
+
+
+def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca(monkeypatch, tmp_path):
+    shim_path = tmp_path / "node"
+    monkeypatch.setenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", str(shim_path))
+    monkeypatch.setattr(agent_runner, "_resolve_node_binary", lambda env: "/usr/bin/node")
+    monkeypatch.setattr(
+        agent_runner,
+        "_node_binary_accepts_use_system_ca",
+        lambda binary, *, env: binary == str(shim_path),
+    )
+
+    ok, detail = agent_runner._ensure_cursor_node_shim(env={"PATH": "/usr/bin"}, cursor_binary="")
+
+    assert ok is True
+    assert detail.startswith("cursor_node_shim_created_compat:")
+    assert shim_path.exists()
+    content = shim_path.read_text(encoding="utf-8")
+    assert "--use-system-ca" in content
+    assert "exec /usr/bin/node \"$@\"" in content
+    assert os.access(shim_path, os.X_OK)
 
 
 def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monkeypatch):
@@ -764,6 +790,42 @@ def test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b6
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refresh_token") == "nested-refresh-token"
     assert loaded.get("access_token") == "nested-access-token"
+
+
+def test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present(monkeypatch, tmp_path):
+    existing_payload = {
+        "access_token": "existing-access-token",
+        "refresh_token": "existing-refresh-token",
+        "auth_mode": "oauth",
+    }
+    target = tmp_path / ".codex" / "auth.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(existing_payload), encoding="utf-8")
+
+    incoming_payload = {
+        "access_token": "incoming-access-token",
+        "refresh_token": "incoming-refresh-token",
+        "auth_mode": "oauth",
+    }
+    encoded = base64.b64encode(json.dumps(incoming_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_preserve_existing_session",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session"] is True
+    assert auth["oauth_session_bootstrapped"] is False
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_preserved_existing:")
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "existing-refresh-token"
+    assert loaded.get("access_token") == "existing-access-token"
 
 
 def test_configure_codex_cli_environment_defaults_oauth_fallback_off(monkeypatch, tmp_path):
