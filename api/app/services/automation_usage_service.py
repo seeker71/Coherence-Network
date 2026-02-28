@@ -4280,8 +4280,11 @@ def provider_limit_guard_decision(provider: str, *, force_refresh: bool = False)
     )
 
 
-def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
-    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+def _resolved_required_provider_set(
+    required_providers: list[str] | None,
+    *,
+    active_counts: dict[str, int],
+) -> set[str]:
     required = [
         _provider_family_name(item)
         for item in (required_providers or _required_providers_from_env())
@@ -4291,10 +4294,15 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         for provider_name, count in active_counts.items():
             if count > 0:
                 required.append(provider_name)
-    required_set = set(required)
-    overview = coalesce_usage_overview_families(
-        collect_usage_overview(force_refresh=force_refresh)
-    )
+    return set(required)
+
+
+def _provider_readiness_report_for_overview(
+    *,
+    overview: ProviderUsageOverview,
+    required_set: set[str],
+    active_counts: dict[str, int],
+) -> ProviderReadinessReport:
     by_provider = {
         family: row
         for row in overview.providers
@@ -4390,6 +4398,33 @@ def provider_readiness_report(*, required_providers: list[str] | None = None, fo
         recommendations=recommendations,
         providers=rows,
         limit_telemetry=limit_telemetry,
+    )
+
+
+def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+    required_set = _resolved_required_provider_set(required_providers, active_counts=active_counts)
+    overview = coalesce_usage_overview_families(
+        collect_usage_overview(force_refresh=force_refresh)
+    )
+    return _provider_readiness_report_for_overview(
+        overview=overview,
+        required_set=required_set,
+        active_counts=active_counts,
+    )
+
+
+def provider_readiness_report_from_snapshots(
+    *,
+    required_providers: list[str] | None = None,
+) -> ProviderReadinessReport:
+    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+    required_set = _resolved_required_provider_set(required_providers, active_counts=active_counts)
+    overview = coalesce_usage_overview_families(usage_overview_from_snapshots())
+    return _provider_readiness_report_for_overview(
+        overview=overview,
+        required_set=required_set,
+        active_counts=active_counts,
     )
 
 
