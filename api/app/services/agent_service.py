@@ -73,6 +73,13 @@ _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"`[^`]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)`", re.IGNORECASE),
     re.compile(r"\b[A-Za-z0-9_.\-]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)\b", re.IGNORECASE),
 )
+_TASK_CARD_REQUIRED_FIELDS: tuple[str, ...] = (
+    "goal",
+    "files_allowed",
+    "done_when",
+    "commands",
+    "constraints",
+)
 
 
 def _int_env(name: str, default: int) -> int:
@@ -254,6 +261,45 @@ def _task_retry_hint(context: dict[str, Any]) -> int:
             if value.isdigit():
                 return max(0, int(value))
     return 0
+
+
+def _task_card_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set)):
+        return any(bool(str(item).strip()) for item in value)
+    if isinstance(value, dict):
+        return len(value) > 0
+    return True
+
+
+def _task_card_validation(context: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(context, dict) or "task_card" not in context:
+        return None
+    raw = context.get("task_card")
+    if not isinstance(raw, dict):
+        return {
+            "present": False,
+            "score": 0.0,
+            "missing": list(_TASK_CARD_REQUIRED_FIELDS),
+            "required_fields": list(_TASK_CARD_REQUIRED_FIELDS),
+        }
+
+    missing = [
+        field
+        for field in _TASK_CARD_REQUIRED_FIELDS
+        if not _task_card_value_present(raw.get(field))
+    ]
+    complete = len(_TASK_CARD_REQUIRED_FIELDS) - len(missing)
+    score = round(complete / float(len(_TASK_CARD_REQUIRED_FIELDS)), 4)
+    return {
+        "present": True,
+        "score": score,
+        "missing": missing,
+        "required_fields": list(_TASK_CARD_REQUIRED_FIELDS),
+    }
 
 
 def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
@@ -1206,6 +1252,9 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     _ensure_store_loaded(include_output=False)
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    validation = _task_card_validation(ctx)
+    if validation is not None:
+        ctx["task_card_validation"] = validation
     target_contract = _normalize_target_state_contract(
         direction=data.direction,
         task_type=data.task_type,

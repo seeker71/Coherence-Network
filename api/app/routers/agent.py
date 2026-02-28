@@ -783,6 +783,35 @@ async def get_effectiveness() -> dict:
         }
 
 
+@router.get("/agent/collective-health")
+async def get_collective_health(
+    window_days: int = Query(7, ge=1, le=30),
+) -> dict:
+    """Collective health scorecard focused on coherence, resonance, flow, and friction."""
+    try:
+        from app.services.collective_health_service import get_collective_health as _get
+
+        return _get(window_days=window_days)
+    except ImportError:
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "window_days": window_days,
+            "scores": {
+                "coherence": 0.0,
+                "resonance": 0.0,
+                "flow": 0.0,
+                "friction": 0.0,
+                "collective_value": 0.0,
+            },
+            "coherence": {},
+            "resonance": {},
+            "flow": {},
+            "friction": {},
+            "top_friction_queue": [],
+            "top_opportunities": [],
+        }
+
+
 def _agent_logs_dir() -> str:
     """Logs directory for status-report and meta_questions; overridable in tests."""
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")

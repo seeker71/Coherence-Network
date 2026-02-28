@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -118,6 +118,28 @@ def _match_waiver_for_failure(failure: dict, waivers: list[dict]) -> dict | None
     return None
 
 
+def _waiver_suggestion(failure: dict, owner: str, *, now: datetime) -> str:
+    workflow = str(failure.get("name") or "unknown").strip() or "unknown"
+    run_url = str(failure.get("html_url") or "").strip()
+    run_fragment = ""
+    match = re.search(r"actions/runs/\d+", run_url)
+    if match:
+        run_fragment = match.group(0)
+    expires_at = (now + timedelta(days=3)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    payload = {
+        "workflow": workflow,
+        "owner": owner or "unassigned",
+        "reason": (
+            "Temporary waiver while the latest main-workflow failure is actively remediated; "
+            "required to unblock start-gate for active thread completion."
+        ),
+        "expires_at": expires_at,
+    }
+    if run_fragment:
+        payload["run_url_contains"] = run_fragment
+    return json.dumps(payload, separators=(", ", ": "))
+
+
 def run_json(cmd: list[str], *, required: bool = True) -> dict | None:
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -211,7 +233,9 @@ def main() -> None:
     if proc.stdout.strip():
         raise SystemExit(
             "start-gate: current worktree has local changes. Do not abandon in-flight work: "
-            "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean worktree."
+            "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean worktree. "
+            "If you must run gates without abandoning changes, use "
+            "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate."
         )
 
     proc = subprocess.run(
@@ -327,6 +351,17 @@ def main() -> None:
                 for item in blocking_failures
             )
             if enforce_remote_failures:
+                print(
+                    "start-gate: remediation: fix or rerun the failing main workflow(s), or add a short-lived waiver "
+                    f"in {waivers_file} with owner/reason/expires_at."
+                )
+                for item in blocking_failures:
+                    name_key = str(item.get("name") or "").strip().lower()
+                    owner = workflow_owners.get(name_key, "unassigned")
+                    print(
+                        "start-gate: remediation waiver example: "
+                        + _waiver_suggestion(item, owner, now=now)
+                    )
                 raise SystemExit(
                     f"start-gate: latest main workflow failures detected: {failures_text}"
                 )
@@ -408,7 +443,9 @@ def main() -> None:
         if proc.stdout.strip():
             raise SystemExit(
                 "start-gate: primary workspace has local changes. Do not abandon in-flight work: "
-                "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean workspace."
+                "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean workspace. "
+                "If you must run gates without abandoning changes, use "
+                "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate."
             )
     elif in_worktree:
         print(
