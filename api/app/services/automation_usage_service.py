@@ -85,6 +85,11 @@ _PROVIDER_ALIASES: dict[str, str] = {
     "openai-codex": "openai",
 }
 
+_PROVIDER_FAMILY_ALIASES: dict[str, str] = {
+    "openai-codex": "openai",
+    "claude-code": "claude",
+}
+
 _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
     "hourly": 0.1,
     "weekly": 0.1,
@@ -99,6 +104,13 @@ def _normalize_provider_name(value: str | None) -> str:
     if not candidate:
         return ""
     return _PROVIDER_ALIASES.get(candidate, candidate)
+
+
+def _provider_family_name(value: str | None) -> str:
+    normalized = _normalize_provider_name(value)
+    if not normalized:
+        return ""
+    return _PROVIDER_FAMILY_ALIASES.get(normalized, normalized)
 
 
 def _snapshots_path() -> Path:
@@ -864,14 +876,140 @@ def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
     return _primary_metric(metrics)
 
 
+def _metric_quality_rank(metric: UsageMetric) -> tuple[int, int, int, int]:
+    validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
+    validation_state = str(metric.validation_state or "unknown").strip().lower()
+    has_remaining = 0 if metric.remaining is not None else 1
+    has_limit = 0 if (metric.limit is not None and float(metric.limit or 0.0) > 0.0) else 1
+    return (
+        validation_priority.get(validation_state, 2),
+        has_remaining,
+        has_limit,
+        -int(float(metric.used or 0.0) > 0.0),
+    )
+
+
+def _merge_metric_rows(base: list[UsageMetric], incoming: list[UsageMetric]) -> list[UsageMetric]:
+    merged: dict[tuple[str, str, str], UsageMetric] = {}
+    order: list[tuple[str, str, str]] = []
+    for metric in [*base, *incoming]:
+        key = (metric.id, metric.unit, str(metric.window or ""))
+        existing = merged.get(key)
+        if existing is None:
+            merged[key] = metric
+            order.append(key)
+            continue
+        if _metric_quality_rank(metric) < _metric_quality_rank(existing):
+            merged[key] = metric
+    return [merged[key] for key in order]
+
+
+def _data_source_rank(source: str) -> int:
+    priority = {
+        "provider_api": 0,
+        "provider_cli": 1,
+        "runtime_events": 2,
+        "configuration_only": 3,
+        "unknown": 4,
+    }
+    return priority.get(str(source or "").strip().lower(), 4)
+
+
+def _status_rank(status: str) -> int:
+    priority = {"ok": 0, "degraded": 1, "unavailable": 2}
+    return priority.get(str(status or "").strip().lower(), 2)
+
+
+def _normalize_usage_row_status(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
+    if snapshot.status != "degraded":
+        return snapshot
+    has_signal = any(
+        (
+            float(metric.used or 0.0) > 0.0
+            or metric.remaining is not None
+            or (metric.limit is not None and float(metric.limit or 0.0) > 0.0)
+        )
+        for metric in snapshot.metrics
+    )
+    if has_signal:
+        snapshot.status = "ok"
+        snapshot.notes = list(dict.fromkeys([*snapshot.notes, "status_normalized_from_degraded:usage_signal_present"]))
+    else:
+        snapshot.status = "unavailable"
+        snapshot.notes = list(dict.fromkeys([*snapshot.notes, "status_normalized_from_degraded:no_usage_signal"]))
+    return snapshot
+
+
+def _merge_provider_snapshot_family(
+    base: ProviderUsageSnapshot,
+    incoming: ProviderUsageSnapshot,
+    *,
+    family: str,
+) -> ProviderUsageSnapshot:
+    base.provider = family
+    base.metrics = _merge_metric_rows(base.metrics, incoming.metrics)
+    base.notes = list(dict.fromkeys([*base.notes, *incoming.notes]))
+    base.official_records = list(dict.fromkeys([*base.official_records, *incoming.official_records]))
+    if _status_rank(incoming.status) < _status_rank(base.status):
+        base.status = incoming.status
+    if _data_source_rank(incoming.data_source) < _data_source_rank(base.data_source):
+        base.data_source = incoming.data_source
+    if incoming.cost_usd is not None:
+        base.cost_usd = max(float(base.cost_usd or 0.0), float(incoming.cost_usd))
+    if incoming.capacity_tasks_per_day is not None:
+        base.capacity_tasks_per_day = max(
+            float(base.capacity_tasks_per_day or 0.0),
+            float(incoming.capacity_tasks_per_day),
+        )
+    if incoming.collected_at > base.collected_at:
+        base.collected_at = incoming.collected_at
+    for key, value in incoming.raw.items():
+        if key not in base.raw:
+            base.raw[key] = value
+    return _normalize_usage_row_status(_finalize_snapshot(base))
+
+
+def coalesce_usage_overview_families(overview: ProviderUsageOverview) -> ProviderUsageOverview:
+    grouped: dict[str, ProviderUsageSnapshot] = {}
+    order: list[str] = []
+    for row in overview.providers:
+        family = _provider_family_name(row.provider)
+        if not family:
+            continue
+        candidate = ProviderUsageSnapshot(**row.model_dump(mode="json"))
+        candidate.provider = family
+        existing = grouped.get(family)
+        if existing is None:
+            grouped[family] = _normalize_usage_row_status(_finalize_snapshot(candidate))
+            order.append(family)
+            continue
+        grouped[family] = _merge_provider_snapshot_family(existing, candidate, family=family)
+
+    merged = [grouped[name] for name in order]
+    unavailable = sorted({row.provider for row in merged if row.status != "ok"})
+    return ProviderUsageOverview(
+        generated_at=overview.generated_at,
+        providers=merged,
+        unavailable_providers=unavailable,
+        tracked_providers=len(merged),
+        limit_coverage=dict(overview.limit_coverage),
+    )
+
+
 def _finalize_snapshot(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
-    metric = _primary_metric(snapshot.metrics)
-    if metric:
-        snapshot.actual_current_usage = metric.used
-        snapshot.actual_current_usage_unit = metric.unit
-        snapshot.usage_remaining = metric.remaining
-        snapshot.usage_remaining_unit = metric.unit if metric.remaining is not None else None
-        snapshot.usage_per_time = _metric_time_rate(metric)
+    primary_metric = _primary_metric(snapshot.metrics)
+    summary_metric = _summary_metric(snapshot.metrics)
+    current_metric = primary_metric or summary_metric
+    if current_metric:
+        snapshot.actual_current_usage = current_metric.used
+        snapshot.actual_current_usage_unit = current_metric.unit
+        snapshot.usage_per_time = _metric_time_rate(current_metric)
+    remaining_metric = summary_metric or primary_metric
+    if remaining_metric:
+        snapshot.usage_remaining = remaining_metric.remaining
+        snapshot.usage_remaining_unit = (
+            remaining_metric.unit if remaining_metric.remaining is not None else None
+        )
 
     official_records = list(snapshot.official_records)
     raw_urls = [
@@ -3743,11 +3881,36 @@ def _latest_provider_snapshots(limit: int = 800) -> dict[str, ProviderUsageSnaps
     rows = list_usage_snapshots(limit=max(10, min(int(limit), 2000)))
     by_provider: dict[str, ProviderUsageSnapshot] = {}
     for row in rows:
-        provider = _normalize_provider_name(row.provider)
+        provider = _provider_family_name(row.provider)
         if not provider or provider in by_provider:
             continue
         by_provider[provider] = row
     return by_provider
+
+
+def usage_overview_from_snapshots() -> ProviderUsageOverview:
+    by_provider = _latest_provider_snapshots(limit=1000)
+    providers = [by_provider[key] for key in sorted(by_provider.keys())]
+    unavailable = [row.provider for row in providers if row.status != "ok"]
+    required_providers = _required_providers_from_env()
+    active_usage = _active_provider_usage_counts()
+    return ProviderUsageOverview(
+        providers=providers,
+        unavailable_providers=unavailable,
+        tracked_providers=len(providers),
+        limit_coverage=_limit_coverage_summary(
+            providers,
+            required_providers=required_providers,
+            active_usage_counts=active_usage,
+        ),
+    )
+
+
+def usage_endpoint_timeout_seconds(default: float = 10.0) -> float:
+    parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS"))
+    if parsed is None:
+        return max(0.1, min(float(default), 10.0))
+    return max(0.1, min(float(parsed), 300.0))
 
 
 def daily_system_summary(
