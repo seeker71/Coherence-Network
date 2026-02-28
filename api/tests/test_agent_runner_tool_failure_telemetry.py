@@ -597,6 +597,17 @@ def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_syste
     assert os.access(shim_path, os.X_OK)
 
 
+def test_cursor_node_shim_path_uses_realpath_target(monkeypatch):
+    monkeypatch.delenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", raising=False)
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "realpath",
+        lambda path: "/usr/local/bin/agent" if path == "/usr/bin/agent" else path,
+    )
+    shim_path = agent_runner._cursor_node_shim_path(cursor_binary="/usr/bin/agent")
+    assert shim_path == "/usr/local/bin/node"
+
+
 def test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout(monkeypatch, tmp_path):
     bad_dir = tmp_path / "bad"
     good_dir = tmp_path / "good"

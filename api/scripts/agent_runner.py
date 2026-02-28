@@ -3173,7 +3173,8 @@ def _cursor_node_shim_path(*, cursor_binary: str = "") -> str:
         return configured
     cursor_path = _abs_expanded_path(cursor_binary)
     if cursor_path:
-        cursor_dir = os.path.dirname(cursor_path)
+        resolved_cursor_path = _abs_expanded_path(os.path.realpath(cursor_path)) or cursor_path
+        cursor_dir = os.path.dirname(resolved_cursor_path)
         if cursor_dir:
             return os.path.join(cursor_dir, "node")
     return "/usr/local/bin/node"
