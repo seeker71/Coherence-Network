@@ -3039,6 +3039,47 @@ def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
         os.environ["PATH"] = directory + (os.pathsep + process_current if process_current else "")
 
 
+def _resolve_node_binary(env: dict[str, str]) -> str:
+    discovered = shutil.which("node", path=str(env.get("PATH", "")))
+    if discovered and os.path.isfile(discovered) and os.access(discovered, os.X_OK):
+        return discovered
+    for candidate in ("/usr/bin/node", "/usr/local/bin/node", "/bin/node", "/opt/homebrew/bin/node"):
+        normalized = _abs_expanded_path(candidate)
+        if os.path.isfile(normalized) and os.access(normalized, os.X_OK):
+            return normalized
+    return ""
+
+
+def _cursor_node_shim_path(*, cursor_binary: str = "") -> str:
+    configured = _abs_expanded_path(str(os.getenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", "")).strip())
+    if configured:
+        return configured
+    cursor_path = _abs_expanded_path(cursor_binary)
+    if cursor_path:
+        cursor_dir = os.path.dirname(cursor_path)
+        if cursor_dir:
+            return os.path.join(cursor_dir, "node")
+    return "/usr/local/bin/node"
+
+
+def _ensure_cursor_node_shim(*, env: dict[str, str], cursor_binary: str = "") -> tuple[bool, str]:
+    shim_path = _cursor_node_shim_path(cursor_binary=cursor_binary)
+    if os.path.isfile(shim_path) and os.access(shim_path, os.X_OK):
+        return True, f"cursor_node_shim_present:{shim_path}"
+    node_binary = _resolve_node_binary(env)
+    if not node_binary:
+        return False, "cursor_node_missing"
+    try:
+        shim_dir = os.path.dirname(shim_path) or "."
+        os.makedirs(shim_dir, exist_ok=True)
+        if os.path.lexists(shim_path):
+            os.remove(shim_path)
+        os.symlink(node_binary, shim_path)
+    except Exception as exc:
+        return False, f"cursor_node_shim_failed:{type(exc).__name__}"
+    return True, f"cursor_node_shim_created:{shim_path}->{node_binary}"
+
+
 def _run_cli_install_command(command: str, *, env: dict[str, str], timeout_seconds: int) -> tuple[bool, str]:
     try:
         result = subprocess.run(
@@ -3084,7 +3125,14 @@ def _ensure_cli_for_command(
         except Exception:
             pass
         _prepend_cli_path(existing, env)
-        return True, f"runner_cli_present:{provider}:{binary}:{existing}"
+        if provider == "cursor":
+            shim_ok, shim_detail = _ensure_cursor_node_shim(env=env, cursor_binary=existing)
+            if not shim_ok and not _cli_auto_install_enabled():
+                return False, f"runner_cli_present_but_runtime_unhealthy:{provider}:{binary}:{shim_detail}"
+            if shim_ok:
+                return True, f"runner_cli_present:{provider}:{binary}:{existing}:{shim_detail}"
+        else:
+            return True, f"runner_cli_present:{provider}:{binary}:{existing}"
 
     if not _cli_auto_install_enabled():
         return False, f"runner_cli_missing_auto_install_disabled:{provider}:{binary}"
@@ -3110,6 +3158,12 @@ def _ensure_cli_for_command(
             except Exception:
                 pass
             _prepend_cli_path(resolved, env)
+            if provider == "cursor":
+                shim_ok, shim_detail = _ensure_cursor_node_shim(env=env, cursor_binary=resolved)
+                if not shim_ok:
+                    notes.append(f"cursor_runtime:{shim_detail}")
+                    continue
+                return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}:{shim_detail}"
             return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}"
 
     log.warning("task=%s cli install failed provider=%s notes=%s", task_id, provider, "; ".join(notes)[:500])
@@ -4999,40 +5053,36 @@ def run_one_task(
             retry_task_ctx = task_ctx
             retry_context_patch: dict[str, Any] | None = None
             if _uses_codex_cli(command):
-                auth_fallback_already_attempted = _as_bool(task_ctx.get("runner_codex_auth_fallback_attempted"))
-                oauth_fallback_allowed = bool(codex_auth_state and codex_auth_state.get("oauth_fallback_allowed"))
-                oauth_retry_eligible = bool(
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_codex_oauth_refresh_retry_attempted"))
+                oauth_refresh_retry_eligible = bool(
                     codex_auth_state
                     and codex_auth_state.get("effective_mode") == "oauth"
-                    and codex_auth_state.get("api_key_present")
-                    and oauth_fallback_allowed
                 )
-                if oauth_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
-                    if not auth_fallback_already_attempted:
+                if oauth_refresh_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
+                    if not oauth_refresh_retry_attempted:
                         retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["runner_codex_auth_mode"] = "api_key"
-                        retry_task_ctx["runner_codex_auth_fallback_attempted"] = True
+                        retry_task_ctx["runner_codex_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_codex_oauth_refresh_retry_attempted"] = True
                         retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
                         requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
                         retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
                         retry_context_patch = (retry_context_patch or {}) | {
-                            "runner_codex_auth_mode": "api_key",
-                            "runner_codex_auth_fallback_attempted": True,
-                            "runner_codex_auth_fallback": {
+                            "runner_codex_auth_mode": "oauth",
+                            "runner_codex_oauth_refresh_retry_attempted": True,
+                            "runner_codex_oauth_refresh_retry": {
                                 "trigger": "oauth_refresh_token_reused",
-                                "from_mode": "oauth",
-                                "to_mode": "api_key",
+                                "mode": "oauth",
                                 "at": _utc_now_iso(),
                             },
                         }
                         output = (
-                            f"{output}\n[runner-codex-auth-fallback] oauth refresh token reuse detected; "
-                            "retrying with api_key auth mode."
+                            f"{output}\n[runner-codex-auth-retry] oauth refresh token reuse detected; "
+                            "retrying with oauth auth mode."
                         )
                     else:
                         output = (
-                            f"{output}\n[runner-codex-auth-fallback] "
-                            "oauth refresh-token fallback already attempted; not retrying auth fallback."
+                            f"{output}\n[runner-codex-auth-retry] "
+                            "oauth refresh-token retry already attempted; not retrying auth retry."
                         )
                 if _codex_model_not_found_or_access_error(output):
                     fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
