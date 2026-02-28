@@ -210,7 +210,8 @@ def main() -> None:
         raise SystemExit("start-gate: failed to check current worktree state")
     if proc.stdout.strip():
         raise SystemExit(
-            "start-gate: current worktree has local changes. Clean it before starting a task."
+            "start-gate: current worktree has local changes. Do not abandon in-flight work: "
+            "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean worktree."
         )
 
     proc = subprocess.run(
@@ -406,7 +407,8 @@ def main() -> None:
 
         if proc.stdout.strip():
             raise SystemExit(
-                "start-gate: primary workspace has local changes. Clean it before starting a task."
+                "start-gate: primary workspace has local changes. Do not abandon in-flight work: "
+                "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean workspace."
             )
     elif in_worktree:
         print(
