@@ -84,10 +84,21 @@ async def get_provider_readiness(
     force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
-    report = automation_usage_service.provider_readiness_report(
-        required_providers=requested or None,
-        force_refresh=force_refresh,
-    )
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    try:
+        report = await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.provider_readiness_report,
+                required_providers=requested or None,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        report = automation_usage_service.provider_readiness_report(
+            required_providers=requested or None,
+            force_refresh=False,
+        )
     return report.model_dump(mode="json")
 
 

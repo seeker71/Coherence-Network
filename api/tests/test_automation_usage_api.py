@@ -368,6 +368,98 @@ def test_provider_readiness_can_block_on_limit_telemetry_when_enabled(
     assert "limit_telemetry_state=derived_or_unvalidated" in provider_row.notes
 
 
+def test_provider_readiness_report_coalesces_provider_families_and_normalizes_degraded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openai_primary",
+                provider="openai",
+                kind="openai",
+                status="degraded",
+                data_source="provider_api",
+                metrics=[],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_openai_alias",
+                provider="openai-codex",
+                kind="custom",
+                status="ok",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=12.0,
+                        remaining=None,
+                        limit=None,
+                        window="rolling",
+                    )
+                ],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_claude_primary",
+                provider="claude",
+                kind="custom",
+                status="degraded",
+                data_source="provider_api",
+                metrics=[],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_claude_alias",
+                provider="claude-code",
+                kind="custom",
+                status="degraded",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=7.0,
+                        remaining=None,
+                        limit=None,
+                        window="rolling",
+                    )
+                ],
+            ),
+        ],
+        unavailable_providers=["openai", "claude", "claude-code"],
+        tracked_providers=4,
+        limit_coverage={},
+    )
+    monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_active_provider_usage_counts",
+        lambda: {"openai-codex": 12, "claude-code": 7},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_configured_status",
+        lambda provider: (True, [], [], []),
+    )
+
+    report = automation_usage_service.provider_readiness_report(
+        required_providers=["openai-codex", "claude-code"],
+        force_refresh=False,
+    )
+
+    assert report.required_providers == ["claude", "openai"]
+    rows = {row.provider: row for row in report.providers}
+    assert set(rows) == {"claude", "openai"}
+    assert all(row.status != "degraded" for row in report.providers)
+    assert rows["openai"].status == "ok"
+    assert rows["claude"].status == "ok"
+
+
 def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1018,6 +1110,60 @@ async def test_automation_usage_endpoint_times_out_to_snapshot_fallback(
     payload = response.json()
     assert payload["tracked_providers"] == 1
     assert payload["providers"][0]["provider"] == "openai"
+
+
+@pytest.mark.asyncio
+async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS", "0.05")
+    calls: list[dict[str, object]] = []
+
+    def _fake_readiness(
+        *,
+        required_providers: list[str] | None = None,
+        force_refresh: bool = True,
+    ) -> ProviderReadinessReport:
+        calls.append(
+            {
+                "required_providers": list(required_providers or []),
+                "force_refresh": force_refresh,
+            }
+        )
+        if force_refresh:
+            time.sleep(0.3)
+        return ProviderReadinessReport(
+            required_providers=list(required_providers or []),
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openai",
+                    kind="openai",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[],
+                )
+            ],
+        )
+
+    monkeypatch.setattr(automation_usage_service, "provider_readiness_report", _fake_readiness)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/automation/usage/readiness",
+            params={"required_providers": "openai", "force_refresh": True},
+        )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["providers"][0]["provider"] == "openai"
+    assert len(calls) >= 2
+    assert calls[0]["force_refresh"] is True
+    assert any(call["force_refresh"] is False for call in calls)
 
 
 @pytest.mark.asyncio
