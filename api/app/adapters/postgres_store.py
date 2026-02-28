@@ -9,16 +9,15 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import create_engine, Column, String, Numeric, DateTime, JSON, Integer, text
+from sqlalchemy import create_engine, Column, String, Numeric, DateTime, JSON, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from datetime import datetime
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
 from app.models.project import Project, ProjectSummary
-from app.services.contributor_hygiene import is_test_contributor_email
+from app.services.contributor_hygiene import is_test_contributor_email, normalize_contributor_email
 
 Base = declarative_base()
 
@@ -185,10 +184,17 @@ class PostgresGraphStore:
 
     def find_contributor_by_email(self, email: str) -> Contributor | None:
         """Find contributor by email address."""
-        if is_test_contributor_email(email):
+        normalized_email = normalize_contributor_email(email)
+        if not normalized_email:
+            return None
+        if is_test_contributor_email(normalized_email):
             return None
         with self._session() as session:
-            model = session.query(ContributorModel).filter_by(email=email).first()
+            model = (
+                session.query(ContributorModel)
+                .filter(func.lower(ContributorModel.email) == normalized_email)
+                .first()
+            )
             if not model:
                 return None
             if is_test_contributor_email(model.email):
@@ -204,9 +210,18 @@ class PostgresGraphStore:
             )
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
-        if is_test_contributor_email(str(contributor.email)):
+        normalized_email = normalize_contributor_email(str(contributor.email))
+        if is_test_contributor_email(normalized_email):
             raise ValueError("test contributor emails are not allowed in persistent store")
         with self._session() as session:
+            existing = (
+                session.query(ContributorModel)
+                .filter(func.lower(ContributorModel.email) == normalized_email)
+                .first()
+            )
+            if existing is not None:
+                raise ValueError("contributor email already exists")
+            contributor = contributor.model_copy(update={"email": normalized_email})
             model = ContributorModel(
                 id=contributor.id,
                 type=contributor.type.value,
