@@ -1,7 +1,7 @@
 {
   "date": "2026-02-28",
   "thread_branch": "codex/host-runner-executor-proof-20260228",
-  "commit_scope": "Repair host-runner executor reliability by healing Cursor node runtime path from resolved agent binary location and enforcing OAuth-only Codex refresh-token retry behavior (no API-key fallback).",
+  "commit_scope": "Repair host-runner executor reliability by avoiding recursive /mise node shims for Cursor runtime healing, hydrating Codex OAuth session files from AGENT_CODEX_OAUTH_SESSION_B64, and enforcing OAuth-only Codex refresh-token retries (no API-key fallback).",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
@@ -49,7 +49,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64",
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
     ]
@@ -64,7 +64,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting rebase, local gate reruns, PR checks, merge, and production verification for codex/claude/cursor host-runner executor proof."
+    "blocked_reason": "Awaiting follow-up PR merge/redeploy and post-deploy hosted proof rerun for codex/claude/cursor execution paths."
   },
   "e2e_validation": {
     "status": "pending",

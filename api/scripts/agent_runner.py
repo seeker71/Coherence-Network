@@ -11,6 +11,7 @@ Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 """
 
 import argparse
+import base64
 import logging
 import math
 import os
@@ -3040,12 +3041,31 @@ def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
 
 
 def _resolve_node_binary(env: dict[str, str]) -> str:
-    discovered = shutil.which("node", path=str(env.get("PATH", "")))
-    if discovered and os.path.isfile(discovered) and os.access(discovered, os.X_OK):
-        return discovered
-    for candidate in ("/usr/bin/node", "/usr/local/bin/node", "/bin/node", "/opt/homebrew/bin/node"):
+    def _is_node_shim(path: str) -> bool:
+        lowered = str(path or "").lower()
+        return "/mise/shims/" in lowered or "/.asdf/shims/" in lowered
+
+    def _is_usable(path: str, *, allow_shim: bool = False) -> bool:
+        normalized = _abs_expanded_path(path)
+        if not normalized:
+            return False
+        if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+            return False
+        resolved = _abs_expanded_path(os.path.realpath(normalized))
+        if not allow_shim and _is_node_shim(resolved or normalized):
+            return False
+        return True
+
+    for candidate in ("/usr/bin/node", "/bin/node", "/opt/homebrew/bin/node", "/usr/local/bin/node"):
         normalized = _abs_expanded_path(candidate)
-        if os.path.isfile(normalized) and os.access(normalized, os.X_OK):
+        if _is_usable(normalized):
+            return normalized
+    discovered = shutil.which("node", path=str(env.get("PATH", "")))
+    if discovered:
+        normalized = _abs_expanded_path(discovered)
+        if _is_usable(normalized):
+            return normalized
+        if _is_usable(normalized, allow_shim=True):
             return normalized
     return ""
 
@@ -3211,6 +3231,81 @@ def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
     if str(env.get(key, "")).strip():
         return
     env[key] = value
+
+
+def _codex_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    if not codex_home:
+        codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
+    if codex_home:
+        return _abs_expanded_path(os.path.join(codex_home, "auth.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".codex", "auth.json"))
+    return ""
+
+
+def _bootstrap_codex_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    encoded = str(env.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
+    if not encoded:
+        encoded = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
+    if not encoded:
+        return False, ""
+
+    compact = "".join(encoded.split())
+    if not compact:
+        return False, "oauth_session_b64_empty"
+    padded = compact + ("=" * ((4 - (len(compact) % 4)) % 4))
+
+    decoded_text = ""
+    decode_errors: list[str] = []
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            decoded_text = decoder(padded.encode("utf-8")).decode("utf-8")
+            if decoded_text:
+                break
+        except Exception as exc:
+            decode_errors.append(type(exc).__name__)
+    if not decoded_text:
+        detail = "/".join(decode_errors) if decode_errors else "unknown"
+        log.warning("task=%s failed to decode AGENT_CODEX_OAUTH_SESSION_B64 detail=%s", task_id, detail)
+        return False, f"oauth_session_b64_decode_failed:{detail[:80]}"
+
+    try:
+        payload = json.loads(decoded_text)
+    except Exception as exc:
+        return False, f"oauth_session_json_invalid:{type(exc).__name__}"
+    if not isinstance(payload, dict):
+        return False, "oauth_session_json_not_object"
+    if not payload.get("refresh_token") and not payload.get("access_token"):
+        return False, "oauth_session_missing_tokens"
+
+    target_path = _codex_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+    return True, f"oauth_session_bootstrapped:{target_path}"
 
 
 def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
@@ -3388,6 +3483,8 @@ def _configure_codex_cli_environment(
     allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0"))
     api_key_login_bootstrapped = False
     api_key_login_source = ""
+    oauth_session_bootstrapped = False
+    oauth_session_bootstrap_detail = ""
 
     effective_mode = requested_mode
     if requested_mode == "auto":
@@ -3399,6 +3496,11 @@ def _configure_codex_cli_environment(
             effective_mode = "oauth"
 
     if effective_mode == "oauth":
+        oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_codex_oauth_session_from_env(
+            env=env,
+            task_id=task_id,
+            log=log,
+        )
         env.pop("OPENAI_API_KEY", None)
         env.pop("OPENAI_ADMIN_API_KEY", None)
         env.pop("OPENAI_API_BASE", None)
@@ -3425,6 +3527,8 @@ def _configure_codex_cli_environment(
         "api_key_present": bool(api_key_present),
         "oauth_fallback_allowed": bool(allow_oauth_fallback),
         "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
         "api_key_login_bootstrapped": bool(api_key_login_bootstrapped),
         "api_key_login_source": api_key_login_source,
     }
@@ -3435,13 +3539,14 @@ def _configure_codex_cli_environment(
             oauth_source,
         )
     log.info(
-        "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s api_key_present=%s",
+        "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s api_key_present=%s oauth_bootstrap=%s",
         task_id,
         requested_mode,
         effective_mode,
         bool(oauth_available),
         oauth_source,
         bool(api_key_present),
+        oauth_session_bootstrap_detail or "none",
     )
     return auth_state
 
