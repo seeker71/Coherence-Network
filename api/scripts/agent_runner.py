@@ -3045,28 +3045,77 @@ def _resolve_node_binary(env: dict[str, str]) -> str:
         lowered = str(path or "").lower()
         return "/mise/shims/" in lowered or "/.asdf/shims/" in lowered
 
-    def _is_usable(path: str, *, allow_shim: bool = False) -> bool:
+    def _resolve_node_shim_target(path: str) -> str:
+        lowered = str(path or "").lower()
+        commands: list[list[str]] = []
+        if "/mise/shims/" in lowered:
+            commands.extend(
+                [
+                    ["mise", "which", "node"],
+                    ["/mise/bin/mise", "which", "node"],
+                ]
+            )
+        elif "/.asdf/shims/" in lowered:
+            commands.extend(
+                [
+                    ["asdf", "which", "nodejs"],
+                    ["asdf", "which", "node"],
+                ]
+            )
+        for argv in commands:
+            try:
+                completed = subprocess.run(
+                    argv,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True,
+                    timeout=6,
+                    env=env,
+                )
+            except Exception:
+                continue
+            if completed.returncode != 0:
+                continue
+            candidate = _abs_expanded_path(str(completed.stdout or "").strip())
+            if not candidate:
+                continue
+            if candidate == path:
+                continue
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+        return ""
+
+    def _usable_binary(path: str, *, allow_shim: bool = False) -> str:
         normalized = _abs_expanded_path(path)
         if not normalized:
-            return False
+            return ""
         if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
-            return False
+            return ""
         resolved = _abs_expanded_path(os.path.realpath(normalized))
-        if not allow_shim and _is_node_shim(resolved or normalized):
-            return False
-        return True
+        active_path = resolved or normalized
+        if _is_node_shim(active_path):
+            concrete = _resolve_node_shim_target(active_path)
+            if concrete:
+                return concrete
+            if not allow_shim:
+                return ""
+        return normalized
 
     for candidate in ("/usr/bin/node", "/bin/node", "/opt/homebrew/bin/node", "/usr/local/bin/node"):
         normalized = _abs_expanded_path(candidate)
-        if _is_usable(normalized):
-            return normalized
+        usable = _usable_binary(normalized)
+        if usable:
+            return usable
     discovered = shutil.which("node", path=str(env.get("PATH", "")))
     if discovered:
         normalized = _abs_expanded_path(discovered)
-        if _is_usable(normalized):
-            return normalized
-        if _is_usable(normalized, allow_shim=True):
-            return normalized
+        usable = _usable_binary(normalized)
+        if usable:
+            return usable
+        usable_shim = _usable_binary(normalized, allow_shim=True)
+        if usable_shim:
+            return usable_shim
     return ""
 
 
@@ -3289,8 +3338,34 @@ def _bootstrap_codex_oauth_session_from_env(
         return False, f"oauth_session_json_invalid:{type(exc).__name__}"
     if not isinstance(payload, dict):
         return False, "oauth_session_json_not_object"
-    if not payload.get("refresh_token") and not payload.get("access_token"):
+
+    def _find_token_value(node: Any, token_key: str) -> str:
+        if isinstance(node, dict):
+            direct = node.get(token_key)
+            if isinstance(direct, str) and direct.strip():
+                return direct.strip()
+            for value in node.values():
+                found = _find_token_value(value, token_key)
+                if found:
+                    return found
+            return ""
+        if isinstance(node, list):
+            for item in node:
+                found = _find_token_value(item, token_key)
+                if found:
+                    return found
+        return ""
+
+    refresh_token = _find_token_value(payload, "refresh_token")
+    access_token = _find_token_value(payload, "access_token")
+    if not refresh_token and not access_token:
         return False, "oauth_session_missing_tokens"
+
+    if access_token:
+        payload["access_token"] = access_token
+    if refresh_token:
+        payload["refresh_token"] = refresh_token
+    payload.setdefault("auth_mode", "oauth")
 
     target_path = _codex_oauth_session_target_path(env)
     if not target_path:
