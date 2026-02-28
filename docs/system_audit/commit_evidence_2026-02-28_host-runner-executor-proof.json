@@ -1,0 +1,84 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/host-runner-executor-proof-20260228",
+  "commit_scope": "Repair host-runner executor reliability by healing Cursor node runtime path from resolved agent binary location and enforcing OAuth-only Codex refresh-token retry behavior (no API-key fallback).",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-28_host-runner-executor-proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-28-host-runner-executor-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "/tmp/host_runner_baseline_20260228T095107Z.json",
+    "https://coherence-network-production.up.railway.app/api/agent/tasks",
+    "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
+    "https://coherence-network-production.up.railway.app/api/agent/runners"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting rebase, local gate reruns, PR checks, merge, and production verification for codex/claude/cursor host-runner executor proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Host runner can complete one execution path each for codex, claude, and cursor; Codex refresh-token self-heal stays in OAuth mode and cursor runtime self-heals missing node shim.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
+      "https://coherence-network-production.up.railway.app/api/runtime/events",
+      "https://coherence-network-production.up.railway.app/api/agent/runners"
+    ],
+    "test_flows": [
+      "Create codex task and verify completion using oauth auth mode (no api_key fallback marker).",
+      "Create claude task and verify completed status with expected proof token.",
+      "Create cursor task and verify completed status with expected proof token and no missing /usr/local/bin/node error."
+    ]
+  }
+}
