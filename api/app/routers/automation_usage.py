@@ -95,9 +95,8 @@ async def get_provider_readiness(
             timeout=timeout_seconds,
         )
     except TimeoutError:
-        report = automation_usage_service.provider_readiness_report(
+        report = automation_usage_service.provider_readiness_report_from_snapshots(
             required_providers=requested or None,
-            force_refresh=False,
         )
     return report.model_dump(mode="json")
 
