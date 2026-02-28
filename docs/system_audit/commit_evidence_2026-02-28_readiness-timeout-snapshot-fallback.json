@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/readiness-coalesce-no-degraded-20260228",
+  "commit_scope": "Fix readiness timeout fallback to use snapshot-based readiness reports, preserving family coalescing while preventing repeated slow live provider collection after timeout.",
+  "files_owned": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-28_readiness-timeout-snapshot-fallback.json"
+  ],
+  "change_files": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py"
+  ],
+  "idea_ids": [
+    "automation-provider-usage-readiness-api"
+  ],
+  "spec_ids": [
+    "113-provider-usage-coalescing-timeout-resilience"
+  ],
+  "task_ids": [
+    "task-2026-02-28-readiness-timeout-snapshot-fallback"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR merge and post-deploy production verification for readiness timeout fallback behavior."
+  },
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting follow-up PR merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "If readiness live collection exceeds timeout, endpoint returns snapshot-based readiness quickly without re-running slow live provider probes, while still keeping provider-family coalescing and no degraded rows.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Force readiness collection timeout and verify snapshot fallback path is used.",
+      "Confirm readiness response still has one row per provider family and no degraded rows."
+    ]
+  }
+}
