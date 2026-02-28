@@ -1617,6 +1617,22 @@ def _active_provider_usage_counts() -> dict[str, int]:
     return normalized_counts
 
 
+def _coalesce_usage_counts_by_family(counts: dict[str, int]) -> dict[str, int]:
+    coalesced: dict[str, int] = {}
+    for provider_name, value in counts.items():
+        family = _provider_family_name(provider_name)
+        if not family:
+            continue
+        try:
+            numeric = int(value)
+        except Exception:
+            continue
+        if numeric <= 0:
+            continue
+        coalesced[family] = max(coalesced.get(family, 0), numeric)
+    return coalesced
+
+
 def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
     rule = _PROVIDER_CONFIG_RULES.get(provider, {})
     kind = str(rule.get("kind") or "custom")
@@ -4265,19 +4281,25 @@ def provider_limit_guard_decision(provider: str, *, force_refresh: bool = False)
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
-    active_counts = _active_provider_usage_counts()
+    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
     required = [
-        _normalize_provider_name(item)
+        _provider_family_name(item)
         for item in (required_providers or _required_providers_from_env())
-        if str(item).strip()
+        if _provider_family_name(item)
     ]
     if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
         for provider_name, count in active_counts.items():
             if count > 0:
                 required.append(provider_name)
     required_set = set(required)
-    overview = collect_usage_overview(force_refresh=force_refresh)
-    by_provider = {row.provider.strip().lower(): row for row in overview.providers}
+    overview = coalesce_usage_overview_families(
+        collect_usage_overview(force_refresh=force_refresh)
+    )
+    by_provider = {
+        family: row
+        for row in overview.providers
+        if (family := _provider_family_name(row.provider))
+    }
 
     rows: list[ProviderReadinessRow] = []
     blocking: list[str] = []
