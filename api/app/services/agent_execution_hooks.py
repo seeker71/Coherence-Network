@@ -130,6 +130,15 @@ def _runtime_metadata(payload: LifecycleHookPayload) -> dict[str, str | int | fl
         metadata["reason"] = str(payload.get("reason") or "")
     if payload.get("error"):
         metadata["error"] = str(payload.get("error") or "")[:800]
+    if payload.get("failure_category"):
+        metadata["failure_category"] = str(payload.get("failure_category") or "")
+    if "retry_count" in payload:
+        try:
+            metadata["retry_count"] = int(payload.get("retry_count") or 0)
+        except (TypeError, ValueError):
+            pass
+    if payload.get("blind_spot"):
+        metadata["blind_spot"] = str(payload.get("blind_spot") or "")[:200]
     return metadata
 
 
@@ -199,6 +208,12 @@ def dispatch_lifecycle_event(
         "task_status": _to_text(task.get("status")),
         "model": str(task.get("model") or context.get("model_override") or ""),
     }
+    if context.get("last_failure_category"):
+        payload["failure_category"] = str(context.get("last_failure_category") or "")
+    if "retry_count" in context:
+        payload["retry_count"] = context.get("retry_count")
+    if context.get("blind_spot"):
+        payload["blind_spot"] = str(context.get("blind_spot") or "")
     payload.update(extra)
 
     try:

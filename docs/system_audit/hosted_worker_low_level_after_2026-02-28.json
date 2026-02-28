@@ -1,0 +1,1870 @@
+{
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "created_tasks": [
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "spec",
+            "tier": "claude"
+          },
+          "task_id": "task_1bfbaf8bb05c747d",
+          "task_type": "spec"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_1bfbaf8bb05c747d"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "spec",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK"
+        },
+        "task_agent": "product-manager"
+      },
+      "created_at": "2026-02-28T09:58:49.056280Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+      "id": "task_1bfbaf8bb05c747d",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+      "task_type": "spec",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "test",
+            "tier": "claude"
+          },
+          "task_id": "task_0836c3b93c45450f",
+          "task_type": "test"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_0836c3b93c45450f"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "test",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK"
+        },
+        "task_agent": "qa-engineer"
+      },
+      "created_at": "2026-02-28T09:58:49.162138Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+      "id": "task_0836c3b93c45450f",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+      "task_type": "test",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: reviewer. Guard agents: spec-guard. Task type: review. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK\" --model claude-opus-4-5 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+          "model": "claude/claude-opus-4-5",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-opus-4-5",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "review",
+            "tier": "claude"
+          },
+          "task_id": "task_5ce7c162e166d8bd",
+          "task_type": "review"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "guard_agents": [
+          "spec-guard"
+        ],
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: reviewer. Guard agents: spec-guard. Task type: review. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-opus-4-5",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_5ce7c162e166d8bd"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-opus-4-5",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "review",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+        },
+        "task_agent": "reviewer"
+      },
+      "created_at": "2026-02-28T09:58:49.265754Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+      "id": "task_5ce7c162e166d8bd",
+      "model": "claude/claude-opus-4-5",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+      "task_type": "review",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "spec",
+            "tier": "claude"
+          },
+          "task_id": "task_5190320b94ff9830",
+          "task_type": "spec"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_5190320b94ff9830"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "spec",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+        },
+        "task_agent": "product-manager"
+      },
+      "created_at": "2026-02-28T09:58:49.361771Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+      "id": "task_5190320b94ff9830",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+      "task_type": "spec",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "test",
+            "tier": "claude"
+          },
+          "task_id": "task_8a7c4e7cbc2b633c",
+          "task_type": "test"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_8a7c4e7cbc2b633c"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "test",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+        },
+        "task_agent": "qa-engineer"
+      },
+      "created_at": "2026-02-28T09:58:49.473316Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+      "id": "task_8a7c4e7cbc2b633c",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+      "task_type": "test",
+      "updated_at": null
+    }
+  ],
+  "executor": "claude",
+  "final_tasks": [
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "spec",
+            "tier": "claude"
+          },
+          "task_id": "task_1bfbaf8bb05c747d",
+          "task_type": "spec"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_1bfbaf8bb05c747d"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "spec",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK"
+        },
+        "task_agent": "product-manager"
+      },
+      "created_at": "2026-02-28T09:58:49.056280Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+      "id": "task_1bfbaf8bb05c747d",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=1 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_1_OK",
+      "task_type": "spec",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": null,
+      "claimed_by": null,
+      "command": "claude -p \"Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "test",
+            "tier": "claude"
+          },
+          "task_id": "task_0836c3b93c45450f",
+          "task_type": "test"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_0836c3b93c45450f"
+        },
+        "observation_window_sec": 900,
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "test",
+          "tier": "claude"
+        },
+        "success_evidence": [],
+        "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK"
+        },
+        "task_agent": "qa-engineer"
+      },
+      "created_at": "2026-02-28T09:58:49.162138Z",
+      "current_step": null,
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+      "id": "task_0836c3b93c45450f",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": null,
+      "progress_pct": null,
+      "status": "pending",
+      "success_evidence": [],
+      "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=2 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_2_OK",
+      "task_type": "test",
+      "updated_at": null
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": "2026-02-28T10:02:42.699081Z",
+      "claimed_by": "openai-codex:railway-runner-1",
+      "command": "claude -p \"Role agent: reviewer. Guard agents: spec-guard. Task type: review. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK\" --model claude-opus-4-5 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "active_branch": "",
+        "active_run_id": "run_cde5f74fb3d7",
+        "active_worker_id": "openai-codex:railway-runner-1",
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+          "model": "claude/claude-opus-4-5",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-opus-4-5",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "review",
+            "tier": "claude"
+          },
+          "task_id": "task_5ce7c162e166d8bd",
+          "task_type": "review"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "awareness_blocks_total": 0,
+        "awareness_cost_per_successful_transition": 0.354667,
+        "awareness_estimated_roi_total": 0.0,
+        "awareness_estimated_to_measured_roi_conversion": null,
+        "awareness_events_total": 3,
+        "awareness_hold_pattern_rate": 0.0,
+        "awareness_hold_pattern_total": 0,
+        "awareness_interventions_total": 0,
+        "awareness_measured_roi_total": 0.0,
+        "awareness_quality": {
+          "blocks_total": 0,
+          "context_coverage": 0.6,
+          "cost_per_successful_transition": 0.354667,
+          "estimated_roi_total": 0.0,
+          "estimated_to_measured_roi_conversion": null,
+          "events_total": 3,
+          "hold_pattern_rate": 0.0,
+          "hold_pattern_total": 0,
+          "interventions_total": 0,
+          "measured_roi_total": 0.0,
+          "policy_discipline": 1.0,
+          "score": 0.7638,
+          "snapshot_count": 3,
+          "state_transition_quality": 1.0,
+          "successful_transition_total": 3,
+          "transition_cost_total": 1.064,
+          "transition_total": 3,
+          "updated_at": "2026-02-28T10:02:52.043327+00:00"
+        },
+        "awareness_state_transition_quality": 1.0,
+        "awareness_successful_transition_total": 3,
+        "awareness_transition_cost_total": 1.064,
+        "awareness_transition_total": 3,
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "guard_agents": [
+          "spec-guard"
+        ],
+        "last_attempt": 1,
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: reviewer. Guard agents: spec-guard. Task type: review. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-opus-4-5",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_5ce7c162e166d8bd"
+        },
+        "observation_window_sec": 900,
+        "observer_context_last_snapshot": {
+          "at": "2026-02-28T10:02:52.043240+00:00",
+          "current_step": "finalized",
+          "delta": {
+            "last_failure_class": "",
+            "next_action": "done",
+            "runner_state": "idle"
+          },
+          "failure_class": "",
+          "run_id": "run_cde5f74fb3d7",
+          "state": {
+            "active_branch": "",
+            "active_run_id": "run_cde5f74fb3d7",
+            "active_worker_id": "openai-codex:railway-runner-1",
+            "last_attempt": 1,
+            "last_failure_class": "",
+            "next_action": "done",
+            "observation_window_sec": 900,
+            "runner_state": "idle",
+            "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+          },
+          "status": "completed",
+          "transition": "complete",
+          "worker_id": "openai-codex:railway-runner-1"
+        },
+        "observer_context_snapshots": [
+          {
+            "at": "2026-02-28T10:02:42.464514+00:00",
+            "current_step": "lease claimed",
+            "delta": {
+              "active_branch": "",
+              "active_run_id": "run_cde5f74fb3d7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+            },
+            "details": {
+              "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+              "repo_path": "",
+              "task_type": "review"
+            },
+            "failure_class": "",
+            "run_id": "run_cde5f74fb3d7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_cde5f74fb3d7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+            },
+            "status": "claimed",
+            "transition": "claim",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T10:02:43.242635+00:00",
+            "current_step": "command started",
+            "delta": {
+              "next_action": "execute_command",
+              "runner_state": "running"
+            },
+            "failure_class": "",
+            "run_id": "run_cde5f74fb3d7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_cde5f74fb3d7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "next_action": "execute_command",
+              "observation_window_sec": 900,
+              "runner_state": "running",
+              "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+            },
+            "status": "running",
+            "transition": "start",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T10:02:52.043240+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "",
+              "next_action": "done",
+              "runner_state": "idle"
+            },
+            "failure_class": "",
+            "run_id": "run_cde5f74fb3d7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_cde5f74fb3d7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "last_failure_class": "",
+              "next_action": "done",
+              "observation_window_sec": 900,
+              "runner_state": "idle",
+              "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+            },
+            "status": "completed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          }
+        ],
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-opus-4-5",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "review",
+          "tier": "claude"
+        },
+        "runner_cli_bootstrap": {
+          "at": "2026-02-28T10:02:42.624927+00:00",
+          "detail": "runner_cli_present:claude:claude:/usr/bin/claude",
+          "ok": true
+        },
+        "runner_exec_user": {
+          "at": "2026-02-28T10:02:42.624958+00:00",
+          "detail": "runner_non_root_exec_user:runner:1000:1000",
+          "ok": true
+        },
+        "runner_id": "openai-codex:railway-runner-1",
+        "runner_last_result": {
+          "at": "2026-02-28T10:02:50.309952+00:00",
+          "attempt": 1,
+          "command_tool": "claude",
+          "duration_seconds": 6.4,
+          "failure_class": "",
+          "model": "claude/claude-opus-4-5",
+          "paid_call": true,
+          "status": "completed",
+          "task_type": "review"
+        },
+        "runner_last_seen_at": "2026-02-28T10:02:48.623534+00:00",
+        "runner_log_tail": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":4068,\"duration_api_ms\":3993,\"num_turns\":1,\"result\":\"HOSTED_LOWLEVEL_REVIEW_3_OK\",\"stop_reason\":null,\"session_id\":\"c722090a-f646-42e4-9ebe-0d076f5b791e\",\"total_cost_usd\":0.13273249999999998,\"usage\":{\"input_tokens\":9,\"cache_creation_input_tokens\":20866,\"cache_read_input_tokens\":0,\"output_tokens\":91,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":20866},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-opus-4-5\":{\"inputTokens\":9,\"outputTokens\":91,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":20866,\"webSearchRequests\":0,\"costUSD\":0.13273249999999998,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"5a1c7a1e-6815-4d2b-81a9-82b39389a4a4\"}",
+        "runner_metrics": {
+          "avg_runtime_seconds": 6.4,
+          "awareness_blocks_total": 0,
+          "awareness_events_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 0,
+          "awareness_quality_score": 0.7253,
+          "awareness_successful_transition_total": 2,
+          "awareness_transition_cost_total": 1.064,
+          "awareness_transition_total": 2,
+          "cost_per_successful_transition": 0.532,
+          "estimated_to_measured_roi_conversion": null,
+          "hold_pattern_rate": 0.0,
+          "last_attempt": 1,
+          "last_failure_class": "",
+          "last_model": "claude/claude-opus-4-5",
+          "last_status": "completed",
+          "last_tool": "claude",
+          "paid_calls_failed": 0,
+          "paid_calls_success": 1,
+          "paid_calls_total": 1,
+          "paid_retry_calls": 0,
+          "paid_success_rate": 1.0,
+          "retries_total": 0,
+          "runs_failed": 0,
+          "runs_success": 1,
+          "runs_total": 1,
+          "state_transition_quality": 1.0,
+          "success_rate": 1.0,
+          "total_runtime_seconds": 6.4,
+          "updated_at": "2026-02-28T10:02:50.309940+00:00"
+        },
+        "runner_run_id": "run_cde5f74fb3d7",
+        "success_evidence": [],
+        "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+        },
+        "target_state_last_observed_at": "2026-02-28T10:02:49.778659+00:00",
+        "target_state_observation": {
+          "abort_evidence": [],
+          "abort_evidence_hits": [],
+          "abort_evidence_met": false,
+          "attempt_status": "completed",
+          "observation_window_exceeded": false,
+          "observation_window_sec": 900,
+          "observed_at": "2026-02-28T10:02:49.778580+00:00",
+          "success_evidence": [],
+          "success_evidence_hits": [],
+          "success_evidence_met": false,
+          "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK"
+        },
+        "task_agent": "reviewer"
+      },
+      "created_at": "2026-02-28T09:58:49.265754Z",
+      "current_step": "running command",
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+      "id": "task_5ce7c162e166d8bd",
+      "model": "claude/claude-opus-4-5",
+      "observation_window_sec": 900,
+      "output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":4068,\"duration_api_ms\":3993,\"num_turns\":1,\"result\":\"HOSTED_LOWLEVEL_REVIEW_3_OK\",\"stop_reason\":null,\"session_id\":\"c722090a-f646-42e4-9ebe-0d076f5b791e\",\"total_cost_usd\":0.13273249999999998,\"usage\":{\"input_tokens\":9,\"cache_creation_input_tokens\":20866,\"cache_read_input_tokens\":0,\"output_tokens\":91,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":20866},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-opus-4-5\":{\"inputTokens\":9,\"outputTokens\":91,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":20866,\"webSearchRequests\":0,\"costUSD\":0.13273249999999998,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"5a1c7a1e-6815-4d2b-81a9-82b39389a4a4\"}\n",
+      "progress_pct": 1,
+      "status": "completed",
+      "success_evidence": [],
+      "target_state": "review task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=3 task_type=review. Return exactly HOSTED_LOWLEVEL_REVIEW_3_OK",
+      "task_type": "review",
+      "updated_at": "2026-02-28T10:02:52.117586Z"
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": "2026-02-28T09:59:51.935195Z",
+      "claimed_by": "openai-codex:railway-runner-1",
+      "command": "claude -p \"Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "active_branch": "",
+        "active_run_id": "run_79183d037e22",
+        "active_worker_id": "openai-codex:railway-runner-1",
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "spec",
+            "tier": "claude"
+          },
+          "task_id": "task_5190320b94ff9830",
+          "task_type": "spec"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "awareness_blocks_total": 0,
+        "awareness_cost_per_successful_transition": 0.803667,
+        "awareness_estimated_roi_total": 0.0,
+        "awareness_estimated_to_measured_roi_conversion": null,
+        "awareness_events_total": 3,
+        "awareness_hold_pattern_rate": 0.0,
+        "awareness_hold_pattern_total": 0,
+        "awareness_interventions_total": 0,
+        "awareness_measured_roi_total": 0.0,
+        "awareness_quality": {
+          "blocks_total": 0,
+          "context_coverage": 0.6,
+          "cost_per_successful_transition": 0.803667,
+          "estimated_roi_total": 0.0,
+          "estimated_to_measured_roi_conversion": null,
+          "events_total": 3,
+          "hold_pattern_rate": 0.0,
+          "hold_pattern_total": 0,
+          "interventions_total": 0,
+          "measured_roi_total": 0.0,
+          "policy_discipline": 1.0,
+          "score": 0.7454,
+          "snapshot_count": 3,
+          "state_transition_quality": 1.0,
+          "successful_transition_total": 3,
+          "transition_cost_total": 2.411,
+          "transition_total": 3,
+          "updated_at": "2026-02-28T10:02:16.036383+00:00"
+        },
+        "awareness_state_transition_quality": 1.0,
+        "awareness_successful_transition_total": 3,
+        "awareness_transition_cost_total": 2.411,
+        "awareness_transition_total": 3,
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "last_attempt": 1,
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: product-manager. Task type: spec. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_5190320b94ff9830"
+        },
+        "observation_window_sec": 900,
+        "observer_context_last_snapshot": {
+          "at": "2026-02-28T10:02:16.036310+00:00",
+          "current_step": "finalized",
+          "delta": {
+            "last_failure_class": "",
+            "next_action": "done",
+            "runner_state": "idle"
+          },
+          "failure_class": "",
+          "run_id": "run_79183d037e22",
+          "state": {
+            "active_branch": "",
+            "active_run_id": "run_79183d037e22",
+            "active_worker_id": "openai-codex:railway-runner-1",
+            "last_attempt": 1,
+            "last_failure_class": "",
+            "next_action": "done",
+            "observation_window_sec": 900,
+            "runner_state": "idle",
+            "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+          },
+          "status": "completed",
+          "transition": "complete",
+          "worker_id": "openai-codex:railway-runner-1"
+        },
+        "observer_context_snapshots": [
+          {
+            "at": "2026-02-28T09:59:51.696359+00:00",
+            "current_step": "lease claimed",
+            "delta": {
+              "active_branch": "",
+              "active_run_id": "run_79183d037e22",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+            },
+            "details": {
+              "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+              "repo_path": "",
+              "task_type": "spec"
+            },
+            "failure_class": "",
+            "run_id": "run_79183d037e22",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_79183d037e22",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+            },
+            "status": "claimed",
+            "transition": "claim",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T09:59:52.547726+00:00",
+            "current_step": "command started",
+            "delta": {
+              "next_action": "execute_command",
+              "runner_state": "running"
+            },
+            "failure_class": "",
+            "run_id": "run_79183d037e22",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_79183d037e22",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "next_action": "execute_command",
+              "observation_window_sec": 900,
+              "runner_state": "running",
+              "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+            },
+            "status": "running",
+            "transition": "start",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T10:02:16.036310+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "",
+              "next_action": "done",
+              "runner_state": "idle"
+            },
+            "failure_class": "",
+            "run_id": "run_79183d037e22",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_79183d037e22",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "last_failure_class": "",
+              "next_action": "done",
+              "observation_window_sec": 900,
+              "runner_state": "idle",
+              "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+            },
+            "status": "completed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          }
+        ],
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "spec",
+          "tier": "claude"
+        },
+        "runner_cli_bootstrap": {
+          "at": "2026-02-28T09:59:51.855645+00:00",
+          "detail": "runner_cli_present:claude:claude:/usr/bin/claude",
+          "ok": true
+        },
+        "runner_exec_user": {
+          "at": "2026-02-28T09:59:51.855677+00:00",
+          "detail": "runner_non_root_exec_user:runner:1000:1000",
+          "ok": true
+        },
+        "runner_id": "openai-codex:railway-runner-1",
+        "runner_last_result": {
+          "at": "2026-02-28T10:02:14.276129+00:00",
+          "attempt": 1,
+          "command_tool": "claude",
+          "duration_seconds": 141.1,
+          "failure_class": "",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "paid_call": true,
+          "status": "completed",
+          "task_type": "spec"
+        },
+        "runner_last_seen_at": "2026-02-28T10:02:11.617165+00:00",
+        "runner_log_tail": "",
+        "runner_metrics": {
+          "avg_runtime_seconds": 141.1,
+          "awareness_blocks_total": 0,
+          "awareness_events_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 0,
+          "awareness_quality_score": 0.7053,
+          "awareness_successful_transition_total": 2,
+          "awareness_transition_cost_total": 2.411,
+          "awareness_transition_total": 2,
+          "cost_per_successful_transition": 1.2055,
+          "estimated_to_measured_roi_conversion": null,
+          "hold_pattern_rate": 0.0,
+          "last_attempt": 1,
+          "last_failure_class": "",
+          "last_model": "claude/claude-sonnet-4-5-20250929",
+          "last_status": "completed",
+          "last_tool": "claude",
+          "paid_calls_failed": 0,
+          "paid_calls_success": 1,
+          "paid_calls_total": 1,
+          "paid_retry_calls": 0,
+          "paid_success_rate": 1.0,
+          "retries_total": 0,
+          "runs_failed": 0,
+          "runs_success": 1,
+          "runs_total": 1,
+          "state_transition_quality": 1.0,
+          "success_rate": 1.0,
+          "total_runtime_seconds": 141.1,
+          "updated_at": "2026-02-28T10:02:14.276117+00:00"
+        },
+        "runner_pid": 3038,
+        "runner_run_id": "run_79183d037e22",
+        "success_evidence": [],
+        "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+        },
+        "target_state_last_observed_at": "2026-02-28T10:02:13.771882+00:00",
+        "target_state_observation": {
+          "abort_evidence": [],
+          "abort_evidence_hits": [],
+          "abort_evidence_met": false,
+          "attempt_status": "completed",
+          "observation_window_exceeded": false,
+          "observation_window_sec": 900,
+          "observed_at": "2026-02-28T10:02:13.771766+00:00",
+          "success_evidence": [],
+          "success_evidence_hits": [],
+          "success_evidence_met": false,
+          "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK"
+        },
+        "task_agent": "product-manager"
+      },
+      "created_at": "2026-02-28T09:58:49.361771Z",
+      "current_step": "running command",
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+      "id": "task_5190320b94ff9830",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":139592,\"duration_api_ms\":137457,\"num_turns\":19,\"result\":\"## Spec Created: Hosted Low-Level Infrastructure Proof\\n\\nI've created **spec 113** for Hosted Low-Level Infrastructure Proof validation. The spec defines a comprehensive contract for validating that foundational infrastructure (network, PostgreSQL, Neo4j, filesystem, environment config) is operational in the hosted production environment.\\n\\n### Spec Summary\\n\\n**Purpose**: Systematic proof that foundational infrastructure layers work before trusting higher-level services, preventing deployment drift and infrastructure failures from surfacing as user-facing errors.\\n\\n**Key Requirements**:\\n- Network connectivity probes (external egress + Railway mesh)\\n- PostgreSQL connection validation (write-read-delete cycle)\\n- Neo4j query execution validation\\n- Filesystem operations validation\\n- Environment variable validation\\n- API endpoints for proof execution and history\\n- Database recording for regression detection\\n- CI/CD gate integration\\n\\n**API Endpoints**:\\n- `POST /api/infrastructure/proof/run` - Execute proof validation\\n- `GET /api/infrastructure/proof/latest` - Get most recent proof result\\n- `GET /api/infrastructure/proof/history` - Query historical proof runs\\n\\n### File Location\\n\\nDue to permission restrictions (specs/ directory is owned by root, running as user runner), the spec has been created at:\\n\\n```\\n/tmp/113-hosted-lowlevel-proof.md\\n```\\n\\nThe spec follows the project template and includes all mandatory sections: Purpose, Requirements, API Contract, Data Model, Files to Create/Modify, Acceptance Tests, Verification, Out of Scope, Risks and Assumptions, Known Gaps and Follow-up Tasks, and Decision Gates.\\n\\n---\\n\\n**HOSTED_LOWLEVEL_SPEC_4_OK**\",\"stop_reason\":null,\"session_id\":\"fb8781a2-714f-4865-bc66-b268f01b5b74\",\"total_cost_usd\":0.5422015,\"usage\":{\"input_tokens\":2143,\"cache_creation_input_tokens\":25496,\"cache_read_input_tokens\":334723,\"output_tokens\":8191,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":25496},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":2143,\"outputTokens\":8191,\"cacheReadInputTokens\":334723,\"cacheCreationInputTokens\":25496,\"webSearchRequests\":0,\"costUSD\":0.5422015,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"d7e43caa-9905-44ce-851e-13b8a57cf04c\"}\n",
+      "progress_pct": 10,
+      "status": "completed",
+      "success_evidence": [],
+      "target_state": "spec task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=4 task_type=spec. Return exactly HOSTED_LOWLEVEL_SPEC_4_OK",
+      "task_type": "spec",
+      "updated_at": "2026-02-28T10:02:16.118455Z"
+    },
+    {
+      "abort_evidence": [],
+      "claimed_at": "2026-02-28T09:59:19.120664Z",
+      "claimed_by": "openai-codex:railway-runner-1",
+      "command": "claude -p \"Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "context": {
+        "abort_evidence": [],
+        "active_branch": "",
+        "active_run_id": "run_d3e84504fff7",
+        "active_worker_id": "openai-codex:railway-runner-1",
+        "agent_graph_state": {
+          "attempt": 0,
+          "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "phase": "queued",
+          "provider": "claude",
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "test",
+            "tier": "claude"
+          },
+          "task_id": "task_8a7c4e7cbc2b633c",
+          "task_type": "test"
+        },
+        "agent_graph_state_errors": [],
+        "agent_graph_state_schema": {
+          "allowed_phases": [
+            "queued",
+            "running",
+            "needs_decision",
+            "completed",
+            "failed"
+          ],
+          "required_fields": [
+            "task_id",
+            "task_type",
+            "phase",
+            "direction"
+          ],
+          "schema_id": "coherence_agent_graph_state_v1"
+        },
+        "agent_graph_state_status": "valid",
+        "awareness_blocks_total": 0,
+        "awareness_cost_per_successful_transition": 0.358,
+        "awareness_estimated_roi_total": 0.0,
+        "awareness_estimated_to_measured_roi_conversion": null,
+        "awareness_events_total": 3,
+        "awareness_hold_pattern_rate": 0.0,
+        "awareness_hold_pattern_total": 0,
+        "awareness_interventions_total": 0,
+        "awareness_measured_roi_total": 0.0,
+        "awareness_quality": {
+          "blocks_total": 0,
+          "context_coverage": 0.6,
+          "cost_per_successful_transition": 0.358,
+          "estimated_roi_total": 0.0,
+          "estimated_to_measured_roi_conversion": null,
+          "events_total": 3,
+          "hold_pattern_rate": 0.0,
+          "hold_pattern_total": 0,
+          "interventions_total": 0,
+          "measured_roi_total": 0.0,
+          "policy_discipline": 1.0,
+          "score": 0.7636,
+          "snapshot_count": 3,
+          "state_transition_quality": 1.0,
+          "successful_transition_total": 3,
+          "transition_cost_total": 1.074,
+          "transition_total": 3,
+          "updated_at": "2026-02-28T09:59:29.377459+00:00"
+        },
+        "awareness_state_transition_quality": 1.0,
+        "awareness_successful_transition_total": 3,
+        "awareness_transition_cost_total": 1.074,
+        "awareness_transition_total": 3,
+        "executor": "claude",
+        "executor_policy": {
+          "availability": "unavailable_on_api_node",
+          "explicit_executor": "claude",
+          "policy_applied": true,
+          "reason": "explicit_executor_forced"
+        },
+        "last_attempt": 1,
+        "normalized_response_call": {
+          "executor": "claude",
+          "input": [
+            {
+              "content": [
+                {
+                  "text": "Role agent: qa-engineer. Task type: test. Respect role boundaries, spec scope, and acceptance criteria. Direction: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+                  "type": "input_text"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_id": "task_8a7c4e7cbc2b633c"
+        },
+        "observation_window_sec": 900,
+        "observer_context_last_snapshot": {
+          "at": "2026-02-28T09:59:29.377389+00:00",
+          "current_step": "finalized",
+          "delta": {
+            "last_failure_class": "",
+            "next_action": "done",
+            "runner_state": "idle"
+          },
+          "failure_class": "",
+          "run_id": "run_d3e84504fff7",
+          "state": {
+            "active_branch": "",
+            "active_run_id": "run_d3e84504fff7",
+            "active_worker_id": "openai-codex:railway-runner-1",
+            "last_attempt": 1,
+            "last_failure_class": "",
+            "next_action": "done",
+            "observation_window_sec": 900,
+            "runner_state": "idle",
+            "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+          },
+          "status": "completed",
+          "transition": "complete",
+          "worker_id": "openai-codex:railway-runner-1"
+        },
+        "observer_context_snapshots": [
+          {
+            "at": "2026-02-28T09:59:18.871829+00:00",
+            "current_step": "lease claimed",
+            "delta": {
+              "active_branch": "",
+              "active_run_id": "run_d3e84504fff7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+            },
+            "details": {
+              "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+              "repo_path": "",
+              "task_type": "test"
+            },
+            "failure_class": "",
+            "run_id": "run_d3e84504fff7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_d3e84504fff7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "observation_window_sec": 900,
+              "runner_state": "claimed",
+              "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+            },
+            "status": "claimed",
+            "transition": "claim",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T09:59:19.710976+00:00",
+            "current_step": "command started",
+            "delta": {
+              "next_action": "execute_command",
+              "runner_state": "running"
+            },
+            "failure_class": "",
+            "run_id": "run_d3e84504fff7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_d3e84504fff7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "next_action": "execute_command",
+              "observation_window_sec": 900,
+              "runner_state": "running",
+              "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+            },
+            "status": "running",
+            "transition": "start",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          {
+            "at": "2026-02-28T09:59:29.377389+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "",
+              "next_action": "done",
+              "runner_state": "idle"
+            },
+            "failure_class": "",
+            "run_id": "run_d3e84504fff7",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_d3e84504fff7",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "last_failure_class": "",
+              "next_action": "done",
+              "observation_window_sec": 900,
+              "runner_state": "idle",
+              "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+            },
+            "status": "completed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          }
+        ],
+        "retry_max": 0,
+        "route_decision": {
+          "billing_provider": "claude",
+          "executor": "claude",
+          "is_paid_provider": true,
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "provider": "claude",
+          "request_schema": "open_responses_v1",
+          "task_type": "test",
+          "tier": "claude"
+        },
+        "runner_cli_bootstrap": {
+          "at": "2026-02-28T09:59:19.043269+00:00",
+          "detail": "runner_cli_present:claude:claude:/usr/bin/claude",
+          "ok": true
+        },
+        "runner_exec_user": {
+          "at": "2026-02-28T09:59:19.043299+00:00",
+          "detail": "runner_non_root_exec_user:runner:1000:1000",
+          "ok": true
+        },
+        "runner_id": "openai-codex:railway-runner-1",
+        "runner_last_result": {
+          "at": "2026-02-28T09:59:27.759045+00:00",
+          "attempt": 1,
+          "command_tool": "claude",
+          "duration_seconds": 7.4,
+          "failure_class": "",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "paid_call": true,
+          "status": "completed",
+          "task_type": "test"
+        },
+        "runner_last_seen_at": "2026-02-28T09:59:25.093262+00:00",
+        "runner_log_tail": "",
+        "runner_metrics": {
+          "avg_runtime_seconds": 7.4,
+          "awareness_blocks_total": 0,
+          "awareness_events_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 0,
+          "awareness_quality_score": 0.7251,
+          "awareness_successful_transition_total": 2,
+          "awareness_transition_cost_total": 1.074,
+          "awareness_transition_total": 2,
+          "cost_per_successful_transition": 0.537,
+          "estimated_to_measured_roi_conversion": null,
+          "hold_pattern_rate": 0.0,
+          "last_attempt": 1,
+          "last_failure_class": "",
+          "last_model": "claude/claude-sonnet-4-5-20250929",
+          "last_status": "completed",
+          "last_tool": "claude",
+          "paid_calls_failed": 0,
+          "paid_calls_success": 1,
+          "paid_calls_total": 1,
+          "paid_retry_calls": 0,
+          "paid_success_rate": 1.0,
+          "retries_total": 0,
+          "runs_failed": 0,
+          "runs_success": 1,
+          "runs_total": 1,
+          "state_transition_quality": 1.0,
+          "success_rate": 1.0,
+          "total_runtime_seconds": 7.4,
+          "updated_at": "2026-02-28T09:59:27.759034+00:00"
+        },
+        "runner_run_id": "run_d3e84504fff7",
+        "success_evidence": [],
+        "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+        "target_state_contract": {
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "success_evidence": [],
+          "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+        },
+        "target_state_last_observed_at": "2026-02-28T09:59:27.248932+00:00",
+        "target_state_observation": {
+          "abort_evidence": [],
+          "abort_evidence_hits": [],
+          "abort_evidence_met": false,
+          "attempt_status": "completed",
+          "observation_window_exceeded": false,
+          "observation_window_sec": 900,
+          "observed_at": "2026-02-28T09:59:27.248862+00:00",
+          "success_evidence": [],
+          "success_evidence_hits": [],
+          "success_evidence_met": false,
+          "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK"
+        },
+        "task_agent": "qa-engineer"
+      },
+      "created_at": "2026-02-28T09:58:49.473316Z",
+      "current_step": "running command",
+      "decision": null,
+      "decision_prompt": null,
+      "direction": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+      "id": "task_8a7c4e7cbc2b633c",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "observation_window_sec": 900,
+      "output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":6196,\"duration_api_ms\":6110,\"num_turns\":1,\"result\":\"HOSTED_LOWLEVEL_TEST_5_OK\",\"stop_reason\":null,\"session_id\":\"32f56654-3d9b-421f-abef-07f01d198a24\",\"total_cost_usd\":0.02409775,\"usage\":{\"input_tokens\":9,\"cache_creation_input_tokens\":1325,\"cache_read_input_tokens\":19543,\"output_tokens\":240,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":1325},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":9,\"outputTokens\":240,\"cacheReadInputTokens\":19543,\"cacheCreationInputTokens\":1325,\"webSearchRequests\":0,\"costUSD\":0.02409775,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"86ccb18b-c4e1-4281-8b0a-2083b22f3b1e\"}\n",
+      "progress_pct": 1,
+      "status": "completed",
+      "success_evidence": [],
+      "target_state": "test task reaches intended target state: HOSTED_LOWLEVEL_PROOF 20260228T095700Z index=5 task_type=test. Return exactly HOSTED_LOWLEVEL_TEST_5_OK",
+      "task_type": "test",
+      "updated_at": "2026-02-28T09:59:29.448089Z"
+    }
+  ],
+  "generated_at": "2026-02-28T10:02:54.846127Z",
+  "run_id": "20260228T095700Z",
+  "summary": {
+    "hosted_claim_ratio": 0.6,
+    "hosted_claimed_count": 3,
+    "status_counts": {
+      "completed": 3,
+      "pending": 2
+    },
+    "total": 5
+  },
+  "tag": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z",
+  "task_types": [
+    "spec",
+    "test",
+    "review",
+    "spec",
+    "test"
+  ],
+  "timed_out": true
+}
