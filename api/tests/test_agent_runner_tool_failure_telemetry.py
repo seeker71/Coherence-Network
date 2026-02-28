@@ -654,7 +654,7 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     assert "OPENAI_BASE_URL" not in env
 
 
-def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch, tmp_path):
+def test_configure_codex_cli_environment_defaults_oauth_fallback_off(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.delenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", raising=False)
@@ -675,9 +675,11 @@ def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch,
 
     assert auth["requested_mode"] == "oauth"
     assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_fallback_allowed"] is True
-    assert env.get("OPENAI_API_KEY") == "sk-test"
-    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
+    assert auth["oauth_fallback_allowed"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
 
 
 def test_configure_codex_cli_environment_oauth_without_api_key_strips_openai_env(monkeypatch, tmp_path):
@@ -701,7 +703,7 @@ def test_configure_codex_cli_environment_oauth_without_api_key_strips_openai_env
 
     assert auth["requested_mode"] == "oauth"
     assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_fallback_allowed"] is True
+    assert auth["oauth_fallback_allowed"] is False
     assert auth["api_key_present"] is False
     assert "OPENAI_API_KEY" not in env
     assert "OPENAI_ADMIN_API_KEY" not in env
@@ -741,7 +743,7 @@ def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch,
     assert auth["requested_mode"] == "api_key"
     assert auth["effective_mode"] == "api_key"
     assert auth["oauth_session"] is False
-    assert auth["oauth_fallback_allowed"] is True
+    assert auth["oauth_fallback_allowed"] is False
     assert env.get("AGENT_CODEX_OAUTH_SESSION_FILE") == ""
     assert "agent-runner-codex-api-key" in str(env.get("HOME") or "")
     assert "agent-runner-codex-api-key" in str(env.get("CODEX_HOME") or "")
@@ -865,7 +867,7 @@ def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch
     assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
 
 
-def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeypatch, tmp_path):
+def test_run_one_task_does_not_schedule_api_key_auth_fallback_when_disallowed(monkeypatch, tmp_path):
     t = [5200.0]
 
     def _mono():
@@ -906,24 +908,29 @@ def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeyp
     )
     assert done is True
 
-    pending_patch = next(
+    pending_patches = [
         patch
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
+    ]
+    assert pending_patches == []
+
+    failed_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
     )
     failed_patches = [
         patch
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
     ]
-    assert failed_patches == []
-    context = pending_patch.get("context") or {}
-    assert context.get("runner_codex_auth_mode") == "api_key"
-    assert context.get("runner_codex_auth_fallback_attempted") is True
-    auth_fallback = context.get("runner_codex_auth_fallback") or {}
-    assert auth_fallback.get("trigger") == "oauth_refresh_token_reused"
-    assert auth_fallback.get("to_mode") == "api_key"
-    assert "runner-codex-auth-fallback" in str(pending_patch.get("output") or "")
+    assert len(failed_patches) == 1
+    context = failed_patch.get("context") or {}
+    assert context.get("runner_codex_auth_mode") != "api_key"
+    assert context.get("runner_codex_auth_fallback_attempted") is not True
+    assert (context.get("runner_codex_auth_fallback") or {}) == {}
+    assert "retrying with api_key auth mode" not in str(failed_patch.get("output") or "")
 
 
 def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):

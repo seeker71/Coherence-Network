@@ -243,7 +243,7 @@ def test_create_task_openclaw_model_override_openai_prefix_normalizes_for_codex(
     assert task["model"] == "openclaw/gpt-4o-mini"
 
 
-def test_create_task_openclaw_defaults_runner_codex_auth_mode_api_key(
+def test_create_task_openclaw_defaults_runner_codex_auth_mode_oauth(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
@@ -257,13 +257,13 @@ def test_create_task_openclaw_defaults_runner_codex_auth_mode_api_key(
 
     task = agent_service.create_task(
         AgentTaskCreate(
-            direction="Default to api_key runner auth mode",
+            direction="Default to oauth runner auth mode",
             task_type=TaskType.IMPL,
             context={"executor": "openclaw"},
         )
     )
 
-    assert task["context"]["runner_codex_auth_mode"] == "api_key"
+    assert task["context"]["runner_codex_auth_mode"] == "oauth"
 
 
 def test_create_task_openclaw_preserves_explicit_runner_codex_auth_mode(
