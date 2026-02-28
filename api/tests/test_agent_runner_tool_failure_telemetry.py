@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import io
+import json
 import os
 from dataclasses import dataclass
 import importlib.util
@@ -464,6 +466,54 @@ def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
     assert install_called["value"] is False
 
 
+def test_resolve_node_binary_prefers_non_shim_candidate(monkeypatch):
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/mise/shims/node" if binary == "node" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "isfile",
+        lambda path: path in {"/usr/local/bin/node", "/bin/node", "/mise/shims/node"},
+    )
+    monkeypatch.setattr(
+        agent_runner.os,
+        "access",
+        lambda path, mode: path in {"/usr/local/bin/node", "/bin/node", "/mise/shims/node"},
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "realpath",
+        lambda path: "/mise/shims/node" if path in {"/usr/local/bin/node", "/mise/shims/node"} else path,
+    )
+
+    resolved = agent_runner._resolve_node_binary({"PATH": "/mise/shims:/usr/local/bin:/bin"})
+    assert resolved == "/bin/node"
+
+
+def test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary(monkeypatch):
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/mise/shims/node" if binary == "node" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "isfile",
+        lambda path: path == "/mise/shims/node",
+    )
+    monkeypatch.setattr(
+        agent_runner.os,
+        "access",
+        lambda path, mode: path == "/mise/shims/node",
+    )
+    monkeypatch.setattr(agent_runner.os.path, "realpath", lambda path: path)
+
+    resolved = agent_runner._resolve_node_binary({"PATH": "/mise/shims"})
+    assert resolved == "/mise/shims/node"
+
+
 def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monkeypatch):
     monkeypatch.delenv("AGENT_TASK_TIMEOUT_SPEC", raising=False)
     monkeypatch.setattr(agent_runner, "TASK_TIMEOUT", 3600)
@@ -652,6 +702,36 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     assert "OPENAI_ADMIN_API_KEY" not in env
     assert "OPENAI_API_BASE" not in env
     assert "OPENAI_BASE_URL" not in env
+
+
+def test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "access_token": "access-token-value",
+        "refresh_token": "refresh-token-value",
+        "account_id": "acct-test",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    bootstrap_detail = str(auth.get("oauth_session_bootstrap_detail") or "")
+    assert bootstrap_detail.startswith("oauth_session_bootstrapped:")
+    target = env.get("AGENT_CODEX_OAUTH_SESSION_FILE") or ""
+    assert target.endswith("/.codex/auth.json")
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "refresh-token-value"
+    assert loaded.get("access_token") == "access-token-value"
 
 
 def test_configure_codex_cli_environment_defaults_oauth_fallback_off(monkeypatch, tmp_path):
