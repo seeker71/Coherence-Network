@@ -3026,6 +3026,54 @@ def _resolve_cli_binary(binary: str, env: dict[str, str]) -> str:
     return ""
 
 
+def _cursor_binary_runtime_layout(binary_path: str) -> tuple[bool, str]:
+    normalized = _abs_expanded_path(binary_path)
+    if not normalized:
+        return False, "cursor_binary_path_missing"
+    if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+        return False, "cursor_binary_missing_or_not_executable"
+    real_binary = _abs_expanded_path(os.path.realpath(normalized)) or normalized
+    runtime_dir = os.path.dirname(real_binary)
+    index_js = os.path.join(runtime_dir, "index.js")
+    node_bin = os.path.join(runtime_dir, "node")
+    if os.path.isfile(index_js) and os.path.isfile(node_bin) and os.access(node_bin, os.X_OK):
+        return True, f"cursor_runtime_layout_ok:{runtime_dir}"
+    return False, f"cursor_runtime_layout_missing:{runtime_dir}"
+
+
+def _resolve_cursor_cli_binary(binary: str, env: dict[str, str]) -> tuple[str, bool, str]:
+    candidates = _candidate_cli_paths(binary, env)
+    discovered = shutil.which(binary, path=str(env.get("PATH", "")))
+    if discovered:
+        discovered_normalized = _abs_expanded_path(discovered)
+        if discovered_normalized and discovered_normalized not in candidates:
+            candidates.append(discovered_normalized)
+
+    fallback = ""
+    fallback_detail = "cursor_binary_missing"
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if not normalized:
+            continue
+        if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+            continue
+        if not fallback:
+            fallback = normalized
+        layout_ok, layout_detail = _cursor_binary_runtime_layout(normalized)
+        if layout_ok:
+            return normalized, True, layout_detail
+        fallback_detail = layout_detail
+
+    if fallback:
+        return fallback, False, fallback_detail
+    if discovered:
+        normalized = _abs_expanded_path(discovered)
+        if normalized:
+            layout_ok, layout_detail = _cursor_binary_runtime_layout(normalized)
+            return normalized, bool(layout_ok), layout_detail
+    return "", False, "cursor_binary_missing"
+
+
 def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
     directory = os.path.dirname(binary_path)
     if not directory:
@@ -3233,7 +3281,13 @@ def _ensure_cli_for_command(
     if not binary:
         return True, ""
 
-    existing = _resolve_cli_binary(binary, env)
+    preinstall_notes: list[str] = []
+    cursor_layout_ok = True
+    cursor_layout_detail = ""
+    if provider == "cursor":
+        existing, cursor_layout_ok, cursor_layout_detail = _resolve_cursor_cli_binary(binary, env)
+    else:
+        existing = _resolve_cli_binary(binary, env)
     if existing:
         try:
             if os.geteuid() == 0 and provider != "cursor":
@@ -3245,10 +3299,18 @@ def _ensure_cli_for_command(
         _prepend_cli_path(existing, env)
         if provider == "cursor":
             shim_ok, shim_detail = _ensure_cursor_node_shim(env=env, cursor_binary=existing)
-            if not shim_ok and not _cli_auto_install_enabled():
-                return False, f"runner_cli_present_but_runtime_unhealthy:{provider}:{binary}:{shim_detail}"
-            if shim_ok:
-                return True, f"runner_cli_present:{provider}:{binary}:{existing}:{shim_detail}"
+            runtime_unhealthy_detail = ""
+            if not shim_ok:
+                runtime_unhealthy_detail = shim_detail
+            elif not cursor_layout_ok:
+                runtime_unhealthy_detail = cursor_layout_detail
+            if not runtime_unhealthy_detail:
+                return True, f"runner_cli_present:{provider}:{binary}:{existing}:{shim_detail}:{cursor_layout_detail}"
+            if not _cli_auto_install_enabled():
+                return False, (
+                    f"runner_cli_present_but_runtime_unhealthy:{provider}:{binary}:{runtime_unhealthy_detail}"
+                )
+            preinstall_notes.append(f"cursor_runtime:{runtime_unhealthy_detail}")
         else:
             return True, f"runner_cli_present:{provider}:{binary}:{existing}"
 
@@ -3260,13 +3322,18 @@ def _ensure_cli_for_command(
         return False, f"runner_cli_missing_no_install_commands:{provider}:{binary}"
 
     timeout_seconds = _cli_install_timeout_seconds()
-    notes: list[str] = []
+    notes: list[str] = list(preinstall_notes)
     for index, install_command in enumerate(commands, start=1):
         ok, detail = _run_cli_install_command(install_command, env=env, timeout_seconds=timeout_seconds)
         notes.append(f"cmd{index}:{'ok' if ok else 'fail'}:{detail}")
         if not ok:
             continue
-        resolved = _resolve_cli_binary(binary, env)
+        if provider == "cursor":
+            resolved, resolved_layout_ok, resolved_layout_detail = _resolve_cursor_cli_binary(binary, env)
+        else:
+            resolved = _resolve_cli_binary(binary, env)
+            resolved_layout_ok = True
+            resolved_layout_detail = ""
         if resolved:
             try:
                 if os.geteuid() == 0 and provider != "cursor":
@@ -3281,7 +3348,12 @@ def _ensure_cli_for_command(
                 if not shim_ok:
                     notes.append(f"cursor_runtime:{shim_detail}")
                     continue
-                return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}:{shim_detail}"
+                if not resolved_layout_ok:
+                    notes.append(f"cursor_runtime:{resolved_layout_detail}")
+                    continue
+                return True, (
+                    f"runner_cli_install_ok:{provider}:{binary}:{resolved}:{shim_detail}:{resolved_layout_detail}"
+                )
             return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}"
 
     log.warning("task=%s cli install failed provider=%s notes=%s", task_id, provider, "; ".join(notes)[:500])
