@@ -1117,14 +1117,15 @@ async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS", "0.05")
-    calls: list[dict[str, object]] = []
+    refresh_calls: list[dict[str, object]] = []
+    fallback_calls: list[dict[str, object]] = []
 
     def _fake_readiness(
         *,
         required_providers: list[str] | None = None,
         force_refresh: bool = True,
     ) -> ProviderReadinessReport:
-        calls.append(
+        refresh_calls.append(
             {
                 "required_providers": list(required_providers or []),
                 "force_refresh": force_refresh,
@@ -1132,6 +1133,19 @@ async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
         )
         if force_refresh:
             time.sleep(0.3)
+        return ProviderReadinessReport(
+            required_providers=list(required_providers or []),
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[],
+        )
+
+    def _fake_snapshot_fallback(
+        *,
+        required_providers: list[str] | None = None,
+    ) -> ProviderReadinessReport:
+        fallback_calls.append({"required_providers": list(required_providers or [])})
         return ProviderReadinessReport(
             required_providers=list(required_providers or []),
             all_required_ready=True,
@@ -1152,6 +1166,11 @@ async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
         )
 
     monkeypatch.setattr(automation_usage_service, "provider_readiness_report", _fake_readiness)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report_from_snapshots",
+        _fake_snapshot_fallback,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
@@ -1161,9 +1180,9 @@ async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
     assert response.status_code == 200
     payload = response.json()
     assert payload["providers"][0]["provider"] == "openai"
-    assert len(calls) >= 2
-    assert calls[0]["force_refresh"] is True
-    assert any(call["force_refresh"] is False for call in calls)
+    assert len(refresh_calls) >= 1
+    assert refresh_calls[0]["force_refresh"] is True
+    assert fallback_calls == [{"required_providers": ["openai"]}]
 
 
 @pytest.mark.asyncio
