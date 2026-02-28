@@ -37,6 +37,7 @@ No API shape changes are required in this spec.
 - `cd api && python3 scripts/prove_hosted_low_level_tasks.py --api-url https://coherence-network-production.up.railway.app --before-output ../docs/system_audit/hosted_worker_low_level_before_2026-02-28.json --after-output ../docs/system_audit/hosted_worker_low_level_after_2026-02-28.json`
 - `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
 - `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
+- Manual validation: confirm before/after artifact deltas in `docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md` and `docs/system_audit/start_gate_output_delta_2026-02-28.md`.
 
 ## Verification
 

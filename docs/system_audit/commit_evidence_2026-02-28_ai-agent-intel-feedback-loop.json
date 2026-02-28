@@ -1,7 +1,7 @@
 {
   "date": "2026-02-28",
   "thread_branch": "codex/ai-agent-research-20260228",
-  "commit_scope": "Biweekly AI agent intelligence + collective health scoring + start-gate continuation UX + hosted low-level worker proof.",
+  "commit_scope": "Biweekly AI agent intelligence + collective health scoring + start-gate continuation UX + hosted low-level worker proof (+ spec 115 acceptance/manual-validation quality fix).",
   "files_owned": [
     "api/app/services/agent_service.py",
     "api/app/services/agent_execution_retry.py",
