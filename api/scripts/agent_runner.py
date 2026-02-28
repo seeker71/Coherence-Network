@@ -3236,7 +3236,7 @@ def _ensure_cli_for_command(
     existing = _resolve_cli_binary(binary, env)
     if existing:
         try:
-            if os.geteuid() == 0:
+            if os.geteuid() == 0 and provider != "cursor":
                 promoted = _promote_binary_to_shared_path(binary, existing)
                 if promoted:
                     existing = promoted
@@ -3269,7 +3269,7 @@ def _ensure_cli_for_command(
         resolved = _resolve_cli_binary(binary, env)
         if resolved:
             try:
-                if os.geteuid() == 0:
+                if os.geteuid() == 0 and provider != "cursor":
                     promoted = _promote_binary_to_shared_path(binary, resolved)
                     if promoted:
                         resolved = promoted
