@@ -1,0 +1,90 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/readiness-coalesce-no-degraded-20260228",
+  "commit_scope": "Coalesce provider families in readiness output, normalize away degraded readiness statuses, and add timeout fallback to /api/automation/usage/readiness.",
+  "files_owned": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-28_readiness-coalesce-no-degraded.json"
+  ],
+  "change_files": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "idea_ids": [
+    "automation-provider-usage-readiness-api"
+  ],
+  "spec_ids": [
+    "113-provider-usage-coalescing-timeout-resilience"
+  ],
+  "task_ids": [
+    "task-2026-02-28-readiness-family-coalescing-timeout-fallback"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR merge and production deploy verification for readiness endpoint payload shape and timeout fallback behavior."
+  },
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting PR merge and public API verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Readiness endpoint returns family-coalesced providers (no openai/openai-codex or claude/claude-code duplicates), no degraded statuses in readiness rows, and timeout fallback returns cached report when forced refresh exceeds threshold.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Call /api/automation/usage/readiness?force_refresh=true and verify provider rows do not include degraded status.",
+      "Call /api/automation/usage/readiness?force_refresh=true and verify one row per provider family (single openai, single claude).",
+      "Set a low readiness timeout and verify timeout path serves fallback report instead of blocking request completion."
+    ]
+  }
+}
