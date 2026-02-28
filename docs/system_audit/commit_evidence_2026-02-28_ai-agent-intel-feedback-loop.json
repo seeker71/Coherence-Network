@@ -1,0 +1,171 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/ai-agent-research-20260228",
+  "commit_scope": "Biweekly AI agent intelligence + collective health scoring + start-gate continuation UX + hosted low-level worker proof.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_execution_hooks.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/scripts/collect_ai_agent_intel.py",
+    "api/scripts/build_ai_agent_improvement_plan.py",
+    "api/scripts/prove_hosted_low_level_tasks.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "specs/TEMPLATE.md",
+    "specs/113-ai-agent-biweekly-intelligence-feedback-loop.md",
+    "docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json",
+    "docs/system_audit/ai_agent_security_watch_2026-02-28.json",
+    "docs/system_audit/ai_agent_10_point_plan_2026-02-28.json",
+    "docs/system_audit/ai_agent_biweekly_summary_2026-02-28.md",
+    "docs/system_audit/ai_agent_implementation_proof_2026-02-28.md",
+    "config/start_gate_main_workflow_waivers.json",
+    "scripts/start_gate.py",
+    "scripts/auto_heal_start_gate.sh",
+    "api/app/routers/agent.py",
+    "api/app/services/collective_health_service.py",
+    "api/tests/test_agent_collective_health_api.py",
+    "docs/system_audit/collective_health_after_2026-02-28.json",
+    "docs/system_audit/collective_health_before_2026-02-28.json",
+    "docs/system_audit/collective_health_delta_2026-02-28.md",
+    "specs/114-collective-coherence-resonance-flow-friction-health.md",
+    "specs/115-start-gate-continuation-and-hosted-worker-proof.md",
+    "docs/system_audit/start_gate_output_before_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_remote_failure_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_delta_2026-02-28.md",
+    "docs/system_audit/hosted_worker_low_level_before_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_after_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "cd api && pytest -q tests/test_agent_task_persistence.py -k task_card",
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py -k retries_once_with_retry_hint_after_failure",
+      "cd api && pytest -q tests/test_monitor_pipeline_github_actions.py -k \"intelligence or advisory\"",
+      "cd api && python3 scripts/collect_ai_agent_intel.py --window-days 14 --output ../docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json --security-output ../docs/system_audit/ai_agent_security_watch_2026-02-28.json",
+      "cd api && python3 scripts/build_ai_agent_improvement_plan.py --intel ../docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json --output ../docs/system_audit/ai_agent_10_point_plan_2026-02-28.json",
+      "python3 -m py_compile scripts/start_gate.py api/scripts/prove_hosted_low_level_tasks.py api/scripts/collect_ai_agent_intel.py api/scripts/build_ai_agent_improvement_plan.py api/app/services/collective_health_service.py",
+      "git show HEAD:scripts/start_gate.py > /tmp/start_gate_before_20260228.py && python3 /tmp/start_gate_before_20260228.py > docs/system_audit/start_gate_output_before_2026-02-28.txt 2>&1 || true",
+      "python3 scripts/start_gate.py > docs/system_audit/start_gate_output_after_2026-02-28.txt 2>&1 || true",
+      "./scripts/auto_heal_start_gate.sh --start-command \"START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate\"",
+      "cd api && python3 scripts/prove_hosted_low_level_tasks.py --api-url https://coherence-network-production.up.railway.app --run-id 20260228T095700Z --executor claude --before-output ../docs/system_audit/hosted_worker_low_level_before_2026-02-28.json --after-output ../docs/system_audit/hosted_worker_low_level_after_2026-02-28.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build --json",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd api && pytest -q tests/test_agent_collective_health_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No remote CI run executed in this local thread."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy requested in this task."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI/deploy validation if a PR/deploy step is requested."
+  },
+  "idea_ids": [
+    "idea_ai_agent_feedback_loop_2026_02_28"
+  ],
+  "spec_ids": [
+    "113-ai-agent-biweekly-intelligence-feedback-loop",
+    "114-collective-coherence-resonance-flow-friction-health",
+    "115-start-gate-continuation-and-hosted-worker-proof"
+  ],
+  "task_ids": [
+    "task_ai_agent_research_plan_and_runtime_upgrades_2026_02_28"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "research",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/ai_agent_biweekly_summary_2026-02-28.md",
+    "docs/system_audit/ai_agent_implementation_proof_2026-02-28.md",
+    "docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json",
+    "docs/system_audit/ai_agent_security_watch_2026-02-28.json",
+    "docs/system_audit/ai_agent_10_point_plan_2026-02-28.json",
+    "docs/system_audit/collective_health_before_2026-02-28.json",
+    "docs/system_audit/collective_health_after_2026-02-28.json",
+    "docs/system_audit/collective_health_delta_2026-02-28.md",
+    "docs/system_audit/start_gate_output_before_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_remote_failure_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_delta_2026-02-28.md",
+    "docs/system_audit/hosted_worker_low_level_before_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_after_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md"
+  ],
+  "change_files": [
+    "api/app/services/agent_execution_hooks.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_service.py",
+    "api/scripts/build_ai_agent_improvement_plan.py",
+    "api/scripts/collect_ai_agent_intel.py",
+    "api/scripts/prove_hosted_low_level_tasks.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_monitor_pipeline_github_actions.py",
+    "config/start_gate_main_workflow_waivers.json",
+    "scripts/start_gate.py",
+    "scripts/auto_heal_start_gate.sh",
+    "docs/system_audit/ai_agent_10_point_plan_2026-02-28.json",
+    "docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json",
+    "docs/system_audit/ai_agent_biweekly_sources_latest.json",
+    "docs/system_audit/ai_agent_biweekly_summary_2026-02-28.md",
+    "docs/system_audit/ai_agent_implementation_proof_2026-02-28.md",
+    "docs/system_audit/ai_agent_security_watch_2026-02-28.json",
+    "docs/system_audit/ai_agent_security_watch_latest.json",
+    "specs/113-ai-agent-biweekly-intelligence-feedback-loop.md",
+    "specs/TEMPLATE.md",
+    "api/app/routers/agent.py",
+    "api/app/services/collective_health_service.py",
+    "api/tests/test_agent_collective_health_api.py",
+    "docs/system_audit/collective_health_after_2026-02-28.json",
+    "docs/system_audit/collective_health_before_2026-02-28.json",
+    "docs/system_audit/collective_health_delta_2026-02-28.md",
+    "specs/114-collective-coherence-resonance-flow-friction-health.md",
+    "specs/115-start-gate-continuation-and-hosted-worker-proof.md",
+    "docs/system_audit/start_gate_output_before_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_after_remote_failure_2026-02-28.txt",
+    "docs/system_audit/start_gate_output_delta_2026-02-28.md",
+    "docs/system_audit/hosted_worker_low_level_before_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_after_2026-02-28.json",
+    "docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Agent tasks now include task-card and retry-reflection metadata; monitor now flags stale intelligence and open high-severity security advisories.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "cd api && pytest -q tests/test_agent_task_persistence.py -k task_card",
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py -k retries_once_with_retry_hint_after_failure",
+      "cd api && pytest -q tests/test_monitor_pipeline_github_actions.py -k \"intelligence or advisory\""
+    ]
+  }
+}

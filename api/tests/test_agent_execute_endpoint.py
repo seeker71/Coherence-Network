@@ -155,6 +155,14 @@ async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
         assert int(context.get("failure_hits", 0)) == 1
         assert int(context.get("retry_count", 0)) == 1
         assert "Retry attempt 1" in str(context.get("retry_hint") or "")
+        reflections = context.get("retry_reflections") if isinstance(context.get("retry_reflections"), list) else []
+        assert len(reflections) == 1
+        reflection = reflections[0]
+        assert reflection.get("retry_number") == 1
+        assert reflection.get("failure_excerpt")
+        assert reflection.get("failure_category")
+        assert reflection.get("blind_spot")
+        assert reflection.get("next_action")
         assert call_count["value"] == 2
         assert len(prompt_history) == 2
         assert "Retry guidance" in prompt_history[1]

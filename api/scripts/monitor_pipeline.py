@@ -68,6 +68,14 @@ PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE = os.path.join(LOG_DIR, "public_deploy_c
 PROJECT_ROOT = os.path.dirname(_api_dir)
 START_GATE_WORKFLOW_OWNERS_FILE = os.path.join(PROJECT_ROOT, "config", "start_gate_workflow_owners.json")
 START_GATE_MAIN_WAIVERS_FILE = os.path.join(PROJECT_ROOT, "config", "start_gate_main_workflow_waivers.json")
+AI_AGENT_INTELLIGENCE_DIGEST_FILE = os.environ.get(
+    "AI_AGENT_INTELLIGENCE_DIGEST_FILE",
+    os.path.join(PROJECT_ROOT, "docs", "system_audit", "ai_agent_biweekly_sources_latest.json"),
+)
+AI_AGENT_SECURITY_WATCH_FILE = os.environ.get(
+    "AI_AGENT_SECURITY_WATCH_FILE",
+    os.path.join(PROJECT_ROOT, "docs", "system_audit", "ai_agent_security_watch_latest.json"),
+)
 
 # Priority order: 1 = highest (address first)
 SEVERITY_TO_PRIORITY = {"high": 1, "medium": 2, "low": 3}
@@ -94,6 +102,10 @@ EXPENSIVE_FAIL_THRESHOLD_SEC = float(os.environ.get("PIPELINE_EXPENSIVE_FAIL_THR
 GITHUB_ACTIONS_FAIL_RATE_THRESHOLD = float(os.environ.get("GITHUB_ACTIONS_FAIL_RATE_THRESHOLD", "0.35"))
 GITHUB_ACTIONS_MIN_COMPLETED = int(os.environ.get("GITHUB_ACTIONS_MIN_COMPLETED", "8"))
 GITHUB_ACTIONS_LOOKBACK_DAYS = int(os.environ.get("GITHUB_ACTIONS_LOOKBACK_DAYS", "7"))
+AI_AGENT_INTELLIGENCE_MAX_AGE_DAYS = max(
+    1,
+    int(os.environ.get("AI_AGENT_INTELLIGENCE_MAX_AGE_DAYS", "14")),
+)
 
 NO_TASK_RUNNING_ACTION = """ANALYZE why no task is running:
 - agent_runner process may have died or crashed
@@ -282,6 +294,75 @@ def _parse_ts_iso(raw: str | None) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except Exception:
         return None
+
+
+def _safe_load_json_file(path: str) -> dict[str, Any]:
+    if not path or not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _ai_agent_intelligence_status(now: datetime) -> dict[str, Any]:
+    payload = _safe_load_json_file(AI_AGENT_INTELLIGENCE_DIGEST_FILE)
+    if not payload:
+        return {
+            "available": False,
+            "path": AI_AGENT_INTELLIGENCE_DIGEST_FILE,
+            "reason": "missing_or_unreadable",
+        }
+    generated = _parse_ts_iso(str(payload.get("generated_at") or ""))
+    if generated is None:
+        return {
+            "available": False,
+            "path": AI_AGENT_INTELLIGENCE_DIGEST_FILE,
+            "reason": "missing_generated_at",
+        }
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+    generated_utc = generated.astimezone(timezone.utc)
+    age_days = max(0.0, (now - generated_utc).total_seconds() / 86400.0)
+    sources = payload.get("sources") if isinstance(payload.get("sources"), list) else []
+    return {
+        "available": True,
+        "path": AI_AGENT_INTELLIGENCE_DIGEST_FILE,
+        "generated_at": generated_utc.isoformat().replace("+00:00", "Z"),
+        "age_days": round(age_days, 2),
+        "source_count": len([row for row in sources if isinstance(row, dict)]),
+    }
+
+
+def _ai_agent_security_watch_status() -> dict[str, Any]:
+    payload = _safe_load_json_file(AI_AGENT_SECURITY_WATCH_FILE)
+    if not payload:
+        return {
+            "available": False,
+            "path": AI_AGENT_SECURITY_WATCH_FILE,
+            "reason": "missing_or_unreadable",
+        }
+    high_open = payload.get("open_high_severity")
+    critical_open = payload.get("open_critical_severity")
+    high_rows = [row for row in high_open if isinstance(row, dict)] if isinstance(high_open, list) else []
+    critical_rows = [row for row in critical_open if isinstance(row, dict)] if isinstance(critical_open, list) else []
+    generated = _parse_ts_iso(str(payload.get("generated_at") or ""))
+    generated_iso = ""
+    if generated is not None:
+        if generated.tzinfo is None:
+            generated = generated.replace(tzinfo=timezone.utc)
+        generated_iso = generated.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return {
+        "available": True,
+        "path": AI_AGENT_SECURITY_WATCH_FILE,
+        "generated_at": generated_iso,
+        "high_open_count": len(high_rows),
+        "critical_open_count": len(critical_rows),
+        "top_high": high_rows[0] if high_rows else {},
+        "top_critical": critical_rows[0] if critical_rows else {},
+    }
 
 
 def _load_workflow_owners() -> dict[str, str]:
@@ -1809,6 +1890,45 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                     data["issues"][-1]["heal_task_id"] = heal_task_id
     except Exception as ex:
         log.debug("Could not check paid-provider friction events: %s", ex)
+
+    intelligence = _ai_agent_intelligence_status(now)
+    if intelligence.get("available"):
+        age_days = float(intelligence.get("age_days") or 0.0)
+        if age_days > float(AI_AGENT_INTELLIGENCE_MAX_AGE_DAYS):
+            _add_issue(
+                data,
+                "ai_agent_intelligence_stale",
+                "medium",
+                (
+                    f"AI-agent intelligence digest is stale: age_days={age_days}, "
+                    f"max_age_days={AI_AGENT_INTELLIGENCE_MAX_AGE_DAYS}, "
+                    f"source_count={int(intelligence.get('source_count') or 0)}."
+                ),
+                (
+                    "Regenerate the biweekly intelligence digest and refresh the linked 10-point plan "
+                    "before scheduling additional autonomous execution."
+                ),
+            )
+
+    security_watch = _ai_agent_security_watch_status()
+    if security_watch.get("available"):
+        high_open_count = int(security_watch.get("high_open_count") or 0)
+        critical_open_count = int(security_watch.get("critical_open_count") or 0)
+        if high_open_count > 0 or critical_open_count > 0:
+            top_entry = security_watch.get("top_critical") or security_watch.get("top_high") or {}
+            advisory_id = str(top_entry.get("id") or top_entry.get("cve_id") or "unknown").strip()
+            _add_issue(
+                data,
+                "ai_agent_security_advisory_open",
+                "high" if critical_open_count > 0 else "medium",
+                (
+                    f"Open AI-agent security advisories detected: critical={critical_open_count}, "
+                    f"high={high_open_count}, top={advisory_id}."
+                ),
+                (
+                    "Review the advisory details, patch affected dependencies/workflows, and update the security watch artifact."
+                ),
+            )
 
     # Runner log errors: ERROR or "API not reachable" in agent_runner.log (last 2h)
     has_runner_errors, sample = _runner_log_has_recent_errors()

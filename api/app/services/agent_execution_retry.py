@@ -13,6 +13,7 @@ _RETRY_HINT_MAX = 900
 _OPENAI_RETRY_MODEL_DEFAULT = "gpt-5.3-codex"
 _OPENCLAW_SPARK_FALLBACK_MODEL = "gpt-5.3-codex"
 _OPENCLAW_SPARK_MODEL_SUFFIX = "gpt-5.3-codex-spark"
+_RETRY_REFLECTION_HISTORY_MAX = 8
 
 
 def _non_negative_int(value: Any, default: int = 0) -> int:
@@ -80,6 +81,90 @@ def _retry_fix_hint(failure_output: str, retry_number: int) -> str:
         f"Retry attempt {retry_number}: previous failure was '{_failure_excerpt(failure_output)}'. "
         f"Hint: {guidance}"
     )[:_RETRY_HINT_MAX]
+
+
+def _failure_category(failure_output: str, result_error: str) -> str:
+    lower_output = str(failure_output or "").lower()
+    lower_error = str(result_error or "").lower()
+    if _is_paid_provider_retry_candidate(
+        failure_output=failure_output,
+        result_error=result_error,
+    ):
+        return "paid_provider_blocked"
+    if "timeout" in lower_output or "timed out" in lower_output or "timeout" in lower_error:
+        return "timeout"
+    if "empty direction" in lower_output or "validation" in lower_output:
+        return "validation"
+    if (
+        "forbidden" in lower_output
+        or "unauthorized" in lower_output
+        or "authentication" in lower_output
+        or "auth" in lower_error
+    ):
+        return "auth"
+    if (
+        "command not found" in lower_output
+        or "missing" in lower_output
+        or "module not found" in lower_output
+    ):
+        return "dependency"
+    return "other"
+
+
+def _reflection_blind_spot_and_action(category: str) -> tuple[str, str]:
+    if category == "paid_provider_blocked":
+        return (
+            "Provider route and budget constraints were not validated before execution.",
+            "Verify provider access, budget windows, and fallback route before retry.",
+        )
+    if category == "timeout":
+        return (
+            "Task scope likely exceeded runtime or external dependency latency budget.",
+            "Reduce scope and prioritize one deterministic completion criterion.",
+        )
+    if category == "validation":
+        return (
+            "Input contract was underspecified or invalid for execution.",
+            "Tighten task card inputs and re-run with explicit success criteria.",
+        )
+    if category == "auth":
+        return (
+            "Credential or permissions assumptions were not verified in preflight.",
+            "Repair credentials/permissions and run readiness probe before retry.",
+        )
+    if category == "dependency":
+        return (
+            "Runtime dependency availability was assumed without verification.",
+            "Install/enable the required dependency and validate command availability.",
+        )
+    return (
+        "Root cause was not explicitly categorized before retry.",
+        "Capture a tighter hypothesis and run one smallest-possible corrective action.",
+    )
+
+
+def _append_retry_reflection(
+    context: dict[str, Any],
+    *,
+    retry_number: int,
+    failure_output: str,
+    failure_category: str,
+) -> list[dict[str, Any]]:
+    blind_spot, next_action = _reflection_blind_spot_and_action(failure_category)
+    history_raw = context.get("retry_reflections")
+    history: list[dict[str, Any]] = [row for row in history_raw if isinstance(row, dict)] if isinstance(history_raw, list) else []
+    history.append(
+        {
+            "retry_number": max(1, int(retry_number)),
+            "failure_category": failure_category,
+            "failure_excerpt": _failure_excerpt(failure_output),
+            "blind_spot": blind_spot,
+            "next_action": next_action,
+        }
+    )
+    if len(history) > _RETRY_REFLECTION_HISTORY_MAX:
+        history = history[-_RETRY_REFLECTION_HISTORY_MAX:]
+    return history
 
 
 def _truthy(value: Any) -> bool:
@@ -174,6 +259,31 @@ def _build_retry_override(
     return {}
 
 
+def _apply_retry_learning_context(
+    *,
+    context_patch: dict[str, Any],
+    context: dict[str, Any],
+    next_retry: int,
+    failure_output: str,
+    failure_category: str,
+) -> None:
+    context_patch["retry_count"] = next_retry
+    context_patch["retry_hint"] = _retry_fix_hint(failure_output, next_retry)
+    reflections = _append_retry_reflection(
+        context,
+        retry_number=next_retry,
+        failure_output=failure_output,
+        failure_category=failure_category,
+    )
+    context_patch["retry_reflections"] = reflections
+    if reflections:
+        latest_reflection = reflections[-1]
+        context_patch["blind_spot"] = str(latest_reflection.get("blind_spot") or "")
+        context_patch["next_action"] = str(latest_reflection.get("next_action") or "")
+    context_patch["retry_requested_at"] = datetime.now(timezone.utc).isoformat()
+    context_patch["last_retry_source"] = "auto_failure_recovery"
+
+
 def record_failure_hits_and_retry(
     *,
     task_id: str,
@@ -205,12 +315,14 @@ def record_failure_hits_and_retry(
         or "task_failed"
     )
     result_error = str(result.get("error") or "").strip()
+    failure_category = _failure_category(failure_output, result_error)
     current_model = str(task.get("model") or "").strip().lower()
     context_patch: dict[str, Any] = _build_retry_context_patch(
         failure_hits=failure_hits,
         retry_max=retry_max,
         failure_output=failure_output,
     )
+    context_patch["last_failure_category"] = failure_category
 
     can_retry = retry_count < retry_max and retry_depth < retry_max
     if not can_retry:
@@ -222,10 +334,13 @@ def record_failure_hits_and_retry(
         return result
 
     next_retry = retry_count + 1
-    context_patch["retry_count"] = next_retry
-    context_patch["retry_hint"] = _retry_fix_hint(failure_output, next_retry)
-    context_patch["retry_requested_at"] = datetime.now(timezone.utc).isoformat()
-    context_patch["last_retry_source"] = "auto_failure_recovery"
+    _apply_retry_learning_context(
+        context_patch=context_patch,
+        context=context,
+        next_retry=next_retry,
+        failure_output=failure_output,
+        failure_category=failure_category,
+    )
     retry_force_paid_providers = force_paid_providers
     override_patch = _build_retry_override(
         context=context,

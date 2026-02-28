@@ -14,7 +14,7 @@ Options:
   --with-pr-gate     also run `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`.
   --with-rebase      also run `git fetch origin main` and `git rebase origin/main`.
   --skip-restore     do not restore stashed worktree changes after completion.
-  --start-command CMD command (default: make start-gate)
+  --start-command CMD command string to run instead of start-gate (default: make start-gate)
   -h, --help         show this help text.
 USAGE
 }
@@ -22,7 +22,7 @@ USAGE
 run_pr_gate=0
 run_rebase=0
 run_restore=1
-start_cmd=(make start-gate)
+start_cmd="make start-gate"
 start_cmd_label="make start-gate"
 
 while [[ $# -gt 0 ]]; do
@@ -42,10 +42,10 @@ while [[ $# -gt 0 ]]; do
     --start-command)
       shift
       if [[ $# -eq 0 ]]; then
-        echo "auto-heal-start-gate: --start-command requires a command token"
+        echo "auto-heal-start-gate: --start-command requires a command string"
         exit 1
       fi
-      start_cmd=("$1")
+      start_cmd="$1"
       start_cmd_label="$1"
       shift
       ;;
@@ -105,7 +105,7 @@ else
 fi
 
 set +e
-"${start_cmd[@]}"
+bash -lc "$start_cmd"
 start_rc=$?
 set -e
 if [[ "$start_rc" -ne 0 ]]; then

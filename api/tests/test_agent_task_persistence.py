@@ -366,3 +366,57 @@ def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
     assert context.get("failure_diagnostics_present") is True
     assert context.get("failure_diagnostics_source") == "fallback"
     assert context.get("failure_reason_bucket") in {"other", "empty_output"}
+
+
+def test_create_task_records_task_card_validation_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Implement task-card scoring metadata",
+            task_type=TaskType.IMPL,
+            context={
+                "task_card": {
+                    "goal": "Add scoring metadata to task context",
+                    "files_allowed": ["api/app/services/agent_service.py"],
+                    "done_when": ["context.task_card_validation.score is present"],
+                    "commands": ["cd api && pytest -q tests/test_agent_task_persistence.py -k task_card"],
+                    "constraints": ["no placeholder fields"],
+                }
+            },
+        )
+    )
+    context = created.get("context") if isinstance(created.get("context"), dict) else {}
+    validation = context.get("task_card_validation") if isinstance(context.get("task_card_validation"), dict) else {}
+    assert validation.get("present") is True
+    assert validation.get("missing") == []
+    assert validation.get("score") == pytest.approx(1.0, rel=1e-6)
+
+    partial = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Create a task with an incomplete task card",
+            task_type=TaskType.IMPL,
+            context={"task_card": {"goal": "Only goal is set"}},
+        )
+    )
+    partial_context = partial.get("context") if isinstance(partial.get("context"), dict) else {}
+    partial_validation = (
+        partial_context.get("task_card_validation")
+        if isinstance(partial_context.get("task_card_validation"), dict)
+        else {}
+    )
+    assert partial_validation.get("present") is True
+    assert partial_validation.get("score", 1.0) < 1.0
+    assert set(partial_validation.get("missing") or []) == {
+        "files_allowed",
+        "done_when",
+        "commands",
+        "constraints",
+    }
