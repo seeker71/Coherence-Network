@@ -1,0 +1,94 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/usage-provider-fix-timeout-20260228",
+  "commit_scope": "Fix automation usage provider-family duplication (openai/claude aliases), use quota-aware summary metrics for usage_remaining, and add timeout fallback for /api/automation/usage.",
+  "files_owned": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "specs/113-provider-usage-coalescing-timeout-resilience.md",
+    "docs/system_audit/commit_evidence_2026-02-28_provider-usage-coalescing-timeout.json"
+  ],
+  "change_files": [
+    "api/app/routers/automation_usage.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "specs/113-provider-usage-coalescing-timeout-resilience.md"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"finalize_snapshot_uses_summary_metric_for_usage_remaining or coalesces_provider_families or times_out_to_snapshot_fallback\"",
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
+  ],
+  "idea_ids": [
+    "automation-provider-usage-readiness-api"
+  ],
+  "spec_ids": [
+    "113-provider-usage-coalescing-timeout-resilience"
+  ],
+  "task_ids": [
+    "task-2026-02-28-provider-usage-family-coalescing-timeout-fallback"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR and public deployment verification for timeout behavior on production endpoints."
+  },
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"finalize_snapshot_uses_summary_metric_for_usage_remaining or coalesces_provider_families or times_out_to_snapshot_fallback\"",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "cd api && ruff check app/services/automation_usage_service.py app/routers/automation_usage.py tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting PR merge and public API verification in production."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation usage endpoint responds within configured timeout by serving snapshot fallback instead of hanging, and provider families are coalesced to one openai and one claude row with improved usage_remaining values when quota metrics exist.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/daily-summary?window_hours=24&top_n=8"
+    ],
+    "test_flows": [
+      "Call /api/automation/usage and verify provider rows are coalesced by family (single openai, single claude).",
+      "Call /api/automation/usage and verify usage_remaining is populated when summary quota metrics include remaining values.",
+      "Force a slow provider collection path and verify /api/automation/usage still returns fallback payload before client timeout."
+    ]
+  }
+}

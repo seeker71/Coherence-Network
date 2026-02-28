@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Query
 
 from app.services import automation_usage_service
@@ -15,7 +17,18 @@ async def get_automation_usage(
     compact: bool = Query(False, description="Return a trimmed payload for lower-bandwidth clients"),
     include_raw: bool = Query(False, description="Include provider raw payload in compact mode"),
 ) -> dict:
-    overview = automation_usage_service.collect_usage_overview(force_refresh=force_refresh)
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    try:
+        overview = await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.collect_usage_overview,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        overview = automation_usage_service.usage_overview_from_snapshots()
+    overview = automation_usage_service.coalesce_usage_overview_families(overview)
     if compact:
         return automation_usage_service.compact_usage_overview_payload(
             overview,

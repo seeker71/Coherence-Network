@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -769,6 +770,44 @@ def test_summary_metric_prefers_db_monthly_egress_over_db_window_proxy() -> None
     assert selected.id == "db_host_egress_monthly_estimated"
 
 
+def test_finalize_snapshot_uses_summary_metric_for_usage_remaining() -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_remaining_selection",
+        provider="openai",
+        kind="openai",
+        status="ok",
+        data_source="provider_api",
+        metrics=[
+            UsageMetric(
+                id="runtime_task_runs",
+                label="Runtime task runs",
+                unit="tasks",
+                used=42.0,
+                remaining=None,
+                limit=None,
+                window="rolling",
+            ),
+            UsageMetric(
+                id="requests_quota",
+                label="OpenAI request quota",
+                unit="requests",
+                used=120.0,
+                remaining=880.0,
+                limit=1000.0,
+                window="minute",
+                validation_state="validated",
+                evidence_source="provider_rate_limit_headers",
+            ),
+        ],
+    )
+
+    finalized = automation_usage_service._finalize_snapshot(snapshot)
+    assert finalized.actual_current_usage == pytest.approx(42.0, rel=1e-6)
+    assert finalized.actual_current_usage_unit == "tasks"
+    assert finalized.usage_remaining == pytest.approx(880.0, rel=1e-6)
+    assert finalized.usage_remaining_unit == "requests"
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,
@@ -822,6 +861,209 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert len(providers["coherence-internal"]["official_records"]) >= 1
         assert len(providers["github"]["official_records"]) >= 1
         assert providers["github"]["data_source"] in {"configuration_only", "provider_api", "provider_cli", "unknown"}
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_endpoint_coalesces_provider_families(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openai_primary",
+                provider="openai",
+                kind="openai",
+                status="ok",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="requests_quota",
+                        label="OpenAI request quota",
+                        unit="requests",
+                        used=200.0,
+                        remaining=800.0,
+                        limit=1000.0,
+                        window="minute",
+                        validation_state="validated",
+                        evidence_source="provider_rate_limit_headers",
+                    )
+                ],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_openai_alias",
+                provider="openai-codex",
+                kind="custom",
+                status="ok",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=60.0,
+                        remaining=None,
+                        limit=None,
+                        window="rolling",
+                    )
+                ],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_claude_primary",
+                provider="claude",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="models_visible",
+                        label="Claude visible models",
+                        unit="requests",
+                        used=7.0,
+                        remaining=None,
+                        limit=None,
+                        window="probe",
+                    )
+                ],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_claude_alias",
+                provider="claude-code",
+                kind="custom",
+                status="degraded",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=15.0,
+                        remaining=None,
+                        limit=None,
+                        window="rolling",
+                    )
+                ],
+            ),
+        ],
+        unavailable_providers=[],
+        tracked_providers=4,
+        limit_coverage={"providers_considered": 4},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/automation/usage", params={"force_refresh": True})
+    assert response.status_code == 200
+    payload = response.json()
+    providers = [row["provider"] for row in payload["providers"]]
+    assert providers.count("openai") == 1
+    assert providers.count("claude") == 1
+    assert "openai-codex" not in providers
+    assert "claude-code" not in providers
+    assert all(row["status"] != "degraded" for row in payload["providers"])
+    openai_row = next(row for row in payload["providers"] if row["provider"] == "openai")
+    assert openai_row["usage_remaining"] == pytest.approx(800.0, rel=1e-6)
+    assert openai_row["usage_remaining_unit"] == "requests"
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_endpoint_times_out_to_snapshot_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS", "0.05")
+
+    fallback_overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openai_fallback",
+                provider="openai",
+                kind="openai",
+                status="ok",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="runtime_task_runs",
+                        label="Runtime task runs",
+                        unit="tasks",
+                        used=9.0,
+                        remaining=None,
+                        limit=None,
+                        window="rolling",
+                    )
+                ],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={"providers_considered": 1},
+    )
+
+    def _slow_collect(force_refresh: bool = False) -> ProviderUsageOverview:
+        time.sleep(0.3)
+        return fallback_overview
+
+    monkeypatch.setattr(automation_usage_service, "collect_usage_overview", _slow_collect)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "usage_overview_from_snapshots",
+        lambda: fallback_overview,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/automation/usage", params={"force_refresh": True})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tracked_providers"] == 1
+    assert payload["providers"][0]["provider"] == "openai"
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_endpoint_normalizes_degraded_status_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openrouter_degraded",
+                provider="openrouter",
+                kind="custom",
+                status="degraded",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="models_visible",
+                        label="OpenRouter visible models",
+                        unit="requests",
+                        used=9.0,
+                        remaining=None,
+                        limit=None,
+                        window="probe",
+                    )
+                ],
+                notes=["probe intermittent"],
+            )
+        ],
+        unavailable_providers=["openrouter"],
+        tracked_providers=1,
+        limit_coverage={"providers_considered": 1},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/automation/usage", params={"force_refresh": True})
+    assert response.status_code == 200
+    payload = response.json()
+    row = payload["providers"][0]
+    assert row["provider"] == "openrouter"
+    assert row["status"] == "ok"
+    assert all(provider["status"] != "degraded" for provider in payload["providers"])
 
 
 @pytest.mark.asyncio
