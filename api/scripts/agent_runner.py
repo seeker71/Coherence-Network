@@ -3131,22 +3131,71 @@ def _cursor_node_shim_path(*, cursor_binary: str = "") -> str:
     return "/usr/local/bin/node"
 
 
+def _node_binary_accepts_use_system_ca(node_binary: str, *, env: dict[str, str]) -> bool:
+    binary = _abs_expanded_path(node_binary)
+    if not binary:
+        return False
+    if not os.path.isfile(binary) or not os.access(binary, os.X_OK):
+        return False
+    try:
+        completed = subprocess.run(
+            [binary, "--use-system-ca", "-e", "process.exit(0)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env=env,
+        )
+    except Exception:
+        return False
+    return completed.returncode == 0
+
+
+def _write_cursor_node_compat_wrapper(*, shim_path: str, node_binary: str) -> None:
+    quoted_binary = shlex.quote(node_binary)
+    content = (
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "while [ \"${1-}\" = \"--use-system-ca\" ]; do\n"
+        "  shift\n"
+        "done\n"
+        f"exec {quoted_binary} \"$@\"\n"
+    )
+    with open(shim_path, "w", encoding="utf-8") as file:
+        file.write(content)
+    os.chmod(shim_path, 0o755)
+
+
 def _ensure_cursor_node_shim(*, env: dict[str, str], cursor_binary: str = "") -> tuple[bool, str]:
     shim_path = _cursor_node_shim_path(cursor_binary=cursor_binary)
+    shim_exists = os.path.lexists(shim_path)
     if os.path.isfile(shim_path) and os.access(shim_path, os.X_OK):
-        return True, f"cursor_node_shim_present:{shim_path}"
+        if _node_binary_accepts_use_system_ca(shim_path, env=env):
+            return True, f"cursor_node_shim_present:{shim_path}"
+        shim_exists = True
     node_binary = _resolve_node_binary(env)
     if not node_binary:
         return False, "cursor_node_missing"
+    supports_use_system_ca = _node_binary_accepts_use_system_ca(node_binary, env=env)
     try:
         shim_dir = os.path.dirname(shim_path) or "."
         os.makedirs(shim_dir, exist_ok=True)
         if os.path.lexists(shim_path):
             os.remove(shim_path)
-        os.symlink(node_binary, shim_path)
+        if supports_use_system_ca:
+            os.symlink(node_binary, shim_path)
+        else:
+            _write_cursor_node_compat_wrapper(shim_path=shim_path, node_binary=node_binary)
     except Exception as exc:
         return False, f"cursor_node_shim_failed:{type(exc).__name__}"
-    return True, f"cursor_node_shim_created:{shim_path}->{node_binary}"
+    if not _node_binary_accepts_use_system_ca(shim_path, env=env):
+        return False, "cursor_node_shim_failed:unsupported_use_system_ca"
+    if supports_use_system_ca:
+        event = "cursor_node_shim_repaired" if shim_exists else "cursor_node_shim_created"
+    else:
+        event = "cursor_node_shim_repaired_compat" if shim_exists else "cursor_node_shim_created_compat"
+    return True, f"{event}:{shim_path}->{node_binary}"
 
 
 def _run_cli_install_command(command: str, *, env: dict[str, str], timeout_seconds: int) -> tuple[bool, str]:
@@ -3301,6 +3350,44 @@ def _codex_oauth_session_target_path(env: dict[str, str]) -> str:
     return ""
 
 
+def _find_nested_token_value(node: Any, token_key: str) -> str:
+    if isinstance(node, dict):
+        direct = node.get(token_key)
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+        for value in node.values():
+            found = _find_nested_token_value(value, token_key)
+            if found:
+                return found
+        return ""
+    if isinstance(node, list):
+        for item in node:
+            found = _find_nested_token_value(item, token_key)
+            if found:
+                return found
+    return ""
+
+
+def _extract_codex_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_nested_token_value(payload, "access_token")
+    refresh_token = _find_nested_token_value(payload, "refresh_token")
+    return access_token, refresh_token
+
+
+def _read_json_object_file(path: str) -> dict[str, Any]:
+    candidate = _abs_expanded_path(path)
+    if not candidate:
+        return {}
+    try:
+        with open(candidate, encoding="utf-8") as file:
+            payload = json.load(file)
+    except Exception:
+        return {}
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
 def _bootstrap_codex_oauth_session_from_env(
     *,
     env: dict[str, str],
@@ -3312,6 +3399,15 @@ def _bootstrap_codex_oauth_session_from_env(
         encoded = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
     if not encoded:
         return False, ""
+    target_path = _codex_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_codex_oauth_tokens(existing_payload)
+    if existing_access_token or existing_refresh_token:
+        env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+        return False, f"oauth_session_preserved_existing:{target_path}"
 
     compact = "".join(encoded.split())
     if not compact:
@@ -3339,25 +3435,7 @@ def _bootstrap_codex_oauth_session_from_env(
     if not isinstance(payload, dict):
         return False, "oauth_session_json_not_object"
 
-    def _find_token_value(node: Any, token_key: str) -> str:
-        if isinstance(node, dict):
-            direct = node.get(token_key)
-            if isinstance(direct, str) and direct.strip():
-                return direct.strip()
-            for value in node.values():
-                found = _find_token_value(value, token_key)
-                if found:
-                    return found
-            return ""
-        if isinstance(node, list):
-            for item in node:
-                found = _find_token_value(item, token_key)
-                if found:
-                    return found
-        return ""
-
-    refresh_token = _find_token_value(payload, "refresh_token")
-    access_token = _find_token_value(payload, "access_token")
+    access_token, refresh_token = _extract_codex_oauth_tokens(payload)
     if not refresh_token and not access_token:
         return False, "oauth_session_missing_tokens"
 
@@ -3366,10 +3444,6 @@ def _bootstrap_codex_oauth_session_from_env(
     if refresh_token:
         payload["refresh_token"] = refresh_token
     payload.setdefault("auth_mode", "oauth")
-
-    target_path = _codex_oauth_session_target_path(env)
-    if not target_path:
-        return False, "oauth_session_target_missing"
 
     try:
         os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
@@ -3624,6 +3698,60 @@ def _configure_codex_cli_environment(
         oauth_session_bootstrap_detail or "none",
     )
     return auth_state
+
+
+def _codex_oauth_auto_relogin_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST") and not _as_bool(
+        os.getenv("AGENT_RUNNER_CODEX_OAUTH_AUTO_RELOGIN_IN_TESTS", "0")
+    ):
+        return False
+    return _as_bool(os.getenv("AGENT_RUNNER_CODEX_OAUTH_AUTO_RELOGIN", "1"))
+
+
+def _attempt_codex_oauth_relogin(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    if not _codex_oauth_auto_relogin_enabled():
+        return False, "oauth_relogin_disabled"
+
+    codex_binary = _resolve_cli_binary("codex", env) or ""
+    if not codex_binary:
+        return False, "oauth_relogin_codex_missing"
+
+    login_commands = (
+        ([codex_binary, "login", "--device-auth"], "codex_login_device_auth"),
+        ([codex_binary, "auth", "login", "--device-auth"], "codex_auth_login_device_auth"),
+    )
+    last_error = "oauth_relogin_command_failed"
+    for argv, source in login_commands:
+        try:
+            completed = subprocess.run(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=45,
+                env=env,
+            )
+        except Exception as exc:
+            last_error = f"{source}_exception:{type(exc).__name__}"
+            continue
+        if completed.returncode == 0:
+            session_ok, session_source = _codex_oauth_session_status(env)
+            if session_ok:
+                return True, f"{source}:{session_source}"
+            return True, source
+        stderr = str(completed.stderr or "").strip()
+        stdout = str(completed.stdout or "").strip()
+        detail = (stderr or stdout or "unknown_error")[:180]
+        last_error = f"{source}_rc{completed.returncode}:{detail}"
+
+    log.warning("task=%s codex oauth relogin failed detail=%s", task_id, last_error)
+    return False, last_error
 
 
 def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
@@ -5234,30 +5362,57 @@ def run_one_task(
             retry_context_patch: dict[str, Any] | None = None
             if _uses_codex_cli(command):
                 oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_codex_oauth_refresh_retry_attempted"))
+                oauth_relogin_attempted = _as_bool(task_ctx.get("runner_codex_oauth_relogin_attempted"))
                 oauth_refresh_retry_eligible = bool(
                     codex_auth_state
                     and codex_auth_state.get("effective_mode") == "oauth"
                 )
                 if oauth_refresh_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
                     if not oauth_refresh_retry_attempted:
+                        relogin_ok = False
+                        relogin_detail = "oauth_relogin_skipped"
+                        if not oauth_relogin_attempted:
+                            relogin_ok, relogin_detail = _attempt_codex_oauth_relogin(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                            )
                         retry_task_ctx = dict(retry_task_ctx)
                         retry_task_ctx["runner_codex_auth_mode"] = "oauth"
                         retry_task_ctx["runner_codex_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_codex_oauth_relogin_attempted"] = True
+                        retry_task_ctx["runner_codex_oauth_relogin"] = {
+                            "ok": bool(relogin_ok),
+                            "detail": relogin_detail,
+                            "at": _utc_now_iso(),
+                        }
                         retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
                         requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
                         retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
                         retry_context_patch = (retry_context_patch or {}) | {
                             "runner_codex_auth_mode": "oauth",
                             "runner_codex_oauth_refresh_retry_attempted": True,
+                            "runner_codex_oauth_relogin_attempted": True,
+                            "runner_codex_oauth_relogin": {
+                                "ok": bool(relogin_ok),
+                                "detail": relogin_detail,
+                                "at": _utc_now_iso(),
+                            },
                             "runner_codex_oauth_refresh_retry": {
                                 "trigger": "oauth_refresh_token_reused",
                                 "mode": "oauth",
                                 "at": _utc_now_iso(),
                             },
                         }
+                        relogin_message = ""
+                        if not oauth_relogin_attempted:
+                            relogin_status = "ok" if relogin_ok else "failed"
+                            relogin_message = (
+                                f" oauth relogin {relogin_status} ({relogin_detail});"
+                            )
                         output = (
                             f"{output}\n[runner-codex-auth-retry] oauth refresh token reuse detected; "
-                            "retrying with oauth auth mode."
+                            f"{relogin_message} retrying with oauth auth mode."
                         )
                     else:
                         output = (
