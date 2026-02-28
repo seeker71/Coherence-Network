@@ -1,7 +1,7 @@
 {
   "date": "2026-02-28",
   "thread_branch": "codex/host-runner-executor-proof-20260228",
-  "commit_scope": "Repair host-runner executor reliability by avoiding recursive /mise node shims for Cursor runtime healing, hydrating Codex OAuth session files from AGENT_CODEX_OAUTH_SESSION_B64, and enforcing OAuth-only Codex refresh-token retries (no API-key fallback).",
+  "commit_scope": "Repair host-runner executor reliability by making Cursor node shim self-heal compatible with --use-system-ca hosts, preserving existing Codex OAuth session files when AGENT_CODEX_OAUTH_SESSION_B64 is present, and attempting one Codex OAuth relogin before OAuth-only refresh-token reuse retries.",
   "files_owned": [
     "api/scripts/agent_runner.py",
     "api/tests/test_agent_runner_tool_failure_telemetry.py",
@@ -49,7 +49,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64 tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
     ]
@@ -64,11 +64,11 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Awaiting follow-up PR merge/redeploy and post-deploy hosted proof rerun for codex/claude/cursor execution paths."
+    "blocked_reason": "Awaiting PR merge, production deploy, and hosted proof rerun confirming codex/claude/cursor all complete on host runner."
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "Host runner can complete one execution path each for codex, claude, and cursor; Codex refresh-token self-heal stays in OAuth mode and cursor runtime self-heals missing node shim.",
+    "expected_behavior_delta": "Host runner can complete one execution path each for codex, claude, and cursor; Cursor self-heals unsupported --use-system-ca node flag via compatibility shim, and Codex refresh-token failures retry in OAuth mode with one relogin heal attempt while preserving existing auth session files.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
       "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
