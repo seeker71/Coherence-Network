@@ -1,0 +1,21 @@
+{
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "executor": "claude",
+  "generated_at": "2026-02-28T09:58:49.000403Z",
+  "matching_tasks": [],
+  "run_id": "20260228T095700Z",
+  "summary": {
+    "hosted_claim_ratio": 0.0,
+    "hosted_claimed_count": 0,
+    "status_counts": {},
+    "total": 0
+  },
+  "tag": "HOSTED_LOWLEVEL_PROOF 20260228T095700Z",
+  "task_types": [
+    "spec",
+    "test",
+    "review",
+    "spec",
+    "test"
+  ]
+}

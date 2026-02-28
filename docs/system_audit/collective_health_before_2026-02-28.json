@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-02-28T09:00:00Z",
+  "endpoint": "/api/agent/collective-health",
+  "status_code": 404,
+  "body": {
+    "detail": "Not Found"
+  },
+  "meaning": "No explicit system-level Coherence/Resonance/Flow/Friction score was available."
+}
