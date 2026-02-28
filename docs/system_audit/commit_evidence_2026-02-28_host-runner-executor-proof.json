@@ -49,7 +49,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64 tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens",
       "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
       "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
     ]

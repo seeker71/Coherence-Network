@@ -734,6 +734,38 @@ def test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64(monke
     assert loaded.get("access_token") == "access-token-value"
 
 
+def test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens(monkeypatch, tmp_path):
+    session_payload = {
+        "auth_mode": "oauth",
+        "last_refresh": {"at": "2026-02-28T10:00:00Z"},
+        "tokens": {
+            "chatgpt": {
+                "access_token": "nested-access-token",
+                "refresh_token": "nested-refresh-token",
+            }
+        },
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_bootstrap_nested_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    target = env.get("AGENT_CODEX_OAUTH_SESSION_FILE") or ""
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "nested-refresh-token"
+    assert loaded.get("access_token") == "nested-access-token"
+
+
 def test_configure_codex_cli_environment_defaults_oauth_fallback_off(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
