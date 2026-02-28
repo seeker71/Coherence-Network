@@ -36,6 +36,13 @@
   },
   "evidence_refs": [
     "/tmp/host_runner_baseline_20260228T095107Z.json",
+    "/tmp/host_runner_proof_final6_20260228T120301Z.json",
+    "https://github.com/seeker71/Coherence-Network/pull/366",
+    "https://github.com/seeker71/Coherence-Network/pull/367",
+    "https://github.com/seeker71/Coherence-Network/pull/368",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22520224227",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22520224213",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/22520265021",
     "https://coherence-network-production.up.railway.app/api/agent/tasks",
     "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}",
     "https://coherence-network-production.up.railway.app/api/agent/runners"
@@ -54,19 +61,21 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "run_url": ""
+    "status": "pass",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22520224227"
   },
   "deploy_validation": {
-    "status": "pending",
-    "environment": "railway-production"
+    "status": "pass",
+    "environment": "railway-production",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22520265021",
+    "deployed_sha": "60ab03f01f12aa427dfbc1b5a4e7ea4dee104699"
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Awaiting PR merge, production deploy, and hosted proof rerun confirming codex/claude/cursor all complete on host runner."
+    "can_move_next_phase": true,
+    "blocked_reason": ""
   },
   "e2e_validation": {
-    "status": "pending",
+    "status": "pass",
     "expected_behavior_delta": "Host runner can complete one execution path each for codex, claude, and cursor; Cursor self-heals unsupported --use-system-ca node flag via compatibility shim, avoids promoted binaries without runtime assets, and resolves to layout-healthy agent binaries only; Codex refresh-token failures retry in OAuth mode with one relogin heal attempt while preserving existing auth session files.",
     "public_endpoints": [
       "https://coherence-network-production.up.railway.app/api/agent/tasks",
@@ -75,9 +84,9 @@
       "https://coherence-network-production.up.railway.app/api/agent/runners"
     ],
     "test_flows": [
-      "Create codex task and verify completion using oauth auth mode (no api_key fallback marker).",
-      "Create claude task and verify completed status with expected proof token.",
-      "Create cursor task and verify completed status with expected proof token and no missing /usr/local/bin/node error."
+      "Create codex task task_1b8d181a4ad2dfb7 (codex exec --help) and verify status=completed with OAuth auth metadata in output.",
+      "Create claude task task_c27d41ca9bf279cd and verify status=completed with output token PROOF_claude_OK.",
+      "Create cursor task task_7295858a969f6ec4 (agent --help) and verify status=completed with runtime-layout bootstrap detail cursor_runtime_layout_ok."
     ]
   }
 }
