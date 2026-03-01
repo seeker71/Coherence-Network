@@ -5866,8 +5866,95 @@ def provider_validation_report(
     )
 
 
-def _env_flag(name: str) -> bool:
-    return bool(str(os.getenv(name, "")).strip())
+def _normalize_subscription_tier(provider: str, value: str) -> str:
+    normalized_provider = provider.strip().lower()
+    normalized_value = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized_provider == "openai":
+        aliases = {
+            "plus": "pro",
+            "chatgpt_plus": "pro",
+            "pro": "pro",
+            "team": "team",
+            "business": "team",
+            "enterprise": "team",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "anthropic":
+        aliases = {
+            "free": "free",
+            "pro": "pro",
+            "max": "team",
+            "max_5x": "team",
+            "team": "team",
+            "enterprise": "team",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "cursor":
+        aliases = {
+            "free": "free",
+            "pro": "pro",
+            "pro_plus": "pro_plus",
+            "business": "pro_plus",
+            "enterprise": "pro_plus",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "github":
+        aliases = {
+            "free": "free",
+            "pro": "team",
+            "team": "team",
+            "business": "enterprise",
+            "enterprise": "enterprise",
+        }
+        return aliases.get(normalized_value, "free")
+    return normalized_value or "free"
+
+
+def _subscription_detected(provider: str) -> bool:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider == "openai":
+        runner_ok, _ = _runner_provider_configured("openai")
+        oauth_ok, _ = _codex_oauth_available()
+        return runner_ok or oauth_ok or _env_present("OPENAI_ADMIN_API_KEY") or _env_present("OPENAI_API_KEY")
+    if normalized_provider == "anthropic":
+        runner_ok, _ = _runner_provider_configured("claude")
+        auth = _claude_cli_auth_context()
+        return runner_ok or bool(auth.get("logged_in")) or _env_present("ANTHROPIC_API_KEY")
+    if normalized_provider == "cursor":
+        runner_ok, _ = _runner_provider_configured("cursor")
+        about = _cursor_cli_about_context()
+        return (
+            runner_ok
+            or bool(about.get("logged_in"))
+            or _env_present("CURSOR_API_KEY")
+            or _env_present("CURSOR_CLI_MODEL")
+        )
+    if normalized_provider == "github":
+        return _env_present("GITHUB_TOKEN") or _env_present("GH_TOKEN")
+    return False
+
+
+def _subscription_current_tier(provider: str) -> str:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider == "openai":
+        row = _runner_provider_telemetry("openai")
+        raw_tier = str(row.get("tier") or row.get("plan") or "").strip()
+        return _normalize_subscription_tier("openai", raw_tier)
+    if normalized_provider == "anthropic":
+        row = _runner_provider_telemetry("claude")
+        raw_tier = str(row.get("tier") or "").strip()
+        if not raw_tier:
+            raw_tier = str(_claude_cli_auth_context().get("subscription_type") or "").strip()
+        return _normalize_subscription_tier("anthropic", raw_tier)
+    if normalized_provider == "cursor":
+        row = _runner_provider_telemetry("cursor")
+        raw_tier = str(row.get("tier") or "").strip()
+        if not raw_tier:
+            raw_tier = str(_cursor_cli_about_context().get("tier") or "").strip()
+        return _normalize_subscription_tier("cursor", raw_tier)
+    if normalized_provider == "github":
+        return "free"
+    return "free"
 
 
 def _tier_cost(provider: str, tier: str) -> float:
@@ -5905,8 +5992,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
     return [
         {
             "provider": "openai",
-            "detected": _env_flag("OPENAI_ADMIN_API_KEY") or _env_flag("OPENAI_API_KEY"),
-            "current_tier": os.getenv("OPENAI_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("openai"),
+            "current_tier": _subscription_current_tier("openai"),
             "benefits": [
                 "Higher token/request throughput for API workloads",
                 "Reduced queueing risk for agent execution peaks",
@@ -5916,8 +6003,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "anthropic",
-            "detected": _env_flag("ANTHROPIC_API_KEY"),
-            "current_tier": os.getenv("ANTHROPIC_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("anthropic"),
+            "current_tier": _subscription_current_tier("anthropic"),
             "benefits": [
                 "Higher fallback capacity for escalated agent tasks",
                 "More resilient execution when primary provider is saturated",
@@ -5927,8 +6014,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "cursor",
-            "detected": _env_flag("CURSOR_API_KEY") or _env_flag("CURSOR_CLI_MODEL"),
-            "current_tier": os.getenv("CURSOR_SUBSCRIPTION_TIER", "pro"),
+            "detected": _subscription_detected("cursor"),
+            "current_tier": _subscription_current_tier("cursor"),
             "benefits": [
                 "Higher agent concurrency for implementation and review loops",
                 "Lower cycle time for task completion throughput",
@@ -5938,8 +6025,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "github",
-            "detected": _env_flag("GITHUB_TOKEN"),
-            "current_tier": os.getenv("GITHUB_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("github"),
+            "current_tier": _subscription_current_tier("github"),
             "benefits": [
                 "More CI minutes and stronger governance controls",
                 "Lower deployment latency under heavy PR traffic",
