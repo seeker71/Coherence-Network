@@ -15,6 +15,7 @@ from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_routing_service as routing_service
 from app.services import agent_task_store_service
+from app.services import failure_taxonomy_service
 
 # Routing decisions and provider classification live in agent_routing_service.
 ROUTING = routing_service.ROUTING
@@ -115,22 +116,22 @@ def _escalation_executor_default() -> str:
     if configured:
         return _normalize_executor(configured, default="claude")
     cheap = _cheap_executor_default()
-    return "claude" if cheap != "claude" else "openclaw"
+    return "claude" if cheap != "claude" else "codex"
 
 
 def _executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
-    if executor == "openclaw":
-        for candidate in ("openclaw", "codex"):
-            if shutil.which(candidate):
-                return candidate
-        configured = os.environ.get("OPENCLAW_EXECUTABLE")
-        return configured.strip() if configured else "openclaw"
+    if executor == "codex":
+        return routing_service.executor_binary_name(executor)
+    if executor == "openrouter":
+        return routing_service.executor_binary_name(executor)
     return "claude"
 
 
 def _executor_available(executor: str) -> bool:
+    if executor == "openrouter":
+        return True
     return shutil.which(_executor_binary_name(executor)) is not None
 
 
@@ -147,18 +148,19 @@ def _first_available_executor(preferred: list[str]) -> str:
     configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
     if configured_default and _executor_available(configured_default):
         return configured_default
-    # Final deterministic safety net: prefer codex/openclaw when available.
-    for candidate in ("openclaw", "cursor", "claude"):
+    # Final deterministic safety net: prefer codex when available.
+    for candidate in ("codex", "cursor", "claude"):
         if _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="openclaw")
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
 
 
 def _executor_fallback_candidates() -> list[str]:
     return [
         _cheap_executor_default(),
         _escalation_executor_default(),
-        "openclaw",
+        "codex",
+        "openrouter",
         "cursor",
         "claude",
     ]
@@ -174,7 +176,7 @@ def _select_executor_with_retry_policy(
     cheap = _cheap_executor_default()
     escalate_to = _escalation_executor_default()
     if escalate_to == cheap:
-        escalate_to = "claude" if cheap != "claude" else "openclaw"
+        escalate_to = "claude" if cheap != "claude" else "codex"
 
     stats = _prior_attempt_stats(task_fingerprint)
     retry_hint = _task_retry_hint(context)
@@ -185,7 +187,7 @@ def _select_executor_with_retry_policy(
         "failure_threshold" if should_escalate else "cheap_default"
     )
     if not _executor_available(selected):
-        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "openclaw"])
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "codex", "openrouter"])
         return fallback, {
             "policy_applied": True,
             "reason": "selected_executor_unavailable",
@@ -240,8 +242,8 @@ def _repo_question_executor_default() -> str:
 def _open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return _normalize_executor(configured, default="openclaw")
-    return "openclaw"
+        return _normalize_executor(configured, default="codex")
+    return "codex"
 
 
 def _task_fingerprint(task_type: TaskType, direction: str) -> str:
@@ -361,7 +363,7 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
             _repo_question_executor_default(),
             "cursor",
             "claude",
-            "openclaw",
+            "codex",
         ])
         return selected, {
             "policy_applied": True,
@@ -372,11 +374,11 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
 
     selected_open = _first_available_executor([
         _open_question_executor_default(),
-        "openclaw",
+        "codex",
         "cursor",
         "claude",
     ])
-    if selected_open == "openclaw":
+    if selected_open == "codex":
         return selected_open, {
             "policy_applied": True,
             "reason": "open_question_default",
@@ -402,8 +404,13 @@ def _cursor_command_template(task_type: TaskType) -> str:
 
 
 def _openclaw_command_template(task_type: TaskType) -> str:
-    """OpenClaw CLI template configurable via env; must include {{direction}}."""
-    return routing_service.openclaw_command_template(task_type)
+    """Codex CLI template configurable via env; must include {{direction}}."""
+    return routing_service.codex_command_template(task_type)
+
+
+def _openrouter_command_template(task_type: TaskType) -> str:
+    """Server-side OpenRouter executor marker template."""
+    return routing_service.openrouter_command_template(task_type)
 
 
 def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]) -> str:
@@ -455,7 +462,8 @@ def _integration_gaps() -> dict[str, Any]:
     binary_checks = {
         "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
-        "openclaw": _executor_available("openclaw"),
+        "codex": _executor_available("codex"),
+        "openrouter": _executor_available("openrouter"),
     }
 
     gaps: list[dict[str, str]] = []
@@ -778,13 +786,17 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
+    if model.startswith("openrouter/") or command.startswith("openrouter-exec "):
+        return "openrouter"
+    if model.startswith("codex/") or command.startswith("codex "):
+        return "codex"
     if (
         model.startswith("openclaw/")
         or model.startswith("clawwork/")
         or command.startswith("openclaw ")
         or command.startswith("clawwork ")
     ):
-        return "openclaw"
+        return "codex"
     if command.startswith("aider "):
         return "aider"
     if command.startswith("claude "):
@@ -925,6 +937,8 @@ def _derive_failed_task_output(task: dict[str, Any]) -> tuple[str, str]:
             "error",
             "last_error",
             "failure_reason",
+            "last_failure_class",
+            "failure_class",
             "runner_error",
             "exception",
             "details",
@@ -970,7 +984,10 @@ def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
 
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     next_context = dict(context) if isinstance(context, dict) else {}
-    next_context["failure_reason_bucket"] = _failure_reason_bucket(task)
+    classified = _failure_classification(task, output_text=output_text)
+    next_context["failure_reason_bucket"] = classified["bucket"]
+    next_context["failure_signature"] = classified["signature"]
+    next_context["failure_summary"] = classified["summary"]
     next_context["failure_diagnostics_source"] = source
     next_context["failure_diagnostics_present"] = bool(output_text)
     task["context"] = next_context
@@ -1145,11 +1162,13 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw' (clawwork alias)."""
+    """Build command for task. executor: 'claude' (default), 'cursor', 'codex', or 'openrouter'."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
-    elif executor == "openclaw":
+    elif executor == "codex":
         template = _openclaw_command_template(task_type)
+    elif executor == "openrouter":
+        template = _openrouter_command_template(task_type)
     elif executor == "claude":
         template = routing_service.claude_command_template(task_type)
     else:
@@ -1199,10 +1218,12 @@ def _resolve_task_route(
             override = str(ctx["model_override"]).strip()
             command, applied_override = routing_service.apply_model_override(command, override)
             if applied_override:
-                if executor == "openclaw":
-                    model = f"openclaw/{applied_override}"
+                if executor == "codex":
+                    model = f"codex/{applied_override}"
                 elif executor == "cursor":
                     model = f"cursor/{applied_override}"
+                elif executor == "openrouter":
+                    model = routing_service.enforce_openrouter_free_model(applied_override)
                 else:
                     model = applied_override
         if "claude -p" in command and "--dangerously-skip-permissions" not in command:
@@ -1235,16 +1256,33 @@ def _resolve_task_route(
 
 
 def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None:
-    if executor != "openclaw":
+    if executor == "codex":
+        ctx["runner_codex_auth_mode"] = "oauth"
         return
-    current = str(ctx.get("runner_codex_auth_mode") or "").strip().lower()
-    if current in {"api_key", "oauth", "auto"}:
-        ctx["runner_codex_auth_mode"] = current
-        return
-    configured = str(os.environ.get("AGENT_TASK_DEFAULT_RUNNER_CODEX_AUTH_MODE", "oauth")).strip().lower()
-    if configured not in {"api_key", "oauth", "auto"}:
-        configured = "oauth"
-    ctx["runner_codex_auth_mode"] = configured
+    if executor == "cursor":
+        ctx["runner_cursor_auth_mode"] = "oauth"
+
+
+def _enforce_openrouter_executor_policy(ctx: dict[str, Any], executor: str) -> str:
+    requested_override_raw = str(ctx.get("model_override") or "").strip()
+    requested_override = routing_service.normalize_model_name(requested_override_raw)
+    requested_executor = str(executor or "").strip().lower()
+    wants_openrouter = requested_executor == "openrouter" or requested_override.startswith("openrouter/")
+    if not wants_openrouter:
+        return executor
+
+    enforced_model = routing_service.enforce_openrouter_free_model(requested_override or "openrouter/free")
+    previous_override = requested_override or ""
+    ctx["model_override"] = enforced_model
+    if previous_override != enforced_model:
+        ctx["model_override_policy"] = {
+            "kind": "openrouter_free_only",
+            "requested_model_override": requested_override_raw or previous_override,
+            "applied_model_override": enforced_model,
+        }
+    if requested_executor != "openrouter":
+        ctx["executor_override_reason"] = "openrouter_model_override_requires_openrouter_executor"
+    return "openrouter"
 
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
@@ -1272,6 +1310,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     ctx.update(target_contract)
     ctx["target_state_contract"] = dict(target_contract)
     executor, policy_meta = _select_executor(data.task_type, data.direction, ctx)
+    executor = _enforce_openrouter_executor_policy(ctx, executor)
     if policy_meta.get("policy_applied"):
         ctx["executor_policy"] = policy_meta
     if "task_fingerprint" in policy_meta:
@@ -1694,7 +1733,7 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|openclaw|clawwork."""
+    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|codex|openrouter|openclaw|clawwork."""
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()
@@ -2255,34 +2294,25 @@ def _task_type_name(value: Any) -> str:
 
 
 def _failure_reason_bucket(task: dict[str, Any]) -> str:
-    output = _task_output_text(task).lower()
-    if not output:
-        return "empty_output"
-    if "timeout" in output or "timed out" in output:
-        return "timeout"
-    if (
-        "unauthorized" in output
-        or "forbidden" in output
-        or "api key" in output
-        or "invalid api key" in output
-        or "status=401" in output
-        or "status=403" in output
-    ):
-        return "auth"
-    if "rate limit" in output or "429" in output or "quota" in output:
-        return "rate_limit"
-    if (
-        "command not found" in output
-        or "module not found" in output
-        or "no module named" in output
-        or "no such file or directory" in output
-    ):
-        return "dependency_or_tooling"
-    if "assertionerror" in output or "test failed" in output or "pytest" in output:
-        return "test_failure"
-    if "merge conflict" in output or "rebase" in output:
-        return "git_conflict"
-    return "other"
+    return _failure_classification(task)["bucket"]
+
+
+def _failure_classification(task: dict[str, Any], *, output_text: str | None = None) -> dict[str, str]:
+    output_value = _task_output_text(task) if output_text is None else str(output_text or "")
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    detail = ""
+    if isinstance(context, dict):
+        for key in ("last_error", "error", "failure_reason", "runner_error", "message", "details", "exception"):
+            maybe = _context_failure_detail(context, key)
+            if maybe:
+                detail = maybe
+                break
+    failure_class = str((context or {}).get("last_failure_class") or (context or {}).get("failure_class") or "")
+    return failure_taxonomy_service.classify_failure(
+        output_text=output_value,
+        result_error=detail,
+        failure_class=failure_class,
+    )
 
 
 def _pipeline_queue_diagnostics(
@@ -2309,11 +2339,17 @@ def _pipeline_queue_diagnostics(
             continue
         reason = _failure_reason_bucket(task)
         reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        failure_signature = (
+            str((task.get("context") or {}).get("failure_signature") or "").strip()
+            if isinstance(task.get("context"), dict)
+            else ""
+        )
         recent_failed.append(
             {
                 "task_id": task.get("id"),
                 "task_type": _task_type_name(task.get("task_type")) or "unknown",
                 "reason": reason,
+                "signature": failure_signature or _failure_classification(task).get("signature", ""),
             }
         )
 

@@ -1,7 +1,7 @@
 """Server-side execution for agent tasks.
 
-This is intentionally conservative:
-- default-deny for paid providers (can be overridden via env for emergencies)
+Execution policy:
+- paid providers are allowed by default unless explicitly disabled by env
 - records runtime events for diagnostics and usage visibility
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -26,6 +27,7 @@ from app.services import (
     metrics_service,
     spec_registry_service,
     runtime_service,
+    agent_routing_service,
 )
 from app.services.agent_execution_task_flow import execute_task
 from app.services.openrouter_client import OpenRouterError, chat_completion
@@ -55,8 +57,8 @@ def _truthy_any(value: object) -> bool:
 
 
 def _paid_providers_allowed() -> bool:
-    # Default: paid providers NOT allowed.
-    return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "0"))
+    # Default: paid providers allowed. Set AGENT_ALLOW_PAID_PROVIDERS=0 to hard-block.
+    return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "1"))
 
 
 def _paid_route_override_requested(task: dict[str, Any]) -> bool:
@@ -76,6 +78,8 @@ def _paid_route_override_requested(task: dict[str, Any]) -> bool:
 
 def _extract_underlying_model(task_model: str) -> str:
     cleaned = (task_model or "").strip()
+    if cleaned.startswith("codex/"):
+        return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("openclaw/") or cleaned.startswith("clawwork/"):
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):
@@ -311,7 +315,13 @@ def _run_openrouter(
 
 def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     model = _extract_underlying_model(str(task.get("model") or ""))
-    return model or default
+    resolved = model or default
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+    executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
+    if executor == "openrouter" or str(resolved).strip().lower().startswith("openrouter/"):
+        return agent_routing_service.enforce_openrouter_free_model(resolved)
+    return resolved
 
 
 def _resolve_prompt(task: dict[str, Any]) -> str:
@@ -357,6 +367,45 @@ def _normalize_int(value: Any, default: int | None = None) -> int | None:
     if parsed <= 0:
         return default
     return parsed
+
+
+def _to_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _paid_provider_block_on_soft_quota_threshold() -> bool:
+    return _truthy(os.getenv("AGENT_BLOCK_ON_SOFT_PROVIDER_QUOTA_THRESHOLD", "0"))
+
+
+def _quota_guard_indicates_exhausted(quota_guard: dict[str, Any]) -> bool:
+    blocked_metrics = quota_guard.get("blocked_metrics")
+    if isinstance(blocked_metrics, list):
+        observed_signal = False
+        for item in blocked_metrics:
+            if not isinstance(item, dict):
+                continue
+            remaining = _to_float(item.get("remaining"))
+            remaining_ratio = _to_float(item.get("remaining_ratio"))
+            if remaining is not None:
+                observed_signal = True
+                if remaining <= 0.0:
+                    return True
+            if remaining_ratio is not None:
+                observed_signal = True
+                if remaining_ratio <= 0.0:
+                    return True
+        if observed_signal:
+            return False
+
+    reason = str(quota_guard.get("reason") or "").strip().lower()
+    if not reason:
+        return False
+    if "exhaust" in reason or "deplet" in reason:
+        return True
+    return bool(re.search(r"(remaining|ratio)\s*[:=]\s*0+(?:\.0+)?\b", reason))
 
 
 def _resolve_window_paid_tool_limit(env_name: str) -> int | None:
@@ -416,6 +465,8 @@ def _check_paid_provider_window_budget(
         quota_guard = {"allowed": True}
 
     if not bool(quota_guard.get("allowed", True)):
+        if not _paid_provider_block_on_soft_quota_threshold() and not _quota_guard_indicates_exhausted(quota_guard):
+            return True, None
         detail = str(quota_guard.get("reason") or "provider quota threshold reached").strip()
         msg = (
             "Paid-provider usage blocked by provider quota policy: "

@@ -492,7 +492,7 @@ def _claim_and_load_task(task_id: str, worker_id: str) -> tuple[dict[str, Any] |
 def execute_task(
     task_id: str,
     *,
-    worker_id: str = "openclaw-worker:server",
+    worker_id: str = "codex-worker:server",
     force_paid_providers: bool = False,
     max_cost_usd: float | None = None,
     estimated_cost_usd: float | None = None,

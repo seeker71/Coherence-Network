@@ -15,6 +15,8 @@ from app.services import runtime_service
 
 def _extract_underlying_model(task_model: str) -> str:
     cleaned = (task_model or "").strip()
+    if cleaned.startswith("codex/"):
+        return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("openclaw/") or cleaned.startswith("clawwork/"):
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):

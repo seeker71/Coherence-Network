@@ -61,10 +61,12 @@ def normalize_model_name(model: str) -> str:
     return cleaned
 
 
-_OPENCLAW_MODEL_DEFAULT = normalize_model_name(
-    os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark")
+_CODEX_MODEL_DEFAULT = normalize_model_name(
+    os.environ.get("CODEX_MODEL", os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark"))
 )
-_OPENCLAW_MODEL_REVIEW = normalize_model_name(os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT))
+_CODEX_MODEL_REVIEW = normalize_model_name(
+    os.environ.get("CODEX_REVIEW_MODEL", os.environ.get("OPENCLAW_REVIEW_MODEL", _CODEX_MODEL_DEFAULT))
+)
 
 # Claude Code CLI model tiers:
 # SPEC/TEST/IMPL → sonnet (fast, cheap, strong at code generation)
@@ -90,12 +92,13 @@ CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 
 OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
-    TaskType.SPEC: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.TEST: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
-    TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
+    TaskType.SPEC: _CODEX_MODEL_DEFAULT,
+    TaskType.TEST: _CODEX_MODEL_DEFAULT,
+    TaskType.IMPL: _CODEX_MODEL_DEFAULT,
+    TaskType.REVIEW: _CODEX_MODEL_REVIEW,
+    TaskType.HEAL: _CODEX_MODEL_REVIEW,
 }
+CODEX_MODEL_BY_TYPE = OPENCLAW_MODEL_BY_TYPE
 
 CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.SPEC: _CLAUDE_CODE_MODEL_DEFAULT,
@@ -105,8 +108,11 @@ CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _CLAUDE_CODE_MODEL_REVIEW,
 }
 
-_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
-_EXECUTOR_ALIASES = {"clawwork": "openclaw", "codex": "openclaw"}
+_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "codex", "openrouter")
+_EXECUTOR_ALIASES = {"clawwork": "codex", "openclaw": "codex"}
+_OPENROUTER_FREE_MODEL = normalize_model_name(
+    os.environ.get("OPENROUTER_FREE_MODEL", "openrouter/free")
+)
 EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES + tuple(_EXECUTOR_ALIASES.keys())
 
 REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -161,23 +167,26 @@ def escalation_executor_default() -> str:
     if configured:
         return normalize_executor(configured, default="claude")
     cheap = cheap_executor_default()
-    return "claude" if cheap != "claude" else "openclaw"
+    return "claude" if cheap != "claude" else "codex"
 
 
 def executor_binary_name(executor: str) -> str:
     normalized = normalize_executor(executor, default=executor.strip().lower())
     if normalized == "cursor":
         return "agent"
-    if normalized == "openclaw":
-        for candidate in ("openclaw", "codex"):
-            if shutil.which(candidate):
-                return candidate
-        configured = os.environ.get("OPENCLAW_EXECUTABLE")
-        return configured.strip() if configured else "openclaw"
+    if normalized == "codex":
+        configured = os.environ.get("CODEX_EXECUTABLE", os.environ.get("OPENCLAW_EXECUTABLE", "")).strip()
+        if configured:
+            return configured
+        return "codex"
+    if normalized == "openrouter":
+        return "server-executor"
     return "claude"
 
 
 def executor_available(executor: str) -> bool:
+    if normalize_executor(executor, default=executor.strip().lower()) == "openrouter":
+        return True
     return shutil.which(executor_binary_name(executor)) is not None
 
 
@@ -212,24 +221,63 @@ def repo_question_executor_default() -> str:
 def open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return normalize_executor(configured, default="openclaw")
-    return "openclaw"
+        return normalize_executor(configured, default="codex")
+    return "codex"
 
 
 def cursor_command_template(task_type: TaskType) -> str:
     model = CURSOR_MODEL_BY_TYPE[task_type]
-    return f'agent "{{{{direction}}}}" --model {model}'
-
-
-def openclaw_command_template(task_type: TaskType) -> str:
-    model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
-    template = os.environ.get(
-        "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
+    template = (
+        os.environ.get("CURSOR_COMMAND_TEMPLATE", "").strip()
+        or 'agent --trust --print --output-format json "{{direction}}" --model {{model}}'
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
     return template.replace("{{model}}", model)
+
+
+def codex_command_template(task_type: TaskType) -> str:
+    model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
+    template = (
+        os.environ.get("CODEX_COMMAND_TEMPLATE", "").strip()
+        or os.environ.get("OPENCLAW_COMMAND_TEMPLATE", "").strip()
+        or 'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json'
+    )
+    if "{{direction}}" not in template:
+        template = template.strip() + ' "{{direction}}"'
+    return template.replace("{{model}}", model)
+
+
+def openclaw_command_template(task_type: TaskType) -> str:
+    # Backward-compatible shim for legacy imports.
+    return codex_command_template(task_type)
+
+
+def openrouter_command_template(task_type: TaskType) -> str:
+    model, _tier = ROUTING[task_type]
+    resolved_model = enforce_openrouter_free_model(model)
+    template = (
+        os.environ.get("OPENROUTER_EXEC_COMMAND_TEMPLATE", "").strip()
+        or 'openrouter-exec "{{direction}}" --model {{model}}'
+    )
+    if "{{direction}}" not in template:
+        template = template.strip() + ' "{{direction}}"'
+    return template.replace("{{model}}", resolved_model)
+
+
+def enforce_openrouter_free_model(model: str | None) -> str:
+    """OpenRouter execution policy: force free-tier model usage."""
+    cleaned = normalize_model_name(str(model or "").strip())
+    if cleaned == _OPENROUTER_FREE_MODEL:
+        return cleaned
+    if cleaned.startswith("openrouter/"):
+        return _OPENROUTER_FREE_MODEL
+    if cleaned in {"free", "openrouter", "openrouter:free"}:
+        return _OPENROUTER_FREE_MODEL
+    if not cleaned:
+        return _OPENROUTER_FREE_MODEL
+    # Any non-openrouter override is coerced to openrouter/free for this executor.
+    return _OPENROUTER_FREE_MODEL
 
 
 def claude_command_template(task_type: TaskType) -> str:
@@ -264,11 +312,16 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
         model = f"cursor/{CURSOR_MODEL_BY_TYPE[task_type]}"
         template = cursor_command_template(task_type)
         tier = "cursor"
-    elif normalized == "openclaw":
+    elif normalized == "codex":
         resolved_model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
-        model = f"openclaw/{resolved_model}"
-        template = openclaw_command_template(task_type)
-        tier = "openclaw"
+        model = f"codex/{resolved_model}"
+        template = codex_command_template(task_type)
+        tier = "codex"
+    elif normalized == "openrouter":
+        resolved_model, _provider_tier = ROUTING[task_type]
+        model = enforce_openrouter_free_model(resolved_model)
+        template = openrouter_command_template(task_type)
+        tier = "openrouter"
     elif normalized == "claude":
         cc_model = CLAUDE_CODE_MODEL_BY_TYPE[task_type]
         model = f"claude/{cc_model}" if cc_model else "claude/default"
@@ -301,6 +354,8 @@ def apply_model_override(command: str, override: str) -> tuple[str, str]:
     if not cleaned:
         return command, ""
     applied = cleaned
+    if command.lstrip().startswith("openrouter-exec "):
+        applied = enforce_openrouter_free_model(cleaned)
     if command.lstrip().startswith("codex ") and cleaned.startswith("openai/"):
         _, _, codex_model = cleaned.partition("/")
         if codex_model.strip():
@@ -314,7 +369,7 @@ def normalize_open_responses_model(model: str) -> str:
     cleaned = str(model or "").strip()
     if "/" in cleaned:
         prefix, _, suffix = cleaned.partition("/")
-        if prefix in {"openclaw", "clawwork", "cursor"} and suffix.strip():
+        if prefix in {"codex", "openclaw", "clawwork", "cursor"} and suffix.strip():
             return suffix.strip()
     return cleaned
 
@@ -356,6 +411,10 @@ def classify_provider(*, executor: str, model: str, command: str, worker_id: str
     provider = "unknown"
     if normalized_worker == "openai-codex" or normalized_worker.startswith("openai-codex:"):
         provider = "openai-codex"
+    elif normalized_executor == "codex":
+        provider = "openai-codex"
+    elif normalized_executor == "openrouter":
+        provider = "openrouter"
     elif "openrouter" in command_model or "openrouter" in lower_model:
         provider = "openrouter"
     elif command_model.startswith("openai/") or command_model.startswith(("gpt", "o1", "o3", "o4")):
@@ -366,8 +425,6 @@ def classify_provider(*, executor: str, model: str, command: str, worker_id: str
         provider = "openai"
     elif lower_command.startswith("codex "):
         provider = "openai-codex"
-    elif normalized_executor == "openclaw":
-        provider = "openclaw"
     elif normalized_executor == "cursor":
         provider = "cursor"
     elif normalized_executor in {"claude", "aider"}:
