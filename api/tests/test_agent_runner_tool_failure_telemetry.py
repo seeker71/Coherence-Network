@@ -797,6 +797,25 @@ def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatc
     assert "--model gtp-5.3-codex" not in remapped
 
 
+def test_apply_claude_model_alias_strips_provider_prefix():
+    remapped, alias = agent_runner._apply_claude_model_alias(
+        'claude -p "smoke" --model claude/claude-sonnet-4-5-20250929 --output-format json'
+    )
+    assert alias == {
+        "requested_model": "claude/claude-sonnet-4-5-20250929",
+        "effective_model": "claude-sonnet-4-5-20250929",
+    }
+    assert "--model claude-sonnet-4-5-20250929" in remapped
+    assert "--model claude/claude-sonnet-4-5-20250929" not in remapped
+
+
+def test_apply_claude_model_alias_noop_for_already_normalized_model():
+    command = 'claude -p "smoke" --model claude-sonnet-4-5-20250929 --output-format json'
+    remapped, alias = agent_runner._apply_claude_model_alias(command)
+    assert alias is None
+    assert remapped == command
+
+
 def test_codex_model_not_found_fallback_only_applies_after_not_found_signal():
     command = 'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
     output = "stream disconnected before completion: The model `gpt-5.3-codex` does not exist or you do not have access to it."
@@ -949,6 +968,13 @@ def test_run_one_task_skips_codex_auth_retry_when_retry_explicitly_disabled(monk
     assert failed_patches
     output = str(failed_patches[-1].get("output") or "")
     assert "retry disabled by explicit retry_max=0" in output
+
+
+def test_retry_explicitly_disabled_ignores_null_values():
+    assert agent_runner._retry_explicitly_disabled({"retry_max": None}) is False
+    assert agent_runner._retry_explicitly_disabled({"runner_retry_max": ""}) is False
+    assert agent_runner._retry_explicitly_disabled({"max_retries": "  "}) is False
+    assert agent_runner._retry_explicitly_disabled({"retry_max": 0}) is True
 
 
 def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):
@@ -1253,6 +1279,58 @@ def test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_
     assert retry_meta.get("mode") == "oauth"
     assert context.get("runner_codex_auth_fallback_attempted") is not True
     assert (context.get("runner_codex_auth_fallback") or {}) == {}
+    assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
+
+
+def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, tmp_path):
+    t = [5220.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-null-retry-runner")
+
+    failure_output = (
+        'ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {"error":{"code":"refresh_token_reused"}}\n'
+        "Your refresh token has already been used to generate a new access token.\n"
+    )
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_oauth_retry_null_retry_max",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+        task_context={"retry_max": None},
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_retry_null_retry_max") and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_retry_max") == 1
     assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
 
 
