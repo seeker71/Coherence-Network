@@ -3,9 +3,13 @@
   "thread_branch": "codex/open-questions-unblock-20260228",
   "commit_scope": "Remove cursor/codex subscription limit env-var dependency from readiness telemetry; source required-provider config/limit evidence from host-runner telemetry and live CLI session signals.",
   "files_owned": [
+    "api/.env.example",
     "api/app/services/automation_usage_service.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json",
     "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json"
   ],
   "idea_ids": [
@@ -41,9 +45,13 @@
     "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
   ],
   "change_files": [
+    "api/.env.example",
     "api/app/services/automation_usage_service.py",
     "api/scripts/agent_runner.py",
     "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json",
     "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json"
   ],
   "change_intent": "runtime_fix",
