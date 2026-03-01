@@ -9,12 +9,58 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
 CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
+CURL_RETRIES="${CURL_RETRIES:-3}"
+CURL_RETRY_SLEEP_SECONDS="${CURL_RETRY_SLEEP_SECONDS:-3}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
+
+run_with_retries() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  while (( attempt <= attempts )); do
+    if "$@"; then
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..."
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
+
+run_with_retries_capture() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  local output=""
+  while (( attempt <= attempts )); do
+    if output="$("$@")"; then
+      printf "%s" "$output"
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..." >&2
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
 
 check_url() {
   local name="$1"
@@ -27,7 +73,7 @@ check_url() {
   echo
   echo "==> ${name}: ${url}"
 
-  if ! curl -sS -L -D "$headers_file" -o "$body_file" \
+  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" >/dev/null; then
@@ -73,7 +119,7 @@ check_cors() {
   echo
   echo "==> CORS check: ${api_health_url} with Origin ${web_origin}"
 
-  if ! curl -sS -D "$headers_file" -o /dev/null \
+  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -D "$headers_file" -o /dev/null \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     -H "Origin: ${web_origin}" "$api_health_url" >/dev/null; then
@@ -104,7 +150,7 @@ check_persistence_contract() {
 
   echo
   echo "==> Persistence contract: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" || true)"
@@ -147,7 +193,7 @@ check_telegram_alert_config() {
 
   echo
   echo "==> Telegram alert diagnostics: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" || true)"
@@ -186,7 +232,7 @@ check_provider_readiness() {
 
   echo
   echo "==> Provider readiness: ${url} (required=${required})"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" || true)"
@@ -243,11 +289,11 @@ check_api_runtime_sha() {
 
   echo
   echo "==> API runtime SHA parity: ${health_url} vs ${main_head_url} (required=${required})"
-  health_status="$(curl -sS -o "$health_body" -w "%{http_code}" \
+  health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$health_url" || true)"
-  main_head_status="$(curl -sS -o "$main_head_body" -w "%{http_code}" \
+  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$main_head_url" || true)"
@@ -322,11 +368,11 @@ check_web_runtime_sha() {
 
   echo
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
-  proxy_status="$(curl -sS -o "$proxy_body" -w "%{http_code}" \
+  proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$proxy_url" || true)"
-  main_head_status="$(curl -sS -o "$main_head_body" -w "%{http_code}" \
+  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$main_head_url" || true)"
