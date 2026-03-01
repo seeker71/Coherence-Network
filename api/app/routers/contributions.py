@@ -79,28 +79,37 @@ def _contributor_type_for_email(email: str) -> ContributorType:
     return ContributorType.SYSTEM if is_internal_contributor_email(email) else ContributorType.HUMAN
 
 
-def _resolve_or_create_contributor(store: GraphStore, normalized_email: str) -> Contributor:
+def _canonical_system_contributor(store: GraphStore) -> Contributor | None:
+    systems = [
+        row
+        for row in store.list_contributors(limit=1000)
+        if str(getattr(row.type, "value", row.type)).upper() == "SYSTEM"
+    ]
+    if not systems:
+        return None
+    systems.sort(key=lambda row: (str(row.created_at), str(row.id)))
+    return systems[0]
+
+
+def _resolve_registered_contributor(store: GraphStore, normalized_email: str) -> Contributor:
     existing = None
     if hasattr(store, "find_contributor_by_email"):
         existing = store.find_contributor_by_email(normalized_email)
     if existing is not None:
         return existing
 
-    contributor_name = normalized_email.split("@")[0]
-    contributor = Contributor(
-        type=_contributor_type_for_email(normalized_email),
-        name=contributor_name,
-        email=normalized_email,
+    if is_internal_contributor_email(normalized_email):
+        system = _canonical_system_contributor(store)
+        if system is not None:
+            return system
+        raise HTTPException(
+            status_code=409,
+            detail="System contributor is not configured. Register one SYSTEM contributor first.",
+        )
+    raise HTTPException(
+        status_code=409,
+        detail="Contributor not registered. Register via /api/contributors with real name and real email first.",
     )
-    try:
-        return store.create_contributor(contributor)
-    except ValueError as exc:
-        # Handle concurrent duplicate creation by resolving the canonical row.
-        if "already exists" in str(exc).lower() and hasattr(store, "find_contributor_by_email"):
-            resolved = store.find_contributor_by_email(normalized_email)
-            if resolved is not None:
-                return resolved
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/contributions", response_model=Contribution, status_code=201)
@@ -165,12 +174,12 @@ async def get_contributor_contributions(
 async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
     """Track contribution from GitHub webhook.
 
-    Auto-creates contributor and asset if they don't exist.
+    Requires contributor to be explicitly registered.
     """
-    # Find or create contributor by email
+    # Resolve contributor by normalized email (or map internal emails to canonical SYSTEM).
     raw_email = str(payload.contributor_email).strip()
     normalized_email = normalize_contributor_email(raw_email)
-    contributor = _resolve_or_create_contributor(store, normalized_email)
+    contributor = _resolve_registered_contributor(store, normalized_email)
 
     # Find or create asset for repository
     asset = None
@@ -273,6 +282,8 @@ def _debug_github_dry_run_payload(
             "raw_email": raw_email,
             "found_existing": contributor is not None,
             "type_if_created": contributor_type.value,
+            "registration_required": contributor is None and contributor_type == ContributorType.HUMAN,
+            "will_map_to_canonical_system": contributor is None and contributor_type == ContributorType.SYSTEM,
         },
         "asset_lookup": {
             "repository": payload.repository,
@@ -334,7 +345,7 @@ async def debug_github_contribution(
             )
 
         if not contributor:
-            contributor = _resolve_or_create_contributor(store, normalized_email)
+            contributor = _resolve_registered_contributor(store, normalized_email)
 
         if not asset:
             asset = Asset(

@@ -1,7 +1,7 @@
 {
   "date": "2026-02-28",
   "thread_branch": "codex/revenue-readiness-20260228-064024",
-  "commit_scope": "Separate internal/synthetic data from actionable marketplace signals, enforce contributor identity hygiene, and make unblock/question workflows default to actionable ideas.",
+  "commit_scope": "Separate internal/synthetic data from actionable marketplace signals, enforce contributor identity hygiene, require explicit real-name human registration, and prevent ingestion-time auto-creation of new human contributors.",
   "files_owned": [
     "api/app/adapters/graph_store.py",
     "api/app/adapters/postgres_store.py",
@@ -19,6 +19,8 @@
     "api/tests/test_contributions.py",
     "api/tests/test_contributor_hygiene.py",
     "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
     "api/tests/test_ideas.py",
     "api/tests/test_inventory_api.py",
     "docs/SPEC-COVERAGE.md",
@@ -80,6 +82,8 @@
     "api/tests/test_contributions.py",
     "api/tests/test_contributor_hygiene.py",
     "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
     "api/tests/test_ideas.py",
     "api/tests/test_inventory_api.py",
     "docs/SPEC-COVERAGE.md",
@@ -94,8 +98,8 @@
       "make start-gate",
       "git fetch origin main && git rebase origin/main",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
-      "cd api && ruff check app/adapters/graph_store.py app/adapters/postgres_store.py app/routers/contributions.py app/routers/contributors.py app/routers/ideas.py app/routers/inventory.py app/services/contributor_hygiene.py app/services/idea_service.py app/services/inventory_service.py scripts/cleanup_contributor_identities.py tests/test_contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_ideas.py tests/test_inventory_api.py",
-      "cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_ideas.py tests/test_inventory_api.py"
+      "cd api && ruff check app/services/contributor_hygiene.py app/routers/contributors.py app/routers/contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py",
+      "cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py"
     ]
   },
   "ci_validation": {
@@ -114,6 +118,8 @@
     "status": "pending",
     "expected_behavior_delta": "Actionable-only filters exclude internal synthetic ideas by default on flow/proactive endpoints, duplicate contributor aliases are normalized, and production unblock tasks/open-question answers can be executed with cleaner contracts.",
     "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/contributors",
+      "https://coherence-network-production.up.railway.app/api/contributions/github",
       "https://coherence-network-production.up.railway.app/api/inventory/flow",
       "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
       "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",

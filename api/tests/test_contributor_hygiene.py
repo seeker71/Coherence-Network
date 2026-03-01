@@ -14,8 +14,10 @@ from app.models.contribution import Contribution
 from app.models.contributor import Contributor, ContributorType
 from app.services.contributor_hygiene import (
     is_internal_contributor_email,
+    is_real_human_name,
     is_test_contributor_email,
     normalize_contributor_email,
+    validate_real_human_registration,
 )
 
 
@@ -34,7 +36,28 @@ def test_normalize_contributor_email_collapses_plus_alias_by_default() -> None:
 def test_is_internal_contributor_email_detects_system_prefixes() -> None:
     assert is_internal_contributor_email("deploy-test@coherence.network") is True
     assert is_internal_contributor_email("machine-reviewer-1@coherence.network") is True
+    assert is_internal_contributor_email("system@coherence.network") is True
     assert is_internal_contributor_email("urs-muff@coherence.network") is False
+
+
+def test_real_human_name_requires_first_and_last_name() -> None:
+    assert is_real_human_name("Alice Smith") is True
+    assert is_real_human_name("Jean-Luc Picard") is True
+    assert is_real_human_name("Alice") is False
+    assert is_real_human_name("Automation Bot") is False
+
+
+def test_validate_real_human_registration_rejects_internal_or_test_emails() -> None:
+    ok, _ = validate_real_human_registration("Alice Smith", "alice@proton.me")
+    assert ok is True
+
+    bad_internal, reason_internal = validate_real_human_registration("Alice Smith", "deploy-test@coherence.network")
+    assert bad_internal is False
+    assert "Internal/system" in reason_internal
+
+    bad_test, reason_test = validate_real_human_registration("Alice Smith", "alice@example.com")
+    assert bad_test is False
+    assert "Test or placeholder" in reason_test
 
 
 @pytest.mark.asyncio

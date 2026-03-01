@@ -39,10 +39,10 @@ async def test_system_lineage_inventory_includes_core_sections(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        unique_email = f"urs-muff+{uuid4().hex[:8]}@coherence.network"
+        unique_email = f"urs.muff.{uuid4().hex[:8]}@proton.me"
         contributor = await client.post(
             "/api/contributors",
-            json={"type": "HUMAN", "name": "urs-muff", "email": unique_email},
+            json={"type": "HUMAN", "name": "Urs Muff", "email": unique_email},
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
