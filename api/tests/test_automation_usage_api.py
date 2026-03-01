@@ -695,7 +695,7 @@ def test_append_codex_subscription_metrics_adds_provider_api_windows_when_availa
     assert metrics["codex_provider_window_secondary"].remaining == pytest.approx(60.0, rel=1e-6)
     assert metrics["codex_subscription_5h"].used == pytest.approx(8.0, rel=1e-6)
     assert metrics["codex_subscription_week"].used == pytest.approx(20.0, rel=1e-6)
-    assert not any("Set CODEX_SUBSCRIPTION_5H_LIMIT" in note for note in snapshot.notes)
+    assert not any("CODEX_SUBSCRIPTION_" in note for note in snapshot.notes)
     assert snapshot.raw["codex_usage_plan"] == "plus"
     assert len(snapshot.raw["codex_usage_windows"]) == 2
 
@@ -1530,12 +1530,34 @@ async def test_subscription_estimator_reports_upgrade_cost_and_benefit(
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "test-key")
-    monkeypatch.setenv("OPENAI_SUBSCRIPTION_TIER", "pro")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     monkeypatch.setenv("CURSOR_CLI_MODEL", "openrouter/free")
-    monkeypatch.setenv("CURSOR_SUBSCRIPTION_TIER", "pro")
     monkeypatch.setenv("GITHUB_TOKEN", "token")
-    monkeypatch.setenv("GITHUB_SUBSCRIPTION_TIER", "free")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "metadata": {
+                    "provider_telemetry": {
+                        "openai": {"configured": True, "plan": "pro"},
+                        "cursor": {"configured": True, "tier": "pro"},
+                        "claude": {"configured": False, "tier": ""},
+                    }
+                }
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_claude_cli_auth_context",
+        lambda: {"cli_available": False, "logged_in": False, "subscription_type": ""},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_cursor_cli_about_context",
+        lambda: {"cli_available": True, "logged_in": True, "tier": "pro"},
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get("/api/automation/usage/subscription-estimator")
