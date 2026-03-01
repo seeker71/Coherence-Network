@@ -1,7 +1,7 @@
 {
   "date": "2026-02-28",
   "thread_branch": "codex/revenue-readiness-20260228-064024",
-  "commit_scope": "Separate internal/synthetic data from actionable marketplace signals, enforce contributor identity hygiene, require explicit real-name human registration, and prevent ingestion-time auto-creation of new human contributors.",
+  "commit_scope": "Separate internal/synthetic data from actionable marketplace signals, enforce contributor identity hygiene, require explicit real-name human registration, prevent ingestion-time auto-creation of new human contributors, and remove runtime placeholder wording that trips maintainability regression guards.",
   "files_owned": [
     "api/app/adapters/graph_store.py",
     "api/app/adapters/postgres_store.py",
@@ -99,7 +99,8 @@
       "git fetch origin main && git rebase origin/main",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "cd api && ruff check app/services/contributor_hygiene.py app/routers/contributors.py app/routers/contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py",
-      "cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py"
+      "cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py",
+      "cd api && python3 scripts/run_maintainability_audit.py --output logs/maintainability_audit_report.worktree_guard.json --fail-on-regression"
     ]
   },
   "ci_validation": {

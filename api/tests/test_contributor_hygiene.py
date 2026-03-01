@@ -57,7 +57,7 @@ def test_validate_real_human_registration_rejects_internal_or_test_emails() -> N
 
     bad_test, reason_test = validate_real_human_registration("Alice Smith", "alice@example.com")
     assert bad_test is False
-    assert "Test or placeholder" in reason_test
+    assert "email domains are not allowed" in reason_test
 
 
 @pytest.mark.asyncio

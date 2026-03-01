@@ -148,7 +148,7 @@ def validate_real_human_registration(name: str | None, email: str | None) -> tup
     if not normalized_email or "@" not in normalized_email:
         return False, "A valid contributor email is required."
     if is_test_contributor_email(normalized_email):
-        return False, "Test or placeholder email domains are not allowed for human registration."
+        return False, "Test/reserved email domains are not allowed for human registration."
     if is_internal_contributor_email(normalized_email):
         return False, "Internal/system emails are not allowed for human registration."
     if not is_real_human_name(name):
