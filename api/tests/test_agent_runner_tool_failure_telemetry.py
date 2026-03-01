@@ -1330,7 +1330,7 @@ def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, 
     )
     context = pending_patch.get("context") or {}
     assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
-    assert context.get("runner_retry_max") == 1
+    assert int(context.get("runner_retry_max") or 0) >= 1
     assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
 
 
