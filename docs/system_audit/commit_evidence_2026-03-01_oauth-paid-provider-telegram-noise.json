@@ -1,0 +1,104 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/telegram-alert-noise-20260228",
+  "commit_scope": "Suppress noisy duplicate Telegram task alerts and enforce OAuth-only paid-provider execution (codex/cursor/claude) with refresh-token-backed session bootstrap and API-key removal from runner execution paths.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/telegram_adapter.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_registry_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_telegram_adapter.py",
+    "docs/system_audit/commit_evidence_2026-03-01_oauth-paid-provider-telegram-noise.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/telegram_adapter.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_registry_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_telegram_adapter.py",
+    "docs/system_audit/commit_evidence_2026-03-01_oauth-paid-provider-telegram-noise.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && ruff check app/routers/agent.py app/services/agent_service.py app/services/telegram_adapter.py scripts/agent_runner.py tests/test_agent_runner_registry_api.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_telegram_adapter.py",
+    "cd api && pytest -q tests/test_telegram_adapter.py tests/test_agent_runner_registry_api.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py -k \"defaults_runner_codex_auth_mode_oauth or defaults_runner_cursor_auth_mode_oauth or forces_oauth_runner_codex_auth_mode\"",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "idea_ids": [
+    "telegram-failed-alert-dedup",
+    "oauth-only-paid-provider-runner",
+    "refresh-token-session-bootstrap-for-paid-providers"
+  ],
+  "spec_ids": [
+    "006-overnight-backlog"
+  ],
+  "task_ids": [
+    "task-2026-03-01-telegram-noise-and-oauth-paid-providers"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR checks and post-push CI completion."
+  },
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check app/routers/agent.py app/services/agent_service.py app/services/telegram_adapter.py scripts/agent_runner.py tests/test_agent_runner_registry_api.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_telegram_adapter.py",
+      "cd api && pytest -q tests/test_telegram_adapter.py tests/test_agent_runner_registry_api.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting branch deploy/push and CI-linked deploy confirmation."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Task failure/needs_decision Telegram alerts are deduplicated and no longer spam repeated failed sends; paid-provider runner execution for codex/cursor/claude enforces OAuth session auth only, strips API-key env usage, and supports refresh-token session bootstrap payloads.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness",
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary"
+    ],
+    "test_flows": [
+      "Run a paid codex/cursor/claude task and confirm runner uses OAuth/session path without API-key injection.",
+      "Trigger repeated task failure transitions and confirm Telegram alert emission remains deduplicated rather than spammed."
+    ]
+  }
+}
