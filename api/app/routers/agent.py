@@ -51,6 +51,13 @@ router.include_router(telegram_router)
 _ISSUE_PRIORITY = {"high": 0, "medium": 1, "low": 2}
 
 
+def _task_status_value(task: dict[str, Any] | None) -> str:
+    if not isinstance(task, dict):
+        return ""
+    task_status = task.get("status")
+    return task_status.value if isinstance(task_status, TaskStatus) else str(task_status or "").strip().lower()
+
+
 def _truthy(value: str | bool | None) -> bool:
     if isinstance(value, bool):
         return value
@@ -631,6 +638,8 @@ async def update_task(
     """
     if not _task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
+    existing_task = agent_service.get_task(task_id)
+    previous_status_value = _task_status_value(existing_task)
     context_patch = _target_state_context_patch(data)
     try:
         task = agent_service.update_task(
@@ -653,13 +662,12 @@ async def update_task(
         worker_id=data.worker_id,
         context_patch=context_patch if context_patch else data.context,
     )
-    task_status = task.get("status")
-    task_status_value = (
-        task_status.value
-        if isinstance(task_status, TaskStatus)
-        else str(task_status or "").strip().lower()
+    task_status_value = _task_status_value(task)
+    entered_attention_state = (
+        task_status_value in {TaskStatus.NEEDS_DECISION.value, TaskStatus.FAILED.value}
+        and task_status_value != previous_status_value
     )
-    if task_status_value in {TaskStatus.NEEDS_DECISION.value, TaskStatus.FAILED.value}:
+    if entered_attention_state:
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
