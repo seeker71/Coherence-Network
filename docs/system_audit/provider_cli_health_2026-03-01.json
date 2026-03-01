@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-03-01T09:45:48.423829Z",
+  "api_keys_present": {
+    "OPENROUTER_API_KEY": false,
+    "OPENAI_API_KEY": false,
+    "OPENAI_ADMIN_API_KEY": false,
+    "ANTHROPIC_API_KEY": false,
+    "CURSOR_API_KEY": false
+  },
+  "runs": [
+    {
+      "label": "paid_codex",
+      "cwd": "/tmp",
+      "command": "codex exec 'Return exactly HEALTH_PAID_CODEX_OK' --model gpt-5-codex --skip-git-repo-check --json",
+      "returncode": 0,
+      "success_token": "HEALTH_PAID_CODEX_OK",
+      "success_detected": true,
+      "retry_marker_present": false,
+      "fallback_marker_present": true,
+      "stdout_excerpt": "{\"type\":\"thread.started\",\"thread_id\":\"019ca8ca-2ea5-7280-8b15-0f93a2a32779\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"reasoning\",\"text\":\"**Searching for AGENTS instructions**\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc pwd\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc pwd\",\"aggregated_output\":\"/private/tmp\\n\",\"exit_code\":0,\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"reasoning\",\"text\":\"**Listing files**\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc ls\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc ls\",\"aggregated_output\":\"Coherence-E2E-output.bak\\nCoherence-E2E-playwright-cli.bak\\nMSBuild10054\\nMSBuild11762\\nMSBuild17499\\nMSBuild36063\\nMSBuild70543\\nMSBuild71384\\nMSBuild71737\\nMSBuild92260\\nMerlyServiceAdmin-logs-1771749648\\nMerlyServiceAdmin-logs-new-1771750879\\nMerlyServiceAdmin-logs.zip\\n_replace_patch_post_merge_tmp.json\\n_replace_patch_tmp.json\\nans_resp.json\\napi_health.json\\nassets_20260227.json\\nassistant_start_trace.log\\naudit.json\\nautomation_usage.json\\nautomation_usage_readiness.json\\nawr.out\\nbountybot_nodes\\nbridge-artifacts\\nbridge-artifacts-old\\nc_exec.err\\nc_plan.err\\nc_review.err\\ncf168_proof\\nclaude\\nclaude-501\\nclaude-mcp-browser-bridge-ursmuff\\ncl",
+      "stderr_excerpt": "2026-03-01T09:45:48.453701Z  WARN codex_protocol::openai_models: Model personality requested but model_messages is missing, falling back to base instructions. model=gpt-5-codex personality=pragmatic\n2026-03-01T09:45:49.493142Z  WARN codex_state::runtime: failed to open state db at /Users/ursmuff/.codex/state_5.sqlite: migration 9 was previously applied but is missing in the resolved migrations\n2026-03-01T09:45:49.518094Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019ca516-47f0-7c80-8f5b-6a9b605f4d2e\n2026-03-01T09:45:49.518101Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back\n2026-03-01T09:45:49.518632Z  WARN codex_state::runtime: failed to open state db at /Users/ursmuff/.codex/state_5.sqlite: migrati",
+      "strict_fallback_marker_present": false,
+      "strict_retry_marker_present": false
+    },
+    {
+      "label": "paid_claude",
+      "cwd": "/Users/ursmuff/.claude-worktrees/Coherence-Network/selfimprove-failure-audit",
+      "command": "claude -p 'Return exactly HEALTH_PAID_CLAUDE_OK' --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json",
+      "returncode": 0,
+      "success_token": "HEALTH_PAID_CLAUDE_OK",
+      "success_detected": true,
+      "retry_marker_present": false,
+      "fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":1924,\"duration_api_ms\":1905,\"num_turns\":1,\"result\":\"HEALTH_PAID_CLAUDE_OK\",\"stop_reason\":null,\"session_id\":\"e32af9de-6eca-4042-a81e-2d2359068997\",\"total_cost_usd\":0.03219075,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":3655,\"cache_read_input_tokens\":18024,\"output_tokens\":13,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":3655,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":2,\"outputTokens\":13,\"cacheReadInputTokens\":18024,\"cacheCreationInputTokens\":3655,\"webSearchRequests\":0,\"costUSD\":0.03219075,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"uuid\":\"aff7024f-d1a3-49a0-b3b1-73782d022806\"}\n",
+      "stderr_excerpt": "",
+      "strict_fallback_marker_present": false,
+      "strict_retry_marker_present": false
+    },
+    {
+      "label": "paid_cursor",
+      "cwd": "/Users/ursmuff/.claude-worktrees/Coherence-Network/selfimprove-failure-audit",
+      "command": "agent --trust --print --output-format json 'Return exactly HEALTH_PAID_CURSOR_OK' --model auto",
+      "returncode": 0,
+      "success_token": "HEALTH_PAID_CURSOR_OK",
+      "success_detected": true,
+      "retry_marker_present": false,
+      "fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":3424,\"duration_api_ms\":3424,\"result\":\"\\nHEALTH_PAID_CURSOR_OK\",\"session_id\":\"5bdd603c-0527-490d-ae9e-ed5a067ef1bf\",\"request_id\":\"e5d418dc-de67-4335-8bb9-d49839006413\",\"usage\":{\"inputTokens\":15034,\"outputTokens\":58,\"cacheReadTokens\":8192,\"cacheWriteTokens\":6842}}\n",
+      "stderr_excerpt": "",
+      "strict_fallback_marker_present": false,
+      "strict_retry_marker_present": false
+    },
+    {
+      "label": "free_openrouter_route",
+      "cwd": "/tmp",
+      "command": "codex exec 'Return exactly HEALTH_FREE_ROUTE_OK' --model openrouter/free --skip-git-repo-check --json",
+      "returncode": 1,
+      "success_token": "HEALTH_FREE_ROUTE_OK",
+      "success_detected": false,
+      "retry_marker_present": false,
+      "fallback_marker_present": true,
+      "stdout_excerpt": "{\"type\":\"thread.started\",\"thread_id\":\"019ca8ca-959e-7ed3-965b-186678d2a72c\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"error\",\"message\":\"{\\\"detail\\\":\\\"The 'openrouter/free' model is not supported when using Codex with a ChatGPT account.\\\"}\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"{\\\"detail\\\":\\\"The 'openrouter/free' model is not supported when using Codex with a ChatGPT account.\\\"}\"}}\n",
+      "stderr_excerpt": "2026-03-01T09:46:14.814776Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model metadata.\n2026-03-01T09:46:14.814798Z  WARN codex_protocol::openai_models: Model personality requested but model_messages is missing, falling back to base instructions. model=openrouter/free personality=pragmatic\n2026-03-01T09:46:15.513932Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model metadata.\n2026-03-01T09:46:15.515681Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model metadata.\n2026-03-01T09:46:15.516162Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model",
+      "strict_fallback_marker_present": false,
+      "strict_retry_marker_present": false
+    }
+  ]
+}

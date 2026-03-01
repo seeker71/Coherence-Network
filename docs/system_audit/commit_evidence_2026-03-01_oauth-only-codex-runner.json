@@ -1,0 +1,164 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/selfimprove-failure-audit",
+  "commit_scope": "Enforce OAuth-only Codex runner auth, add OAuth session-refresh recovery for refresh-token reuse failures, harden CLI argv execution against shell expansion, make paid-provider routing default-allow with blocking only on explicit disable or exhausted usage limits (not soft thresholds), add cross-process-safe atomic state writes for parallel test execution, and normalize all failed-task diagnostics through a shared failure taxonomy (bucket + signature + summary). Also enforce openrouter executor as first-class with openrouter/free-only model normalization and default cursor runner auth mode to oauth (no API-key path by default).",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_codex_service.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_runner_registry_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/failure_taxonomy_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_execution_retry.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_failure_taxonomy_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_parallel_state_writes.py",
+    "docs/system_audit/commit_evidence_2026-03-01_oauth-only-codex-runner.json",
+    "docs/system_audit/cursor_fact_report_2026-03-01.json",
+    "docs/system_audit/host_route_snapshot_2026-03-01.json",
+    "docs/system_audit/host_runner_usage_limits_2026-03-01.json",
+    "docs/system_audit/local_route_snapshot_2026-03-01.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/openrouter_executor_enforcement_2026-03-01.json",
+    "docs/system_audit/provider_cli_health_2026-03-01.json",
+    "docs/system_audit/provider_cli_health_2026-03-01_v2.json",
+    "docs/system_audit/provider_execution_proof_2026-03-01.json",
+    "docs/system_audit/runner_auth_mode_defaults_2026-03-01.json",
+    "docs/task_card_provider_smoke_codex_paid_execution.md",
+    "docs/task_card_provider_smoke_free_provider_execution.md"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_codex_service.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_runner_registry_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/failure_taxonomy_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_execution_retry.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "api/tests/test_failure_taxonomy_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_parallel_state_writes.py",
+    "docs/system_audit/commit_evidence_2026-03-01_oauth-only-codex-runner.json",
+    "docs/system_audit/cursor_fact_report_2026-03-01.json",
+    "docs/system_audit/host_route_snapshot_2026-03-01.json",
+    "docs/system_audit/host_runner_usage_limits_2026-03-01.json",
+    "docs/system_audit/local_route_snapshot_2026-03-01.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/openrouter_executor_enforcement_2026-03-01.json",
+    "docs/system_audit/provider_cli_health_2026-03-01.json",
+    "docs/system_audit/provider_cli_health_2026-03-01_v2.json",
+    "docs/system_audit/provider_execution_proof_2026-03-01.json",
+    "docs/system_audit/runner_auth_mode_defaults_2026-03-01.json",
+    "docs/task_card_provider_smoke_codex_paid_execution.md",
+    "docs/task_card_provider_smoke_free_provider_execution.md"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && ruff check scripts/agent_runner.py app/services/agent_service.py app/services/agent_execution_service.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_openclaw_executor_integration.py tests/test_agent_execute_endpoint.py",
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_run_self_improve_cycle.py tests/test_openclaw_executor_integration.py",
+    "cd api && for i in 1 2 3; do pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64\"; done",
+    "cd api && for i in 1 2 3; do pytest -q tests/test_agent_execute_endpoint.py -k \"test_execute_endpoint_blocks_paid_provider_until_forced or test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_override\"; done",
+    "cd api && for i in 1 2; do pytest -q tests/test_run_self_improve_cycle.py::test_run_cycle_submits_plan_execute_review_in_order tests/test_run_self_improve_cycle.py::test_run_cycle_retries_plan_submit_on_http_502_then_completes tests/test_run_self_improve_cycle.py::test_run_cycle_tolerates_execute_forbidden_when_pending; done",
+    "cd api && for i in 1 2; do pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_oauth_without_api_key_strips_openai_env tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64; done",
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_allows_paid_provider_by_default_when_not_disabled tests/test_agent_execute_endpoint.py::test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_is_soft_threshold_only tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_reports_exhausted tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded",
+    "cd api && pytest -q tests/test_parallel_state_writes.py",
+    "cd api && for i in 1 2 3; do pytest -q tests/test_parallel_state_writes.py::test_parallel_agent_runner_run_records_writes_are_safe; done",
+    "cd api && pytest -q tests/test_failure_taxonomy_service.py tests/test_agent_execution_retry.py tests/test_agent_task_persistence.py -k \"failure or retry\"",
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_run_self_improve_cycle.py tests/test_openclaw_executor_integration.py tests/test_agent_run_state_api.py tests/test_agent_runner_registry_api.py tests/test_parallel_state_writes.py tests/test_failure_taxonomy_service.py tests/test_agent_execution_retry.py tests/test_agent_task_persistence.py",
+    "cd api && python3 - <<'PY'\\nimport json, urllib.request\\nfrom collections import Counter\\nfrom app.services import failure_taxonomy_service\\nAPI_URL='https://coherence-network-production.up.railway.app'\\nwith urllib.request.urlopen(f'{API_URL}/api/agent/tasks?status=failed&limit=60', timeout=20) as r:\\n    tasks=json.loads(r.read().decode('utf-8')).get('tasks', [])\\nids=[t.get('id') for t in tasks if t.get('id')][:40]\\nb=Counter(); s=Counter()\\nfor tid in ids:\\n    with urllib.request.urlopen(f'{API_URL}/api/agent/tasks/{tid}', timeout=20) as r:\\n        task=json.loads(r.read().decode('utf-8'))\\n    c=task.get('context') if isinstance(task.get('context'), dict) else {}\\n    cls=failure_taxonomy_service.classify_failure(output_text=str(task.get('output') or ''), result_error=str(c.get('last_error') or c.get('error') or ''), failure_class=str(c.get('last_failure_class') or ''))\\n    b[cls['bucket']]+=1; s[cls['signature']]+=1\\nprint('sample_size', len(ids)); print('bucket_counts', dict(b.most_common())); print('signature_counts_top10', dict(s.most_common(10)))\\nPY"
+  ],
+  "idea_ids": [
+    "oauth-only-codex-runner-auth",
+    "oauth-session-refresh-recovery",
+    "cli-shell-expansion-hardening",
+    "paid-provider-default-allow-unless-gated",
+    "paid-provider-block-only-on-exhausted-usage-by-default",
+    "parallel-safe-state-writes-for-agent-runner-and-fallback-state-services",
+    "shared-failure-taxonomy-for-generic-bucketing-and-signature-grouping"
+  ],
+  "spec_ids": [
+    "006-overnight-backlog"
+  ],
+  "task_ids": [
+    "task-2026-03-01-oauth-only-codex-runner"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR checks and post-deploy production verification."
+  },
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py app/services/agent_service.py app/services/agent_execution_service.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_openclaw_executor_integration.py tests/test_agent_execute_endpoint.py",
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_run_self_improve_cycle.py tests/test_openclaw_executor_integration.py tests/test_agent_run_state_api.py tests/test_agent_runner_registry_api.py tests/test_parallel_state_writes.py tests/test_failure_taxonomy_service.py tests/test_agent_execution_retry.py tests/test_agent_task_persistence.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting deployment of this branch; production currently reachable with healthy /api/health."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Codex/openclaw tasks now force OAuth mode, strip OpenAI API-key env vars from codex subprocess execution, recover refresh-token reuse via OAuth session refresh + retry, execute CLI commands through argv to avoid shell expansion, allow paid providers by default while blocking only when explicitly disabled or usage is exhausted (soft-threshold quota alerts no longer hard-block by default), prevent parallel test/process collisions by using per-write temp files plus cross-process file locks for runner/run-state fallback JSON stores, and normalize failed-task diagnostics via shared taxonomy fields (failure_reason_bucket + failure_signature + failure_summary) so similar failures are grouped and handled consistently.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks?status=failed&limit=80"
+    ],
+    "test_flows": [
+      "Run codex/oauth task that previously failed with refresh_token_reused and verify runner_codex_oauth_session_refresh metadata appears before retry.",
+      "Run paid-route task without AGENT_ALLOW_PAID_PROVIDERS override and verify it executes unless usage-window/readiness gates are exceeded."
+    ]
+  }
+}

@@ -5,10 +5,15 @@ from __future__ import annotations
 import json
 import os
 import threading
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - non-posix fallback
+    fcntl = None
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -53,6 +58,24 @@ def _repo_root() -> Path:
 
 def _fallback_path() -> Path:
     return _repo_root() / "logs" / "agent_run_state.json"
+
+
+def _fallback_lock_path() -> Path:
+    return _repo_root() / "logs" / "agent_run_state.json.lock"
+
+
+@contextmanager
+def _local_file_lock():
+    lock_path = _fallback_lock_path()
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def _database_url() -> str:
@@ -242,9 +265,22 @@ def _read_local() -> dict[str, Any]:
 def _write_local(payload: dict[str, Any]) -> None:
     path = _fallback_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    fd, tmp_name = tempfile.mkstemp(prefix=f"{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp:
+            json.dump(payload, tmp, indent=2)
+            tmp.flush()
+            try:
+                os.fsync(tmp.fileno())
+            except OSError:
+                pass
+        os.replace(tmp_name, path)
+    finally:
+        try:
+            if os.path.exists(tmp_name):
+                os.unlink(tmp_name)
+        except OSError:
+            pass
 
 
 def _claim_local(
@@ -260,7 +296,7 @@ def _claim_local(
 ) -> dict[str, Any]:
     now = _now()
     lease_until = now + timedelta(seconds=lease_seconds)
-    with _LOCAL_LOCK:
+    with _LOCAL_LOCK, _local_file_lock():
         payload = _read_local()
         tasks = payload.setdefault("tasks", {})
         current = tasks.get(task_id)
@@ -401,7 +437,7 @@ def _update_local(
     require_owner: bool,
 ) -> dict[str, Any]:
     now = _now()
-    with _LOCAL_LOCK:
+    with _LOCAL_LOCK, _local_file_lock():
         payload = _read_local()
         tasks = payload.setdefault("tasks", {})
         row = tasks.get(task_id)
@@ -490,7 +526,7 @@ def heartbeat_run_state(
 
 def get_run_state(task_id: str) -> dict[str, Any] | None:
     if not _database_url():
-        with _LOCAL_LOCK:
+        with _LOCAL_LOCK, _local_file_lock():
             payload = _read_local()
             tasks = payload.get("tasks")
             if not isinstance(tasks, dict):

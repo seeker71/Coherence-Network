@@ -21,7 +21,7 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "2")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "3")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -49,7 +49,7 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -87,7 +87,7 @@ async def test_route_auto_executor_uses_policy_default(monkeypatch: pytest.Monke
 
 def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -99,14 +99,14 @@ def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None
         )
     )
     context = task.get("context") or {}
-    assert context.get("executor") == "openclaw"
+    assert context.get("executor") == "codex"
     policy = context.get("executor_policy") or {}
     assert policy == {}
 
 
 def test_explicit_executor_is_forced_when_unavailable_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -128,7 +128,7 @@ def test_explicit_executor_is_forced_when_unavailable_by_default(monkeypatch: py
 def test_explicit_executor_falls_back_when_unavailable_and_forcing_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "0")
-    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -140,18 +140,18 @@ def test_explicit_executor_falls_back_when_unavailable_and_forcing_disabled(monk
         )
     )
     context = task.get("context") or {}
-    assert context.get("executor") == "openclaw"
+    assert context.get("executor") == "codex"
     policy = context.get("executor_policy") or {}
     assert policy.get("reason") == "explicit_executor_unavailable"
     assert policy.get("explicit_executor") == "claude"
-    assert policy.get("fallback_executor") == "openclaw"
+    assert policy.get("fallback_executor") == "codex"
 
 
 def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "claude")
-    _which = {"agent": None, "claude": None, "openclaw": "/usr/bin/openclaw", "codex": None}
+    _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -159,16 +159,16 @@ def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest
         AgentTaskCreate(direction="Policy disabled fallback path", task_type=TaskType.IMPL)
     )
     context = task.get("context") or {}
-    assert context.get("executor") == "openclaw"
+    assert context.get("executor") == "codex"
     policy = context.get("executor_policy") or {}
     assert policy.get("reason") == "policy_disabled_default_unavailable"
     assert policy.get("default_executor") == "claude"
-    assert policy.get("fallback_executor") == "openclaw"
+    assert policy.get("fallback_executor") == "codex"
 
 
 def test_explicit_clawwork_executor_alias_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -180,7 +180,7 @@ def test_explicit_clawwork_executor_alias_is_respected(monkeypatch: pytest.Monke
         )
     )
     context = task.get("context") or {}
-    assert context.get("executor") == "openclaw"
+    assert context.get("executor") == "codex"
     policy = context.get("executor_policy") or {}
     assert policy == {}
 
@@ -192,7 +192,7 @@ def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytes
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_TO", "claude")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": "/usr/bin/agent", "aider": None, "openclaw": None}
+    _which = {"agent": "/usr/bin/agent", "aider": None, "codex": None}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -216,7 +216,7 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_REPO_DEFAULT", "cursor")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -235,11 +235,11 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     assert str(task["command"]).startswith("agent ")
 
 
-def test_open_question_prefers_openclaw(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "openclaw")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -252,14 +252,14 @@ def test_open_question_prefers_openclaw(monkeypatch: pytest.MonkeyPatch) -> None
 
     context = task.get("context") or {}
     policy = context.get("executor_policy") or {}
-    assert context.get("executor") == "openclaw"
+    assert context.get("executor") == "codex"
     assert policy.get("reason") == "open_question_default"
-    assert str(task["model"]).startswith("openclaw/")
+    assert str(task["model"]).startswith("codex/")
 
 
 def test_open_responses_normalization_is_shared_across_executors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -270,7 +270,7 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
             context={"executor": "cursor"},
         )
     )
-    openclaw_task = agent_service.create_task(
+    codex_task = agent_service.create_task(
         AgentTaskCreate(
             direction="Normalize responses across providers",
             task_type=TaskType.IMPL,
@@ -279,7 +279,7 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
     )
 
     cursor_ctx = cursor_task.get("context") or {}
-    claw_ctx = openclaw_task.get("context") or {}
+    claw_ctx = codex_task.get("context") or {}
     cursor_call = cursor_ctx.get("normalized_response_call") or {}
     claw_call = claw_ctx.get("normalized_response_call") or {}
 

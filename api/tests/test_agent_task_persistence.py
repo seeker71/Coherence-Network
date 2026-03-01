@@ -335,6 +335,8 @@ def test_update_task_backfills_failed_output_from_context_error(
     assert context.get("failure_diagnostics_present") is True
     assert context.get("failure_diagnostics_source") == "context.error"
     assert context.get("failure_reason_bucket") == "timeout"
+    assert context.get("failure_signature") == "timeout_runtime_or_dependency"
+    assert "timed out" in str(context.get("failure_summary") or "").lower()
 
 
 def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
@@ -366,6 +368,8 @@ def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
     assert context.get("failure_diagnostics_present") is True
     assert context.get("failure_diagnostics_source") == "fallback"
     assert context.get("failure_reason_bucket") in {"other", "empty_output"}
+    assert str(context.get("failure_signature") or "").strip()
+    assert str(context.get("failure_summary") or "").strip()
 
 
 def test_create_task_records_task_card_validation_metadata(
