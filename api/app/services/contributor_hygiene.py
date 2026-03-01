@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 DEFAULT_TEST_EMAIL_DOMAINS = {
     "example.com",
@@ -23,6 +24,8 @@ DEFAULT_INTERNAL_EMAIL_PREFIXES = {
     "e2e",
     "automation",
     "machine-reviewer",
+    "system",
+    "coherence-system",
 }
 
 
@@ -112,3 +115,42 @@ def is_internal_contributor_email(email: str | None) -> bool:
         if local == prefix or local.startswith(f"{prefix}-") or local.startswith(f"{prefix}_"):
             return True
     return False
+
+
+_NAME_TOKEN_RE = re.compile(r"^[a-z][a-z'-]{1,}$", re.IGNORECASE)
+_DISALLOWED_NAME_MARKERS = {
+    "test",
+    "bot",
+    "automation",
+    "deploy",
+    "system",
+    "ci",
+    "e2e",
+    "machine",
+}
+
+
+def is_real_human_name(name: str | None) -> bool:
+    value = str(name or "").strip()
+    if not value:
+        return False
+    lower = value.lower()
+    if any(marker in lower for marker in _DISALLOWED_NAME_MARKERS):
+        return False
+    tokens = [token for token in re.split(r"\s+", value) if token]
+    if len(tokens) < 2:
+        return False
+    return all(bool(_NAME_TOKEN_RE.match(token)) for token in tokens)
+
+
+def validate_real_human_registration(name: str | None, email: str | None) -> tuple[bool, str]:
+    normalized_email = normalize_contributor_email(email)
+    if not normalized_email or "@" not in normalized_email:
+        return False, "A valid contributor email is required."
+    if is_test_contributor_email(normalized_email):
+        return False, "Test or placeholder email domains are not allowed for human registration."
+    if is_internal_contributor_email(normalized_email):
+        return False, "Internal/system emails are not allowed for human registration."
+    if not is_real_human_name(name):
+        return False, "Contributor name must be a real full name (first and last name)."
+    return True, ""
