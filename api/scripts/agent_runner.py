@@ -249,6 +249,28 @@ except ValueError:
 AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = max(0, AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS)
 _last_idle_task_generation_ts = 0.0
 
+RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
+try:
+    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = int(
+        os.environ.get("AGENT_RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS", "120")
+    )
+except ValueError:
+    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = 120
+RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = max(15, min(RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS, 1800))
+
+CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "pro_plus": (100, 1000),
+}
+
+CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (45, 315),
+    "max": (120, 840),
+    "team": (120, 840),
+}
+
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
@@ -336,6 +358,315 @@ def _safe_float(value: object) -> float | None:
         return float(str(value).strip())
     except Exception:
         return None
+
+
+def _coerce_nonnegative_int(value: object, *, default: int = 0) -> int:
+    parsed = _safe_float(value)
+    if parsed is None:
+        return default
+    return max(0, int(parsed))
+
+
+def _cli_output(command: list[str], *, timeout: int = 8) -> tuple[bool, str]:
+    try:
+        completed = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=timeout,
+        )
+    except Exception as exc:
+        return False, str(exc)
+    output = (completed.stdout or completed.stderr or "").strip()
+    return completed.returncode == 0, output
+
+
+def _normalize_subscription_tier(value: str) -> str:
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {"free", "pro", "pro_plus", "max", "team"}:
+        return normalized
+    if normalized in {"proplus", "plus"}:
+        return "pro_plus"
+    return normalized
+
+
+def _runner_claude_auth_context() -> dict[str, Any]:
+    if shutil.which("claude") is None:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status", "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env={**os.environ, "CLAUDECODE": ""},
+        )
+    except Exception:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    if result.returncode != 0:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    try:
+        payload = json.loads(result.stdout.strip())
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    logged_in = bool(payload.get("loggedIn"))
+    auth_method = str(payload.get("authMethod") or "").strip()
+    subscription_type = _normalize_subscription_tier(str(payload.get("subscriptionType") or ""))
+    return {
+        "configured": logged_in,
+        "tier": subscription_type,
+        "auth_source": f"claude_cli_auth_status:{auth_method}" if auth_method else "claude_cli_auth_status",
+        "details": {
+            "auth_method": auth_method,
+            "api_provider": str(payload.get("apiProvider") or "").strip(),
+        },
+    }
+
+
+def _runner_cursor_about_context() -> dict[str, Any]:
+    if shutil.which("agent") is None:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    status_ok, status_detail = _cli_output(["agent", "status"])
+    about_ok, about_detail = _cli_output(["agent", "about"])
+    output = f"{status_detail}\n{about_detail}".strip()
+    normalized = output.lower()
+    configured = bool(status_ok and ("logged in" in normalized or "authenticated" in normalized))
+
+    tier = ""
+    for line in output.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key_clean = key.strip().lower()
+        value_clean = value.strip().lower()
+        if key_clean in {"plan", "subscription", "subscription type"} and value_clean:
+            tier = _normalize_subscription_tier(value_clean)
+            break
+    if not tier:
+        for candidate in ("pro_plus", "pro plus", "pro", "free"):
+            if candidate in normalized:
+                tier = _normalize_subscription_tier(candidate)
+                break
+
+    email = ""
+    for line in output.splitlines():
+        if "@" not in line:
+            continue
+        token = line.split()[-1].strip()
+        if "@" in token:
+            email = token
+            break
+    return {
+        "configured": configured,
+        "tier": tier,
+        "auth_source": "cursor_cli_status",
+        "details": {"email": email},
+    }
+
+
+def _runner_codex_oauth_access_context(env: dict[str, str]) -> tuple[str | None, str | None, str]:
+    for candidate in _codex_oauth_session_candidates(env):
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        tokens = payload.get("tokens") if isinstance(payload.get("tokens"), dict) else {}
+        access_token = str(
+            tokens.get("access_token")
+            or payload.get("access_token")
+            or tokens.get("id_token")
+            or payload.get("id_token")
+            or ""
+        ).strip()
+        if not access_token:
+            continue
+        if access_token.lower().startswith("bearer "):
+            access_token = access_token[7:].strip()
+        account_id = str(
+            tokens.get("account_id")
+            or payload.get("account_id")
+            or payload.get("chatgpt_account_id")
+            or ""
+        ).strip()
+        return access_token, (account_id or None), f"session_file:{candidate}"
+    return None, None, ""
+
+
+def _runner_codex_window_label(limit_window_seconds: int, fallback: str) -> str:
+    seconds = max(0, int(limit_window_seconds))
+    if seconds <= 0:
+        return str(fallback or "window").strip() or "window"
+    if seconds % (7 * 24 * 3600) == 0:
+        weeks = max(1, int(seconds / (7 * 24 * 3600)))
+        return "7d" if weeks == 1 else f"{weeks}w"
+    if seconds % (24 * 3600) == 0:
+        days = max(1, int(seconds / (24 * 3600)))
+        return "24h" if days == 1 else f"{days}d"
+    if seconds % 3600 == 0:
+        return f"{max(1, int(seconds / 3600))}h"
+    if seconds % 60 == 0:
+        return f"{max(1, int(seconds / 60))}m"
+    return f"{seconds}s"
+
+
+def _runner_parse_codex_usage_windows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rate_limit = payload.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        return []
+    out: list[dict[str, Any]] = []
+    for key in ("primary_window", "secondary_window"):
+        row = rate_limit.get(key)
+        if not isinstance(row, dict):
+            continue
+        used_percent = _safe_float(row.get("used_percent"))
+        if used_percent is None:
+            used_percent = _safe_float(row.get("utilization"))
+        if used_percent is None:
+            remaining_percent = _safe_float(row.get("remaining_percent") or row.get("percent_remaining"))
+            if remaining_percent is not None:
+                used_percent = 100.0 - remaining_percent
+        if used_percent is None:
+            continue
+        used_percent = max(0.0, min(float(used_percent), 100.0))
+        limit_seconds = _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0)
+        reset_at_unix = _coerce_nonnegative_int(row.get("reset_at"), default=0)
+        reset_at_iso: str | None = None
+        if reset_at_unix > 0:
+            try:
+                reset_at_iso = (
+                    datetime.fromtimestamp(reset_at_unix, timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+            except Exception:
+                reset_at_iso = None
+        label = _runner_codex_window_label(limit_seconds, key)
+        out.append(
+            {
+                "metric_id": f"codex_provider_window_{'primary' if key == 'primary_window' else 'secondary'}",
+                "source_key": key,
+                "label": label,
+                "window": label,
+                "used_percent": used_percent,
+                "remaining_percent": max(0.0, 100.0 - used_percent),
+                "limit_window_seconds": limit_seconds,
+                "reset_at_unix": reset_at_unix or None,
+                "reset_at_iso": reset_at_iso,
+            }
+        )
+    return out
+
+
+def _runner_codex_usage_telemetry() -> dict[str, Any]:
+    env = dict(os.environ)
+    oauth_ok, oauth_source = _codex_oauth_session_status(env)
+    payload: dict[str, Any] = {
+        "configured": bool(oauth_ok),
+        "auth_source": oauth_source,
+        "usage_windows": [],
+        "plan": "",
+        "usage_url": str(os.getenv("CODEX_USAGE_URL", "https://chatgpt.com/backend-api/wham/usage")).strip(),
+        "limits": {},
+        "limits_source": "",
+    }
+    if not oauth_ok:
+        return payload
+    token, account_id, access_source = _runner_codex_oauth_access_context(env)
+    if access_source:
+        payload["auth_source"] = access_source
+    if not token:
+        return payload
+    headers: dict[str, str] = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "User-Agent": "coherence-network-agent-runner/1.0",
+    }
+    if account_id:
+        headers["ChatGPT-Account-Id"] = account_id
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            response = client.get(payload["usage_url"])
+            response.raise_for_status()
+            body = response.json()
+    except Exception:
+        return payload
+    body_dict = body if isinstance(body, dict) else {}
+    payload["usage_windows"] = _runner_parse_codex_usage_windows(body_dict)
+    payload["limits_source"] = "codex_usage_api"
+    plan = str(body_dict.get("plan_type") or "").strip()
+    credits = body_dict.get("credits")
+    if isinstance(credits, dict) and credits.get("balance") is not None:
+        balance = _safe_float(credits.get("balance"))
+        if balance is not None:
+            plan = f"{plan} (${balance:.2f})" if plan else f"${balance:.2f}"
+    payload["plan"] = plan
+    return payload
+
+
+def _runner_provider_telemetry_payload(*, force_refresh: bool = False) -> dict[str, Any]:
+    now = time.time()
+    cached = RUNNER_PROVIDER_TELEMETRY_CACHE.get("payload")
+    if (
+        not force_refresh
+        and isinstance(cached, dict)
+        and float(RUNNER_PROVIDER_TELEMETRY_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return dict(cached)
+
+    cursor = _runner_cursor_about_context()
+    cursor_tier = _normalize_subscription_tier(str(cursor.get("tier") or ""))
+    cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER.get(cursor_tier) if cursor_tier else None
+    if cursor_limits is None:
+        cursor_tier = "pro"
+        cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER[cursor_tier]
+
+    claude = _runner_claude_auth_context()
+    claude_tier = _normalize_subscription_tier(str(claude.get("tier") or ""))
+    claude_limits = CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER.get(claude_tier) if claude_tier else None
+
+    openai = _runner_codex_usage_telemetry()
+    payload: dict[str, Any] = {
+        "openai": {
+            "configured": bool(openai.get("configured")),
+            "auth_source": str(openai.get("auth_source") or ""),
+            "usage_windows": list(openai.get("usage_windows") or []),
+            "plan": str(openai.get("plan") or ""),
+            "usage_url": str(openai.get("usage_url") or ""),
+            "limits_source": str(openai.get("limits_source") or ""),
+        },
+        "claude": {
+            "configured": bool(claude.get("configured")),
+            "auth_source": str(claude.get("auth_source") or ""),
+            "tier": claude_tier,
+            "limits_source": "cli_subscription_baseline" if claude_limits else "",
+            "limits": {
+                "subscription_8h": int(claude_limits[0]) if claude_limits else 0,
+                "subscription_week": int(claude_limits[1]) if claude_limits else 0,
+            },
+            "details": claude.get("details") if isinstance(claude.get("details"), dict) else {},
+        },
+        "cursor": {
+            "configured": bool(cursor.get("configured")),
+            "auth_source": str(cursor.get("auth_source") or ""),
+            "tier": cursor_tier,
+            "limits_source": "cli_subscription_baseline",
+            "limits": {
+                "subscription_8h": int(cursor_limits[0]),
+                "subscription_week": int(cursor_limits[1]),
+            },
+            "details": cursor.get("details") if isinstance(cursor.get("details"), dict) else {},
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    RUNNER_PROVIDER_TELEMETRY_CACHE["payload"] = dict(payload)
+    RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = now + RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS
+    return payload
 
 
 def _context_first_float(context: dict[str, Any], keys: tuple[str, ...]) -> float | None:
@@ -2157,6 +2488,12 @@ def _runner_heartbeat(
     metadata: dict[str, Any] | None = None,
 ) -> None:
     lease_seconds = max(20, min(3600, RUN_HEARTBEAT_SECONDS * 3))
+    merged_metadata: dict[str, Any] = {}
+    if isinstance(metadata, dict):
+        merged_metadata.update(metadata)
+    telemetry = _runner_provider_telemetry_payload(force_refresh=False)
+    if telemetry:
+        merged_metadata["provider_telemetry"] = telemetry
     payload = {
         "runner_id": runner_id,
         "status": str(status or "idle"),
@@ -2167,7 +2504,7 @@ def _runner_heartbeat(
         "active_task_id": active_task_id[:200],
         "active_run_id": active_run_id[:200],
         "last_error": last_error[:2000],
-        "metadata": metadata or {},
+        "metadata": merged_metadata,
     }
     try:
         client.post(f"{BASE}/api/agent/runners/heartbeat", json=payload, timeout=HTTP_TIMEOUT)
