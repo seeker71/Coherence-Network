@@ -2196,8 +2196,14 @@ def _schedule_retry_if_configured(
 
 def _retry_explicitly_disabled(task_ctx: dict[str, Any]) -> bool:
     for key in ("runner_retry_max", "retry_max", "max_retries"):
-        if key in task_ctx:
-            return _to_int(task_ctx.get(key), 0) <= 0
+        if key not in task_ctx:
+            continue
+        raw_value = task_ctx.get(key)
+        if raw_value is None:
+            continue
+        if isinstance(raw_value, str) and not raw_value.strip():
+            continue
+        return _to_int(raw_value, 0) <= 0
     return False
 
 
@@ -4203,6 +4209,34 @@ def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
     }
 
 
+def _claude_command_model(command: str) -> str:
+    if not _uses_claude_cli(command):
+        return ""
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return ""
+    return match.group("model").strip()
+
+
+def _apply_claude_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+    requested_model = _claude_command_model(command)
+    if not requested_model:
+        return command, None
+    target_model = requested_model
+    if requested_model.lower().startswith("claude/"):
+        target_model = requested_model.split("/", 1)[1].strip()
+    if not target_model or target_model.lower() == requested_model.lower():
+        return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
+    remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
+    return remapped, {
+        "requested_model": requested_model,
+        "effective_model": target_model,
+    }
+
+
 def _codex_model_not_found_or_access_error(output: str) -> bool:
     lowered = (output or "").lower()
     if not lowered:
@@ -4893,6 +4927,7 @@ def run_one_task(
         )
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
+    claude_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
     cli_bootstrap_ok = True
     cli_bootstrap_detail = ""
@@ -4970,6 +5005,14 @@ def run_one_task(
             env.pop("ANTHROPIC_BASE_URL", None)
             env.pop("ANTHROPIC_API_KEY", None)
             log.info("task=%s using Claude Code CLI (inherited session)", task_id)
+        command, claude_model_alias = _apply_claude_model_alias(command)
+        if claude_model_alias:
+            log.warning(
+                "task=%s remapped claude model %s -> %s",
+                task_id,
+                claude_model_alias["requested_model"],
+                claude_model_alias["effective_model"],
+            )
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
@@ -5159,9 +5202,10 @@ def run_one_task(
             **codex_auth_state,
             "at": _utc_now_iso(),
         }
-    if codex_model_alias:
+    if codex_model_alias or claude_model_alias:
+        active_model_alias = codex_model_alias or claude_model_alias
         running_context["runner_model_alias"] = {
-            **codex_model_alias,
+            **(active_model_alias or {}),
             "at": _utc_now_iso(),
         }
     if non_root_detail:
@@ -5284,10 +5328,11 @@ def run_one_task(
             f"oauth_missing={'true' if codex_auth_state['oauth_missing'] else 'false'}\n"
         )
     alias_note = ""
-    if codex_model_alias:
+    effective_model_alias = codex_model_alias or claude_model_alias
+    if effective_model_alias:
         alias_note = (
             "[runner-model-alias] requested_model="
-            f"{codex_model_alias['requested_model']} effective_model={codex_model_alias['effective_model']}\n"
+            f"{effective_model_alias['requested_model']} effective_model={effective_model_alias['effective_model']}\n"
         )
     exec_mode_note = ""
     if _uses_codex_cli(command):
