@@ -114,7 +114,7 @@ Environment variables:
 - `AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD` (default `2`)
 - `AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD` (default `1`)
 - `CURSOR_CLI_MODEL` / `CURSOR_CLI_REVIEW_MODEL` (recommended `auto`)
-- `CURSOR_SUBSCRIPTION_8H_LIMIT` / `CURSOR_SUBSCRIPTION_WEEK_LIMIT` (optional proactive backoff thresholds)
+- Cursor/Codex subscription windows come from host-runner telemetry and CLI auth context.
 
 Notes:
 
@@ -149,6 +149,6 @@ Use `auto` as default so Cursor can balance availability/quality against subscri
 Track and back off via:
 - `GET /api/automation/usage`
 - `GET /api/automation/usage/alerts`
-- provider guard envs for Cursor window limits (`CURSOR_SUBSCRIPTION_8H_LIMIT`, `CURSOR_SUBSCRIPTION_WEEK_LIMIT`)
+- provider telemetry limits (reported in usage snapshots/readiness)
 
 See [CURSOR-CLI.md](CURSOR-CLI.md) for setup and usage.

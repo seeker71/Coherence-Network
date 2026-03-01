@@ -31,7 +31,12 @@ from app.models.automation_usage import (
     UsageAlertReport,
     UsageMetric,
 )
-from app.services import agent_service, quality_awareness_service, telemetry_persistence_service
+from app.services import (
+    agent_runner_registry_service,
+    agent_service,
+    quality_awareness_service,
+    telemetry_persistence_service,
+)
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 120.0
@@ -46,6 +51,10 @@ _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 _RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
 _CODEX_PROVIDER_USAGE_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": None}
 _CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS = 90.0
+_RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "rows": []}
+_RUNNER_PROVIDER_TELEMETRY_CACHE_TTL_SECONDS = 20.0
+_CURSOR_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
+_CLAUDE_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -91,6 +100,19 @@ _PROVIDER_FAMILY_ALIASES: dict[str, str] = {
 }
 
 _READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor"})
+
+_CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "pro_plus": (100, 1000),
+}
+
+_CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (45, 315),
+    "max": (120, 840),
+    "team": (120, 840),
+}
 
 _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
     "hourly": 0.1,
@@ -1434,9 +1456,305 @@ def _append_codex_provider_window_metrics(snapshot: ProviderUsageSnapshot) -> bo
         error = _truncate_text(probe.get("error"), max_len=180)
         if error:
             snapshot.notes.append(f"Codex provider usage probe failed: {error}")
+    if not appended and _append_codex_runner_window_metrics(snapshot):
+        return True
 
     snapshot.notes = list(dict.fromkeys(snapshot.notes))
     return appended
+
+
+def _runner_provider_telemetry_rows(*, force_refresh: bool = False) -> list[dict[str, Any]]:
+    now = time.time()
+    cached_rows = _RUNNER_PROVIDER_TELEMETRY_CACHE.get("rows")
+    if (
+        not force_refresh
+        and isinstance(cached_rows, list)
+        and float(_RUNNER_PROVIDER_TELEMETRY_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return [row for row in cached_rows if isinstance(row, dict)]
+
+    try:
+        rows = agent_runner_registry_service.list_runners(include_stale=False, limit=100)
+    except Exception:
+        rows = []
+    normalized = [row for row in rows if isinstance(row, dict)]
+    _RUNNER_PROVIDER_TELEMETRY_CACHE["rows"] = normalized
+    _RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = now + _RUNNER_PROVIDER_TELEMETRY_CACHE_TTL_SECONDS
+    return normalized
+
+
+def _runner_provider_telemetry(provider: str) -> dict[str, Any]:
+    normalized_provider = _normalize_provider_name(provider)
+    if not normalized_provider:
+        return {}
+    for row in _runner_provider_telemetry_rows():
+        metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        provider_telemetry = (
+            metadata.get("provider_telemetry")
+            if isinstance(metadata.get("provider_telemetry"), dict)
+            else {}
+        )
+        provider_row = provider_telemetry.get(normalized_provider)
+        if isinstance(provider_row, dict):
+            return provider_row
+    return {}
+
+
+def _runner_provider_configured(provider: str) -> tuple[bool, str]:
+    provider_row = _runner_provider_telemetry(provider)
+    if not provider_row:
+        return False, ""
+    configured = bool(provider_row.get("configured"))
+    if not configured:
+        return False, ""
+    detail = str(provider_row.get("auth_source") or provider_row.get("detail") or "").strip()
+    return True, (detail or "runner_provider_telemetry")
+
+
+def _runner_provider_limits(provider: str) -> tuple[int, int, str]:
+    provider_row = _runner_provider_telemetry(provider)
+    if not provider_row:
+        return 0, 0, ""
+    limits = provider_row.get("limits") if isinstance(provider_row.get("limits"), dict) else {}
+    limit_8h = _coerce_nonnegative_int(
+        limits.get("subscription_8h") or limits.get("limit_8h"),
+        default=0,
+    )
+    limit_week = _coerce_nonnegative_int(
+        limits.get("subscription_week") or limits.get("limit_week"),
+        default=0,
+    )
+    source = str(provider_row.get("limits_source") or "runner_provider_telemetry").strip()
+    if limit_8h > 0 and limit_week > 0:
+        return limit_8h, limit_week, (source or "runner_provider_telemetry")
+    return 0, 0, ""
+
+
+def _runner_openai_usage_windows() -> list[dict[str, Any]]:
+    provider_row = _runner_provider_telemetry("openai")
+    windows = provider_row.get("usage_windows") if isinstance(provider_row.get("usage_windows"), list) else []
+    out: list[dict[str, Any]] = []
+    for row in windows:
+        if not isinstance(row, dict):
+            continue
+        metric_id = str(row.get("metric_id") or "").strip()
+        used_percent = _coerce_float(row.get("used_percent"))
+        if not metric_id or used_percent is None:
+            continue
+        out.append(row)
+    return out
+
+
+def _append_codex_runner_window_metrics(snapshot: ProviderUsageSnapshot) -> bool:
+    if _normalize_provider_name(snapshot.provider) != "openai":
+        return False
+    windows = _runner_openai_usage_windows()
+    if not windows:
+        return False
+
+    existing_ids = {metric.id for metric in snapshot.metrics}
+    appended = False
+    raw_windows: list[dict[str, Any]] = []
+    for row in windows:
+        metric_id = str(row.get("metric_id") or "").strip()
+        if not metric_id or metric_id in existing_ids:
+            continue
+        used_percent = _coerce_float(row.get("used_percent"))
+        if used_percent is None:
+            continue
+        used_percent = max(0.0, min(float(used_percent), 100.0))
+        remaining_percent = max(0.0, 100.0 - used_percent)
+        label = str(row.get("label") or "window").strip() or "window"
+        window = str(row.get("window") or label).strip() or label
+        source_key = str(row.get("source_key") or "window").strip() or "window"
+        reset_at_iso = str(row.get("reset_at_iso") or "").strip()
+        reset_suffix = f"; resets_at={reset_at_iso}" if reset_at_iso else ""
+        snapshot.metrics.append(
+            _metric(
+                id=metric_id,
+                label=f"Codex provider quota ({label})",
+                unit="requests",
+                used=used_percent,
+                remaining=remaining_percent,
+                limit=100.0,
+                window=window,
+                validation_state="validated",
+                validation_detail=(
+                    "Validated from host-runner Codex provider telemetry "
+                    f"({source_key}, percentage of window capacity){reset_suffix}."
+                ),
+                evidence_source="runner_provider_telemetry",
+            )
+        )
+        raw_windows.append(
+            {
+                "metric_id": metric_id,
+                "source_key": source_key,
+                "label": label,
+                "window": window,
+                "used_percent": round(used_percent, 6),
+                "remaining_percent": round(remaining_percent, 6),
+                "limit_window_seconds": _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0) or None,
+                "reset_at_unix": _coerce_nonnegative_int(row.get("reset_at_unix"), default=0) or None,
+                "reset_at_iso": reset_at_iso or None,
+            }
+        )
+        existing_ids.add(metric_id)
+        appended = True
+
+    if appended:
+        snapshot.notes.append(
+            "Codex provider quota windows are sourced from host-runner telemetry (percentage-based windows)."
+        )
+        snapshot.raw["codex_usage_windows"] = raw_windows
+        provider_row = _runner_provider_telemetry("openai")
+        plan = str(provider_row.get("plan") or "").strip()
+        auth_source = str(provider_row.get("auth_source") or "").strip()
+        usage_url = str(provider_row.get("usage_url") or "").strip()
+        if plan:
+            snapshot.raw["codex_usage_plan"] = plan
+        if auth_source:
+            snapshot.raw["codex_usage_auth_source"] = auth_source
+        if usage_url:
+            snapshot.raw["codex_usage_url"] = usage_url
+    snapshot.notes = list(dict.fromkeys(snapshot.notes))
+    return appended
+
+
+def _cursor_cli_about_context() -> dict[str, Any]:
+    now = time.time()
+    cached_payload = _CURSOR_CLI_CONTEXT_CACHE.get("payload")
+    if isinstance(cached_payload, dict) and float(_CURSOR_CLI_CONTEXT_CACHE.get("expires_at") or 0.0) > now:
+        return dict(cached_payload)
+
+    if shutil.which("agent") is None:
+        payload = {"cli_available": False, "logged_in": False, "tier": ""}
+        _CURSOR_CLI_CONTEXT_CACHE["payload"] = dict(payload)
+        _CURSOR_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+        return payload
+
+    status_ok, status_detail = _cli_output(["agent", "status"])
+    _, about_detail = _cli_output(["agent", "about"])
+    output = f"{status_detail}\n{about_detail}".strip()
+    normalized = output.lower()
+
+    tier = ""
+    for line in output.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key_clean = key.strip().lower()
+        value_clean = value.strip().lower()
+        if key_clean in {"plan", "subscription", "subscription type"} and value_clean:
+            tier = value_clean.replace(" ", "_")
+            break
+    if not tier:
+        for candidate in ("pro_plus", "pro plus", "pro", "free"):
+            if candidate in normalized:
+                tier = candidate.replace(" ", "_")
+                break
+
+    email = ""
+    for line in output.splitlines():
+        if "@" not in line:
+            continue
+        token = line.split()[-1].strip()
+        if "@" in token:
+            email = token
+            break
+
+    payload = {
+        "cli_available": True,
+        "logged_in": bool(status_ok and ("logged in" in normalized or "authenticated" in normalized)),
+        "tier": tier,
+        "email": email,
+        "detail": _truncate_text(output, max_len=240),
+    }
+    _CURSOR_CLI_CONTEXT_CACHE["payload"] = dict(payload)
+    _CURSOR_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+    return payload
+
+
+def _cursor_subscription_limits() -> tuple[int, int, str, str]:
+    runner_8h, runner_week, runner_source = _runner_provider_limits("cursor")
+    if runner_8h > 0 and runner_week > 0:
+        provider_row = _runner_provider_telemetry("cursor")
+        runner_tier = str(provider_row.get("tier") or "").strip().lower()
+        return runner_8h, runner_week, runner_source, runner_tier
+
+    about = _cursor_cli_about_context()
+    if not bool(about.get("logged_in")):
+        return 0, 0, "", ""
+    tier = str(about.get("tier") or "").strip().lower().replace("-", "_")
+    limits = _CURSOR_SUBSCRIPTION_LIMITS_BY_TIER.get(tier) if tier else None
+    if limits is None:
+        tier = "pro"
+        limits = _CURSOR_SUBSCRIPTION_LIMITS_BY_TIER[tier]
+    return int(limits[0]), int(limits[1]), "cli_subscription_baseline", tier
+
+
+def _claude_cli_auth_context() -> dict[str, Any]:
+    now = time.time()
+    cached_payload = _CLAUDE_CLI_CONTEXT_CACHE.get("payload")
+    if isinstance(cached_payload, dict) and float(_CLAUDE_CLI_CONTEXT_CACHE.get("expires_at") or 0.0) > now:
+        return dict(cached_payload)
+
+    if not _claude_code_cli_available():
+        payload = {"cli_available": False, "logged_in": False, "subscription_type": ""}
+        _CLAUDE_CLI_CONTEXT_CACHE["payload"] = dict(payload)
+        _CLAUDE_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+        return payload
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status", "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env={**os.environ, "CLAUDECODE": ""},
+        )
+    except Exception:
+        payload = {"cli_available": True, "logged_in": False, "subscription_type": ""}
+        _CLAUDE_CLI_CONTEXT_CACHE["payload"] = dict(payload)
+        _CLAUDE_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+        return payload
+    if result.returncode != 0:
+        payload = {"cli_available": True, "logged_in": False, "subscription_type": ""}
+        _CLAUDE_CLI_CONTEXT_CACHE["payload"] = dict(payload)
+        _CLAUDE_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+        return payload
+    try:
+        payload = json.loads(result.stdout.strip())
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    out = {
+        "cli_available": True,
+        "logged_in": bool(payload.get("loggedIn")),
+        "subscription_type": str(payload.get("subscriptionType") or "").strip().lower(),
+        "auth_method": str(payload.get("authMethod") or "").strip(),
+        "api_provider": str(payload.get("apiProvider") or "").strip(),
+    }
+    _CLAUDE_CLI_CONTEXT_CACHE["payload"] = dict(out)
+    _CLAUDE_CLI_CONTEXT_CACHE["expires_at"] = now + 20.0
+    return out
+
+
+def _claude_subscription_limits() -> tuple[int, int, str, str]:
+    runner_8h, runner_week, runner_source = _runner_provider_limits("claude")
+    if runner_8h > 0 and runner_week > 0:
+        provider_row = _runner_provider_telemetry("claude")
+        runner_tier = str(provider_row.get("tier") or "").strip().lower()
+        return runner_8h, runner_week, runner_source, runner_tier
+
+    auth = _claude_cli_auth_context()
+    tier = str(auth.get("subscription_type") or "").strip().lower().replace("-", "_")
+    limits = _CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER.get(tier) if tier else None
+    if limits is None:
+        return 0, 0, "", tier
+    return int(limits[0]), int(limits[1]), "cli_subscription_baseline", tier
 
 
 def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
@@ -1476,6 +1794,10 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
         oauth_ok, oauth_detail = _codex_oauth_available()
         if oauth_ok:
             return True, [], ["codex_oauth_session"], [f"Configured via Codex OAuth session ({oauth_detail})."]
+        runner_ok, runner_detail = _runner_provider_configured("openai")
+        if runner_ok:
+            detail = runner_detail or "runner_provider_telemetry"
+            return True, [], ["runner_provider_telemetry"], [f"Configured via host-runner OpenAI/Codex telemetry ({detail})."]
         if active_runs > 0:
             notes.append("OpenAI observed in runtime usage; treating as configured by active execution context.")
             return True, [], present, notes
@@ -1493,6 +1815,23 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
     if provider_name == "claude" and active_runs > 0:
         notes.append("Claude observed in runtime usage; treating as configured by active execution context.")
         return True, [], present, notes
+    if provider_name == "claude":
+        runner_ok, runner_detail = _runner_provider_configured("claude")
+        if runner_ok:
+            detail = runner_detail or "runner_provider_telemetry"
+            return True, [], ["runner_provider_telemetry"], [f"Configured via host-runner Claude telemetry ({detail})."]
+        auth = _claude_cli_auth_context()
+        if bool(auth.get("logged_in")):
+            auth_method = str(auth.get("auth_method") or "cli_session").strip()
+            return True, [], ["claude_cli_session"], [f"Configured via Claude CLI session ({auth_method})."]
+    if provider_name == "cursor":
+        runner_ok, runner_detail = _runner_provider_configured("cursor")
+        if runner_ok:
+            detail = runner_detail or "runner_provider_telemetry"
+            return True, [], ["runner_provider_telemetry"], [f"Configured via host-runner Cursor telemetry ({detail})."]
+        about = _cursor_cli_about_context()
+        if bool(about.get("logged_in")):
+            return True, [], ["cursor_cli_session"], ["Configured via Cursor CLI session."]
 
     return configured, missing, present, notes
 
@@ -1767,6 +2106,28 @@ def _cursor_events_within_window(window_seconds: int) -> int:
     return count
 
 
+def _claude_events_within_window(window_seconds: int) -> int:
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+
+    count = 0
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        executor = str(metadata.get("executor") or "").strip().lower()
+        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
+        model = str(metadata.get("model") or "").strip().lower()
+        agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        if (
+            executor == "claude"
+            or provider in {"claude", "claude-code"}
+            or "claude" in model
+            or agent_id.startswith("claude")
+        ):
+            count += 1
+    return count
+
+
 def _codex_events_within_window(window_seconds: int) -> int:
     events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
     count = 0
@@ -1805,6 +2166,59 @@ def _codex_events_within_window(window_seconds: int) -> int:
     return count
 
 
+def _cursor_subscription_window_metrics(
+    *,
+    limit_8h: int,
+    limit_week: int,
+    limit_source: str,
+) -> list[UsageMetric]:
+    validation_state = "validated" if limit_source == "runner_provider_telemetry" else "derived"
+    validation_detail = (
+        "Derived from runtime worker-event usage and host-runner Cursor subscription telemetry."
+        if limit_source == "runner_provider_telemetry"
+        else "Derived from runtime worker-event usage and Cursor CLI subscription-tier baseline."
+    )
+    evidence_source = (
+        "runner_provider_telemetry"
+        if limit_source == "runner_provider_telemetry"
+        else "runtime_events+cli_subscription_baseline"
+    )
+    metrics: list[UsageMetric] = []
+    if limit_8h > 0:
+        used_8h = _cursor_events_within_window(8 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="cursor_subscription_8h",
+                label="Cursor subscription runs (8h)",
+                unit="requests",
+                used=float(min(used_8h, limit_8h)),
+                remaining=float(max(0, limit_8h - used_8h)),
+                limit=float(limit_8h),
+                window="hourly",
+                validation_state=validation_state,
+                validation_detail=validation_detail,
+                evidence_source=evidence_source,
+            )
+        )
+    if limit_week > 0:
+        used_week = _cursor_events_within_window(7 * 24 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="cursor_subscription_week",
+                label="Cursor subscription runs (7d)",
+                unit="requests",
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+                validation_state=validation_state,
+                validation_detail=validation_detail,
+                evidence_source=evidence_source,
+            )
+        )
+    return metrics
+
+
 def _build_cursor_snapshot() -> ProviderUsageSnapshot:
     configured, missing, present, derived_notes = _configured_status("cursor")
     agent_binary = shutil.which("agent")
@@ -1828,55 +2242,30 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
     else:
         notes.append("cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution.")
 
-    limit_8h = max(0, _int_env("CURSOR_SUBSCRIPTION_8H_LIMIT", 0))
-    if limit_8h > 0:
-        used_8h = _cursor_events_within_window(8 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="cursor_subscription_8h",
-                label="Cursor subscription runs (8h)",
-                unit="requests",
-                used=float(min(used_8h, limit_8h)),
-                remaining=float(max(0, limit_8h - used_8h)),
-                limit=float(limit_8h),
-                window="hourly",
-                validation_state="derived",
-                validation_detail=(
-                    "Derived from runtime worker-event usage and CURSOR_SUBSCRIPTION_8H_LIMIT "
-                    "subscription limit configuration."
-                ),
-                evidence_source="runtime_events+env_limits",
-            )
-        )
+    limit_8h, limit_week, limit_source, limit_tier = _cursor_subscription_limits()
+    if limit_source:
+        notes.append(f"cursor_limit_source={limit_source}")
+    if limit_tier:
+        notes.append(f"cursor_subscription_tier={limit_tier}")
 
-    limit_week = max(0, _int_env("CURSOR_SUBSCRIPTION_WEEK_LIMIT", 0))
-    if limit_week > 0:
-        used_week = _cursor_events_within_window(7 * 24 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="cursor_subscription_week",
-                label="Cursor subscription runs (7d)",
-                unit="requests",
-                used=float(min(used_week, limit_week)),
-                remaining=float(max(0, limit_week - used_week)),
-                limit=float(limit_week),
-                window="weekly",
-                validation_state="derived",
-                validation_detail=(
-                    "Derived from runtime worker-event usage and CURSOR_SUBSCRIPTION_WEEK_LIMIT "
-                    "subscription limit configuration."
-                ),
-                evidence_source="runtime_events+env_limits",
-            )
+    metrics.extend(
+        _cursor_subscription_window_metrics(
+            limit_8h=limit_8h,
+            limit_week=limit_week,
+            limit_source=limit_source,
         )
+    )
 
-    status = "ok" if configured and agent_binary and cli_ok else "degraded" if configured else "unavailable"
+    runner_ok, _runner_detail = _runner_provider_configured("cursor")
+    status = "ok" if configured and ((agent_binary and cli_ok) or runner_ok) else "degraded" if configured else "unavailable"
+    if configured and status != "ok":
+        notes.append("cursor_cli_probe_unavailable: falling back to runtime/runner telemetry only")
     return ProviderUsageSnapshot(
         id=f"provider_cursor_{int(time.time())}",
         provider="cursor",
         kind="custom",
         status=status,  # type: ignore[arg-type]
-        data_source="provider_cli" if agent_binary else "configuration_only",
+        data_source="provider_cli" if agent_binary else ("runtime_events" if runner_ok else "configuration_only"),
         metrics=metrics,
         notes=list(dict.fromkeys(notes)),
         raw={
@@ -1888,6 +2277,8 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
             "limits": {
                 "cursor_subscription_8h_limit": limit_8h,
                 "cursor_subscription_week_limit": limit_week,
+                "cursor_limit_source": limit_source,
+                "cursor_subscription_tier": limit_tier,
             },
         },
     )
@@ -1898,68 +2289,49 @@ def _append_codex_subscription_metrics(snapshot: ProviderUsageSnapshot) -> None:
         return
     has_provider_windows = _append_codex_provider_window_metrics(snapshot)
     existing = {metric.id for metric in snapshot.metrics}
-    limit_5h = max(0, _int_env("CODEX_SUBSCRIPTION_5H_LIMIT", 0))
-    limit_week = max(0, _int_env("CODEX_SUBSCRIPTION_WEEK_LIMIT", 0))
     used_5h = _codex_events_within_window(5 * 60 * 60)
     used_week = _codex_events_within_window(7 * 24 * 60 * 60)
     if "codex_subscription_5h" not in existing:
-        has_limit_5h = limit_5h > 0
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_5h",
                 label="Codex task runs (5h)",
                 unit="requests",
                 used=float(used_5h),
-                remaining=(float(max(0, limit_5h - used_5h)) if has_limit_5h else None),
-                limit=(float(limit_5h) if has_limit_5h else None),
+                remaining=None,
+                limit=None,
                 window="rolling_5h",
                 validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration."
-                    if has_limit_5h
-                    else (
-                        "Derived from runtime worker-event counts for execution volume tracking."
-                        if has_provider_windows
-                        else (
-                            "Derived from runtime worker-event counts. No hard Codex 5h limit is configured, "
-                            "so remaining quota cannot be computed."
-                        )
-                    )
+                    "Derived from runtime worker-event counts for execution volume tracking."
+                    if has_provider_windows
+                    else "Derived from runtime worker-event counts. No validated Codex 5h quota window telemetry was available."
                 ),
-                evidence_source=("runtime_events+env_limits" if has_limit_5h else "runtime_events"),
+                evidence_source="runtime_events",
             )
         )
     if "codex_subscription_week" not in existing:
-        has_limit_week = limit_week > 0
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_week",
                 label="Codex task runs (7d)",
                 unit="requests",
                 used=float(used_week),
-                remaining=(float(max(0, limit_week - used_week)) if has_limit_week else None),
-                limit=(float(limit_week) if has_limit_week else None),
+                remaining=None,
+                limit=None,
                 window="rolling_7d",
                 validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration."
-                    if has_limit_week
-                    else (
-                        "Derived from runtime worker-event counts for execution volume tracking."
-                        if has_provider_windows
-                        else (
-                            "Derived from runtime worker-event counts. No hard Codex weekly limit is configured, "
-                            "so remaining quota cannot be computed."
-                        )
-                    )
+                    "Derived from runtime worker-event counts for execution volume tracking."
+                    if has_provider_windows
+                    else "Derived from runtime worker-event counts. No validated Codex weekly quota window telemetry was available."
                 ),
-                evidence_source=("runtime_events+env_limits" if has_limit_week else "runtime_events"),
+                evidence_source="runtime_events",
             )
         )
-    if limit_5h <= 0 and limit_week <= 0 and not has_provider_windows:
+    if not has_provider_windows:
         snapshot.notes.append(
-            "Codex subscription limits vary by plan and demand. Set CODEX_SUBSCRIPTION_5H_LIMIT and "
-            "CODEX_SUBSCRIPTION_WEEK_LIMIT from your Codex usage dashboard to compute remaining quota."
+            "Codex subscription windows were unavailable from provider API/runner telemetry; tracking execution volume only."
         )
     snapshot.notes = list(dict.fromkeys(snapshot.notes))
 
@@ -2228,17 +2600,126 @@ def _anthropic_headers() -> dict[str, str]:
     }
 
 
+def _claude_subscription_window_metrics(
+    *,
+    limit_8h: int,
+    limit_week: int,
+    limit_source: str,
+) -> list[UsageMetric]:
+    validation_state = "validated" if limit_source == "runner_provider_telemetry" else "derived"
+    validation_detail = (
+        "Derived from runtime worker-event usage and host-runner Claude subscription telemetry."
+        if limit_source == "runner_provider_telemetry"
+        else "Derived from runtime worker-event usage and Claude CLI subscription-tier baseline."
+    )
+    evidence_source = (
+        "runner_provider_telemetry"
+        if limit_source == "runner_provider_telemetry"
+        else "runtime_events+cli_subscription_baseline"
+    )
+    metrics: list[UsageMetric] = []
+    if limit_8h > 0:
+        used_8h = _claude_events_within_window(8 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="claude_subscription_8h",
+                label="Claude subscription runs (8h)",
+                unit="requests",
+                used=float(min(used_8h, limit_8h)),
+                remaining=float(max(0, limit_8h - used_8h)),
+                limit=float(limit_8h),
+                window="hourly",
+                validation_state=validation_state,
+                validation_detail=validation_detail,
+                evidence_source=evidence_source,
+            )
+        )
+    if limit_week > 0:
+        used_week = _claude_events_within_window(7 * 24 * 60 * 60)
+        metrics.append(
+            _metric(
+                id="claude_subscription_week",
+                label="Claude subscription runs (7d)",
+                unit="requests",
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+                validation_state=validation_state,
+                validation_detail=validation_detail,
+                evidence_source=evidence_source,
+            )
+        )
+    return metrics
+
+
+def _build_claude_snapshot_without_api_key() -> ProviderUsageSnapshot | None:
+    active = int(_active_provider_usage_counts().get("claude", 0))
+    auth = _claude_cli_auth_context()
+    runner_ok, runner_detail = _runner_provider_configured("claude")
+    limit_8h, limit_week, limit_source, limit_tier = _claude_subscription_limits()
+    if active <= 0 and not bool(auth.get("logged_in")) and not runner_ok:
+        return None
+
+    notes: list[str] = []
+    if runner_ok:
+        notes.append(f"Using host-runner Claude telemetry ({runner_detail or 'runner_provider_telemetry'}).")
+    elif bool(auth.get("logged_in")):
+        auth_method = str(auth.get("auth_method") or "cli_session").strip()
+        notes.append(f"Using Claude CLI auth session ({auth_method}).")
+    else:
+        notes.append("Using runtime Claude execution evidence (no direct Anthropic key in environment).")
+    if limit_source:
+        notes.append(f"claude_limit_source={limit_source}")
+    if limit_tier:
+        notes.append(f"claude_subscription_tier={limit_tier}")
+
+    metrics = _claude_subscription_window_metrics(
+        limit_8h=limit_8h,
+        limit_week=limit_week,
+        limit_source=limit_source,
+    )
+    if active > 0:
+        metrics.append(
+            _metric(
+                id="runtime_task_runs",
+                label="Runtime task runs",
+                unit="tasks",
+                used=float(active),
+                window="rolling",
+                validation_state="derived",
+                validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
+                evidence_source="runtime_events",
+            )
+        )
+    return ProviderUsageSnapshot(
+        id=f"provider_claude_{int(time.time())}",
+        provider="claude",
+        kind="custom",
+        status="ok",
+        data_source=("runtime_events" if runner_ok else "provider_cli"),
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "cli_logged_in": bool(auth.get("logged_in")),
+            "cli_auth_method": str(auth.get("auth_method") or ""),
+            "subscription_type": str(auth.get("subscription_type") or ""),
+            "limits": {
+                "claude_subscription_8h_limit": limit_8h,
+                "claude_subscription_week_limit": limit_week,
+                "claude_limit_source": limit_source,
+                "claude_subscription_tier": limit_tier,
+            },
+        },
+    )
+
+
 def _build_claude_snapshot() -> ProviderUsageSnapshot:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
     if not api_key:
-        active = int(_active_provider_usage_counts().get("claude", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="claude",
-                kind="custom",
-                active_runs=active,
-                note="Using runtime Claude execution evidence (no direct Anthropic key in environment).",
-            )
+        fallback = _build_claude_snapshot_without_api_key()
+        if fallback is not None:
+            return fallback
         return ProviderUsageSnapshot(
             id=f"provider_claude_{int(time.time())}",
             provider="claude",
@@ -4543,6 +5024,9 @@ def _probe_openclaw() -> tuple[bool, str]:
 
 
 def _probe_cursor() -> tuple[bool, str]:
+    runner_ok, runner_detail = _runner_provider_configured("cursor")
+    if runner_ok:
+        return True, f"ok_via_runner_telemetry:{runner_detail or 'runner_provider_telemetry'}"
     if shutil.which("agent") is None:
         active = int(_active_provider_usage_counts().get("cursor", 0))
         if active > 0:
@@ -4643,6 +5127,16 @@ def _probe_supabase() -> tuple[bool, str]:
 def _probe_claude() -> tuple[bool, str]:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
     if not api_key:
+        runner_ok, runner_detail = _runner_provider_configured("claude")
+        if runner_ok:
+            return True, f"ok_via_runner_telemetry:{runner_detail or 'runner_provider_telemetry'}"
+        auth = _claude_cli_auth_context()
+        if bool(auth.get("logged_in")):
+            auth_method = str(auth.get("auth_method") or "cli_session").strip()
+            return True, f"ok_via_claude_cli_session:{auth_method}"
+        active = int(_active_provider_usage_counts().get("claude", 0))
+        if active > 0:
+            return True, "ok_via_runtime_usage_no_auth_env"
         return False, "missing_anthropic_key"
     # Use the messages endpoint (POST) for the probe — it returns real rate limit headers
     # and confirms API key validity for the actual execution path.
@@ -5372,8 +5866,95 @@ def provider_validation_report(
     )
 
 
-def _env_flag(name: str) -> bool:
-    return bool(str(os.getenv(name, "")).strip())
+def _normalize_subscription_tier(provider: str, value: str) -> str:
+    normalized_provider = provider.strip().lower()
+    normalized_value = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized_provider == "openai":
+        aliases = {
+            "plus": "pro",
+            "chatgpt_plus": "pro",
+            "pro": "pro",
+            "team": "team",
+            "business": "team",
+            "enterprise": "team",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "anthropic":
+        aliases = {
+            "free": "free",
+            "pro": "pro",
+            "max": "team",
+            "max_5x": "team",
+            "team": "team",
+            "enterprise": "team",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "cursor":
+        aliases = {
+            "free": "free",
+            "pro": "pro",
+            "pro_plus": "pro_plus",
+            "business": "pro_plus",
+            "enterprise": "pro_plus",
+        }
+        return aliases.get(normalized_value, "free")
+    if normalized_provider == "github":
+        aliases = {
+            "free": "free",
+            "pro": "team",
+            "team": "team",
+            "business": "enterprise",
+            "enterprise": "enterprise",
+        }
+        return aliases.get(normalized_value, "free")
+    return normalized_value or "free"
+
+
+def _subscription_detected(provider: str) -> bool:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider == "openai":
+        runner_ok, _ = _runner_provider_configured("openai")
+        oauth_ok, _ = _codex_oauth_available()
+        return runner_ok or oauth_ok or _env_present("OPENAI_ADMIN_API_KEY") or _env_present("OPENAI_API_KEY")
+    if normalized_provider == "anthropic":
+        runner_ok, _ = _runner_provider_configured("claude")
+        auth = _claude_cli_auth_context()
+        return runner_ok or bool(auth.get("logged_in")) or _env_present("ANTHROPIC_API_KEY")
+    if normalized_provider == "cursor":
+        runner_ok, _ = _runner_provider_configured("cursor")
+        about = _cursor_cli_about_context()
+        return (
+            runner_ok
+            or bool(about.get("logged_in"))
+            or _env_present("CURSOR_API_KEY")
+            or _env_present("CURSOR_CLI_MODEL")
+        )
+    if normalized_provider == "github":
+        return _env_present("GITHUB_TOKEN") or _env_present("GH_TOKEN")
+    return False
+
+
+def _subscription_current_tier(provider: str) -> str:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider == "openai":
+        row = _runner_provider_telemetry("openai")
+        raw_tier = str(row.get("tier") or row.get("plan") or "").strip()
+        return _normalize_subscription_tier("openai", raw_tier)
+    if normalized_provider == "anthropic":
+        row = _runner_provider_telemetry("claude")
+        raw_tier = str(row.get("tier") or "").strip()
+        if not raw_tier:
+            raw_tier = str(_claude_cli_auth_context().get("subscription_type") or "").strip()
+        return _normalize_subscription_tier("anthropic", raw_tier)
+    if normalized_provider == "cursor":
+        row = _runner_provider_telemetry("cursor")
+        raw_tier = str(row.get("tier") or "").strip()
+        if not raw_tier:
+            raw_tier = str(_cursor_cli_about_context().get("tier") or "").strip()
+        return _normalize_subscription_tier("cursor", raw_tier)
+    if normalized_provider == "github":
+        return "free"
+    return "free"
 
 
 def _tier_cost(provider: str, tier: str) -> float:
@@ -5411,8 +5992,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
     return [
         {
             "provider": "openai",
-            "detected": _env_flag("OPENAI_ADMIN_API_KEY") or _env_flag("OPENAI_API_KEY"),
-            "current_tier": os.getenv("OPENAI_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("openai"),
+            "current_tier": _subscription_current_tier("openai"),
             "benefits": [
                 "Higher token/request throughput for API workloads",
                 "Reduced queueing risk for agent execution peaks",
@@ -5422,8 +6003,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "anthropic",
-            "detected": _env_flag("ANTHROPIC_API_KEY"),
-            "current_tier": os.getenv("ANTHROPIC_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("anthropic"),
+            "current_tier": _subscription_current_tier("anthropic"),
             "benefits": [
                 "Higher fallback capacity for escalated agent tasks",
                 "More resilient execution when primary provider is saturated",
@@ -5433,8 +6014,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "cursor",
-            "detected": _env_flag("CURSOR_API_KEY") or _env_flag("CURSOR_CLI_MODEL"),
-            "current_tier": os.getenv("CURSOR_SUBSCRIPTION_TIER", "pro"),
+            "detected": _subscription_detected("cursor"),
+            "current_tier": _subscription_current_tier("cursor"),
             "benefits": [
                 "Higher agent concurrency for implementation and review loops",
                 "Lower cycle time for task completion throughput",
@@ -5444,8 +6025,8 @@ def _subscription_plan_inputs() -> list[dict[str, Any]]:
         },
         {
             "provider": "github",
-            "detected": _env_flag("GITHUB_TOKEN"),
-            "current_tier": os.getenv("GITHUB_SUBSCRIPTION_TIER", "free"),
+            "detected": _subscription_detected("github"),
+            "current_tier": _subscription_current_tier("github"),
             "benefits": [
                 "More CI minutes and stronger governance controls",
                 "Lower deployment latency under heavy PR traffic",
