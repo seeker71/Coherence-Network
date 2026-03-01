@@ -1399,10 +1399,10 @@ async def route(
     task_type: TaskType = Query(...),
     executor: Optional[str] = Query(
         "auto",
-        description="Executor: auto (default policy), claude, cursor, openclaw, or clawwork (alias).",
+        description="Executor: auto (default policy), claude, cursor, codex, openrouter, openclaw (alias), or clawwork (alias).",
     ),
 ) -> RouteResponse:
-    """Get routing for a task type (no persistence). Use executor=cursor|openclaw|clawwork for alternate CLIs."""
+    """Get routing for a task type (no persistence). Use executor=cursor|codex|openrouter (openclaw/clawwork alias to codex)."""
     return RouteResponse(**agent_service.get_route(task_type, executor=executor or "auto"))
 
 

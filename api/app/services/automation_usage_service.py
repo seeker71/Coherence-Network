@@ -1586,8 +1586,10 @@ def _active_provider_usage_counts() -> dict[str, int]:
     executor_rows = by_executor if isinstance(by_executor, dict) else {}
     executor_provider_map = {
         "cursor": "cursor",
-        "openclaw": "openclaw",
-        "clawwork": "openclaw",
+        "codex": "openai",
+        "openclaw": "openai",
+        "clawwork": "openai",
+        "openrouter": "openrouter",
         "claude": "claude-code",
     }
     for executor_name, row in executor_rows.items():
@@ -5239,9 +5241,15 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         if explicit:
             providers.add(explicit)
 
-        executor = str(metadata.get("executor") or "").strip().lower()
-        executor = "openclaw" if executor == "clawwork" else executor
+        raw_executor = str(metadata.get("executor") or "").strip().lower()
+        executor = raw_executor
+        if executor in {"clawwork", "openclaw"}:
+            # Legacy executor aliases map to codex for canonical execution,
+            # but still count as openclaw evidence for compatibility checks.
+            providers.add("openclaw")
+            executor = "codex"
         model = str(metadata.get("model") or "").strip()
+        model_lower = model.lower()
         worker_id = str(metadata.get("worker_id") or "").strip().lower()
         agent_id = str(metadata.get("agent_id") or "").strip().lower()
         repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
@@ -5249,11 +5257,15 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         inferred = _infer_provider_from_model(model)
         if inferred:
             providers.add(inferred)
-        if executor == "openclaw":
+        if model_lower.startswith(("openclaw/", "clawwork/")):
             providers.add("openclaw")
+        if executor == "openrouter":
+            providers.add("openrouter")
+        if executor == "codex":
+            providers.add("openai")
         if worker_id.startswith("openai-codex") or agent_id.startswith("openai-codex"):
             providers.add("openai")
-        if "codex" in model.lower() or repeatable_tool_call.startswith("codex "):
+        if "codex" in model_lower or repeatable_tool_call.startswith("codex "):
             providers.add("openai")
 
         return {item for item in providers if item}

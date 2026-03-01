@@ -1,0 +1,253 @@
+{
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "generated_at": "2026-03-01T09:58:09.886868Z",
+  "readiness": {
+    "all_required_ready": false,
+    "blocking_issues": [
+      "cursor: status=unavailable, configured=False",
+      "claude: missing_limit_metrics",
+      "cursor: missing_limit_metrics",
+      "openai: missing_limit_metrics"
+    ],
+    "generated_at": "2026-03-01T09:58:30.516594Z",
+    "providers": [
+      {
+        "configured": true,
+        "notes": [
+          "configuration keys detected"
+        ],
+        "provider": "anthropic",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "Claude Code CLI not found in PATH; using runtime execution evidence.",
+          "limit_telemetry_state=missing_limits"
+        ],
+        "provider": "claude",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "Execution success rate 13.74%"
+        ],
+        "provider": "coherence-internal",
+        "status": "ok"
+      },
+      {
+        "configured": false,
+        "notes": [
+          "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+          "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution.",
+          "provider observed in runtime usage but key/config is missing or provider checks are failing",
+          "limit_telemetry_state=missing_limits"
+        ],
+        "provider": "cursor",
+        "status": "unavailable"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "DB-host monthly egress metric is estimated from PostgreSQL counters; request windows are safety proxies."
+        ],
+        "provider": "db-host",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+        ],
+        "provider": "github",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "OpenAI usage/cost fetch failed: usage=Client error '401 Unauthorized' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769767095&end_time=1772359095'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401; costs=Client error '401 Unauthorized' for url 'https://api.openai.com/v1/organization/costs?start_time=1769767095&end_time=1772359095'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+          "OpenAI responses fallback probe failed: Client error '401 Unauthorized' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+          "Codex subscription limits vary by plan and demand. Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT from your Codex usage dashboard to compute remaining quota.",
+          "provider observed in runtime usage but key/config is missing or provider checks are failing",
+          "status_normalized_from_degraded:usage_signal_present",
+          "limit_telemetry_state=missing_limits"
+        ],
+        "provider": "openai",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "configuration keys detected",
+          "limit_telemetry_state=missing_limits"
+        ],
+        "provider": "openclaw",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "OpenRouter models probe succeeded, but no request/token remaining headers were returned."
+        ],
+        "provider": "openrouter",
+        "status": "ok"
+      },
+      {
+        "configured": true,
+        "notes": [
+          "Railway probe succeeded, but no request remaining headers were returned."
+        ],
+        "provider": "railway",
+        "status": "ok"
+      }
+    ],
+    "recommendations": [
+      "Configure provider 'cursor' (one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)) and re-run /api/automation/usage/readiness.",
+      "Provide real usage+limit telemetry for 'claude' (missing=missing_limit_metrics) so readiness can verify subscription quota state.",
+      "Add validated limit+remaining telemetry for 'claude' (current_state=missing_limits) before making numeric-limit claims.",
+      "Provide real usage+limit telemetry for 'cursor' (missing=missing_limit_metrics) so readiness can verify subscription quota state.",
+      "Add validated limit+remaining telemetry for 'cursor' (current_state=missing_limits) before making numeric-limit claims.",
+      "Provide real usage+limit telemetry for 'openai' (missing=missing_limit_metrics) so readiness can verify subscription quota state.",
+      "Add validated limit+remaining telemetry for 'openai' (current_state=missing_limits) before making numeric-limit claims."
+    ],
+    "required_providers": [
+      "claude",
+      "cursor",
+      "openai"
+    ]
+  },
+  "runtime_endpoint_focus": [
+    {
+      "endpoint": "/tool:agent-task-completion",
+      "event_count": 14,
+      "paid_tool_event_count": 14,
+      "paid_tool_failure_count": 14,
+      "paid_tool_ratio": 1.0,
+      "runtime_cost_estimate": 10.69824862,
+      "status_counts": {
+        "500": 14
+      }
+    },
+    {
+      "endpoint": "/tool:codex",
+      "event_count": 36,
+      "paid_tool_event_count": 31,
+      "paid_tool_failure_count": 31,
+      "paid_tool_ratio": 0.8611,
+      "runtime_cost_estimate": 0.132,
+      "status_counts": {
+        "500": 36
+      }
+    }
+  ],
+  "usage": {
+    "generated_at": "2026-03-01T09:58:36.978919Z",
+    "providers": [
+      {
+        "actual_current_usage": 5000.0,
+        "actual_current_usage_unit": "tasks",
+        "data_source": "runtime_events",
+        "provider": "coherence-internal",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": 1201.0,
+        "actual_current_usage_unit": "tasks",
+        "data_source": "provider_api",
+        "provider": "claude",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": 999.0,
+        "usage_remaining_unit": "requests"
+      },
+      {
+        "actual_current_usage": 26.0,
+        "actual_current_usage_unit": "requests",
+        "data_source": "provider_api",
+        "provider": "github",
+        "status": "ok",
+        "usage_per_time": "26.0 requests/hour",
+        "usage_remaining": 4974.0,
+        "usage_remaining_unit": "requests"
+      },
+      {
+        "actual_current_usage": 4798.0,
+        "actual_current_usage_unit": "tasks",
+        "data_source": "provider_api",
+        "provider": "openai",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": 343.0,
+        "actual_current_usage_unit": "requests",
+        "data_source": "provider_api",
+        "provider": "openrouter",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": null,
+        "actual_current_usage_unit": null,
+        "data_source": "configuration_only",
+        "provider": "anthropic",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": 4898.0,
+        "actual_current_usage_unit": "tasks",
+        "data_source": "configuration_only",
+        "provider": "openclaw",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": 376.0,
+        "actual_current_usage_unit": "tasks",
+        "data_source": "configuration_only",
+        "provider": "cursor",
+        "status": "unavailable",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      },
+      {
+        "actual_current_usage": 183.4956157087283,
+        "actual_current_usage_unit": "gb",
+        "data_source": "provider_api",
+        "provider": "db-host",
+        "status": "ok",
+        "usage_per_time": "6.1165 gb/day",
+        "usage_remaining": 0.0,
+        "usage_remaining_unit": "gb"
+      },
+      {
+        "actual_current_usage": 1.0,
+        "actual_current_usage_unit": "requests",
+        "data_source": "provider_api",
+        "provider": "railway",
+        "status": "ok",
+        "usage_per_time": null,
+        "usage_remaining": null,
+        "usage_remaining_unit": null
+      }
+    ],
+    "tracked_providers": 10,
+    "unavailable_providers": [
+      "cursor"
+    ]
+  }
+}
