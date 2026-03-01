@@ -173,6 +173,14 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     },
 }
 
+DEFAULT_INTERNAL_IDEA_PREFIXES = (
+    "spec-origin-",
+    "endpoint-lineage-",
+    "public-e2e-",
+    "e2e-idea-",
+)
+DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS = {"machine:commit-evidence"}
+
 
 def _default_portfolio_path() -> str:
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -181,6 +189,46 @@ def _default_portfolio_path() -> str:
 
 def _portfolio_path() -> str:
     return os.getenv("IDEA_PORTFOLIO_PATH", _default_portfolio_path())
+
+
+def _configured_internal_idea_prefixes() -> set[str]:
+    raw = str(os.getenv("INTERNAL_IDEA_ID_PREFIXES", "")).strip()
+    if not raw:
+        return set(DEFAULT_INTERNAL_IDEA_PREFIXES)
+    out = {item.strip().lower() for item in raw.split(",") if item.strip()}
+    return out or set(DEFAULT_INTERNAL_IDEA_PREFIXES)
+
+
+def _configured_internal_idea_exact_ids() -> set[str]:
+    out = {idea_id.strip().lower() for idea_id in DERIVED_IDEA_METADATA if idea_id.strip()}
+    raw = str(os.getenv("INTERNAL_IDEA_ID_EXACT", "")).strip()
+    if raw:
+        out.update(item.strip().lower() for item in raw.split(",") if item.strip())
+    return out
+
+
+def _configured_internal_idea_interface_tags() -> set[str]:
+    raw = str(os.getenv("INTERNAL_IDEA_INTERFACE_TAGS", "")).strip()
+    if not raw:
+        return set(DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS)
+    out = {item.strip().lower() for item in raw.split(",") if item.strip()}
+    return out or set(DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS)
+
+
+def is_internal_idea_id(idea_id: str, interfaces: list[str] | None = None) -> bool:
+    normalized_id = str(idea_id or "").strip().lower()
+    if not normalized_id:
+        return False
+    if normalized_id in _configured_internal_idea_exact_ids():
+        return True
+    for prefix in _configured_internal_idea_prefixes():
+        if normalized_id.startswith(prefix):
+            return True
+    if isinstance(interfaces, list):
+        tags = {str(item).strip().lower() for item in interfaces if str(item).strip()}
+        if tags.intersection(_configured_internal_idea_interface_tags()):
+            return True
+    return False
 
 
 def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
@@ -412,13 +460,14 @@ def _read_ideas() -> list[Idea]:
         ideas, source = _read_legacy_file_ideas()
         ideas, required_changed = _ensure_required_system_ideas(ideas)
         ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+        ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
         bootstrap_source = source
         if required_changed:
             bootstrap_source = f"{bootstrap_source}+required_system_ideas"
         if tracked_changed or source == "defaults":
             bootstrap_source = f"{bootstrap_source}+derived"
-        if standing_changed:
+        if standing_changed or pruned_changed:
             bootstrap_source = f"{bootstrap_source}+standing_question"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
         _write_snapshot_file(ideas)
@@ -427,8 +476,9 @@ def _read_ideas() -> list[Idea]:
 
     ideas, required_changed = _ensure_required_system_ideas(ideas)
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+    ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if required_changed or tracked_changed or standing_changed:
+    if required_changed or tracked_changed or standing_changed or pruned_changed:
         _write_ideas(ideas)
     else:
         path = _portfolio_path()
@@ -447,6 +497,8 @@ def _write_ideas(ideas: list[Idea]) -> None:
 def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     changed = False
     for idea in ideas:
+        if is_internal_idea_id(idea.id, idea.interfaces):
+            continue
         has_standing = any(q.question == STANDING_QUESTION_TEXT for q in idea.open_questions)
         if has_standing:
             continue
@@ -460,6 +512,20 @@ def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
             )
         )
         changed = True
+    return ideas, changed
+
+
+def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    changed = False
+    for idea in ideas:
+        if not is_internal_idea_id(idea.id, idea.interfaces):
+            continue
+        before = len(idea.open_questions)
+        if before == 0:
+            continue
+        idea.open_questions = [q for q in idea.open_questions if q.question != STANDING_QUESTION_TEXT]
+        if len(idea.open_questions) != before:
+            changed = True
     return ideas, changed
 
 
@@ -477,8 +543,11 @@ def list_ideas(
     only_unvalidated: bool = False,
     limit: int | None = None,
     offset: int = 0,
+    include_internal: bool = True,
 ) -> IdeaPortfolioResponse:
     ideas = _read_ideas()
+    if not include_internal:
+        ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
 

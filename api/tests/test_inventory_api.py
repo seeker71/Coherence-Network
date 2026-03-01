@@ -39,10 +39,10 @@ async def test_system_lineage_inventory_includes_core_sections(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        unique_email = f"urs-muff+{uuid4().hex[:8]}@coherence.network"
+        unique_email = f"urs.muff.{uuid4().hex[:8]}@proton.me"
         contributor = await client.post(
             "/api/contributors",
-            json={"type": "HUMAN", "name": "urs-muff", "email": unique_email},
+            json={"type": "HUMAN", "name": "Urs Muff", "email": unique_email},
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
@@ -1087,6 +1087,71 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
         duplicate_payload = duplicate.json()
         assert duplicate_payload["result"] == "task_already_active"
         assert duplicate_payload["active_task"]["id"] == created_payload["created_task"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_next_unblock_task_defaults_to_actionable_ideas_only(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    (tmp_path / "ideas.json").write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "spec-origin-internal-1234abcd",
+                        "name": "Internal derived idea",
+                        "description": "Should not be first unblock target in actionable mode.",
+                        "potential_value": 120.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 8.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.9,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:commit-evidence"],
+                        "open_questions": [],
+                    },
+                    {
+                        "id": "human-actionable-idea",
+                        "name": "Human actionable idea",
+                        "description": "Should be selected by default.",
+                        "potential_value": 40.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 10.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.7,
+                        "manifestation_status": "none",
+                        "interfaces": ["human:web", "machine:api"],
+                        "open_questions": [],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        default_resp = await client.post("/api/inventory/flow/next-unblock-task")
+        assert default_resp.status_code == 200
+        default_payload = default_resp.json()
+        assert default_payload["result"] == "task_suggested"
+        assert default_payload["idea_id"] != "spec-origin-internal-1234abcd"
+
+        include_internal = await client.post(
+            "/api/inventory/flow/next-unblock-task",
+            params={"include_internal_ideas": True, "idea_id": "spec-origin-internal-1234abcd"},
+        )
+        assert include_internal.status_code == 200
+        include_payload = include_internal.json()
+        assert include_payload["result"] == "task_suggested"
+        assert include_payload["idea_id"] == "spec-origin-internal-1234abcd"
 
 
 @pytest.mark.asyncio
