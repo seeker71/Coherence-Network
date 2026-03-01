@@ -64,11 +64,9 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
 }
 
 _DEFAULT_REQUIRED_PROVIDERS = (
-    "coherence-internal",
-    "github",
     "openai",
-    "openrouter",
-    "railway",
+    "claude",
+    "cursor",
 )
 _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "coherence-internal",
@@ -82,13 +80,17 @@ _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
 
 _PROVIDER_ALIASES: dict[str, str] = {
     "clawwork": "openclaw",
+    "codex": "openai",
     "openai-codex": "openai",
 }
 
 _PROVIDER_FAMILY_ALIASES: dict[str, str] = {
+    "codex": "openai",
     "openai-codex": "openai",
     "claude-code": "claude",
 }
+
+_READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor"})
 
 _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
     "hourly": 0.1,
@@ -111,6 +113,17 @@ def _provider_family_name(value: str | None) -> str:
     if not normalized:
         return ""
     return _PROVIDER_FAMILY_ALIASES.get(normalized, normalized)
+
+
+def _dedupe_preserve_order(items: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
 
 
 def _snapshots_path() -> Path:
@@ -1136,8 +1149,11 @@ def _codex_oauth_available() -> tuple[bool, str]:
         except OSError:
             continue
 
-    if shutil.which("codex") is not None and _cli_ok(["codex", "auth", "status"]):
-        return True, "codex_auth_status"
+    if shutil.which("codex") is not None:
+        if _cli_ok(["codex", "login", "status"]):
+            return True, "codex_login_status"
+        if _cli_ok(["codex", "auth", "status"]):
+            return True, "codex_auth_status"
 
     if candidates:
         return False, f"missing_session_file:{candidates[0]}"
@@ -1443,12 +1459,12 @@ def _configured_env_status(provider: str) -> tuple[bool, list[str], list[str]]:
 
 
 def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[str]]:
-    configured, missing, present = _configured_env_status(provider)
+    provider_name = _normalize_provider_name(provider)
+    configured, missing, present = _configured_env_status(provider_name)
     notes: list[str] = []
     if configured:
         return configured, missing, present, notes
 
-    provider_name = _normalize_provider_name(provider)
     active_counts = _active_provider_usage_counts()
     active_runs = int(active_counts.get(provider_name, 0))
 
@@ -1483,15 +1499,21 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
 
 def _required_providers_from_env() -> list[str]:
     raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
-    out = [
-        _normalize_provider_name(item)
+    parsed = [
+        _provider_family_name(item)
         for item in str(raw).split(",")
         if str(item).strip()
     ]
-    cheap_executor = str(os.getenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "")).strip().lower()
-    default_executor = str(os.getenv("AGENT_EXECUTOR_DEFAULT", "")).strip().lower()
-    if cheap_executor == "cursor" or default_executor == "cursor":
-        out.append("cursor")
+    out = [
+        provider
+        for provider in parsed
+        if provider in _READINESS_REQUIRED_PROVIDER_ALLOWLIST
+    ]
+    out = _dedupe_preserve_order(out)
+    for provider in _DEFAULT_REQUIRED_PROVIDERS:
+        normalized = _provider_family_name(provider)
+        if normalized and normalized in _READINESS_REQUIRED_PROVIDER_ALLOWLIST and normalized not in out:
+            out.append(normalized)
     return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
 
 
@@ -1816,6 +1838,12 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
                 remaining=float(max(0, limit_8h - used_8h)),
                 limit=float(limit_8h),
                 window="hourly",
+                validation_state="derived",
+                validation_detail=(
+                    "Derived from runtime worker-event usage and CURSOR_SUBSCRIPTION_8H_LIMIT "
+                    "subscription limit configuration."
+                ),
+                evidence_source="runtime_events+env_limits",
             )
         )
 
@@ -1831,6 +1859,12 @@ def _build_cursor_snapshot() -> ProviderUsageSnapshot:
                 remaining=float(max(0, limit_week - used_week)),
                 limit=float(limit_week),
                 window="weekly",
+                validation_state="derived",
+                validation_detail=(
+                    "Derived from runtime worker-event usage and CURSOR_SUBSCRIPTION_WEEK_LIMIT "
+                    "subscription limit configuration."
+                ),
+                evidence_source="runtime_events+env_limits",
             )
         )
 
@@ -4285,16 +4319,43 @@ def _resolved_required_provider_set(
     *,
     active_counts: dict[str, int],
 ) -> set[str]:
+    _ = active_counts
+    if required_providers:
+        requested = _dedupe_preserve_order(
+            [
+                _provider_family_name(item)
+                for item in required_providers
+                if _provider_family_name(item)
+            ]
+        )
+        if requested:
+            return set(requested)
     required = [
         _provider_family_name(item)
         for item in (required_providers or _required_providers_from_env())
-        if _provider_family_name(item)
+        if _provider_family_name(item) in _READINESS_REQUIRED_PROVIDER_ALLOWLIST
     ]
-    if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
-        for provider_name, count in active_counts.items():
-            if count > 0:
-                required.append(provider_name)
-    return set(required)
+    required = _dedupe_preserve_order(required)
+    if required:
+        return set(required)
+    return set(_DEFAULT_REQUIRED_PROVIDERS)
+
+
+def _required_provider_usage_and_limit_contract_state(state_row: dict[str, Any] | None) -> tuple[bool, str]:
+    if not isinstance(state_row, dict):
+        return False, "missing_limit_telemetry"
+    if not bool(state_row.get("has_limit_metrics")):
+        return False, "missing_limit_metrics"
+    if not bool(state_row.get("has_remaining_metrics")):
+        return False, "missing_remaining_metrics"
+    evidence_sources = [
+        str(item).strip()
+        for item in (state_row.get("evidence_sources") or [])
+        if str(item).strip()
+    ]
+    if not evidence_sources:
+        return False, "missing_limit_evidence_source"
+    return True, "ok"
 
 
 def _provider_readiness_report_for_overview(
@@ -4371,23 +4432,33 @@ def _provider_readiness_report_for_overview(
     for row in rows:
         provider_name = _normalize_provider_name(row.provider)
         state_row = provider_limit_status.get(provider_name)
-        if not isinstance(state_row, dict):
-            continue
-        state = str(state_row.get("state") or "").strip()
-        if not state:
-            continue
-        row.notes = list(dict.fromkeys([*row.notes, f"limit_telemetry_state={state}"]))
-        if row.required and state != "hard_limit_ready":
-            if row.severity == "info":
-                row.severity = "warning"  # type: ignore[assignment]
-            recommendations.append(
-                (
-                    f"Add validated limit+remaining telemetry for '{provider_name}' "
-                    f"(current_state={state}) before making numeric-limit claims."
+        state = str(state_row.get("state") or "").strip() if isinstance(state_row, dict) else ""
+        if state:
+            row.notes = list(dict.fromkeys([*row.notes, f"limit_telemetry_state={state}"]))
+
+        if row.required:
+            meets_contract, contract_detail = _required_provider_usage_and_limit_contract_state(state_row)
+            if not meets_contract:
+                row.severity = "critical"  # type: ignore[assignment]
+                blocking.append(f"{provider_name}: {contract_detail}")
+                recommendations.append(
+                    (
+                        f"Provide real usage+limit telemetry for '{provider_name}' "
+                        f"(missing={contract_detail}) so readiness can verify subscription quota state."
+                    )
                 )
-            )
-            if strict_limit_telemetry:
-                blocking.append(f"{provider_name}: limit_telemetry_state={state}")
+
+            if state and state != "hard_limit_ready":
+                if row.severity == "info":
+                    row.severity = "warning"  # type: ignore[assignment]
+                recommendations.append(
+                    (
+                        f"Add validated limit+remaining telemetry for '{provider_name}' "
+                        f"(current_state={state}) before making numeric-limit claims."
+                    )
+                )
+                if strict_limit_telemetry:
+                    blocking.append(f"{provider_name}: limit_telemetry_state={state}")
 
     blocking = list(dict.fromkeys(blocking))
     recommendations = list(dict.fromkeys(recommendations))
