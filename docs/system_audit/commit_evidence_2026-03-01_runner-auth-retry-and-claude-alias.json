@@ -1,0 +1,96 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/selfimprove-failure-audit",
+  "commit_scope": "Fix generic host-runner paid-provider recovery bugs: treat null retry fields as unset (so OAuth auth-recovery retry can schedule), and normalize Claude CLI model arguments by stripping provider prefixes (claude/...) before execution.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-auth-retry-and-claude-alias.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01_v2.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01_v3.json"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-auth-retry-and-claude-alias.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01_v2.json",
+    "docs/system_audit/provider_smoke_after_deploy_2026-03-01_v3.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"retry_explicitly_disabled or oauth_retry_null_retry_max or apply_claude_model_alias or apply_codex_model_alias or schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback\"",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "python3 - <<'PY'\\nimport json, urllib.request\\nAPI='https://coherence-network-production.up.railway.app'\\nfor tid in ['task_fddd86b53cf1343d','task_99fa12d7dfe369c1','task_4922fdcb7259f375','task_ab6506f28461fc68']:\\n    with urllib.request.urlopen(f'{API}/api/agent/tasks/{tid}', timeout=20) as r:\\n        task=json.loads(r.read().decode('utf-8'))\\n    ctx=task.get('context') if isinstance(task.get('context'), dict) else {}\\n    print(tid, task.get('status'), (ctx.get('route_decision') or {}).get('executor'), ctx.get('failure_signature'))\\nPY"
+  ],
+  "idea_ids": [
+    "runner-retry-null-not-explicit-disable",
+    "claude-cli-model-prefix-normalization"
+  ],
+  "spec_ids": [
+    "006-overnight-backlog"
+  ],
+  "task_ids": [
+    "task-2026-03-01-hosted-provider-smoke-recovery"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "Pending commit/push/PR/deploy and post-deploy hosted paid-provider smoke revalidation."
+  },
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "Thread Gates",
+      "Test",
+      "Change Contract"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Awaiting merge/deploy of follow-up fix."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Codex OAuth recovery retries when retry fields are null (unset), and Claude executor no longer sends unsupported provider-prefixed model IDs to Claude CLI.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Re-run paid_codex smoke with executor=codex and verify retry scheduling/terminal success without fallback route.",
+      "Re-run paid_claude smoke with executor=claude and verify model alias normalization and successful completion.",
+      "Re-run paid_cursor + free_openrouter smoke and compare failure taxonomy/output signatures."
+    ]
+  }
+}
