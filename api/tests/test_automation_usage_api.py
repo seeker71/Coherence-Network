@@ -48,6 +48,57 @@ def test_probe_openai_codex_accepts_oauth_without_api_key(monkeypatch: pytest.Mo
     assert detail.startswith("ok_via_codex_oauth_session:")
 
 
+def test_configured_status_openai_accepts_runner_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing"))
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "metadata": {
+                    "provider_telemetry": {
+                        "openai": {"configured": True, "auth_source": "runner_codex_oauth"}
+                    }
+                }
+            }
+        ],
+    )
+
+    configured, missing, present, notes = automation_usage_service._configured_status("openai")
+    assert configured is True
+    assert missing == []
+    assert "runner_provider_telemetry" in present
+    assert any("host-runner OpenAI/Codex telemetry" in note for note in notes)
+
+
+def test_configured_status_cursor_accepts_runner_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CURSOR_API_KEY", "")
+    monkeypatch.setenv("CURSOR_CLI_MODEL", "")
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "metadata": {
+                    "provider_telemetry": {
+                        "cursor": {"configured": True, "auth_source": "cursor_cli_status"}
+                    }
+                }
+            }
+        ],
+    )
+
+    configured, missing, present, notes = automation_usage_service._configured_status("cursor")
+    assert configured is True
+    assert missing == []
+    assert "runner_provider_telemetry" in present
+    assert any("host-runner Cursor telemetry" in note for note in notes)
+
+
 def test_codex_oauth_access_context_reads_access_token_and_account(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -477,8 +528,12 @@ def test_build_cursor_snapshot_includes_subscription_window_metrics(
         "_configured_status",
         lambda provider: (True, [], ["CURSOR_CLI_MODEL"], []) if provider == "cursor" else (False, [], [], []),
     )
-    monkeypatch.setenv("CURSOR_SUBSCRIPTION_8H_LIMIT", "100")
-    monkeypatch.setenv("CURSOR_SUBSCRIPTION_WEEK_LIMIT", "700")
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_cursor_subscription_limits",
+        lambda: (100, 700, "runner_provider_telemetry", "pro"),
+    )
+    monkeypatch.setattr(automation_usage_service, "_runner_provider_configured", lambda provider: (False, ""))
     monkeypatch.setattr(automation_usage_service.shutil, "which", lambda name: "/usr/local/bin/agent" if name == "agent" else None)
     monkeypatch.setattr(automation_usage_service, "_cli_output", lambda command: (True, "agent 1.2.3"))
 
@@ -499,8 +554,8 @@ def test_build_cursor_snapshot_includes_subscription_window_metrics(
     assert "cursor_subscription_week" in metrics
     assert metrics["cursor_subscription_8h"].remaining == pytest.approx(30.0, rel=1e-6)
     assert metrics["cursor_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
-    assert metrics["cursor_subscription_8h"].validation_state == "derived"
-    assert metrics["cursor_subscription_8h"].evidence_source == "runtime_events+env_limits"
+    assert metrics["cursor_subscription_8h"].validation_state == "validated"
+    assert metrics["cursor_subscription_8h"].evidence_source == "runner_provider_telemetry"
     assert snapshot.data_source == "provider_cli"
 
 
@@ -515,9 +570,6 @@ def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
         data_source="runtime_events",
         metrics=[],
     )
-    monkeypatch.setenv("CODEX_SUBSCRIPTION_5H_LIMIT", "100")
-    monkeypatch.setenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", "700")
-
     def _fake_codex_counts(window_seconds: int) -> int:
         if window_seconds == 5 * 60 * 60:
             return 40
@@ -535,10 +587,12 @@ def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
     metrics = {row.id: row for row in snapshot.metrics}
     assert "codex_subscription_5h" in metrics
     assert "codex_subscription_week" in metrics
-    assert metrics["codex_subscription_5h"].remaining == pytest.approx(60.0, rel=1e-6)
-    assert metrics["codex_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].remaining is None
+    assert metrics["codex_subscription_week"].remaining is None
+    assert metrics["codex_subscription_5h"].limit is None
+    assert metrics["codex_subscription_week"].limit is None
     assert metrics["codex_subscription_5h"].validation_state == "derived"
-    assert metrics["codex_subscription_5h"].evidence_source == "runtime_events+env_limits"
+    assert metrics["codex_subscription_5h"].evidence_source == "runtime_events"
 
 
 def test_append_codex_subscription_metrics_tracks_usage_without_limit_configuration(
@@ -552,9 +606,6 @@ def test_append_codex_subscription_metrics_tracks_usage_without_limit_configurat
         data_source="runtime_events",
         metrics=[],
     )
-    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
-    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
-
     def _fake_codex_counts(window_seconds: int) -> int:
         if window_seconds == 5 * 60 * 60:
             return 11
@@ -579,7 +630,7 @@ def test_append_codex_subscription_metrics_tracks_usage_without_limit_configurat
     assert metrics["codex_subscription_5h"].remaining is None
     assert metrics["codex_subscription_5h"].validation_state == "derived"
     assert metrics["codex_subscription_5h"].evidence_source == "runtime_events"
-    assert any("Codex subscription limits vary by plan and demand" in note for note in snapshot.notes)
+    assert any("Codex subscription windows were unavailable" in note for note in snapshot.notes)
 
 
 def test_append_codex_subscription_metrics_adds_provider_api_windows_when_available(
@@ -593,8 +644,6 @@ def test_append_codex_subscription_metrics_adds_provider_api_windows_when_availa
         data_source="provider_api",
         metrics=[],
     )
-    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
-    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
     monkeypatch.setattr(
         automation_usage_service,
         "_codex_provider_usage_payload",
@@ -649,6 +698,65 @@ def test_append_codex_subscription_metrics_adds_provider_api_windows_when_availa
     assert not any("Set CODEX_SUBSCRIPTION_5H_LIMIT" in note for note in snapshot.notes)
     assert snapshot.raw["codex_usage_plan"] == "plus"
     assert len(snapshot.raw["codex_usage_windows"]) == 2
+
+
+def test_append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_codex_runner_windows",
+        provider="openai",
+        kind="openai",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_provider_usage_payload",
+        lambda force_refresh=False: {"status": "unavailable", "windows": [], "error": "missing_oauth"},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "metadata": {
+                    "provider_telemetry": {
+                        "openai": {
+                            "configured": True,
+                            "auth_source": "runner_codex_oauth",
+                            "plan": "plus",
+                            "usage_windows": [
+                                {
+                                    "metric_id": "codex_provider_window_primary",
+                                    "source_key": "primary_window",
+                                    "label": "5h",
+                                    "window": "5h",
+                                    "used_percent": 33.0,
+                                    "remaining_percent": 67.0,
+                                    "limit_window_seconds": 5 * 60 * 60,
+                                    "reset_at_unix": 1_700_000_000,
+                                    "reset_at_iso": "2023-11-14T22:13:20Z",
+                                }
+                            ],
+                        }
+                    }
+                }
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_events_within_window",
+        lambda window_seconds: 4 if window_seconds == 5 * 60 * 60 else 9,
+    )
+
+    automation_usage_service._append_codex_subscription_metrics(snapshot)
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert "codex_provider_window_primary" in metrics
+    assert metrics["codex_provider_window_primary"].validation_state == "validated"
+    assert metrics["codex_provider_window_primary"].evidence_source == "runner_provider_telemetry"
 
 
 def test_parse_codex_usage_windows_maps_primary_and_secondary() -> None:
@@ -1463,6 +1571,17 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
     monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
     monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+    monkeypatch.setattr(automation_usage_service, "_runner_provider_telemetry_rows", lambda force_refresh=False: [])
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_claude_cli_auth_context",
+        lambda: {"cli_available": False, "logged_in": False, "subscription_type": ""},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_cursor_cli_about_context",
+        lambda: {"cli_available": False, "logged_in": False, "tier": ""},
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get("/api/automation/usage/readiness")
