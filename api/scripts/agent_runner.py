@@ -292,6 +292,8 @@ DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
 )
 CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 CODEX_AUTH_MODE_VALUES = {"oauth"}
+CURSOR_AUTH_MODE_VALUES = {"oauth"}
+CLAUDE_AUTH_MODE_VALUES = {"oauth"}
 
 
 def _tool_token(command: str) -> str:
@@ -3768,6 +3770,14 @@ def _prepare_cli_command_for_exec(command: str) -> tuple[str | list[str], bool, 
     return argv, False, "argv"
 
 
+def _normalize_oauth_only_auth_mode(raw: Any, *, default: str = "oauth", allowed: set[str] | None = None) -> str:
+    mode = str(raw or "").strip().lower()
+    allowed_modes = allowed or {"oauth"}
+    if mode in allowed_modes:
+        return mode
+    return default
+
+
 def _normalize_codex_auth_mode(raw: Any, *, default: str = "oauth") -> str:
     mode = str(raw or "").strip().lower()
     if mode in CODEX_AUTH_MODE_VALUES:
@@ -3831,6 +3841,14 @@ def _find_nested_token_value(node: Any, token_key: str) -> str:
             found = _find_nested_token_value(item, token_key)
             if found:
                 return found
+    return ""
+
+
+def _find_first_nested_token_value(node: Any, token_keys: tuple[str, ...]) -> str:
+    for token_key in token_keys:
+        found = _find_nested_token_value(node, token_key)
+        if found:
+            return found
     return ""
 
 
@@ -4086,6 +4104,506 @@ def _configure_codex_cli_environment(
         )
     log.info(
         "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+    )
+    return auth_state
+
+
+def _oauth_session_b64_from_task_or_env(
+    *,
+    task_ctx: dict[str, Any] | None,
+    task_ctx_key: str,
+    env: dict[str, str],
+    env_key: str,
+) -> str:
+    task_value = str((task_ctx or {}).get(task_ctx_key) or "").strip()
+    if task_value:
+        return task_value
+    env_value = str(env.get(env_key, "")).strip()
+    if env_value:
+        return env_value
+    return str(os.environ.get(env_key, "")).strip()
+
+
+def _decode_oauth_session_b64_payload(
+    *,
+    encoded: str,
+    task_id: str,
+    log: logging.Logger,
+    env_key: str,
+) -> tuple[dict[str, Any], str]:
+    compact = "".join(encoded.split())
+    if not compact:
+        return {}, "oauth_session_b64_empty"
+    padded = compact + ("=" * ((4 - (len(compact) % 4)) % 4))
+
+    decoded_text = ""
+    decode_errors: list[str] = []
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            decoded_text = decoder(padded.encode("utf-8")).decode("utf-8")
+            if decoded_text:
+                break
+        except Exception as exc:
+            decode_errors.append(type(exc).__name__)
+    if not decoded_text:
+        detail = "/".join(decode_errors) if decode_errors else "unknown"
+        log.warning("task=%s failed to decode %s detail=%s", task_id, env_key, detail)
+        return {}, f"oauth_session_b64_decode_failed:{detail[:80]}"
+
+    try:
+        payload = json.loads(decoded_text)
+    except Exception as exc:
+        return {}, f"oauth_session_json_invalid:{type(exc).__name__}"
+    if not isinstance(payload, dict):
+        return {}, "oauth_session_json_not_object"
+    return payload, ""
+
+
+def _cursor_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    config_dir = str(env.get("CURSOR_CONFIG_DIR", "")).strip() or str(os.environ.get("CURSOR_CONFIG_DIR", "")).strip()
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "auth.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    xdg_config_home = str(env.get("XDG_CONFIG_HOME", "")).strip() or str(os.environ.get("XDG_CONFIG_HOME", "")).strip()
+    if not xdg_config_home and home:
+        xdg_config_home = os.path.join(home, ".config")
+
+    names_raw = (
+        str(env.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
+        or str(os.environ.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
+        or "cagent,cursor"
+    )
+    names = [item.strip() for item in names_raw.split(",") if item.strip()]
+    if not names:
+        names = ["cagent", "cursor"]
+
+    candidates: list[str] = []
+    for name in names:
+        if xdg_config_home:
+            candidates.append(os.path.join(xdg_config_home, name, "auth.json"))
+        if home:
+            candidates.append(os.path.join(home, f".{name}", "auth.json"))
+
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if normalized and os.path.isfile(normalized):
+            return normalized
+    if candidates:
+        return _abs_expanded_path(candidates[0])
+    return ""
+
+
+def _extract_cursor_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _cursor_oauth_session_candidates(env: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    config_dir = str(env.get("CURSOR_CONFIG_DIR", "")).strip() or str(os.environ.get("CURSOR_CONFIG_DIR", "")).strip()
+    if config_dir:
+        _append(os.path.join(config_dir, "auth.json"))
+
+    target = _cursor_oauth_session_target_path(env)
+    if target:
+        _append(target)
+    return candidates
+
+
+def _cursor_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    candidates = _cursor_oauth_session_candidates(env)
+    for candidate in candidates:
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        access_token, refresh_token = _extract_cursor_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{candidate}"
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_cursor_oauth_session"
+
+
+def _bootstrap_cursor_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_cursor_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _cursor_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_cursor_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing cursor oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_CURSOR_OAUTH_SESSION_FILE"] = target_path
+            env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_cursor_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["accessToken"] = access_token
+    payload["refreshToken"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CURSOR_OAUTH_SESSION_FILE"] = target_path
+    env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _configure_cursor_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_cursor_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_CURSOR_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=CURSOR_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing cursor auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_cursor_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    env.pop("CURSOR_API_KEY", None)
+    env.pop("OPENAI_API_KEY", None)
+    env.pop("OPENAI_ADMIN_API_KEY", None)
+    env.pop("OPENAI_API_BASE", None)
+    env.pop("OPENAI_BASE_URL", None)
+
+    target_path = _cursor_oauth_session_target_path(env)
+    if target_path:
+        env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+
+    oauth_available, oauth_source = _cursor_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s cursor oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using cursor CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+    )
+    return auth_state
+
+
+def _claude_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    config_dir = (
+        str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, ".credentials.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".claude", ".credentials.json"))
+    return ""
+
+
+def _extract_claude_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token", "oauth_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _claude_oauth_session_candidates(env: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    config_dir = (
+        str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        _append(os.path.join(config_dir, ".credentials.json"))
+
+    target = _claude_oauth_session_target_path(env)
+    if target:
+        _append(target)
+    return candidates
+
+
+def _claude_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    candidates = _claude_oauth_session_candidates(env)
+    for candidate in candidates:
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        access_token, refresh_token = _extract_claude_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{candidate}"
+
+    if not os.getenv("PYTEST_CURRENT_TEST"):
+        try:
+            completed = subprocess.run(
+                ["claude", "auth", "status", "--json"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=8,
+                env={**env, "CLAUDECODE": ""},
+            )
+            if completed.returncode == 0:
+                payload = json.loads(str(completed.stdout or "{}").strip())
+                if isinstance(payload, dict) and bool(payload.get("loggedIn")):
+                    return True, "claude_cli_auth_status"
+        except Exception:
+            pass
+
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_claude_oauth_session"
+
+
+def _bootstrap_claude_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_claude_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _claude_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_claude_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing claude oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+            env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_claude_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["accessToken"] = access_token
+    payload["refreshToken"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+    env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _configure_claude_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_claude_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_CLAUDE_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=CLAUDE_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing claude auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+
+    claude_config_override = str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+    if claude_config_override:
+        env["CLAUDE_CONFIG_DIR"] = _abs_expanded_path(claude_config_override)
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_claude_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    env.pop("ANTHROPIC_API_KEY", None)
+    env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    env.pop("ANTHROPIC_BASE_URL", None)
+    env.pop("CLAUDE_API_KEY", None)
+    env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+
+    target_path = _claude_oauth_session_target_path(env)
+    if target_path:
+        env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+
+    oauth_available, oauth_source = _claude_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s claude oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using claude CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
         task_id,
         requested_mode,
         effective_mode,
@@ -4947,24 +5465,13 @@ def run_one_task(
     popen_preexec_fn: Callable[[], None] | None = None
     command_exec_mode = "shell"
     if _uses_cursor_cli(command):
-        cursor_auth_mode = str(
-            task_ctx.get("runner_cursor_auth_mode")
-            or os.environ.get("AGENT_CURSOR_AUTH_MODE")
-            or "oauth"
-        ).strip().lower()
-        if cursor_auth_mode == "oauth":
-            # OAuth/session mode: do not inject API keys.
-            env.pop("CURSOR_API_KEY", None)
-            env.pop("OPENAI_API_KEY", None)
-            env.pop("OPENAI_ADMIN_API_KEY", None)
-            env.pop("OPENAI_API_BASE", None)
-            env.pop("OPENAI_BASE_URL", None)
-            log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
-        else:
-            cursor_key = os.environ.get("CURSOR_API_KEY", "").strip()
-            if cursor_key:
-                env["CURSOR_API_KEY"] = cursor_key
-            log.info("task=%s using Cursor CLI (API key mode)", task_id)
+        _configure_cursor_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
     elif _uses_codex_cli(command):
         codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log, task_ctx=task_ctx)
         command, codex_model_alias = _apply_codex_model_alias(command)
@@ -4982,29 +5489,13 @@ def run_one_task(
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
     elif _uses_claude_cli(command):
-        # Claude Code CLI auth resolution order:
-        #   1. ANTHROPIC_API_KEY  — explicit cloud key
-        #   2. CLAUDE_CODE_OAUTH_TOKEN  — explicit OAuth env token
-        #   3. Local CLI session (`claude login`) — inherited automatically; no env override needed
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-        oauth_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
-        if api_key:
-            env["ANTHROPIC_API_KEY"] = api_key
-            env.pop("ANTHROPIC_AUTH_TOKEN", None)
-            env.pop("ANTHROPIC_BASE_URL", None)
-            log.info("task=%s using Claude Code CLI (API key)", task_id)
-        elif oauth_token:
-            env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
-            env.pop("ANTHROPIC_AUTH_TOKEN", None)
-            env.pop("ANTHROPIC_BASE_URL", None)
-            log.info("task=%s using Claude Code CLI (OAuth token)", task_id)
-        else:
-            # No explicit auth env vars — let the CLI use its own session (from `claude login`).
-            # Clear any Ollama overrides that would confuse the Claude Code CLI.
-            env.pop("ANTHROPIC_AUTH_TOKEN", None)
-            env.pop("ANTHROPIC_BASE_URL", None)
-            env.pop("ANTHROPIC_API_KEY", None)
-            log.info("task=%s using Claude Code CLI (inherited session)", task_id)
+        _configure_claude_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Claude Code CLI (OAuth/session)", task_id)
         command, claude_model_alias = _apply_claude_model_alias(command)
         if claude_model_alias:
             log.warning(
@@ -5016,9 +5507,11 @@ def run_one_task(
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        env.setdefault("ANTHROPIC_API_KEY", api_key)
-        log.info("task=%s using Anthropic cloud has_key=%s", task_id, bool(api_key))
+        env.pop("ANTHROPIC_API_KEY", None)
+        log.warning(
+            "task=%s anthropic cloud API-key auth disabled; use Claude CLI OAuth/session for paid Anthropic access",
+            task_id,
+        )
     else:
         env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
         env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
