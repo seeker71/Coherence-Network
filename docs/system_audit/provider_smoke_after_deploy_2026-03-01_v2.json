@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-03-01T10:26:38.836131+00:00",
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "max_wait_seconds": 1200,
+  "all_terminal": true,
+  "active_remaining": [],
+  "results": [
+    {
+      "label": "paid_codex",
+      "requested": {
+        "label": "paid_codex",
+        "executor": "codex",
+        "model_override": "openai/gpt-5.3-codex",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 502,
+      "create_body": {
+        "status": "error",
+        "code": 502,
+        "message": "Application failed to respond",
+        "request_id": "fG35IgvYQviPBv7cn6XIxQ"
+      },
+      "id": null
+    },
+    {
+      "label": "paid_claude",
+      "requested": {
+        "label": "paid_claude",
+        "executor": "claude",
+        "model_override": "claude/claude-sonnet-4-5-20250929",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 502,
+      "create_body": {
+        "status": "error",
+        "code": 502,
+        "message": "Application failed to respond",
+        "request_id": "TQ9jXdjKScS-LbZ5xtoGcA"
+      },
+      "id": null
+    },
+    {
+      "label": "paid_cursor",
+      "requested": {
+        "label": "paid_cursor",
+        "executor": "cursor",
+        "model_override": "auto",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 502,
+      "create_body": {
+        "status": "error",
+        "code": 502,
+        "message": "Application failed to respond",
+        "request_id": "yoL1G-XORDWi-FVLLPU1MQ"
+      },
+      "id": null
+    },
+    {
+      "label": "free_openrouter",
+      "requested": {
+        "label": "free_openrouter",
+        "executor": "openrouter",
+        "model_override": "openrouter/free",
+        "force_paid_providers": false,
+        "is_paid_expected": false
+      },
+      "create_http": 502,
+      "create_body": {
+        "status": "error",
+        "code": 502,
+        "message": "Application failed to respond",
+        "request_id": "lnds91oGR4SPpivD0_TJvA"
+      },
+      "id": null
+    }
+  ]
+}
