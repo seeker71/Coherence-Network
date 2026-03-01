@@ -1487,6 +1487,18 @@ def _runner_provider_telemetry(provider: str) -> dict[str, Any]:
     normalized_provider = _normalize_provider_name(provider)
     if not normalized_provider:
         return {}
+
+    def _parse_iso_timestamp(value: Any) -> float:
+        text = str(value or "").strip()
+        if not text:
+            return 0.0
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return 0.0
+
+    best_row: dict[str, Any] = {}
+    best_score: tuple[int, float] = (-1, 0.0)
     for row in _runner_provider_telemetry_rows():
         metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
         provider_telemetry = (
@@ -1495,8 +1507,37 @@ def _runner_provider_telemetry(provider: str) -> dict[str, Any]:
             else {}
         )
         provider_row = provider_telemetry.get(normalized_provider)
-        if isinstance(provider_row, dict):
-            return provider_row
+        if not isinstance(provider_row, dict):
+            continue
+
+        limits = provider_row.get("limits") if isinstance(provider_row.get("limits"), dict) else {}
+        limit_8h = _coerce_nonnegative_int(limits.get("subscription_8h") or limits.get("limit_8h"), default=0)
+        limit_week = _coerce_nonnegative_int(limits.get("subscription_week") or limits.get("limit_week"), default=0)
+        usage_windows = provider_row.get("usage_windows") if isinstance(provider_row.get("usage_windows"), list) else []
+        configured = bool(provider_row.get("configured"))
+        auth_detail = str(provider_row.get("auth_source") or provider_row.get("detail") or "").strip()
+
+        priority = 0
+        if configured:
+            priority += 100
+        if limit_8h > 0 and limit_week > 0:
+            priority += 40
+        if usage_windows:
+            priority += 40
+        if auth_detail:
+            priority += 10
+
+        recency = max(
+            _parse_iso_timestamp(row.get("last_seen_at")),
+            _parse_iso_timestamp(row.get("updated_at")),
+            _parse_iso_timestamp(provider_telemetry.get("generated_at")),
+        )
+        score = (priority, recency)
+        if score > best_score:
+            best_score = score
+            best_row = provider_row
+    if best_row:
+        return best_row
     return {}
 
 

@@ -1,7 +1,7 @@
 {
   "date": "2026-03-01",
   "thread_branch": "codex/clear-subscription-env-20260301",
-  "commit_scope": "Remove remaining subscription-tier and subscription-window env var usage for Codex/Cursor readiness and estimator paths; rely on host-runner telemetry and CLI auth context instead.",
+  "commit_scope": "Remove remaining subscription-tier and subscription-window env var usage for Codex/Cursor readiness and estimator paths, and prefer the strongest provider telemetry row across host runners so local signed-in runner data is not masked by unconfigured runner rows.",
   "files_owned": [
     "api/.env.example",
     "api/app/services/automation_usage_service.py",
@@ -40,6 +40,7 @@
   "evidence_refs": [
     "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
     "cd api && pytest -q tests/test_automation_usage_api.py -k \"subscription_estimator_reports_upgrade_cost_and_benefit or build_cursor_snapshot_includes_subscription_window_metrics or append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable or provider_readiness_reports_blocking_required_provider_gaps\"",
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"runner_provider_telemetry_prefers_configured_row or runner_provider_telemetry_prefers_openai_windows or subscription_estimator_reports_upgrade_cost_and_benefit or configured_status_cursor_accepts_runner_telemetry or configured_status_openai_accepts_runner_telemetry\"",
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
     "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
   ],
@@ -58,7 +59,8 @@
     "status": "pass",
     "commands": [
       "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
-      "cd api && pytest -q tests/test_automation_usage_api.py -k \"subscription_estimator_reports_upgrade_cost_and_benefit or build_cursor_snapshot_includes_subscription_window_metrics or append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable or provider_readiness_reports_blocking_required_provider_gaps\""
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"subscription_estimator_reports_upgrade_cost_and_benefit or build_cursor_snapshot_includes_subscription_window_metrics or append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable or provider_readiness_reports_blocking_required_provider_gaps\"",
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"runner_provider_telemetry_prefers_configured_row or runner_provider_telemetry_prefers_openai_windows or subscription_estimator_reports_upgrade_cost_and_benefit or configured_status_cursor_accepts_runner_telemetry or configured_status_openai_accepts_runner_telemetry\""
     ]
   },
   "ci_validation": {
