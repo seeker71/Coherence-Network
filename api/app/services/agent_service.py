@@ -1261,6 +1261,9 @@ def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None
         return
     if executor == "cursor":
         ctx["runner_cursor_auth_mode"] = "oauth"
+        return
+    if executor == "claude":
+        ctx["runner_claude_auth_mode"] = "oauth"
 
 
 def _enforce_openrouter_executor_policy(ctx: dict[str, Any], executor: str) -> str:
