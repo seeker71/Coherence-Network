@@ -2693,7 +2693,11 @@ def _scope_bonus(scope: str) -> float:
     return bonus
 
 
-def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) -> list[str]:
+def _normalize_idea_ids_for_record(
+    record: dict[str, Any],
+    known_ids: set[str],
+    actionable_ids: set[str],
+) -> list[str]:
     raw = record.get("idea_ids")
     out: list[str] = []
     if isinstance(raw, list):
@@ -2704,12 +2708,20 @@ def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) 
             if not idea_id:
                 continue
             out.append(idea_id)
-    if not out:
-        out.append("portfolio-governance")
+    fallback_id = "portfolio-governance" if "portfolio-governance" in actionable_ids else ""
+    if not fallback_id and actionable_ids:
+        fallback_id = sorted(actionable_ids)[0]
+    if not out and fallback_id:
+        out.append(fallback_id)
 
     normalized: list[str] = []
     for idea_id in out:
-        normalized.append(idea_id if idea_id in known_ids else "portfolio-governance")
+        candidate = idea_id if idea_id in known_ids else fallback_id
+        if not candidate:
+            continue
+        if candidate not in actionable_ids:
+            continue
+        normalized.append(candidate)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -2721,16 +2733,36 @@ def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) 
     return deduped
 
 
-def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 20) -> dict[str, Any]:
+def derive_proactive_questions_from_recent_changes(
+    limit: int = 20,
+    top: int = 20,
+    include_internal_ideas: bool = False,
+) -> dict[str, Any]:
     records = _latest_commit_evidence_records(limit=limit)
     top_n = max(1, min(top, 200))
-    known_idea_ids = {item.id for item in idea_service.list_ideas().ideas}
-
+    all_ideas = idea_service.list_ideas(include_internal=True).ideas
+    known_idea_ids = {item.id for item in all_ideas}
+    if include_internal_ideas:
+        actionable_idea_ids = set(known_idea_ids)
+    else:
+        actionable_idea_ids = {
+            item.id
+            for item in all_ideas
+            if not idea_service.is_internal_idea_id(item.id, item.interfaces)
+        }
     intent_breakdown: dict[str, int] = {}
     candidates: list[dict[str, Any]] = []
     seen_keys: set[str] = set()
-
     for record in records:
+        contributors = record.get("contributors")
+        if isinstance(contributors, list) and contributors:
+            contributor_types = [
+                str(item.get("contributor_type") or "").strip().lower()
+                for item in contributors
+                if isinstance(item, dict) and str(item.get("contributor_type") or "").strip()
+            ]
+            if contributor_types and all(value == "machine" for value in contributor_types):
+                continue
         change_intent = str(record.get("change_intent") or "unknown").strip().lower() or "unknown"
         intent_breakdown[change_intent] = intent_breakdown.get(change_intent, 0) + 1
         scope = str(record.get("commit_scope") or "").strip() or "recent feature/fix"
@@ -2741,7 +2773,7 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
         source_file = str(record.get("_evidence_file") or "")
         source_date = str(record.get("date") or "")
 
-        for idea_id in _normalize_idea_ids_for_record(record, known_idea_ids):
+        for idea_id in _normalize_idea_ids_for_record(record, known_idea_ids, actionable_idea_ids):
             dedupe_key = f"{idea_id.lower()}::{question_text.strip().lower()}"
             if dedupe_key in seen_keys:
                 continue
@@ -2759,7 +2791,6 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
                     "source_file": source_file,
                 }
             )
-
     ranked = sorted(
         candidates,
         key=lambda row: (
@@ -2768,7 +2799,6 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
             str(row.get("idea_id") or ""),
         ),
     )[:top_n]
-
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -2791,8 +2821,16 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
     }
 
 
-def sync_proactive_questions_from_recent_changes(limit: int = 20, max_add: int = 20) -> dict[str, Any]:
-    report = derive_proactive_questions_from_recent_changes(limit=limit, top=max_add * 3)
+def sync_proactive_questions_from_recent_changes(
+    limit: int = 20,
+    max_add: int = 20,
+    include_internal_ideas: bool = False,
+) -> dict[str, Any]:
+    report = derive_proactive_questions_from_recent_changes(
+        limit=limit,
+        top=max_add * 3,
+        include_internal_ideas=include_internal_ideas,
+    )
     questions = report.get("questions")
     ranked = [row for row in questions if isinstance(row, dict)] if isinstance(questions, list) else []
     max_allowed = max(1, min(max_add, 200))
@@ -4572,6 +4610,7 @@ def _sorted_limited(values: set[str], *, limit: int) -> tuple[list[str], int, bo
 
 def build_spec_process_implementation_validation_flow(
     idea_id: str | None = None,
+    include_internal_ideas: bool = False,
     runtime_window_seconds: int = 86400,
     contributor_rows: list[dict[str, Any]] | None = None,
     contribution_rows: list[dict[str, Any]] | None = None,
@@ -4595,6 +4634,7 @@ def build_spec_process_implementation_validation_flow(
         commit_evidence_limit,
         runtime_event_limit,
         bounded_list_item_limit,
+        include_internal_ideas,
         _inventory_environment_cache_key(),
         _row_signature(contributor_rows),
         _row_signature(contribution_rows),
@@ -4608,10 +4648,11 @@ def build_spec_process_implementation_validation_flow(
 
     stage_timings: dict[str, float] = {}
     stage_start = time.perf_counter()
-    portfolio = idea_service.list_ideas()
+    portfolio = idea_service.list_ideas(include_internal=True)
     stage_timings["ideas"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
     idea_name_map = {item.id: item.name for item in portfolio.ideas}
+    idea_interfaces_map = {item.id: list(item.interfaces) for item in portfolio.ideas}
     idea_signal_map = {
         item.id: {
             "value_gap": float(item.value_gap),
@@ -4709,6 +4750,12 @@ def build_spec_process_implementation_validation_flow(
     filtered_ids = sorted(discovered_ids)
     if idea_id:
         filtered_ids = [item for item in filtered_ids if item == idea_id]
+    elif not include_internal_ideas:
+        filtered_ids = [
+            item
+            for item in filtered_ids
+            if not idea_service.is_internal_idea_id(item, idea_interfaces_map.get(item, []))
+        ]
     stage_timings["discovered_ids"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
@@ -5020,6 +5067,16 @@ def build_spec_process_implementation_validation_flow(
             {
                 "idea_id": current_idea_id,
                 "idea_name": flow["idea_name"],
+                "idea_classification": {
+                    "internal": idea_service.is_internal_idea_id(
+                        current_idea_id,
+                        idea_interfaces_map.get(current_idea_id, []),
+                    ),
+                    "actionable": not idea_service.is_internal_idea_id(
+                        current_idea_id,
+                        idea_interfaces_map.get(current_idea_id, []),
+                    ),
+                },
                 "spec": {
                     "count": spec_count,
                     "spec_ids": spec_ids,
@@ -5128,6 +5185,8 @@ def build_spec_process_implementation_validation_flow(
 
     summary = {
         "ideas": len(items),
+        "actionable_ideas": sum(1 for row in items if row["idea_classification"]["actionable"]),
+        "internal_ideas": sum(1 for row in items if row["idea_classification"]["internal"]),
         "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
         "with_process": sum(1 for row in items if row["process"]["tracked"]),
         "with_implementation": sum(1 for row in items if row["implementation"]["tracked"]),
@@ -5136,6 +5195,11 @@ def build_spec_process_implementation_validation_flow(
         "with_contributions": sum(1 for row in items if row["contributions"]["tracked"]),
         "with_assets": sum(1 for row in items if row["assets"]["tracked"]),
         "blocked_ideas": sum(1 for row in items if row["interdependencies"]["blocked"]),
+        "blocked_actionable_ideas": sum(
+            1
+            for row in items
+            if row["interdependencies"]["blocked"] and row["idea_classification"]["actionable"]
+        ),
         "queue_items": len(unblock_queue),
     }
     stage_timings["summary_build"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
@@ -5144,7 +5208,7 @@ def build_spec_process_implementation_validation_flow(
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "runtime_window_seconds": runtime_window_seconds,
-        "filter": {"idea_id": idea_id},
+        "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         "summary": summary,
         "unblock_queue": unblock_queue,
         "items": items,
@@ -5167,10 +5231,12 @@ def build_spec_process_implementation_validation_flow(
 def next_unblock_task_from_flow(
     create_task: bool = False,
     idea_id: str | None = None,
+    include_internal_ideas: bool = False,
     runtime_window_seconds: int = 86400,
 ) -> dict[str, Any]:
     flow = build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
+        include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
     )
     queue = flow.get("unblock_queue")
@@ -5178,7 +5244,7 @@ def next_unblock_task_from_flow(
         return {
             "result": "no_blocking_items",
             "flow_summary": flow.get("summary", {}),
-            "filter": {"idea_id": idea_id},
+            "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         }
 
     top = queue[0] if isinstance(queue[0], dict) else None
@@ -5186,7 +5252,7 @@ def next_unblock_task_from_flow(
         return {
             "result": "no_blocking_items",
             "flow_summary": flow.get("summary", {}),
-            "filter": {"idea_id": idea_id},
+            "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         }
 
     task_fingerprint = str(top.get("task_fingerprint") or "").strip()
@@ -5210,7 +5276,7 @@ def next_unblock_task_from_flow(
         "direction": str(top.get("direction") or ""),
         "task_fingerprint": task_fingerprint,
         "flow_summary": flow.get("summary", {}),
-        "filter": {"idea_id": idea_id},
+        "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
     }
 
     if isinstance(existing_active, dict):

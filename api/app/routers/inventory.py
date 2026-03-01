@@ -162,18 +162,25 @@ async def sync_roi_progress_tasks(
 async def proactive_questions(
     limit: int = Query(20, ge=1, le=200),
     top: int = Query(20, ge=1, le=200),
+    include_internal_ideas: bool = Query(False),
 ) -> dict:
-    return inventory_service.derive_proactive_questions_from_recent_changes(limit=limit, top=top)
+    return inventory_service.derive_proactive_questions_from_recent_changes(
+        limit=limit,
+        top=top,
+        include_internal_ideas=include_internal_ideas,
+    )
 
 
 @router.post("/inventory/questions/sync-proactive")
 async def sync_proactive_questions(
     limit: int = Query(20, ge=1, le=200),
     max_add: int = Query(20, ge=1, le=200),
+    include_internal_ideas: bool = Query(False),
 ) -> dict:
     return inventory_service.sync_proactive_questions_from_recent_changes(
         limit=limit,
         max_add=max_add,
+        include_internal_ideas=include_internal_ideas,
     )
 
 
@@ -269,6 +276,7 @@ async def sync_asset_modularity_tasks(
 def spec_process_implementation_validation_flow(
     request: Request,
     idea_id: str | None = Query(default=None),
+    include_internal_ideas: bool = Query(False),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     contributor_limit: int = Query(120, ge=1, le=10000),
     contribution_limit: int = Query(300, ge=1, le=20000),
@@ -286,6 +294,7 @@ def spec_process_implementation_validation_flow(
     asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=asset_limit)]
     return inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
+        include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
         contributor_rows=contributor_rows,
         contribution_rows=contribution_rows,
@@ -304,11 +313,13 @@ async def next_unblock_task(
     background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
     idea_id: str | None = Query(default=None),
+    include_internal_ideas: bool = Query(False),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
     payload = inventory_service.next_unblock_task_from_flow(
         create_task=create_task,
         idea_id=idea_id,
+        include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
     )
     if create_task:
