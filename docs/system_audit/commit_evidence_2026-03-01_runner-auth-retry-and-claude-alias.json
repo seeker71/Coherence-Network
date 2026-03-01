@@ -60,7 +60,7 @@
     "can_move_next_phase": false,
     "blocking_reason": "Pending commit/push/PR/deploy and post-deploy hosted paid-provider smoke revalidation."
   },
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
