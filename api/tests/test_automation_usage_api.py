@@ -466,7 +466,7 @@ def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
     required = automation_usage_service._required_providers_from_env()
-    assert "cursor" in required
+    assert required == ["openai", "claude", "cursor"]
 
 
 def test_build_cursor_snapshot_includes_subscription_window_metrics(
@@ -499,6 +499,8 @@ def test_build_cursor_snapshot_includes_subscription_window_metrics(
     assert "cursor_subscription_week" in metrics
     assert metrics["cursor_subscription_8h"].remaining == pytest.approx(30.0, rel=1e-6)
     assert metrics["cursor_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
+    assert metrics["cursor_subscription_8h"].validation_state == "derived"
+    assert metrics["cursor_subscription_8h"].evidence_source == "runtime_events+env_limits"
     assert snapshot.data_source == "provider_cli"
 
 
@@ -1237,8 +1239,13 @@ async def test_automation_usage_alerts_raise_on_low_remaining_ratio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
-    monkeypatch.setenv("GITHUB_TOKEN", "")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "")
+    monkeypatch.setenv("CURSOR_API_KEY", "")
+    monkeypatch.setenv("CURSOR_CLI_MODEL", "")
+    monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get("/api/automation/usage/alerts", params={"threshold_ratio": 1.0})
@@ -1246,9 +1253,10 @@ async def test_automation_usage_alerts_raise_on_low_remaining_ratio(
         payload = report.json()
         assert payload["threshold_ratio"] == 1.0
         assert isinstance(payload["alerts"], list)
-        # At least unavailable provider alerts should be present when external creds are missing.
-        assert any(alert["provider"] == "github" for alert in payload["alerts"])
+        # Required providers should alert when credentials/usage-limit telemetry are missing.
         assert any(alert["provider"] == "openai" for alert in payload["alerts"])
+        assert any(alert["provider"] == "claude" for alert in payload["alerts"])
+        assert any(alert["provider"] == "cursor" for alert in payload["alerts"])
 
 
 @pytest.mark.asyncio
@@ -1463,7 +1471,9 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
         assert payload["all_required_ready"] is False
         providers = {row["provider"]: row for row in payload["providers"]}
         assert providers["openai"]["severity"] == "critical"
-        assert providers["github"]["severity"] == "critical"
+        assert providers["claude"]["severity"] == "critical"
+        assert providers["cursor"]["severity"] == "critical"
+        assert providers["github"]["severity"] in {"info", "warning"}
         assert providers["coherence-internal"]["severity"] in {"info", "warning"}
 
 
@@ -1495,7 +1505,8 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
         )
         assert report.status_code == 200
         payload = report.json()
-        assert payload["all_required_ready"] is True
+        assert payload["all_required_ready"] is False
+        assert "openrouter: missing_limit_metrics" in payload["blocking_issues"]
 
 
 @pytest.mark.asyncio
@@ -1538,8 +1549,7 @@ async def test_provider_in_active_use_requires_key_for_readiness(
         payload = report.json()
         providers = {row["provider"]: row for row in payload["providers"]}
         assert payload["all_required_ready"] is False
-        assert providers["openrouter"]["required"] is True
-        assert providers["openrouter"]["severity"] == "critical"
+        assert providers["openrouter"]["required"] is False
         assert providers["openrouter"]["configured"] is False
 
 
