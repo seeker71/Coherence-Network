@@ -1,0 +1,90 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/clear-subscription-env-20260301",
+  "commit_scope": "Remove remaining subscription-tier and subscription-window env var usage for Codex/Cursor readiness and estimator paths; rely on host-runner telemetry and CLI auth context instead.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json"
+  ],
+  "idea_ids": [
+    "automation-provider-readiness-required-contract"
+  ],
+  "spec_ids": [
+    "spec-automation-provider-usage-readiness"
+  ],
+  "task_ids": [
+    "task-2026-03-01-clear-subscription-env-usage"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"subscription_estimator_reports_upgrade_cost_and_benefit or build_cursor_snapshot_includes_subscription_window_metrics or append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable or provider_readiness_reports_blocking_required_provider_gaps\"",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"subscription_estimator_reports_upgrade_cost_and_benefit or build_cursor_snapshot_includes_subscription_window_metrics or append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable or provider_readiness_reports_blocking_required_provider_gaps\""
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Subscription readiness/estimation no longer instructs or depends on CODEX_SUBSCRIPTION_* / CURSOR_SUBSCRIPTION_* / *_SUBSCRIPTION_TIER env vars.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/subscription-estimator",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Verify all required providers (openai, claude, cursor) can report readiness without local subscription env vars.",
+      "Verify subscription estimator tiers derive from runner telemetry / CLI context.",
+      "Verify docs/.env no longer ask operators to set subscription-window env vars."
+    ]
+  }
+}

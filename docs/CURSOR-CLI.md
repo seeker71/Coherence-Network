@@ -65,9 +65,6 @@ Set in `api/.env`:
 ```bash
 CURSOR_CLI_MODEL=auto
 CURSOR_CLI_REVIEW_MODEL=auto
-# Optional proactive backoff thresholds:
-# CURSOR_SUBSCRIPTION_8H_LIMIT=225
-# CURSOR_SUBSCRIPTION_WEEK_LIMIT=1200
 ```
 
 ## Command Format
@@ -80,7 +77,7 @@ Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed comma
 ## Best Practices
 
 1. **Default model strategy:** Keep `auto` for most tasks to let Cursor balance quality vs limits.
-2. **Backoff strategy:** Set `CURSOR_SUBSCRIPTION_8H_LIMIT` and `CURSOR_SUBSCRIPTION_WEEK_LIMIT`; monitor `/api/automation/usage` and `/api/automation/usage/alerts` to throttle before hard caps.
+2. **Backoff strategy:** Use host-runner telemetry + `/api/automation/usage` and `/api/automation/usage/alerts` to throttle before hard caps.
 3. **Isolation:** Run in a git worktree or DevContainer for safety.
 4. **Context:** Cursor respects `.cursor/rules/` in the repo; ensure rules are in place for consistency.
 5. **Fallback:** If Cursor CLI fails (exit 127), the task is marked failed; use Claude Code as fallback by omitting `--cursor`.
