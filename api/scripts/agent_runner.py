@@ -294,6 +294,7 @@ CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 CODEX_AUTH_MODE_VALUES = {"oauth"}
 CURSOR_AUTH_MODE_VALUES = {"oauth"}
 CLAUDE_AUTH_MODE_VALUES = {"oauth"}
+GEMINI_AUTH_MODE_VALUES = {"oauth"}
 
 
 def _tool_token(command: str) -> str:
@@ -3079,6 +3080,11 @@ def _uses_cursor_cli(command: str) -> bool:
     return command.strip().startswith("agent ")
 
 
+def _uses_gemini_cli(command: str) -> bool:
+    """True if command uses Gemini CLI."""
+    return command.strip().startswith("gemini ")
+
+
 def _uses_openclaw_cli(command: str) -> bool:
     """True if command uses OpenClaw CLI."""
     stripped = command.strip()
@@ -3305,6 +3311,8 @@ def _cli_install_provider_for_command(command: str) -> str:
         return "cursor"
     if _uses_claude_cli(command):
         return "claude"
+    if _uses_gemini_cli(command):
+        return "gemini"
     if _uses_codex_cli(command):
         return "codex"
     return ""
@@ -3314,6 +3322,7 @@ def _cli_binary_for_provider(provider: str) -> str:
     mapping = {
         "cursor": "agent",
         "claude": "claude",
+        "gemini": "gemini",
         "codex": "codex",
     }
     return mapping.get(provider, "")
@@ -3349,6 +3358,7 @@ def _cli_install_commands(provider: str) -> list[str]:
     env_overrides = {
         "cursor": "AGENT_RUNNER_CURSOR_INSTALL_COMMANDS",
         "claude": "AGENT_RUNNER_CLAUDE_INSTALL_COMMANDS",
+        "gemini": "AGENT_RUNNER_GEMINI_INSTALL_COMMANDS",
         "codex": "AGENT_RUNNER_CODEX_INSTALL_COMMANDS",
     }
     default_commands = {
@@ -3361,6 +3371,10 @@ def _cli_install_commands(provider: str) -> list[str]:
             ensure_node_cmd,
             "curl -fsSL https://claude.ai/install.sh | bash",
             "npm install -g @anthropic-ai/claude-code",
+        ],
+        "gemini": [
+            ensure_node_cmd,
+            "npm install -g @google/gemini-cli",
         ],
         "codex": [
             ensure_node_cmd,
@@ -3757,7 +3771,13 @@ def _ensure_cli_for_command(
 def _prepare_cli_command_for_exec(command: str) -> tuple[str | list[str], bool, str]:
     """Run supported CLI commands via argv to avoid shell expansion in prompt text."""
     cmd = str(command or "")
-    if not (_uses_codex_cli(cmd) or _uses_cursor_cli(cmd) or _uses_openclaw_cli(cmd) or _uses_claude_cli(cmd)):
+    if not (
+        _uses_codex_cli(cmd)
+        or _uses_cursor_cli(cmd)
+        or _uses_gemini_cli(cmd)
+        or _uses_openclaw_cli(cmd)
+        or _uses_claude_cli(cmd)
+    ):
         return cmd, True, "shell"
     try:
         argv = shlex.split(cmd, posix=True)
@@ -4385,6 +4405,250 @@ def _configure_cursor_cli_environment(
     return auth_state
 
 
+def _configure_gemini_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_gemini_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_GEMINI_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=GEMINI_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing gemini auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+    gemini_config_override = str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+    if gemini_config_override:
+        env["AGENT_GEMINI_CONFIG_DIR"] = _abs_expanded_path(gemini_config_override)
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_gemini_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    settings_configured, settings_config_detail = _ensure_gemini_oauth_settings(
+        env=env,
+        task_id=task_id,
+        log=log,
+    )
+
+    env.pop("GEMINI_API_KEY", None)
+    env.pop("GOOGLE_API_KEY", None)
+
+    target_oauth_path = _gemini_oauth_creds_target_path(env)
+    if target_oauth_path:
+        env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_oauth_path
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        env["AGENT_GEMINI_CONFIG_DIR"] = config_dir
+
+    oauth_available, oauth_source = _gemini_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+        "oauth_settings_configured": bool(settings_configured),
+        "oauth_settings_config_detail": settings_config_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s gemini oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using gemini CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s settings=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+        settings_config_detail or "none",
+    )
+    return auth_state
+
+
+def _gemini_config_dir(env: dict[str, str]) -> str:
+    config_dir = (
+        str(env.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+        or str(env.get("GEMINI_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("GEMINI_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        return _abs_expanded_path(config_dir)
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".gemini"))
+    return ""
+
+
+def _gemini_oauth_creds_target_path(env: dict[str, str]) -> str:
+    explicit = str(env.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
+    if not explicit:
+        explicit = str(os.environ.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
+    if explicit:
+        return _abs_expanded_path(explicit)
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "oauth_creds.json"))
+    return ""
+
+
+def _gemini_settings_target_path(env: dict[str, str]) -> str:
+    explicit = str(env.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
+    if not explicit:
+        explicit = str(os.environ.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
+    if explicit:
+        return _abs_expanded_path(explicit)
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "settings.json"))
+    return ""
+
+
+def _extract_gemini_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token", "oauth_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _gemini_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    target = _gemini_oauth_creds_target_path(env)
+    if not target:
+        return False, "missing_gemini_oauth_session"
+    payload = _read_json_object_file(target)
+    if payload:
+        access_token, refresh_token = _extract_gemini_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{target}"
+    return False, f"missing_session_file:{target}"
+
+
+def _bootstrap_gemini_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_gemini_oauth_session_b64",
+        env=env,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _gemini_oauth_creds_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_gemini_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing gemini oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_path
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_gemini_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["access_token"] = access_token
+    payload["refresh_token"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_path
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _ensure_gemini_oauth_settings(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    settings_path = _gemini_settings_target_path(env)
+    if not settings_path:
+        return False, "oauth_settings_target_missing"
+    payload = _read_json_object_file(settings_path)
+    if not payload:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    security = payload.get("security")
+    if not isinstance(security, dict):
+        security = {}
+    auth = security.get("auth")
+    if not isinstance(auth, dict):
+        auth = {}
+
+    selected = str(auth.get("selectedType") or "").strip().lower()
+    enforced = str(auth.get("enforcedType") or "").strip().lower()
+    desired = "oauth-personal"
+    if selected == desired and enforced == desired:
+        env["AGENT_GEMINI_SETTINGS_FILE"] = settings_path
+        return False, f"oauth_settings_preserved_existing:{settings_path}"
+
+    auth["selectedType"] = desired
+    auth["enforcedType"] = desired
+    security["auth"] = auth
+    payload["security"] = security
+
+    try:
+        os.makedirs(os.path.dirname(settings_path) or ".", exist_ok=True)
+        with open(settings_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(settings_path, 0o600)
+    except Exception as exc:
+        log.warning("task=%s failed to configure gemini oauth settings detail=%s", task_id, type(exc).__name__)
+        return False, f"oauth_settings_write_failed:{type(exc).__name__}"
+
+    env["AGENT_GEMINI_SETTINGS_FILE"] = settings_path
+    return True, f"oauth_settings_bootstrapped:{settings_path}"
+
+
 def _claude_oauth_session_target_path(env: dict[str, str]) -> str:
     explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
@@ -4809,6 +5073,8 @@ def _infer_executor(command: str, model: str) -> str:
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
+    if _uses_gemini_cli(command) or model_value.startswith("gemini/"):
+        return "gemini"
     if _uses_openrouter_executor_command(command) or model_value.startswith("openrouter/"):
         return "openrouter"
     if _uses_codex_cli(command):
@@ -5472,6 +5738,14 @@ def run_one_task(
             task_ctx=task_ctx,
         )
         log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
+    elif _uses_gemini_cli(command):
+        _configure_gemini_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Gemini CLI (OAuth/session)", task_id)
     elif _uses_codex_cli(command):
         codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log, task_ctx=task_ctx)
         command, codex_model_alias = _apply_codex_model_alias(command)
