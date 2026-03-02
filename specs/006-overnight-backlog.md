@@ -95,3 +95,6 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 75. Implement spec 108-n8n-security-and-hitl-hardening: patch baseline + HITL guardrails for destructive actions
 76. Implement spec 109-open-responses-interoperability-layer: normalize provider execution via Open Responses-compatible adapter
 77. Implement spec 110-langgraph-stateschema-adoption: enforce graph state schema checks and deterministic failure diagnostics
+78. Add n8n GitHub advisory ingestion to `collect_ai_agent_intel.py` + security watch monitor path, then validate monitor flags top GHSA ID
+79. Run CrewAI async step-callback pilot (v1.10.1a1+) with callback latency/error telemetry and rollback guard in docs/AGENT-DEBUGGING.md
+80. Add LangGraphJS 1.2.0 Overwrite/tool-lifecycle stream compatibility spike task linked to spec 110 acceptance evidence
