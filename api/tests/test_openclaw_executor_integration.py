@@ -49,6 +49,29 @@ def test_create_task_supports_openrouter_executor(monkeypatch: pytest.MonkeyPatc
     assert task["command"].startswith("openrouter-exec ")
 
 
+def test_create_task_supports_gemini_executor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("GEMINI_CLI_MODEL", "gemini-2.5-pro")
+    monkeypatch.setenv("GEMINI_COMMAND_TEMPLATE", 'gemini -p "{{direction}}" --model {{model}} --format json')
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Implement gemini executor support",
+            task_type=TaskType.IMPL,
+            context={"executor": "gemini"},
+        )
+    )
+
+    assert task["model"].startswith("gemini/")
+    assert task["tier"] == "gemini"
+    assert task["command"].startswith("gemini -p ")
+    context = task.get("context") or {}
+    assert context.get("executor") == "gemini"
+
+
 def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")
@@ -392,3 +415,19 @@ async def test_agent_route_endpoint_accepts_openrouter_executor() -> None:
         template = str(payload["command_template"])
         assert "{{direction}}" in template
         assert template.startswith("openrouter-exec ")
+
+
+@pytest.mark.asyncio
+async def test_agent_route_endpoint_accepts_gemini_executor() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/api/agent/route", params={"task_type": "impl", "executor": "gemini"})
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["executor"] == "gemini"
+        assert payload["tier"] == "gemini"
+        assert str(payload["model"]).startswith("gemini/")
+        assert payload["provider"] == "gemini"
+        assert isinstance(payload["is_paid_provider"], bool)
+        template = str(payload["command_template"])
+        assert "{{direction}}" in template
+        assert template.startswith("gemini ")
