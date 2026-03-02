@@ -1559,7 +1559,7 @@ def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, 
     assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
 
 
-def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64(monkeypatch, tmp_path):
+def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
     t = [5300.0]
 
     def _mono():
@@ -1582,7 +1582,6 @@ def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64(monkey
     encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
-    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
     monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-refresh-runner")
 
     relogin_calls = {"count": 0}
@@ -1614,6 +1613,7 @@ def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64(monkey
         verbose=False,
         task_type="impl",
         model="openclaw/gpt-5.3-codex",
+        task_context={"runner_codex_oauth_session_b64": encoded},
     )
     assert done is True
     assert relogin_calls["count"] == 0
@@ -1632,6 +1632,205 @@ def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64(monkey
     loaded = json.loads(session_file.read_text(encoding="utf-8"))
     assert loaded.get("refresh_token") == "fresh-refresh"
     assert loaded.get("access_token") == "fresh-access"
+
+
+def test_run_one_task_cursor_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5400.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".cursor" / "auth.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"accessToken": "stale-access", "refreshToken": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "accessToken": "fresh-access",
+        "refreshToken": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CURSOR_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CURSOR_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "cursor:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_cursor_oauth_refresh_from_context",
+        command='agent "Return ok" --model auto',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/auto",
+        task_context={
+            "runner_cursor_auth_mode": "oauth",
+            "runner_cursor_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_cursor_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_cursor_oauth_session_refresh") or {}
+    assert context.get("runner_cursor_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_cursor_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "fresh-refresh"
+    assert loaded.get("accessToken") == "fresh-access"
+
+
+def test_run_one_task_gemini_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5420.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".gemini" / "oauth_creds.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"access_token": "stale-access", "refresh_token": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "access_token": "fresh-access",
+        "refresh_token": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_GEMINI_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_GEMINI_OAUTH_CREDS_FILE", str(session_file))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_WORKER_ID", "gemini:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_gemini_oauth_refresh_from_context",
+        command='gemini -p "Return ok" --model gemini-2.5-pro',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="gemini/gemini-2.5-pro",
+        task_context={
+            "runner_gemini_auth_mode": "oauth",
+            "runner_gemini_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_gemini_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_gemini_oauth_session_refresh") or {}
+    assert context.get("runner_gemini_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_gemini_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "fresh-refresh"
+    assert loaded.get("access_token") == "fresh-access"
+
+
+def test_run_one_task_claude_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5440.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".claude" / ".credentials.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"accessToken": "stale-access", "refreshToken": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "accessToken": "fresh-access",
+        "refreshToken": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CLAUDE_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CLAUDE_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "claude:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_claude_oauth_refresh_from_context",
+        command='claude -p "ok" --dangerously-skip-permissions',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="claude/sonnet",
+        task_context={
+            "runner_claude_auth_mode": "oauth",
+            "runner_claude_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_claude_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_claude_oauth_session_refresh") or {}
+    assert context.get("runner_claude_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_claude_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "fresh-refresh"
+    assert loaded.get("accessToken") == "fresh-access"
 
 
 def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):

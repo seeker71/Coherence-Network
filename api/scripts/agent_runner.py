@@ -3897,11 +3897,15 @@ def _bootstrap_codex_oauth_session_from_env(
     env: dict[str, str],
     task_id: str,
     log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
     overwrite_existing: bool = False,
 ) -> tuple[bool, str]:
-    encoded = str(env.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
-    if not encoded:
-        encoded = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_codex_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CODEX_OAUTH_SESSION_B64",
+    )
     if not encoded:
         return False, ""
     target_path = _codex_oauth_session_target_path(env)
@@ -3975,16 +3979,21 @@ def _attempt_codex_oauth_session_refresh_from_env(
     env: dict[str, str],
     task_id: str,
     log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
 ) -> tuple[bool, str]:
-    encoded = str(env.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
-    if not encoded:
-        encoded = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_B64", "")).strip()
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_codex_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CODEX_OAUTH_SESSION_B64",
+    )
     if not encoded:
         return False, "oauth_session_refresh_b64_missing"
     refreshed, detail = _bootstrap_codex_oauth_session_from_env(
         env=env,
         task_id=task_id,
         log=log,
+        task_ctx=task_ctx,
         overwrite_existing=True,
     )
     if refreshed:
@@ -4095,6 +4104,7 @@ def _configure_codex_cli_environment(
         env=env,
         task_id=task_id,
         log=log,
+        task_ctx=task_ctx,
     )
     env.pop("OPENAI_API_KEY", None)
     env.pop("OPENAI_ADMIN_API_KEY", None)
@@ -4336,6 +4346,33 @@ def _bootstrap_cursor_oauth_session_from_env(
     if existing_refresh_token or existing_access_token:
         return True, f"oauth_session_overwritten:{target_path}"
     return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_cursor_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_cursor_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_cursor_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
 
 
 def _configure_cursor_cli_environment(
@@ -4602,6 +4639,33 @@ def _bootstrap_gemini_oauth_session_from_env(
     return True, f"oauth_session_bootstrapped:{target_path}"
 
 
+def _attempt_gemini_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_gemini_oauth_session_b64",
+        env=env,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_gemini_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
+
+
 def _ensure_gemini_oauth_settings(
     *,
     env: dict[str, str],
@@ -4805,6 +4869,33 @@ def _bootstrap_claude_oauth_session_from_env(
     if existing_refresh_token or existing_access_token:
         return True, f"oauth_session_overwritten:{target_path}"
     return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_claude_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_claude_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_claude_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
 
 
 def _configure_claude_cli_environment(
@@ -5047,6 +5138,28 @@ def _codex_oauth_refresh_token_reused_error(output: str) -> bool:
     if "failed to refresh token: 401 unauthorized" in lowered:
         return True
     return False
+
+
+def _oauth_session_refresh_or_auth_error(output: str) -> bool:
+    lowered = (output or "").lower()
+    if not lowered:
+        return False
+    direct_markers = (
+        "refresh_token_reused",
+        "failed to refresh token",
+        "refresh token has already been used",
+        "invalid_grant",
+        "grant_type=refresh_token",
+        "reauthenticate",
+        "login required",
+        "not logged in",
+        "authentication required",
+    )
+    if any(marker in lowered for marker in direct_markers):
+        return True
+    has_token_context = any(marker in lowered for marker in ("oauth", "token", "auth"))
+    has_auth_error = any(marker in lowered for marker in ("unauthorized", "401", "forbidden", "invalid token"))
+    return bool(has_token_context and has_auth_error)
 
 
 def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dict[str, str] | None]:
@@ -5713,6 +5826,9 @@ def run_one_task(
     codex_model_alias: dict[str, str] | None = None
     claude_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
+    cursor_auth_state: dict[str, Any] | None = None
+    gemini_auth_state: dict[str, Any] | None = None
+    claude_auth_state: dict[str, Any] | None = None
     cli_bootstrap_ok = True
     cli_bootstrap_detail = ""
     cli_bootstrap_ok, cli_bootstrap_detail = _ensure_cli_for_command(
@@ -5731,7 +5847,7 @@ def run_one_task(
     popen_preexec_fn: Callable[[], None] | None = None
     command_exec_mode = "shell"
     if _uses_cursor_cli(command):
-        _configure_cursor_cli_environment(
+        cursor_auth_state = _configure_cursor_cli_environment(
             env=env,
             task_id=task_id,
             log=log,
@@ -5739,7 +5855,7 @@ def run_one_task(
         )
         log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
     elif _uses_gemini_cli(command):
-        _configure_gemini_cli_environment(
+        gemini_auth_state = _configure_gemini_cli_environment(
             env=env,
             task_id=task_id,
             log=log,
@@ -5763,7 +5879,7 @@ def run_one_task(
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
     elif _uses_claude_cli(command):
-        _configure_claude_cli_environment(
+        claude_auth_state = _configure_claude_cli_environment(
             env=env,
             task_id=task_id,
             log=log,
@@ -6698,6 +6814,7 @@ def run_one_task(
                                 env=env,
                                 task_id=task_id,
                                 log=log,
+                                task_ctx=task_ctx,
                             )
                         else:
                             session_refresh_detail = "oauth_session_refresh_already_attempted"
@@ -6832,6 +6949,222 @@ def run_one_task(
                         output = (
                             f"{output}\n[runner-model-fallback] "
                             "model unavailable after fallback attempt; not retrying fallback."
+                        )
+            elif _uses_cursor_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_session_refresh_attempted"))
+                auth_mode = str((cursor_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(cursor_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_cursor_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_cursor_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_cursor_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_cursor_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_cursor_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_cursor_auth_mode": "oauth",
+                            "runner_cursor_oauth_refresh_retry_attempted": True,
+                            "runner_cursor_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_cursor_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_cursor_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-cursor-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-cursor-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
+                        )
+            elif _uses_gemini_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_session_refresh_attempted"))
+                auth_mode = str((gemini_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(gemini_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_gemini_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_gemini_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_gemini_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_gemini_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_gemini_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_gemini_auth_mode": "oauth",
+                            "runner_gemini_oauth_refresh_retry_attempted": True,
+                            "runner_gemini_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_gemini_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_gemini_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-gemini-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-gemini-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
+                        )
+            elif _uses_claude_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_claude_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_claude_oauth_session_refresh_attempted"))
+                auth_mode = str((claude_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(claude_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_claude_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_claude_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_claude_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_claude_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_claude_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_claude_auth_mode": "oauth",
+                            "runner_claude_oauth_refresh_retry_attempted": True,
+                            "runner_claude_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_claude_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_claude_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-claude-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-claude-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
                         )
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
