@@ -210,6 +210,10 @@ def test_infer_executor_detects_openrouter_model():
     assert agent_runner._infer_executor('echo "task"', "openrouter/free") == "openrouter"
 
 
+def test_infer_executor_detects_gemini():
+    assert agent_runner._infer_executor('gemini -p "task"', "gemini/gemini-2.5-pro") == "gemini"
+
+
 def test_run_one_task_dispatches_openrouter_server_executor(monkeypatch, tmp_path):
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_WORKER_ID", "runner:test")
@@ -294,6 +298,44 @@ def test_run_one_task_cursor_oauth_mode_strips_api_key_env(monkeypatch, tmp_path
     assert captured_env.get("OPENAI_ADMIN_API_KEY", "") == ""
     assert captured_env.get("OPENAI_API_BASE", "") == ""
     assert captured_env.get("OPENAI_BASE_URL", "") == ""
+
+
+def test_run_one_task_gemini_forces_oauth_mode_and_strips_api_key_env(monkeypatch, tmp_path):
+    t = [1300.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    captured_env: dict[str, str] = {}
+
+    def _popen(*args, **kwargs):
+        env = kwargs.get("env") or {}
+        captured_env.clear()
+        captured_env.update({str(k): str(v) for k, v in env.items()})
+        return _Proc(returncode=0, stdout_text='{"result":"ok"}\n')
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key-should-not-be-used")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key-should-not-be-used")
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_gemini_oauth_mode",
+        command='gemini -p "Return ok" --model gemini-2.5-pro',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="gemini/gemini-2.5-pro",
+        task_context={"runner_gemini_auth_mode": "api_key"},
+    )
+    assert done is True
+    assert captured_env.get("GEMINI_API_KEY", "") == ""
+    assert captured_env.get("GOOGLE_API_KEY", "") == ""
 
 
 def test_run_one_task_claude_oauth_mode_strips_api_key_env(monkeypatch, tmp_path):
@@ -541,6 +583,7 @@ def test_cli_install_provider_for_command_detects_supported_providers():
     assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
     assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
     assert agent_runner._cli_install_provider_for_command('codex exec "run" --json') == "codex"
+    assert agent_runner._cli_install_provider_for_command('gemini -p "run" --model gemini-2.5-pro') == "gemini"
     assert agent_runner._cli_install_provider_for_command("pytest -q") == ""
 
 
@@ -1109,6 +1152,54 @@ def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monk
     assert loaded.get("refreshToken") == "claude-refresh-token"
     assert loaded.get("accessToken") == "claude-access-token"
     assert "apiKey" not in loaded
+
+
+def test_configure_gemini_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "access_token": "gemini-access-token",
+        "refresh_token": "gemini-refresh-token",
+        "apiKey": "should-be-removed",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_GEMINI_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_GEMINI_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_GEMINI_OAUTH_CREDS_FILE", raising=False)
+    monkeypatch.delenv("AGENT_GEMINI_SETTINGS_FILE", raising=False)
+
+    env = {
+        "HOME": str(tmp_path),
+        "GEMINI_API_KEY": "gemini-key",
+        "GOOGLE_API_KEY": "google-key",
+    }
+    auth = agent_runner._configure_gemini_cli_environment(
+        env=env,
+        task_id="task_gemini_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    assert auth["oauth_session"] is True
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
+    assert str(auth.get("oauth_settings_config_detail") or "").startswith(
+        ("oauth_settings_bootstrapped:", "oauth_settings_preserved_existing:")
+    )
+    assert "GEMINI_API_KEY" not in env
+    assert "GOOGLE_API_KEY" not in env
+    target = env.get("AGENT_GEMINI_OAUTH_CREDS_FILE") or ""
+    assert target.endswith("/.gemini/oauth_creds.json")
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "gemini-refresh-token"
+    assert loaded.get("access_token") == "gemini-access-token"
+    assert "apiKey" not in loaded
+    settings_target = env.get("AGENT_GEMINI_SETTINGS_FILE") or ""
+    assert settings_target.endswith("/.gemini/settings.json")
+    settings = json.loads(Path(settings_target).read_text(encoding="utf-8"))
+    security = settings.get("security") if isinstance(settings, dict) else {}
+    auth_settings = security.get("auth") if isinstance(security, dict) else {}
+    assert auth_settings.get("selectedType") == "oauth-personal"
+    assert auth_settings.get("enforcedType") == "oauth-personal"
 
 
 def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):
