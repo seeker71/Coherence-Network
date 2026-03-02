@@ -79,6 +79,7 @@
     "docs/system_audit/ai_agent_biweekly_summary_2026-03-02.md",
     "docs/system_audit/ai_agent_security_watch_2026-03-02.json",
     "docs/system_audit/ai_agent_security_watch_latest.json",
+    "docs/system_audit/model_executor_runs.jsonl",
     "specs/006-overnight-backlog.md"
   ],
   "change_intent": "process_only"
