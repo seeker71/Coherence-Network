@@ -48,7 +48,7 @@
     "web/package.json",
     "web/package-lock.json"
   ],
-  "change_intent": "dependency_conflict_resolution",
+  "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -60,7 +60,7 @@
     "run_url": "pending"
   },
   "deploy_validation": {
-    "status": "not_applicable",
+    "status": "pending",
     "environment": "github-pr"
   },
   "phase_gate": {
