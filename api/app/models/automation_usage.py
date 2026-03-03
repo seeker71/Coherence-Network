@@ -23,6 +23,9 @@ class UsageMetric(BaseModel):
     remaining: float | None = Field(default=None, ge=0.0)
     limit: float | None = Field(default=None, ge=0.0)
     window: str | None = Field(default=None, max_length=120)
+    validation_state: str | None = Field(default=None, max_length=40)
+    validation_detail: str | None = Field(default=None, max_length=400)
+    evidence_source: str | None = Field(default=None, max_length=200)
 
 
 class ProviderUsageSnapshot(BaseModel):

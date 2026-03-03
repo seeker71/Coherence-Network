@@ -69,6 +69,19 @@ async def get_provider_readiness(
     return report.model_dump(mode="json")
 
 
+@router.get("/automation/usage/daily-summary")
+async def get_automation_usage_daily_summary(
+    window_hours: int = Query(24, ge=1, le=24 * 30),
+    top_n: int = Query(3, ge=1, le=20),
+    force_refresh: bool = Query(False),
+) -> dict:
+    return automation_usage_service.daily_system_summary(
+        window_hours=window_hours,
+        top_n=top_n,
+        force_refresh=force_refresh,
+    )
+
+
 @router.post("/automation/usage/provider-validation/run")
 async def run_provider_validation_probes(
     required_providers: str = Query("", description="Comma-separated provider ids to probe"),

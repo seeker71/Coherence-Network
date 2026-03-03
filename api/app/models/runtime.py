@@ -91,3 +91,27 @@ class EndpointAttentionReport(BaseModel):
     total_endpoints: int = Field(ge=0)
     attention_count: int = Field(ge=0)
     endpoints: list[EndpointAttentionRow] = Field(default_factory=list)
+
+
+class WebViewPerformanceRow(BaseModel):
+    route: str = Field(min_length=1)
+    views: int = Field(ge=0)
+    p50_render_ms: float = Field(ge=0.0)
+    p95_render_ms: float = Field(ge=0.0)
+    average_render_ms: float = Field(ge=0.0)
+    average_api_call_count: float = Field(ge=0.0)
+    average_api_endpoint_count: float = Field(ge=0.0)
+    average_api_runtime_ms: float = Field(ge=0.0)
+    average_api_runtime_cost_estimate: float = Field(ge=0.0)
+    last_render_ms: float = Field(ge=0.0)
+    last_api_runtime_ms: float = Field(ge=0.0)
+    last_api_runtime_cost_estimate: float = Field(ge=0.0)
+    last_view_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class WebViewPerformanceReport(BaseModel):
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    window_seconds: int = Field(ge=60)
+    route_prefix: str | None = None
+    total_routes: int = Field(ge=0)
+    rows: list[WebViewPerformanceRow] = Field(default_factory=list)

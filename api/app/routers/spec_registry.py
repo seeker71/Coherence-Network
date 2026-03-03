@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
 from app.services import spec_registry_service
@@ -11,8 +11,13 @@ router = APIRouter()
 
 
 @router.get("/spec-registry", response_model=list[SpecRegistryEntry])
-async def list_specs(limit: int = Query(200, ge=1, le=1000)) -> list[SpecRegistryEntry]:
-    return spec_registry_service.list_specs(limit=limit)
+async def list_specs(
+    response: Response,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> list[SpecRegistryEntry]:
+    response.headers["x-total-count"] = str(spec_registry_service.count_specs())
+    return spec_registry_service.list_specs(limit=limit, offset=offset)
 
 
 @router.get("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)

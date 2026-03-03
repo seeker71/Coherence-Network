@@ -39,13 +39,33 @@ function copyRequestHeaders(request: NextRequest): Headers {
   return headers;
 }
 
-function copyResponseHeaders(upstream: Response): Headers {
+function routePath(pathSegments: string[]): string {
+  return `/${pathSegments.join("/")}`;
+}
+
+function resolveCacheControl(method: string, path: string, status: number): string {
+  if (method !== "GET" && method !== "HEAD") return "no-store";
+  if (status >= 400) return "no-store";
+  if (path.startsWith("/runtime/change-token")) return "private, max-age=5, stale-while-revalidate=5";
+  if (path.startsWith("/health")) return "private, max-age=5, stale-while-revalidate=10";
+  if (path.startsWith("/runtime/events")) return "private, max-age=10, stale-while-revalidate=15";
+  if (path.startsWith("/agent/tasks")) return "private, max-age=15, stale-while-revalidate=20";
+  if (path.startsWith("/inventory/flow") || path.startsWith("/inventory/system-lineage")) {
+    return "private, max-age=45, stale-while-revalidate=60";
+  }
+  if (path.startsWith("/runtime/ideas/summary") || path.startsWith("/inventory/endpoint-traceability")) {
+    return "private, max-age=30, stale-while-revalidate=45";
+  }
+  return "private, max-age=20, stale-while-revalidate=30";
+}
+
+function copyResponseHeaders(upstream: Response, method: string, path: string): Headers {
   const headers = new Headers();
   upstream.headers.forEach((value, key) => {
     if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
     headers.set(key, value);
   });
-  headers.set("cache-control", "no-store");
+  headers.set("cache-control", resolveCacheControl(method, path, upstream.status));
   return headers;
 }
 
@@ -56,6 +76,7 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
   }
 
   const upstreamUrl = buildUpstreamUrl(path, request.nextUrl.search);
+  const proxiedPath = routePath(path);
   const method = request.method.toUpperCase();
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -78,7 +99,7 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
     });
     const upstream = await Promise.race([fetchPromise, timeoutPromise]);
 
-    const headers = copyResponseHeaders(upstream);
+    const headers = copyResponseHeaders(upstream, method, proxiedPath);
     const responseBody = method === "HEAD" ? null : await upstream.arrayBuffer();
     return new NextResponse(responseBody, {
       status: upstream.status,

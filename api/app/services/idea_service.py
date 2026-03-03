@@ -10,6 +10,7 @@ from typing import Any
 
 from app.models.idea import (
     Idea,
+    PaginationInfo,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestion,
@@ -472,12 +473,23 @@ def _with_score(idea: Idea) -> IdeaWithScore:
     return IdeaWithScore(**idea.model_dump(), free_energy_score=round(_score(idea), 4), value_gap=round(value_gap, 4))
 
 
-def list_ideas(only_unvalidated: bool = False) -> IdeaPortfolioResponse:
+def list_ideas(
+    only_unvalidated: bool = False,
+    limit: int | None = None,
+    offset: int = 0,
+) -> IdeaPortfolioResponse:
     ideas = _read_ideas()
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
 
     ranked = sorted((_with_score(i) for i in ideas), key=lambda i: i.free_energy_score, reverse=True)
+    total_ranked = len(ranked)
+    safe_offset = max(0, int(offset))
+    safe_limit = None if limit is None else max(1, min(int(limit), 500))
+    if safe_limit is None:
+        page_items = ranked[safe_offset:]
+    else:
+        page_items = ranked[safe_offset:safe_offset + safe_limit]
     total_potential = sum(i.potential_value for i in ideas)
     total_actual = sum(i.actual_value for i in ideas)
     summary = IdeaSummary(
@@ -488,7 +500,14 @@ def list_ideas(only_unvalidated: bool = False) -> IdeaPortfolioResponse:
         total_actual_value=round(total_actual, 4),
         total_value_gap=round(max(total_potential - total_actual, 0.0), 4),
     )
-    return IdeaPortfolioResponse(ideas=ranked, summary=summary)
+    pagination = PaginationInfo(
+        total=total_ranked,
+        limit=safe_limit or max(total_ranked, 1),
+        offset=safe_offset,
+        returned=len(page_items),
+        has_more=(safe_offset + len(page_items)) < total_ranked,
+    )
+    return IdeaPortfolioResponse(ideas=page_items, summary=summary, pagination=pagination)
 
 
 def get_idea(idea_id: str) -> IdeaWithScore | None:

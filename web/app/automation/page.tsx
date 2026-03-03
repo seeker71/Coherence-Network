@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { UI_RUNTIME_WINDOW } from "@/lib/egress";
 
 type UsageMetric = {
   id: string;
@@ -103,6 +104,8 @@ type ProviderValidationResponse = {
   providers: ProviderValidationRow[];
 };
 
+export const revalidate = 120;
+
 async function loadAutomationData(): Promise<{
   usage: AutomationUsageResponse;
   alerts: UsageAlertResponse;
@@ -110,13 +113,15 @@ async function loadAutomationData(): Promise<{
   validation: ProviderValidationResponse;
 }> {
   const api = getApiBase();
+  const validationParams = new URLSearchParams({
+    runtime_window_seconds: String(UI_RUNTIME_WINDOW),
+    min_execution_events: "1",
+  });
   const [usageRes, alertsRes, readinessRes, validationRes] = await Promise.all([
-    fetch(`${api}/api/automation/usage`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/readiness`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1`, {
-      cache: "no-store",
-    }),
+    fetch(`${api}/api/automation/usage`),
+    fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`),
+    fetch(`${api}/api/automation/usage/readiness`),
+    fetch(`${api}/api/automation/usage/provider-validation?${validationParams.toString()}`),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);

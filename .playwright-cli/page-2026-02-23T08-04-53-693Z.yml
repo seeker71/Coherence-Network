@@ -1,0 +1,297 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: http://127.0.0.1:18137/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "OFF"
+      - text: "| path"
+      - code [ref=e34]: /usage
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /usage
+      - text: "| idea"
+      - code [ref=e41]: coherence-network-value-attribution
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e45] [cursor=pointer]:
+        - /url: /flow
+      - link "Contribute" [ref=e46] [cursor=pointer]:
+        - /url: /contribute
+      - link "Ideas" [ref=e47] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e48] [cursor=pointer]:
+        - /url: /specs
+      - link "Automation" [ref=e49] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e50] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e51] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e52] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e53] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e54] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e55] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e56] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e57] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e58] [cursor=pointer]:
+        - /url: /api-health
+      - link "Gates" [ref=e59] [cursor=pointer]:
+        - /url: /gates
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/coherence-network-value-attribution
+      - link "Runtime summary" [ref=e61] [cursor=pointer]:
+        - /url: http://127.0.0.1:18137/api/runtime/ideas/summary?seconds=21600
+      - link "Full-view runtime + cost" [ref=e62] [cursor=pointer]:
+        - /url: http://127.0.0.1:18137/api/runtime/web/views/summary?seconds=21600
+      - link "Friction report" [ref=e63] [cursor=pointer]:
+        - /url: http://127.0.0.1:18137/api/friction/report?window_days=7
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - link "← Home" [ref=e66] [cursor=pointer]:
+        - /url: /
+      - link "Portfolio" [ref=e67] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Ideas" [ref=e68] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e69] [cursor=pointer]:
+        - /url: /specs
+      - link "Flow" [ref=e70] [cursor=pointer]:
+        - /url: /flow
+      - link "Contributors" [ref=e71] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e72] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e73] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e74] [cursor=pointer]:
+        - /url: /tasks
+      - link "Agent" [ref=e75] [cursor=pointer]:
+        - /url: /agent
+      - link "Gates" [ref=e76] [cursor=pointer]:
+        - /url: /gates
+    - heading "Usage" [level=1] [ref=e77]
+    - paragraph [ref=e78]: Runtime telemetry + friction summary (machine data rendered for humans).
+    - generic [ref=e79]:
+      - heading "Friction (24h)" [level=2] [ref=e80]
+      - paragraph [ref=e81]: total_events 12 | open 4
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - paragraph [ref=e84]: Top block types
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - link "task_failure" [ref=e87] [cursor=pointer]:
+                - /url: /friction
+              - generic [ref=e88]: "4"
+            - listitem [ref=e89]:
+              - link "tool_failure" [ref=e90] [cursor=pointer]:
+                - /url: /friction
+              - generic [ref=e91]: "8"
+        - generic [ref=e92]:
+          - paragraph [ref=e93]: Top stages
+          - list [ref=e94]:
+            - listitem [ref=e95]:
+              - generic [ref=e96]: agent_runner
+              - generic [ref=e97]: "12"
+      - generic [ref=e98]:
+        - paragraph [ref=e99]: Top entry points
+        - list [ref=e100]:
+          - listitem [ref=e101]:
+            - generic [ref=e102]: friction:task_failure
+            - generic [ref=e103]: events 4 | open
+          - listitem [ref=e104]:
+            - generic [ref=e105]: friction:tool_failure
+            - generic [ref=e106]: events 8 | resolved
+    - generic [ref=e107]:
+      - heading "Host Runner (24h)" [level=2] [ref=e108]
+      - paragraph [ref=e109]: runs 69 | failed 16 | completed 53 | tool events 0 | tool failures 0
+      - list [ref=e110]:
+        - listitem [ref=e111]:
+          - generic [ref=e112]: impl
+          - generic [ref=e113]: total 5 | completed 2 | failed 3
+        - listitem [ref=e114]:
+          - generic [ref=e115]: spec
+          - generic [ref=e116]: total 64 | completed 51 | failed 13
+      - generic [ref=e117]:
+        - paragraph [ref=e118]: Telemetry Contract Gaps
+        - list [ref=e119]:
+          - listitem [ref=e120]: failed host-runner tasks (16) exceed friction events (12)
+          - listitem [ref=e121]: failed host-runner tasks (16) exceed failed worker tool events (0)
+          - listitem [ref=e122]: execution tracked_runs is zero while host-runner task runs exist
+    - generic [ref=e123]:
+      - heading "Providers + Limits" [level=2] [ref=e124]
+      - list [ref=e125]:
+        - listitem [ref=e126]:
+          - generic [ref=e127]:
+            - generic [ref=e128]: github (ok)
+            - generic [ref=e129]: provider_api
+          - paragraph [ref=e130]: "GitHub REST core requests: used 185 requests | limit 5000 | remaining 4815 | window hourly"
+        - listitem [ref=e131]:
+          - generic [ref=e132]:
+            - generic [ref=e133]: openai-codex (ok)
+            - generic [ref=e134]: provider_api
+          - paragraph [ref=e135]: "Runtime task runs: used 180 tasks | window rolling"
+        - listitem [ref=e136]:
+          - generic [ref=e137]:
+            - generic [ref=e138]: openrouter (ok)
+            - generic [ref=e139]: provider_api
+          - paragraph [ref=e140]: "OpenRouter visible models: used 337 requests | window probe"
+        - listitem [ref=e141]:
+          - generic [ref=e142]:
+            - generic [ref=e143]: railway (ok)
+            - generic [ref=e144]: provider_api
+          - paragraph [ref=e145]: "Railway API probe: used 1 requests | window probe"
+        - listitem [ref=e146]:
+          - generic [ref=e147]:
+            - generic [ref=e148]: coherence-internal (ok)
+            - generic [ref=e149]: runtime_events
+          - paragraph [ref=e150]: "Tracked task runs: used 0 tasks | window rolling"
+        - listitem [ref=e151]:
+          - generic [ref=e152]:
+            - generic [ref=e153]: anthropic (ok)
+            - generic [ref=e154]: configuration_only
+          - paragraph [ref=e155]: No usage metric yet
+        - listitem [ref=e156]:
+          - generic [ref=e157]:
+            - generic [ref=e158]: claude (ok)
+            - generic [ref=e159]: provider_api
+          - paragraph [ref=e160]: "Claude visible models: used 9 requests | window probe"
+        - listitem [ref=e161]:
+          - generic [ref=e162]:
+            - generic [ref=e163]: cursor (unavailable)
+            - generic [ref=e164]: configuration_only
+          - paragraph [ref=e165]: No usage metric yet
+        - listitem [ref=e166]:
+          - generic [ref=e167]:
+            - generic [ref=e168]: openai (degraded)
+            - generic [ref=e169]: provider_api
+          - paragraph [ref=e170]: No usage metric yet
+        - listitem [ref=e171]:
+          - generic [ref=e172]:
+            - generic [ref=e173]: openclaw (ok)
+            - generic [ref=e174]: configuration_only
+          - paragraph [ref=e175]: "Runtime task runs: used 89 tasks | window rolling"
+        - listitem [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]: supabase (unavailable)
+            - generic [ref=e179]: configuration_only
+          - paragraph [ref=e180]: No usage metric yet
+    - generic [ref=e181]:
+      - heading "Top Tool Usage + Attention (24h)" [level=2] [ref=e182]
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - paragraph [ref=e185]: Top tools
+          - list [ref=e186]:
+            - listitem [ref=e187]: No worker tool events in window.
+        - generic [ref=e188]:
+          - paragraph [ref=e189]: Top attention areas
+          - list [ref=e190]:
+            - listitem [ref=e191]:
+              - generic [ref=e192]: /api/health-proxy
+              - generic [ref=e193]: score 90.9 | events 41
+            - listitem [ref=e194]:
+              - generic [ref=e195]: /api/automation/usage
+              - generic [ref=e196]: score 60.0 | events 2
+            - listitem [ref=e197]:
+              - generic [ref=e198]: /api/automation/usage/subscription-estimator
+              - generic [ref=e199]: score 49.0 | events 21
+            - listitem [ref=e200]:
+              - generic [ref=e201]: /api/friction/report
+              - generic [ref=e202]: score 40.0 | events 23
+            - listitem [ref=e203]:
+              - generic [ref=e204]: /api/health
+              - generic [ref=e205]: score 33.8 | events 43
+            - listitem [ref=e206]:
+              - generic [ref=e207]: /api/runtime/ideas/summary
+              - generic [ref=e208]: score 33.3 | events 22
+            - listitem [ref=e209]:
+              - generic [ref=e210]: /api/agent/tasks
+              - generic [ref=e211]: score 32.8 | events 230
+            - listitem [ref=e212]:
+              - generic [ref=e213]: /api/runtime/events
+              - generic [ref=e214]: score 28.4 | events 41
+    - generic [ref=e215]:
+      - heading "Runtime Cost by Idea" [level=2] [ref=e216]
+      - paragraph [ref=e217]: window_seconds 21600 | page 1
+      - generic [ref=e218]:
+        - generic [ref=e219]: Previous
+        - generic [ref=e220]: Next
+      - list [ref=e221]:
+        - listitem [ref=e222]:
+          - link "portfolio-governance" [ref=e223] [cursor=pointer]:
+            - /url: /ideas/portfolio-governance
+          - generic [ref=e224]: events 1826 | runtime 2271233.76ms | cost $4.542468
+        - listitem [ref=e225]:
+          - link "oss-interface-alignment" [ref=e226] [cursor=pointer]:
+            - /url: /ideas/oss-interface-alignment
+          - generic [ref=e227]: events 151 | runtime 721550.67ms | cost $1.443101
+        - listitem [ref=e228]:
+          - link "coherence-network-agent-pipeline" [ref=e229] [cursor=pointer]:
+            - /url: /ideas/coherence-network-agent-pipeline
+          - generic [ref=e230]: events 23 | runtime 494524.83ms | cost $0.989050
+    - generic [ref=e231]:
+      - heading "Full View Render + API Cost" [level=2] [ref=e232]
+      - paragraph [ref=e233]: "Measured after data is loaded (`web_view_complete` beacon): render time and summed API runtime/cost per route."
+      - list [ref=e234]:
+        - listitem [ref=e235]: No full-view telemetry yet. Visit pages and refresh this screen.
+  - button "Open Next.js Dev Tools" [ref=e241] [cursor=pointer]:
+    - img [ref=e242]
+  - alert [ref=e245]

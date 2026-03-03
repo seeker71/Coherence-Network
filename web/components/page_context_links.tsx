@@ -86,7 +86,7 @@ const CONTEXTS: Record<string, ContextDef> = {
     ideaId: "coherence-network-api-runtime",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/api/inventory/system-lineage", label: "System lineage" },
+      { href: "/api/spec-registry", label: "Spec registry API" },
       { href: "/api/inventory/routes/canonical", label: "Canonical routes" },
     ],
   },
@@ -103,7 +103,8 @@ const CONTEXTS: Record<string, ContextDef> = {
     ideaId: "coherence-network-value-attribution",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/api/runtime/ideas/summary?seconds=86400", label: "Runtime summary" },
+      { href: "/api/runtime/ideas/summary?seconds=21600", label: "Runtime summary" },
+      { href: "/api/runtime/web/views/summary?seconds=21600", label: "Full-view runtime + cost" },
       { href: "/api/friction/report?window_days=7", label: "Friction report" },
     ],
   },
