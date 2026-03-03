@@ -135,7 +135,9 @@ type FlowSearchParams = Promise<{
   contributor_id?: string | string[];
 }>;
 
-export const revalidate = 90;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 function normalizeFilter(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return (value[0] || "").trim();
@@ -166,6 +168,7 @@ async function loadDataForIdea(ideaId: string): Promise<{
 }> {
   const API = getApiBase();
   const flowParams = buildFlowSearchParams({ ideaId });
+  flowParams.set("include_internal_ideas", "true");
   const [flowData, contributorData, contributionData] = await Promise.all([
     fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, undefined, 5000),
     fetchJsonOrNull<Contributor[]>(`${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`, undefined, 5000),
