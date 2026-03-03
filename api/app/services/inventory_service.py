@@ -5579,20 +5579,16 @@ def build_idea_cards_feed(
         manifestation_value = manifestation_raw.value if hasattr(manifestation_raw, "value") else str(manifestation_raw)
 
         flow_state = _idea_card_state(flow_row) if flow_row else "none"
-        manifestation_state = _idea_card_state_from_manifestation(manifestation_value)
+        manifestation_state = _idea_card_state_from_manifestation(
+            manifestation_value
+        )
         state_value = flow_state
         if _IDEA_CARD_STATE_ORDER.get(manifestation_state, 0) > _IDEA_CARD_STATE_ORDER.get(state_value, 0):
             state_value = manifestation_state
 
         idea_signals = flow_row.get("idea_signals") if isinstance(flow_row, dict) else {}
-        potential_value = _safe_float(
-            getattr(idea_model, "potential_value", None),
-            _safe_float(idea_signals.get("potential_value")),
-        )
-        actual_value = _safe_float(
-            getattr(idea_model, "actual_value", None),
-            _safe_float(idea_signals.get("actual_value")),
-        )
+        potential_value = _safe_float(getattr(idea_model, "potential_value", None), _safe_float(idea_signals.get("potential_value")))
+        actual_value = _safe_float(getattr(idea_model, "actual_value", None), _safe_float(idea_signals.get("actual_value")))
         value_gap = round(
             max(
                 _safe_float(idea_signals.get("value_gap")),
@@ -5603,10 +5599,7 @@ def build_idea_cards_feed(
         measured_contribution = _safe_float((flow_row.get("contributions") or {}).get("measured_value_total"))
         measured_value = round(max(measured_contribution, actual_value), 4)
         estimated_cost = max(
-            _safe_float(
-                getattr(idea_model, "estimated_cost", None),
-                _safe_float(idea_signals.get("estimated_cost")),
-            ),
+            _safe_float(getattr(idea_model, "estimated_cost", None), _safe_float(idea_signals.get("estimated_cost"))),
             0.0,
         )
         measured_roi = round((measured_value / estimated_cost), 4) if estimated_cost > 0 else round(measured_value, 4)
@@ -5671,6 +5664,7 @@ def build_idea_cards_feed(
             }
         )
 
+    # Facets for filter UIs.
     state_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_STATE_ORDER}
     attention_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_ATTENTION_ORDER}
     for row in candidates:
