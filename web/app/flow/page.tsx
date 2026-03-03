@@ -170,9 +170,9 @@ async function loadDataForIdea(ideaId: string): Promise<{
   const flowParams = buildFlowSearchParams({ ideaId });
   flowParams.set("include_internal_ideas", "true");
   const [flowData, contributorData, contributionData] = await Promise.all([
-    fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, undefined, 5000),
-    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`, undefined, 5000),
-    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`, undefined, 5000),
+    fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`, { cache: "no-store" }, 5000),
   ]);
 
   return {
