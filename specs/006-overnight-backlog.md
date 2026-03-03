@@ -90,3 +90,6 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 72. Add smoke test script: curl health, pipeline-status, create minimal task
 73. Consolidate duplicate logic between project_manager and overnight_orchestrator if any
 74. Expand docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md per recent work
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

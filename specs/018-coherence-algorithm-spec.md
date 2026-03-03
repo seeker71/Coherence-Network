@@ -41,3 +41,7 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 
 - Actual weight values require human approval
 - Coherence formula changes require needs-decision
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

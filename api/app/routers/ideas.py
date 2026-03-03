@@ -46,6 +46,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         description=data.description,
         potential_value=data.potential_value,
         estimated_cost=data.estimated_cost,
+        resistance_risk=data.resistance_risk,
         confidence=data.confidence,
         interfaces=data.interfaces,
         open_questions=data.open_questions,
@@ -62,6 +63,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
         for field in (
             data.actual_value,
             data.actual_cost,
+            data.resistance_risk,
             data.confidence,
             data.manifestation_status,
         )
@@ -72,6 +74,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
         idea_id=idea_id,
         actual_value=data.actual_value,
         actual_cost=data.actual_cost,
+        resistance_risk=data.resistance_risk,
         confidence=data.confidence,
         manifestation_status=data.manifestation_status,
     )

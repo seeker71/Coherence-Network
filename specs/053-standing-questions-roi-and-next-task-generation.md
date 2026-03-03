@@ -33,3 +33,7 @@ Creates a task in the agent task store and returns task metadata.
 - `api/app/routers/inventory.py`
 - `api/tests/test_inventory_api.py`
 
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -193,3 +193,6 @@ Organization:
 - [ ] Approval required for indexer data source selection and processing approach
 - [ ] Approval required for API endpoint design and naming conventions
 - [ ] Approval required for database connection and configuration approach
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

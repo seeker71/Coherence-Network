@@ -17,3 +17,7 @@ Add a recurring maintainability review that scans architecture quality from top-
 - `api/tests/test_maintainability_audit_service.py`
 - `python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression`
 - Workflow: `.github/workflows/maintainability-architecture-audit.yml`
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

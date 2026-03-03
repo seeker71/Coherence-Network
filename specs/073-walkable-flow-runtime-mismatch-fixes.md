@@ -31,3 +31,7 @@ Fix public walkability mismatches discovered post-deploy:
 - `cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_contributions.py`
 - `cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_walkable-flow-runtime-mismatch-fixes.json`
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

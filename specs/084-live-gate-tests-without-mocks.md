@@ -24,3 +24,7 @@ cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py
 ## Out of Scope
 - Rewriting every unit test that uses local monkeypatch for pure-function behavior.
 - Refactoring release gate implementation logic.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

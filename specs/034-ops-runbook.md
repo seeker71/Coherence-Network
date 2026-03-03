@@ -49,3 +49,7 @@ N/A.
 ## Decision Gates (if any)
 
 None. Doc-only change.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

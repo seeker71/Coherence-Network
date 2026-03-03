@@ -124,7 +124,7 @@ STANDING_QUESTION_TEXT = (
     "and if it is measured how can that measurement be improved?"
 )
 
-_TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": []}
+_TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
 REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = ("federated-instance-aggregation",)
 
@@ -243,9 +243,11 @@ def _tracked_idea_ids_from_local(max_files: int = 400) -> list[str]:
 
 def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> list[str]:
     now = time.time()
+    cache_key = f"{_tracking_repository()}::{_tracking_ref()}"
     cached_ids = _TRACKED_IDEA_CACHE.get("idea_ids")
     if (
         isinstance(cached_ids, list)
+        and _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
         and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
     ):
         return [x for x in cached_ids if isinstance(x, str) and x.strip()]
@@ -285,12 +287,24 @@ def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> 
         return []
 
     result = sorted(out)
+    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
     _TRACKED_IDEA_CACHE["idea_ids"] = result
     _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
     return result
 
 
+def _should_include_default_tracked_ideas() -> bool:
+    # When callers isolate ideas into a custom portfolio path (common in tests),
+    # do not implicitly pull tracked idea ids from repo-global evidence unless
+    # the evidence source is explicitly provided.
+    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR"):
+        return True
+    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+
+
 def _tracked_idea_ids() -> list[str]:
+    if not _should_include_default_tracked_ideas():
+        return []
     local = _tracked_idea_ids_from_local()
     if local:
         return local
@@ -507,6 +521,7 @@ def create_idea(
     description: str,
     potential_value: float,
     estimated_cost: float,
+    resistance_risk: float = 1.0,
     confidence: float = 0.5,
     interfaces: list[str] | None = None,
     open_questions: list[IdeaQuestionCreate] | None = None,
@@ -523,7 +538,7 @@ def create_idea(
         actual_value=0.0,
         estimated_cost=estimated_cost,
         actual_cost=0.0,
-        resistance_risk=1.0,
+        resistance_risk=max(0.0, resistance_risk),
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=ManifestationStatus.NONE,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
@@ -584,6 +599,7 @@ def update_idea(
     idea_id: str,
     actual_value: float | None = None,
     actual_cost: float | None = None,
+    resistance_risk: float | None = None,
     confidence: float | None = None,
     manifestation_status: ManifestationStatus | None = None,
 ) -> IdeaWithScore | None:
@@ -597,6 +613,8 @@ def update_idea(
             idea.actual_value = actual_value
         if actual_cost is not None:
             idea.actual_cost = actual_cost
+        if resistance_risk is not None:
+            idea.resistance_risk = resistance_risk
         if confidence is not None:
             idea.confidence = confidence
         if manifestation_status is not None:
