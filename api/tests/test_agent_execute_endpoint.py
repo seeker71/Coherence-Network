@@ -588,6 +588,19 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
 
         friction = await client.get("/api/friction/events?status=open")
         assert friction.status_code == 200
+        matching = [
+            item
+            for item in friction.json()
+            if item.get("block_type") == "usage_window_budget_exceeded"
+            and "Paid-provider usage blocked" in item.get("notes", "")
+        ]
+        assert matching
+        row = matching[0]
+        assert row.get("task_id") == task["id"]
+        assert row.get("provider")
+        assert row.get("billing_provider")
+        assert row.get("tool") == "agent-task-execution-summary"
+        assert row.get("model")
         assert any(
             item.get("block_type") == "usage_window_budget_exceeded"
             and "Paid-provider usage blocked" in item.get("notes", "")
@@ -677,6 +690,19 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_b
 
         friction = await client.get("/api/friction/events?status=open")
         assert friction.status_code == 200
+        matching = [
+            item
+            for item in friction.json()
+            if item.get("block_type") == "provider_usage_limit_exceeded"
+            and "provider quota policy" in item.get("notes", "")
+        ]
+        assert matching
+        row = matching[0]
+        assert row.get("task_id") == task["id"]
+        assert row.get("provider")
+        assert row.get("billing_provider")
+        assert row.get("tool") == "agent-task-execution-summary"
+        assert row.get("model")
         assert any(
             item.get("block_type") == "provider_usage_limit_exceeded"
             and "provider quota policy" in item.get("notes", "")

@@ -27,6 +27,12 @@ interface FrictionReport {
 interface FrictionEvent {
   id: string;
   timestamp: string;
+  task_id?: string | null;
+  run_id?: string | null;
+  provider?: string | null;
+  billing_provider?: string | null;
+  tool?: string | null;
+  model?: string | null;
   stage: string;
   block_type: string;
   severity: string;
@@ -34,6 +40,8 @@ interface FrictionEvent {
   status: string;
   energy_loss_estimate: number;
   cost_of_delay: number;
+  resolution_action?: string | null;
+  notes?: string | null;
 }
 
 interface FrictionEntryPoint {
@@ -215,6 +223,13 @@ export default function FrictionPage() {
                       {event.owner}
                     </Link>{" "}
                     | energy {event.energy_loss_estimate} | delay {event.cost_of_delay}
+                  </p>
+                  <p className="text-muted-foreground">
+                    task {event.task_id || "-"} | tool {event.tool || "-"} | provider{" "}
+                    {event.provider || "-"}/{event.billing_provider || "-"} | model {event.model || "-"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    resolution_action {event.resolution_action || "-"}
                   </p>
                 </li>
               ))}

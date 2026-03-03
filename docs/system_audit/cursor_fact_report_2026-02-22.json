@@ -28,7 +28,7 @@
       "stdout": "\u001b[2K\u001b[G\n Starting login process...\n\n\u001b[2K\u001b[1A\u001b[2K\u001b[1A\u001b[2K\u001b[G Not logged in"
     }
   },
-  "generated_at": "2026-02-22T10:33:38Z",
+  "generated_at": "2026-02-22T17:57:53Z",
   "local_cursor_guard_decision": {
     "allowed": true,
     "blocked_metrics": [],
@@ -38,29 +38,18 @@
     "status": "unavailable"
   },
   "local_cursor_provider_snapshot": {
-    "actual_current_usage": 16.0,
-    "actual_current_usage_unit": "tasks",
+    "actual_current_usage": null,
+    "actual_current_usage_unit": null,
     "capacity_tasks_per_day": null,
-    "collected_at": "2026-02-22T10:33:37.239514Z",
+    "collected_at": "2026-02-22T17:57:51.849496Z",
     "cost_usd": null,
     "data_source": "provider_cli",
-    "id": "provider_cursor_1771756417",
+    "id": "provider_cursor_1771783071",
     "kind": "custom",
-    "metrics": [
-      {
-        "id": "runtime_task_runs",
-        "label": "Runtime task runs",
-        "limit": null,
-        "remaining": null,
-        "unit": "tasks",
-        "used": 16.0,
-        "window": "rolling"
-      }
-    ],
+    "metrics": [],
     "notes": [
       "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
-      "cursor_cli_ready: 2026.01.28-fd13201",
-      "provider observed in runtime usage but key/config is missing or provider checks are failing"
+      "cursor_cli_ready: 2026.01.28-fd13201"
     ],
     "official_records": [],
     "provider": "cursor",
@@ -75,8 +64,7 @@
       },
       "missing_env_keys": [
         "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
-      ],
-      "runtime_task_runs": 16
+      ]
     },
     "status": "unavailable",
     "usage_per_time": null,
@@ -86,38 +74,9 @@
   "local_runtime_usage": {
     "by_model": {},
     "execution": {
-      "by_agent": {
-        "runner-a": {
-          "completed": 0,
-          "count": 4,
-          "failed": 4
-        },
-        "unknown": {
-          "completed": 0,
-          "count": 10,
-          "failed": 10
-        }
-      },
-      "by_executor": {
-        "cursor": {
-          "completed": 0,
-          "count": 10,
-          "failed": 10
-        },
-        "openclaw": {
-          "completed": 0,
-          "count": 4,
-          "failed": 4
-        }
-      },
-      "by_tool": {
-        "agent-task-completion": {
-          "completed": 0,
-          "count": 14,
-          "failed": 14,
-          "success_rate": 0.0
-        }
-      },
+      "by_agent": {},
+      "by_executor": {},
+      "by_tool": {},
       "codex_runs": 0,
       "coverage": {
         "completed_or_failed_tasks": 0,
@@ -125,194 +84,11 @@
         "tracked_task_runs": 0,
         "untracked_task_ids": []
       },
-      "failed_runs": 14,
-      "recent_runs": [
-        {
-          "agent_id": "runner-a",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_3e23b64b51ff",
-          "executor": "openclaw",
-          "is_openai_codex": false,
-          "provider": "openai-codex",
-          "recorded_at": "2026-02-22T10:13:50.373249+00:00",
-          "runtime_ms": 3700004.031,
-          "status_code": 500,
-          "task_id": "task_225d93cc1b2eea28",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_efa07375a63c",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:13:50.174266+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_8abe996377d2d1f0",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_ee44e35e59ae",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:13:50.108117+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_bca7bcf445490fef",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "runner-a",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_e9fa3152b4d5",
-          "executor": "openclaw",
-          "is_openai_codex": false,
-          "provider": "openai-codex",
-          "recorded_at": "2026-02-22T10:11:12.743312+00:00",
-          "runtime_ms": 3700004.499,
-          "status_code": 500,
-          "task_id": "task_f1981d2551f65361",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_a78b689b7eba",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:11:12.578578+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_aea455770f65840e",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_ef7734e480cc",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:11:12.530332+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_7d12d3fbd1db962b",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_a7bcd9c98c8f",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:09:51.486813+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_eea9925f08ba228d",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_1fb71d340360",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "cursor",
-          "recorded_at": "2026-02-22T10:09:51.441350+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_6f89c0813259575c",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "runner-a",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_39bf7615268e",
-          "executor": "openclaw",
-          "is_openai_codex": false,
-          "provider": "openai-codex",
-          "recorded_at": "2026-02-22T09:58:34.834687+00:00",
-          "runtime_ms": 3700004.175,
-          "status_code": 500,
-          "task_id": "task_816e514956c2c6ab",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_2c4363783050",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "openrouter",
-          "recorded_at": "2026-02-22T09:58:34.726415+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_5a3c95141c9e8426",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_507e7a165de7",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "openrouter",
-          "recorded_at": "2026-02-22T09:58:34.698828+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_da84079b330d1031",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "runner-a",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_a87cbd9b8698",
-          "executor": "openclaw",
-          "is_openai_codex": false,
-          "provider": "openai-codex",
-          "recorded_at": "2026-02-22T09:56:20.153500+00:00",
-          "runtime_ms": 3700004.604,
-          "status_code": 500,
-          "task_id": "task_dcb35aaa11722951",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_ab9e0f0a1ee2",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "openrouter",
-          "recorded_at": "2026-02-22T09:56:20.091892+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_997ab29baf712196",
-          "tool": "agent-task-completion"
-        },
-        {
-          "agent_id": "unknown",
-          "endpoint": "/tool:agent-task-completion",
-          "event_id": "rt_dcc672a7eec3",
-          "executor": "cursor",
-          "is_openai_codex": false,
-          "provider": "openrouter",
-          "recorded_at": "2026-02-22T09:56:20.086952+00:00",
-          "runtime_ms": 0.1,
-          "status_code": 500,
-          "task_id": "task_1c1d41f68a47011d",
-          "tool": "agent-task-completion"
-        }
-      ],
-      "success_rate": 0.0,
+      "failed_runs": 0,
+      "recent_runs": [],
+      "success_rate": 1.0,
       "success_runs": 0,
-      "tracked_runs": 14
+      "tracked_runs": 0
     }
   },
   "official_sources": [
@@ -325,7 +101,7 @@
     "usage_overview": {
       "error": "",
       "json": {
-        "generated_at": "2026-02-22T10:32:34.058333Z",
+        "generated_at": "2026-02-22T17:58:12.612744Z",
         "limit_coverage": {
           "coverage_ratio": 0.1,
           "providers_considered": 10,
@@ -346,13 +122,13 @@
         },
         "providers": [
           {
-            "actual_current_usage": 0.0,
+            "actual_current_usage": 4.0,
             "actual_current_usage_unit": "tasks",
-            "capacity_tasks_per_day": 0.0,
-            "collected_at": "2026-02-22T10:32:17.323254Z",
+            "capacity_tasks_per_day": 96.0,
+            "collected_at": "2026-02-22T17:57:53.311452Z",
             "cost_usd": null,
             "data_source": "runtime_events",
-            "id": "provider_internal_1771756337",
+            "id": "provider_internal_1771783073",
             "kind": "internal",
             "metrics": [
               {
@@ -361,7 +137,7 @@
                 "limit": null,
                 "remaining": null,
                 "unit": "tasks",
-                "used": 0.0,
+                "used": 4.0,
                 "window": "rolling"
               },
               {
@@ -379,7 +155,7 @@
                 "limit": null,
                 "remaining": null,
                 "unit": "tasks",
-                "used": 194.0,
+                "used": 258.0,
                 "window": "rolling"
               }
             ],
@@ -393,61 +169,114 @@
             "provider": "coherence-internal",
             "raw": {
               "execution": {
-                "by_agent": {},
-                "by_executor": {},
-                "by_tool": {},
-                "codex_runs": 0,
+                "by_agent": {
+                  "openai-codex": {
+                    "completed": 4,
+                    "count": 4,
+                    "failed": 0
+                  }
+                },
+                "by_executor": {
+                  "openai-codex": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0
+                  },
+                  "openclaw": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0
+                  }
+                },
+                "by_tool": {
+                  "agent-task-completion": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0,
+                    "success_rate": 1.0
+                  },
+                  "codex": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0,
+                    "success_rate": 1.0
+                  }
+                },
+                "codex_runs": 4,
                 "coverage": {
-                  "completed_or_failed_tasks": 194,
-                  "coverage_rate": 0.0,
-                  "tracked_task_runs": 0,
+                  "completed_or_failed_tasks": 260,
+                  "coverage_rate": 0.0077,
+                  "tracked_task_runs": 2,
                   "untracked_task_ids": [
                     "task_0022f6fa6d2d5a37",
                     "task_00e1beca1e8e4797",
                     "task_031dc02a66931022",
+                    "task_034efcd86fae8945",
+                    "task_03581333cae0c266",
                     "task_0372e779917fb6d8",
+                    "task_059c66a3e5056866",
                     "task_059f58545ff10457",
                     "task_05b055d0332f65d0",
+                    "task_05d626a8c16a1d47",
                     "task_06ff93a6da0e40ff",
                     "task_073c03fbc5232ccd",
                     "task_07ba8436e3c4290d",
+                    "task_0828a97167e6dbf9",
                     "task_08ddee1921c1a9fd",
                     "task_08e05afaa93c89e6",
                     "task_09694a12f3e51168",
                     "task_0a467386309d53c3",
+                    "task_0a7038015ddc54ec",
                     "task_0a814c000bc817e6",
                     "task_0b3b26af4ddbb452",
+                    "task_0b71a9d8aafa64a3",
+                    "task_0ceefe3c98320f9e",
+                    "task_0e42847d9d989fea",
                     "task_0fb9c65e54a6a087",
                     "task_104f5c2f49e7b887",
+                    "task_1093bfef2780fab3",
+                    "task_11064006aab5dbf2",
                     "task_11eb448e26149206",
                     "task_11f920229020e20e",
                     "task_14ca7953227e9b5e",
+                    "task_15e09d4ddef6b866",
                     "task_165b580ce4baac1b",
                     "task_1749318808cd5a81",
                     "task_19769e1a97562f4b",
                     "task_19bb4f8a82a809d3",
                     "task_1c7193a922ee8211",
+                    "task_21b725a9a1ee1984",
                     "task_235a3610d6e62cca",
+                    "task_239baaf83e52e52b",
                     "task_24340aaa12c02b37",
                     "task_2696dc22b2a4b0a7",
+                    "task_27447f8a8a9019d3",
+                    "task_2786a54494dc1090",
                     "task_28423f01fe3bccc6",
                     "task_28917ba93d25de34",
                     "task_2a2063c1f7e8d25c",
                     "task_2a2fda1392be29ac",
                     "task_2ce5a2c007413aaa",
+                    "task_2db148eab41b4c1f",
                     "task_2e7dc038dab9a3a9",
                     "task_2f11950b158c9075",
                     "task_2f8ebc8ad1564000",
                     "task_30b95071174ef9bb",
                     "task_316ec2d0078e879b",
                     "task_320a74163cc1f642",
+                    "task_32ee189230a9dc6e",
+                    "task_33b8b23bc264a4b8",
                     "task_359c8a4a0f4a648c",
+                    "task_35ff9402d5a62bf8",
                     "task_36a19e39d5f3b6d2",
                     "task_36e21be584bea3c0",
                     "task_39f9d860524285d3",
+                    "task_3af8ade50df7e2ea",
                     "task_3b769b9c9e7da9ed",
                     "task_3c4d23de5f8ba9aa",
                     "task_3d1fb345425be6c0",
+                    "task_3dd89493e642fbd5",
+                    "task_3e651c2920137777",
                     "task_3fc816565759b4fe",
                     "task_40315a491310140b",
                     "task_40d312b2bfb054ec",
@@ -455,6 +284,8 @@
                     "task_4740d8512018645e",
                     "task_47f5b20cf8722658",
                     "task_47f7c33bb0296b39",
+                    "task_48779fd48f1bb460",
+                    "task_48a2725f38dbeca8",
                     "task_4985c2c3967e36dc",
                     "task_4b3ee51e0ce8a694",
                     "task_4cd4f158c05d7b3a",
@@ -468,6 +299,8 @@
                     "task_5ae60e7390e24182",
                     "task_5b41a38dcbbd679d",
                     "task_5bf765978f547728",
+                    "task_5cbf97650390fb6c",
+                    "task_5d1c44a4376f3889",
                     "task_5d62440cf6f97bd5",
                     "task_5dbf2e0f8c896f1c",
                     "task_5e56216192173c3b",
@@ -475,18 +308,26 @@
                     "task_5f3fa9399348d1d8",
                     "task_5f8dbf49b2ea9f2e",
                     "task_60f426f95f2e5766",
+                    "task_6136f0c93faa0b1e",
+                    "task_6428a11e0656a995",
                     "task_643aabddb30cc283",
                     "task_64fda47091fcf552",
                     "task_653f454a407ce381",
                     "task_66c78b91a90a8e1e",
+                    "task_6716b4a8b338c2d3",
+                    "task_67235ef7ac5c285a",
                     "task_672ce63ea931935d",
+                    "task_6757d0fbaa20b181",
                     "task_68a31737e2db4369",
+                    "task_68d7d7481d8fad92",
                     "task_68e7eb1a555be31b",
+                    "task_68f376cb8c8a3a1d",
                     "task_69ee93875827494b",
                     "task_6bd3127f968a5de4",
                     "task_6c307824638e4c2f",
                     "task_6f63bd4a8d4b61da",
                     "task_6fa0517be19478ba",
+                    "task_711a98f5b4e43d63",
                     "task_74d913ee386af6e7",
                     "task_7597e5c2be051351",
                     "task_76ffd09ae15337a0",
@@ -495,8 +336,10 @@
                     "task_7a8826453d39d42e",
                     "task_7b52c5d24855f120",
                     "task_7ba66c104d1a529e",
+                    "task_7bc1a1793ca27e14",
                     "task_7ccc8845f0bcff70",
                     "task_7da0b449c6ea8876",
+                    "task_7da3ca8b3da55f10",
                     "task_7dd651b0755fc75e",
                     "task_7e98dce126fc405f",
                     "task_7eb7c4e4e92498b0",
@@ -504,13 +347,17 @@
                     "task_7eea921695de8b74",
                     "task_80112263ea23cf20",
                     "task_80f57ced78d344fe",
+                    "task_8438b634bf9ea1ef",
                     "task_84bc9c7238318b02",
+                    "task_85832dbd9dfb239d",
                     "task_85ac555c17bc0f22",
                     "task_85ba29439f436d68",
                     "task_86a03d92a225dec6",
                     "task_86e76472c326f3d9",
                     "task_88328ed09840a531",
                     "task_888b49d75b307c10",
+                    "task_8a6f3ca6601057fd",
+                    "task_8c569b54b2a22db8",
                     "task_8d234c5f53d9f40c",
                     "task_8d57a6d2cef904bf",
                     "task_906faef73e031cb2",
@@ -518,7 +365,9 @@
                     "task_942e6741c3af7482",
                     "task_9447a941cedc0595",
                     "task_94b0fcb08a3c38f9",
+                    "task_9534213643a9ac5c",
                     "task_9581db0edd7e5671",
+                    "task_97a3cd86aaf76177",
                     "task_9a45765c9378600c",
                     "task_9a4d637994f78885",
                     "task_9b7250ae3007ae67",
@@ -527,19 +376,29 @@
                     "task_9f782d69484ef31f",
                     "task_9fd36c195d94649a",
                     "task_a0d1dc82707561de",
+                    "task_a17c57f27857507f",
                     "task_a325680fcd625c73",
                     "task_a3272029c2351bbe",
                     "task_a43e693593b64f9d",
                     "task_a61ecc837000a0ef",
+                    "task_a6643620b321d00b",
+                    "task_a89fd7409879453c",
                     "task_a8a8148047a9dc0f",
+                    "task_a8f3d766902d7683",
                     "task_a9502fefea8de90c",
                     "task_aaa992a8adacd5da",
                     "task_ab4a082392d5261e",
+                    "task_ab64ecf22f88982f",
                     "task_abe8192cfa915431",
+                    "task_ac1b198eb1ee6198",
+                    "task_ad5e3cd2feb2fb8c",
                     "task_ae7e401ad4a6ca0c",
                     "task_b103d3e25f23437a",
                     "task_b230d2107efea98b",
+                    "task_b2608a685ad0669d",
                     "task_b2d6ba7d3c96dbba",
+                    "task_b38702df9eb2366d",
+                    "task_b3cc895c60cc0298",
                     "task_b4c49be570ad0e28",
                     "task_b54b966ceb94f6a7",
                     "task_b64fe29a5799c348",
@@ -561,25 +420,34 @@
                     "task_c5dd36c58c1cb602",
                     "task_c61bd6e3b4e7d736",
                     "task_c7f05fd0a719c01a",
+                    "task_c8a9bf1f85b55a90",
                     "task_c945ead6a74162d8",
                     "task_cae9d444cb3f7315",
                     "task_cb2107d46d879577",
                     "task_cb98687d6d890e2a",
                     "task_ce481fa3b82b961f",
+                    "task_cf0da0ac1fc4bccd",
+                    "task_d095f73684da95c3",
+                    "task_d1c1491dc93394fa",
                     "task_d278d56c2a1a7173",
                     "task_d35811e406283d7b",
                     "task_d5e16d762a45e42c",
                     "task_d613217f6faea000",
                     "task_d8f788fd33b0d4bd",
+                    "task_dae71f0e75c698cb",
                     "task_dcc0fbfd5f654e53",
                     "task_dd26e73b122c04a5",
+                    "task_dd72bcaa4e1dbeec",
                     "task_ddad4919a772cc04",
+                    "task_ddb2c8c9bd3ad3a3",
                     "task_dfb2a0be53a60a9b",
                     "task_e0316ae2d9027f62",
                     "task_e05658720a846978",
                     "task_e27d1b5ea86ce5b6",
+                    "task_e2a1150eb0b78ff3",
                     "task_e3c9942061be3756",
                     "task_e3f289e320ba49f3",
+                    "task_e59acf163a97289c",
                     "task_e6bd60c518091ce0",
                     "task_e79cbb8cb6e27eca",
                     "task_e9f33c9bc7b24fd4",
@@ -590,8 +458,10 @@
                     "task_eef86d1b9896e246",
                     "task_ef6e8369e3d84b4e",
                     "task_efc2d6010dd9b743",
+                    "task_f03d0e7293937bcd",
                     "task_f0deefef52cfca9a",
                     "task_f3bd48ed1a131036",
+                    "task_f45f2515530b8b3d",
                     "task_f4b6f2e540d85073",
                     "task_f51fa160c52b9b46",
                     "task_fe14875de963fc8b",
@@ -599,10 +469,63 @@
                   ]
                 },
                 "failed_runs": 0,
-                "recent_runs": [],
+                "recent_runs": [
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_ed95b39c6db2",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-22T17:48:46.439430+00:00",
+                    "runtime_ms": 43325.555,
+                    "status_code": 200,
+                    "task_id": "task_a8d0d391d40ec2db",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_bdcd6364293e",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-22T17:48:42.236922+00:00",
+                    "runtime_ms": 33700.0,
+                    "status_code": 200,
+                    "task_id": "task_a8d0d391d40ec2db",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_e88b723a5228",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-22T17:47:34.889789+00:00",
+                    "runtime_ms": 47337.602,
+                    "status_code": 200,
+                    "task_id": "task_812f46dcd52f1a96",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_998b9c1922b3",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-22T17:47:30.807248+00:00",
+                    "runtime_ms": 36200.0,
+                    "status_code": 200,
+                    "task_id": "task_812f46dcd52f1a96",
+                    "tool": "codex"
+                  }
+                ],
                 "success_rate": 1.0,
-                "success_runs": 0,
-                "tracked_runs": 0
+                "success_runs": 4,
+                "tracked_runs": 4
               }
             },
             "status": "ok",
@@ -611,13 +534,13 @@
             "usage_remaining_unit": null
           },
           {
-            "actual_current_usage": 111.0,
+            "actual_current_usage": 181.0,
             "actual_current_usage_unit": "tasks",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:17.635833Z",
+            "collected_at": "2026-02-22T17:57:54.582803Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_openai_codex_1771756337",
+            "id": "provider_openai_codex_1771783074",
             "kind": "custom",
             "metrics": [
               {
@@ -635,7 +558,7 @@
                 "limit": null,
                 "remaining": null,
                 "unit": "tasks",
-                "used": 111.0,
+                "used": 181.0,
                 "window": "rolling"
               }
             ],
@@ -657,7 +580,7 @@
                 "x-ratelimit-remaining-requests": null,
                 "x-ratelimit-remaining-tokens": null
               },
-              "runtime_task_runs": 111
+              "runtime_task_runs": 181
             },
             "status": "ok",
             "usage_per_time": null,
@@ -668,10 +591,10 @@
             "actual_current_usage": 9.0,
             "actual_current_usage_unit": "requests",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:18.203618Z",
+            "collected_at": "2026-02-22T17:57:54.997193Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_claude_1771756338",
+            "id": "provider_claude_1771783074",
             "kind": "custom",
             "metrics": [
               {
@@ -709,22 +632,22 @@
             "usage_remaining_unit": null
           },
           {
-            "actual_current_usage": 737.0,
+            "actual_current_usage": 65.0,
             "actual_current_usage_unit": "requests",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:18.964482Z",
+            "collected_at": "2026-02-22T17:57:55.547630Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_github_1771756338",
+            "id": "provider_github_1771783075",
             "kind": "github",
             "metrics": [
               {
                 "id": "rest_requests",
                 "label": "GitHub REST core requests",
                 "limit": 5000.0,
-                "remaining": 4263.0,
+                "remaining": 4935.0,
                 "unit": "requests",
-                "used": 737.0,
+                "used": 65.0,
                 "window": "hourly"
               }
             ],
@@ -746,85 +669,85 @@
                 "actions_runner_registration": {
                   "limit": 10000,
                   "remaining": 10000,
-                  "reset": 1771759938,
+                  "reset": 1771786675,
                   "used": 0
                 },
                 "audit_log": {
                   "limit": 1750,
                   "remaining": 1750,
-                  "reset": 1771759938,
+                  "reset": 1771786675,
                   "used": 0
                 },
                 "audit_log_streaming": {
                   "limit": 15,
                   "remaining": 15,
-                  "reset": 1771759938,
+                  "reset": 1771786675,
                   "used": 0
                 },
                 "code_scanning_autofix": {
                   "limit": 10,
                   "remaining": 10,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 },
                 "code_scanning_upload": {
                   "limit": 5000,
-                  "remaining": 4263,
-                  "reset": 1771756385,
-                  "used": 737
+                  "remaining": 4935,
+                  "reset": 1771785409,
+                  "used": 65
                 },
                 "code_search": {
                   "limit": 10,
                   "remaining": 10,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 },
                 "core": {
                   "limit": 5000,
-                  "remaining": 4263,
-                  "reset": 1771756385,
-                  "used": 737
+                  "remaining": 4935,
+                  "reset": 1771785409,
+                  "used": 65
                 },
                 "dependency_sbom": {
                   "limit": 100,
                   "remaining": 100,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 },
                 "dependency_snapshots": {
                   "limit": 100,
                   "remaining": 100,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 },
                 "graphql": {
                   "limit": 5000,
-                  "remaining": 4879,
-                  "reset": 1771757349,
-                  "used": 121
+                  "remaining": 4989,
+                  "reset": 1771784310,
+                  "used": 11
                 },
                 "integration_manifest": {
                   "limit": 5000,
                   "remaining": 5000,
-                  "reset": 1771759938,
+                  "reset": 1771786675,
                   "used": 0
                 },
                 "scim": {
                   "limit": 15000,
                   "remaining": 15000,
-                  "reset": 1771759938,
+                  "reset": 1771786675,
                   "used": 0
                 },
                 "search": {
                   "limit": 30,
                   "remaining": 30,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 },
                 "source_import": {
                   "limit": 100,
                   "remaining": 100,
-                  "reset": 1771756398,
+                  "reset": 1771783135,
                   "used": 0
                 }
               },
@@ -832,22 +755,22 @@
               "total_minutes_used": 0.0
             },
             "status": "ok",
-            "usage_per_time": "737.0 requests/hour",
-            "usage_remaining": 4263.0,
+            "usage_per_time": "65.0 requests/hour",
+            "usage_remaining": 4935.0,
             "usage_remaining_unit": "requests"
           },
           {
             "actual_current_usage": null,
             "actual_current_usage_unit": null,
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:21.867046Z",
+            "collected_at": "2026-02-22T17:57:58.833025Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_openai_1771756341",
+            "id": "provider_openai_1771783078",
             "kind": "openai",
             "metrics": [],
             "notes": [
-              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769191075&end_time=1771783075'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769191075&end_time=1771783075'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
               "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
             ],
             "official_records": [
@@ -862,8 +785,8 @@
               "costs_url": "https://api.openai.com/v1/organization/costs",
               "usage_records": 0,
               "usage_url": "https://api.openai.com/v1/organization/usage/completions",
-              "window_end_unix": 1771756338,
-              "window_start_unix": 1769164338
+              "window_end_unix": 1771783075,
+              "window_start_unix": 1769191075
             },
             "status": "degraded",
             "usage_per_time": null,
@@ -874,10 +797,10 @@
             "actual_current_usage": 337.0,
             "actual_current_usage_unit": "requests",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:22.739372Z",
+            "collected_at": "2026-02-22T17:57:59.804790Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_openrouter_1771756342",
+            "id": "provider_openrouter_1771783079",
             "kind": "custom",
             "metrics": [
               {
@@ -921,10 +844,10 @@
             "actual_current_usage": null,
             "actual_current_usage_unit": null,
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:22.740413Z",
+            "collected_at": "2026-02-22T17:57:59.805551Z",
             "cost_usd": null,
             "data_source": "configuration_only",
-            "id": "provider_anthropic_1771756342",
+            "id": "provider_anthropic_1771783079",
             "kind": "custom",
             "metrics": [],
             "notes": [
@@ -948,10 +871,10 @@
             "actual_current_usage": 89.0,
             "actual_current_usage_unit": "tasks",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:22.740474Z",
+            "collected_at": "2026-02-22T17:57:59.805567Z",
             "cost_usd": null,
             "data_source": "configuration_only",
-            "id": "provider_openclaw_1771756342",
+            "id": "provider_openclaw_1771783079",
             "kind": "custom",
             "metrics": [
               {
@@ -985,10 +908,10 @@
             "actual_current_usage": null,
             "actual_current_usage_unit": null,
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:23.458364Z",
+            "collected_at": "2026-02-22T17:58:00.647494Z",
             "cost_usd": null,
             "data_source": "configuration_only",
-            "id": "provider_cursor_1771756343",
+            "id": "provider_cursor_1771783080",
             "kind": "custom",
             "metrics": [],
             "notes": [
@@ -1019,10 +942,10 @@
             "actual_current_usage": null,
             "actual_current_usage_unit": null,
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:23.458397Z",
+            "collected_at": "2026-02-22T17:58:00.647520Z",
             "cost_usd": null,
             "data_source": "configuration_only",
-            "id": "provider_supabase_1771756343",
+            "id": "provider_supabase_1771783080",
             "kind": "custom",
             "metrics": [],
             "notes": [
@@ -1047,10 +970,10 @@
             "actual_current_usage": 1.0,
             "actual_current_usage_unit": "requests",
             "capacity_tasks_per_day": null,
-            "collected_at": "2026-02-22T10:32:24.299644Z",
+            "collected_at": "2026-02-22T17:58:01.574834Z",
             "cost_usd": null,
             "data_source": "provider_api",
-            "id": "provider_railway_1771756344",
+            "id": "provider_railway_1771783081",
             "kind": "custom",
             "metrics": [
               {
@@ -1105,7 +1028,7 @@
           "openai: status=degraded, configured=True",
           "supabase: status=unavailable, configured=False"
         ],
-        "generated_at": "2026-02-22T10:33:42.315640Z",
+        "generated_at": "2026-02-22T17:58:23.850645Z",
         "providers": [
           {
             "configured": true,
@@ -1176,7 +1099,7 @@
             "kind": "openai",
             "missing_env": [],
             "notes": [
-              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769164338&end_time=1771756338'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769191075&end_time=1771783075'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769191075&end_time=1771783075'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
               "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
             ],
             "provider": "openai",
@@ -1269,7 +1192,7 @@
       "url": "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
     }
   },
-  "repo_root": "/Users/ursmuff/.codex/worktrees/1600/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/4176/Coherence-Network",
   "route_decision_matrix": [
     {
       "billing_provider": "cursor",
