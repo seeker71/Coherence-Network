@@ -197,6 +197,17 @@ def _normalize_provider_name(value: str | None) -> str:
         return ""
     return _PROVIDER_ALIASES.get(candidate, candidate)
 
+_PROVIDER_ALIASES: dict[str, str] = {
+    "clawwork": "openclaw",
+}
+
+
+def _normalize_provider_name(value: str | None) -> str:
+    candidate = str(value or "").strip().lower()
+    if not candidate:
+        return ""
+    return _PROVIDER_ALIASES.get(candidate, candidate)
+
 
 def _snapshots_path() -> Path:
     configured = os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH")
@@ -783,36 +794,6 @@ def _build_models_visibility_snapshot(
     )
 
 
-def _build_openai_models_visibility_snapshot(
-    *,
-    models_url: str,
-    rows: list[Any],
-    headers: httpx.Headers,
-) -> ProviderUsageSnapshot:
-    return _build_models_visibility_snapshot(
-        provider="openai-codex",
-        label="OpenAI visible models",
-        models_url=models_url,
-        rows=rows,
-        headers=headers,
-        request_limit_keys=("x-ratelimit-limit-requests",),
-        request_remaining_keys=("x-ratelimit-remaining-requests",),
-        request_window="minute",
-        request_label="OpenAI request quota",
-        token_limit_keys=("x-ratelimit-limit-tokens",),
-        token_remaining_keys=("x-ratelimit-remaining-tokens",),
-        token_window="minute",
-        token_label="OpenAI token quota",
-        rate_header_keys=(
-            "x-ratelimit-limit-requests",
-            "x-ratelimit-remaining-requests",
-            "x-ratelimit-limit-tokens",
-            "x-ratelimit-remaining-tokens",
-        ),
-        no_header_note="OpenAI models probe succeeded, but no request/token remaining headers were returned.",
-    )
-
-
 def _openai_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers | None, str | None]:
     probe_url = os.getenv("OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
     model = os.getenv("OPENAI_QUOTA_PROBE_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
@@ -832,9 +813,7 @@ def _openai_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers 
 
 def _claude_quota_probe_headers(headers: dict[str, str]) -> tuple[httpx.Headers | None, str | None]:
     probe_url = os.getenv("ANTHROPIC_MESSAGES_URL", "https://api.anthropic.com/v1/messages")
-    # claude-haiku-4-5 is the cheapest current model for quota probes.
-    # claude-3-5-haiku-latest is not valid as of the claude-4 generation.
-    model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-haiku-4-5").strip() or "claude-haiku-4-5"
+    model = os.getenv("ANTHROPIC_QUOTA_PROBE_MODEL", "claude-3-5-haiku-latest").strip() or "claude-3-5-haiku-latest"
     payload = {
         "model": model,
         "max_tokens": 1,
@@ -918,54 +897,6 @@ def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
             "is_free_tier": data.get("is_free_tier"),
         },
     )
-
-
-def _apply_quota_probe_to_snapshot(
-    *,
-    snapshot: ProviderUsageSnapshot,
-    probe_headers: httpx.Headers | None,
-    probe_error: str | None,
-    request_limit_keys: tuple[str, ...],
-    request_remaining_keys: tuple[str, ...],
-    request_label: str,
-    token_limit_keys: tuple[str, ...],
-    token_remaining_keys: tuple[str, ...],
-    token_label: str,
-    success_note: str,
-    no_headers_note: str,
-    error_note_prefix: str,
-) -> ProviderUsageSnapshot:
-    has_quota_metric = any(metric.id in {"requests_quota", "tokens_quota"} for metric in snapshot.metrics)
-    if has_quota_metric:
-        return snapshot
-
-    if probe_headers is not None:
-        appended = _append_rate_limit_metrics(
-            metrics=snapshot.metrics,
-            headers=probe_headers,
-            request_limit_keys=request_limit_keys,
-            request_remaining_keys=request_remaining_keys,
-            request_window="minute",
-            request_label=request_label,
-            token_limit_keys=token_limit_keys,
-            token_remaining_keys=token_remaining_keys,
-            token_window="minute",
-            token_label=token_label,
-        )
-        if appended:
-            snapshot.notes.append(success_note)
-            snapshot.notes = [
-                note
-                for note in snapshot.notes
-                if "no request/token remaining headers were returned" not in note.lower()
-            ]
-        else:
-            snapshot.notes.append(no_headers_note)
-        return snapshot
-
-    if probe_error:
-        snapshot.notes.append(f"{error_note_prefix}: {probe_error}")
-    return snapshot
 
 
 def _railway_api_probe_snapshot(*, ok: bool, response_headers: httpx.Headers, gql_url: str) -> ProviderUsageSnapshot:
@@ -2997,7 +2928,9 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         )
 
     rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    snapshot = _build_openai_models_visibility_snapshot(
+    snapshot = _build_models_visibility_snapshot(
+        provider="openai-codex",
+        label="OpenAI visible models",
         models_url=models_url,
         rows=rows,
         headers=response.headers,
@@ -3017,6 +2950,36 @@ def _build_openai_codex_snapshot() -> ProviderUsageSnapshot:
         no_headers_note="OpenAI responses probe completed, but no request/token remaining headers were returned.",
         error_note_prefix="OpenAI responses quota probe failed",
     )
+    has_quota_metric = any(metric.id in {"requests_quota", "tokens_quota"} for metric in snapshot.metrics)
+    if not has_quota_metric:
+        probe_headers, probe_error = _openai_quota_probe_headers(headers)
+        if probe_headers is not None:
+            appended = _append_rate_limit_metrics(
+                metrics=snapshot.metrics,
+                headers=probe_headers,
+                request_limit_keys=("x-ratelimit-limit-requests",),
+                request_remaining_keys=("x-ratelimit-remaining-requests",),
+                request_window="minute",
+                request_label="OpenAI request quota",
+                token_limit_keys=("x-ratelimit-limit-tokens",),
+                token_remaining_keys=("x-ratelimit-remaining-tokens",),
+                token_window="minute",
+                token_label="OpenAI token quota",
+            )
+            if appended:
+                snapshot.notes.append("Quota headers sourced from lightweight OpenAI responses probe.")
+                snapshot.notes = [
+                    note
+                    for note in snapshot.notes
+                    if "no request/token remaining headers were returned" not in note.lower()
+                ]
+            else:
+                snapshot.notes.append(
+                    "OpenAI responses probe completed, but no request/token remaining headers were returned."
+                )
+        elif probe_error:
+            snapshot.notes.append(f"OpenAI responses quota probe failed: {probe_error}")
+    return snapshot
 
 
 def _anthropic_headers() -> dict[str, str]:
@@ -3206,1168 +3169,35 @@ def _build_claude_snapshot() -> ProviderUsageSnapshot:
         ),
         no_header_note="Claude models probe succeeded, but no request/token remaining headers were returned.",
     )
-    evidence_source = (
-        "runner_provider_telemetry"
-        if limit_source == "runner_provider_telemetry"
-        else "runtime_events+cli_subscription_baseline"
-    )
-    metrics: list[UsageMetric] = []
-    if limit_8h > 0:
-        used_8h = _claude_events_within_window(8 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="claude_subscription_8h",
-                label="Claude subscription runs (8h)",
-                unit="requests",
-                used=float(min(used_8h, limit_8h)),
-                remaining=float(max(0, limit_8h - used_8h)),
-                limit=float(limit_8h),
-                window="hourly",
-                validation_state=validation_state,
-                validation_detail=validation_detail,
-                evidence_source=evidence_source,
+    has_quota_metric = any(metric.id in {"requests_quota", "tokens_quota"} for metric in snapshot.metrics)
+    if not has_quota_metric:
+        probe_headers, probe_error = _claude_quota_probe_headers(_anthropic_headers())
+        if probe_headers is not None:
+            appended = _append_rate_limit_metrics(
+                metrics=snapshot.metrics,
+                headers=probe_headers,
+                request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
+                request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
+                request_window="minute",
+                request_label="Claude request quota",
+                token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
+                token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
+                token_window="minute",
+                token_label="Claude token quota",
             )
-        )
-    if limit_week > 0:
-        used_week = _claude_events_within_window(7 * 24 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="claude_subscription_week",
-                label="Claude subscription runs (7d)",
-                unit="requests",
-                used=float(min(used_week, limit_week)),
-                remaining=float(max(0, limit_week - used_week)),
-                limit=float(limit_week),
-                window="weekly",
-                validation_state=validation_state,
-                validation_detail=validation_detail,
-                evidence_source=evidence_source,
-            )
-        )
-    return metrics
-
-
-def _build_claude_snapshot_without_api_key() -> ProviderUsageSnapshot | None:
-    active = int(_active_provider_usage_counts().get("claude", 0))
-    auth = _claude_cli_auth_context()
-    runner_ok, runner_detail = _runner_provider_configured("claude")
-    limit_8h, limit_week, limit_source, limit_tier = _claude_subscription_limits()
-    if active <= 0 and not bool(auth.get("logged_in")) and not runner_ok:
-        return None
-
-    notes: list[str] = []
-    if runner_ok:
-        notes.append(f"Using host-runner Claude telemetry ({runner_detail or 'runner_provider_telemetry'}).")
-    elif bool(auth.get("logged_in")):
-        auth_method = str(auth.get("auth_method") or "cli_session").strip()
-        notes.append(f"Using Claude CLI auth session ({auth_method}).")
-    else:
-        notes.append("Using runtime Claude execution evidence (no direct Anthropic key in environment).")
-    if limit_source:
-        notes.append(f"claude_limit_source={limit_source}")
-    if limit_tier:
-        notes.append(f"claude_subscription_tier={limit_tier}")
-
-    metrics = _claude_subscription_window_metrics(
-        limit_8h=limit_8h,
-        limit_week=limit_week,
-        limit_source=limit_source,
-    )
-    if active > 0:
-        metrics.append(
-            _metric(
-                id="runtime_task_runs",
-                label="Runtime task runs",
-                unit="tasks",
-                used=float(active),
-                window="rolling",
-                validation_state="derived",
-                validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
-                evidence_source="runtime_events",
-            )
-        )
-    return ProviderUsageSnapshot(
-        id=f"provider_claude_{int(time.time())}",
-        provider="claude",
-        kind="custom",
-        status="ok",
-        data_source=("runtime_events" if runner_ok else "provider_cli"),
-        metrics=metrics,
-        notes=notes,
-        raw={
-            "cli_logged_in": bool(auth.get("logged_in")),
-            "cli_auth_method": str(auth.get("auth_method") or ""),
-            "subscription_type": str(auth.get("subscription_type") or ""),
-            "limits": {
-                "claude_subscription_8h_limit": limit_8h,
-                "claude_subscription_week_limit": limit_week,
-                "claude_limit_source": limit_source,
-                "claude_subscription_tier": limit_tier,
-            },
-        },
-    )
-
-
-def _build_claude_snapshot() -> ProviderUsageSnapshot:
-    _configured, _missing, present, derived_notes = _configured_status("claude")
-    limit_8h, limit_week, limit_source, limit_tier = _claude_subscription_limits()
-    used_8h = _claude_events_within_window(8 * 60 * 60)
-    used_week = _claude_events_within_window(7 * 24 * 60 * 60)
-    metrics = _subscription_window_metrics(
-        provider="claude",
-        label="Claude",
-        limit_8h=limit_8h,
-        limit_week=limit_week,
-        used_8h=used_8h,
-        used_week=used_week,
-        source=(limit_source or "claude_subscription_window_policy"),
-    )
-    notes: list[str] = [*derived_notes, "subscription_window_mode_active"]
-    if limit_source:
-        notes.append(f"claude_limit_source={limit_source}")
-    if limit_tier:
-        notes.append(f"claude_subscription_tier={limit_tier}")
-    active_runs = int(_active_provider_usage_counts().get("claude", 0))
-    if active_runs > 0:
-        metrics.append(
-            _metric(
-                id="runtime_task_runs",
-                label="Runtime task runs",
-                unit="tasks",
-                used=float(active_runs),
-                window="rolling",
-                validation_state="derived",
-                validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
-                evidence_source="runtime_events",
-            )
-        )
-    return ProviderUsageSnapshot(
-        id=f"provider_claude_{int(time.time())}",
-        provider="claude",
-        kind="custom",
-        status="ok",
-        data_source="runtime_events",
-        metrics=metrics,
-        notes=list(dict.fromkeys(notes)),
-        raw={
-            "configured_signals": present,
-            "limits": {
-                "claude_subscription_8h_limit": limit_8h,
-                "claude_subscription_week_limit": limit_week,
-                "claude_limit_source": limit_source,
-                "claude_subscription_tier": limit_tier,
-            },
-        },
-    )
-
-
-def _openrouter_headers() -> dict[str, str]:
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    headers: dict[str, str] = {"Authorization": f"Bearer {api_key}"}
-    site_url = os.getenv("OPENROUTER_HTTP_REFERER", "").strip()
-    site_title = os.getenv("OPENROUTER_X_TITLE", "").strip()
-    if site_url:
-        headers["HTTP-Referer"] = site_url
-    if site_title:
-        headers["X-Title"] = site_title
-    return headers
-
-
-def _openrouter_models_probe(models_url: str) -> tuple[dict[str, Any], httpx.Headers]:
-    started = time.perf_counter()
-    try:
-        with httpx.Client(timeout=8.0, headers=_openrouter_headers()) as client:
-            response = client.get(models_url)
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        status_code = None
-        response = getattr(exc, "response", None)
-        if response is not None:
-            status_code = int(getattr(response, "status_code", 0) or 0) or None
-        _record_external_tool_usage(
-            tool_name="openrouter-api",
-            provider="openrouter",
-            operation="list_models",
-            resource=models_url,
-            status="error",
-            http_status=status_code,
-            duration_ms=int((time.perf_counter() - started) * 1000),
-            payload={"error": str(exc)},
-        )
-        raise
-
-    _record_external_tool_usage(
-        tool_name="openrouter-api",
-        provider="openrouter",
-        operation="list_models",
-        resource=models_url,
-        status="success",
-        http_status=int(response.status_code),
-        duration_ms=int((time.perf_counter() - started) * 1000),
-    )
-    return payload, response.headers
-
-
-def _openrouter_probe_failure_snapshot(exc: Exception, *, models_url: str) -> ProviderUsageSnapshot:
-    active = int(_active_provider_usage_counts().get("openrouter", 0))
-    if active > 0:
-        snapshot = _runtime_task_runs_snapshot(
-            provider="openrouter",
-            kind="custom",
-            active_runs=active,
-            note=f"OpenRouter models probe failed ({exc}); using runtime execution evidence fallback.",
-        )
-        snapshot.raw["probe_url"] = models_url
-        return snapshot
-    return ProviderUsageSnapshot(
-        id=f"provider_openrouter_{int(time.time())}",
-        provider="openrouter",
-        kind="custom",
-        status="degraded",
-        data_source="provider_api",
-        notes=[f"OpenRouter models probe failed: {exc}"],
-        raw={"probe_url": models_url},
-    )
-
-
-def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        active = int(_active_provider_usage_counts().get("openrouter", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="openrouter",
-                kind="custom",
-                active_runs=active,
-                note="Using runtime OpenRouter execution evidence (no direct OpenRouter key in environment).",
-            )
-        snapshot = _build_config_only_snapshot("openrouter")
-        if snapshot.status == "ok":
-            snapshot.notes.append(
-                "OpenRouter readiness is satisfied via routed executor context (Cursor/Codex); direct OPENROUTER_API_KEY is optional."
-            )
-            snapshot.notes = list(dict.fromkeys(snapshot.notes))
-        return snapshot
-
-    models_url = os.getenv("OPENROUTER_MODELS_URL", "https://openrouter.ai/api/v1/models")
-    try:
-        payload, response_headers = _openrouter_models_probe(models_url)
-    except Exception as exc:
-        return _openrouter_probe_failure_snapshot(exc, models_url=models_url)
-
-    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    return _build_models_visibility_snapshot(
-        provider="openrouter",
-        label="OpenRouter visible models",
-        models_url=models_url,
-        rows=rows,
-        headers=response_headers,
-        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit", "x-ratelimit-limit-requests"),
-        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining", "x-ratelimit-remaining-requests"),
-        request_window="minute",
-        request_label="OpenRouter request quota",
-        token_limit_keys=("x-ratelimit-limit-tokens",),
-        token_remaining_keys=("x-ratelimit-remaining-tokens",),
-        token_window="minute",
-        token_label="OpenRouter token quota",
-        rate_header_keys=(
-            "x-ratelimit-limit",
-            "x-ratelimit-remaining",
-            "ratelimit-limit",
-            "ratelimit-remaining",
-            "x-ratelimit-limit-requests",
-            "x-ratelimit-remaining-requests",
-            "x-ratelimit-limit-tokens",
-            "x-ratelimit-remaining-tokens",
-        ),
-        no_header_note="OpenRouter models probe succeeded, but no request/token remaining headers were returned.",
-    )
-
-
-def _supabase_headers(token: str) -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-    }
-
-
-def _supabase_project_probe(token: str, project_url: str) -> tuple[dict[str, Any], httpx.Headers]:
-    started = time.perf_counter()
-    try:
-        with httpx.Client(timeout=8.0, headers=_supabase_headers(token)) as client:
-            response = client.get(project_url)
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        status_code = None
-        response = getattr(exc, "response", None)
-        if response is not None:
-            status_code = int(getattr(response, "status_code", 0) or 0) or None
-        _record_external_tool_usage(
-            tool_name="supabase-management-api",
-            provider="supabase",
-            operation="get_project",
-            resource=project_url,
-            status="error",
-            http_status=status_code,
-            duration_ms=int((time.perf_counter() - started) * 1000),
-            payload={"error": str(exc)},
-        )
-        raise
-
-    _record_external_tool_usage(
-        tool_name="supabase-management-api",
-        provider="supabase",
-        operation="get_project",
-        resource=project_url,
-        status="success",
-        http_status=int(response.status_code),
-        duration_ms=int((time.perf_counter() - started) * 1000),
-    )
-    return payload, response.headers
-
-
-def _supabase_probe_failure_snapshot(
-    exc: Exception,
-    *,
-    project_url: str,
-    project_ref: str,
-) -> ProviderUsageSnapshot:
-    return ProviderUsageSnapshot(
-        id=f"provider_supabase_{int(time.time())}",
-        provider="supabase",
-        kind="custom",
-        status="degraded",
-        data_source="provider_api",
-        notes=[f"Supabase project probe failed: {exc}"],
-        raw={"probe_url": project_url, "project_ref": project_ref},
-    )
-
-
-def _supabase_probe_metrics(headers: httpx.Headers) -> tuple[list[UsageMetric], list[str]]:
-    metrics = [
-        _metric(
-            id="api_probe",
-            label="Supabase API probe",
-            unit="requests",
-            used=1.0,
-            window="probe",
-        )
-    ]
-    has_limit_headers = _append_rate_limit_metrics(
-        metrics=metrics,
-        headers=headers,
-        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit"),
-        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining"),
-        request_window="hourly",
-        request_label="Supabase API request quota",
-    )
-    notes: list[str] = []
-    if not has_limit_headers:
-        notes.append("Supabase probe succeeded, but no request remaining headers were returned.")
-
-    egress_limit = _coerce_float(os.getenv("SUPABASE_EGRESS_LIMIT_GB"))
-    egress_used = _coerce_float(os.getenv("SUPABASE_EGRESS_USED_GB"))
-    if egress_limit is not None and egress_limit > 0:
-        used = max(0.0, egress_used or 0.0)
-        remaining = max(0.0, egress_limit - used)
-        metrics.append(
-            _metric(
-                id="egress_quota",
-                label="Supabase egress quota",
-                unit="gb",
-                used=used,
-                remaining=remaining,
-                limit=egress_limit,
-                window=os.getenv("SUPABASE_EGRESS_WINDOW", "monthly"),
-            )
-        )
-        notes.append("Using SUPABASE_EGRESS_LIMIT_GB/SUPABASE_EGRESS_USED_GB environment inputs for egress tracking.")
-
-    return metrics, notes
-
-
-def _build_supabase_snapshot() -> ProviderUsageSnapshot:
-    token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip() or os.getenv("SUPABASE_TOKEN", "").strip()
-    project_ref = os.getenv("SUPABASE_PROJECT_REF", "").strip()
-    if not token or not project_ref:
-        return ProviderUsageSnapshot(
-            id=f"provider_supabase_{int(time.time())}",
-            provider="supabase",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set SUPABASE_ACCESS_TOKEN (or SUPABASE_TOKEN) and SUPABASE_PROJECT_REF."],
-            raw={"missing_project_ref": not bool(project_ref), "missing_token": not bool(token)},
-        )
-
-    base_url = os.getenv("SUPABASE_MANAGEMENT_API_URL", "https://api.supabase.com/v1").rstrip("/")
-    project_url = f"{base_url}/projects/{project_ref}"
-    try:
-        payload, response_headers = _supabase_project_probe(token, project_url)
-    except Exception as exc:
-        return _supabase_probe_failure_snapshot(exc, project_url=project_url, project_ref=project_ref)
-
-    metrics, notes = _supabase_probe_metrics(response_headers)
-
-    return ProviderUsageSnapshot(
-        id=f"provider_supabase_{int(time.time())}",
-        provider="supabase",
-        kind="custom",
-        status="ok",
-        data_source="provider_api",
-        metrics=metrics,
-        notes=list(dict.fromkeys(notes)),
-        raw={
-            "probe_url": project_url,
-            "project_ref": project_ref,
-            "project_status": payload.get("status"),
-            "project_region": payload.get("region"),
-            "project_name": payload.get("name"),
-            "rate_limit_headers": _subset_headers(
-                response_headers,
-                ("x-ratelimit-limit", "x-ratelimit-remaining", "ratelimit-limit", "ratelimit-remaining"),
-            ),
-        },
-    )
-
-
-def _append_db_host_window_metric(
-    metrics: list[UsageMetric],
-    *,
-    metric_id: str,
-    label: str,
-    window_seconds: int,
-    limit: int,
-    window: str,
-) -> None:
-    if limit <= 0:
-        return
-    used = len(_runtime_events_within_window(window_seconds=window_seconds, source="api"))
-    metrics.append(
-        _metric(
-            id=metric_id,
-            label=label,
-            unit="requests",
-            used=float(min(used, limit)),
-            remaining=float(max(0, limit - used)),
-            limit=float(limit),
-            window=window,
-            validation_state="derived",
-            validation_detail="Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
-            evidence_source="runtime_events+env_limits",
-        )
-    )
-
-
-def _db_host_monthly_limit_gb() -> float | None:
-    for env_name in ("DB_EGRESS_MONTHLY_LIMIT_GB", "DB_HOST_MONTHLY_EGRESS_LIMIT_GB", "SUPABASE_EGRESS_LIMIT_GB"):
-        value = _coerce_float(os.getenv(env_name))
-        if value is not None and value > 0:
-            return float(value)
-    return None
-
-
-def _db_host_monthly_seed_gb() -> float:
-    for env_name in ("DB_EGRESS_MONTHLY_USED_GB", "SUPABASE_EGRESS_USED_GB"):
-        value = _coerce_float(os.getenv(env_name))
-        if value is not None and value >= 0:
-            return float(value)
-    return 0.0
-
-
-def _db_host_tracker_key(*, db_host: str, db_name: str) -> str:
-    combined = f"{db_host or 'unknown'}:{db_name or 'unknown'}".strip().lower()
-    normalized = re.sub(r"[^a-z0-9_.:-]+", "_", combined)
-    return f"db_egress_tracker::{normalized}"
-
-
-def _load_db_host_tracker_state(key: str) -> dict[str, Any]:
-    try:
-        raw = telemetry_persistence_service.get_meta_value(key)
-    except Exception:
-        return {}
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except ValueError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _save_db_host_tracker_state(key: str, payload: dict[str, Any]) -> None:
-    try:
-        telemetry_persistence_service.set_meta_value(key, json.dumps(payload, sort_keys=True))
-    except Exception:
-        return
-
-
-def _db_host_egress_engine(db_url: str):
-    if _DB_HOST_EGRESS_ENGINE_CACHE["engine"] is not None and _DB_HOST_EGRESS_ENGINE_CACHE["url"] == db_url:
-        return _DB_HOST_EGRESS_ENGINE_CACHE["engine"]
-    kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if db_url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        kwargs["poolclass"] = NullPool
-    elif db_url.startswith("postgres"):
-        kwargs["connect_args"] = {
-            "connect_timeout": max(1, min(_int_env("DB_EGRESS_DB_CONNECT_TIMEOUT_SECONDS", 3), 15))
-        }
-        kwargs["poolclass"] = NullPool
-    engine = create_engine(db_url, **kwargs)
-    _DB_HOST_EGRESS_ENGINE_CACHE["url"] = db_url
-    _DB_HOST_EGRESS_ENGINE_CACHE["engine"] = engine
-    return engine
-
-
-def _collect_postgres_db_egress_sample(
-    db_url: str,
-    *,
-    force_refresh: bool = False,
-) -> tuple[dict[str, Any] | None, str | None]:
-    if "postgres" not in db_url.lower():
-        return None, "db_not_postgresql"
-    now = time.time()
-    if (
-        not force_refresh
-        and _DB_HOST_EGRESS_SAMPLE_CACHE.get("url") == db_url
-        and float(_DB_HOST_EGRESS_SAMPLE_CACHE.get("expires_at") or 0.0) > now
-    ):
-        cached_sample = _DB_HOST_EGRESS_SAMPLE_CACHE.get("sample")
-        cached_error = str(_DB_HOST_EGRESS_SAMPLE_CACHE.get("error") or "").strip()
-        return (cached_sample if isinstance(cached_sample, dict) else None), (cached_error or None)
-
-    try:
-        engine = _db_host_egress_engine(db_url)
-        with engine.connect() as connection:
-            stats_row = connection.execute(
-                text(
-                    """
-                    SELECT
-                        current_database() AS database_name,
-                        COALESCE(tup_returned, 0) AS tup_returned,
-                        COALESCE(tup_fetched, 0) AS tup_fetched,
-                        stats_reset
-                    FROM pg_stat_database
-                    WHERE datname = current_database()
-                    LIMIT 1
-                    """
+            if appended:
+                snapshot.notes.append("Quota headers sourced from lightweight Anthropic messages probe.")
+                snapshot.notes = [
+                    note
+                    for note in snapshot.notes
+                    if "no request/token remaining headers were returned" not in note.lower()
+                ]
+            else:
+                snapshot.notes.append(
+                    "Anthropic messages probe completed, but no request/token remaining headers were returned."
                 )
-            ).mappings().first()
-            row_size = connection.execute(
-                text(
-                    """
-                    SELECT
-                        COALESCE(
-                            SUM(pg_relation_size(c.oid)) / NULLIF(SUM(NULLIF(c.reltuples, 0)), 0),
-                            0
-                        ) AS avg_row_bytes
-                    FROM pg_class c
-                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                    WHERE c.relkind = 'r'
-                    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-                    """
-                )
-            ).scalar()
-        if not stats_row:
-            raise RuntimeError("pg_stat_database row for current_database() was not found")
-        stats_reset = stats_row.get("stats_reset")
-        sample = {
-            "database_name": str(stats_row.get("database_name") or "").strip(),
-            "tup_returned": int(float(stats_row.get("tup_returned") or 0)),
-            "tup_fetched": int(float(stats_row.get("tup_fetched") or 0)),
-            "stats_reset": (stats_reset.isoformat() if isinstance(stats_reset, datetime) else str(stats_reset or "")),
-            "avg_row_bytes": float(row_size or 0.0),
-            "collected_at": datetime.now(timezone.utc).isoformat(),
-        }
-        _DB_HOST_EGRESS_SAMPLE_CACHE.update(
-            {
-                "url": db_url,
-                "sample": sample,
-                "error": "",
-                "expires_at": now + _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS,
-            }
-        )
-        return sample, None
-    except Exception as exc:
-        message = str(exc)
-        _DB_HOST_EGRESS_SAMPLE_CACHE.update(
-            {
-                "url": db_url,
-                "sample": None,
-                "error": message,
-                "expires_at": now + _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS,
-            }
-        )
-        return None, message
-
-
-def _estimate_db_host_monthly_bytes(
-    *,
-    state: dict[str, Any],
-    month_key: str,
-    seed_gb: float,
-    current_returned: int,
-    current_fetched: int,
-    avg_row_bytes: float,
-    safety_factor: float,
-) -> tuple[float, int, list[str]]:
-    notes: list[str] = []
-    state_month = str(state.get("month") or "").strip()
-    if state_month == month_key:
-        estimated_monthly_bytes = max(0.0, _coerce_float(state.get("estimated_monthly_bytes")) or 0.0)
-    else:
-        estimated_monthly_bytes = max(0.0, seed_gb) * (1024.0 ** 3)
-        if seed_gb > 0:
-            notes.append("Seeded monthly DB egress estimate from DB_EGRESS_MONTHLY_USED_GB/SUPABASE_EGRESS_USED_GB.")
-
-    previous_returned = _coerce_nonnegative_int(state.get("last_tup_returned"), default=current_returned)
-    previous_fetched = _coerce_nonnegative_int(state.get("last_tup_fetched"), default=current_fetched)
-
-    delta_rows = 0
-    if state_month != month_key:
-        notes.append("Initialized monthly DB egress tracker baseline for current month.")
-    elif current_returned < previous_returned or current_fetched < previous_fetched:
-        notes.append("Detected pg_stat_database counter reset; refreshed DB egress baseline.")
-    else:
-        delta_rows = max(0, current_returned - previous_returned) + max(0, current_fetched - previous_fetched)
-        estimated_monthly_bytes += float(delta_rows) * avg_row_bytes * safety_factor
-    return estimated_monthly_bytes, delta_rows, notes
-
-
-def _db_host_context(db_url: str) -> tuple[str, str, str, dict[str, Any]]:
-    parsed = urlparse(db_url)
-    db_host = str(parsed.hostname or "").strip()
-    db_name = str(parsed.path or "").strip().lstrip("/") or "default"
-    db_engine = str(parsed.scheme or "").strip()
-    if db_engine.endswith("+psycopg"):
-        db_engine = db_engine.split("+", 1)[0]
-    raw = {
-        "database_host": db_host,
-        "database_name": db_name,
-        "database_engine": db_engine,
-        "database_present": True,
-    }
-    return db_host, db_name, db_engine, raw
-
-
-def _append_db_host_runtime_proxy_metrics(metrics: list[UsageMetric]) -> tuple[int, int]:
-    api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api"))
-    metrics.append(
-        _metric(
-            id="api_events_24h",
-            label="API events touching DB host (24h)",
-            unit="requests",
-            used=float(api_events_24h),
-            window="daily",
-            validation_state="derived",
-            validation_detail="Derived from API runtime-event counts as an egress-safe proxy for DB load.",
-            evidence_source="runtime_events",
-        )
-    )
-
-    limit_5h = max(0, _int_env("DB_HOST_5H_LIMIT", 0))
-    limit_week = max(0, _int_env("DB_HOST_WEEK_LIMIT", 0))
-    _append_db_host_window_metric(
-        metrics,
-        metric_id="db_host_window_5h",
-        label="DB host request window (5h)",
-        window_seconds=5 * 60 * 60,
-        limit=limit_5h,
-        window="hourly",
-    )
-    _append_db_host_window_metric(
-        metrics,
-        metric_id="db_host_window_week",
-        label="DB host request window (7d)",
-        window_seconds=7 * 24 * 60 * 60,
-        limit=limit_week,
-        window="weekly",
-    )
-    return limit_5h, limit_week
-
-
-def _build_db_host_monthly_egress_metric(
-    *,
-    db_url: str,
-    db_host: str,
-    db_name: str,
-) -> tuple[UsageMetric | None, dict[str, Any], list[str]]:
-    sample, sample_error = _collect_postgres_db_egress_sample(db_url)
-    if sample is None:
-        return None, {"egress_measurement_mode": "runtime_event_proxy", "pg_sample_error": sample_error or ""}, []
-
-    now = datetime.now(timezone.utc)
-    month_key = now.strftime("%Y-%m")
-    tracker_key = _db_host_tracker_key(db_host=db_host, db_name=db_name)
-    state = _load_db_host_tracker_state(tracker_key)
-    limit_gb = _db_host_monthly_limit_gb()
-    seed_gb = _db_host_monthly_seed_gb()
-    fallback_row_bytes = max(64.0, _coerce_float(os.getenv("DB_EGRESS_FALLBACK_BYTES_PER_ROW")) or 512.0)
-    safety_factor = max(1.0, _coerce_float(os.getenv("DB_EGRESS_ESTIMATE_SAFETY_FACTOR")) or 1.25)
-    avg_row_bytes = max(64.0, _coerce_float(sample.get("avg_row_bytes")) or fallback_row_bytes)
-
-    current_returned = _coerce_nonnegative_int(sample.get("tup_returned"))
-    current_fetched = _coerce_nonnegative_int(sample.get("tup_fetched"))
-    estimated_monthly_bytes, delta_rows, notes = _estimate_db_host_monthly_bytes(
-        state=state,
-        month_key=month_key,
-        seed_gb=seed_gb,
-        current_returned=current_returned,
-        current_fetched=current_fetched,
-        avg_row_bytes=avg_row_bytes,
-        safety_factor=safety_factor,
-    )
-
-    updated_state = {
-        "month": month_key,
-        "estimated_monthly_bytes": round(float(estimated_monthly_bytes), 3),
-        "last_tup_returned": current_returned,
-        "last_tup_fetched": current_fetched,
-        "last_avg_row_bytes": round(float(avg_row_bytes), 3),
-        "safety_factor": round(float(safety_factor), 4),
-        "updated_at": now.isoformat(),
-        "stats_reset": str(sample.get("stats_reset") or ""),
-    }
-    _save_db_host_tracker_state(tracker_key, updated_state)
-
-    used_gb = max(0.0, estimated_monthly_bytes / (1024.0 ** 3))
-    remaining_gb = max(0.0, limit_gb - used_gb) if limit_gb is not None and limit_gb > 0 else None
-    if limit_gb is None:
-        notes.append("Set DB_EGRESS_MONTHLY_LIMIT_GB (or DB_HOST_MONTHLY_EGRESS_LIMIT_GB) for hard monthly GB enforcement.")
-
-    metric = _metric(
-        id="db_host_egress_monthly_estimated",
-        label="DB host estimated egress (monthly)",
-        unit="gb",
-        used=used_gb,
-        remaining=remaining_gb,
-        limit=limit_gb,
-        window="monthly",
-        validation_state="inferred",
-        validation_detail=(
-            "Estimated from pg_stat_database tuple deltas and relation-size-derived row bytes, "
-            f"with safety factor {round(safety_factor, 3)}."
-        ),
-        evidence_source="pg_stat_database+telemetry_meta",
-    )
-    raw = {
-        "egress_measurement_mode": "pg_stat_database_delta_estimate",
-        "estimator_state_key": tracker_key,
-        "monthly_limit_gb": limit_gb,
-        "monthly_used_gb": round(used_gb, 6),
-        "delta_rows_since_last_sample": int(delta_rows),
-        "avg_row_bytes": round(avg_row_bytes, 3),
-        "safety_factor": round(safety_factor, 4),
-        "pg_stats_reset": str(sample.get("stats_reset") or ""),
-        "pg_sample_collected_at": str(sample.get("collected_at") or ""),
-    }
-    return metric, raw, notes
-
-
-def _build_db_host_snapshot() -> ProviderUsageSnapshot:
-    db_url = (
-        str(os.getenv("RUNTIME_DATABASE_URL", "")).strip()
-        or str(os.getenv("DATABASE_URL", "")).strip()
-    )
-    if not db_url:
-        return ProviderUsageSnapshot(
-            id=f"provider_db_host_{int(time.time())}",
-            provider="db-host",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set DATABASE_URL or RUNTIME_DATABASE_URL to track DB-host usage windows."],
-        )
-
-    db_host, db_name, _db_engine, raw = _db_host_context(db_url)
-    metrics: list[UsageMetric] = []
-    notes: list[str] = []
-    monthly_metric, monthly_raw, monthly_notes = _build_db_host_monthly_egress_metric(
-        db_url=db_url,
-        db_host=db_host,
-        db_name=db_name,
-    )
-    if monthly_metric is not None:
-        metrics.append(monthly_metric)
-    if isinstance(monthly_raw, dict):
-        raw.update(monthly_raw)
-    notes.extend(monthly_notes)
-
-    limit_5h, limit_week = _append_db_host_runtime_proxy_metrics(metrics)
-
-    if monthly_metric is None:
-        notes.append("Monthly DB egress estimate unavailable; falling back to runtime event proxy metrics.")
-    else:
-        notes.append("DB-host monthly egress metric is estimated from PostgreSQL counters; request windows are safety proxies.")
-    if limit_5h <= 0 and limit_week <= 0:
-        notes.append("Set DB_HOST_5H_LIMIT and DB_HOST_WEEK_LIMIT for hard host-window tracking.")
-
-    return ProviderUsageSnapshot(
-        id=f"provider_db_host_{int(time.time())}",
-        provider="db-host",
-        kind="custom",
-        status="ok",
-        data_source="provider_api" if monthly_metric is not None else "runtime_events",
-        metrics=metrics,
-        notes=list(dict.fromkeys(notes)),
-        raw=raw,
-    )
-
-
-def _claude_code_cli_available() -> bool:
-    return shutil.which("claude") is not None
-
-
-def _claude_code_cli_logged_in() -> tuple[bool, str]:
-    """Check whether the local claude CLI has an active auth session.
-
-    Returns (logged_in, auth_method) where auth_method is e.g. 'oauth_token' or ''.
-    Uses `claude auth status --json`; falls back to False on any error.
-    """
-    if not _claude_code_cli_available():
-        return False, ""
-    try:
-        result = subprocess.run(
-            ["claude", "auth", "status", "--json"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            text=True,
-            timeout=8,
-            env={**os.environ, "CLAUDECODE": ""},  # prevent nested-session guard
-        )
-        if result.returncode != 0:
-            return False, ""
-        data = json.loads(result.stdout.strip())
-        if isinstance(data, dict) and data.get("loggedIn"):
-            return True, str(data.get("authMethod", ""))
-        return False, ""
-    except Exception:
-        return False, ""
-
-
-def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
-    """Snapshot for the Claude Code CLI executor (claude -p)."""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
-    cli_available = _claude_code_cli_available()
-
-    if not cli_available:
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note="Claude Code CLI not found in PATH; using runtime execution evidence.",
-            )
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Claude Code CLI ('claude') not found in PATH. Install via 'npm install -g @anthropic-ai/claude-code'."],
-        )
-
-    # Resolve auth method: env key > env OAuth token > local CLI session
-    cli_logged_in, cli_auth_method = (False, "")
-    if not api_key and not oauth_token:
-        cli_logged_in, cli_auth_method = _claude_code_cli_logged_in()
-
-    if not api_key and not oauth_token and not cli_logged_in:
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note="Claude Code CLI available but no auth configured; using runtime execution evidence.",
-            )
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, or run 'claude login' to authenticate."],
-            raw={"cli_available": True},
-        )
-
-    if api_key:
-        auth_method = "api_key"
-    elif oauth_token:
-        auth_method = "oauth_token_env"
-    else:
-        auth_method = f"cli_session:{cli_auth_method}" if cli_auth_method else "cli_session"
-
-    # CLI is present and auth is resolved; probe the Anthropic models endpoint to confirm connectivity.
-    # Only send auth headers when we have explicit env credentials — for CLI session, the probe
-    # confirms network reachability; the CLI itself handles auth internally at execution time.
-    models_url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
-    probe_headers = _claude_code_headers() if (api_key or oauth_token) else {
-        "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
-    }
-    try:
-        with httpx.Client(timeout=8.0, headers=probe_headers) as client:
-            response = client.get(models_url)
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        if cli_logged_in:
-            # CLI session is confirmed; network probe failure is non-fatal.
-            return ProviderUsageSnapshot(
-                id=f"provider_claude_code_{int(time.time())}",
-                provider="claude-code",
-                kind="custom",
-                status="ok",
-                data_source="provider_cli",
-                metrics=[_metric(id="api_probe", label="Claude Code CLI session", unit="requests", used=1.0, window="probe")],
-                notes=[f"auth_method={auth_method}", f"models_probe_skipped:{exc}"],
-                raw={"cli_available": True, "cli_logged_in": True},
-            )
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            snapshot = _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note=f"Claude Code models probe failed ({exc}); using runtime execution evidence.",
-            )
-            snapshot.raw["cli_available"] = True
-            return snapshot
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="degraded",
-            data_source="provider_api",
-            notes=[f"Claude Code models probe failed: {exc}"],
-            raw={"probe_url": models_url, "cli_available": True},
-        )
-
-    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    snapshot = _build_models_visibility_snapshot(
-        provider="claude-code",
-        label="Claude Code visible models",
-        models_url=models_url,
-        rows=rows,
-        headers=response.headers,
-        request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
-        request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
-        request_window="minute",
-        request_label="Claude Code request quota",
-        token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
-        token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
-        token_window="minute",
-        token_label="Claude Code token quota",
-        rate_header_keys=(
-            "anthropic-ratelimit-requests-limit",
-            "anthropic-ratelimit-requests-remaining",
-            "anthropic-ratelimit-tokens-limit",
-            "anthropic-ratelimit-tokens-remaining",
-        ),
-        no_header_note="Claude Code models probe succeeded, but no rate-limit headers were returned.",
-    )
-    snapshot.raw["cli_available"] = True
-    snapshot.raw["cli_logged_in"] = cli_logged_in
-    snapshot.notes.append(f"auth_method={auth_method}")
-
-    # Subscription usage limits (5h/weekly windows) are tracked server-side by Anthropic.
-    # They are NOT exposed via API headers — only visible in the Anthropic console.
-    # Strategy: use --max-budget-usd (CLAUDE_CODE_MAX_BUDGET_USD, default $2/run) to cap per-run cost.
-    # Use --output-format json to capture per-model costUSD in task metadata for accumulation.
-    max_budget = os.getenv("CLAUDE_CODE_MAX_BUDGET_USD", "2.00")
-    snapshot.notes.append(
-        f"Subscription usage limits (5h/weekly windows) are server-side only. "
-        f"Per-run cap: --max-budget-usd ${max_budget} (CLAUDE_CODE_MAX_BUDGET_USD). "
-        f"Set CLAUDE_CODE_MODEL=claude-sonnet-4-5-20250929 (SPEC/TEST/IMPL) and "
-        f"CLAUDE_CODE_REVIEW_MODEL=claude-opus-4-5 (REVIEW/HEAL) to enable model-tier routing."
-    )
-
-    # Apply quota probe from messages endpoint if we have explicit API key credentials.
-    # This gets real per-minute rate limit headers (not available from models GET endpoint).
-    if api_key or oauth_token:
-        quota_probe_headers, probe_error = _claude_quota_probe_headers(probe_headers)
-        snapshot = _apply_quota_probe_to_snapshot(
-            snapshot=snapshot,
-            probe_headers=quota_probe_headers,
-            probe_error=probe_error,
-            request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
-            request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
-            request_label="Claude Code API requests quota (per minute)",
-            token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
-            token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
-            token_label="Claude Code API token quota (per minute)",
-            success_note="Rate limit headers sourced from Anthropic messages probe (not models endpoint).",
-            no_headers_note="Anthropic messages probe completed, but no rate limit headers were returned.",
-            error_note_prefix="Claude Code messages quota probe failed",
-        )
-
-    return snapshot
-
-
-def _claude_code_cli_available() -> bool:
-    return shutil.which("claude") is not None
-
-
-def _claude_code_cli_logged_in() -> tuple[bool, str]:
-    """Check whether the local claude CLI has an active auth session.
-
-    Returns (logged_in, auth_method) where auth_method is e.g. 'oauth_token' or ''.
-    Uses `claude auth status --json`; falls back to False on any error.
-    """
-    if not _claude_code_cli_available():
-        return False, ""
-    try:
-        result = subprocess.run(
-            ["claude", "auth", "status", "--json"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            text=True,
-            timeout=8,
-            env={**os.environ, "CLAUDECODE": ""},  # prevent nested-session guard
-        )
-        if result.returncode != 0:
-            return False, ""
-        data = json.loads(result.stdout.strip())
-        if isinstance(data, dict) and data.get("loggedIn"):
-            return True, str(data.get("authMethod", ""))
-        return False, ""
-    except Exception:
-        return False, ""
-
-
-def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
-    """Snapshot for the Claude Code CLI executor (claude -p)."""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
-    cli_available = _claude_code_cli_available()
-
-    if not cli_available:
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note="Claude Code CLI not found in PATH; using runtime execution evidence.",
-            )
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Claude Code CLI ('claude') not found in PATH. Install via 'npm install -g @anthropic-ai/claude-code'."],
-        )
-
-    # Resolve auth method: env key > env OAuth token > local CLI session
-    cli_logged_in, cli_auth_method = (False, "")
-    if not api_key and not oauth_token:
-        cli_logged_in, cli_auth_method = _claude_code_cli_logged_in()
-
-    if not api_key and not oauth_token and not cli_logged_in:
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            return _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note="Claude Code CLI available but no auth configured; using runtime execution evidence.",
-            )
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, or run 'claude login' to authenticate."],
-            raw={"cli_available": True},
-        )
-
-    if api_key:
-        auth_method = "api_key"
-    elif oauth_token:
-        auth_method = "oauth_token_env"
-    else:
-        auth_method = f"cli_session:{cli_auth_method}" if cli_auth_method else "cli_session"
-
-    # CLI is present and auth is resolved; probe the Anthropic models endpoint to confirm connectivity.
-    # Only send auth headers when we have explicit env credentials — for CLI session, the probe
-    # confirms network reachability; the CLI itself handles auth internally at execution time.
-    models_url = os.getenv("ANTHROPIC_MODELS_URL", "https://api.anthropic.com/v1/models")
-    probe_headers = _claude_code_headers() if (api_key or oauth_token) else {
-        "anthropic-version": os.getenv("ANTHROPIC_API_VERSION", "2023-06-01"),
-    }
-    try:
-        with httpx.Client(timeout=8.0, headers=probe_headers) as client:
-            response = client.get(models_url)
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-    except Exception as exc:
-        if cli_logged_in:
-            # CLI session is confirmed; network probe failure is non-fatal.
-            return ProviderUsageSnapshot(
-                id=f"provider_claude_code_{int(time.time())}",
-                provider="claude-code",
-                kind="custom",
-                status="ok",
-                data_source="provider_cli",
-                metrics=[_metric(id="api_probe", label="Claude Code CLI session", unit="requests", used=1.0, window="probe")],
-                notes=[f"auth_method={auth_method}", f"models_probe_skipped:{exc}"],
-                raw={"cli_available": True, "cli_logged_in": True},
-            )
-        active = int(_active_provider_usage_counts().get("claude-code", 0))
-        if active > 0:
-            snapshot = _runtime_task_runs_snapshot(
-                provider="claude-code",
-                kind="custom",
-                active_runs=active,
-                note=f"Claude Code models probe failed ({exc}); using runtime execution evidence.",
-            )
-            snapshot.raw["cli_available"] = True
-            return snapshot
-        return ProviderUsageSnapshot(
-            id=f"provider_claude_code_{int(time.time())}",
-            provider="claude-code",
-            kind="custom",
-            status="degraded",
-            data_source="provider_api",
-            notes=[f"Claude Code models probe failed: {exc}"],
-            raw={"probe_url": models_url, "cli_available": True},
-        )
-
-    rows = payload.get("data") if isinstance(payload.get("data"), list) else []
-    snapshot = _build_models_visibility_snapshot(
-        provider="claude-code",
-        label="Claude Code visible models",
-        models_url=models_url,
-        rows=rows,
-        headers=response.headers,
-        request_limit_keys=("anthropic-ratelimit-requests-limit", "x-ratelimit-limit-requests"),
-        request_remaining_keys=("anthropic-ratelimit-requests-remaining", "x-ratelimit-remaining-requests"),
-        request_window="minute",
-        request_label="Claude Code request quota",
-        token_limit_keys=("anthropic-ratelimit-tokens-limit", "x-ratelimit-limit-tokens"),
-        token_remaining_keys=("anthropic-ratelimit-tokens-remaining", "x-ratelimit-remaining-tokens"),
-        token_window="minute",
-        token_label="Claude Code token quota",
-        rate_header_keys=(
-            "anthropic-ratelimit-requests-limit",
-            "anthropic-ratelimit-requests-remaining",
-            "anthropic-ratelimit-tokens-limit",
-            "anthropic-ratelimit-tokens-remaining",
-        ),
-        no_header_note="Claude Code models probe succeeded, but no rate-limit headers were returned.",
-    )
-    snapshot.raw["cli_available"] = True
-    snapshot.raw["cli_logged_in"] = cli_logged_in
-    snapshot.notes.append(f"auth_method={auth_method}")
+        elif probe_error:
+            snapshot.notes.append(f"Anthropic messages quota probe failed: {probe_error}")
     return snapshot
 
 
@@ -4492,6 +3322,41 @@ def _build_openai_snapshot() -> ProviderUsageSnapshot:
                 evidence_source="runtime_events",
             )
         )
+    if requests > 0:
+        metrics.append(
+            _metric(
+                id="requests_total",
+                label="OpenAI model requests",
+                unit="requests",
+                used=requests,
+                window="rolling_30d",
+            )
+        )
+
+    # Best-effort fallback: when org usage APIs are unavailable, attempt limit headers from models probe.
+    if usage_error and cost_error:
+        try:
+            models_url = os.getenv("OPENAI_MODELS_URL", "https://api.openai.com/v1/models")
+            probe_headers, probe_error = _openai_quota_probe_headers(headers)
+            if probe_headers is None:
+                raise RuntimeError(probe_error or "openai_quota_probe_unavailable")
+            has_model_limits = _append_rate_limit_metrics(
+                metrics=metrics,
+                headers=probe_headers,
+                request_limit_keys=("x-ratelimit-limit-requests",),
+                request_remaining_keys=("x-ratelimit-remaining-requests",),
+                request_window="minute",
+                request_label="OpenAI request quota",
+                token_limit_keys=("x-ratelimit-limit-tokens",),
+                token_remaining_keys=("x-ratelimit-remaining-tokens",),
+                token_window="minute",
+                token_label="OpenAI token quota",
+            )
+            if has_model_limits:
+                notes.append("Using OpenAI responses probe rate-limit headers as best-effort fallback for remaining quota.")
+        except Exception as exc:
+            notes.append(f"OpenAI models fallback probe failed: {exc}")
+
     return ProviderUsageSnapshot(
         id=f"provider_openai_{int(time.time())}",
         provider="openai",
@@ -4573,7 +3438,7 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_claude_code_snapshot(),
         _build_github_snapshot(),
         _build_openai_snapshot(),
-        _build_config_only_snapshot("openrouter"),
+        _build_openrouter_snapshot(),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
         _build_config_only_snapshot("cursor"),
