@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -8,6 +9,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.models.runtime import IdeaRuntimeSummary, RuntimeEvent, WebViewPerformanceReport, WebViewPerformanceRow
 from app.services import runtime_service
 
 
@@ -657,3 +659,180 @@ async def test_runtime_endpoint_attention_includes_idea_value_gap(
         assert row["idea_id"] == "portfolio-governance"
         assert row["value_gap"] >= 0.0
         assert row["potential_value"] == 82.0
+
+
+def test_cached_runtime_ideas_summary_payload_stale_refresh_singleflight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telemetry_db = tmp_path / "telemetry_cache.db"
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{telemetry_db}")
+    monkeypatch.setattr(runtime_service, "_runtime_endpoint_cache_ttl_seconds", lambda cache_name, default=0.0: 0.0)
+
+    calls = {"refresh": 0}
+
+    def _summary(**kwargs: Any) -> list[IdeaRuntimeSummary]:
+        _ = kwargs
+        calls["refresh"] += 1
+        time.sleep(0.2)
+        idx = calls["refresh"]
+        return [
+            IdeaRuntimeSummary(
+                idea_id=f"idea-{idx}",
+                event_count=1,
+                total_runtime_ms=25.0,
+                average_runtime_ms=25.0,
+                runtime_cost_estimate=float(idx),
+                by_source={"api": 1},
+            )
+        ]
+
+    monkeypatch.setattr(runtime_service, "summarize_by_idea", _summary)
+
+    seeded = runtime_service.cached_runtime_ideas_summary_payload(
+        seconds=3600,
+        limit=20,
+        offset=0,
+        force_refresh=True,
+    )
+    assert seeded["ideas"][0]["idea_id"] == "idea-1"
+    assert calls["refresh"] == 1
+
+    first_stale = runtime_service.cached_runtime_ideas_summary_payload(
+        seconds=3600,
+        limit=20,
+        offset=0,
+        force_refresh=False,
+    )
+    second_stale = runtime_service.cached_runtime_ideas_summary_payload(
+        seconds=3600,
+        limit=20,
+        offset=0,
+        force_refresh=False,
+    )
+    assert first_stale["ideas"][0]["idea_id"] == "idea-1"
+    assert second_stale["ideas"][0]["idea_id"] == "idea-1"
+
+    deadline = time.time() + 2.0
+    while calls["refresh"] < 2 and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert calls["refresh"] == 2
+
+
+def test_cached_runtime_events_stale_refresh_singleflight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telemetry_db = tmp_path / "telemetry_cache.db"
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{telemetry_db}")
+    monkeypatch.setattr(runtime_service, "_runtime_endpoint_cache_ttl_seconds", lambda cache_name, default=0.0: 0.0)
+
+    calls = {"refresh": 0}
+
+    def _events(**kwargs: Any) -> list[RuntimeEvent]:
+        _ = kwargs
+        calls["refresh"] += 1
+        time.sleep(0.2)
+        idx = calls["refresh"]
+        return [
+            RuntimeEvent(
+                id=f"rt_{idx}",
+                source="api",
+                endpoint="/api/ideas",
+                raw_endpoint="/api/ideas",
+                method="GET",
+                status_code=200,
+                runtime_ms=12.0,
+                idea_id="portfolio-governance",
+                origin_idea_id="portfolio-governance",
+                metadata={},
+                runtime_cost_estimate=0.001,
+                recorded_at=datetime.now(timezone.utc),
+            )
+        ]
+
+    monkeypatch.setattr(runtime_service, "list_events", _events)
+
+    seeded = runtime_service.cached_runtime_events(limit=100, force_refresh=True)
+    assert seeded[0].id == "rt_1"
+    assert calls["refresh"] == 1
+
+    first_stale = runtime_service.cached_runtime_events(limit=100, force_refresh=False)
+    second_stale = runtime_service.cached_runtime_events(limit=100, force_refresh=False)
+    assert first_stale[0].id == "rt_1"
+    assert second_stale[0].id == "rt_1"
+
+    deadline = time.time() + 2.0
+    while calls["refresh"] < 2 and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert calls["refresh"] == 2
+
+
+def test_cached_web_view_performance_payload_stale_refresh_singleflight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telemetry_db = tmp_path / "telemetry_cache.db"
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{telemetry_db}")
+    monkeypatch.setattr(runtime_service, "_runtime_endpoint_cache_ttl_seconds", lambda cache_name, default=0.0: 0.0)
+
+    calls = {"refresh": 0}
+
+    def _report(**kwargs: Any) -> WebViewPerformanceReport:
+        _ = kwargs
+        calls["refresh"] += 1
+        time.sleep(0.2)
+        idx = calls["refresh"]
+        return WebViewPerformanceReport(
+            window_seconds=3600,
+            route_prefix=None,
+            total_routes=1,
+            rows=[
+                WebViewPerformanceRow(
+                    route=f"/ideas-{idx}",
+                    views=3,
+                    p50_render_ms=120.0,
+                    p95_render_ms=220.0,
+                    average_render_ms=150.0,
+                    average_api_call_count=2.0,
+                    average_api_endpoint_count=2.0,
+                    average_api_runtime_ms=50.0,
+                    average_api_runtime_cost_estimate=0.003,
+                    last_render_ms=140.0,
+                    last_api_runtime_ms=52.0,
+                    last_api_runtime_cost_estimate=0.0032,
+                    last_view_at=datetime.now(timezone.utc),
+                )
+            ],
+        )
+
+    monkeypatch.setattr(runtime_service, "summarize_web_view_performance", _report)
+
+    seeded = runtime_service.cached_web_view_performance_payload(
+        seconds=3600,
+        limit=20,
+        force_refresh=True,
+    )
+    assert seeded["rows"][0]["route"] == "/ideas-1"
+    assert calls["refresh"] == 1
+
+    first_stale = runtime_service.cached_web_view_performance_payload(
+        seconds=3600,
+        limit=20,
+        force_refresh=False,
+    )
+    second_stale = runtime_service.cached_web_view_performance_payload(
+        seconds=3600,
+        limit=20,
+        force_refresh=False,
+    )
+    assert first_stale["rows"][0]["route"] == "/ideas-1"
+    assert second_stale["rows"][0]["route"] == "/ideas-1"
+
+    deadline = time.time() + 2.0
+    while calls["refresh"] < 2 and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert calls["refresh"] == 2
