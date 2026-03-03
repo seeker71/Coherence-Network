@@ -472,21 +472,44 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
               <h2 className="text-xl font-semibold tracking-tight">Active Ideas</h2>
               <p className="text-xs text-muted-foreground">sorted by {SORT_LABEL[sort]}</p>
             </div>
-            <div className="mb-3 hidden items-center gap-6 border-b border-border/60 pb-2 text-xs text-muted-foreground lg:flex">
-              <span className="inline-flex items-center gap-1">
+            <div className="sticky top-[56px] z-30 mb-3 hidden grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] items-center rounded-lg border border-border/70 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm lg:grid">
+              <span className="inline-flex items-center gap-1.5">
+                <Circle className="h-3.5 w-3.5" aria-hidden />
+                idea
+              </span>
+              <span className="inline-flex items-center justify-end gap-1">
                 <Link2 className="h-3.5 w-3.5" aria-hidden />
                 links
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center justify-end gap-1">
                 <Sparkles className="h-3.5 w-3.5" aria-hidden />
                 gap
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center justify-end gap-1">
                 <TrendingUp className="h-3.5 w-3.5" aria-hidden />
                 roi
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center justify-end gap-1">
                 <Activity className="h-3.5 w-3.5" aria-hidden />
+                attention
+              </span>
+              <span className="ml-2 justify-self-end border-l border-primary/35 pl-3 text-right uppercase tracking-wide">open</span>
+            </div>
+            <div className="sticky top-[56px] z-30 mb-2 flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm lg:hidden">
+              <span className="inline-flex items-center gap-1">
+                <Link2 className="h-3 w-3" aria-hidden />
+                links
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                gap
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" aria-hidden />
+                roi
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Activity className="h-3 w-3" aria-hidden />
                 attention
               </span>
             </div>
@@ -501,7 +524,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
 
                 return (
                   <li key={item.idea_id} className="rounded-xl border border-border/70 bg-background/45 p-2.5 shadow-sm sm:p-3.5">
-                    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_auto] lg:items-center">
+                    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] lg:items-center">
                       <div className="min-w-0">
                         <div className="flex items-start gap-3">
                           <span
