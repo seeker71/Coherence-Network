@@ -1,0 +1,347 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "OFF"
+      - text: "| path"
+      - code [ref=e34]: /ideas
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /ideas
+      - text: "| idea"
+      - code [ref=e41]: portfolio-governance
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e45] [cursor=pointer]:
+        - /url: /flow
+      - link "Contribute" [ref=e46] [cursor=pointer]:
+        - /url: /contribute
+      - link "Specs" [ref=e47] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e48] [cursor=pointer]:
+        - /url: /usage
+      - link "Automation" [ref=e49] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e50] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e51] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e52] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e53] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e54] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e55] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e56] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e57] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e58] [cursor=pointer]:
+        - /url: /api-health
+      - link "Gates" [ref=e59] [cursor=pointer]:
+        - /url: /gates
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/portfolio-governance
+      - link "Ideas API" [ref=e61] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/ideas
+      - link "System lineage" [ref=e62] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/inventory/system-lineage
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - link "← Home" [ref=e65] [cursor=pointer]:
+        - /url: /
+      - link "Portfolio" [ref=e66] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Specs" [ref=e67] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e68] [cursor=pointer]:
+        - /url: /usage
+      - link "Flow" [ref=e69] [cursor=pointer]:
+        - /url: /flow
+      - link "Contributors" [ref=e70] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e71] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e72] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e73] [cursor=pointer]:
+        - /url: /tasks
+      - link "Gates" [ref=e74] [cursor=pointer]:
+        - /url: /gates
+    - heading "Ideas" [level=1] [ref=e75]
+    - paragraph [ref=e76]: "Paginated `GET /api/ideas` with direct links to full idea detail."
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - paragraph [ref=e79]: Total ideas
+        - paragraph [ref=e80]: "112"
+      - generic [ref=e81]:
+        - paragraph [ref=e82]: Actual value
+        - paragraph [ref=e83]: "202.5"
+      - generic [ref=e84]:
+        - paragraph [ref=e85]: Value gap
+        - paragraph [ref=e86]: "8145"
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - paragraph [ref=e89]: Showing 1-25 of 112 | page 1
+        - generic [ref=e90]:
+          - generic [ref=e91]: Previous
+          - link "Next" [ref=e92] [cursor=pointer]:
+            - /url: /ideas?page=2&page_size=25
+      - list [ref=e93]:
+        - listitem [ref=e94]:
+          - generic [ref=e95]:
+            - link "Agent task lease and heartbeat tracking" [ref=e96] [cursor=pointer]:
+              - /url: /ideas/agent-task-lease-and-heartbeat
+            - generic [ref=e97]: validated
+          - paragraph [ref=e98]: agent-task-lease-and-heartbeat
+          - paragraph [ref=e99]: Prevent duplicate parallel work by enforcing time-bound task leases with heartbeats and automatic reassignment when a worker stalls or exits.
+          - paragraph [ref=e100]: free_energy 14.75 | value_gap 83.50 | cost_est 0.000002
+        - listitem [ref=e101]:
+          - generic [ref=e102]:
+            - link "Tool failure cost ledger" [ref=e103] [cursor=pointer]:
+              - /url: /ideas/tool-failure-cost-ledger
+            - generic [ref=e104]: none
+          - paragraph [ref=e105]: tool-failure-cost-ledger
+          - paragraph [ref=e106]: Track every tool call failure with elapsed time and resource spend so expensive no-gain runs are quantified and prioritized for mitigation.
+          - paragraph [ref=e107]: free_energy 7.96 | value_gap 124.00 | cost_est 11
+        - listitem [ref=e108]:
+          - generic [ref=e109]:
+            - link "API and web parity enforcement" [ref=e110] [cursor=pointer]:
+              - /url: /ideas/api-web-parity-enforcement
+            - generic [ref=e111]: validated
+          - paragraph [ref=e112]: api-web-parity-enforcement
+          - paragraph [ref=e113]: Continuously enforce that every public API concept has a human web view and every web flow has machine API parity with bidirectional interlinks.
+          - paragraph [ref=e114]: free_energy 7.91 | value_gap 81.50 | cost_est 10
+        - listitem [ref=e115]:
+          - generic [ref=e116]:
+            - link "Scheduled pipeline effectiveness watchdog" [ref=e117] [cursor=pointer]:
+              - /url: /ideas/scheduled-pipeline-effectiveness-watchdog
+            - generic [ref=e118]: none
+          - paragraph [ref=e119]: scheduled-pipeline-effectiveness-watchdog
+          - paragraph [ref=e120]: Run scheduled audits that measure schedule execution success, stale automations, and unattended failures, then auto-create prioritized tasks from findings.
+          - paragraph [ref=e121]: free_energy 7.67 | value_gap 114.00 | cost_est 10
+        - listitem [ref=e122]:
+          - generic [ref=e123]:
+            - link "Public E2E flow gate automation" [ref=e124] [cursor=pointer]:
+              - /url: /ideas/public-e2e-flow-gate-automation
+            - generic [ref=e125]: validated
+          - paragraph [ref=e126]: public-e2e-flow-gate-automation
+          - paragraph [ref=e127]: Enforce real human-meaningful end-to-end public validation flows before merge so deploys do not pass when only basic endpoint checks are green.
+          - paragraph [ref=e128]: free_energy 7.62 | value_gap 97.50 | cost_est 12
+        - listitem [ref=e129]:
+          - generic [ref=e130]:
+            - link "Spec to process to implementation guard" [ref=e131] [cursor=pointer]:
+              - /url: /ideas/spec-process-implementation-guard
+            - generic [ref=e132]: none
+          - paragraph [ref=e133]: spec-process-implementation-guard
+          - paragraph [ref=e134]: Block merges when implementation lacks linked spec, process/pseudocode, or validation evidence so the change graph remains complete and auditable.
+          - paragraph [ref=e135]: free_energy 7.04 | value_gap 122.00 | cost_est 12
+        - listitem [ref=e136]:
+          - generic [ref=e137]:
+            - link "Real-data-only test contract" [ref=e138] [cursor=pointer]:
+              - /url: /ideas/real-data-only-test-contract
+            - generic [ref=e139]: none
+          - paragraph [ref=e140]: real-data-only-test-contract
+          - paragraph [ref=e141]: Detect mock, placeholder, and fake test paths automatically and require safe real-data validation for critical flows before release.
+          - paragraph [ref=e142]: free_energy 6.31 | value_gap 121.00 | cost_est 13
+        - listitem [ref=e143]:
+          - generic [ref=e144]:
+            - link "Workflow spam circuit breaker" [ref=e145] [cursor=pointer]:
+              - /url: /ideas/workflow-spam-circuit-breaker
+            - generic [ref=e146]: validated
+          - paragraph [ref=e147]: workflow-spam-circuit-breaker
+          - paragraph [ref=e148]: Automatically detect and halt runaway scheduled or self-triggering workflows to prevent noisy logs, wasted CI minutes, and hidden real failures.
+          - paragraph [ref=e149]: free_energy 6.00 | value_gap 85.50 | cost_est 9
+        - listitem [ref=e150]:
+          - generic [ref=e151]:
+            - link "Provider readiness contract automation" [ref=e152] [cursor=pointer]:
+              - /url: /ideas/provider-readiness-contract-automation
+            - generic [ref=e153]: validated
+          - paragraph [ref=e154]: provider-readiness-contract-automation
+          - paragraph [ref=e155]: Automate configuration, integration, and health readiness checks for all providers in active use so missing keys, broken adapters, and degraded providers are detected before they block delivery.
+          - paragraph [ref=e156]: free_energy 5.91 | value_gap 91.50 | cost_est 10
+        - listitem [ref=e157]:
+          - generic [ref=e158]:
+            - link "Contributor self-serve governance flow" [ref=e159] [cursor=pointer]:
+              - /url: /ideas/contributor-self-serve-governance-flow
+            - generic [ref=e160]: none
+          - paragraph [ref=e161]: contributor-self-serve-governance-flow
+          - paragraph [ref=e162]: Implement complete self-serve flows for contributor registration, idea/spec submission, review voting, and attribution so growth is not blocked by manual intervention.
+          - paragraph [ref=e163]: free_energy 5.51 | value_gap 130.00 | cost_est 16
+        - listitem [ref=e164]:
+          - generic [ref=e165]:
+            - link "Idea lifecycle API" [ref=e166] [cursor=pointer]:
+              - /url: /ideas/idea-lifecycle-api
+            - generic [ref=e167]: none
+          - paragraph [ref=e168]: idea-lifecycle-api
+          - paragraph [ref=e169]: Own creation, update, and question-answer lifecycle of ideas as a dedicated API capability.
+          - paragraph [ref=e170]: free_energy 5.50 | value_gap 84.00 | cost_est 10
+        - listitem [ref=e171]:
+          - generic [ref=e172]:
+            - link "Agent endpoint observability" [ref=e173] [cursor=pointer]:
+              - /url: /ideas/agent-endpoint-observability
+            - generic [ref=e174]: none
+          - paragraph [ref=e175]: agent-endpoint-observability
+          - paragraph [ref=e176]: Track and evolve agent task and routing endpoints as a dedicated concept with measurable operational value.
+          - paragraph [ref=e177]: free_energy 5.43 | value_gap 88.00 | cost_est 11
+        - listitem [ref=e178]:
+          - generic [ref=e179]:
+            - link "Value lineage API" [ref=e180] [cursor=pointer]:
+              - /url: /ideas/value-lineage-api
+            - generic [ref=e181]: none
+          - paragraph [ref=e182]: value-lineage-api
+          - paragraph [ref=e183]: Track lineage creation, usage events, valuation, and payout attribution as a dedicated value surface.
+          - paragraph [ref=e184]: free_energy 5.42 | value_gap 94.00 | cost_est 12
+        - listitem [ref=e185]:
+          - generic [ref=e186]:
+            - link "Runtime telemetry API" [ref=e187] [cursor=pointer]:
+              - /url: /ideas/runtime-telemetry-api
+            - generic [ref=e188]: none
+          - paragraph [ref=e189]: runtime-telemetry-api
+          - paragraph [ref=e190]: Own runtime event, endpoint summary, and usage signal collection endpoints as a dedicated telemetry domain.
+          - paragraph [ref=e191]: free_energy 5.41 | value_gap 89.00 | cost_est 11
+        - listitem [ref=e192]:
+          - generic [ref=e193]:
+            - link "Service health contract" [ref=e194] [cursor=pointer]:
+              - /url: /ideas/service-health-contract
+            - generic [ref=e195]: none
+          - paragraph [ref=e196]: service-health-contract
+          - paragraph [ref=e197]: Own health, readiness, and version endpoint contract for deploy safety and uptime verification.
+          - paragraph [ref=e198]: free_energy 5.38 | value_gap 78.00 | cost_est 9
+        - listitem [ref=e199]:
+          - generic [ref=e200]:
+            - link "Friction observability API" [ref=e201] [cursor=pointer]:
+              - /url: /ideas/friction-observability-api
+            - generic [ref=e202]: none
+          - paragraph [ref=e203]: friction-observability-api
+          - paragraph [ref=e204]: Own friction event/report endpoints to continuously measure and reduce workflow drag.
+          - paragraph [ref=e205]: free_energy 5.28 | value_gap 83.00 | cost_est 10
+        - listitem [ref=e206]:
+          - generic [ref=e207]:
+            - link "Governance change request API" [ref=e208] [cursor=pointer]:
+              - /url: /ideas/governance-change-request-api
+            - generic [ref=e209]: none
+          - paragraph [ref=e210]: governance-change-request-api
+          - paragraph [ref=e211]: Manage change request and voting endpoints as a dedicated governance domain.
+          - paragraph [ref=e212]: free_energy 5.22 | value_gap 87.00 | cost_est 11
+        - listitem [ref=e213]:
+          - generic [ref=e214]:
+            - link "Asset registry API" [ref=e215] [cursor=pointer]:
+              - /url: /ideas/asset-registry-api
+            - generic [ref=e216]: none
+          - paragraph [ref=e217]: asset-registry-api
+          - paragraph [ref=e218]: Manage assets and their tracked value contributions through dedicated endpoints and governance links.
+          - paragraph [ref=e219]: free_energy 5.22 | value_gap 82.00 | cost_est 10
+        - listitem [ref=e220]:
+          - generic [ref=e221]:
+            - link "Public validation gates API" [ref=e222] [cursor=pointer]:
+              - /url: /ideas/public-validation-gates-api
+            - generic [ref=e223]: none
+          - paragraph [ref=e224]: public-validation-gates-api
+          - paragraph [ref=e225]: Track release and deploy gate endpoints as a dedicated validation and reliability domain.
+          - paragraph [ref=e226]: free_energy 5.21 | value_gap 96.00 | cost_est 13
+        - listitem [ref=e227]:
+          - generic [ref=e228]:
+            - link "Automation provider usage API" [ref=e229] [cursor=pointer]:
+              - /url: /ideas/automation-provider-usage-api
+            - generic [ref=e230]: none
+          - paragraph [ref=e231]: automation-provider-usage-api
+          - paragraph [ref=e232]: Track automation usage, alerts, and provider readiness endpoints as a unified automation domain.
+          - paragraph [ref=e233]: free_energy 5.18 | value_gap 91.00 | cost_est 12
+        - listitem [ref=e234]:
+          - generic [ref=e235]:
+            - link "Inventory governance automation" [ref=e236] [cursor=pointer]:
+              - /url: /ideas/inventory-governance-automation
+            - generic [ref=e237]: none
+          - paragraph [ref=e238]: inventory-governance-automation
+          - paragraph [ref=e239]: Manage inventory sync, gap closure, and ROI task generation endpoints as a cohesive automation surface.
+          - paragraph [ref=e240]: free_energy 5.17 | value_gap 92.00 | cost_est 12
+        - listitem [ref=e241]:
+          - generic [ref=e242]:
+            - link "Unified idea portfolio governance" [ref=e243] [cursor=pointer]:
+              - /url: /ideas/portfolio-governance
+            - generic [ref=e244]: partial
+          - paragraph [ref=e245]: portfolio-governance
+          - paragraph [ref=e246]: Track potential value, actual value, cost, and open questions for all ideas.
+          - paragraph [ref=e247]: free_energy 5.13 | value_gap 70.00 | cost_est 10
+        - listitem [ref=e248]:
+          - generic [ref=e249]:
+            - link "Spec registry API domain" [ref=e250] [cursor=pointer]:
+              - /url: /ideas/spec-registry-api-domain
+            - generic [ref=e251]: none
+          - paragraph [ref=e252]: spec-registry-api-domain
+          - paragraph [ref=e253]: Track spec registry read/update flows as a first-class concept with explicit lifecycle metrics.
+          - paragraph [ref=e254]: free_energy 5.09 | value_gap 80.00 | cost_est 10
+        - listitem [ref=e255]:
+          - generic [ref=e256]:
+            - link "Contributor registry API" [ref=e257] [cursor=pointer]:
+              - /url: /ideas/contributor-registry-api
+            - generic [ref=e258]: none
+          - paragraph [ref=e259]: contributor-registry-api
+          - paragraph [ref=e260]: Manage contributor identities, attribution metadata, and onboarding readiness via dedicated endpoints.
+          - paragraph [ref=e261]: free_energy 5.09 | value_gap 86.00 | cost_est 11
+        - listitem [ref=e262]:
+          - generic [ref=e263]:
+            - link "Contribution ledger API" [ref=e264] [cursor=pointer]:
+              - /url: /ideas/contribution-ledger-api
+            - generic [ref=e265]: none
+          - paragraph [ref=e266]: contribution-ledger-api
+          - paragraph [ref=e267]: Track contributions and distributions with explicit cost/value accounting and payout readiness.
+          - paragraph [ref=e268]: free_energy 4.98 | value_gap 90.00 | cost_est 12
+  - alert [ref=e269]

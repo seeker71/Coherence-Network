@@ -1,0 +1,2066 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "OFF"
+      - text: "| path"
+      - code [ref=e34]: /flow
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /flow
+      - text: "| idea"
+      - code [ref=e41]: portfolio-governance
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Contribute" [ref=e45] [cursor=pointer]:
+        - /url: /contribute
+      - link "Ideas" [ref=e46] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e47] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e48] [cursor=pointer]:
+        - /url: /usage
+      - link "Automation" [ref=e49] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e50] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e51] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e52] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e53] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e54] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e55] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e56] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e57] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e58] [cursor=pointer]:
+        - /url: /api-health
+      - link "Gates" [ref=e59] [cursor=pointer]:
+        - /url: /gates
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/portfolio-governance
+      - link "Flow inventory" [ref=e61] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/inventory/flow
+      - link "System lineage" [ref=e62] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/inventory/system-lineage
+      - link "Contributors API" [ref=e63] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/contributors
+      - link "Contributions API" [ref=e64] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/contributions
+  - main [ref=e65]:
+    - generic [ref=e66]:
+      - link "← Home" [ref=e67] [cursor=pointer]:
+        - /url: /
+      - link "Portfolio" [ref=e68] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Ideas" [ref=e69] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e70] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e71] [cursor=pointer]:
+        - /url: /usage
+      - link "Contributors" [ref=e72] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e73] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e74] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e75] [cursor=pointer]:
+        - /url: /tasks
+      - link "Gates" [ref=e76] [cursor=pointer]:
+        - /url: /gates
+    - heading "Flow" [level=1] [ref=e77]
+    - paragraph [ref=e78]:
+      - text: Unified tracking of
+      - code [ref=e79]: idea -> spec -> process -> implementation -> validation
+      - text: with contributor and contribution visibility.
+    - generic [ref=e80]:
+      - generic [ref=e81]:
+        - paragraph [ref=e82]: Ideas tracked
+        - paragraph [ref=e83]: "39"
+      - generic [ref=e84]:
+        - paragraph [ref=e85]: Flow complete (spec+process+impl+validation)
+        - paragraph [ref=e86]: "0"
+      - generic [ref=e87]:
+        - paragraph [ref=e88]: Contributors in registry
+        - paragraph [ref=e89]: "2"
+      - generic [ref=e90]:
+        - paragraph [ref=e91]: Contributions in registry
+        - paragraph [ref=e92]: "160"
+      - generic [ref=e93]:
+        - paragraph [ref=e94]: Blocked ideas
+        - paragraph [ref=e95]: "39"
+      - generic [ref=e96]:
+        - paragraph [ref=e97]: Unblock queue items
+        - paragraph [ref=e98]: "39"
+    - generic [ref=e99]:
+      - heading "Top Contributors by Contribution Count" [level=2] [ref=e100]
+      - list [ref=e101]:
+        - listitem [ref=e102]:
+          - link "urs-muff" [ref=e104] [cursor=pointer]:
+            - /url: /contributors?contributor_id=4c2cb956-f866-432f-beed-12298589b47d
+          - generic [ref=e105]: "144"
+        - listitem [ref=e106]:
+          - link "coherence-system" [ref=e108] [cursor=pointer]:
+            - /url: /contributors?contributor_id=09114469-cbb0-4d3b-90b6-2a7de1857ee6
+          - generic [ref=e109]: "16"
+    - generic [ref=e110]:
+      - heading "Unblock Priority Queue" [level=2] [ref=e111]
+      - paragraph [ref=e112]: Ordered by estimated unlock value per cost. Work top-down to unblock more downstream tasks.
+      - list [ref=e113]:
+        - listitem [ref=e114]:
+          - generic [ref=e115]:
+            - link "Tool failure cost ledger" [ref=e116] [cursor=pointer]:
+              - /url: /flow?idea_id=tool-failure-cost-ledger
+            - generic [ref=e117]: stage spec | priority 47.74
+          - paragraph [ref=e118]: cost 2.00 | unlock value 95.48 | blocked process, implementation, validation
+          - paragraph [ref=e119]:
+            - text: ready to create as
+            - code [ref=e120]: spec
+            - text: task
+        - listitem [ref=e121]:
+          - generic [ref=e122]:
+            - link "Contributor self-serve governance flow" [ref=e123] [cursor=pointer]:
+              - /url: /flow?idea_id=contributor-self-serve-governance-flow
+            - generic [ref=e124]: stage spec | priority 46.80
+          - paragraph [ref=e125]: cost 2.00 | unlock value 93.60 | blocked process, implementation, validation
+          - paragraph [ref=e126]:
+            - text: ready to create as
+            - code [ref=e127]: spec
+            - text: task
+        - listitem [ref=e128]:
+          - generic [ref=e129]:
+            - link "Federated instance aggregation for contributor-owned deployments" [ref=e130] [cursor=pointer]:
+              - /url: /flow?idea_id=federated-instance-aggregation
+            - generic [ref=e131]: stage spec | priority 46.08
+          - paragraph [ref=e132]: cost 2.00 | unlock value 92.16 | blocked process, implementation, validation
+          - paragraph [ref=e133]:
+            - text: active task
+            - link "task_e388c8c885807bd9" [ref=e134] [cursor=pointer]:
+              - /url: /tasks?task_id=task_e388c8c885807bd9
+            - text: (pending)
+        - listitem [ref=e135]:
+          - generic [ref=e136]:
+            - link "Spec to process to implementation guard" [ref=e137] [cursor=pointer]:
+              - /url: /flow?idea_id=spec-process-implementation-guard
+            - generic [ref=e138]: stage spec | priority 45.75
+          - paragraph [ref=e139]: cost 2.00 | unlock value 91.50 | blocked process, implementation, validation
+          - paragraph [ref=e140]:
+            - text: active task
+            - link "task_72c5bc2d406ab11b" [ref=e141] [cursor=pointer]:
+              - /url: /tasks?task_id=task_72c5bc2d406ab11b
+            - text: (pending)
+        - listitem [ref=e142]:
+          - generic [ref=e143]:
+            - link "Real-data-only test contract" [ref=e144] [cursor=pointer]:
+              - /url: /flow?idea_id=real-data-only-test-contract
+            - generic [ref=e145]: stage spec | priority 44.16
+          - paragraph [ref=e146]: cost 2.00 | unlock value 88.33 | blocked process, implementation, validation
+          - paragraph [ref=e147]:
+            - text: active task
+            - link "task_e65c720d468db8ca" [ref=e148] [cursor=pointer]:
+              - /url: /tasks?task_id=task_e65c720d468db8ca
+            - text: (pending)
+        - listitem [ref=e149]:
+          - generic [ref=e150]:
+            - link "Scheduled pipeline effectiveness watchdog" [ref=e151] [cursor=pointer]:
+              - /url: /flow?idea_id=scheduled-pipeline-effectiveness-watchdog
+            - generic [ref=e152]: stage spec | priority 42.18
+          - paragraph [ref=e153]: cost 2.00 | unlock value 84.36 | blocked process, implementation, validation
+          - paragraph [ref=e154]:
+            - text: active task
+            - link "task_fde8447d395b98a8" [ref=e155] [cursor=pointer]:
+              - /url: /tasks?task_id=task_fde8447d395b98a8
+            - text: (pending)
+        - listitem [ref=e156]:
+          - generic [ref=e157]:
+            - link "Public validation gates API" [ref=e158] [cursor=pointer]:
+              - /url: /flow?idea_id=public-validation-gates-api
+            - generic [ref=e159]: stage spec | priority 36.48
+          - paragraph [ref=e160]: cost 2.00 | unlock value 72.96 | blocked process, implementation, validation
+          - paragraph [ref=e161]:
+            - text: active task
+            - link "task_cf997d0ecc321c97" [ref=e162] [cursor=pointer]:
+              - /url: /tasks?task_id=task_cf997d0ecc321c97
+            - text: (needs_decision)
+        - listitem [ref=e163]:
+          - generic [ref=e164]:
+            - link "Value lineage API" [ref=e165] [cursor=pointer]:
+              - /url: /flow?idea_id=value-lineage-api
+            - generic [ref=e166]: stage spec | priority 35.25
+          - paragraph [ref=e167]: cost 2.00 | unlock value 70.50 | blocked process, implementation, validation
+          - paragraph [ref=e168]:
+            - text: active task
+            - link "task_18dd4eb9df31cca1" [ref=e169] [cursor=pointer]:
+              - /url: /tasks?task_id=task_18dd4eb9df31cca1
+            - text: (needs_decision)
+        - listitem [ref=e170]:
+          - generic [ref=e171]:
+            - link "Automation provider usage API" [ref=e172] [cursor=pointer]:
+              - /url: /flow?idea_id=automation-provider-usage-api
+            - generic [ref=e173]: stage spec | priority 33.67
+          - paragraph [ref=e174]: cost 2.00 | unlock value 67.34 | blocked process, implementation, validation
+          - paragraph [ref=e175]:
+            - text: active task
+            - link "task_78558775b936e600" [ref=e176] [cursor=pointer]:
+              - /url: /tasks?task_id=task_78558775b936e600
+            - text: (needs_decision)
+        - listitem [ref=e177]:
+          - generic [ref=e178]:
+            - link "Inventory governance automation" [ref=e179] [cursor=pointer]:
+              - /url: /flow?idea_id=inventory-governance-automation
+            - generic [ref=e180]: stage spec | priority 33.58
+          - paragraph [ref=e181]: cost 2.00 | unlock value 67.16 | blocked process, implementation, validation
+          - paragraph [ref=e182]:
+            - text: active task
+            - link "task_9896c4d04253e669" [ref=e183] [cursor=pointer]:
+              - /url: /tasks?task_id=task_9896c4d04253e669
+            - text: (needs_decision)
+        - listitem [ref=e184]:
+          - generic [ref=e185]:
+            - link "Agent endpoint observability" [ref=e186] [cursor=pointer]:
+              - /url: /flow?idea_id=agent-endpoint-observability
+            - generic [ref=e187]: stage spec | priority 32.56
+          - paragraph [ref=e188]: cost 2.00 | unlock value 65.12 | blocked process, implementation, validation
+          - paragraph [ref=e189]:
+            - text: active task
+            - link "task_5389df0db147a0d8" [ref=e190] [cursor=pointer]:
+              - /url: /tasks?task_id=task_5389df0db147a0d8
+            - text: (pending)
+        - listitem [ref=e191]:
+          - generic [ref=e192]:
+            - link "Runtime telemetry API" [ref=e193] [cursor=pointer]:
+              - /url: /flow?idea_id=runtime-telemetry-api
+            - generic [ref=e194]: stage spec | priority 32.48
+          - paragraph [ref=e195]: cost 2.00 | unlock value 64.97 | blocked process, implementation, validation
+          - paragraph [ref=e196]:
+            - text: active task
+            - link "task_9802bb05dc481a56" [ref=e197] [cursor=pointer]:
+              - /url: /tasks?task_id=task_9802bb05dc481a56
+            - text: (pending)
+    - generic [ref=e198]:
+      - article [ref=e199]:
+        - generic [ref=e200]:
+          - heading "Agent endpoint observability" [level=2] [ref=e201]:
+            - link "Agent endpoint observability" [ref=e202] [cursor=pointer]:
+              - /url: /ideas/agent-endpoint-observability
+          - generic [ref=e203]: agent-endpoint-observability
+        - generic [ref=e204]:
+          - generic [ref=e205]: "spec: missing"
+          - generic [ref=e206]: "process: missing"
+          - generic [ref=e207]: "implementation: missing"
+          - generic [ref=e208]: "validation: missing"
+          - generic [ref=e209]: "contributors: missing"
+          - generic [ref=e210]: "contributions: missing"
+          - generic [ref=e211]: "assets: missing"
+        - paragraph [ref=e212]: blocker spec | unblock priority 32.56 | idea value gap 88.00 | confidence 0.74
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - paragraph [ref=e215]: Spec + Process
+            - paragraph [ref=e216]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e217]: spec_ids -
+            - paragraph [ref=e218]: task_ids -
+            - paragraph [ref=e219]: threads -
+            - paragraph [ref=e220]: source_files -
+          - generic [ref=e221]:
+            - paragraph [ref=e222]: Implementation + Contribution
+            - paragraph [ref=e223]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e224]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e225]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e226]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e227]: assets 0 (missing)
+            - paragraph [ref=e228]: lineage_ids -
+            - paragraph [ref=e229]: implementation_refs -
+          - generic [ref=e230]:
+            - paragraph [ref=e231]: Validation
+            - paragraph [ref=e232]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e233]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e234]: public_endpoints -
+          - generic [ref=e235]:
+            - paragraph [ref=e236]: Contributors
+            - paragraph [ref=e237]: unique 0 (missing)
+            - paragraph [ref=e238]: registry_ids -
+            - list
+      - article [ref=e239]:
+        - generic [ref=e240]:
+          - heading "Agent task lease and heartbeat tracking" [level=2] [ref=e241]:
+            - link "Agent task lease and heartbeat tracking" [ref=e242] [cursor=pointer]:
+              - /url: /ideas/agent-task-lease-and-heartbeat
+          - generic [ref=e243]: agent-task-lease-and-heartbeat
+        - generic [ref=e244]:
+          - generic [ref=e245]: "spec: tracked"
+          - generic [ref=e246]: "process: tracked"
+          - generic [ref=e247]: "implementation: tracked"
+          - generic [ref=e248]: "validation: missing"
+          - generic [ref=e249]: "contributors: missing"
+          - generic [ref=e250]: "contributions: missing"
+          - generic [ref=e251]: "assets: missing"
+        - paragraph [ref=e252]: blocker validation | unblock priority 7.83 | idea value gap 83.50 | confidence 0.75
+        - generic [ref=e253]:
+          - generic [ref=e254]:
+            - paragraph [ref=e255]: Spec + Process
+            - paragraph [ref=e256]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e257]:
+              - text: spec_ids
+              - link "113-agent-task-lease-and-heartbeat" [ref=e259] [cursor=pointer]:
+                - /url: /specs/113-agent-task-lease-and-heartbeat
+            - paragraph [ref=e260]: task_ids -
+            - paragraph [ref=e261]: threads -
+            - paragraph [ref=e262]: source_files -
+          - generic [ref=e263]:
+            - paragraph [ref=e264]: Implementation + Contribution
+            - paragraph [ref=e265]: lineage_links 0 (tracked) | runtime_events 0
+            - paragraph [ref=e266]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e267]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e268]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e269]: assets 0 (missing)
+            - paragraph [ref=e270]: lineage_ids -
+            - paragraph [ref=e271]:
+              - text: implementation_refs
+              - link "spec-registry:113-agent-task-lease-and-heartbeat" [ref=e273] [cursor=pointer]:
+                - /url: https://github.com/seeker71/Coherence-Network/blob/main/spec-registry:113-agent-task-lease-and-heartbeat
+          - generic [ref=e274]:
+            - paragraph [ref=e275]: Validation
+            - paragraph [ref=e276]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e277]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e278]: public_endpoints -
+          - generic [ref=e279]:
+            - paragraph [ref=e280]: Contributors
+            - paragraph [ref=e281]: unique 0 (missing)
+            - paragraph [ref=e282]: registry_ids -
+            - list
+      - article [ref=e283]:
+        - generic [ref=e284]:
+          - heading "API and web parity enforcement" [level=2] [ref=e285]:
+            - link "API and web parity enforcement" [ref=e286] [cursor=pointer]:
+              - /url: /ideas/api-web-parity-enforcement
+          - generic [ref=e287]: api-web-parity-enforcement
+        - generic [ref=e288]:
+          - generic [ref=e289]: "spec: missing"
+          - generic [ref=e290]: "process: missing"
+          - generic [ref=e291]: "implementation: missing"
+          - generic [ref=e292]: "validation: missing"
+          - generic [ref=e293]: "contributors: missing"
+          - generic [ref=e294]: "contributions: missing"
+          - generic [ref=e295]: "assets: missing"
+        - paragraph [ref=e296]: blocker spec | unblock priority 30.56 | idea value gap 81.50 | confidence 0.75
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - paragraph [ref=e299]: Spec + Process
+            - paragraph [ref=e300]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e301]: spec_ids -
+            - paragraph [ref=e302]: task_ids -
+            - paragraph [ref=e303]: threads -
+            - paragraph [ref=e304]: source_files -
+          - generic [ref=e305]:
+            - paragraph [ref=e306]: Implementation + Contribution
+            - paragraph [ref=e307]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e308]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e309]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e310]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e311]: assets 0 (missing)
+            - paragraph [ref=e312]: lineage_ids -
+            - paragraph [ref=e313]: implementation_refs -
+          - generic [ref=e314]:
+            - paragraph [ref=e315]: Validation
+            - paragraph [ref=e316]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e317]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e318]: public_endpoints -
+          - generic [ref=e319]:
+            - paragraph [ref=e320]: Contributors
+            - paragraph [ref=e321]: unique 0 (missing)
+            - paragraph [ref=e322]: registry_ids -
+            - list
+      - article [ref=e323]:
+        - generic [ref=e324]:
+          - heading "Asset registry API" [level=2] [ref=e325]:
+            - link "Asset registry API" [ref=e326] [cursor=pointer]:
+              - /url: /ideas/asset-registry-api
+          - generic [ref=e327]: asset-registry-api
+        - generic [ref=e328]:
+          - generic [ref=e329]: "spec: missing"
+          - generic [ref=e330]: "process: missing"
+          - generic [ref=e331]: "implementation: missing"
+          - generic [ref=e332]: "validation: missing"
+          - generic [ref=e333]: "contributors: missing"
+          - generic [ref=e334]: "contributions: missing"
+          - generic [ref=e335]: "assets: missing"
+        - paragraph [ref=e336]: blocker spec | unblock priority 28.70 | idea value gap 82.00 | confidence 0.70
+        - generic [ref=e337]:
+          - generic [ref=e338]:
+            - paragraph [ref=e339]: Spec + Process
+            - paragraph [ref=e340]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e341]: spec_ids -
+            - paragraph [ref=e342]: task_ids -
+            - paragraph [ref=e343]: threads -
+            - paragraph [ref=e344]: source_files -
+          - generic [ref=e345]:
+            - paragraph [ref=e346]: Implementation + Contribution
+            - paragraph [ref=e347]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e348]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e349]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e350]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e351]: assets 0 (missing)
+            - paragraph [ref=e352]: lineage_ids -
+            - paragraph [ref=e353]: implementation_refs -
+          - generic [ref=e354]:
+            - paragraph [ref=e355]: Validation
+            - paragraph [ref=e356]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e357]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e358]: public_endpoints -
+          - generic [ref=e359]:
+            - paragraph [ref=e360]: Contributors
+            - paragraph [ref=e361]: unique 0 (missing)
+            - paragraph [ref=e362]: registry_ids -
+            - list
+      - article [ref=e363]:
+        - generic [ref=e364]:
+          - heading "Automation provider usage API" [level=2] [ref=e365]:
+            - link "Automation provider usage API" [ref=e366] [cursor=pointer]:
+              - /url: /ideas/automation-provider-usage-api
+          - generic [ref=e367]: automation-provider-usage-api
+        - generic [ref=e368]:
+          - generic [ref=e369]: "spec: missing"
+          - generic [ref=e370]: "process: missing"
+          - generic [ref=e371]: "implementation: missing"
+          - generic [ref=e372]: "validation: missing"
+          - generic [ref=e373]: "contributors: missing"
+          - generic [ref=e374]: "contributions: missing"
+          - generic [ref=e375]: "assets: missing"
+        - paragraph [ref=e376]: blocker spec | unblock priority 33.67 | idea value gap 91.00 | confidence 0.74
+        - generic [ref=e377]:
+          - generic [ref=e378]:
+            - paragraph [ref=e379]: Spec + Process
+            - paragraph [ref=e380]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e381]: spec_ids -
+            - paragraph [ref=e382]: task_ids -
+            - paragraph [ref=e383]: threads -
+            - paragraph [ref=e384]: source_files -
+          - generic [ref=e385]:
+            - paragraph [ref=e386]: Implementation + Contribution
+            - paragraph [ref=e387]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e388]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e389]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e390]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e391]: assets 0 (missing)
+            - paragraph [ref=e392]: lineage_ids -
+            - paragraph [ref=e393]: implementation_refs -
+          - generic [ref=e394]:
+            - paragraph [ref=e395]: Validation
+            - paragraph [ref=e396]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e397]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e398]: public_endpoints -
+          - generic [ref=e399]:
+            - paragraph [ref=e400]: Contributors
+            - paragraph [ref=e401]: unique 0 (missing)
+            - paragraph [ref=e402]: registry_ids -
+            - list
+      - article [ref=e403]:
+        - generic [ref=e404]:
+          - heading "Coherence network agent pipeline" [level=2] [ref=e405]:
+            - link "Coherence network agent pipeline" [ref=e406] [cursor=pointer]:
+              - /url: /ideas/coherence-network-agent-pipeline
+          - generic [ref=e407]: coherence-network-agent-pipeline
+        - generic [ref=e408]:
+          - generic [ref=e409]: "spec: missing"
+          - generic [ref=e410]: "process: missing"
+          - generic [ref=e411]: "implementation: missing"
+          - generic [ref=e412]: "validation: missing"
+          - generic [ref=e413]: "contributors: missing"
+          - generic [ref=e414]: "contributions: missing"
+          - generic [ref=e415]: "assets: missing"
+        - paragraph [ref=e416]: blocker spec | unblock priority 28.60 | idea value gap 88.00 | confidence 0.65
+        - generic [ref=e417]:
+          - generic [ref=e418]:
+            - paragraph [ref=e419]: Spec + Process
+            - paragraph [ref=e420]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e421]: spec_ids -
+            - paragraph [ref=e422]: task_ids -
+            - paragraph [ref=e423]: threads -
+            - paragraph [ref=e424]: source_files -
+          - generic [ref=e425]:
+            - paragraph [ref=e426]: Implementation + Contribution
+            - paragraph [ref=e427]: lineage_links 0 (missing) | runtime_events 1
+            - paragraph [ref=e428]: runtime_ms 1000.00 | runtime_cost 0.002000
+            - paragraph [ref=e429]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e430]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e431]: assets 0 (missing)
+            - paragraph [ref=e432]: lineage_ids -
+            - paragraph [ref=e433]: implementation_refs -
+          - generic [ref=e434]:
+            - paragraph [ref=e435]: Validation
+            - paragraph [ref=e436]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e437]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e438]: public_endpoints -
+          - generic [ref=e439]:
+            - paragraph [ref=e440]: Contributors
+            - paragraph [ref=e441]: unique 0 (missing)
+            - paragraph [ref=e442]: registry_ids -
+            - list
+      - article [ref=e443]:
+        - generic [ref=e444]:
+          - heading "Increase coherence signal depth with real data" [level=2] [ref=e445]:
+            - link "Increase coherence signal depth with real data" [ref=e446] [cursor=pointer]:
+              - /url: /ideas/coherence-signal-depth
+          - generic [ref=e447]: coherence-signal-depth
+        - generic [ref=e448]:
+          - generic [ref=e449]: "spec: missing"
+          - generic [ref=e450]: "process: missing"
+          - generic [ref=e451]: "implementation: missing"
+          - generic [ref=e452]: "validation: missing"
+          - generic [ref=e453]: "contributors: missing"
+          - generic [ref=e454]: "contributions: missing"
+          - generic [ref=e455]: "assets: missing"
+        - paragraph [ref=e456]: blocker spec | unblock priority 19.25 | idea value gap 70.00 | confidence 0.55
+        - generic [ref=e457]:
+          - generic [ref=e458]:
+            - paragraph [ref=e459]: Spec + Process
+            - paragraph [ref=e460]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e461]: spec_ids -
+            - paragraph [ref=e462]: task_ids -
+            - paragraph [ref=e463]: threads -
+            - paragraph [ref=e464]: source_files -
+          - generic [ref=e465]:
+            - paragraph [ref=e466]: Implementation + Contribution
+            - paragraph [ref=e467]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e468]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e469]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e470]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e471]: assets 0 (missing)
+            - paragraph [ref=e472]: lineage_ids -
+            - paragraph [ref=e473]: implementation_refs -
+          - generic [ref=e474]:
+            - paragraph [ref=e475]: Validation
+            - paragraph [ref=e476]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e477]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e478]: public_endpoints -
+          - generic [ref=e479]:
+            - paragraph [ref=e480]: Contributors
+            - paragraph [ref=e481]: unique 0 (missing)
+            - paragraph [ref=e482]: registry_ids -
+            - list
+      - article [ref=e483]:
+        - generic [ref=e484]:
+          - heading "Contribution ledger API" [level=2] [ref=e485]:
+            - link "Contribution ledger API" [ref=e486] [cursor=pointer]:
+              - /url: /ideas/contribution-ledger-api
+          - generic [ref=e487]: contribution-ledger-api
+        - generic [ref=e488]:
+          - generic [ref=e489]: "spec: missing"
+          - generic [ref=e490]: "process: missing"
+          - generic [ref=e491]: "implementation: missing"
+          - generic [ref=e492]: "validation: missing"
+          - generic [ref=e493]: "contributors: missing"
+          - generic [ref=e494]: "contributions: missing"
+          - generic [ref=e495]: "assets: missing"
+        - paragraph [ref=e496]: blocker spec | unblock priority 32.40 | idea value gap 90.00 | confidence 0.72
+        - generic [ref=e497]:
+          - generic [ref=e498]:
+            - paragraph [ref=e499]: Spec + Process
+            - paragraph [ref=e500]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e501]: spec_ids -
+            - paragraph [ref=e502]: task_ids -
+            - paragraph [ref=e503]: threads -
+            - paragraph [ref=e504]: source_files -
+          - generic [ref=e505]:
+            - paragraph [ref=e506]: Implementation + Contribution
+            - paragraph [ref=e507]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e508]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e509]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e510]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e511]: assets 0 (missing)
+            - paragraph [ref=e512]: lineage_ids -
+            - paragraph [ref=e513]: implementation_refs -
+          - generic [ref=e514]:
+            - paragraph [ref=e515]: Validation
+            - paragraph [ref=e516]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e517]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e518]: public_endpoints -
+          - generic [ref=e519]:
+            - paragraph [ref=e520]: Contributors
+            - paragraph [ref=e521]: unique 0 (missing)
+            - paragraph [ref=e522]: registry_ids -
+            - list
+      - article [ref=e523]:
+        - generic [ref=e524]:
+          - heading "Contributor registry API" [level=2] [ref=e525]:
+            - link "Contributor registry API" [ref=e526] [cursor=pointer]:
+              - /url: /ideas/contributor-registry-api
+          - generic [ref=e527]: contributor-registry-api
+        - generic [ref=e528]:
+          - generic [ref=e529]: "spec: missing"
+          - generic [ref=e530]: "process: missing"
+          - generic [ref=e531]: "implementation: missing"
+          - generic [ref=e532]: "validation: missing"
+          - generic [ref=e533]: "contributors: missing"
+          - generic [ref=e534]: "contributions: missing"
+          - generic [ref=e535]: "assets: missing"
+        - paragraph [ref=e536]: blocker spec | unblock priority 30.53 | idea value gap 86.00 | confidence 0.71
+        - generic [ref=e537]:
+          - generic [ref=e538]:
+            - paragraph [ref=e539]: Spec + Process
+            - paragraph [ref=e540]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e541]: spec_ids -
+            - paragraph [ref=e542]: task_ids -
+            - paragraph [ref=e543]: threads -
+            - paragraph [ref=e544]: source_files -
+          - generic [ref=e545]:
+            - paragraph [ref=e546]: Implementation + Contribution
+            - paragraph [ref=e547]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e548]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e549]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e550]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e551]: assets 0 (missing)
+            - paragraph [ref=e552]: lineage_ids -
+            - paragraph [ref=e553]: implementation_refs -
+          - generic [ref=e554]:
+            - paragraph [ref=e555]: Validation
+            - paragraph [ref=e556]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e557]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e558]: public_endpoints -
+          - generic [ref=e559]:
+            - paragraph [ref=e560]: Contributors
+            - paragraph [ref=e561]: unique 0 (missing)
+            - paragraph [ref=e562]: registry_ids -
+            - list
+      - article [ref=e563]:
+        - generic [ref=e564]:
+          - heading "Contributor self-serve governance flow" [level=2] [ref=e565]:
+            - link "Contributor self-serve governance flow" [ref=e566] [cursor=pointer]:
+              - /url: /ideas/contributor-self-serve-governance-flow
+          - generic [ref=e567]: contributor-self-serve-governance-flow
+        - generic [ref=e568]:
+          - generic [ref=e569]: "spec: missing"
+          - generic [ref=e570]: "process: missing"
+          - generic [ref=e571]: "implementation: missing"
+          - generic [ref=e572]: "validation: missing"
+          - generic [ref=e573]: "contributors: missing"
+          - generic [ref=e574]: "contributions: missing"
+          - generic [ref=e575]: "assets: missing"
+        - paragraph [ref=e576]: blocker spec | unblock priority 46.80 | idea value gap 130.00 | confidence 0.72
+        - generic [ref=e577]:
+          - generic [ref=e578]:
+            - paragraph [ref=e579]: Spec + Process
+            - paragraph [ref=e580]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e581]: spec_ids -
+            - paragraph [ref=e582]: task_ids -
+            - paragraph [ref=e583]: threads -
+            - paragraph [ref=e584]: source_files -
+          - generic [ref=e585]:
+            - paragraph [ref=e586]: Implementation + Contribution
+            - paragraph [ref=e587]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e588]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e589]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e590]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e591]: assets 0 (missing)
+            - paragraph [ref=e592]: lineage_ids -
+            - paragraph [ref=e593]: implementation_refs -
+          - generic [ref=e594]:
+            - paragraph [ref=e595]: Validation
+            - paragraph [ref=e596]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e597]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e598]: public_endpoints -
+          - generic [ref=e599]:
+            - paragraph [ref=e600]: Contributors
+            - paragraph [ref=e601]: unique 0 (missing)
+            - paragraph [ref=e602]: registry_ids -
+            - list
+      - article [ref=e603]:
+        - generic [ref=e604]:
+          - heading "Federated instance aggregation for contributor-owned deployments" [level=2] [ref=e605]:
+            - link "Federated instance aggregation for contributor-owned deployments" [ref=e606] [cursor=pointer]:
+              - /url: /ideas/federated-instance-aggregation
+          - generic [ref=e607]: federated-instance-aggregation
+        - generic [ref=e608]:
+          - generic [ref=e609]: "spec: missing"
+          - generic [ref=e610]: "process: missing"
+          - generic [ref=e611]: "implementation: missing"
+          - generic [ref=e612]: "validation: missing"
+          - generic [ref=e613]: "contributors: missing"
+          - generic [ref=e614]: "contributions: missing"
+          - generic [ref=e615]: "assets: missing"
+        - paragraph [ref=e616]: blocker spec | unblock priority 46.08 | idea value gap 128.00 | confidence 0.72
+        - generic [ref=e617]:
+          - generic [ref=e618]:
+            - paragraph [ref=e619]: Spec + Process
+            - paragraph [ref=e620]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e621]: spec_ids -
+            - paragraph [ref=e622]: task_ids -
+            - paragraph [ref=e623]: threads -
+            - paragraph [ref=e624]: source_files -
+          - generic [ref=e625]:
+            - paragraph [ref=e626]: Implementation + Contribution
+            - paragraph [ref=e627]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e628]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e629]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e630]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e631]: assets 0 (missing)
+            - paragraph [ref=e632]: lineage_ids -
+            - paragraph [ref=e633]: implementation_refs -
+          - generic [ref=e634]:
+            - paragraph [ref=e635]: Validation
+            - paragraph [ref=e636]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e637]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e638]: public_endpoints -
+          - generic [ref=e639]:
+            - paragraph [ref=e640]: Contributors
+            - paragraph [ref=e641]: unique 0 (missing)
+            - paragraph [ref=e642]: registry_ids -
+            - list
+      - article [ref=e643]:
+        - generic [ref=e644]:
+          - heading "Friction observability API" [level=2] [ref=e645]:
+            - link "Friction observability API" [ref=e646] [cursor=pointer]:
+              - /url: /ideas/friction-observability-api
+          - generic [ref=e647]: friction-observability-api
+        - generic [ref=e648]:
+          - generic [ref=e649]: "spec: missing"
+          - generic [ref=e650]: "process: missing"
+          - generic [ref=e651]: "implementation: missing"
+          - generic [ref=e652]: "validation: missing"
+          - generic [ref=e653]: "contributors: missing"
+          - generic [ref=e654]: "contributions: missing"
+          - generic [ref=e655]: "assets: missing"
+        - paragraph [ref=e656]: blocker spec | unblock priority 29.05 | idea value gap 83.00 | confidence 0.70
+        - generic [ref=e657]:
+          - generic [ref=e658]:
+            - paragraph [ref=e659]: Spec + Process
+            - paragraph [ref=e660]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e661]: spec_ids -
+            - paragraph [ref=e662]: task_ids -
+            - paragraph [ref=e663]: threads -
+            - paragraph [ref=e664]: source_files -
+          - generic [ref=e665]:
+            - paragraph [ref=e666]: Implementation + Contribution
+            - paragraph [ref=e667]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e668]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e669]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e670]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e671]: assets 0 (missing)
+            - paragraph [ref=e672]: lineage_ids -
+            - paragraph [ref=e673]: implementation_refs -
+          - generic [ref=e674]:
+            - paragraph [ref=e675]: Validation
+            - paragraph [ref=e676]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e677]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e678]: public_endpoints -
+          - generic [ref=e679]:
+            - paragraph [ref=e680]: Contributors
+            - paragraph [ref=e681]: unique 0 (missing)
+            - paragraph [ref=e682]: registry_ids -
+            - list
+      - article [ref=e683]:
+        - generic [ref=e684]:
+          - heading "Governance change request API" [level=2] [ref=e685]:
+            - link "Governance change request API" [ref=e686] [cursor=pointer]:
+              - /url: /ideas/governance-change-request-api
+          - generic [ref=e687]: governance-change-request-api
+        - generic [ref=e688]:
+          - generic [ref=e689]: "spec: missing"
+          - generic [ref=e690]: "process: missing"
+          - generic [ref=e691]: "implementation: missing"
+          - generic [ref=e692]: "validation: missing"
+          - generic [ref=e693]: "contributors: missing"
+          - generic [ref=e694]: "contributions: missing"
+          - generic [ref=e695]: "assets: missing"
+        - paragraph [ref=e696]: blocker spec | unblock priority 31.32 | idea value gap 87.00 | confidence 0.72
+        - generic [ref=e697]:
+          - generic [ref=e698]:
+            - paragraph [ref=e699]: Spec + Process
+            - paragraph [ref=e700]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e701]: spec_ids -
+            - paragraph [ref=e702]: task_ids -
+            - paragraph [ref=e703]: threads -
+            - paragraph [ref=e704]: source_files -
+          - generic [ref=e705]:
+            - paragraph [ref=e706]: Implementation + Contribution
+            - paragraph [ref=e707]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e708]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e709]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e710]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e711]: assets 0 (missing)
+            - paragraph [ref=e712]: lineage_ids -
+            - paragraph [ref=e713]: implementation_refs -
+          - generic [ref=e714]:
+            - paragraph [ref=e715]: Validation
+            - paragraph [ref=e716]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e717]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e718]: public_endpoints -
+          - generic [ref=e719]:
+            - paragraph [ref=e720]: Contributors
+            - paragraph [ref=e721]: unique 0 (missing)
+            - paragraph [ref=e722]: registry_ids -
+            - list
+      - article [ref=e723]:
+        - generic [ref=e724]:
+          - heading "Governance idea" [level=2] [ref=e725]:
+            - link "Governance idea" [ref=e726] [cursor=pointer]:
+              - /url: /ideas/governance-idea
+          - generic [ref=e727]: governance-idea
+        - generic [ref=e728]:
+          - generic [ref=e729]: "spec: missing"
+          - generic [ref=e730]: "process: missing"
+          - generic [ref=e731]: "implementation: missing"
+          - generic [ref=e732]: "validation: missing"
+          - generic [ref=e733]: "contributors: missing"
+          - generic [ref=e734]: "contributions: missing"
+          - generic [ref=e735]: "assets: missing"
+        - paragraph [ref=e736]: blocker spec | unblock priority 13.00 | idea value gap 40.00 | confidence 0.65
+        - generic [ref=e737]:
+          - generic [ref=e738]:
+            - paragraph [ref=e739]: Spec + Process
+            - paragraph [ref=e740]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e741]: spec_ids -
+            - paragraph [ref=e742]: task_ids -
+            - paragraph [ref=e743]: threads -
+            - paragraph [ref=e744]: source_files -
+          - generic [ref=e745]:
+            - paragraph [ref=e746]: Implementation + Contribution
+            - paragraph [ref=e747]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e748]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e749]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e750]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e751]: assets 0 (missing)
+            - paragraph [ref=e752]: lineage_ids -
+            - paragraph [ref=e753]: implementation_refs -
+          - generic [ref=e754]:
+            - paragraph [ref=e755]: Validation
+            - paragraph [ref=e756]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e757]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e758]: public_endpoints -
+          - generic [ref=e759]:
+            - paragraph [ref=e760]: Contributors
+            - paragraph [ref=e761]: unique 0 (missing)
+            - paragraph [ref=e762]: registry_ids -
+            - list
+      - article [ref=e763]:
+        - generic [ref=e764]:
+          - heading "Idea lifecycle API" [level=2] [ref=e765]:
+            - link "Idea lifecycle API" [ref=e766] [cursor=pointer]:
+              - /url: /ideas/idea-lifecycle-api
+          - generic [ref=e767]: idea-lifecycle-api
+        - generic [ref=e768]:
+          - generic [ref=e769]: "spec: missing"
+          - generic [ref=e770]: "process: missing"
+          - generic [ref=e771]: "implementation: missing"
+          - generic [ref=e772]: "validation: missing"
+          - generic [ref=e773]: "contributors: missing"
+          - generic [ref=e774]: "contributions: missing"
+          - generic [ref=e775]: "assets: missing"
+        - paragraph [ref=e776]: blocker spec | unblock priority 30.24 | idea value gap 84.00 | confidence 0.72
+        - generic [ref=e777]:
+          - generic [ref=e778]:
+            - paragraph [ref=e779]: Spec + Process
+            - paragraph [ref=e780]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e781]: spec_ids -
+            - paragraph [ref=e782]: task_ids -
+            - paragraph [ref=e783]: threads -
+            - paragraph [ref=e784]: source_files -
+          - generic [ref=e785]:
+            - paragraph [ref=e786]: Implementation + Contribution
+            - paragraph [ref=e787]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e788]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e789]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e790]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e791]: assets 0 (missing)
+            - paragraph [ref=e792]: lineage_ids -
+            - paragraph [ref=e793]: implementation_refs -
+          - generic [ref=e794]:
+            - paragraph [ref=e795]: Validation
+            - paragraph [ref=e796]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e797]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e798]: public_endpoints -
+          - generic [ref=e799]:
+            - paragraph [ref=e800]: Contributors
+            - paragraph [ref=e801]: unique 0 (missing)
+            - paragraph [ref=e802]: registry_ids -
+            - list
+      - article [ref=e803]:
+        - generic [ref=e804]:
+          - heading "Inventory governance automation" [level=2] [ref=e805]:
+            - link "Inventory governance automation" [ref=e806] [cursor=pointer]:
+              - /url: /ideas/inventory-governance-automation
+          - generic [ref=e807]: inventory-governance-automation
+        - generic [ref=e808]:
+          - generic [ref=e809]: "spec: missing"
+          - generic [ref=e810]: "process: missing"
+          - generic [ref=e811]: "implementation: missing"
+          - generic [ref=e812]: "validation: missing"
+          - generic [ref=e813]: "contributors: missing"
+          - generic [ref=e814]: "contributions: missing"
+          - generic [ref=e815]: "assets: missing"
+        - paragraph [ref=e816]: blocker spec | unblock priority 33.58 | idea value gap 92.00 | confidence 0.73
+        - generic [ref=e817]:
+          - generic [ref=e818]:
+            - paragraph [ref=e819]: Spec + Process
+            - paragraph [ref=e820]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e821]: spec_ids -
+            - paragraph [ref=e822]: task_ids -
+            - paragraph [ref=e823]: threads -
+            - paragraph [ref=e824]: source_files -
+          - generic [ref=e825]:
+            - paragraph [ref=e826]: Implementation + Contribution
+            - paragraph [ref=e827]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e828]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e829]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e830]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e831]: assets 0 (missing)
+            - paragraph [ref=e832]: lineage_ids -
+            - paragraph [ref=e833]: implementation_refs -
+          - generic [ref=e834]:
+            - paragraph [ref=e835]: Validation
+            - paragraph [ref=e836]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e837]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e838]: public_endpoints -
+          - generic [ref=e839]:
+            - paragraph [ref=e840]: Contributors
+            - paragraph [ref=e841]: unique 0 (missing)
+            - paragraph [ref=e842]: registry_ids -
+            - list
+      - article [ref=e843]:
+        - generic [ref=e844]:
+          - heading "Contributor-originated idea" [level=2] [ref=e845]:
+            - link "Contributor-originated idea" [ref=e846] [cursor=pointer]:
+              - /url: /ideas/new-contributor-idea
+          - generic [ref=e847]: new-contributor-idea
+        - generic [ref=e848]:
+          - generic [ref=e849]: "spec: missing"
+          - generic [ref=e850]: "process: missing"
+          - generic [ref=e851]: "implementation: missing"
+          - generic [ref=e852]: "validation: missing"
+          - generic [ref=e853]: "contributors: missing"
+          - generic [ref=e854]: "contributions: missing"
+          - generic [ref=e855]: "assets: missing"
+        - paragraph [ref=e856]: blocker spec | unblock priority 10.50 | idea value gap 35.00 | confidence 0.60
+        - generic [ref=e857]:
+          - generic [ref=e858]:
+            - paragraph [ref=e859]: Spec + Process
+            - paragraph [ref=e860]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e861]: spec_ids -
+            - paragraph [ref=e862]: task_ids -
+            - paragraph [ref=e863]: threads -
+            - paragraph [ref=e864]: source_files -
+          - generic [ref=e865]:
+            - paragraph [ref=e866]: Implementation + Contribution
+            - paragraph [ref=e867]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e868]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e869]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e870]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e871]: assets 0 (missing)
+            - paragraph [ref=e872]: lineage_ids -
+            - paragraph [ref=e873]: implementation_refs -
+          - generic [ref=e874]:
+            - paragraph [ref=e875]: Validation
+            - paragraph [ref=e876]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e877]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e878]: public_endpoints -
+          - generic [ref=e879]:
+            - paragraph [ref=e880]: Contributors
+            - paragraph [ref=e881]: unique 0 (missing)
+            - paragraph [ref=e882]: registry_ids -
+            - list
+      - article [ref=e883]:
+        - generic [ref=e884]:
+          - heading "Contributor-originated idea" [level=2] [ref=e885]:
+            - link "Contributor-originated idea" [ref=e886] [cursor=pointer]:
+              - /url: /ideas/new-contributor-idea-3f4147c5
+          - generic [ref=e887]: new-contributor-idea-3f4147c5
+        - generic [ref=e888]:
+          - generic [ref=e889]: "spec: missing"
+          - generic [ref=e890]: "process: missing"
+          - generic [ref=e891]: "implementation: missing"
+          - generic [ref=e892]: "validation: missing"
+          - generic [ref=e893]: "contributors: missing"
+          - generic [ref=e894]: "contributions: missing"
+          - generic [ref=e895]: "assets: missing"
+        - paragraph [ref=e896]: blocker spec | unblock priority 10.50 | idea value gap 35.00 | confidence 0.60
+        - generic [ref=e897]:
+          - generic [ref=e898]:
+            - paragraph [ref=e899]: Spec + Process
+            - paragraph [ref=e900]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e901]: spec_ids -
+            - paragraph [ref=e902]: task_ids -
+            - paragraph [ref=e903]: threads -
+            - paragraph [ref=e904]: source_files -
+          - generic [ref=e905]:
+            - paragraph [ref=e906]: Implementation + Contribution
+            - paragraph [ref=e907]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e908]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e909]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e910]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e911]: assets 0 (missing)
+            - paragraph [ref=e912]: lineage_ids -
+            - paragraph [ref=e913]: implementation_refs -
+          - generic [ref=e914]:
+            - paragraph [ref=e915]: Validation
+            - paragraph [ref=e916]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e917]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e918]: public_endpoints -
+          - generic [ref=e919]:
+            - paragraph [ref=e920]: Contributors
+            - paragraph [ref=e921]: unique 0 (missing)
+            - paragraph [ref=e922]: registry_ids -
+            - list
+      - article [ref=e923]:
+        - generic [ref=e924]:
+          - heading "Align OSS intelligence interfaces with runtime" [level=2] [ref=e925]:
+            - link "Align OSS intelligence interfaces with runtime" [ref=e926] [cursor=pointer]:
+              - /url: /ideas/oss-interface-alignment
+          - generic [ref=e927]: oss-interface-alignment
+        - generic [ref=e928]:
+          - generic [ref=e929]: "spec: tracked"
+          - generic [ref=e930]: "process: tracked"
+          - generic [ref=e931]: "implementation: missing"
+          - generic [ref=e932]: "validation: missing"
+          - generic [ref=e933]: "contributors: missing"
+          - generic [ref=e934]: "contributions: missing"
+          - generic [ref=e935]: "assets: missing"
+        - paragraph [ref=e936]: blocker implementation | unblock priority 5.60 | idea value gap 80.00 | confidence 0.70
+        - generic [ref=e937]:
+          - generic [ref=e938]:
+            - paragraph [ref=e939]: Spec + Process
+            - paragraph [ref=e940]: specs 8 (tracked) | evidence 8 (tracked)
+            - paragraph [ref=e941]:
+              - text: spec_ids
+              - link "auto-get-api-assets-76db8e1e" [ref=e943] [cursor=pointer]:
+                - /url: /specs/auto-get-api-assets-76db8e1e
+              - generic [ref=e944]:
+                - text: ","
+                - link "auto-get-api-assets-asset-id-6c3ac8a3" [ref=e945] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-assets-asset-id-6c3ac8a3
+              - generic [ref=e946]:
+                - text: ","
+                - link "auto-get-api-contributors-0938ba70" [ref=e947] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-contributors-0938ba70
+              - generic [ref=e948]:
+                - text: ","
+                - link "auto-get-api-contributors-contributor-3247c543" [ref=e949] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-contributors-contributor-3247c543
+              - generic [ref=e950]:
+                - text: ","
+                - link "auto-get-api-health-595cf8ff" [ref=e951] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-health-595cf8ff
+              - generic [ref=e952]:
+                - text: ","
+                - link "auto-get-api-ready-610f3c43" [ref=e953] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-ready-610f3c43
+              - generic [ref=e954]:
+                - text: ","
+                - link "auto-get-api-version-b46aab95" [ref=e955] [cursor=pointer]:
+                  - /url: /specs/auto-get-api-version-b46aab95
+              - generic [ref=e956]:
+                - text: ","
+                - link "auto-post-api-distributions-5cf6daff" [ref=e957] [cursor=pointer]:
+                  - /url: /specs/auto-post-api-distributions-5cf6daff
+            - paragraph [ref=e958]: task_ids -
+            - paragraph [ref=e959]: threads -
+            - paragraph [ref=e960]: source_files -
+          - generic [ref=e961]:
+            - paragraph [ref=e962]: Implementation + Contribution
+            - paragraph [ref=e963]: lineage_links 0 (missing) | runtime_events 4
+            - paragraph [ref=e964]: runtime_ms 49.35 | runtime_cost 0.000099
+            - paragraph [ref=e965]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e966]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e967]: assets 0 (missing)
+            - paragraph [ref=e968]: lineage_ids -
+            - paragraph [ref=e969]: implementation_refs -
+          - generic [ref=e970]:
+            - paragraph [ref=e971]: Validation
+            - paragraph [ref=e972]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e973]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e974]: public_endpoints -
+          - generic [ref=e975]:
+            - paragraph [ref=e976]: Contributors
+            - paragraph [ref=e977]: unique 0 (missing)
+            - paragraph [ref=e978]: registry_ids -
+            - list
+      - article [ref=e979]:
+        - generic [ref=e980]:
+          - heading "Unified idea portfolio governance" [level=2] [ref=e981]:
+            - link "Unified idea portfolio governance" [ref=e982] [cursor=pointer]:
+              - /url: /ideas/portfolio-governance
+          - generic [ref=e983]: portfolio-governance
+        - generic [ref=e984]:
+          - generic [ref=e985]: "spec: tracked"
+          - generic [ref=e986]: "process: tracked"
+          - generic [ref=e987]: "implementation: missing"
+          - generic [ref=e988]: "validation: missing"
+          - generic [ref=e989]: "contributors: tracked"
+          - generic [ref=e990]: "contributions: tracked"
+          - generic [ref=e991]: "assets: tracked"
+        - paragraph [ref=e992]: blocker implementation | unblock priority 5.25 | idea value gap 70.00 | confidence 0.75
+        - generic [ref=e993]:
+          - generic [ref=e994]:
+            - paragraph [ref=e995]: Spec + Process
+            - paragraph [ref=e996]: specs 6 (tracked) | evidence 6 (tracked)
+            - paragraph [ref=e997]:
+              - text: spec_ids
+              - link "auto-get-v1-assets-70d17c8f" [ref=e999] [cursor=pointer]:
+                - /url: /specs/auto-get-v1-assets-70d17c8f
+              - generic [ref=e1000]:
+                - text: ","
+                - link "auto-get-v1-assets-asset-id-f303da27" [ref=e1001] [cursor=pointer]:
+                  - /url: /specs/auto-get-v1-assets-asset-id-f303da27
+              - generic [ref=e1002]:
+                - text: ","
+                - link "auto-get-v1-contributors-1b7c3175" [ref=e1003] [cursor=pointer]:
+                  - /url: /specs/auto-get-v1-contributors-1b7c3175
+              - generic [ref=e1004]:
+                - text: ","
+                - link "auto-get-v1-contributors-contributor--e9315652" [ref=e1005] [cursor=pointer]:
+                  - /url: /specs/auto-get-v1-contributors-contributor--e9315652
+              - generic [ref=e1006]:
+                - text: ","
+                - link "auto-post-v1-distributions-6b096c42" [ref=e1007] [cursor=pointer]:
+                  - /url: /specs/auto-post-v1-distributions-6b096c42
+              - generic [ref=e1008]:
+                - text: ","
+                - link "spec-xyz" [ref=e1009] [cursor=pointer]:
+                  - /url: /specs/spec-xyz
+            - paragraph [ref=e1010]: task_ids -
+            - paragraph [ref=e1011]: threads -
+            - paragraph [ref=e1012]: source_files -
+          - generic [ref=e1013]:
+            - paragraph [ref=e1014]: Implementation + Contribution
+            - paragraph [ref=e1015]: lineage_links 0 (missing) | runtime_events 215
+            - paragraph [ref=e1016]: runtime_ms 7813.24 | runtime_cost 0.015626
+            - paragraph [ref=e1017]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1018]: registry_contributions 144 | registry_cost 6817.75
+            - paragraph [ref=e1019]: assets 65 (tracked)
+            - paragraph [ref=e1020]: lineage_ids -
+            - paragraph [ref=e1021]: implementation_refs -
+          - generic [ref=e1022]:
+            - paragraph [ref=e1023]: Validation
+            - paragraph [ref=e1024]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1025]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1026]: public_endpoints -
+          - generic [ref=e1027]:
+            - paragraph [ref=e1028]: Contributors
+            - paragraph [ref=e1029]: unique 1 (tracked)
+            - paragraph [ref=e1030]: registry_ids 4c2cb956-f866-432f-beed-12298589b47d
+            - list [ref=e1031]:
+              - listitem [ref=e1032]:
+                - text: "contribution:"
+                - link "4c2cb956-f866-432f-beed-12298589b47d" [ref=e1034] [cursor=pointer]:
+                  - /url: /contributors?contributor_id=4c2cb956-f866-432f-beed-12298589b47d
+      - article [ref=e1035]:
+        - generic [ref=e1036]:
+          - heading "Provider readiness contract automation" [level=2] [ref=e1037]:
+            - link "Provider readiness contract automation" [ref=e1038] [cursor=pointer]:
+              - /url: /ideas/provider-readiness-contract-automation
+          - generic [ref=e1039]: provider-readiness-contract-automation
+        - generic [ref=e1040]:
+          - generic [ref=e1041]: "spec: tracked"
+          - generic [ref=e1042]: "process: tracked"
+          - generic [ref=e1043]: "implementation: tracked"
+          - generic [ref=e1044]: "validation: missing"
+          - generic [ref=e1045]: "contributors: missing"
+          - generic [ref=e1046]: "contributions: missing"
+          - generic [ref=e1047]: "assets: missing"
+        - paragraph [ref=e1048]: blocker validation | unblock priority 8.58 | idea value gap 91.50 | confidence 0.75
+        - generic [ref=e1049]:
+          - generic [ref=e1050]:
+            - paragraph [ref=e1051]: Spec + Process
+            - paragraph [ref=e1052]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1053]:
+              - text: spec_ids
+              - link "096-provider-readiness-contract-automation" [ref=e1055] [cursor=pointer]:
+                - /url: /specs/096-provider-readiness-contract-automation
+            - paragraph [ref=e1056]: task_ids -
+            - paragraph [ref=e1057]: threads -
+            - paragraph [ref=e1058]: source_files -
+          - generic [ref=e1059]:
+            - paragraph [ref=e1060]: Implementation + Contribution
+            - paragraph [ref=e1061]: lineage_links 0 (tracked) | runtime_events 0
+            - paragraph [ref=e1062]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1063]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1064]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1065]: assets 0 (missing)
+            - paragraph [ref=e1066]: lineage_ids -
+            - paragraph [ref=e1067]:
+              - text: implementation_refs
+              - link "spec-registry:096-provider-readiness-contract-automation" [ref=e1069] [cursor=pointer]:
+                - /url: https://github.com/seeker71/Coherence-Network/blob/main/spec-registry:096-provider-readiness-contract-automation
+          - generic [ref=e1070]:
+            - paragraph [ref=e1071]: Validation
+            - paragraph [ref=e1072]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1073]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1074]: public_endpoints -
+          - generic [ref=e1075]:
+            - paragraph [ref=e1076]: Contributors
+            - paragraph [ref=e1077]: unique 0 (missing)
+            - paragraph [ref=e1078]: registry_ids -
+            - list
+      - article [ref=e1079]:
+        - generic [ref=e1080]:
+          - heading "Public e2e b11fc426" [level=2] [ref=e1081]:
+            - link "Public e2e b11fc426" [ref=e1082] [cursor=pointer]:
+              - /url: /ideas/public-e2e-b11fc426
+          - generic [ref=e1083]: public-e2e-b11fc426
+        - generic [ref=e1084]:
+          - generic [ref=e1085]: "spec: tracked"
+          - generic [ref=e1086]: "process: missing"
+          - generic [ref=e1087]: "implementation: tracked"
+          - generic [ref=e1088]: "validation: tracked"
+          - generic [ref=e1089]: "contributors: tracked"
+          - generic [ref=e1090]: "contributions: tracked"
+          - generic [ref=e1091]: "assets: missing"
+        - paragraph [ref=e1092]: blocker process | unblock priority 3.21 | idea value gap 70.00 | confidence 0.55
+        - generic [ref=e1093]:
+          - generic [ref=e1094]:
+            - paragraph [ref=e1095]: Spec + Process
+            - paragraph [ref=e1096]: specs 1 (tracked) | evidence 0 (missing)
+            - paragraph [ref=e1097]:
+              - text: spec_ids
+              - link "048-value-lineage-and-payout-attribution" [ref=e1099] [cursor=pointer]:
+                - /url: /specs/048-value-lineage-and-payout-attribution
+            - paragraph [ref=e1100]: task_ids -
+            - paragraph [ref=e1101]: threads -
+            - paragraph [ref=e1102]: source_files -
+          - generic [ref=e1103]:
+            - paragraph [ref=e1104]: Implementation + Contribution
+            - paragraph [ref=e1105]: lineage_links 1 (tracked) | runtime_events 0
+            - paragraph [ref=e1106]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1107]: usage_events 1 | measured_value 5.00
+            - paragraph [ref=e1108]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1109]: assets 0 (missing)
+            - paragraph [ref=e1110]:
+              - text: lineage_ids
+              - link "lnk_8c526ca21635" [ref=e1112] [cursor=pointer]:
+                - /url: https://coherence-network-production.up.railway.app/api/value-lineage/links/lnk_8c526ca21635
+            - paragraph [ref=e1113]:
+              - text: implementation_refs
+              - link "contract:b11fc426" [ref=e1115] [cursor=pointer]:
+                - /url: https://github.com/seeker71/Coherence-Network/blob/main/contract:b11fc426
+          - generic [ref=e1116]:
+            - paragraph [ref=e1117]: Validation
+            - paragraph [ref=e1118]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1119]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1120]: public_endpoints -
+          - generic [ref=e1121]:
+            - paragraph [ref=e1122]: Contributors
+            - paragraph [ref=e1123]: unique 4 (tracked)
+            - paragraph [ref=e1124]: registry_ids -
+            - list [ref=e1125]:
+              - listitem [ref=e1126]:
+                - text: "idea:"
+                - link "gate-idea" [ref=e1128] [cursor=pointer]:
+                  - /url: /contributors?contributor_id=gate-idea
+              - listitem [ref=e1129]:
+                - text: "implementation:"
+                - link "gate-impl" [ref=e1131] [cursor=pointer]:
+                  - /url: /contributors?contributor_id=gate-impl
+              - listitem [ref=e1132]:
+                - text: "review:"
+                - link "gate-review" [ref=e1134] [cursor=pointer]:
+                  - /url: /contributors?contributor_id=gate-review
+              - listitem [ref=e1135]:
+                - text: "spec:"
+                - link "gate-spec" [ref=e1137] [cursor=pointer]:
+                  - /url: /contributors?contributor_id=gate-spec
+      - article [ref=e1138]:
+        - generic [ref=e1139]:
+          - heading "Public E2E flow gate automation" [level=2] [ref=e1140]:
+            - link "Public E2E flow gate automation" [ref=e1141] [cursor=pointer]:
+              - /url: /ideas/public-e2e-flow-gate-automation
+          - generic [ref=e1142]: public-e2e-flow-gate-automation
+        - generic [ref=e1143]:
+          - generic [ref=e1144]: "spec: tracked"
+          - generic [ref=e1145]: "process: tracked"
+          - generic [ref=e1146]: "implementation: tracked"
+          - generic [ref=e1147]: "validation: missing"
+          - generic [ref=e1148]: "contributors: missing"
+          - generic [ref=e1149]: "contributions: missing"
+          - generic [ref=e1150]: "assets: missing"
+        - paragraph [ref=e1151]: blocker validation | unblock priority 9.14 | idea value gap 97.50 | confidence 0.75
+        - generic [ref=e1152]:
+          - generic [ref=e1153]:
+            - paragraph [ref=e1154]: Spec + Process
+            - paragraph [ref=e1155]: specs 2 (tracked) | evidence 2 (tracked)
+            - paragraph [ref=e1156]:
+              - text: spec_ids
+              - link "095-public-e2e-flow-gate-automation" [ref=e1158] [cursor=pointer]:
+                - /url: /specs/095-public-e2e-flow-gate-automation
+              - generic [ref=e1159]:
+                - text: ","
+                - link "095-public-e2e-flow-gate-automation-test" [ref=e1160] [cursor=pointer]:
+                  - /url: /specs/095-public-e2e-flow-gate-automation-test
+            - paragraph [ref=e1161]: task_ids -
+            - paragraph [ref=e1162]: threads -
+            - paragraph [ref=e1163]: source_files -
+          - generic [ref=e1164]:
+            - paragraph [ref=e1165]: Implementation + Contribution
+            - paragraph [ref=e1166]: lineage_links 0 (tracked) | runtime_events 0
+            - paragraph [ref=e1167]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1168]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1169]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1170]: assets 0 (missing)
+            - paragraph [ref=e1171]: lineage_ids -
+            - paragraph [ref=e1172]:
+              - text: implementation_refs
+              - link "spec-registry:095-public-e2e-flow-gate-automation" [ref=e1174] [cursor=pointer]:
+                - /url: https://github.com/seeker71/Coherence-Network/blob/main/spec-registry:095-public-e2e-flow-gate-automation
+              - generic [ref=e1175]:
+                - text: ","
+                - link "spec-registry:095-public-e2e-flow-gate-automation-test" [ref=e1176] [cursor=pointer]:
+                  - /url: https://github.com/seeker71/Coherence-Network/blob/main/spec-registry:095-public-e2e-flow-gate-automation-test
+          - generic [ref=e1177]:
+            - paragraph [ref=e1178]: Validation
+            - paragraph [ref=e1179]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1180]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1181]: public_endpoints -
+          - generic [ref=e1182]:
+            - paragraph [ref=e1183]: Contributors
+            - paragraph [ref=e1184]: unique 0 (missing)
+            - paragraph [ref=e1185]: registry_ids -
+            - list
+      - article [ref=e1186]:
+        - generic [ref=e1187]:
+          - heading "Public validation gates API" [level=2] [ref=e1188]:
+            - link "Public validation gates API" [ref=e1189] [cursor=pointer]:
+              - /url: /ideas/public-validation-gates-api
+          - generic [ref=e1190]: public-validation-gates-api
+        - generic [ref=e1191]:
+          - generic [ref=e1192]: "spec: missing"
+          - generic [ref=e1193]: "process: missing"
+          - generic [ref=e1194]: "implementation: missing"
+          - generic [ref=e1195]: "validation: missing"
+          - generic [ref=e1196]: "contributors: missing"
+          - generic [ref=e1197]: "contributions: missing"
+          - generic [ref=e1198]: "assets: missing"
+        - paragraph [ref=e1199]: blocker spec | unblock priority 36.48 | idea value gap 96.00 | confidence 0.76
+        - generic [ref=e1200]:
+          - generic [ref=e1201]:
+            - paragraph [ref=e1202]: Spec + Process
+            - paragraph [ref=e1203]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1204]: spec_ids -
+            - paragraph [ref=e1205]: task_ids -
+            - paragraph [ref=e1206]: threads -
+            - paragraph [ref=e1207]: source_files -
+          - generic [ref=e1208]:
+            - paragraph [ref=e1209]: Implementation + Contribution
+            - paragraph [ref=e1210]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1211]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1212]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1213]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1214]: assets 0 (missing)
+            - paragraph [ref=e1215]: lineage_ids -
+            - paragraph [ref=e1216]: implementation_refs -
+          - generic [ref=e1217]:
+            - paragraph [ref=e1218]: Validation
+            - paragraph [ref=e1219]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1220]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1221]: public_endpoints -
+          - generic [ref=e1222]:
+            - paragraph [ref=e1223]: Contributors
+            - paragraph [ref=e1224]: unique 0 (missing)
+            - paragraph [ref=e1225]: registry_ids -
+            - list
+      - article [ref=e1226]:
+        - generic [ref=e1227]:
+          - heading "Real-data-only test contract" [level=2] [ref=e1228]:
+            - link "Real-data-only test contract" [ref=e1229] [cursor=pointer]:
+              - /url: /ideas/real-data-only-test-contract
+          - generic [ref=e1230]: real-data-only-test-contract
+        - generic [ref=e1231]:
+          - generic [ref=e1232]: "spec: missing"
+          - generic [ref=e1233]: "process: missing"
+          - generic [ref=e1234]: "implementation: missing"
+          - generic [ref=e1235]: "validation: missing"
+          - generic [ref=e1236]: "contributors: missing"
+          - generic [ref=e1237]: "contributions: missing"
+          - generic [ref=e1238]: "assets: missing"
+        - paragraph [ref=e1239]: blocker spec | unblock priority 44.16 | idea value gap 121.00 | confidence 0.73
+        - generic [ref=e1240]:
+          - generic [ref=e1241]:
+            - paragraph [ref=e1242]: Spec + Process
+            - paragraph [ref=e1243]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1244]: spec_ids -
+            - paragraph [ref=e1245]: task_ids -
+            - paragraph [ref=e1246]: threads -
+            - paragraph [ref=e1247]: source_files -
+          - generic [ref=e1248]:
+            - paragraph [ref=e1249]: Implementation + Contribution
+            - paragraph [ref=e1250]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1251]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1252]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1253]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1254]: assets 0 (missing)
+            - paragraph [ref=e1255]: lineage_ids -
+            - paragraph [ref=e1256]: implementation_refs -
+          - generic [ref=e1257]:
+            - paragraph [ref=e1258]: Validation
+            - paragraph [ref=e1259]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1260]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1261]: public_endpoints -
+          - generic [ref=e1262]:
+            - paragraph [ref=e1263]: Contributors
+            - paragraph [ref=e1264]: unique 0 (missing)
+            - paragraph [ref=e1265]: registry_ids -
+            - list
+      - article [ref=e1266]:
+        - generic [ref=e1267]:
+          - heading "Runtime telemetry API" [level=2] [ref=e1268]:
+            - link "Runtime telemetry API" [ref=e1269] [cursor=pointer]:
+              - /url: /ideas/runtime-telemetry-api
+          - generic [ref=e1270]: runtime-telemetry-api
+        - generic [ref=e1271]:
+          - generic [ref=e1272]: "spec: missing"
+          - generic [ref=e1273]: "process: missing"
+          - generic [ref=e1274]: "implementation: missing"
+          - generic [ref=e1275]: "validation: missing"
+          - generic [ref=e1276]: "contributors: missing"
+          - generic [ref=e1277]: "contributions: missing"
+          - generic [ref=e1278]: "assets: missing"
+        - paragraph [ref=e1279]: blocker spec | unblock priority 32.48 | idea value gap 89.00 | confidence 0.73
+        - generic [ref=e1280]:
+          - generic [ref=e1281]:
+            - paragraph [ref=e1282]: Spec + Process
+            - paragraph [ref=e1283]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1284]: spec_ids -
+            - paragraph [ref=e1285]: task_ids -
+            - paragraph [ref=e1286]: threads -
+            - paragraph [ref=e1287]: source_files -
+          - generic [ref=e1288]:
+            - paragraph [ref=e1289]: Implementation + Contribution
+            - paragraph [ref=e1290]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1291]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1292]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1293]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1294]: assets 0 (missing)
+            - paragraph [ref=e1295]: lineage_ids -
+            - paragraph [ref=e1296]: implementation_refs -
+          - generic [ref=e1297]:
+            - paragraph [ref=e1298]: Validation
+            - paragraph [ref=e1299]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1300]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1301]: public_endpoints -
+          - generic [ref=e1302]:
+            - paragraph [ref=e1303]: Contributors
+            - paragraph [ref=e1304]: unique 0 (missing)
+            - paragraph [ref=e1305]: registry_ids -
+            - list
+      - article [ref=e1306]:
+        - generic [ref=e1307]:
+          - heading "Scheduled pipeline effectiveness watchdog" [level=2] [ref=e1308]:
+            - link "Scheduled pipeline effectiveness watchdog" [ref=e1309] [cursor=pointer]:
+              - /url: /ideas/scheduled-pipeline-effectiveness-watchdog
+          - generic [ref=e1310]: scheduled-pipeline-effectiveness-watchdog
+        - generic [ref=e1311]:
+          - generic [ref=e1312]: "spec: missing"
+          - generic [ref=e1313]: "process: missing"
+          - generic [ref=e1314]: "implementation: missing"
+          - generic [ref=e1315]: "validation: missing"
+          - generic [ref=e1316]: "contributors: missing"
+          - generic [ref=e1317]: "contributions: missing"
+          - generic [ref=e1318]: "assets: missing"
+        - paragraph [ref=e1319]: blocker spec | unblock priority 42.18 | idea value gap 114.00 | confidence 0.74
+        - generic [ref=e1320]:
+          - generic [ref=e1321]:
+            - paragraph [ref=e1322]: Spec + Process
+            - paragraph [ref=e1323]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1324]: spec_ids -
+            - paragraph [ref=e1325]: task_ids -
+            - paragraph [ref=e1326]: threads -
+            - paragraph [ref=e1327]: source_files -
+          - generic [ref=e1328]:
+            - paragraph [ref=e1329]: Implementation + Contribution
+            - paragraph [ref=e1330]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1331]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1332]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1333]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1334]: assets 0 (missing)
+            - paragraph [ref=e1335]: lineage_ids -
+            - paragraph [ref=e1336]: implementation_refs -
+          - generic [ref=e1337]:
+            - paragraph [ref=e1338]: Validation
+            - paragraph [ref=e1339]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1340]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1341]: public_endpoints -
+          - generic [ref=e1342]:
+            - paragraph [ref=e1343]: Contributors
+            - paragraph [ref=e1344]: unique 0 (missing)
+            - paragraph [ref=e1345]: registry_ids -
+            - list
+      - article [ref=e1346]:
+        - generic [ref=e1347]:
+          - heading "Service health contract" [level=2] [ref=e1348]:
+            - link "Service health contract" [ref=e1349] [cursor=pointer]:
+              - /url: /ideas/service-health-contract
+          - generic [ref=e1350]: service-health-contract
+        - generic [ref=e1351]:
+          - generic [ref=e1352]: "spec: missing"
+          - generic [ref=e1353]: "process: missing"
+          - generic [ref=e1354]: "implementation: missing"
+          - generic [ref=e1355]: "validation: missing"
+          - generic [ref=e1356]: "contributors: missing"
+          - generic [ref=e1357]: "contributions: missing"
+          - generic [ref=e1358]: "assets: missing"
+        - paragraph [ref=e1359]: blocker spec | unblock priority 26.91 | idea value gap 78.00 | confidence 0.69
+        - generic [ref=e1360]:
+          - generic [ref=e1361]:
+            - paragraph [ref=e1362]: Spec + Process
+            - paragraph [ref=e1363]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1364]: spec_ids -
+            - paragraph [ref=e1365]: task_ids -
+            - paragraph [ref=e1366]: threads -
+            - paragraph [ref=e1367]: source_files -
+          - generic [ref=e1368]:
+            - paragraph [ref=e1369]: Implementation + Contribution
+            - paragraph [ref=e1370]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1371]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1372]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1373]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1374]: assets 0 (missing)
+            - paragraph [ref=e1375]: lineage_ids -
+            - paragraph [ref=e1376]: implementation_refs -
+          - generic [ref=e1377]:
+            - paragraph [ref=e1378]: Validation
+            - paragraph [ref=e1379]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1380]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1381]: public_endpoints -
+          - generic [ref=e1382]:
+            - paragraph [ref=e1383]: Contributors
+            - paragraph [ref=e1384]: unique 0 (missing)
+            - paragraph [ref=e1385]: registry_ids -
+            - list
+      - article [ref=e1386]:
+        - generic [ref=e1387]:
+          - 'heading "Spec lineage: Auto sync process completeness seed" [level=2] [ref=e1388]':
+            - 'link "Spec lineage: Auto sync process completeness seed" [ref=e1389] [cursor=pointer]':
+              - /url: /ideas/spec-origin-auto-sync-process-completeness-spec-7eb8bd20
+          - generic [ref=e1390]: spec-origin-auto-sync-process-completeness-spec-7eb8bd20
+        - generic [ref=e1391]:
+          - generic [ref=e1392]: "spec: tracked"
+          - generic [ref=e1393]: "process: tracked"
+          - generic [ref=e1394]: "implementation: missing"
+          - generic [ref=e1395]: "validation: missing"
+          - generic [ref=e1396]: "contributors: missing"
+          - generic [ref=e1397]: "contributions: missing"
+          - generic [ref=e1398]: "assets: missing"
+        - paragraph [ref=e1399]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1400]:
+          - generic [ref=e1401]:
+            - paragraph [ref=e1402]: Spec + Process
+            - paragraph [ref=e1403]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1404]:
+              - text: spec_ids
+              - link "auto-sync-process-completeness-spec" [ref=e1406] [cursor=pointer]:
+                - /url: /specs/auto-sync-process-completeness-spec
+            - paragraph [ref=e1407]: task_ids -
+            - paragraph [ref=e1408]: threads -
+            - paragraph [ref=e1409]: source_files -
+          - generic [ref=e1410]:
+            - paragraph [ref=e1411]: Implementation + Contribution
+            - paragraph [ref=e1412]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1413]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1414]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1415]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1416]: assets 0 (missing)
+            - paragraph [ref=e1417]: lineage_ids -
+            - paragraph [ref=e1418]: implementation_refs -
+          - generic [ref=e1419]:
+            - paragraph [ref=e1420]: Validation
+            - paragraph [ref=e1421]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1422]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1423]: public_endpoints -
+          - generic [ref=e1424]:
+            - paragraph [ref=e1425]: Contributors
+            - paragraph [ref=e1426]: unique 0 (missing)
+            - paragraph [ref=e1427]: registry_ids -
+            - list
+      - article [ref=e1428]:
+        - generic [ref=e1429]:
+          - 'heading "Spec lineage: Seed spec" [level=2] [ref=e1430]':
+            - 'link "Spec lineage: Seed spec" [ref=e1431] [cursor=pointer]':
+              - /url: /ideas/spec-origin-spec-reject-278598e8-878e7ecb
+          - generic [ref=e1432]: spec-origin-spec-reject-278598e8-878e7ecb
+        - generic [ref=e1433]:
+          - generic [ref=e1434]: "spec: tracked"
+          - generic [ref=e1435]: "process: tracked"
+          - generic [ref=e1436]: "implementation: missing"
+          - generic [ref=e1437]: "validation: missing"
+          - generic [ref=e1438]: "contributors: missing"
+          - generic [ref=e1439]: "contributions: missing"
+          - generic [ref=e1440]: "assets: missing"
+        - paragraph [ref=e1441]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1442]:
+          - generic [ref=e1443]:
+            - paragraph [ref=e1444]: Spec + Process
+            - paragraph [ref=e1445]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1446]:
+              - text: spec_ids
+              - link "spec-reject-278598e8" [ref=e1448] [cursor=pointer]:
+                - /url: /specs/spec-reject-278598e8
+            - paragraph [ref=e1449]: task_ids -
+            - paragraph [ref=e1450]: threads -
+            - paragraph [ref=e1451]: source_files -
+          - generic [ref=e1452]:
+            - paragraph [ref=e1453]: Implementation + Contribution
+            - paragraph [ref=e1454]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1455]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1456]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1457]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1458]: assets 0 (missing)
+            - paragraph [ref=e1459]: lineage_ids -
+            - paragraph [ref=e1460]: implementation_refs -
+          - generic [ref=e1461]:
+            - paragraph [ref=e1462]: Validation
+            - paragraph [ref=e1463]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1464]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1465]: public_endpoints -
+          - generic [ref=e1466]:
+            - paragraph [ref=e1467]: Contributors
+            - paragraph [ref=e1468]: unique 0 (missing)
+            - paragraph [ref=e1469]: registry_ids -
+            - list
+      - article [ref=e1470]:
+        - generic [ref=e1471]:
+          - 'heading "Spec lineage: Seed spec" [level=2] [ref=e1472]':
+            - 'link "Spec lineage: Seed spec" [ref=e1473] [cursor=pointer]':
+              - /url: /ideas/spec-origin-spec-reject-2bb47474-a5d4a6dd
+          - generic [ref=e1474]: spec-origin-spec-reject-2bb47474-a5d4a6dd
+        - generic [ref=e1475]:
+          - generic [ref=e1476]: "spec: tracked"
+          - generic [ref=e1477]: "process: tracked"
+          - generic [ref=e1478]: "implementation: missing"
+          - generic [ref=e1479]: "validation: missing"
+          - generic [ref=e1480]: "contributors: missing"
+          - generic [ref=e1481]: "contributions: missing"
+          - generic [ref=e1482]: "assets: missing"
+        - paragraph [ref=e1483]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1484]:
+          - generic [ref=e1485]:
+            - paragraph [ref=e1486]: Spec + Process
+            - paragraph [ref=e1487]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1488]:
+              - text: spec_ids
+              - link "spec-reject-2bb47474" [ref=e1490] [cursor=pointer]:
+                - /url: /specs/spec-reject-2bb47474
+            - paragraph [ref=e1491]: task_ids -
+            - paragraph [ref=e1492]: threads -
+            - paragraph [ref=e1493]: source_files -
+          - generic [ref=e1494]:
+            - paragraph [ref=e1495]: Implementation + Contribution
+            - paragraph [ref=e1496]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1497]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1498]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1499]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1500]: assets 0 (missing)
+            - paragraph [ref=e1501]: lineage_ids -
+            - paragraph [ref=e1502]: implementation_refs -
+          - generic [ref=e1503]:
+            - paragraph [ref=e1504]: Validation
+            - paragraph [ref=e1505]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1506]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1507]: public_endpoints -
+          - generic [ref=e1508]:
+            - paragraph [ref=e1509]: Contributors
+            - paragraph [ref=e1510]: unique 0 (missing)
+            - paragraph [ref=e1511]: registry_ids -
+            - list
+      - article [ref=e1512]:
+        - generic [ref=e1513]:
+          - 'heading "Spec lineage: Seed spec" [level=2] [ref=e1514]':
+            - 'link "Spec lineage: Seed spec" [ref=e1515] [cursor=pointer]':
+              - /url: /ideas/spec-origin-spec-reject-4a7a17e2
+          - generic [ref=e1516]: spec-origin-spec-reject-4a7a17e2
+        - generic [ref=e1517]:
+          - generic [ref=e1518]: "spec: tracked"
+          - generic [ref=e1519]: "process: tracked"
+          - generic [ref=e1520]: "implementation: missing"
+          - generic [ref=e1521]: "validation: missing"
+          - generic [ref=e1522]: "contributors: missing"
+          - generic [ref=e1523]: "contributions: missing"
+          - generic [ref=e1524]: "assets: missing"
+        - paragraph [ref=e1525]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1526]:
+          - generic [ref=e1527]:
+            - paragraph [ref=e1528]: Spec + Process
+            - paragraph [ref=e1529]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1530]:
+              - text: spec_ids
+              - link "spec-reject" [ref=e1532] [cursor=pointer]:
+                - /url: /specs/spec-reject
+            - paragraph [ref=e1533]: task_ids -
+            - paragraph [ref=e1534]: threads -
+            - paragraph [ref=e1535]: source_files -
+          - generic [ref=e1536]:
+            - paragraph [ref=e1537]: Implementation + Contribution
+            - paragraph [ref=e1538]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1539]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1540]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1541]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1542]: assets 0 (missing)
+            - paragraph [ref=e1543]: lineage_ids -
+            - paragraph [ref=e1544]: implementation_refs -
+          - generic [ref=e1545]:
+            - paragraph [ref=e1546]: Validation
+            - paragraph [ref=e1547]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1548]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1549]: public_endpoints -
+          - generic [ref=e1550]:
+            - paragraph [ref=e1551]: Contributors
+            - paragraph [ref=e1552]: unique 0 (missing)
+            - paragraph [ref=e1553]: registry_ids -
+            - list
+      - article [ref=e1554]:
+        - generic [ref=e1555]:
+          - 'heading "Spec lineage: Seed spec" [level=2] [ref=e1556]':
+            - 'link "Spec lineage: Seed spec" [ref=e1557] [cursor=pointer]':
+              - /url: /ideas/spec-origin-spec-reject-76d35d5b-b47b4725
+          - generic [ref=e1558]: spec-origin-spec-reject-76d35d5b-b47b4725
+        - generic [ref=e1559]:
+          - generic [ref=e1560]: "spec: tracked"
+          - generic [ref=e1561]: "process: tracked"
+          - generic [ref=e1562]: "implementation: missing"
+          - generic [ref=e1563]: "validation: missing"
+          - generic [ref=e1564]: "contributors: missing"
+          - generic [ref=e1565]: "contributions: missing"
+          - generic [ref=e1566]: "assets: missing"
+        - paragraph [ref=e1567]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1568]:
+          - generic [ref=e1569]:
+            - paragraph [ref=e1570]: Spec + Process
+            - paragraph [ref=e1571]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1572]:
+              - text: spec_ids
+              - link "spec-reject-76d35d5b" [ref=e1574] [cursor=pointer]:
+                - /url: /specs/spec-reject-76d35d5b
+            - paragraph [ref=e1575]: task_ids -
+            - paragraph [ref=e1576]: threads -
+            - paragraph [ref=e1577]: source_files -
+          - generic [ref=e1578]:
+            - paragraph [ref=e1579]: Implementation + Contribution
+            - paragraph [ref=e1580]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1581]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1582]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1583]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1584]: assets 0 (missing)
+            - paragraph [ref=e1585]: lineage_ids -
+            - paragraph [ref=e1586]: implementation_refs -
+          - generic [ref=e1587]:
+            - paragraph [ref=e1588]: Validation
+            - paragraph [ref=e1589]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1590]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1591]: public_endpoints -
+          - generic [ref=e1592]:
+            - paragraph [ref=e1593]: Contributors
+            - paragraph [ref=e1594]: unique 0 (missing)
+            - paragraph [ref=e1595]: registry_ids -
+            - list
+      - article [ref=e1596]:
+        - generic [ref=e1597]:
+          - 'heading "Spec lineage: Spec without idea" [level=2] [ref=e1598]':
+            - 'link "Spec lineage: Spec without idea" [ref=e1599] [cursor=pointer]':
+              - /url: /ideas/spec-origin-spec-without-idea-link-6628c810
+          - generic [ref=e1600]: spec-origin-spec-without-idea-link-6628c810
+        - generic [ref=e1601]:
+          - generic [ref=e1602]: "spec: tracked"
+          - generic [ref=e1603]: "process: tracked"
+          - generic [ref=e1604]: "implementation: missing"
+          - generic [ref=e1605]: "validation: missing"
+          - generic [ref=e1606]: "contributors: missing"
+          - generic [ref=e1607]: "contributions: missing"
+          - generic [ref=e1608]: "assets: missing"
+        - paragraph [ref=e1609]: blocker implementation | unblock priority 1.49 | idea value gap 24.00 | confidence 0.62
+        - generic [ref=e1610]:
+          - generic [ref=e1611]:
+            - paragraph [ref=e1612]: Spec + Process
+            - paragraph [ref=e1613]: specs 1 (tracked) | evidence 1 (tracked)
+            - paragraph [ref=e1614]:
+              - text: spec_ids
+              - link "spec-without-idea-link" [ref=e1616] [cursor=pointer]:
+                - /url: /specs/spec-without-idea-link
+            - paragraph [ref=e1617]: task_ids -
+            - paragraph [ref=e1618]: threads -
+            - paragraph [ref=e1619]: source_files -
+          - generic [ref=e1620]:
+            - paragraph [ref=e1621]: Implementation + Contribution
+            - paragraph [ref=e1622]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1623]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1624]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1625]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1626]: assets 0 (missing)
+            - paragraph [ref=e1627]: lineage_ids -
+            - paragraph [ref=e1628]: implementation_refs -
+          - generic [ref=e1629]:
+            - paragraph [ref=e1630]: Validation
+            - paragraph [ref=e1631]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1632]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1633]: public_endpoints -
+          - generic [ref=e1634]:
+            - paragraph [ref=e1635]: Contributors
+            - paragraph [ref=e1636]: unique 0 (missing)
+            - paragraph [ref=e1637]: registry_ids -
+            - list
+      - article [ref=e1638]:
+        - generic [ref=e1639]:
+          - heading "Spec to process to implementation guard" [level=2] [ref=e1640]:
+            - link "Spec to process to implementation guard" [ref=e1641] [cursor=pointer]:
+              - /url: /ideas/spec-process-implementation-guard
+          - generic [ref=e1642]: spec-process-implementation-guard
+        - generic [ref=e1643]:
+          - generic [ref=e1644]: "spec: missing"
+          - generic [ref=e1645]: "process: missing"
+          - generic [ref=e1646]: "implementation: missing"
+          - generic [ref=e1647]: "validation: missing"
+          - generic [ref=e1648]: "contributors: missing"
+          - generic [ref=e1649]: "contributions: missing"
+          - generic [ref=e1650]: "assets: missing"
+        - paragraph [ref=e1651]: blocker spec | unblock priority 45.75 | idea value gap 122.00 | confidence 0.75
+        - generic [ref=e1652]:
+          - generic [ref=e1653]:
+            - paragraph [ref=e1654]: Spec + Process
+            - paragraph [ref=e1655]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1656]: spec_ids -
+            - paragraph [ref=e1657]: task_ids -
+            - paragraph [ref=e1658]: threads -
+            - paragraph [ref=e1659]: source_files -
+          - generic [ref=e1660]:
+            - paragraph [ref=e1661]: Implementation + Contribution
+            - paragraph [ref=e1662]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1663]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1664]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1665]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1666]: assets 0 (missing)
+            - paragraph [ref=e1667]: lineage_ids -
+            - paragraph [ref=e1668]: implementation_refs -
+          - generic [ref=e1669]:
+            - paragraph [ref=e1670]: Validation
+            - paragraph [ref=e1671]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1672]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1673]: public_endpoints -
+          - generic [ref=e1674]:
+            - paragraph [ref=e1675]: Contributors
+            - paragraph [ref=e1676]: unique 0 (missing)
+            - paragraph [ref=e1677]: registry_ids -
+            - list
+      - article [ref=e1678]:
+        - generic [ref=e1679]:
+          - heading "Spec registry API domain" [level=2] [ref=e1680]:
+            - link "Spec registry API domain" [ref=e1681] [cursor=pointer]:
+              - /url: /ideas/spec-registry-api-domain
+          - generic [ref=e1682]: spec-registry-api-domain
+        - generic [ref=e1683]:
+          - generic [ref=e1684]: "spec: missing"
+          - generic [ref=e1685]: "process: missing"
+          - generic [ref=e1686]: "implementation: missing"
+          - generic [ref=e1687]: "validation: missing"
+          - generic [ref=e1688]: "contributors: missing"
+          - generic [ref=e1689]: "contributions: missing"
+          - generic [ref=e1690]: "assets: missing"
+        - paragraph [ref=e1691]: blocker spec | unblock priority 28.00 | idea value gap 80.00 | confidence 0.70
+        - generic [ref=e1692]:
+          - generic [ref=e1693]:
+            - paragraph [ref=e1694]: Spec + Process
+            - paragraph [ref=e1695]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1696]: spec_ids -
+            - paragraph [ref=e1697]: task_ids -
+            - paragraph [ref=e1698]: threads -
+            - paragraph [ref=e1699]: source_files -
+          - generic [ref=e1700]:
+            - paragraph [ref=e1701]: Implementation + Contribution
+            - paragraph [ref=e1702]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1703]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1704]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1705]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1706]: assets 0 (missing)
+            - paragraph [ref=e1707]: lineage_ids -
+            - paragraph [ref=e1708]: implementation_refs -
+          - generic [ref=e1709]:
+            - paragraph [ref=e1710]: Validation
+            - paragraph [ref=e1711]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1712]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1713]: public_endpoints -
+          - generic [ref=e1714]:
+            - paragraph [ref=e1715]: Contributors
+            - paragraph [ref=e1716]: unique 0 (missing)
+            - paragraph [ref=e1717]: registry_ids -
+            - list
+      - article [ref=e1718]:
+        - generic [ref=e1719]:
+          - heading "Tool failure cost ledger" [level=2] [ref=e1720]:
+            - link "Tool failure cost ledger" [ref=e1721] [cursor=pointer]:
+              - /url: /ideas/tool-failure-cost-ledger
+          - generic [ref=e1722]: tool-failure-cost-ledger
+        - generic [ref=e1723]:
+          - generic [ref=e1724]: "spec: missing"
+          - generic [ref=e1725]: "process: missing"
+          - generic [ref=e1726]: "implementation: missing"
+          - generic [ref=e1727]: "validation: missing"
+          - generic [ref=e1728]: "contributors: missing"
+          - generic [ref=e1729]: "contributions: missing"
+          - generic [ref=e1730]: "assets: missing"
+        - paragraph [ref=e1731]: blocker spec | unblock priority 47.74 | idea value gap 124.00 | confidence 0.77
+        - generic [ref=e1732]:
+          - generic [ref=e1733]:
+            - paragraph [ref=e1734]: Spec + Process
+            - paragraph [ref=e1735]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1736]: spec_ids -
+            - paragraph [ref=e1737]: task_ids -
+            - paragraph [ref=e1738]: threads -
+            - paragraph [ref=e1739]: source_files -
+          - generic [ref=e1740]:
+            - paragraph [ref=e1741]: Implementation + Contribution
+            - paragraph [ref=e1742]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1743]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1744]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1745]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1746]: assets 0 (missing)
+            - paragraph [ref=e1747]: lineage_ids -
+            - paragraph [ref=e1748]: implementation_refs -
+          - generic [ref=e1749]:
+            - paragraph [ref=e1750]: Validation
+            - paragraph [ref=e1751]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1752]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1753]: public_endpoints -
+          - generic [ref=e1754]:
+            - paragraph [ref=e1755]: Contributors
+            - paragraph [ref=e1756]: unique 0 (missing)
+            - paragraph [ref=e1757]: registry_ids -
+            - list
+      - article [ref=e1758]:
+        - generic [ref=e1759]:
+          - heading "Value lineage API" [level=2] [ref=e1760]:
+            - link "Value lineage API" [ref=e1761] [cursor=pointer]:
+              - /url: /ideas/value-lineage-api
+          - generic [ref=e1762]: value-lineage-api
+        - generic [ref=e1763]:
+          - generic [ref=e1764]: "spec: missing"
+          - generic [ref=e1765]: "process: missing"
+          - generic [ref=e1766]: "implementation: missing"
+          - generic [ref=e1767]: "validation: missing"
+          - generic [ref=e1768]: "contributors: missing"
+          - generic [ref=e1769]: "contributions: missing"
+          - generic [ref=e1770]: "assets: missing"
+        - paragraph [ref=e1771]: blocker spec | unblock priority 35.25 | idea value gap 94.00 | confidence 0.75
+        - generic [ref=e1772]:
+          - generic [ref=e1773]:
+            - paragraph [ref=e1774]: Spec + Process
+            - paragraph [ref=e1775]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1776]: spec_ids -
+            - paragraph [ref=e1777]: task_ids -
+            - paragraph [ref=e1778]: threads -
+            - paragraph [ref=e1779]: source_files -
+          - generic [ref=e1780]:
+            - paragraph [ref=e1781]: Implementation + Contribution
+            - paragraph [ref=e1782]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1783]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1784]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1785]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1786]: assets 0 (missing)
+            - paragraph [ref=e1787]: lineage_ids -
+            - paragraph [ref=e1788]: implementation_refs -
+          - generic [ref=e1789]:
+            - paragraph [ref=e1790]: Validation
+            - paragraph [ref=e1791]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1792]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1793]: public_endpoints -
+          - generic [ref=e1794]:
+            - paragraph [ref=e1795]: Contributors
+            - paragraph [ref=e1796]: unique 0 (missing)
+            - paragraph [ref=e1797]: registry_ids -
+            - list
+      - article [ref=e1798]:
+        - generic [ref=e1799]:
+          - heading "Workflow spam circuit breaker" [level=2] [ref=e1800]:
+            - link "Workflow spam circuit breaker" [ref=e1801] [cursor=pointer]:
+              - /url: /ideas/workflow-spam-circuit-breaker
+          - generic [ref=e1802]: workflow-spam-circuit-breaker
+        - generic [ref=e1803]:
+          - generic [ref=e1804]: "spec: missing"
+          - generic [ref=e1805]: "process: missing"
+          - generic [ref=e1806]: "implementation: missing"
+          - generic [ref=e1807]: "validation: missing"
+          - generic [ref=e1808]: "contributors: missing"
+          - generic [ref=e1809]: "contributions: missing"
+          - generic [ref=e1810]: "assets: missing"
+        - paragraph [ref=e1811]: blocker spec | unblock priority 32.06 | idea value gap 85.50 | confidence 0.75
+        - generic [ref=e1812]:
+          - generic [ref=e1813]:
+            - paragraph [ref=e1814]: Spec + Process
+            - paragraph [ref=e1815]: specs 0 (missing) | evidence 0 (missing)
+            - paragraph [ref=e1816]: spec_ids -
+            - paragraph [ref=e1817]: task_ids -
+            - paragraph [ref=e1818]: threads -
+            - paragraph [ref=e1819]: source_files -
+          - generic [ref=e1820]:
+            - paragraph [ref=e1821]: Implementation + Contribution
+            - paragraph [ref=e1822]: lineage_links 0 (missing) | runtime_events 0
+            - paragraph [ref=e1823]: runtime_ms 0.00 | runtime_cost 0.000000
+            - paragraph [ref=e1824]: usage_events 0 | measured_value 0.00
+            - paragraph [ref=e1825]: registry_contributions 0 | registry_cost 0.00
+            - paragraph [ref=e1826]: assets 0 (missing)
+            - paragraph [ref=e1827]: lineage_ids -
+            - paragraph [ref=e1828]: implementation_refs -
+          - generic [ref=e1829]:
+            - paragraph [ref=e1830]: Validation
+            - paragraph [ref=e1831]: local pass 0 | ci pass 0 | deploy pass 0 | e2e pass 0
+            - paragraph [ref=e1832]: phase_gate pass 0 | blocked 0
+            - paragraph [ref=e1833]: public_endpoints -
+          - generic [ref=e1834]:
+            - paragraph [ref=e1835]: Contributors
+            - paragraph [ref=e1836]: unique 0 (missing)
+            - paragraph [ref=e1837]: registry_ids -
+            - list
+  - alert [ref=e1838]
