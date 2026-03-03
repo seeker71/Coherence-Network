@@ -732,6 +732,15 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
             },
         )
         assert seed.status_code == 201
+        monkeypatch.setattr(
+            agent_execution_service,
+            "chat_completion",
+            lambda **_: (
+                "ok",
+                {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                {"elapsed_ms": 4, "provider_request_id": "req_spark", "response_id": "resp_spark"},
+            ),
+        )
 
         task = agent_service.create_task(
             AgentTaskCreate(
@@ -742,30 +751,23 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
         )
 
         await client.post(f"/api/agent/tasks/{task['id']}/execute")
-        blocked = await client.get(f"/api/agent/tasks/{task['id']}")
-        assert blocked.status_code == 200
-        blocked_payload = blocked.json()
-        assert blocked_payload["status"] == "failed"
-        assert blocked_payload["output"].startswith("Paid-provider usage blocked by window policy")
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        completed_payload = completed.json()
+        assert completed_payload["status"] == "completed"
+        assert completed_payload["output"] == "ok"
+        context = completed_payload.get("context") or {}
+        fallback_ctx = context.get("budget_pressure_fallback") or {}
+        assert str(fallback_ctx.get("from_model", "")).endswith("gpt-5.3-codex")
+        assert fallback_ctx.get("to_model", "").endswith("gpt-5.3-codex-spark")
+        route_decision = context.get("route_decision") or {}
+        assert route_decision.get("fallback_model") == "gpt-5.3-codex-spark"
+        assert route_decision.get("fallback_reason") == "paid_window_budget_pressure"
 
         friction = await client.get("/api/friction/events?status=open")
         assert friction.status_code == 200
-        matching = [
-            item
-            for item in friction.json()
-            if item.get("block_type") == "usage_window_budget_exceeded"
-            and "Paid-provider usage blocked" in item.get("notes", "")
-        ]
-        assert matching
-        row = matching[0]
-        assert row.get("task_id") == task["id"]
-        assert row.get("provider")
-        assert row.get("billing_provider")
-        assert row.get("tool") == "agent-task-execution-summary"
-        assert row.get("model")
-        assert any(
+        assert not any(
             item.get("block_type") == "usage_window_budget_exceeded"
-            and "Paid-provider usage blocked" in item.get("notes", "")
             for item in friction.json()
         )
 
@@ -799,7 +801,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_is_soft_threshold_only(
+async def test_execute_endpoint_blocks_paid_provider_when_budget_window_exceeded_if_codex_fallback_disabled(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -808,62 +810,58 @@ async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_i
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "1")
-    monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
-    monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
+    monkeypatch.setenv("AGENT_CODEX_BUDGET_FALLBACK_ENABLED", "0")
+    monkeypatch.setenv("PAID_TOOL_8H_LIMIT", "1")
+    monkeypatch.setenv("PAID_TOOL_WINDOW_BUDGET_FRACTION", "0.333333")
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
-    monkeypatch.delenv("AGENT_BLOCK_ON_SOFT_PROVIDER_QUOTA_THRESHOLD", raising=False)
     _reset_agent_store()
 
-    from app.services import agent_execution_service
-
-    monkeypatch.setattr(
-        agent_execution_service.automation_usage_service,
-        "provider_limit_guard_decision",
-        lambda provider, force_refresh=False: {
-            "allowed": False,
-            "provider": provider,
-            "reason": "monthly::credits remaining=4.0/100.0 ratio=0.04<=threshold=0.1",
-            "blocked_metrics": [
-                {
-                    "metric_id": "credits",
-                    "window": "monthly",
-                    "remaining_ratio": 0.04,
-                    "threshold_ratio": 0.1,
-                }
-            ],
-            "evaluated_metrics": [],
-        },
-    )
-
-    monkeypatch.setattr(
-        agent_execution_service,
-        "chat_completion",
-        lambda **_: (
-            "quota-soft-threshold-allowed",
-            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
-            {"elapsed_ms": 7, "provider_request_id": "req_quota_soft", "response_id": "resp_quota_soft"},
-        ),
-    )
-
-    task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Assess codex route with soft provider quota threshold",
-            task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
-        )
-    )
-
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        seed = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:openrouter.chat_completion",
+                "method": "RUN",
+                "status_code": 200,
+                "runtime_ms": 12.0,
+                "metadata": {
+                    "tracking_kind": "agent_tool_call",
+                    "is_paid_provider": True,
+                    "runtime_cost_usd": 0.003,
+                    "task_id": "seed_task",
+                },
+                "idea_id": "coherence-network-agent-pipeline",
+            },
+        )
+        assert seed.status_code == 201
+
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction="Assess codex route with budget guard disabled fallback",
+                task_type=TaskType.IMPL,
+                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            )
+        )
+
         await client.post(f"/api/agent/tasks/{task['id']}/execute")
-        completed = await client.get(f"/api/agent/tasks/{task['id']}")
-        assert completed.status_code == 200
-        payload = completed.json()
-        assert payload["status"] == "completed"
-        assert payload["output"] == "quota-soft-threshold-allowed"
+        blocked = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert blocked.status_code == 200
+        blocked_payload = blocked.json()
+        assert blocked_payload["status"] == "failed"
+        assert blocked_payload["output"].startswith("Paid-provider usage blocked by window policy")
+
+        friction = await client.get("/api/friction/events?status=open")
+        assert friction.status_code == 200
+        assert any(
+            item.get("block_type") == "usage_window_budget_exceeded"
+            and "Paid-provider usage blocked" in item.get("notes", "")
+            for item in friction.json()
+        )
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_reports_exhausted(
+async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_blocks(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -935,6 +933,76 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_r
             and "provider quota policy" in item.get("notes", "")
             for item in friction.json()
         )
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_records_provider_usage_guard_checks(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "1")
+    monkeypatch.setenv("AUTOMATION_PROVIDER_WINDOW_GUARD_ENABLED", "1")
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    def _always_allowed_guard(provider: str, force_refresh: bool = False) -> dict[str, object]:
+        assert provider == "openai-codex"
+        assert force_refresh is True
+        return {
+            "allowed": True,
+            "provider": provider,
+            "reason": "within_window_thresholds",
+            "blocked_metrics": [],
+            "evaluated_metrics": [],
+            "status": "ok",
+        }
+
+    monkeypatch.setattr(
+        agent_execution_service.automation_usage_service,
+        "provider_limit_guard_decision",
+        _always_allowed_guard,
+    )
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 5, "provider_request_id": "req_guard", "response_id": "resp_guard"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Record guard checkpoints",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        context = payload.get("context") or {}
+        checkpoints = context.get("provider_usage_guard_decisions") or []
+        assert isinstance(checkpoints, list)
+        assert len(checkpoints) >= 2
+        assert checkpoints[0]["stage"] == "pre_execution"
+        assert checkpoints[0]["provider"] == "openai-codex"
+        assert checkpoints[0]["allowed"] is True
+        assert checkpoints[-1]["stage"] == "post_execution"
+        assert checkpoints[-1]["provider"] == "openai-codex"
+        assert checkpoints[-1]["allowed"] is True
+        assert context.get("provider_usage_guard_last", {}).get("stage") == "post_execution"
 
 
 @pytest.mark.asyncio

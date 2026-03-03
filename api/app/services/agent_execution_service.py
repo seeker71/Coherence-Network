@@ -12,6 +12,7 @@ import os
 import re
 import time
 from datetime import datetime, timezone
+import re
 from typing import Any
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ from app.services import (
     runtime_service,
     agent_routing_service,
 )
+from app.services import agent_routing_service as routing_service
 from app.services.agent_execution_task_flow import execute_task
 from app.services.openrouter_client import OpenRouterError, chat_completion
 
@@ -140,38 +142,118 @@ def _task_route_provider(task: dict[str, Any]) -> str:
     return "unknown"
 
 
-def _friction_metadata_from_task(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
-    context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    route_decision = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+def _route_is_openai_codex(task: dict[str, Any]) -> bool:
+    return _task_route_provider(task) == "openai-codex"
 
-    provider = str(
-        route_decision.get("provider")
-        or route_decision.get("billing_provider")
-        or _task_route_provider(task)
-    ).strip()
-    billing_provider = str(
-        route_decision.get("billing_provider")
-        or route_decision.get("provider")
-        or provider
-    ).strip()
 
-    task_model = str(task.get("model") or "").strip()
-    normalized_tool = "agent-task-execution-summary"
-    run_id = str(
-        context.get("active_run_id")
-        or context.get("run_id")
-        or context.get("last_run_id")
-        or ""
-    ).strip()
+def _normalize_model_alias(model: str, *, default: str = "") -> str:
+    normalized = str(model or "").strip().lower()
+    if not normalized:
+        return default
+    return routing_service.normalize_model_name(normalized) or normalized
 
-    return {
-        "task_id": (task_id or "").strip() or None,
-        "run_id": run_id or None,
-        "provider": provider or None,
-        "billing_provider": billing_provider or None,
-        "tool": normalized_tool,
-        "model": task_model or None,
+
+def _openai_codex_fallback_enabled() -> bool:
+    return os.getenv("AGENT_CODEX_BUDGET_FALLBACK_ENABLED", "1").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
     }
+
+
+def _openai_codex_primary_fallback_candidates() -> set[str]:
+    return {
+        "gpt-5.3-codex",
+        "gtp-5.3-codex",
+    }
+
+
+def _openai_codex_fallback_model() -> str:
+    return _normalize_model_alias(
+        os.getenv(
+            "AGENT_CODEX_BUDGET_FALLBACK_MODEL",
+            "gpt-5.3-codex-spark",
+        ),
+        default="gpt-5.3-codex-spark",
+    )
+
+
+def _is_openai_codex_fallback_model(model: str) -> bool:
+    normalized = _normalize_model_alias(model)
+    return normalized in {"gpt-5.3-codex-spark", "gtp-5.3-codex-spark"}
+
+
+def _rewrite_command_model(command: str, model: str) -> str:
+    pattern = re.compile(r"--model\s+(\"[^\"]+\"|'[^']+'|\S+)")
+    if pattern.search(command):
+        return pattern.sub(f"--model {model}", command, count=1)
+    return f"{command.rstrip()} --model {model}" if command.strip() else f"--model {model}"
+
+
+def _apply_openai_codex_budget_fallback(
+    task_id: str,
+    task: dict[str, Any],
+    *,
+    current_model: str,
+    fallback_model: str,
+    reason: str,
+) -> bool:
+    if not _openai_codex_fallback_enabled():
+        return False
+    if not _route_is_openai_codex(task):
+        return False
+    if _is_openai_codex_fallback_model(current_model):
+        return False
+    fallback_core = _normalize_model_alias(fallback_model)
+    if not fallback_core:
+        return False
+    if fallback_core == current_model:
+        return False
+
+    current_model_text = _extract_underlying_model(current_model) or current_model
+    prefixed_fallback = current_model
+    if "/" in current_model:
+        prefix = current_model.split("/", 1)[0].strip()
+        if prefix:
+            prefixed_fallback = f"{prefix}/{fallback_core}"
+    else:
+        prefixed_fallback = fallback_core
+
+    route_decision = {}
+    context = dict(task.get("context") or {})
+    raw_route = context.get("route_decision")
+    if isinstance(raw_route, dict):
+        route_decision = dict(raw_route)
+        route_decision["model"] = prefixed_fallback
+        route_decision["is_paid_provider"] = True
+        route_decision["provider"] = "openai-codex"
+        route_decision["billing_provider"] = "openai-codex"
+        route_decision["fallback_model"] = fallback_core
+        route_decision["fallback_reason"] = reason
+    context["route_decision"] = route_decision
+    context["budget_pressure_fallback"] = {
+        "enabled": True,
+        "from_model": current_model,
+        "to_model": prefixed_fallback,
+        "reason": reason,
+    }
+
+    task["model"] = prefixed_fallback
+    task["command"] = _rewrite_command_model(str(task.get("command") or ""), fallback_core)
+    task["context"] = context
+
+    _write_task_log(
+        task_id=task_id,
+        lines=[
+            (
+                "Auto budget fallback active: "
+                f"openai-codex model budget pressure triggered fallback "
+                f"from {current_model_text} to {prefixed_fallback}"
+            )
+        ],
+    )
+    return True
 
 
 def _finish_task(
@@ -453,6 +535,7 @@ def _check_paid_provider_window_budget(
     task: dict[str, Any],
     *,
     task_id: str,
+    emit_friction_event: bool = True,
 ) -> tuple[bool, str | None]:
     if not route_is_paid:
         return True, None
@@ -474,16 +557,17 @@ def _check_paid_provider_window_budget(
             "Paid-provider usage blocked by provider quota policy: "
             f"provider={provider}; {detail}"
         )
-        _record_friction_event(
-            task_id=task_id,
-            task=task,
-            stage="agent_execution",
-            block_type="provider_usage_limit_exceeded",
-            endpoint="tool:agent-task-execution-summary",
-            severity="high",
-            notes=msg,
-            energy_loss_estimate=0.0,
-        )
+        if emit_friction_event:
+            _record_friction_event(
+                task_id=task_id,
+                task=task,
+                stage="agent_execution",
+                block_type="provider_usage_limit_exceeded",
+                endpoint="tool:agent-task-execution-summary",
+                severity="high",
+                notes=msg,
+                energy_loss_estimate=0.0,
+            )
         return False, msg
 
     limit_8h, limit_week, budget_fraction = _paid_tool_windows_budget()
@@ -509,16 +593,17 @@ def _check_paid_provider_window_budget(
         for label, used, window_limit, allowed in blocked_windows
     )
     msg = f"Paid-provider usage blocked by window policy: {details}"
-    _record_friction_event(
-        task_id=task_id,
-        task=task,
-        stage="agent_execution",
-        block_type="usage_window_budget_exceeded",
-        endpoint="tool:agent-task-execution-summary",
-        severity="high",
-        notes=msg,
-        energy_loss_estimate=0.0,
-    )
+    if emit_friction_event:
+        _record_friction_event(
+            task_id=task_id,
+            task=task,
+            stage="agent_execution",
+            block_type="usage_window_budget_exceeded",
+            endpoint="tool:agent-task-execution-summary",
+            severity="high",
+            notes=msg,
+            energy_loss_estimate=0.0,
+        )
     return False, msg
 
 
