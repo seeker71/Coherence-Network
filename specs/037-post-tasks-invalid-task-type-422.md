@@ -66,7 +66,3 @@ None. Adding or expanding this test does not require new dependencies or API con
 - [009-api-error-handling.md](009-api-error-handling.md) — 422 format, acceptance tests for 422 on invalid task_type
 - [010-request-validation.md](010-request-validation.md) — task_type enum, validation rules, test names
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — POST /api/agent/tasks contract and test list
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

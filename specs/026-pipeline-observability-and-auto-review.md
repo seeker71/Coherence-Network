@@ -102,7 +102,3 @@ TaskMetric:
 - [docs/AGENT-DEBUGGING.md](../docs/AGENT-DEBUGGING.md) — Pipeline troubleshooting
 - [docs/SPEC-COVERAGE.md](../docs/SPEC-COVERAGE.md) — Spec→impl mapping
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — Pipeline phases
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

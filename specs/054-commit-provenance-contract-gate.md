@@ -11,9 +11,37 @@ Ensure every meaningful change set is traceable to ideas/specs/tasks via a machi
 - [ ] Evidence validates changed-file coverage: `change_files` includes all non-evidence changed paths in the diff range.
 - [ ] Enforcement runs on both PR and push workflows.
 
-## Validation
-- `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_provenance-gate-mainline.json`
+## Files to Create/Modify
 
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.
+- `scripts/validate_commit_evidence.py` - evidence schema validation + diff-range enforcement.
+- `.github/workflows/test.yml` - enforce evidence contract in the test workflow.
+- `.github/workflows/thread-gates.yml` - enforce evidence contract in the thread-gates workflow.
+- `docs/CODEX-THREAD-PROCESS.md` - contributor-facing instructions for creating valid evidence.
+
+## Acceptance Tests
+
+- `Manual validation`: open a PR that changes a runtime file (for example under `api/app/`) without adding a `docs/system_audit/commit_evidence_*.json` file and confirm CI fails with an evidence error.
+- `Manual validation`: open a PR that changes only `.github/workflows/*` and confirm CI does not hard-fail on missing evidence (when the change set matches an exempted category).
+
+## Verification
+
+```bash
+python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_provenance-gate-mainline.json
+python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence
+```
+
+## Out of Scope
+
+- Expanding evidence schema beyond the required attribution/traceability fields.
+
+## Risks and Assumptions
+
+- Risk: overly strict enforcement blocks automation (Dependabot); mitigation is explicit, narrow exemptions for automation/metadata-only diffs.
+
+## Known Gaps and Follow-up Tasks
+
+- None.
+
+## Decision Gates (if any)
+
+- Approve and periodically review the exemption rules so they remain narrow and do not erode provenance for runtime/spec changes.

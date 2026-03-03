@@ -101,7 +101,3 @@ See `api/tests/test_agent.py`. All of the following must pass:
 ## Decision Gates (if any)
 
 None.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

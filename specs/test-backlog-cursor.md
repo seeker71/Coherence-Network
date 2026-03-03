@@ -13,6 +13,3 @@
 10. specs/002-agent-orchestration-api.md — Any remaining agent API items
 11. Add or improve tests for existing API endpoints per specs
 12. Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

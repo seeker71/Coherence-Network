@@ -150,7 +150,3 @@ None.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — agent API and edge-case table
 - [009-api-error-handling.md](009-api-error-handling.md) — error response format
 - [011-pagination.md](011-pagination.md) — limit/offset validation
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

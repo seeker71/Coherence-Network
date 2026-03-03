@@ -102,7 +102,3 @@ ProjectSummary (for search results):
 
 - deps.dev API: no key required for basic usage (rate limits apply)
 - Adding httpx: already a dependency
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

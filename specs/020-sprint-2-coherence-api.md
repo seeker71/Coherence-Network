@@ -76,7 +76,3 @@ Only 2 of 8 components currently use real data: `downstream_impact`, `dependency
 
 - Weight values require human approval (spec 018)
 - Stub vs real computation: start stub, iterate when data available
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

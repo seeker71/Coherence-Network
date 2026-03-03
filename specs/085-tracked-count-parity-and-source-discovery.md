@@ -28,7 +28,3 @@ cd web && npm run build
 ## Out of Scope
 - Backfilling historical usage events that were never recorded.
 - Replacing all runtime storage backends in this change.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

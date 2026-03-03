@@ -30,7 +30,3 @@ Returns canonical API/web routes with milestone metadata and idea linkage.
 - `api/tests/test_inventory_api.py`
 - `api/tests/test_runtime_api.py`
 
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

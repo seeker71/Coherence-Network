@@ -67,7 +67,3 @@ Return per-idea runtime aggregates for recent events.
 - `web/components/runtime-beacon.tsx`
 - `web/app/layout.tsx`
 
-
-## Idea Traceability
-- `idea_id`: `oss-interface-alignment`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

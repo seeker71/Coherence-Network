@@ -44,7 +44,3 @@ Run at least one task in each phase (spec, impl, test, review) simultaneously, w
 - `api/scripts/monitor_pipeline.py` — add low_phase_coverage rule; reduce interval to 60s
 - `api/app/services/agent_service.py` — optional: add `running_by_phase` to pipeline-status
 - `specs/028-parallel-by-phase-pipeline.md` — this spec
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

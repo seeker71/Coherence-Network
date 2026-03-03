@@ -58,7 +58,3 @@ None.
 - [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — pipeline-status and attention.
 - [032 Attention Heuristics Pipeline Status](032-attention-heuristics-pipeline-status.md) — attention object.
 - [006 Overnight Backlog](006-overnight-backlog.md) — item 19: “Add test: pipeline-status returns 200 when no running task (empty state)”.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

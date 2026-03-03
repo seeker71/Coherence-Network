@@ -8,7 +8,3 @@ Spec 015 was planned in the backlog for "coherence algorithm: algorithm sketch, 
 
 - **Merged into:** [018-coherence-algorithm-spec.md](018-coherence-algorithm-spec.md)
 - **API:** GET /api/projects/{ecosystem}/{name}/coherence implemented in [020-sprint-2-coherence-api.md](020-sprint-2-coherence-api.md)
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

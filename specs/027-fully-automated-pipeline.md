@@ -100,7 +100,3 @@ Add to existing response:
 - **Auto-fix:** Default disabled; enable via PIPELINE_AUTO_FIX_ENABLED=1 after review
 - **Combined backlog:** Human maintains 006 and 007; merge script is deterministic
 - **CI integration:** update_spec_coverage runs in CI but does not block; can be separate job
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -46,7 +46,3 @@ Tool failures are pure friction: they burn time (cost) and often block progress.
 ## Validation
 - `cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_agent_runner_tool_failure_telemetry.py`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_tool-failure-awareness.json`
-
-## Idea Traceability
-- `idea_id`: `coherence-network-agent-pipeline`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

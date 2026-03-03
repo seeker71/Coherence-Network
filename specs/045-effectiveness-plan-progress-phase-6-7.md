@@ -98,7 +98,3 @@ See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_pr
 - [006-overnight-backlog.md](006-overnight-backlog.md) — Phase 6 (56–57), Phase 7 (58–74)
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — GET /api/agent/effectiveness context
 - docs/PLAN.md — goals and roadmap
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

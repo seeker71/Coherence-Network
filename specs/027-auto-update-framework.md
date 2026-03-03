@@ -95,7 +95,3 @@ Tests define the contract; do not modify tests to make implementation pass. Fix 
 - [004 CI Pipeline](004-ci-pipeline.md) — GitHub Actions workflow.
 - [030 Spec Coverage Update](030-spec-coverage-update.md) — Human-triggered SPEC-COVERAGE edits (does not change this script).
 - [docs/EXECUTION-PLAN.md](../docs/EXECUTION-PLAN.md) — SPEC-COVERAGE and STATUS auto-update.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

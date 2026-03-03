@@ -39,7 +39,3 @@ Keep the spec→implementation→test mapping accurate and complete. This spec d
 ## Decision Gates
 
 - None. Documentation-only change.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

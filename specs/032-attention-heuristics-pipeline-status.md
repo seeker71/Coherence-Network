@@ -83,7 +83,3 @@ When metrics are unavailable (e.g. no metrics_service), `low_success_rate` remai
 - [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — Phase 3 monitor attention, Phase 4 auto-fix.
 - [007 Meta-pipeline backlog](007-meta-pipeline-backlog.md) — item 4: attention heuristics.
 - [PIPELINE-ATTENTION](../docs/PIPELINE-ATTENTION.md) — operational checklist.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

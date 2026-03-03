@@ -23,7 +23,3 @@ Prevent test contributors from polluting persistent contributor data.
 ```bash
 cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py
 ```
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.
