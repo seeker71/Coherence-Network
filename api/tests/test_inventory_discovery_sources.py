@@ -75,6 +75,21 @@ def test_idea_service_includes_store_tracked_ids_when_database_url_is_configured
     assert idea_service.list_tracked_idea_ids() == ["database-url-tracked"]
 
 
+def test_idea_service_includes_store_tracked_ids_when_database_url_is_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {"idea_ids": ["database-url-tracked"], "thread_branch": "codex/test"},
+        "memory:test",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    assert idea_service.list_tracked_idea_ids() == ["database-url-tracked"]
+
+
 def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch, tmp_path: Path
 ) -> None:
