@@ -29,6 +29,7 @@ async def get_automation_usage(
     except TimeoutError:
         overview = automation_usage_service.usage_overview_from_snapshots()
     overview = automation_usage_service.coalesce_usage_overview_families(overview)
+    overview = automation_usage_service.refresh_usage_overview_limit_coverage(overview)
     if compact:
         return automation_usage_service.compact_usage_overview_payload(
             overview,
