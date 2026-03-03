@@ -1,0 +1,81 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/specs-page-parity-20260303",
+  "commit_scope": "Mirror latest ideas sorting/filtering UX improvements on specs page, including explicit filter controls, header sorting links, and per-row links dropdowns; add specs cards API feed + tests.",
+  "files_owned": [
+    "api/app/routers/spec_registry.py",
+    "api/app/services/spec_cards_service.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_spec_registry_api.py",
+    "web/app/specs/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_specs-filter-sort-links-dropdown.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_spec_registry_api.py",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge to main and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Specs table now has explicit filter/sort controls, direct header sorting interactions, and per-row links dropdown behavior aligned with ideas.",
+    "public_endpoints": [
+      "/specs",
+      "/api/spec-registry/cards"
+    ],
+    "test_flows": [
+      "specs-filter-controls",
+      "specs-table-header-sort",
+      "specs-row-links-dropdown"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_specs_filter_sort_links_dropdown_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-03-03_specs-filter-sort-links-dropdown.json"
+  ],
+  "change_files": [
+    "api/app/routers/spec_registry.py",
+    "api/app/services/spec_cards_service.py",
+    "api/app/services/spec_registry_service.py",
+    "api/tests/test_spec_registry_api.py",
+    "web/app/specs/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_specs-filter-sort-links-dropdown.json"
+  ],
+  "change_intent": "runtime_fix"
+}
