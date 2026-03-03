@@ -3,13 +3,12 @@ import {
   ArrowUpDown,
   BadgeCheck,
   BookOpen,
+  ChevronDown,
   ChevronRight,
   Circle,
   Cog,
-  LayoutGrid,
   Link2,
   Search,
-  SlidersHorizontal,
   Sparkles,
   TrendingUp,
   type LucideIcon,
@@ -34,6 +33,7 @@ type IdeaCardItem = {
   implementation_ref_count: number;
   links: {
     web_detail_path: string;
+    web_usage_path?: string | null;
     web_spec_path?: string | null;
   };
 };
@@ -80,11 +80,37 @@ const SCOPE_OPTIONS = ["contributors", "all"] as const;
 const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
 
 const SORT_LABEL: Record<(typeof SORT_OPTIONS)[number], string> = {
-  attention_desc: "attention",
-  roi_desc: "roi",
-  gap_desc: "gap",
-  state_desc: "state",
-  name_asc: "name",
+  attention_desc: "attention (high to low)",
+  roi_desc: "ROI (high to low)",
+  gap_desc: "value gap (high to low)",
+  state_desc: "state progress",
+  name_asc: "name (A to Z)",
+};
+
+const STATE_FILTER_LABEL: Record<(typeof FILTER_STATES)[number], string> = {
+  all: "All states",
+  spec: "Spec",
+  implemented: "Implemented",
+  validated: "Validated",
+  measured: "Measured",
+};
+
+const ATTENTION_FILTER_LABEL: Record<(typeof ATTENTION_LEVELS)[number], string> = {
+  all: "All attention levels",
+  none: "On track",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
+const VIEW_LABEL: Record<(typeof VIEW_OPTIONS)[number], string> = {
+  list: "List + side insights",
+  focus: "Focus list only",
+};
+
+const SCOPE_LABEL: Record<(typeof SCOPE_OPTIONS)[number], string> = {
+  contributors: "Contributor ideas",
+  all: "All ideas",
 };
 
 const STATE_META: Record<
@@ -303,10 +329,6 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
     items.slice(0, 7).map((item) => Math.max(item.attention_score, item.value_gap * 0.8, item.measured_roi)),
   );
 
-  const stateCycleNext = FILTER_STATES[(FILTER_STATES.indexOf(state) + 1) % FILTER_STATES.length];
-  const sortCycleNext = SORT_OPTIONS[(SORT_OPTIONS.indexOf(sort) + 1) % SORT_OPTIONS.length];
-  const viewCycleNext = VIEW_OPTIONS[(VIEW_OPTIONS.indexOf(view) + 1) % VIEW_OPTIONS.length];
-
   const clearCursor = { cursor: null } as const;
 
   return (
@@ -351,57 +373,164 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
           </div>
         </section>
 
-        <section className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
-          <form
-            action="/ideas"
-            method="get"
-            className="flex items-center gap-2 rounded-xl border border-border/70 bg-card/60 px-3 py-3"
-          >
-            <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <input
-              type="text"
-              name="q"
-              defaultValue={q}
-              placeholder="Search ideas, specs, owners, or questions"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-            <input type="hidden" name="state" value={state} />
-            <input type="hidden" name="attention" value={attention} />
-            <input type="hidden" name="sort" value={sort} />
-            <input type="hidden" name="view" value={view} />
-            <input type="hidden" name="scope" value={scope} />
-            <input type="hidden" name="limit" value={String(limit)} />
-            {minRoi !== null ? <input type="hidden" name="min_roi" value={String(minRoi)} /> : null}
-            {minValueGap !== null ? <input type="hidden" name="min_value_gap" value={String(minValueGap)} /> : null}
-            <button
-              type="submit"
-              className="rounded-lg border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium hover:bg-muted/60"
-            >
-              Search
-            </button>
-          </form>
+        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm sm:p-5">
+          <form action="/ideas" method="get" className="space-y-3">
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/50 px-3 py-3">
+              <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder="Search ideas, specs, owners, or questions"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+              <button
+                type="submit"
+                className="rounded-lg border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium hover:bg-muted/60"
+              >
+                Apply
+              </button>
+            </div>
 
-          <Link
-            href={buildHref(currentParams, { state: stateCycleNext, ...clearCursor })}
-            className="inline-flex min-w-28 items-center justify-center gap-2 rounded-xl border border-border/70 bg-card/60 px-4 py-3 text-sm font-medium hover:bg-muted/60"
-          >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            Filters
-          </Link>
-          <Link
-            href={buildHref(currentParams, { sort: sortCycleNext, ...clearCursor })}
-            className="inline-flex min-w-24 items-center justify-center gap-2 rounded-xl border border-border/70 bg-card/60 px-4 py-3 text-sm font-medium hover:bg-muted/60"
-          >
-            <ArrowUpDown className="h-4 w-4" aria-hidden />
-            Sort
-          </Link>
-          <Link
-            href={buildHref(currentParams, { view: viewCycleNext, ...clearCursor })}
-            className="inline-flex min-w-24 items-center justify-center gap-2 rounded-xl border border-border/70 bg-card/60 px-4 py-3 text-sm font-medium hover:bg-muted/60"
-          >
-            <LayoutGrid className="h-4 w-4" aria-hidden />
-            Views
-          </Link>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">State</span>
+                <select
+                  name="state"
+                  defaultValue={state}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {FILTER_STATES.map((stateOption) => (
+                    <option key={stateOption} value={stateOption}>
+                      {STATE_FILTER_LABEL[stateOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Attention</span>
+                <select
+                  name="attention"
+                  defaultValue={attention}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {ATTENTION_LEVELS.map((attentionOption) => (
+                    <option key={attentionOption} value={attentionOption}>
+                      {ATTENTION_FILTER_LABEL[attentionOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Sort (table header)
+                </span>
+                <select
+                  name="sort"
+                  defaultValue={sort}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {SORT_OPTIONS.map((sortOption) => (
+                    <option key={sortOption} value={sortOption}>
+                      {SORT_LABEL[sortOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">View</span>
+                <select
+                  name="view"
+                  defaultValue={view}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {VIEW_OPTIONS.map((viewOption) => (
+                    <option key={viewOption} value={viewOption}>
+                      {VIEW_LABEL[viewOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Scope</span>
+                <select
+                  name="scope"
+                  defaultValue={scope}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {SCOPE_OPTIONS.map((scopeOption) => (
+                    <option key={scopeOption} value={scopeOption}>
+                      {SCOPE_LABEL[scopeOption]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Rows per page</span>
+                <select
+                  name="limit"
+                  defaultValue={String(limit)}
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                >
+                  {LIMIT_OPTIONS.map((pageLimit) => (
+                    <option key={pageLimit} value={String(pageLimit)}>
+                      {pageLimit}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Min ROI</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  name="min_roi"
+                  defaultValue={minRoi ?? ""}
+                  placeholder="Any"
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5">
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Min Value Gap</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  name="min_value_gap"
+                  defaultValue={minValueGap ?? ""}
+                  placeholder="Any"
+                  className="w-full rounded-md border border-border/70 bg-background/90 px-2.5 py-1.5 text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                State and attention narrow results. Click table headers to sort; this dropdown is a fallback. View only changes layout.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="rounded-lg border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium hover:bg-muted/60"
+                >
+                  Apply filters
+                </button>
+                <Link
+                  href="/ideas"
+                  className="rounded-lg border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                >
+                  Reset
+                </Link>
+              </div>
+            </div>
+          </form>
         </section>
 
         <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
@@ -436,7 +565,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                   min_value_gap: null,
                   ...clearCursor,
                 }),
-                active: state === "all" && attention === "all" && minRoi === null,
+                active: state === "all" && attention === "all" && minRoi === null && minValueGap === null,
               },
               { label: "Spec", href: buildHref(currentParams, { state: "spec", ...clearCursor }), active: state === "spec" },
               {
@@ -505,28 +634,55 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
               <h2 className="text-xl font-semibold tracking-tight">Active Ideas</h2>
               <p className="text-xs text-muted-foreground">sorted by {SORT_LABEL[sort]}</p>
             </div>
-            <div className="sticky top-[56px] z-30 mb-3 hidden grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] items-center rounded-lg border border-border/70 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm md:grid">
-              <span className="inline-flex items-center gap-1.5">
+            <div className="sticky top-[56px] z-30 mb-3 hidden grid-cols-[minmax(0,1fr)_128px_76px_76px_120px] items-center rounded-lg border border-border/70 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm md:grid">
+              <Link
+                href={buildHref(currentParams, { sort: "name_asc", ...clearCursor })}
+                className={`inline-flex items-center gap-1.5 transition ${
+                  sort === "name_asc" ? "font-semibold text-primary" : "hover:text-foreground"
+                }`}
+                aria-label="Sort by idea name"
+              >
                 <Circle className="h-3.5 w-3.5" aria-hidden />
                 idea
-              </span>
-              <span className="inline-flex items-center justify-end gap-1">
+                <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+              <span className="inline-flex items-center justify-end gap-1" title="Links column is not sortable yet.">
                 <Link2 className="h-3.5 w-3.5" aria-hidden />
                 links
               </span>
-              <span className="inline-flex items-center justify-end gap-1">
+              <Link
+                href={buildHref(currentParams, { sort: "gap_desc", ...clearCursor })}
+                className={`inline-flex items-center justify-end gap-1 transition ${
+                  sort === "gap_desc" ? "font-semibold text-primary" : "hover:text-foreground"
+                }`}
+                aria-label="Sort by value gap"
+              >
                 <Sparkles className="h-3.5 w-3.5" aria-hidden />
                 gap
-              </span>
-              <span className="inline-flex items-center justify-end gap-1">
+                <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+              <Link
+                href={buildHref(currentParams, { sort: "roi_desc", ...clearCursor })}
+                className={`inline-flex items-center justify-end gap-1 transition ${
+                  sort === "roi_desc" ? "font-semibold text-primary" : "hover:text-foreground"
+                }`}
+                aria-label="Sort by ROI"
+              >
                 <TrendingUp className="h-3.5 w-3.5" aria-hidden />
                 roi
-              </span>
-              <span className="inline-flex items-center justify-end gap-1">
+                <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+              <Link
+                href={buildHref(currentParams, { sort: "attention_desc", ...clearCursor })}
+                className={`inline-flex items-center justify-end gap-1 transition ${
+                  sort === "attention_desc" ? "font-semibold text-primary" : "hover:text-foreground"
+                }`}
+                aria-label="Sort by attention"
+              >
                 <Activity className="h-3.5 w-3.5" aria-hidden />
                 attention
-              </span>
-              <span className="ml-2 justify-self-end border-l border-primary/35 pl-3 text-right uppercase tracking-wide">open</span>
+                <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
+              </Link>
             </div>
             <div className="sticky top-[56px] z-30 mb-2 flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm md:hidden">
               <span className="inline-flex items-center gap-1">
@@ -546,18 +702,43 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                 attention
               </span>
             </div>
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 md:hidden">
+              {[
+                { label: "idea", value: "name_asc" },
+                { label: "gap", value: "gap_desc" },
+                { label: "roi", value: "roi_desc" },
+                { label: "attention", value: "attention_desc" },
+              ].map((option) => (
+                <Link
+                  key={option.value}
+                  href={buildHref(currentParams, { sort: option.value, ...clearCursor })}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] transition ${
+                    sort === option.value
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-border/70 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </div>
 
             <ul className="space-y-2.5">
               {items.map((item) => {
                 const stateMeta = STATE_META[item.state];
                 const attentionMeta = ATTENTION_META[item.attention_level];
                 const StateIcon = stateMeta.icon;
-                const linksCount = Math.max(item.spec_count, 0) + Math.max(item.implementation_ref_count, 0);
                 const reason = formatAttentionReason(item.attention_reason);
+                const linkTargets = [
+                  { label: "Idea detail", href: item.links.web_detail_path },
+                  ...(item.links.web_spec_path ? [{ label: "Spec", href: item.links.web_spec_path }] : []),
+                  ...(item.links.web_usage_path ? [{ label: "Usage", href: item.links.web_usage_path }] : []),
+                ];
+                const linksCount = linkTargets.length;
 
                 return (
                   <li key={item.idea_id} className="rounded-xl border border-border/70 bg-background/45 p-2.5 shadow-sm sm:p-3.5">
-                    <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] md:items-center">
+                    <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_128px_76px_76px_120px] md:items-center">
                       <div className="min-w-0">
                         <div className="flex items-start gap-3">
                           <span
@@ -568,7 +749,11 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-base font-semibold">{item.title}</h3>
+                              <h3 className="truncate text-base font-semibold">
+                                <Link href={item.links.web_detail_path} className="underline-offset-2 hover:underline">
+                                  {item.title}
+                                </Link>
+                              </h3>
                               {item.links.web_spec_path ? (
                                 <Link
                                   href={item.links.web_spec_path}
@@ -586,8 +771,24 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                         </div>
                       </div>
 
-                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground md:block">
-                        {formatCompactNumber(linksCount)}
+                      <div className="hidden justify-end md:flex">
+                        <details className="group relative">
+                          <summary className="inline-flex list-none cursor-pointer items-center gap-1 rounded-md border border-border/70 bg-background/70 px-2 py-1 text-xs text-foreground transition hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
+                            {formatCompactNumber(linksCount)} links
+                            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" aria-hidden />
+                          </summary>
+                          <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-md border border-border/70 bg-popover p-1 shadow-md">
+                            {linkTargets.map((target) => (
+                              <Link
+                                key={`${item.idea_id}-${target.label}`}
+                                href={target.href}
+                                className="block rounded px-2 py-1.5 text-xs text-foreground hover:bg-muted/60"
+                              >
+                                {target.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </details>
                       </div>
                       <div className="hidden text-right text-sm font-medium tabular-nums text-foreground md:block">
                         {formatMetric(item.value_gap)}
@@ -598,15 +799,6 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                       <div className="hidden items-center justify-end gap-2 text-sm text-muted-foreground md:flex">
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${attentionMeta.dot}`} />
                         {attentionMeta.label}
-                      </div>
-                      <div className="hidden justify-end md:flex">
-                        <Link
-                          href={item.links.web_detail_path}
-                          className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-2 hover:underline"
-                        >
-                          Open
-                          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                        </Link>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs md:hidden">
@@ -627,18 +819,28 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                           <p className="tabular-nums text-foreground">{formatMetric(item.measured_value)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between md:hidden">
+                      <div className="space-y-1.5 md:hidden">
+                        <details className="group relative">
+                          <summary className="inline-flex list-none cursor-pointer items-center gap-1 rounded-md border border-border/70 bg-background/70 px-2 py-1 text-xs text-foreground transition hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
+                            Links
+                            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" aria-hidden />
+                          </summary>
+                          <div className="absolute left-0 top-full z-30 mt-1 w-40 rounded-md border border-border/70 bg-popover p-1 shadow-md">
+                            {linkTargets.map((target) => (
+                              <Link
+                                key={`${item.idea_id}-mobile-${target.label}`}
+                                href={target.href}
+                                className="block rounded px-2 py-1.5 text-xs text-foreground hover:bg-muted/60"
+                              >
+                                {target.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </details>
                         <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                           <span className={`inline-block h-2 w-2 rounded-full ${attentionMeta.dot}`} />
                           {attentionMeta.label}
                         </div>
-                        <Link
-                          href={item.links.web_detail_path}
-                          className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-2 hover:underline"
-                        >
-                          Open
-                          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                        </Link>
                       </div>
                     </div>
                   </li>
