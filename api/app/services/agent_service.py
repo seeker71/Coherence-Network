@@ -132,7 +132,14 @@ def _first_available_executor(preferred: list[str]) -> str:
         candidate = _normalize_executor(executor, default="")
         if candidate and _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+    configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
+    if configured_default and _executor_available(configured_default):
+        return configured_default
+    # Final deterministic safety net: prefer codex/openclaw when available.
+    for candidate in ("openclaw", "cursor", "claude"):
+        if _executor_available(candidate):
+            return candidate
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="openclaw")
 
 
 def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
@@ -201,11 +208,43 @@ def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
 def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     explicit = _normalize_executor(context.get("executor"), default="")
     if explicit:
-        return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        if _executor_available(explicit):
+            return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        fallback = _first_available_executor(
+            [
+                _cheap_executor_default(),
+                _escalation_executor_default(),
+                "openclaw",
+                "cursor",
+                "claude",
+            ]
+        )
+        return fallback, {
+            "policy_applied": True,
+            "reason": "explicit_executor_unavailable",
+            "explicit_executor": explicit,
+            "fallback_executor": fallback,
+        }
 
     if not _executor_policy_enabled():
         default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
-        return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+        if _executor_available(default_executor):
+            return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+        fallback = _first_available_executor(
+            [
+                _cheap_executor_default(),
+                _escalation_executor_default(),
+                "openclaw",
+                "cursor",
+                "claude",
+            ]
+        )
+        return fallback, {
+            "policy_applied": True,
+            "reason": "policy_disabled_default_unavailable",
+            "default_executor": default_executor,
+            "fallback_executor": fallback,
+        }
 
     task_fingerprint = str(context.get("task_fingerprint") or "").strip()
     if not task_fingerprint:
