@@ -224,6 +224,13 @@ def test_provider_limit_guard_decision_blocks_low_monthly_remaining(
     assert decision["blocked_metrics"][0]["remaining_ratio"] == pytest.approx(0.04, rel=1e-6)
 
 
+def test_provider_limit_guard_defaults_to_one_third_ratio() -> None:
+    defaults = automation_usage_service._provider_window_guard_ratio_defaults()
+    assert defaults["hourly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+    assert defaults["weekly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+    assert defaults["monthly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,

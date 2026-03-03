@@ -69,9 +69,9 @@ _PROVIDER_ALIASES: dict[str, str] = {
 }
 
 _PROVIDER_WINDOW_GUARD_DEFAULT_RATIO_BY_WINDOW: dict[str, float] = {
-    "hourly": 0.1,
-    "weekly": 0.1,
-    "monthly": 0.1,
+    "hourly": 1.0 / 3.0,
+    "weekly": 1.0 / 3.0,
+    "monthly": 1.0 / 3.0,
 }
 
 
