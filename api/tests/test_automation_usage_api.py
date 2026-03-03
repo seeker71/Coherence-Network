@@ -99,6 +99,69 @@ def test_configured_status_cursor_accepts_runner_telemetry(monkeypatch: pytest.M
     assert any("host-runner Cursor telemetry" in note for note in notes)
 
 
+def test_runner_provider_telemetry_prefers_configured_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "last_seen_at": "2026-03-01T10:00:00+00:00",
+                "metadata": {
+                    "provider_telemetry": {
+                        "cursor": {"configured": False, "auth_source": "", "tier": "pro"}
+                    }
+                },
+            },
+            {
+                "last_seen_at": "2026-03-01T09:00:00+00:00",
+                "metadata": {
+                    "provider_telemetry": {
+                        "cursor": {"configured": True, "auth_source": "cursor_cli_status", "tier": "pro"}
+                    }
+                },
+            },
+        ],
+    )
+
+    provider_row = automation_usage_service._runner_provider_telemetry("cursor")
+    assert provider_row.get("configured") is True
+    assert provider_row.get("auth_source") == "cursor_cli_status"
+
+
+def test_runner_provider_telemetry_prefers_openai_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [
+            {
+                "last_seen_at": "2026-03-01T10:01:00+00:00",
+                "metadata": {
+                    "provider_telemetry": {
+                        "openai": {"configured": True, "usage_windows": [], "auth_source": "runner_a"}
+                    }
+                },
+            },
+            {
+                "last_seen_at": "2026-03-01T09:59:00+00:00",
+                "metadata": {
+                    "provider_telemetry": {
+                        "openai": {
+                            "configured": True,
+                            "usage_windows": [{"metric_id": "codex_provider_window_primary"}],
+                            "auth_source": "runner_b",
+                        }
+                    }
+                },
+            },
+        ],
+    )
+
+    provider_row = automation_usage_service._runner_provider_telemetry("openai")
+    assert provider_row.get("auth_source") == "runner_b"
+    assert isinstance(provider_row.get("usage_windows"), list)
+    assert len(provider_row.get("usage_windows") or []) == 1
+
+
 def test_codex_oauth_access_context_reads_access_token_and_account(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
