@@ -39,14 +39,7 @@
       "workflow": "Public Deploy Contract",
       "owner": "@seeker71",
       "reason": "Temporary waiver for cancelled deploy-contract runs during concurrent workflow dispatch.",
-      "expires_at": "2026-02-23T23:59:59Z"
-    },
-    {
-      "workflow": "Change Contract",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while Change Contract main run is being repaired.",
-      "expires_at": "2026-02-23T23:59:59Z",
-      "run_url_contains": "actions/runs/22282530504"
+      "expires_at": "2026-02-25T23:59:59Z"
     }
   ]
 }

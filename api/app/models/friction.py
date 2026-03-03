@@ -13,6 +13,13 @@ class FrictionEvent(BaseModel):
     timestamp: datetime
     task_id: Optional[str] = None
     endpoint: Optional[str] = None
+    task_id: Optional[str] = None
+    run_id: Optional[str] = None
+    provider: Optional[str] = None
+    billing_provider: Optional[str] = None
+    tool: Optional[str] = None
+    model: Optional[str] = None
+    return_code: Optional[int] = None
     stage: str = Field(min_length=1)
     block_type: str = Field(min_length=1)
     severity: str = Field(min_length=1)
