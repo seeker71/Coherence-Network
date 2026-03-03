@@ -27,4 +27,4 @@ install-pre-push-hook:
 	./scripts/setup_pre_push_hook.sh
 
 start-gate:
-	@python3 scripts/start_gate.py
+	@/usr/bin/python3 scripts/start_gate.py
