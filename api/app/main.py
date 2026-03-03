@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import FastAPI, HTTPException, Header
@@ -30,6 +31,7 @@ from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
 app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
+_reqlog = logging.getLogger("coherence.api.request")
 
 # Configure CORS
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
@@ -120,29 +122,104 @@ async def capture_runtime_metrics(request, call_next):
         return await call_next(request)
 
     import time
+    import asyncio
+    from uuid import uuid4
+
+    log_enabled = os.getenv("REQUEST_LOG_ENABLED", "1").strip() not in {"0", "false", "False"}
+    async_telemetry = os.getenv("RUNTIME_TELEMETRY_ASYNC", "1").strip() not in {"0", "false", "False"}
+
+    rid = request.headers.get("x-request-id") or request.headers.get("x-railway-request-id") or ""
+    rid = str(rid).strip() if rid else ""
+    if not rid:
+        rid = f"req_{uuid4().hex[:12]}"
+    request.state.request_id = rid
 
     start = time.perf_counter()
     response = await call_next(request)
-    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    handler_ms = (time.perf_counter() - start) * 1000.0
 
     route = request.scope.get("route")
     route_path = getattr(route, "path", None)
     path = route_path if isinstance(route_path, str) and route_path.strip() else request.url.path
     if path.startswith("/api") or path.startswith("/v1"):
+        # Safe metadata only: no query values or request bodies.
+        query_keys = list(request.query_params.keys())
+        ua = str(request.headers.get("user-agent") or "").strip()
+        if len(ua) > 180:
+            ua = ua[:180]
+        content_length = request.headers.get("content-length")
+        cl_val: int | None = None
+        if content_length:
+            try:
+                cl_val = int(content_length)
+            except Exception:
+                cl_val = None
+
+        slow_threshold = runtime_service.slow_threshold_ms()
+        slow = float(handler_ms) >= float(slow_threshold)
+
+        telemetry_ms = 0.0
         try:
-            runtime_service.record_event(
-                RuntimeEventCreate(
-                    source="api",
-                    endpoint=path,
-                    raw_endpoint=request.url.path,
-                    method=request.method,
-                    status_code=response.status_code,
-                    runtime_ms=max(0.1, elapsed_ms),
-                    idea_id=request.headers.get("x-idea-id"),
-                    metadata={},
-                )
+            t0 = time.perf_counter()
+            payload = RuntimeEventCreate(
+                source="api",
+                endpoint=path,
+                raw_endpoint=request.url.path,
+                method=request.method,
+                status_code=response.status_code,
+                runtime_ms=max(0.1, handler_ms),
+                idea_id=request.headers.get("x-idea-id"),
+                metadata={
+                    "request_id": rid,
+                    "query_keys": ",".join([k for k in query_keys if k])[:300],
+                    "user_agent": ua,
+                    "content_length": int(cl_val) if isinstance(cl_val, int) else 0,
+                    "slow": bool(slow),
+                    "slow_threshold_ms": int(slow_threshold),
+                    "telemetry_ms": 0.0,
+                    "telemetry_async": bool(async_telemetry),
+                },
             )
+            if async_telemetry:
+                # Never block the request on DB writes or other sync telemetry work.
+                task = asyncio.create_task(asyncio.to_thread(runtime_service.record_event, payload))
+                task.add_done_callback(lambda t: t.exception())  # swallow exceptions
+                telemetry_ms = 0.0
+            else:
+                runtime_service.record_event(payload)
+                telemetry_ms = (time.perf_counter() - t0) * 1000.0
         except Exception:
             # Telemetry should not affect request success.
-            pass
+            telemetry_ms = 0.0
+
+        # Emit request logs into container logs so Railway can be used as an "APM-lite".
+        if log_enabled:
+            total_ms = float(handler_ms) + float(telemetry_ms)
+            _reqlog.info(
+                "api_request method=%s path=%s status=%s handler_ms=%.1f telemetry_ms=%.1f total_ms=%.1f request_id=%s",
+                request.method,
+                path,
+                response.status_code,
+                handler_ms,
+                telemetry_ms,
+                total_ms,
+                rid,
+            )
+            if slow:
+                _reqlog.warning(
+                    "api_slow_request method=%s path=%s status=%s handler_ms=%.1f request_id=%s query_keys=%s route=%s",
+                    request.method,
+                    path,
+                    response.status_code,
+                    handler_ms,
+                    rid,
+                    ",".join([k for k in query_keys if k])[:300],
+                    route_path or "",
+                )
+
+    # Propagate request id for client-side correlation.
+    try:
+        response.headers.setdefault("x-request-id", rid)
+    except Exception:
+        pass
     return response
