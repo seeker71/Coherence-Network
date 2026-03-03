@@ -191,8 +191,8 @@ TRANSIENT_INTERNAL_ID_PATTERNS = (
     re.compile(r"^public-e2e-[0-9a-f]{8}$"),
 )
 DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"^public-e2e-"), "deployment-gate-reliability"),
-    (re.compile(r"^e2e-idea-"), "deployment-gate-reliability"),
+    (re.compile(r"^public-e2e-[0-9a-f]{8}$"), "deployment-gate-reliability"),
+    (re.compile(r"^e2e-idea-[0-9a-f]{8}$"), "deployment-gate-reliability"),
     (re.compile(r"^spec-origin-"), "portfolio-governance"),
     (re.compile(r"^endpoint-lineage-"), "oss-interface-alignment"),
 )
@@ -264,6 +264,10 @@ def _canonical_discovered_idea_id(idea_id: str) -> str | None:
     if _is_transient_internal_idea_id(normalized_id):
         return None
     return normalized_id
+
+
+def canonical_discovered_idea_id(idea_id: str) -> str | None:
+    return _canonical_discovered_idea_id(idea_id)
 
 
 def _should_track_discovered_idea_id(idea_id: str) -> bool:

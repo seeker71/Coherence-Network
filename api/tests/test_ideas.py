@@ -113,6 +113,7 @@ async def test_list_ideas_prunes_transient_public_e2e_idea_ids_from_discovery(
         "app.services.value_lineage_service.list_links",
         lambda *args, **kwargs: [
             SimpleNamespace(idea_id="public-e2e-deadbeef"),
+            SimpleNamespace(idea_id="public-e2e-flow-gate-automation"),
             SimpleNamespace(idea_id="spec-origin-cleanup-seed-1234abcd"),
             SimpleNamespace(idea_id="endpoint-lineage-health-check-1234abcd"),
             SimpleNamespace(idea_id="discovered-non-transient"),
@@ -128,6 +129,7 @@ async def test_list_ideas_prunes_transient_public_e2e_idea_ids_from_discovery(
     assert "spec-origin-cleanup-seed-1234abcd" not in ids
     assert "endpoint-lineage-health-check-1234abcd" not in ids
     assert "deployment-gate-reliability" in ids
+    assert "public-e2e-flow-gate-automation" in ids
     assert "portfolio-governance" in ids
     assert "oss-interface-alignment" in ids
     assert "discovered-non-transient" in ids
