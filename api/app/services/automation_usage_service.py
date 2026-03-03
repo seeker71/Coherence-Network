@@ -4886,134 +4886,9 @@ def list_external_tool_usage_events(
     )
 
 
-def _is_openai_permission_gated(notes: list[str]) -> bool:
-    joined = " | ".join(str(note).lower() for note in notes)
-    return "openai usage/cost fetch failed" in joined and "403" in joined
-
-
-def _append_usage_alerts_for_provider(
-    *,
-    provider: ProviderUsageSnapshot,
-    provider_name: str,
-    required: set[str],
-    active_usage: int,
-    ratio: float,
-    alerts: list[UsageAlert],
-    seen_alert_ids: set[str],
-) -> None:
-    should_alert_status = provider.status != "ok"
-    if provider_name not in required and active_usage <= 0:
-        should_alert_status = False
-    if (
-        provider_name == "openai"
-        and provider.status == "degraded"
-        and _is_openai_permission_gated(provider.notes)
-    ):
-        should_alert_status = False
-
-    if should_alert_status:
-        alert_id = f"usage_alert_{provider.provider}_unavailable"
-        if alert_id not in seen_alert_ids:
-            alerts.append(
-                UsageAlert(
-                    id=alert_id,
-                    provider=provider.provider,
-                    metric_id="provider_status",
-                    severity="warning" if provider.status == "degraded" else "critical",
-                    message=_trim_usage_alert_message(
-                        f"{provider.provider} usage provider status={provider.status}"
-                    ),
-                )
-            )
-            seen_alert_ids.add(alert_id)
-
-    for metric in provider.metrics:
-        if metric.limit is None or metric.limit <= 0 or metric.remaining is None:
-            continue
-        remaining_ratio = metric.remaining / metric.limit
-        if remaining_ratio > ratio:
-            continue
-        severity = "critical" if remaining_ratio <= ratio / 2.0 else "warning"
-        alert_id = f"usage_alert_{provider.provider}_{metric.id}"
-        if alert_id in seen_alert_ids:
-            continue
-        alerts.append(
-            UsageAlert(
-                id=alert_id,
-                provider=provider.provider,
-                metric_id=metric.id,
-                severity=severity,  # type: ignore[arg-type]
-                message=_trim_usage_alert_message(
-                    f"{provider.provider} {metric.label} low remaining: "
-                    f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
-                ),
-                remaining_ratio=round(remaining_ratio, 4),
-            )
-        )
-        seen_alert_ids.add(alert_id)
-
-    has_limit_with_remaining = any(
-        metric.limit is not None and metric.limit > 0 and metric.remaining is not None
-        for metric in provider.metrics
-    )
-    if (provider_name in required or active_usage > 0) and not has_limit_with_remaining:
-        alert_id = f"usage_alert_{provider.provider}_remaining_tracking_gap"
-        if alert_id not in seen_alert_ids:
-            alerts.append(
-                UsageAlert(
-                    id=alert_id,
-                    provider=provider.provider,
-                    metric_id="remaining_tracking_gap",
-                    severity="warning" if provider_name in required else "info",
-                    message=_trim_usage_alert_message(
-                        f"{provider.provider} has no remaining/limit telemetry. "
-                        "Configure quota metrics to track usage remaining before reset windows."
-                    ),
-                )
-            )
-            seen_alert_ids.add(alert_id)
-
-
-def _append_readiness_alerts(
-    *,
-    readiness: ProviderReadinessReport,
-    alerts: list[UsageAlert],
-    seen_alert_ids: set[str],
-) -> None:
-    for row in readiness.providers:
-        provider_name = _normalize_provider_name(row.provider)
-        if not row.required:
-            continue
-        if row.status == "ok" and row.configured:
-            continue
-
-        severity: str = "warning" if row.status == "degraded" else "critical"
-        notes = list(row.notes)
-        if provider_name == "openai" and _is_openai_permission_gated(notes):
-            severity = "warning"
-
-        alert_id = f"usage_alert_{provider_name}_readiness"
-        if alert_id in seen_alert_ids:
-            continue
-        alerts.append(
-            UsageAlert(
-                id=alert_id,
-                provider=provider_name,
-                metric_id="provider_readiness",
-                severity=severity,  # type: ignore[arg-type]
-                message=_trim_usage_alert_message(
-                    f"{provider_name} readiness blocking: status={row.status}, configured={row.configured}. "
-                    f"Notes: {', '.join(notes[:2]) if notes else 'none'}"
-                ),
-            )
-        )
-        seen_alert_ids.add(alert_id)
-
-
-def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool = False) -> UsageAlertReport:
+def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
     ratio = max(0.0, min(float(threshold_ratio), 1.0))
-    overview = collect_usage_overview(force_refresh=force_refresh)
-    readiness = provider_readiness_report(force_refresh=force_refresh)
+    overview = collect_usage_overview(force_refresh=True)
     required = set(_required_providers_from_env())
     active_counts = _active_provider_usage_counts()
 
@@ -5021,20 +4896,59 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
     seen_alert_ids: set[str] = set()
     for provider in overview.providers:
         provider_name = _normalize_provider_name(provider.provider)
-        _append_usage_alerts_for_provider(
-            provider=provider,
-            provider_name=provider_name,
-            required=required,
-            active_usage=int(active_counts.get(provider_name, 0)),
-            ratio=ratio,
-            alerts=alerts,
-            seen_alert_ids=seen_alert_ids,
-        )
-    _append_readiness_alerts(
-        readiness=readiness,
-        alerts=alerts,
-        seen_alert_ids=seen_alert_ids,
-    )
+        active_usage = int(active_counts.get(provider_name, 0))
+        should_alert_status = provider.status != "ok"
+        if provider_name not in required and active_usage <= 0:
+            # Do not page on optional providers that are not currently participating in runtime execution.
+            should_alert_status = False
+        if (
+            provider_name == "openai"
+            and provider.status == "degraded"
+            and any("usage/cost fetch failed" in str(note).lower() for note in provider.notes)
+            and any("403" in str(note) for note in provider.notes)
+        ):
+            # OpenAI org usage/cost endpoints can be permission-gated while execution is still healthy.
+            should_alert_status = False
+
+        if should_alert_status:
+            alert_id = f"usage_alert_{provider.provider}_unavailable"
+            if alert_id not in seen_alert_ids:
+                alerts.append(
+                    UsageAlert(
+                        id=alert_id,
+                        provider=provider.provider,
+                        metric_id="provider_status",
+                        severity="warning" if provider.status == "degraded" else "critical",
+                        message=f"{provider.provider} usage provider status={provider.status}",
+                    )
+                )
+                seen_alert_ids.add(alert_id)
+
+        for metric in provider.metrics:
+            if metric.limit is None or metric.limit <= 0:
+                continue
+            if metric.remaining is None:
+                continue
+            remaining_ratio = metric.remaining / metric.limit
+            if remaining_ratio <= ratio:
+                severity = "critical" if remaining_ratio <= ratio / 2.0 else "warning"
+                alert_id = f"usage_alert_{provider.provider}_{metric.id}"
+                if alert_id in seen_alert_ids:
+                    continue
+                alerts.append(
+                    UsageAlert(
+                        id=alert_id,
+                        provider=provider.provider,
+                        metric_id=metric.id,
+                        severity=severity,  # type: ignore[arg-type]
+                        message=(
+                            f"{provider.provider} {metric.label} low remaining: "
+                            f"{round(metric.remaining, 2)} / {round(metric.limit, 2)}"
+                        ),
+                        remaining_ratio=round(remaining_ratio, 4),
+                    )
+                )
+                seen_alert_ids.add(alert_id)
 
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
 
