@@ -271,6 +271,12 @@ CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
     "team": (120, 840),
 }
 
+GEMINI_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "advanced": (120, 840),
+}
+
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
@@ -388,8 +394,10 @@ def _cli_output(command: list[str], *, timeout: int = 8) -> tuple[bool, str]:
 
 def _normalize_subscription_tier(value: str) -> str:
     normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
-    if normalized in {"free", "pro", "pro_plus", "max", "team"}:
+    if normalized in {"free", "pro", "pro_plus", "max", "team", "advanced"}:
         return normalized
+    if normalized in {"gemini_advanced", "google_ai_advanced"}:
+        return "advanced"
     if normalized in {"proplus", "plus"}:
         return "pro_plus"
     return normalized
@@ -470,6 +478,24 @@ def _runner_cursor_about_context() -> dict[str, Any]:
         "tier": tier,
         "auth_source": "cursor_cli_status",
         "details": {"email": email},
+    }
+
+
+def _runner_gemini_auth_context() -> dict[str, Any]:
+    env = dict(os.environ)
+    oauth_ok, oauth_source = _gemini_oauth_session_status(env)
+    tier_raw = str(os.environ.get("GEMINI_SUBSCRIPTION_TIER", "pro")).strip()
+    tier = _normalize_subscription_tier(tier_raw)
+    if tier not in GEMINI_SUBSCRIPTION_LIMITS_BY_TIER:
+        tier = "pro"
+    return {
+        "configured": bool(oauth_ok),
+        "tier": tier,
+        "auth_source": oauth_source,
+        "details": {
+            "auth_mode": "oauth",
+            "oauth_source": oauth_source,
+        },
     }
 
 
@@ -633,6 +659,13 @@ def _runner_provider_telemetry_payload(*, force_refresh: bool = False) -> dict[s
     claude_tier = _normalize_subscription_tier(str(claude.get("tier") or ""))
     claude_limits = CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER.get(claude_tier) if claude_tier else None
 
+    gemini = _runner_gemini_auth_context()
+    gemini_tier = _normalize_subscription_tier(str(gemini.get("tier") or ""))
+    gemini_limits = GEMINI_SUBSCRIPTION_LIMITS_BY_TIER.get(gemini_tier) if gemini_tier else None
+    if gemini_limits is None:
+        gemini_tier = "pro"
+        gemini_limits = GEMINI_SUBSCRIPTION_LIMITS_BY_TIER[gemini_tier]
+
     openai = _runner_codex_usage_telemetry()
     payload: dict[str, Any] = {
         "openai": {
@@ -664,6 +697,17 @@ def _runner_provider_telemetry_payload(*, force_refresh: bool = False) -> dict[s
                 "subscription_week": int(cursor_limits[1]),
             },
             "details": cursor.get("details") if isinstance(cursor.get("details"), dict) else {},
+        },
+        "gemini": {
+            "configured": bool(gemini.get("configured")),
+            "auth_source": str(gemini.get("auth_source") or ""),
+            "tier": gemini_tier,
+            "limits_source": "gemini_subscription_tier_baseline",
+            "limits": {
+                "subscription_8h": int(gemini_limits[0]),
+                "subscription_week": int(gemini_limits[1]),
+            },
+            "details": gemini.get("details") if isinstance(gemini.get("details"), dict) else {},
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
