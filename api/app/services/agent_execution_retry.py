@@ -13,8 +13,8 @@ _RETRY_MAX_CAP = 5
 _FAILURE_OUTPUT_MAX = 1200
 _RETRY_HINT_MAX = 900
 _OPENAI_RETRY_MODEL_DEFAULT = "gpt-5.3-codex"
-_CODEX_SPARK_FALLBACK_MODEL = "gpt-5.3-codex"
-_CODEX_SPARK_MODEL_SUFFIX = "gpt-5.3-codex-spark"
+_OPENCLAW_SPARK_FALLBACK_MODEL = "gpt-5.3-codex"
+_OPENCLAW_SPARK_MODEL_SUFFIX = "gpt-5.3-codex-spark"
 _RETRY_REFLECTION_HISTORY_MAX = 8
 
 
@@ -86,23 +86,30 @@ def _retry_fix_hint(failure_output: str, retry_number: int) -> str:
 
 
 def _failure_category(failure_output: str, result_error: str) -> str:
-    classified = failure_taxonomy_service.classify_failure(
-        output_text=failure_output,
+    lower_output = str(failure_output or "").lower()
+    lower_error = str(result_error or "").lower()
+    if _is_paid_provider_retry_candidate(
+        failure_output=failure_output,
         result_error=result_error,
-    )
-    bucket = str(classified.get("bucket") or "")
-    if _is_paid_provider_retry_candidate(failure_output=failure_output, result_error=result_error):
+    ):
         return "paid_provider_blocked"
-    if bucket == "timeout":
+    if "timeout" in lower_output or "timed out" in lower_output or "timeout" in lower_error:
         return "timeout"
-    if bucket == "validation":
+    if "empty direction" in lower_output or "validation" in lower_output:
         return "validation"
-    if bucket == "auth":
+    if (
+        "forbidden" in lower_output
+        or "unauthorized" in lower_output
+        or "authentication" in lower_output
+        or "auth" in lower_error
+    ):
         return "auth"
-    if bucket == "dependency_or_tooling":
+    if (
+        "command not found" in lower_output
+        or "missing" in lower_output
+        or "module not found" in lower_output
+    ):
         return "dependency"
-    if bucket == "rate_limit":
-        return "rate_limit"
     return "other"
 
 
@@ -131,11 +138,6 @@ def _reflection_blind_spot_and_action(category: str) -> tuple[str, str]:
         return (
             "Runtime dependency availability was assumed without verification.",
             "Install/enable the required dependency and validate command availability.",
-        )
-    if category == "rate_limit":
-        return (
-            "Provider quota/rate-limit conditions were not anticipated before execution.",
-            "Switch to a cheaper route, delay retry until limits reset, or reduce request load.",
         )
     return (
         "Root cause was not explicitly categorized before retry.",
