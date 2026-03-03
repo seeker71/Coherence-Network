@@ -1,0 +1,84 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/ideas-registry-backfill-20260303",
+  "commit_scope": "Keep real named public-e2e ideas visible while canonicalizing synthetic discovery IDs so /api/ideas and /api/inventory/flow stay aligned.",
+  "files_owned": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-realness-canonical-flow.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/idea_service.py app/services/inventory_service.py tests/test_ideas.py tests/test_inventory_api.py",
+      "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py::test_flow_inventory_counts_spec_registry_specs_for_idea tests/test_inventory_api.py::test_flow_canonicalizes_discovery_ids_and_keeps_named_public_e2e_idea"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Named idea IDs such as public-e2e-flow-gate-automation remain visible, while synthetic spec-origin/public-e2e hash IDs are canonicalized away from flow and ideas inventory.",
+    "public_endpoints": [
+      "/api/ideas?include_internal=true",
+      "/api/inventory/flow?include_internal_ideas=true"
+    ],
+    "test_flows": [
+      "ideas-flow-id-parity",
+      "named-public-e2e-idea-preserved"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "public-e2e-flow-gate-automation",
+    "deployment-gate-reliability",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation",
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_ideas_realness_canonical_flow_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-realness-canonical-flow.json"
+  ],
+  "change_files": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-realness-canonical-flow.json"
+  ],
+  "change_intent": "runtime_fix"
+}
