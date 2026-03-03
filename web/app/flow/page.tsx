@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getApiBase } from "@/lib/api";
+import { PROD_API_URL, getApiBase } from "@/lib/api";
 import {
   buildFlowSearchParams,
   UI_CONTRIBUTION_LIMIT,
@@ -166,7 +166,7 @@ async function loadDataForIdea(ideaId: string): Promise<{
   contributors: Contributor[];
   contributions: Contribution[];
 }> {
-  const API = getApiBase();
+  const API = process.env.NODE_ENV === "production" ? PROD_API_URL : getApiBase();
   const flowParams = buildFlowSearchParams({ ideaId });
   flowParams.set("include_internal_ideas", "true");
   const [flowData, contributorData, contributionData] = await Promise.all([
