@@ -5211,11 +5211,9 @@ def _infer_executor(command: str, model: str) -> str:
     if _uses_openrouter_executor_command(command) or model_value.startswith("openrouter/"):
         return "openrouter"
     if _uses_codex_cli(command):
-        return "codex"
-    if _uses_openclaw_cli(command) or model_value.startswith(("openclaw/", "clawwork/")):
-        return "codex"
-    if model_value.startswith("codex/"):
-        return "codex"
+        return "openai-codex"
+    if _uses_openclaw_cli(command) or model_value.startswith("openclaw/"):
+        return "openclaw"
     if _uses_claude_cli(command) or model_value.startswith("claude/"):
         return "claude"
     return "unknown"
@@ -5922,14 +5920,6 @@ def run_one_task(
             env.pop("ANTHROPIC_BASE_URL", None)
             env.pop("ANTHROPIC_API_KEY", None)
             log.info("task=%s using Claude Code CLI (inherited session)", task_id)
-        command, claude_model_alias = _apply_claude_model_alias(command)
-        if claude_model_alias:
-            log.warning(
-                "task=%s remapped claude model %s -> %s",
-                task_id,
-                claude_model_alias["requested_model"],
-                claude_model_alias["effective_model"],
-            )
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
