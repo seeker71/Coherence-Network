@@ -14,6 +14,7 @@
       "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "cd api && ruff check app/services/idea_service.py tests/test_inventory_discovery_sources.py",
+      "cd api && pytest -q tests/test_inventory_api.py::test_standing_question_exists_for_every_idea -q",
       "cd api && pytest -q tests/test_inventory_discovery_sources.py -k \"database_url_is_configured or derives_missing_ideas_from_other_registry_domains or db_is_configured\"",
       "cd api && pytest -q tests/test_ideas.py -k \"cards or list_ideas_returns_ranked_scores_and_summary\""
     ]

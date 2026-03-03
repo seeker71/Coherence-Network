@@ -336,8 +336,21 @@ def _tracked_idea_ids() -> list[str]:
     return idea_ids
 
 
-def _discover_registry_domain_idea_ids() -> list[str]:
+def _should_discover_registry_domain_ideas() -> bool:
     if not _should_include_default_tracked_ideas():
+        return False
+    explicit = str(os.getenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "")).strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+    # In isolated test runs, IDEA_PORTFOLIO_PATH is often pointed at tmp files.
+    # Default to off there unless explicitly enabled.
+    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+
+
+def _discover_registry_domain_idea_ids() -> list[str]:
+    if not _should_discover_registry_domain_ideas():
         return []
 
     discovered: set[str] = set(_tracked_idea_ids())

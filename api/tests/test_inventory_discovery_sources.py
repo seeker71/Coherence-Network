@@ -79,6 +79,7 @@ def test_idea_service_derives_missing_ideas_from_other_registry_domains(
     monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
     monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
 
     monkeypatch.setattr(
