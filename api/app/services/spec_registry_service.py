@@ -14,6 +14,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 from sqlalchemy.pool import NullPool
 
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
+from app.services.spec_cards_service import build_spec_cards_feed_payload
 
 
 class Base(DeclarativeBase):
@@ -317,6 +318,32 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
         session.refresh(row)
     _invalidate_spec_cache()
     return _to_model(row)
+
+
+def build_spec_cards_feed(
+    *,
+    q: str = "",
+    state: str = "all",
+    attention: str = "all",
+    sort: str = "attention_desc",
+    cursor: str | None = None,
+    limit: int = 50,
+    linked: str = "all",
+    min_roi: float | None = None,
+    min_value_gap: float | None = None,
+) -> dict[str, Any]:
+    return build_spec_cards_feed_payload(
+        list_specs_fn=lambda limit_arg, offset_arg: list_specs(limit=limit_arg, offset=offset_arg),
+        q=q,
+        state=state,
+        attention=attention,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+        linked=linked,
+        min_roi=min_roi,
+        min_value_gap=min_value_gap,
+    )
 
 
 def summary() -> dict[str, Any]:
