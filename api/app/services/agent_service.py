@@ -124,8 +124,12 @@ def _escalation_executor_default() -> str:
 def _executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
-    if executor in {"codex", "openrouter", "gemini"}:
-        return routing_service.executor_binary_name(executor)
+    if executor == "openclaw":
+        for candidate in ("openclaw", "codex"):
+            if shutil.which(candidate):
+                return candidate
+        configured = os.environ.get("OPENCLAW_EXECUTABLE")
+        return configured.strip() if configured else "openclaw"
     return "claude"
 
 
@@ -1177,10 +1181,6 @@ def _build_command(
         template = _cursor_command_template(task_type)
     elif executor == "codex":
         template = _openclaw_command_template(task_type)
-    elif executor == "gemini":
-        template = routing_service.gemini_command_template(task_type)
-    elif executor == "openrouter":
-        template = _openrouter_command_template(task_type)
     elif executor == "claude":
         template = routing_service.claude_command_template(task_type)
     else:
