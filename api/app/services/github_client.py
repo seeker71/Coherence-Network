@@ -23,7 +23,12 @@ class GitHubClient:
         user_agent: str = "coherence-network/1.0",
         timeout: float = 20.0,
     ) -> None:
-        self._token = token or os.getenv("GITHUB_TOKEN") or None
+        env_token = os.getenv("GITHUB_TOKEN")
+        if not env_token:
+            env_token = os.getenv("GH_TOKEN")
+        if env_token:
+            env_token = env_token.strip() or None
+        self._token = token or env_token
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._headers = {

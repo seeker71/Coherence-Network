@@ -62,6 +62,8 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
         for field in (
             data.actual_value,
             data.actual_cost,
+            data.potential_value,
+            data.estimated_cost,
             data.confidence,
             data.manifestation_status,
         )
@@ -72,6 +74,8 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
         idea_id=idea_id,
         actual_value=data.actual_value,
         actual_cost=data.actual_cost,
+        potential_value=data.potential_value,
+        estimated_cost=data.estimated_cost,
         confidence=data.confidence,
         manifestation_status=data.manifestation_status,
     )

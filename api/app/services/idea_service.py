@@ -517,6 +517,8 @@ def update_idea(
     idea_id: str,
     actual_value: float | None = None,
     actual_cost: float | None = None,
+    potential_value: float | None = None,
+    estimated_cost: float | None = None,
     confidence: float | None = None,
     manifestation_status: ManifestationStatus | None = None,
 ) -> IdeaWithScore | None:
@@ -530,6 +532,10 @@ def update_idea(
             idea.actual_value = actual_value
         if actual_cost is not None:
             idea.actual_cost = actual_cost
+        if potential_value is not None:
+            idea.potential_value = potential_value
+        if estimated_cost is not None:
+            idea.estimated_cost = estimated_cost
         if confidence is not None:
             idea.confidence = confidence
         if manifestation_status is not None:

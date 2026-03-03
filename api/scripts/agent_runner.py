@@ -54,6 +54,16 @@ def _tool_token(command: str) -> str:
     return s.split()[0].strip() or "unknown"
 
 
+def _model_is_paid(model: str) -> bool:
+    """Best-effort paid-provider inference for runtime telemetry."""
+    normalized = (model or "").strip().lower()
+    if not normalized:
+        return False
+    if "free" in normalized:
+        return False
+    return True
+
+
 def _scrub_command(command: str) -> str:
     """Best-effort scrub of secrets in command strings before writing to friction notes."""
     s = (command or "").replace("\n", " ").strip()
@@ -112,6 +122,7 @@ def _post_runtime_event(
             "task_id": task_id,
             "task_type": task_type,
             "model": model,
+            "is_paid_provider": _model_is_paid(model),
             "returncode": int(returncode),
             "output_len": int(output_len),
             "worker_id": worker_id,
@@ -216,11 +227,17 @@ def _uses_openclaw_cli(command: str) -> bool:
     return command.strip().startswith("openclaw ")
 
 
+def _uses_codex_cli(command: str) -> bool:
+    return command.strip().startswith("codex ")
+
+
 def _infer_executor(command: str, model: str) -> str:
     s = (command or "").strip()
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
+    if _uses_codex_cli(command):
+        return "openai-codex"
     if _uses_openclaw_cli(command) or model_value.startswith("openclaw/"):
         return "openclaw"
     if s.startswith("aider "):
@@ -253,6 +270,11 @@ def run_one_task(
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
         log.info("task=%s using Cursor CLI with OpenRouter", task_id)
+    elif _uses_codex_cli(command):
+        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+        log.info("task=%s using codex CLI", task_id)
     elif _uses_openclaw_cli(command):
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
@@ -274,7 +296,7 @@ def run_one_task(
 
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     executor = _infer_executor(command, model)
-    is_openai_codex = _is_openai_codex_worker(worker_id)
+    is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
     # PATCH to running
     r = client.patch(
