@@ -22,7 +22,7 @@ from app.models.contributor import Contributor
 from app.models.github_contributor import GitHubContributor
 from app.models.github_organization import GitHubOrganization
 from app.models.project import Project, ProjectSummary
-from app.services.contributor_hygiene import is_test_contributor_email
+from app.services.contributor_hygiene import is_test_contributor_email, normalize_contributor_email
 
 
 def _key(ecosystem: str, name: str) -> tuple[str, str]:
@@ -59,6 +59,10 @@ class GraphStore(Protocol):
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
         """Create new contributor."""
+        ...
+
+    def find_contributor_by_email(self, email: str) -> Contributor | None:
+        """Find contributor by normalized email."""
         ...
 
     def list_contributors(self, limit: int = 100) -> list[Contributor]:
@@ -277,10 +281,26 @@ class InMemoryGraphStore:
         return self._contributors.get(contributor_id)
 
     def create_contributor(self, contributor: Contributor) -> Contributor:
-        if self._persist_path and is_test_contributor_email(str(contributor.email)):
+        normalized_email = normalize_contributor_email(str(contributor.email))
+        if self._persist_path and is_test_contributor_email(normalized_email):
             raise ValueError("test contributor emails are not allowed in persistent store")
+        existing = self.find_contributor_by_email(normalized_email)
+        if existing is not None:
+            raise ValueError("contributor email already exists")
+        contributor = contributor.model_copy(update={"email": normalized_email})
         self._contributors[contributor.id] = contributor
         return contributor
+
+    def find_contributor_by_email(self, email: str) -> Contributor | None:
+        normalized = normalize_contributor_email(email)
+        if not normalized:
+            return None
+        for contributor in self._contributors.values():
+            if normalize_contributor_email(str(contributor.email)) == normalized:
+                if self._persist_path and is_test_contributor_email(normalized):
+                    return None
+                return contributor
+        return None
 
     def list_contributors(self, limit: int = 100) -> list[Contributor]:
         items = sorted(self._contributors.values(), key=lambda c: c.created_at, reverse=True)

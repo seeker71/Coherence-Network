@@ -6,6 +6,10 @@ Config: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS (comma-separated), TELEGRAM_ALLOWE
 
 import logging
 import os
+import re
+import time
+from collections import deque
+from threading import Lock
 from typing import Optional, Union
 
 import httpx
@@ -13,6 +17,48 @@ import httpx
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API = "https://api.telegram.org"
+_FAILED_ALERT_TIMESTAMPS: deque[float] = deque()
+_FAILED_ALERT_LOCK = Lock()
+_FAILED_STATUS_PATTERN = re.compile(r"(?im)^status:\s*`?failed`?\b")
+
+
+def _failed_alert_window_seconds() -> int:
+    raw = (os.environ.get("TELEGRAM_FAILED_ALERT_WINDOW_SECONDS") or "1800").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 1800
+    return max(60, min(value, 86400))
+
+
+def _failed_alert_max_per_window() -> int:
+    raw = (os.environ.get("TELEGRAM_FAILED_ALERT_MAX_PER_WINDOW") or "1").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 1
+    return max(0, min(value, 100))
+
+
+def _is_failed_alert_message(message: str) -> bool:
+    return bool(_FAILED_STATUS_PATTERN.search(message or ""))
+
+
+def _should_suppress_failed_alert(message: str) -> bool:
+    if not _is_failed_alert_message(message):
+        return False
+    max_per_window = _failed_alert_max_per_window()
+    if max_per_window <= 0:
+        return True
+    window_seconds = _failed_alert_window_seconds()
+    now = time.time()
+    with _FAILED_ALERT_LOCK:
+        while _FAILED_ALERT_TIMESTAMPS and (now - _FAILED_ALERT_TIMESTAMPS[0]) > window_seconds:
+            _FAILED_ALERT_TIMESTAMPS.popleft()
+        if len(_FAILED_ALERT_TIMESTAMPS) >= max_per_window:
+            return True
+        _FAILED_ALERT_TIMESTAMPS.append(now)
+    return False
 
 
 def _get_token() -> Optional[str]:
@@ -55,6 +101,11 @@ async def send_alert(message: str, parse_mode: str = "Markdown") -> bool:
     chat_ids = _get_chat_ids()
     if not token or not chat_ids:
         return False
+    if _should_suppress_failed_alert(message):
+        for chat_id in chat_ids:
+            telegram_diagnostics.record_report("alert_suppressed", chat_id.strip(), message)
+        logger.warning("Telegram failed alert suppressed by rate limit window")
+        return True
     url = f"{TELEGRAM_API}/bot{token}/sendMessage"
     ok = True
     async with httpx.AsyncClient(timeout=10.0) as client:

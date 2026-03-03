@@ -13,10 +13,16 @@ async def test_distribution_weighted_by_coherence() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp1 = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        resp1 = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"},
+        )
         alice_id = resp1.json()["id"]
 
-        resp2 = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Bob", "email": "bob@example.com"})
+        resp2 = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Bob Builder", "email": "bob@proton.me"},
+        )
         bob_id = resp2.json()["id"]
 
         resp3 = await client.post("/api/assets", json={"type": "CODE", "description": "Test asset"})

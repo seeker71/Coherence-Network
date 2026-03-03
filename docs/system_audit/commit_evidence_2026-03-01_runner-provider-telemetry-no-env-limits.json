@@ -1,0 +1,90 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/open-questions-unblock-20260228",
+  "commit_scope": "Remove cursor/codex subscription limit env-var dependency from readiness telemetry; source required-provider config/limit evidence from host-runner telemetry and live CLI session signals.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json"
+  ],
+  "idea_ids": [
+    "automation-provider-readiness-required-contract"
+  ],
+  "spec_ids": [
+    "spec-automation-provider-usage-readiness"
+  ],
+  "task_ids": [
+    "task-2026-03-01-runner-provider-telemetry-no-env-limits"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 -m pytest -q api/tests/test_automation_usage_api.py::test_build_cursor_snapshot_includes_subscription_window_metrics api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_includes_5h_and_week_windows api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_tracks_usage_without_limit_configuration api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_adds_provider_api_windows_when_available api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable api/tests/test_automation_usage_api.py::test_configured_status_openai_accepts_runner_telemetry api/tests/test_automation_usage_api.py::test_configured_status_cursor_accepts_runner_telemetry",
+    "python3 -m pytest -q api/tests/test_agent_runner_tool_failure_telemetry.py::test_agent_runner_posts_runtime_and_friction_events --maxfail=1",
+    "cd api && ruff check app/services/automation_usage_service.py scripts/agent_runner.py tests/test_automation_usage_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/CURSOR-CLI.md",
+    "docs/MODEL-ROUTING.md",
+    "docs/system_audit/commit_evidence_2026-03-01_clear-subscription-env-usage.json",
+    "docs/system_audit/commit_evidence_2026-03-01_runner-provider-telemetry-no-env-limits.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_automation_usage_api.py::test_build_cursor_snapshot_includes_subscription_window_metrics api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_includes_5h_and_week_windows api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_tracks_usage_without_limit_configuration api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_adds_provider_api_windows_when_available api/tests/test_automation_usage_api.py::test_append_codex_subscription_metrics_adds_runner_windows_when_provider_api_unavailable api/tests/test_automation_usage_api.py::test_configured_status_openai_accepts_runner_telemetry api/tests/test_automation_usage_api.py::test_configured_status_cursor_accepts_runner_telemetry",
+      "python3 -m pytest -q api/tests/test_agent_runner_tool_failure_telemetry.py::test_agent_runner_posts_runtime_and_friction_events --maxfail=1",
+      "cd api && ruff check app/services/automation_usage_service.py scripts/agent_runner.py tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Required readiness providers (openai/codex, claude, cursor) no longer require CODEX_SUBSCRIPTION_* or CURSOR_SUBSCRIPTION_* env vars; host-runner telemetry and live CLI session signals provide config and limit evidence.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Verify readiness required providers remain openai, claude, cursor.",
+      "Verify all_required_ready can become true without CODEX_SUBSCRIPTION_* and CURSOR_SUBSCRIPTION_* env vars when runner telemetry is present.",
+      "Verify openai Codex quota windows can be sourced from host-runner telemetry when API node lacks direct OAuth session file access."
+    ]
+  }
+}

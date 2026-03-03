@@ -6,14 +6,15 @@ const UI_SYSTEM_LINEAGE_LIMITS = {
   runtime_event_limit: 300,
 } as const;
 const UI_FLOW_LIMITS = {
-  contributor_limit: 150,
-  contribution_limit: 400,
-  asset_limit: 200,
-  spec_limit: 120,
-  lineage_link_limit: 120,
-  usage_event_limit: 300,
-  commit_evidence_limit: 120,
-  runtime_event_limit: 300,
+  contributor_limit: 80,
+  contribution_limit: 160,
+  asset_limit: 80,
+  spec_limit: 160,
+  lineage_link_limit: 160,
+  usage_event_limit: 220,
+  commit_evidence_limit: 80,
+  runtime_event_limit: 220,
+  list_item_limit: 10,
 } as const;
 
 export const UI_CONTRIBUTOR_LIMIT = 150;

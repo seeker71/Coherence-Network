@@ -155,3 +155,95 @@ async def test_runner_idle_heartbeat_reaps_orphaned_running_tasks(
 
     assert len(sent_messages) == 1
     assert task_id in sent_messages[0]
+
+
+@pytest.mark.asyncio
+async def test_task_failed_alert_emits_once_per_status_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "bot-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_IDS", "111")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    sent_messages: list[str] = []
+
+    async def _fake_send_alert(message: str, parse_mode: str = "Markdown") -> bool:
+        sent_messages.append(message)
+        return True
+
+    monkeypatch.setattr("app.services.telegram_adapter.send_alert", _fake_send_alert)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "suppress duplicate failed alert", "task_type": "impl"},
+        )
+        assert created.status_code == 201
+        task_id = created.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "runner-a"},
+        )
+        assert running.status_code == 200
+
+        first_failed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "failed", "output": "first failure"},
+        )
+        assert first_failed.status_code == 200
+
+        duplicate_failed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "failed", "output": "same failure, updated context"},
+        )
+        assert duplicate_failed.status_code == 200
+
+    assert len(sent_messages) == 1
+    assert task_id in sent_messages[0]
+
+
+@pytest.mark.asyncio
+async def test_task_needs_decision_alert_emits_once_per_status_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "bot-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_IDS", "111")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    sent_messages: list[str] = []
+
+    async def _fake_send_alert(message: str, parse_mode: str = "Markdown") -> bool:
+        sent_messages.append(message)
+        return True
+
+    monkeypatch.setattr("app.services.telegram_adapter.send_alert", _fake_send_alert)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "suppress duplicate needs decision alert", "task_type": "impl"},
+        )
+        assert created.status_code == 201
+        task_id = created.json()["id"]
+
+        to_needs_decision = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "needs_decision", "decision_prompt": "Approve deploy?"},
+        )
+        assert to_needs_decision.status_code == 200
+
+        same_status_update = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "needs_decision", "decision_prompt": "Approve deploy to staging?"},
+        )
+        assert same_status_update.status_code == 200
+
+    assert len(sent_messages) == 1
+    assert task_id in sent_messages[0]

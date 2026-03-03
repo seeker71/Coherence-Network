@@ -1,0 +1,354 @@
+{
+  "cursor_cli": {
+    "about": {
+      "command": [
+        "agent",
+        "about"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading...\n\u001b[2K\u001b[1A\u001b[2K\u001b[GAbout Cursor CLI\n\nCLI Version         2026.02.27-e7d2ef6\nModel               Auto\nOS                  darwin (arm64)\nTerminal            unknown\nShell               zsh\nUser Email          umuff71@gmail.com"
+    },
+    "models": {
+      "command": [
+        "agent",
+        "models"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading models\u2026\n\u001b[2K\u001b[1A\u001b[2K\u001b[GAvailable models\n\nauto - Auto\ncomposer-1.5 - Composer 1.5\ncomposer-1 - Composer 1\ngpt-5.3-codex-low - GPT-5.3 Codex Low\ngpt-5.3-codex-low-fast - GPT-5.3 Codex Low Fast\ngpt-5.3-codex - GPT-5.3 Codex\ngpt-5.3-codex-fast - GPT-5.3 Codex Fast\ngpt-5.3-codex-high - GPT-5.3 Codex High\ngpt-5.3-codex-high-fast - GPT-5.3 Codex High Fast\ngpt-5.3-codex-xhigh - GPT-5.3 Codex Extra High\ngpt-5.3-codex-xhigh-fast - GPT-5.3 Codex Extra High Fast\ngpt-5.2 - GPT-5.2\ngpt-5.3-codex-spark-preview - GPT-5.3 Codex Spark\ngpt-5.2-codex-low - GPT-5.2 Codex Low\ngpt-5.2-codex-low-fast - GPT-5.2 Codex Low Fast\ngpt-5.2-codex - GPT-5.2 Codex\ngpt-5.2-codex-fast - GPT-5.2 Codex Fast\ngpt-5.2-codex-high - GPT-5.2 Codex High\ngpt-5.2-codex-high-fast - GPT-5.2 Codex High Fast\ngpt-5.2-codex-xhigh - GPT-5.2 Codex Extra High\ngpt-5.2-codex-xhigh-fast - GPT-5.2 Codex Extra High Fast\ngpt-5.1-codex-max - GPT-5.1 Codex Max\ngpt-5.1-codex-max-high - GPT-5.1 Codex Max High\nopus-4.6-thinking - Claude 4.6 Opus (Thinking)  (default)\ngpt-5.2-high - GPT-5.2 High\nsonnet-4.6 - Claude 4.6 Sonnet\nsonnet-4.6-thinking - Claude 4.6 Sonnet (Thinking)\nopus-4.6 - Claude 4.6 Opus\nopus-4.5 - Claude 4.5 Opus\nopus-4.5-thinking - Claude 4.5 Opus (Thinking)\ngemini-3.1-pro - Gemini 3.1 Pro\ngrok - Grok\nsonnet-4.5 - Claude 4.5 Sonnet\nsonnet-4.5-thinking - Claude 4.5 Sonnet (Thinking)\ngpt-5.1-high - GPT-5.1 High\ngemini-3-pro - Gemini 3 Pro\ngemini-3-flash - Gemini 3 Flash\ngpt-5.1-codex-mini - GPT-5.1 Codex Mini\nkimi-k2.5 - Kimi K2.5\n\nTip: use --model <id> (or /model <id> in interactive mode) to switch."
+    },
+    "status": {
+      "command": [
+        "agent",
+        "status"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[G\n Starting login process...\n\n\u001b[2K\u001b[1A\u001b[2K\u001b[1A\u001b[2K\u001b[1A\u001b[2K\u001b[GChecking authentication status...\n\u001b[2K\u001b[1A\u001b[2K\u001b[G\n \u2713 Logged in as umuff71@gmail.com"
+    }
+  },
+  "generated_at": "2026-03-01T09:42:35Z",
+  "local_cursor_guard_decision": {
+    "allowed": true,
+    "blocked_metrics": [],
+    "evaluated_metrics": [],
+    "provider": "cursor",
+    "reason": "within_window_thresholds",
+    "status": "unavailable"
+  },
+  "local_cursor_provider_snapshot": {
+    "actual_current_usage": 3.0,
+    "actual_current_usage_unit": "tasks",
+    "capacity_tasks_per_day": null,
+    "collected_at": "2026-03-01T09:42:33.902179Z",
+    "cost_usd": null,
+    "data_source": "provider_cli",
+    "id": "provider_cursor_1772358153",
+    "kind": "custom",
+    "metrics": [
+      {
+        "evidence_source": "runtime_events",
+        "id": "runtime_task_runs",
+        "label": "Runtime task runs",
+        "limit": null,
+        "remaining": null,
+        "unit": "tasks",
+        "used": 3.0,
+        "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+        "validation_state": "derived",
+        "window": "rolling"
+      }
+    ],
+    "notes": [
+      "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+      "cursor_cli_ready: 2026.02.27-e7d2ef6",
+      "provider observed in runtime usage but key/config is missing or provider checks are failing"
+    ],
+    "official_records": [],
+    "provider": "cursor",
+    "raw": {
+      "agent_binary": "/Users/ursmuff/.local/bin/agent",
+      "cli_probe_detail": "2026.02.27-e7d2ef6",
+      "cli_probe_ok": true,
+      "configured_env_keys": [],
+      "limits": {
+        "cursor_subscription_8h_limit": 0,
+        "cursor_subscription_week_limit": 0
+      },
+      "missing_env_keys": [
+        "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+      ],
+      "runtime_task_runs": 3
+    },
+    "status": "unavailable",
+    "usage_per_time": null,
+    "usage_remaining": null,
+    "usage_remaining_unit": null
+  },
+  "local_runtime_usage": {
+    "by_model": {
+      "claude/claude-sonnet-4-5-20250929": {
+        "by_status": {
+          "completed": 2
+        },
+        "count": 2,
+        "last_used": "2026-03-01T09:38:10.321967+00:00"
+      },
+      "codex/gpt-5.3-codex-spark": {
+        "by_status": {
+          "pending": 3,
+          "running": 1
+        },
+        "count": 4,
+        "last_used": "2026-03-01T09:38:17.458898+00:00"
+      },
+      "cursor/auto": {
+        "by_status": {
+          "completed": 1,
+          "failed": 2
+        },
+        "count": 3,
+        "last_used": "2026-03-01T09:38:02.752697+00:00"
+      },
+      "openclaw/gpt-5.3-codex": {
+        "by_status": {
+          "completed": 1
+        },
+        "count": 1,
+        "last_used": "2026-03-01T08:53:21.512163+00:00"
+      },
+      "openclaw/openrouter/free": {
+        "by_status": {
+          "completed": 1
+        },
+        "count": 1,
+        "last_used": "2026-03-01T09:02:30.688376+00:00"
+      },
+      "openrouter/free": {
+        "by_status": {
+          "failed": 1
+        },
+        "count": 1,
+        "last_used": "2026-03-01T09:38:00.359146+00:00"
+      }
+    },
+    "execution": {
+      "by_agent": {
+        "unknown": {
+          "completed": 1,
+          "count": 3,
+          "failed": 2
+        }
+      },
+      "by_executor": {
+        "openclaw": {
+          "completed": 1,
+          "count": 3,
+          "failed": 2
+        }
+      },
+      "by_tool": {
+        "agent-task-completion": {
+          "completed": 1,
+          "count": 3,
+          "failed": 2,
+          "success_rate": 0.3333
+        }
+      },
+      "codex_runs": 0,
+      "coverage": {
+        "completed_or_failed_tasks": 8,
+        "coverage_rate": 0.0,
+        "tracked_task_runs": 0,
+        "untracked_task_ids": [
+          "task_1e1913ef1bde682c",
+          "task_1f71c3664d4a5d0c",
+          "task_54d706e6bca3b033",
+          "task_578d42779678821d",
+          "task_8ae1c8674f376cb0",
+          "task_af012d93a249a833",
+          "task_b87dca2a425aea8f",
+          "task_c3da7c400babf96a"
+        ]
+      },
+      "failed_runs": 2,
+      "recent_runs": [
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_13c4213d03f4",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:38:34.168185+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_9e682f4f1f00302b",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_ea933d10fbfe",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:38:34.159269+00:00",
+          "runtime_ms": 0.1,
+          "status_code": 500,
+          "task_id": "task_e0a1b3b2989b4f94",
+          "tool": "agent-task-completion"
+        },
+        {
+          "agent_id": "unknown",
+          "endpoint": "/tool:agent-task-completion",
+          "event_id": "rt_65b15c455017",
+          "executor": "openclaw",
+          "is_openai_codex": false,
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:38:34.137634+00:00",
+          "runtime_ms": 2.209,
+          "status_code": 200,
+          "task_id": "task_9b4700d0cff02d85",
+          "tool": "agent-task-completion"
+        }
+      ],
+      "success_rate": 0.3333,
+      "success_runs": 1,
+      "tracked_runs": 3
+    }
+  },
+  "official_sources": [
+    "https://www.cursor.com/pricing",
+    "https://docs.cursor.com/account/pricing",
+    "https://www.cursor.com/changelog/our-shift-to-usage-based-pricing",
+    "https://www.cursor.com/pricing/business"
+  ],
+  "public_api_snapshots": {
+    "usage_overview": {
+      "error": "{\"status\":\"error\",\"code\":502,\"message\":\"Application failed to respond\",\"request_id\":\"H7UtZuMlQbGoBm4ALPU1MQ\"}",
+      "json": null,
+      "ok": false,
+      "status": 502,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage"
+    },
+    "usage_readiness": {
+      "error": "{\"status\":\"error\",\"code\":502,\"message\":\"Application failed to respond\",\"request_id\":\"I_-dJES0RRCBG1aV2prcFg\"}",
+      "json": null,
+      "ok": false,
+      "status": 502,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    }
+  },
+  "repo_root": "/Users/ursmuff/.claude-worktrees/Coherence-Network/selfimprove-failure-audit",
+  "route_decision_matrix": [
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "codex/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "codex/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "codex/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "provider": "claude",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "provider": "claude",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/claude-opus-4-5",
+      "provider": "claude",
+      "task_type": "heal"
+    }
+  ],
+  "routing_policy_proof": [
+    {
+      "direction": "Change api/app/services/agent_service.py in this repo",
+      "policy_meta": {
+        "policy_applied": true,
+        "reason": "repo_scoped_question",
+        "repo_executor_preference": "cursor",
+        "task_fingerprint": "605bf13d4d901e990e2b10aa900a8d8e2fb10c7d2ed8dbd7c5848009519f3e54"
+      },
+      "selected_executor": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "direction": "What is the long-term market outlook for coding agents?",
+      "policy_meta": {
+        "open_question_executor": "codex",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "ee83353db6f4b07ab4043cbb51d5b1f83af6b30a24520d29207607c0e5db14a8"
+      },
+      "selected_executor": "codex",
+      "task_type": "spec"
+    },
+    {
+      "direction": "Investigate provider readiness degradation in automation usage",
+      "policy_meta": {
+        "open_question_executor": "codex",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "4398b3e2b572f4db4510404c48670ca01df72e639e5561ece349942c717f0edf"
+      },
+      "selected_executor": "codex",
+      "task_type": "heal"
+    }
+  ]
+}

@@ -31,6 +31,8 @@ API service (`coherence-network`):
 - `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS=8` (guard retries per deploy check loop)
 - `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS=60` (seconds between retries)
 - `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS=600` (escalate when deployment contract blocked for >10 minutes)
+- `PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA=1` (strictly require `/api/health` to expose deployed SHA and match `main`)
+- `PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA=1` (strictly require `/api/health-proxy` to expose web deployed SHA and match `main`)
 - `PAID_TOOL_8H_LIMIT=300`
 - `PAID_TOOL_WEEK_LIMIT=2200`
 - `PAID_TOOL_WINDOW_BUDGET_FRACTION=0.333`
@@ -73,6 +75,8 @@ Set in both Railway services:
 From repo root:
 
 ```bash
+VERIFY_REQUIRE_API_HEALTH_SHA=1 \
+VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
 ./scripts/verify_web_api_deploy.sh \
   https://coherence-network-production.up.railway.app \
   https://coherence-web-production.up.railway.app
@@ -81,14 +85,16 @@ From repo root:
 ## CI/CD Validation
 
 - `.github/workflows/public-deploy-contract.yml` validates Railway API + Railway web.
-- If contract fails and Railway CLI secrets are present, workflow triggers Railway redeploy and revalidates.
+- If contract fails and Railway CLI secrets are present, workflow triggers Railway redeploy (API + web when both service secrets are set) and revalidates.
 
 Required repo secrets for automated redeploy:
 
 - `RAILWAY_TOKEN`
- - `RAILWAY_PROJECT_ID`
- - `RAILWAY_ENVIRONMENT`
- - `RAILWAY_SERVICE`
+- `RAILWAY_PROJECT_ID`
+- `RAILWAY_ENVIRONMENT`
+- `RAILWAY_API_SERVICE` (preferred; falls back to legacy `RAILWAY_SERVICE` if unset)
+- `RAILWAY_WEB_SERVICE` (required to auto-heal web SHA drift checks)
+- `RAILWAY_SERVICE` (legacy fallback for API service)
 
 Optional repo variables to override deploy de-risk defaults:
 
@@ -97,6 +103,8 @@ Optional repo variables to override deploy de-risk defaults:
 - `PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`
 - `PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`
 - `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS`
+- `PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA`
+- `PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA`
 
 ## Manual Railway Verification
 

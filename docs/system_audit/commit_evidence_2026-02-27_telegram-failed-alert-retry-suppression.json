@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/fix-telegram-failed-report-20260227",
+  "commit_scope": "Suppress transient Telegram failed alerts by removing intermediate runner failed PATCH updates on retryable executions; keep terminal failure alerts intact and covered by regression tests.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-27_telegram-failed-alert-retry-suppression.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-27-telegram-failed-alert-retry-suppression"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T112453Z_codex-fix-telegram-failed-report-20260227.json"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-27_telegram-failed-alert-retry-suppression.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-27_telegram-failed-alert-retry-suppression.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push/PR checks and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Telegram alerts should no longer report transient retry failures as terminal failed status; only terminal failures should produce failed alerts.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Run retryable codex auth/model fallback paths and confirm runner patches task status directly to pending without an intermediate failed patch.",
+      "Confirm terminal non-retry failure still patches failed and remains alertable.",
+      "Inspect /api/agent/telegram/diagnostics after deploy and confirm reduction of false failed report bursts for retry loops."
+    ]
+  }
+}

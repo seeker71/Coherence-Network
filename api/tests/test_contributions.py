@@ -13,7 +13,10 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"},
+        )
         contributor_id = c.json()["id"]
 
         a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
@@ -41,9 +44,9 @@ async def test_create_get_contribution_and_asset_rollup_cost() -> None:
         assert g.status_code == 200
         assert g.json()["id"] == contrib_id
 
-        l = await client.get("/api/contributions?limit=10")
-        assert l.status_code == 200
-        items = l.json()
+        listed = await client.get("/api/contributions?limit=10")
+        assert listed.status_code == 200
+        items = listed.json()
         assert isinstance(items, list)
         assert any(i.get("id") == contrib_id for i in items)
 
@@ -71,7 +74,7 @@ async def test_create_contribution_404s() -> None:
         assert r.status_code == 404
         assert r.json()["detail"] == "Contributor not found"
 
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"})
         contributor_id = c.json()["id"]
 
         r2 = await client.post(
@@ -92,7 +95,7 @@ async def test_get_asset_and_contributor_contributions() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"})
         contributor_id = c.json()["id"]
 
         a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
@@ -122,7 +125,7 @@ async def test_create_contribution_422() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"})
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"})
         contributor_id = c.json()["id"]
         a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
@@ -144,6 +147,11 @@ async def test_github_contribution_cost_is_normalized_from_metadata() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@coherence.network"},
+        )
+        assert reg.status_code == 201
         r = await client.post(
             "/api/contributions/github",
             json={
@@ -169,6 +177,11 @@ async def test_github_contribution_cost_clamps_when_metadata_missing() -> None:
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Bob Builder", "email": "bob@coherence.network"},
+        )
+        assert reg.status_code == 201
         r = await client.post(
             "/api/contributions/github",
             json={
@@ -193,7 +206,10 @@ async def test_manual_contribution_cost_is_marked_actual_when_evidence_exists() 
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice", "email": "alice@coherence.network"})
+        c = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@coherence.network"},
+        )
         contributor_id = c.json()["id"]
         a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo"})
         asset_id = a.json()["id"]
@@ -218,6 +234,11 @@ async def test_github_contribution_cost_marks_actual_with_verification_keys() ->
     app.state.graph_store = InMemoryGraphStore()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Verifier User", "email": "verifier@coherence.network"},
+        )
+        assert reg.status_code == 201
         r = await client.post(
             "/api/contributions/github",
             json={
@@ -233,6 +254,83 @@ async def test_github_contribution_cost_marks_actual_with_verification_keys() ->
         assert Decimal(payload["cost_amount"]) == Decimal("9.50")
         assert payload["metadata"]["cost_basis"] == "actual_verified"
         assert payload["metadata"]["estimation_used"] is False
+
+
+@pytest.mark.asyncio
+async def test_github_contribution_marks_internal_emails_as_system_contributors() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        system = await client.post(
+            "/api/contributors",
+            json={"type": "SYSTEM", "name": "Coherence System", "email": "system@coherence.network"},
+        )
+        assert system.status_code == 201
+        system_id = system.json()["id"]
+        r = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "deploy-test+ci123@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "sys001",
+                "cost_amount": "1.00",
+                "metadata": {"files_changed": 1, "lines_added": 1},
+            },
+        )
+        assert r.status_code == 201
+        payload = r.json()
+        assert payload["metadata"]["contributor_email"] == "deploy-test@coherence.network"
+        assert payload["metadata"]["contributor_email_raw"] == "deploy-test+ci123@coherence.network"
+        assert payload["metadata"]["contributor_type"] == "SYSTEM"
+        assert payload["contributor_id"] == system_id
+
+
+@pytest.mark.asyncio
+async def test_github_contribution_rejects_unregistered_human_email() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/contributions/github",
+            json={
+                "contributor_email": "new-person@proton.me",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "new001",
+                "cost_amount": "1.00",
+                "metadata": {"files_changed": 1, "lines_added": 1},
+            },
+        )
+        assert r.status_code == 409
+        assert "Contributor not registered" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_github_debug_endpoint_defaults_to_dry_run_without_writes() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        debug = await client.post(
+            "/api/contributions/github/debug",
+            json={
+                "contributor_email": "alice+debug@coherence.network",
+                "repository": "seeker71/Coherence-Network",
+                "commit_hash": "dbg001",
+                "cost_amount": "5.00",
+                "metadata": {"files_changed": 2, "lines_added": 10},
+            },
+        )
+        assert debug.status_code == 200
+        payload = debug.json()
+        assert payload["success"] is True
+        assert payload["dry_run"] is True
+        assert payload["contributor_lookup"]["found_existing"] is False
+
+        contributors = await client.get("/api/contributors?limit=10")
+        contributions = await client.get("/api/contributions?limit=10")
+        assert contributors.status_code == 200
+        assert contributions.status_code == 200
+        assert contributors.json() == []
+        assert contributions.json() == []
 
 
 @pytest.mark.asyncio

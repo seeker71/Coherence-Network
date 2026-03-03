@@ -1,0 +1,82 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "codex/prod-auth-default-20260226143817",
+  "commit_scope": "Default openclaw task context to runner_codex_auth_mode=api_key to avoid OAuth refresh-token instability, while preserving explicit overrides.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_openclaw_executor_integration.py"
+  ],
+  "idea_ids": [
+    "idea-openclaw-runner-auth-default-api-key"
+  ],
+  "spec_ids": [
+    "spec-openclaw-runner-auth-mode-defaulting"
+  ],
+  "task_ids": [
+    "task-2026-02-27-openclaw-runner-auth-default"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T004130Z_codex-prod-auth-default-20260226143817.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/commit_evidence_2026-02-27_runner-codex-auth-default-api-key.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "cd api && ruff check app/services/agent_service.py tests/test_openclaw_executor_integration.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "New openclaw tasks default to api_key auth mode, reducing OAuth refresh-token failures while still allowing explicit oauth or auto overrides.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/pipeline-status",
+      "https://coherence-network-production.up.railway.app/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "Create openclaw task without runner_codex_auth_mode and verify task context stores runner_codex_auth_mode=api_key.",
+      "Create openclaw task with explicit runner_codex_auth_mode=oauth and verify explicit value is preserved.",
+      "Run smoke execution and verify no initial OAuth refresh-token failure path is triggered by default mode selection."
+    ]
+  }
+}

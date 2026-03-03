@@ -33,6 +33,17 @@ async def test_health_returns_ok():
 
 
 @pytest.mark.asyncio
+async def test_health_exposes_deployed_sha_from_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "abc123sha")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["deployed_sha"] == "abc123sha"
+        assert data["deployed_sha_source"] == "RAILWAY_GIT_COMMIT_SHA"
+
+
+@pytest.mark.asyncio
 async def test_ready_returns_ready_when_store_exists(monkeypatch: pytest.MonkeyPatch):
     """GET /api/ready returns 200 when graph_store is set."""
     # Keep this baseline readiness check independent of caller environment variables.

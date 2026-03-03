@@ -21,14 +21,12 @@ Spec → Test → Implement → CI → Review → Merge
 1. Worktree-only execution
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
-2. Start gate (required before any edits)
-   - Run: `make start-gate`
+2. Prompt entry gate (required before any edits)
+   - Run: `make prompt-gate`
+   - Clean worktree: runs start-gate + rebase + local guard.
+   - Dirty worktree: continuation mode (skip re-bootstrap/start-gate and continue in-flight task).
+   - Detached `HEAD`: attach a branch first (`git switch -c codex/<thread-name>` or `git switch codex/<thread-name>`).
    - If it fails, stop and fix blockers first.
-   - Main-workflow failure policy:
-     - Temporary waivers must be declared in `config/start_gate_main_workflow_waivers.json`.
-     - Each waiver must include `workflow`, `owner`, `reason`, `expires_at`, and should scope by `run_url_contains` when possible.
-     - Owner mappings for blocking workflows must exist in `config/start_gate_workflow_owners.json`.
-     - Waivers are short-lived and must be removed after root-cause repair.
 3. Pre-commit local gate (required)
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
@@ -138,14 +136,14 @@ Spec → Test → Implement → CI → Review → Merge
 ## Commands
 
 ```bash
-# Mandatory first step for every thread
-make start-gate
+# Mandatory first step for every prompt (new thread + follow-up)
+make prompt-gate
 
 # Worktree setup for Codex thread start
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
-make start-gate
+make prompt-gate
 
 # API
 cd api && uvicorn app.main:app --reload --port 8000
@@ -163,8 +161,8 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 # Public production verify (required before merge/roll-forward)
 ./scripts/verify_web_api_deploy.sh
 
-# Start gate (required before starting a new task)
-make start-gate
+# Prompt entry gate (required before starting a new task)
+make prompt-gate
 
 # PR check failure prevention + tracking (default before commit/push)
 # Optional for n8n-backed automation flows:
@@ -251,6 +249,35 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
 - **Spec cross-links** — specs have "See also" sections
 - **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
+
+## UX Guidance (Navigation + Landing)
+
+Use these as design guidance for web changes. They are intended to keep the experience welcoming and useful without hiding power users' workflows.
+
+- Keep global navigation consistent across all pages. The same core actions should stay visible in the same place, so users do not re-learn navigation per page.
+- Show only a small set of "always visible" actions (for example: explore, collaborate, execute). Place specialized/operational surfaces behind menus.
+- Prefer progressive disclosure over dense link walls. Users should discover depth in layers, not all at once.
+- Treat the top area as high-value space. Keep status/context strips compact; avoid stacking multiple full-height bars.
+- Use plain-language labels first, technical labels second. New contributors should understand page purpose without knowing internal system terms.
+- Keep context nearby but lightweight. A concise "you are here" indicator plus optional related/data menus is usually enough.
+- Design landing content around journeys, not indexes: "where to start", "how to contribute", "how to monitor progress".
+- Maintain a warm, human visual tone by default: high readability, soft contrast transitions, and restrained accent usage.
+- Optimize for first-time users and deep users at the same time: fast entry paths for newcomers, discoverable advanced surfaces for experts.
+- When uncertain, reduce visible complexity first, then reintroduce details where user intent is explicit (menus, drill-down pages, detail panels).
+
+### Worktree Stability Guidance
+
+- Before running stash/rebase helper flows, confirm the worktree is on a named branch (`git rev-parse --abbrev-ref HEAD` should not be `HEAD`).
+- If detached, create or switch to a `codex/...` branch first. This avoids ambiguous stash restoration and preserves in-progress UI decisions.
+- During long UI iterations, capture screenshots in `.playwright-cli/` and keep a short decision summary in the task thread so visual intent can be restored quickly if recovery tooling resets files.
+- Observed failure mode: repeated use of stash+rebase helper scripts while detached can make state recovery noisy and confusing. The helper does not detach by itself; it assumes branch state is already valid.
+- Suggested preflight before any auto-heal command:
+  - run `git rev-parse --abbrev-ref HEAD`
+  - if output is `HEAD`, attach first: `git switch -c codex/<topic>-<date>` (or `git switch codex/<existing-branch>`)
+  - only then run `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
+- If `make start-gate` fails only because the worktree is dirty from active task work, prefer continuing the same task and running local validation gates directly rather than repeatedly stashing/restoring mid-task.
+- Suggested Codex thread start check (quick, lightweight): confirm branch name, run `git status --short`, and record if the worktree is intentionally dirty before running any recovery helpers.
+- For deploy-focused threads, prefer a clean dedicated branch/worktree for release scope. Keep unrelated in-progress edits in another branch/worktree so deploy evidence and PR diffs stay easy to verify.
 
 ## Agent Orchestration API (spec 002)
 

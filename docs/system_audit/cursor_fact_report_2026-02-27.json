@@ -1,0 +1,2474 @@
+{
+  "cursor_cli": {
+    "about": {
+      "command": [
+        "agent",
+        "about"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading...\n\u001b[2K\u001b[1A\u001b[2K\u001b[GAbout Cursor CLI\n\nCLI Version         2026.01.28-fd13201\nModel               Auto\nOS                  darwin (arm64)\nTerminal            unknown\nShell               zsh\nUser Email          Not logged in"
+    },
+    "models": {
+      "command": [
+        "agent",
+        "models"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[GLoading models\u2026\n\u001b[2K\u001b[1A\u001b[2K\u001b[GNo models available for this account."
+    },
+    "status": {
+      "command": [
+        "agent",
+        "status"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\u001b[2K\u001b[G\n Starting login process...\n\n\u001b[2K\u001b[1A\u001b[2K\u001b[1A\u001b[2K\u001b[G Not logged in"
+    }
+  },
+  "generated_at": "2026-02-27T10:47:32Z",
+  "local_cursor_guard_decision": {
+    "allowed": true,
+    "blocked_metrics": [],
+    "evaluated_metrics": [],
+    "provider": "cursor",
+    "reason": "within_window_thresholds",
+    "status": "unavailable"
+  },
+  "local_cursor_provider_snapshot": {
+    "actual_current_usage": null,
+    "actual_current_usage_unit": null,
+    "capacity_tasks_per_day": null,
+    "collected_at": "2026-02-27T10:47:31.146693Z",
+    "cost_usd": null,
+    "data_source": "provider_cli",
+    "id": "provider_cursor_1772189251",
+    "kind": "custom",
+    "metrics": [],
+    "notes": [
+      "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+      "cursor_cli_ready: 2026.01.28-fd13201"
+    ],
+    "official_records": [],
+    "provider": "cursor",
+    "raw": {
+      "agent_binary": "/Users/ursmuff/.local/bin/agent",
+      "cli_probe_detail": "2026.01.28-fd13201",
+      "cli_probe_ok": true,
+      "configured_env_keys": [],
+      "limits": {
+        "cursor_subscription_8h_limit": 0,
+        "cursor_subscription_week_limit": 0
+      },
+      "missing_env_keys": [
+        "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+      ]
+    },
+    "status": "unavailable",
+    "usage_per_time": null,
+    "usage_remaining": null,
+    "usage_remaining_unit": null
+  },
+  "local_runtime_usage": {
+    "by_model": {},
+    "execution": {
+      "by_agent": {},
+      "by_executor": {},
+      "by_tool": {},
+      "codex_runs": 0,
+      "coverage": {
+        "completed_or_failed_tasks": 0,
+        "coverage_rate": 1.0,
+        "tracked_task_runs": 0,
+        "untracked_task_ids": []
+      },
+      "failed_runs": 0,
+      "recent_runs": [],
+      "success_rate": 1.0,
+      "success_runs": 0,
+      "tracked_runs": 0
+    }
+  },
+  "official_sources": [
+    "https://www.cursor.com/pricing",
+    "https://docs.cursor.com/account/pricing",
+    "https://www.cursor.com/changelog/our-shift-to-usage-based-pricing",
+    "https://www.cursor.com/pricing/business"
+  ],
+  "public_api_snapshots": {
+    "usage_overview": {
+      "error": "",
+      "json": {
+        "generated_at": "2026-02-27T10:47:33.117417Z",
+        "limit_coverage": {
+          "coverage_ratio": 0.2,
+          "hard_limit_claim_ready": false,
+          "hard_limit_coverage_ratio": 0.0,
+          "providers_considered": 10,
+          "providers_missing_limit_metrics": [
+            "anthropic",
+            "claude",
+            "claude-code",
+            "cursor",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ],
+          "providers_partial_limit_metrics": [],
+          "providers_with_limit_metrics": 2,
+          "providers_with_remaining_metrics": 2,
+          "providers_with_validated_remaining_metrics": 0,
+          "required_or_active_missing_hard_limit_telemetry": [
+            "claude",
+            "claude-code",
+            "cursor",
+            "github",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ],
+          "required_or_active_provider_status": {
+            "claude": {
+              "active_usage": 525,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": false,
+              "state": "missing_limits"
+            },
+            "claude-code": {
+              "active_usage": 20,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": false,
+              "state": "missing_limits"
+            },
+            "cursor": {
+              "active_usage": 42,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": false,
+              "state": "missing_limits"
+            },
+            "github": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": true,
+              "has_remaining_metrics": true,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [
+                "rest_requests"
+              ],
+              "required": true,
+              "state": "derived_or_unvalidated"
+            },
+            "openai": {
+              "active_usage": 1303,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "openclaw": {
+              "active_usage": 1008,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": false,
+              "state": "missing_limits"
+            },
+            "openrouter": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "railway": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            }
+          },
+          "required_or_active_providers": [
+            "claude",
+            "claude-code",
+            "cursor",
+            "github",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ]
+        },
+        "providers": [
+          {
+            "actual_current_usage": 2059.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": 24696.0,
+            "collected_at": "2026-02-27T10:47:29.985280Z",
+            "cost_usd": null,
+            "data_source": "runtime_events",
+            "id": "provider_internal_1772189249",
+            "kind": "internal",
+            "metrics": [
+              {
+                "evidence_source": null,
+                "id": "tasks_tracked",
+                "label": "Tracked task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 2059.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "rolling"
+              },
+              {
+                "evidence_source": null,
+                "id": "tasks_failed",
+                "label": "Failed task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 1030.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "rolling"
+              },
+              {
+                "evidence_source": null,
+                "id": "tasks_untracked",
+                "label": "Completed/failed tasks without usage",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 354.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "rolling"
+              },
+              {
+                "evidence_source": null,
+                "id": "host_runner_tasks_24h",
+                "label": "Host-runner task runs (24h)",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 64.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "daily"
+              },
+              {
+                "evidence_source": null,
+                "id": "host_runner_failed_24h",
+                "label": "Host-runner failed tasks (24h)",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 31.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "daily"
+              }
+            ],
+            "notes": [
+              "Execution success rate 49.98%"
+            ],
+            "official_records": [
+              "/api/usage",
+              "/api/automation/usage"
+            ],
+            "provider": "coherence-internal",
+            "raw": {
+              "execution": {
+                "by_agent": {
+                  "openai-codex": {
+                    "completed": 606,
+                    "count": 1253,
+                    "failed": 647
+                  },
+                  "openclaw-worker:openrouter-proof": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0
+                  },
+                  "openclaw-worker:public-proof": {
+                    "completed": 2,
+                    "count": 2,
+                    "failed": 0
+                  },
+                  "openclaw-worker:server": {
+                    "completed": 130,
+                    "count": 380,
+                    "failed": 250
+                  },
+                  "unknown": {
+                    "completed": 289,
+                    "count": 422,
+                    "failed": 133
+                  }
+                },
+                "by_executor": {
+                  "aider": {
+                    "completed": 0,
+                    "count": 2,
+                    "failed": 2
+                  },
+                  "claude": {
+                    "completed": 0,
+                    "count": 20,
+                    "failed": 20
+                  },
+                  "cursor": {
+                    "completed": 0,
+                    "count": 29,
+                    "failed": 29
+                  },
+                  "openai-codex": {
+                    "completed": 301,
+                    "count": 599,
+                    "failed": 298
+                  },
+                  "openclaw": {
+                    "completed": 440,
+                    "count": 1008,
+                    "failed": 568
+                  },
+                  "unknown": {
+                    "completed": 288,
+                    "count": 401,
+                    "failed": 113
+                  }
+                },
+                "by_tool": {
+                  "/app/node_modules/.bin/codex": {
+                    "completed": 0,
+                    "count": 1,
+                    "failed": 1,
+                    "success_rate": 0.0
+                  },
+                  "agent": {
+                    "completed": 0,
+                    "count": 2,
+                    "failed": 2,
+                    "success_rate": 0.0
+                  },
+                  "agent-task-completion": {
+                    "completed": 435,
+                    "count": 1040,
+                    "failed": 605,
+                    "success_rate": 0.4183
+                  },
+                  "agent-task-execution-summary": {
+                    "completed": 139,
+                    "count": 192,
+                    "failed": 53,
+                    "success_rate": 0.724
+                  },
+                  "aider": {
+                    "completed": 0,
+                    "count": 1,
+                    "failed": 1,
+                    "success_rate": 0.0
+                  },
+                  "bash": {
+                    "completed": 3,
+                    "count": 10,
+                    "failed": 7,
+                    "success_rate": 0.3
+                  },
+                  "claude": {
+                    "completed": 0,
+                    "count": 10,
+                    "failed": 10,
+                    "success_rate": 0.0
+                  },
+                  "codex": {
+                    "completed": 301,
+                    "count": 599,
+                    "failed": 298,
+                    "success_rate": 0.5025
+                  },
+                  "openrouter.chat_completion": {
+                    "completed": 149,
+                    "count": 199,
+                    "failed": 50,
+                    "success_rate": 0.7487
+                  },
+                  "python3": {
+                    "completed": 2,
+                    "count": 4,
+                    "failed": 2,
+                    "success_rate": 0.5
+                  },
+                  "set": {
+                    "completed": 0,
+                    "count": 1,
+                    "failed": 1,
+                    "success_rate": 0.0
+                  }
+                },
+                "codex_runs": 1253,
+                "coverage": {
+                  "completed_or_failed_tasks": 400,
+                  "coverage_rate": 0.115,
+                  "tracked_task_runs": 46,
+                  "untracked_task_ids": [
+                    "task_000e09c598a0cec5",
+                    "task_00fcf25f540be8b0",
+                    "task_027d76ddbe92f94a",
+                    "task_0333973ce0aaca00",
+                    "task_0335f1d251729edf",
+                    "task_03b17dd040112bbc",
+                    "task_0492276f862e7f63",
+                    "task_0684df40d073954f",
+                    "task_06f52995ad8fc810",
+                    "task_0859a4cb27a41387",
+                    "task_089a3ef1e63e86d0",
+                    "task_09bb87625d16dee1",
+                    "task_0a32af298dfdc705",
+                    "task_0a9112f25f7ef178",
+                    "task_0aac3116b9f119be",
+                    "task_0abefa0458ee5b54",
+                    "task_0b2dd29848ea138e",
+                    "task_0c02f2656e548d9f",
+                    "task_0c4a399184c56d6c",
+                    "task_0dfd4ff7d3d4a239",
+                    "task_0e535c4ab01a306f",
+                    "task_0f50579db9a6922d",
+                    "task_0f65f2d00beb362d",
+                    "task_0f7f67981faef140",
+                    "task_1042888eb3254a6c",
+                    "task_10fe9de342363311",
+                    "task_111416afd22301fe",
+                    "task_129031b751593d3c",
+                    "task_131e3515ff5ce151",
+                    "task_15842d8af6ef0040",
+                    "task_1676f98f8a989e40",
+                    "task_1769963a6e10560c",
+                    "task_188a951c5a750e74",
+                    "task_188c4387397b570a",
+                    "task_191024589fe8c866",
+                    "task_197884f84a34e68d",
+                    "task_19b6c0636b976ad1",
+                    "task_1a71a52af93a9e3b",
+                    "task_1aa7018f446aa167",
+                    "task_1ba02baa61367f73",
+                    "task_1c7ab34ec198cba9",
+                    "task_1cdda29c9f08cbb2",
+                    "task_1d87f4c0bbe59b7d",
+                    "task_1e5acd75801b32e9",
+                    "task_1ecf8ebc3c6ba1d9",
+                    "task_1f3ddf283b9e5b61",
+                    "task_1f602a9d3c783622",
+                    "task_2449fbfb2e84dbc7",
+                    "task_246836562164a893",
+                    "task_250d12ab16a1ce92",
+                    "task_25edb92a4829b04a",
+                    "task_263dcabf8f6953a9",
+                    "task_26545133bb1fb789",
+                    "task_27c6c55215d1e92c",
+                    "task_29d11ad39261e6c4",
+                    "task_2b7916fb8bce0c79",
+                    "task_2c2329e729c9e89b",
+                    "task_2d664d9397454a7f",
+                    "task_2daecb459d553d5a",
+                    "task_2fa6321b91e32c0a",
+                    "task_2fcfa217f1a53c80",
+                    "task_2ff548ee270f7ed1",
+                    "task_308bfce0ce3f06c1",
+                    "task_313f81372885db10",
+                    "task_32e4296bef213a0b",
+                    "task_33a247a406d66103",
+                    "task_35657086f3201e74",
+                    "task_35f8914a8aaf14ba",
+                    "task_37c1c1b1edc4ac72",
+                    "task_396493b8c18ce972",
+                    "task_39f867caa62ea4cd",
+                    "task_3a339bdc7cabdf26",
+                    "task_3a61849b68e224cf",
+                    "task_3c15cabc2bea170e",
+                    "task_3ce97a4b66064bf6",
+                    "task_3d4148e067ec92b2",
+                    "task_3e4376fab6f23b02",
+                    "task_3ecf595e5108ed65",
+                    "task_3ed5053f358bb6a0",
+                    "task_3f0f979fd692bab1",
+                    "task_3fd2344132325061",
+                    "task_40405e343f1a4efb",
+                    "task_415e475d744e613a",
+                    "task_41df39f5607695ee",
+                    "task_4287607991496b37",
+                    "task_429bae34113b55bf",
+                    "task_42cdb027dbdb3768",
+                    "task_439ddab5c476a13b",
+                    "task_43f23a55f5054e68",
+                    "task_43fce9daf11ecff9",
+                    "task_44079218893abf30",
+                    "task_4414b28ac6272dee",
+                    "task_4488ebaca7402432",
+                    "task_44aba4f60dee17ed",
+                    "task_45d6fd435c39f97c",
+                    "task_45fe4b1850869bbd",
+                    "task_46fc44b1828bc5cd",
+                    "task_491f2afa88ba7644",
+                    "task_494dbd7ee74e9265",
+                    "task_49ce5095cf833b23",
+                    "task_4a6241a011c3d489",
+                    "task_4a8b8e7405398b0a",
+                    "task_4b0984e2d09ed18e",
+                    "task_4bb4f722e8a75956",
+                    "task_4bca1f99b168c10f",
+                    "task_4cceeded4cfd44c1",
+                    "task_4d4db11e952e3f9a",
+                    "task_4f59e238089fcd90",
+                    "task_50a4e3fba55c7fe6",
+                    "task_5138e6eea45af154",
+                    "task_5169e9915077d1ba",
+                    "task_5279112f7288ce52",
+                    "task_529deb90480f0cf6",
+                    "task_5339e59f15916ed5",
+                    "task_534c0af9feb78c98",
+                    "task_53af303358c04f5e",
+                    "task_5538984d55e72a51",
+                    "task_553becad42a0c87b",
+                    "task_5591009b0e11c9bc",
+                    "task_562c9910ff0b9e04",
+                    "task_578a9cb75fbf958e",
+                    "task_5924ab54ce436fcf",
+                    "task_59fe7b59d5f4dc0d",
+                    "task_5a8984108481f28a",
+                    "task_5abe9abcf9668718",
+                    "task_5b2d72ef25b94be7",
+                    "task_5bd21744568e86db",
+                    "task_5d59d923af01edd1",
+                    "task_5e4904750b918b3a",
+                    "task_5f9828c242cf2bb9",
+                    "task_60b5daee730a7ec8",
+                    "task_60bbb8c7d97c63c8",
+                    "task_60f8bfa6163b225f",
+                    "task_6108be542ae7d919",
+                    "task_617805583ad1b004",
+                    "task_6208c8bd117f9457",
+                    "task_62fe8572083c50e6",
+                    "task_63461cea668cfe63",
+                    "task_63cdb4eceb46082f",
+                    "task_64abe8b68e8e5aac",
+                    "task_64bbe13136c6c72b",
+                    "task_64e3e441403808b4",
+                    "task_64fdf1bc7b565c0f",
+                    "task_65e1242d8f5b9ebc",
+                    "task_683a421fb984357d",
+                    "task_686bcb377ad1b40e",
+                    "task_6877cdee2dd6d268",
+                    "task_69c2997adb70a006",
+                    "task_69d66327ed283888",
+                    "task_6a3e57565c8ff337",
+                    "task_6ab54ae54304f2d8",
+                    "task_6ad16106edf74683",
+                    "task_6b6ccb25d386104e",
+                    "task_6b954fef7541ca74",
+                    "task_6bf8eda434dc4753",
+                    "task_6c0102f472f6b5a7",
+                    "task_6cd88eca831ff539",
+                    "task_6da886f74ccc871e",
+                    "task_6de751c385aa2e08",
+                    "task_6decbc29d1df41f5",
+                    "task_6f568444a810fce2",
+                    "task_70425c0c252c83d5",
+                    "task_71a922a2c6786d7d",
+                    "task_72ffb23b404d9852",
+                    "task_732ef0ac9bbcb865",
+                    "task_73356bfdcf0983cd",
+                    "task_740532d0222b8633",
+                    "task_749d1d33ce6cc4a8",
+                    "task_75ebd48eb4d6b465",
+                    "task_771f9b3513bc7811",
+                    "task_780a9b7e75602035",
+                    "task_78d5063c9bd11f6e",
+                    "task_799cb79458f2d03c",
+                    "task_7a20fb51f605f615",
+                    "task_7b128350eab3218b",
+                    "task_7c2cc5865269e3d1",
+                    "task_7da956ee0779560e",
+                    "task_7e0272bba5dbdf66",
+                    "task_7e4dc1cb2f487614",
+                    "task_7e95009447e31f8e",
+                    "task_7efae166a674c1af",
+                    "task_7fa6e2c37598ddbc",
+                    "task_809ef1c8613034b3",
+                    "task_80e816a1687dfa82",
+                    "task_817784cf2b06fdb8",
+                    "task_823c7bccfca06860",
+                    "task_8276a6b450c06b35",
+                    "task_833159921403d7cd",
+                    "task_83426cff642b470e",
+                    "task_83cc07401d20deb0",
+                    "task_8635b1a6333bf9cb",
+                    "task_8829f20ec454e5da",
+                    "task_8a7d366fa236c49b",
+                    "task_8aa9c566d34b9059",
+                    "task_8c17504a05a7bdef",
+                    "task_8ca83ddb908bfeb9",
+                    "task_8cea8ea67f002227",
+                    "task_8cff43c9e44042db",
+                    "task_8daaec693e878a97",
+                    "task_8dd1ff8d0981079f",
+                    "task_8ed128adfa438d00",
+                    "task_8fa0f4240968ec41",
+                    "task_8faeb51f53fc67c3",
+                    "task_8fdb87c79b7ccdf7",
+                    "task_90346ff12e1570f6",
+                    "task_91016e3fbc2e9463",
+                    "task_92a12d4f55af3c26",
+                    "task_92abce0dfd828aea",
+                    "task_92dfbeae762d356c",
+                    "task_93c8bee2ec0bd9b3",
+                    "task_9419b3e636426239",
+                    "task_970ae66cb9e43138",
+                    "task_9773ddd4d442d3e4",
+                    "task_979a0e8bc47ca8db",
+                    "task_97ceaddafe196c9d",
+                    "task_982ad2f5dbb01397",
+                    "task_98fdbe31c48594de",
+                    "task_9935900baad12eba",
+                    "task_9952eea5db08e009",
+                    "task_9acfd9da37a8b3b4",
+                    "task_9b8f82b74dccf769",
+                    "task_9bcaa392c8594137",
+                    "task_9c93786cc92c6e63",
+                    "task_9e1a162a5312eb31",
+                    "task_9e7fc3d3f7ac14f0",
+                    "task_9ea76530e9e3c5ae",
+                    "task_9f1f35a9c7698f47",
+                    "task_9f403d4f47b6bfa9",
+                    "task_a0d3a213595632e7",
+                    "task_a14b6468203ea807",
+                    "task_a173be1a12189a77",
+                    "task_a1866e9e0e450ef7",
+                    "task_a1aa0d05644d3ccb",
+                    "task_a1bb0c628ecb8bb0",
+                    "task_a2a08ca4a3ec8c28",
+                    "task_a2eae2b4be5dddd5",
+                    "task_a33f8982f229cea5",
+                    "task_a53a2418746c8148",
+                    "task_a5fbd43244790d7c",
+                    "task_a6740399a731951e",
+                    "task_a74aea625f474a30",
+                    "task_a7bac10124b81e71",
+                    "task_a7da8a9515525cd1",
+                    "task_a82353a1269510e9",
+                    "task_a846c07281ed6371",
+                    "task_a964550b3392d9a5",
+                    "task_aaf9021425a1a627",
+                    "task_aba06d0e952cf639",
+                    "task_acf5c3af02c603c9",
+                    "task_ad24ba4a1ba649bb",
+                    "task_ad2b31fcc18e8441",
+                    "task_ae390f743d8572b8",
+                    "task_ae5324ac298e4db8",
+                    "task_afdcad88f1c7ea64",
+                    "task_b0a1d8e78401ad72",
+                    "task_b137d26c13260369",
+                    "task_b13aa465330c7e18",
+                    "task_b155d91f0b321be8",
+                    "task_b227b472bf93dfca",
+                    "task_b47ad079536d1ecb",
+                    "task_b4892c02c23e30e4",
+                    "task_b5888ed442056b8b",
+                    "task_b5d24a38d4e39079",
+                    "task_b612f59bfe995fd1",
+                    "task_b78286821b544185",
+                    "task_b7b003ec6e72b2dc",
+                    "task_b889d6539fd09573",
+                    "task_b8a190c6ff330026",
+                    "task_b9dd9dd3e978de45",
+                    "task_bb0cfc51cdc86587",
+                    "task_bc0a16b159ff4867",
+                    "task_bcaaa4aed57c95ac",
+                    "task_bd3218dc72164479",
+                    "task_be878d59bd011cb1",
+                    "task_bf1bf73a5efd8d47",
+                    "task_c01399fb769c7e7f",
+                    "task_c10c3ea61ab15805",
+                    "task_c1a2e44827b1af03",
+                    "task_c1e3611d10c6b8ac",
+                    "task_c28fcd6272042373",
+                    "task_c290c737f61f874b",
+                    "task_c3c5c43d1e9e208a",
+                    "task_c41b52565ea2ff1c",
+                    "task_c4c6aa0cf5b8194b",
+                    "task_c556c26c28cf31b3",
+                    "task_c6dd45730508b538",
+                    "task_c7bd399d74b45f69",
+                    "task_c8f8480bd686e558",
+                    "task_c94978ae3847b0ff",
+                    "task_c986df794b029929",
+                    "task_c997c2c998b74b3e",
+                    "task_cb582a37617c0d2d",
+                    "task_cd3d8675e9d54603",
+                    "task_ce0d90f03e7cd14a",
+                    "task_ceb92662d08e1ef6",
+                    "task_cfbab8d1f7c4b011",
+                    "task_d0093c1079528ab2",
+                    "task_d13274c760ba9cc6",
+                    "task_d206024b391dd59d",
+                    "task_d2827913311f50e0",
+                    "task_d3b679210a82a97c",
+                    "task_d5350466523960d3",
+                    "task_d655dea9c57eb5cf",
+                    "task_d7e0f1dbdac4a036",
+                    "task_d800a629bb091528",
+                    "task_d82249f3a7c24741",
+                    "task_da4ea40f85452fa1",
+                    "task_da87d352e6ad5ae2",
+                    "task_dbc7be07e1390310",
+                    "task_dbd9a4c3c291523a",
+                    "task_dc8a93374749b302",
+                    "task_e033f198c8d36059",
+                    "task_e136ca0abf7c07bf",
+                    "task_e1c7cd41d9a36483",
+                    "task_e1dafe5375b1ccce",
+                    "task_e2f36014823e41d7",
+                    "task_e30d9e3068404702",
+                    "task_e34abb9c08716ec3",
+                    "task_e4359b2f19b174ab",
+                    "task_e4c4cff3b959dc04",
+                    "task_e53050fdba29d774",
+                    "task_e55383fe139ca4dd",
+                    "task_e569fae32ffd3d94",
+                    "task_e5b95a38ca2b5382",
+                    "task_e6f54ee329898918",
+                    "task_e7003dae66f1c4ac",
+                    "task_e8866c16d469a46b",
+                    "task_e9cfeb167ae738b0",
+                    "task_eae3c336360995bb",
+                    "task_ec67f5694b25c848",
+                    "task_ec6976c5b10c27eb",
+                    "task_edb36bf4dfe9d01e",
+                    "task_ee32acd5c93dadcd",
+                    "task_ef1cdbd0b77a9f31",
+                    "task_f0c669fc7b9dc200",
+                    "task_f2a54d1746cdc050",
+                    "task_f399582e52d5faff",
+                    "task_f598558ccffc6580",
+                    "task_f6047045d2a1763d",
+                    "task_f8c0273ef7edb29a",
+                    "task_f90200e50618fbe7",
+                    "task_f93482e467a50b8e",
+                    "task_f97042dc4051f3f5",
+                    "task_f9afd69481d4fba5",
+                    "task_f9efbea952079527",
+                    "task_faaf88e916f14fa4",
+                    "task_fab207b469867fd2",
+                    "task_fc757075f3497715",
+                    "task_fc84a48541efd32a",
+                    "task_fe1a6c1eb5424b29",
+                    "task_fe38554d66daaeb5",
+                    "task_ff367c4ae67a577c",
+                    "task_ff8259b2004322c0",
+                    "task_ffd1d154a6de728b"
+                  ]
+                },
+                "failed_runs": 1030,
+                "recent_runs": [
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_d3d6576b6869",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:46:15.875259+00:00",
+                    "runtime_ms": 100604.669,
+                    "status_code": 200,
+                    "task_id": "task_c73fff1155d6eec6",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_ad5b0e05be1b",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:46:15.167728+00:00",
+                    "runtime_ms": 99200.0,
+                    "status_code": 200,
+                    "task_id": "task_c73fff1155d6eec6",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_80f296910d15",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:44:29.582552+00:00",
+                    "runtime_ms": 3536.259,
+                    "status_code": 500,
+                    "task_id": "task_977bed226e8818bc",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_41f55b81d41b",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:44:28.737971+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_977bed226e8818bc",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_037ec693a1a2",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:44:19.862722+00:00",
+                    "runtime_ms": 71957.24,
+                    "status_code": 200,
+                    "task_id": "task_7c8feca61b178b24",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_39de19e5ec2d",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:44:19.038100+00:00",
+                    "runtime_ms": 70600.0,
+                    "status_code": 200,
+                    "task_id": "task_7c8feca61b178b24",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_a5a17cc93320",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:43:02.179722+00:00",
+                    "runtime_ms": 3513.964,
+                    "status_code": 500,
+                    "task_id": "task_a86a364a5854e8fd",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_67277976fbc4",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:43:01.351221+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_a86a364a5854e8fd",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_69da5da49a8f",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:42:52.612251+00:00",
+                    "runtime_ms": 78289.863,
+                    "status_code": 200,
+                    "task_id": "task_d9197bc83ae2a638",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_165208ecb8bf",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:42:51.846823+00:00",
+                    "runtime_ms": 76900.0,
+                    "status_code": 200,
+                    "task_id": "task_d9197bc83ae2a638",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_f993a11a9677",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:41:28.714942+00:00",
+                    "runtime_ms": 3521.144,
+                    "status_code": 500,
+                    "task_id": "task_cb08b555e5889868",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_2a5cbe0e3832",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:41:27.846595+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_cb08b555e5889868",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_c9eaf98b0046",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:41:18.709677+00:00",
+                    "runtime_ms": 453842.529,
+                    "status_code": 200,
+                    "task_id": "task_e90f5228852c4a7e",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_f6687c0f311b",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:41:17.981276+00:00",
+                    "runtime_ms": 452400.0,
+                    "status_code": 200,
+                    "task_id": "task_e90f5228852c4a7e",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_26df087c0d9c",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:28.795058+00:00",
+                    "runtime_ms": 12.586,
+                    "status_code": 500,
+                    "task_id": "task_db4185aa30211099",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_9732023f597f",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:28.463348+00:00",
+                    "runtime_ms": 36.713,
+                    "status_code": 500,
+                    "task_id": "task_cdbe9ff9dfff8d2f",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_01f53625d2df",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:28.131959+00:00",
+                    "runtime_ms": 12.56,
+                    "status_code": 500,
+                    "task_id": "task_b1620eadcb1c043e",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_14feb0bbfb9f",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:27.657811+00:00",
+                    "runtime_ms": 31.434,
+                    "status_code": 500,
+                    "task_id": "task_8407b2ed2e6cded0",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_1ec41a409799",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:27.355662+00:00",
+                    "runtime_ms": 10.745,
+                    "status_code": 500,
+                    "task_id": "task_4976b0129d7c6d24",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_c24fb1c0be2c",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:27.020475+00:00",
+                    "runtime_ms": 30.0,
+                    "status_code": 500,
+                    "task_id": "task_e49a493740e2df68",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_58fa1e6847c8",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:26.682550+00:00",
+                    "runtime_ms": 13.704,
+                    "status_code": 500,
+                    "task_id": "task_eaad6c6d937ed719",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_11c463e490b9",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:26.363375+00:00",
+                    "runtime_ms": 29.286,
+                    "status_code": 500,
+                    "task_id": "task_9a2c6c08ba738a64",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_7e19c42b69d9",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:26.047273+00:00",
+                    "runtime_ms": 19.976,
+                    "status_code": 500,
+                    "task_id": "task_fc72583a7af21c3f",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_b9eff4e6cfcc",
+                    "executor": "unknown",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:35:25.680096+00:00",
+                    "runtime_ms": 44.825,
+                    "status_code": 500,
+                    "task_id": "task_2b2902208ff0f504",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_acf1a3f82cab",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:33:38.959554+00:00",
+                    "runtime_ms": 3599.577,
+                    "status_code": 500,
+                    "task_id": "task_01e59d492ec0d19c",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_d6b5fbe3243a",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:33:38.103846+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_01e59d492ec0d19c",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_28a10ab6e54d",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:33:29.482688+00:00",
+                    "runtime_ms": 87787.035,
+                    "status_code": 200,
+                    "task_id": "task_c81a24c6726666b6",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_f973e51d12db",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:33:28.768534+00:00",
+                    "runtime_ms": 86400.0,
+                    "status_code": 200,
+                    "task_id": "task_c81a24c6726666b6",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_6c418035595c",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:31:55.830070+00:00",
+                    "runtime_ms": 3536.891,
+                    "status_code": 500,
+                    "task_id": "task_792c1f1b5b4fe049",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_c7ef097c5465",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:31:54.956583+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_792c1f1b5b4fe049",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_4c3b0c1e3388",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:31:46.072380+00:00",
+                    "runtime_ms": 60637.63,
+                    "status_code": 200,
+                    "task_id": "task_804eea04642d41a3",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_41f30db68cc3",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:31:45.327260+00:00",
+                    "runtime_ms": 59100.0,
+                    "status_code": 200,
+                    "task_id": "task_804eea04642d41a3",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_cc78d63e2926",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:30:39.475870+00:00",
+                    "runtime_ms": 3529.717,
+                    "status_code": 500,
+                    "task_id": "task_0de23518bb73e2dd",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_2ff62abf54e3",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:30:38.641478+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_0de23518bb73e2dd",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_52d56b9d1953",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:30:29.526785+00:00",
+                    "runtime_ms": 118942.638,
+                    "status_code": 200,
+                    "task_id": "task_cb65806c11337939",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_9a0f827ab8df",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:30:28.625585+00:00",
+                    "runtime_ms": 117600.0,
+                    "status_code": 200,
+                    "task_id": "task_cb65806c11337939",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_87c5b387223a",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:28:23.750151+00:00",
+                    "runtime_ms": 382219.075,
+                    "status_code": 200,
+                    "task_id": "task_7ddb3ec35a582745",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_369a764263e3",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:28:23.068616+00:00",
+                    "runtime_ms": 288600.0,
+                    "status_code": 200,
+                    "task_id": "task_7ddb3ec35a582745",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_8e93fd38ee47",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:23:27.265307+00:00",
+                    "runtime_ms": 76721.687,
+                    "status_code": 200,
+                    "task_id": "task_e1dcfb21be427fd3",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_5c8eca58bfd1",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:23:26.515228+00:00",
+                    "runtime_ms": 75000.0,
+                    "status_code": 200,
+                    "task_id": "task_e1dcfb21be427fd3",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_67069cee7b56",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:22:05.387931+00:00",
+                    "runtime_ms": 3851.925,
+                    "status_code": 500,
+                    "task_id": "task_7ddb3ec35a582745",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_46d2a16e780b",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:22:04.228958+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_7ddb3ec35a582745",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_d9970ab7c8db",
+                    "executor": "cursor",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:21:56.863690+00:00",
+                    "runtime_ms": 1891472.883,
+                    "status_code": 500,
+                    "task_id": "task_a3fd39232e4b17a4",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_5f391ef87ee3",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:21:56.386427+00:00",
+                    "runtime_ms": 1935210.806,
+                    "status_code": 500,
+                    "task_id": "task_e521acf7e3d418e7",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_02a382be69c7",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:14:39.574875+00:00",
+                    "runtime_ms": 3638.53,
+                    "status_code": 500,
+                    "task_id": "task_e81d372625ce535e",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_e6e9559cc269",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:14:38.531693+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_e81d372625ce535e",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_ee3a191b4292",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:14:29.406356+00:00",
+                    "runtime_ms": 87097.145,
+                    "status_code": 200,
+                    "task_id": "task_56ba833043ab53c7",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_ea074c9773fd",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:14:28.376162+00:00",
+                    "runtime_ms": 85600.0,
+                    "status_code": 200,
+                    "task_id": "task_56ba833043ab53c7",
+                    "tool": "codex"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:agent-task-completion",
+                    "event_id": "rt_224be0e0db97",
+                    "executor": "openclaw",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:12:55.539675+00:00",
+                    "runtime_ms": 4192.972,
+                    "status_code": 500,
+                    "task_id": "task_1f33c064a5daf6d1",
+                    "tool": "agent-task-completion"
+                  },
+                  {
+                    "agent_id": "openai-codex",
+                    "endpoint": "/tool:codex",
+                    "event_id": "rt_f28658f4e099",
+                    "executor": "openai-codex",
+                    "is_openai_codex": true,
+                    "provider": "openai-codex",
+                    "recorded_at": "2026-02-27T10:12:54.444626+00:00",
+                    "runtime_ms": 2000.0,
+                    "status_code": 500,
+                    "task_id": "task_1f33c064a5daf6d1",
+                    "tool": "codex"
+                  }
+                ],
+                "success_rate": 0.4998,
+                "success_runs": 1029,
+                "tracked_runs": 2059
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 525.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:30.157737Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_claude_1772189250",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": null,
+                "id": "models_visible",
+                "label": "Claude visible models",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 9.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "probe"
+              },
+              {
+                "evidence_source": "runtime_events",
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 525.0,
+                "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+                "validation_state": "derived",
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "Claude models probe succeeded, but no request/token remaining headers were returned.",
+              "Anthropic messages quota probe failed: Client error '404 Not Found' for url 'https://api.anthropic.com/v1/messages'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "official_records": [
+              "https://api.anthropic.com/v1/models",
+              "https://docs.anthropic.com/en/api/models-list"
+            ],
+            "provider": "claude",
+            "raw": {
+              "models_count": 9,
+              "probe_url": "https://api.anthropic.com/v1/models",
+              "rate_limit_headers": {
+                "anthropic-ratelimit-requests-limit": null,
+                "anthropic-ratelimit-requests-remaining": null,
+                "anthropic-ratelimit-tokens-limit": null,
+                "anthropic-ratelimit-tokens-remaining": null
+              },
+              "runtime_task_runs": 525
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 20.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:30.358090Z",
+            "cost_usd": null,
+            "data_source": "runtime_events",
+            "id": "provider_claude_code_1772189250",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": "runtime_events",
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 20.0,
+                "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+                "validation_state": "derived",
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "Claude Code CLI not found in PATH; using runtime execution evidence."
+            ],
+            "official_records": [
+              "https://docs.anthropic.com/en/api/models-list"
+            ],
+            "provider": "claude-code",
+            "raw": {
+              "runtime_task_runs": 20
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 283.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:30.932564Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_github_1772189250",
+            "kind": "github",
+            "metrics": [
+              {
+                "evidence_source": null,
+                "id": "rest_requests",
+                "label": "GitHub REST core requests",
+                "limit": 5000.0,
+                "remaining": 4717.0,
+                "unit": "requests",
+                "used": 283.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "hourly"
+              }
+            ],
+            "notes": [
+              "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+            ],
+            "official_records": [
+              "https://api.github.com/rate_limit",
+              "https://api.github.com/users/seeker71/settings/billing/actions",
+              "https://docs.github.com/en/rest/rate-limit/rate-limit",
+              "https://docs.github.com/en/rest/billing/billing"
+            ],
+            "provider": "github",
+            "raw": {
+              "billing_url": "https://api.github.com/users/seeker71/settings/billing/actions",
+              "included_minutes": 0.0,
+              "minutes_used_breakdown": null,
+              "rate_limit": {
+                "actions_runner_registration": {
+                  "limit": 10000,
+                  "remaining": 10000,
+                  "reset": 1772192850,
+                  "used": 0
+                },
+                "audit_log": {
+                  "limit": 1750,
+                  "remaining": 1750,
+                  "reset": 1772192850,
+                  "used": 0
+                },
+                "audit_log_streaming": {
+                  "limit": 15,
+                  "remaining": 15,
+                  "reset": 1772192850,
+                  "used": 0
+                },
+                "code_scanning_autofix": {
+                  "limit": 10,
+                  "remaining": 10,
+                  "reset": 1772189310,
+                  "used": 0
+                },
+                "code_scanning_upload": {
+                  "limit": 5000,
+                  "remaining": 4717,
+                  "reset": 1772190817,
+                  "used": 283
+                },
+                "code_search": {
+                  "limit": 10,
+                  "remaining": 10,
+                  "reset": 1772189310,
+                  "used": 0
+                },
+                "core": {
+                  "limit": 5000,
+                  "remaining": 4717,
+                  "reset": 1772190817,
+                  "used": 283
+                },
+                "dependency_sbom": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1772189310,
+                  "used": 0
+                },
+                "dependency_snapshots": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1772189310,
+                  "used": 0
+                },
+                "graphql": {
+                  "limit": 5000,
+                  "remaining": 4917,
+                  "reset": 1772191126,
+                  "used": 83
+                },
+                "integration_manifest": {
+                  "limit": 5000,
+                  "remaining": 5000,
+                  "reset": 1772192850,
+                  "used": 0
+                },
+                "scim": {
+                  "limit": 15000,
+                  "remaining": 15000,
+                  "reset": 1772192850,
+                  "used": 0
+                },
+                "search": {
+                  "limit": 30,
+                  "remaining": 30,
+                  "reset": 1772189310,
+                  "used": 0
+                },
+                "source_import": {
+                  "limit": 100,
+                  "remaining": 100,
+                  "reset": 1772189310,
+                  "used": 0
+                }
+              },
+              "rate_limit_url": "https://api.github.com/rate_limit",
+              "total_minutes_used": 0.0
+            },
+            "status": "ok",
+            "usage_per_time": "283.0 requests/hour",
+            "usage_remaining": 4717.0,
+            "usage_remaining_unit": "requests"
+          },
+          {
+            "actual_current_usage": 1303.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:31.945376Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_openai_1772189251",
+            "kind": "openai",
+            "metrics": [
+              {
+                "evidence_source": "runtime_events",
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 1303.0,
+                "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+                "validation_state": "derived",
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769597250&end_time=1772189250'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769597250&end_time=1772189250'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT to enforce hard Codex window limits.",
+              "provider observed in runtime usage but key/config is missing or provider checks are failing"
+            ],
+            "official_records": [
+              "https://api.openai.com/v1/organization/usage/completions",
+              "https://api.openai.com/v1/organization/costs",
+              "https://platform.openai.com/docs/api-reference/usage",
+              "https://platform.openai.com/docs/api-reference/costs",
+              "https://platform.openai.com/docs/api-reference/models/list"
+            ],
+            "provider": "openai",
+            "raw": {
+              "cost_records": 0,
+              "costs_url": "https://api.openai.com/v1/organization/costs",
+              "runtime_task_runs": 1303,
+              "usage_records": 0,
+              "usage_url": "https://api.openai.com/v1/organization/usage/completions",
+              "window_end_unix": 1772189250,
+              "window_start_unix": 1769597250
+            },
+            "status": "degraded",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 344.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.071257Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_openrouter_1772189252",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": null,
+                "id": "models_visible",
+                "label": "OpenRouter visible models",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 344.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "probe"
+              }
+            ],
+            "notes": [
+              "OpenRouter models probe succeeded, but no request/token remaining headers were returned."
+            ],
+            "official_records": [
+              "https://openrouter.ai/api/v1/models",
+              "https://openrouter.ai/docs/api-reference/overview"
+            ],
+            "provider": "openrouter",
+            "raw": {
+              "models_count": 344,
+              "probe_url": "https://openrouter.ai/api/v1/models",
+              "rate_limit_headers": {
+                "ratelimit-limit": null,
+                "ratelimit-remaining": null,
+                "x-ratelimit-limit": null,
+                "x-ratelimit-limit-requests": null,
+                "x-ratelimit-limit-tokens": null,
+                "x-ratelimit-remaining": null,
+                "x-ratelimit-remaining-requests": null,
+                "x-ratelimit-remaining-tokens": null
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": null,
+            "actual_current_usage_unit": null,
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.072032Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_anthropic_1772189252",
+            "kind": "custom",
+            "metrics": [],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "official_records": [],
+            "provider": "anthropic",
+            "raw": {
+              "configured_env_keys": [
+                "ANTHROPIC_API_KEY",
+                "ANTHROPIC_AUTH_TOKEN"
+              ],
+              "missing_env_keys": []
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 1008.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.072045Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_openclaw_1772189252",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": "runtime_events",
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 1008.0,
+                "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+                "validation_state": "derived",
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "official_records": [],
+            "provider": "openclaw",
+            "raw": {
+              "configured_env_keys": [
+                "OPENCLAW_API_KEY"
+              ],
+              "missing_env_keys": [],
+              "runtime_task_runs": 1008
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 42.0,
+            "actual_current_usage_unit": "tasks",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.119426Z",
+            "cost_usd": null,
+            "data_source": "configuration_only",
+            "id": "provider_cursor_1772189252",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": "runtime_events",
+                "id": "runtime_task_runs",
+                "label": "Runtime task runs",
+                "limit": null,
+                "remaining": null,
+                "unit": "tasks",
+                "used": 42.0,
+                "validation_detail": "Derived from runtime telemetry events; not a provider-reported quota value.",
+                "validation_state": "derived",
+                "window": "rolling"
+              }
+            ],
+            "notes": [
+              "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+              "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution.",
+              "provider observed in runtime usage but key/config is missing or provider checks are failing"
+            ],
+            "official_records": [],
+            "provider": "cursor",
+            "raw": {
+              "agent_binary": "",
+              "cli_probe_detail": "",
+              "cli_probe_ok": false,
+              "configured_env_keys": [],
+              "limits": {
+                "cursor_subscription_8h_limit": 0,
+                "cursor_subscription_week_limit": 0
+              },
+              "missing_env_keys": [
+                "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+              ],
+              "runtime_task_runs": 42
+            },
+            "status": "unavailable",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          },
+          {
+            "actual_current_usage": 525.6681472249307,
+            "actual_current_usage_unit": "gb",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.647944Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_db_host_1772189252",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": "pg_stat_database+telemetry_meta",
+                "id": "db_host_egress_monthly_estimated",
+                "label": "DB host estimated egress (monthly)",
+                "limit": 5.0,
+                "remaining": 0.0,
+                "unit": "gb",
+                "used": 525.6681472249307,
+                "validation_detail": "Estimated from pg_stat_database tuple deltas and relation-size-derived row bytes, with safety factor 1.25.",
+                "validation_state": "inferred",
+                "window": "monthly"
+              },
+              {
+                "evidence_source": "runtime_events",
+                "id": "api_events_24h",
+                "label": "API events touching DB host (24h)",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 1500.0,
+                "validation_detail": "Derived from API runtime-event counts as an egress-safe proxy for DB load.",
+                "validation_state": "derived",
+                "window": "daily"
+              },
+              {
+                "evidence_source": "runtime_events+env_limits",
+                "id": "db_host_window_5h",
+                "label": "DB host request window (5h)",
+                "limit": 250.0,
+                "remaining": 0.0,
+                "unit": "requests",
+                "used": 250.0,
+                "validation_detail": "Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
+                "validation_state": "derived",
+                "window": "hourly"
+              },
+              {
+                "evidence_source": "runtime_events+env_limits",
+                "id": "db_host_window_week",
+                "label": "DB host request window (7d)",
+                "limit": 4000.0,
+                "remaining": 2500.0,
+                "unit": "requests",
+                "used": 1500.0,
+                "validation_detail": "Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
+                "validation_state": "derived",
+                "window": "weekly"
+              }
+            ],
+            "notes": [
+              "DB-host monthly egress metric is estimated from PostgreSQL counters; request windows are safety proxies."
+            ],
+            "official_records": [
+              "https://www.postgresql.org/docs/current/monitoring-stats.html",
+              "https://docs.railway.com/reference/metrics"
+            ],
+            "provider": "db-host",
+            "raw": {
+              "avg_row_bytes": 479.469,
+              "database_engine": "postgresql",
+              "database_host": "postgres.railway.internal",
+              "database_name": "railway",
+              "database_present": true,
+              "delta_rows_since_last_sample": 8775442,
+              "egress_measurement_mode": "pg_stat_database_delta_estimate",
+              "estimator_state_key": "db_egress_tracker::postgres.railway.internal:railway",
+              "monthly_limit_gb": 5.0,
+              "monthly_used_gb": 525.668147,
+              "pg_sample_collected_at": "2026-02-27T10:47:32.153309+00:00",
+              "pg_stats_reset": "",
+              "safety_factor": 1.25
+            },
+            "status": "ok",
+            "usage_per_time": "17.5223 gb/day",
+            "usage_remaining": 0.0,
+            "usage_remaining_unit": "gb"
+          },
+          {
+            "actual_current_usage": 1.0,
+            "actual_current_usage_unit": "requests",
+            "capacity_tasks_per_day": null,
+            "collected_at": "2026-02-27T10:47:32.755662Z",
+            "cost_usd": null,
+            "data_source": "provider_api",
+            "id": "provider_railway_1772189252",
+            "kind": "custom",
+            "metrics": [
+              {
+                "evidence_source": null,
+                "id": "api_probe",
+                "label": "Railway API probe",
+                "limit": null,
+                "remaining": null,
+                "unit": "requests",
+                "used": 1.0,
+                "validation_detail": null,
+                "validation_state": null,
+                "window": "probe"
+              }
+            ],
+            "notes": [
+              "Railway probe succeeded, but no request remaining headers were returned."
+            ],
+            "official_records": [
+              "https://backboard.railway.com/graphql/v2",
+              "https://docs.railway.com/reference/public-api"
+            ],
+            "provider": "railway",
+            "raw": {
+              "probe_url": "https://backboard.railway.com/graphql/v2",
+              "rate_limit_headers": {
+                "ratelimit-limit": null,
+                "ratelimit-remaining": null,
+                "x-ratelimit-limit": null,
+                "x-ratelimit-remaining": null
+              }
+            },
+            "status": "ok",
+            "usage_per_time": null,
+            "usage_remaining": null,
+            "usage_remaining_unit": null
+          }
+        ],
+        "tracked_providers": 11,
+        "unavailable_providers": [
+          "openai",
+          "cursor"
+        ]
+      },
+      "ok": true,
+      "status": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage"
+    },
+    "usage_readiness": {
+      "error": "",
+      "json": {
+        "all_required_ready": false,
+        "blocking_issues": [
+          "cursor: status=unavailable, configured=False",
+          "openai: status=degraded, configured=True"
+        ],
+        "generated_at": "2026-02-27T10:47:33.523033Z",
+        "limit_telemetry": {
+          "coverage_ratio": 0.2,
+          "hard_limit_claim_ready": false,
+          "hard_limit_coverage_ratio": 0.0,
+          "providers_considered": 10,
+          "providers_missing_limit_metrics": [
+            "anthropic",
+            "claude",
+            "claude-code",
+            "cursor",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ],
+          "providers_partial_limit_metrics": [],
+          "providers_with_limit_metrics": 2,
+          "providers_with_remaining_metrics": 2,
+          "providers_with_validated_remaining_metrics": 0,
+          "required_or_active_missing_hard_limit_telemetry": [
+            "claude",
+            "claude-code",
+            "cursor",
+            "github",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ],
+          "required_or_active_provider_status": {
+            "claude": {
+              "active_usage": 525,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "claude-code": {
+              "active_usage": 20,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "cursor": {
+              "active_usage": 42,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "github": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": true,
+              "has_remaining_metrics": true,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [
+                "rest_requests"
+              ],
+              "required": true,
+              "state": "derived_or_unvalidated"
+            },
+            "openai": {
+              "active_usage": 1303,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "openclaw": {
+              "active_usage": 1008,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "openrouter": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            },
+            "railway": {
+              "active_usage": 0,
+              "evidence_sources": [],
+              "has_limit_metrics": false,
+              "has_remaining_metrics": false,
+              "has_validated_remaining": false,
+              "quota_metric_ids": [],
+              "required": true,
+              "state": "missing_limits"
+            }
+          },
+          "required_or_active_providers": [
+            "claude",
+            "claude-code",
+            "cursor",
+            "github",
+            "openai",
+            "openclaw",
+            "openrouter",
+            "railway"
+          ]
+        },
+        "providers": [
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "configuration keys detected"
+            ],
+            "provider": "anthropic",
+            "required": false,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "Claude models probe succeeded, but no request/token remaining headers were returned.",
+              "Anthropic messages quota probe failed: Client error '404 Not Found' for url 'https://api.anthropic.com/v1/messages'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "claude",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "Claude Code CLI not found in PATH; using runtime execution evidence.",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "claude-code",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "internal",
+            "missing_env": [],
+            "notes": [
+              "Execution success rate 49.98%"
+            ],
+            "provider": "coherence-internal",
+            "required": true,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": false,
+            "kind": "custom",
+            "missing_env": [
+              "one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)"
+            ],
+            "notes": [
+              "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+              "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution.",
+              "provider observed in runtime usage but key/config is missing or provider checks are failing",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "cursor",
+            "required": true,
+            "severity": "critical",
+            "status": "unavailable"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "DB-host monthly egress metric is estimated from PostgreSQL counters; request windows are safety proxies."
+            ],
+            "provider": "db-host",
+            "required": false,
+            "severity": "info",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "github",
+            "missing_env": [],
+            "notes": [
+              "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+              "limit_telemetry_state=derived_or_unvalidated"
+            ],
+            "provider": "github",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "openai",
+            "missing_env": [],
+            "notes": [
+              "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769597250&end_time=1772189250'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769597250&end_time=1772189250'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+              "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT to enforce hard Codex window limits.",
+              "provider observed in runtime usage but key/config is missing or provider checks are failing",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "openai",
+            "required": true,
+            "severity": "critical",
+            "status": "degraded"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "configuration keys detected",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "openclaw",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "OpenRouter models probe succeeded, but no request/token remaining headers were returned.",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "openrouter",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          },
+          {
+            "configured": true,
+            "kind": "custom",
+            "missing_env": [],
+            "notes": [
+              "Railway probe succeeded, but no request remaining headers were returned.",
+              "limit_telemetry_state=missing_limits"
+            ],
+            "provider": "railway",
+            "required": true,
+            "severity": "warning",
+            "status": "ok"
+          }
+        ],
+        "recommendations": [
+          "Configure provider 'cursor' (one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)) and re-run /api/automation/usage/readiness.",
+          "Configure provider 'openai' (connectivity/runtime checks) and re-run /api/automation/usage/readiness.",
+          "Add validated limit+remaining telemetry for 'claude' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'claude-code' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'cursor' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'github' (current_state=derived_or_unvalidated) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'openai' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'openclaw' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'openrouter' (current_state=missing_limits) before making numeric-limit claims.",
+          "Add validated limit+remaining telemetry for 'railway' (current_state=missing_limits) before making numeric-limit claims."
+        ],
+        "required_providers": [
+          "claude",
+          "claude-code",
+          "coherence-internal",
+          "cursor",
+          "github",
+          "openai",
+          "openclaw",
+          "openrouter",
+          "railway"
+        ]
+      },
+      "ok": true,
+      "status": 200,
+      "url": "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    }
+  },
+  "repo_root": "/Users/ursmuff/.codex/worktrees/f273/Coherence-Network",
+  "route_decision_matrix": [
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "cursor",
+      "executor": "cursor",
+      "is_paid_provider": true,
+      "model": "cursor/auto",
+      "provider": "cursor",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "openai-codex",
+      "executor": "openclaw",
+      "is_paid_provider": true,
+      "model": "openclaw/gpt-5.3-codex-spark",
+      "provider": "openai-codex",
+      "task_type": "heal"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/default",
+      "provider": "claude",
+      "task_type": "spec"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/default",
+      "provider": "claude",
+      "task_type": "impl"
+    },
+    {
+      "billing_provider": "claude",
+      "executor": "auto",
+      "is_paid_provider": true,
+      "model": "claude/default",
+      "provider": "claude",
+      "task_type": "heal"
+    }
+  ],
+  "routing_policy_proof": [
+    {
+      "direction": "Change api/app/services/agent_service.py in this repo",
+      "policy_meta": {
+        "policy_applied": true,
+        "reason": "repo_scoped_question",
+        "repo_executor_preference": "cursor",
+        "task_fingerprint": "605bf13d4d901e990e2b10aa900a8d8e2fb10c7d2ed8dbd7c5848009519f3e54"
+      },
+      "selected_executor": "cursor",
+      "task_type": "impl"
+    },
+    {
+      "direction": "What is the long-term market outlook for coding agents?",
+      "policy_meta": {
+        "open_question_executor": "openclaw",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "ee83353db6f4b07ab4043cbb51d5b1f83af6b30a24520d29207607c0e5db14a8"
+      },
+      "selected_executor": "openclaw",
+      "task_type": "spec"
+    },
+    {
+      "direction": "Investigate provider readiness degradation in automation usage",
+      "policy_meta": {
+        "open_question_executor": "openclaw",
+        "policy_applied": true,
+        "reason": "open_question_default",
+        "task_fingerprint": "4398b3e2b572f4db4510404c48670ca01df72e639e5561ece349942c717f0edf"
+      },
+      "selected_executor": "openclaw",
+      "task_type": "heal"
+    }
+  ]
+}
