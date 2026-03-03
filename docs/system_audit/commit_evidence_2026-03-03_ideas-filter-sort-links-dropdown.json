@@ -1,0 +1,71 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/ideas-filter-sort-ux",
+  "commit_scope": "Clarify ideas page filtering/sorting with explicit controls, add header-based sorting, and replace open action with clickable title plus links dropdown.",
+  "files_owned": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-filter-sort-links-dropdown.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Ideas table now supports direct column-header sorting, clickable idea titles, and a per-row links dropdown replacing the standalone open button.",
+    "public_endpoints": [
+      "/ideas"
+    ],
+    "test_flows": [
+      "ideas-filter-controls",
+      "ideas-table-header-sort",
+      "ideas-title-and-links-dropdown"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_ideas_filter_sort_links_dropdown_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-filter-sort-links-dropdown.json"
+  ],
+  "change_files": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-filter-sort-links-dropdown.json"
+  ],
+  "change_intent": "runtime_fix"
+}
