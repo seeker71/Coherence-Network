@@ -1,0 +1,72 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/ideas-row-layout-md-breakpoint-20260303",
+  "commit_scope": "Restore row-based ideas presentation at common desktop/laptop widths by lowering ideas row breakpoint from lg to md while preserving sticky metric headers.",
+  "files_owned": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-row-layout-md-breakpoint.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PATH=\"/opt/homebrew/bin:$PATH\" make prompt-gate",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Ideas list keeps row layout and sticky column header at medium and larger viewport widths where users expect table-like scanning.",
+    "public_endpoints": [
+      "/ideas"
+    ],
+    "test_flows": [
+      "ideas-row-layout-desktop-medium-breakpoint"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_ideas_row_layout_md_breakpoint_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-row-layout-md-breakpoint.json"
+  ],
+  "change_files": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-row-layout-md-breakpoint.json"
+  ],
+  "change_intent": "runtime_fix"
+}
