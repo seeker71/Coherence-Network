@@ -18,3 +18,4 @@ One work item per line. Orchestrator processes in order. Prefix with spec filena
 13. specs/002-agent-orchestration-api.md — Any remaining agent API items
 14. Add or improve tests for existing API endpoints per specs
 15. Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md
+16. specs/007-meta-pipeline-backlog.md items 13-18 — Execute measured production improvements from docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json

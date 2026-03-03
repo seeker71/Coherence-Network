@@ -201,8 +201,42 @@ UsageEvent:
 - `api/app/routers/gates.py` — machine-access endpoint for public deploy contract report
 - `web/app/gates/page.tsx` — human-access report viewer for public deploy contract
 
+## Acceptance Tests
+
+- `api/tests/test_value_lineage.py::test_create_and_get_lineage_link_persists_data`
+- `api/tests/test_value_lineage.py::test_append_usage_events_updates_valuation_totals`
+- `api/tests/test_value_lineage.py::test_valuation_computes_roi_ratio_with_zero_cost_guard`
+- `api/tests/test_value_lineage.py::test_payout_preview_allocates_by_role_weights`
+- `api/tests/test_value_lineage.py::test_missing_lineage_returns_404_detail`
+- `api/tests/test_release_gate_service.py::test_public_deploy_contract_includes_value_lineage_e2e`
+
+## Verification
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+cd api && pytest -q tests/test_release_gate_service.py -k value_lineage
+./scripts/verify_web_api_deploy.sh
+curl -fsS https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract | jq .
+```
+
+Manual verification:
+- Create a lineage link, append at least one usage event, and verify payout preview from the same `lineage_id`.
+- Confirm `GET /api/value-lineage/links/{lineage_id}/valuation` returns deterministic totals and ROI.
+
 ## Out of Scope
 
 - On-chain payout execution
 - Fiat/crypto settlement integration
 - Dynamic weight governance beyond static defaults
+
+## Risks and Assumptions
+
+- Risk: usage/value signals may be noisy and could overstate value if event sources are not normalized.
+- Risk: payout attribution can be gamed if contributor-role assignment is not audited.
+- Assumption: static role weights are acceptable for initial release and can be governed later.
+- Assumption: persisted lineage and usage data remain available through API restarts and deploys.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up: add stronger anti-fraud/event-source trust scoring for usage events.
+- Follow-up: add role-weight governance policy and signed audit trail for role assignment changes.
