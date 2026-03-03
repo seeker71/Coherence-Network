@@ -15,7 +15,6 @@ from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_routing_service as routing_service
 from app.services import agent_task_store_service
-from app.services import failure_taxonomy_service
 
 # Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
 _OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "openrouter/free")  # Use OpenRouter free model as default
@@ -782,7 +781,7 @@ def _load_store_from_disk(*, include_output: bool = True) -> dict[str, dict[str,
         return {}
     if agent_task_store_service.enabled():
         loaded: dict[str, dict[str, Any]] = {}
-        for raw in agent_task_store_service.load_tasks(include_output=include_output):
+        for raw in agent_task_store_service.load_tasks():
             task = _deserialize_task(raw)
             if not task:
                 continue
@@ -834,6 +833,15 @@ def _ensure_store_loaded() -> None:
         _store_loaded = False
         _store_loaded_path = None
         _store_loaded_test_context = current_test
+
+    # In DB mode we reload on every call so multi-instance workers observe fresh state.
+    if agent_task_store_service.enabled():
+        _store.clear()
+        _store.update(_load_store_from_disk())
+        _store_loaded = True
+        _store_loaded_path = current_path
+        _store_loaded_test_context = current_test
+        return
 
     if _store_loaded and _store_loaded_path == current_path:
         return
@@ -1754,9 +1762,6 @@ def update_task(
         task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
-    current_status_value = _status_value(task.get("status"))
-    if current_status_value == "failed" and previous_status_value != "failed":
-        _record_task_failure_friction(task)
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))
     else:
