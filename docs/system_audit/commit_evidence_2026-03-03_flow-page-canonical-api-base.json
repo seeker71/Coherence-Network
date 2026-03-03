@@ -1,0 +1,74 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/flow-live-data-20260303",
+  "commit_scope": "Pin /flow production fetches to canonical Railway API base so Vercel page metrics cannot drift from production API data due environment override.",
+  "files_owned": [
+    "web/app/flow/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-canonical-api-base.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Vercel /flow contributor and contribution counts reflect the same canonical API dataset shown by direct production API checks.",
+    "public_endpoints": [
+      "/flow",
+      "/api/health-proxy",
+      "https://coherence-network-production.up.railway.app/api/contributors",
+      "https://coherence-network-production.up.railway.app/api/contributions"
+    ],
+    "test_flows": [
+      "vercel-flow-canonical-api-source"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_flow_page_canonical_api_base_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-canonical-api-base.json"
+  ],
+  "change_files": [
+    "web/app/flow/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-canonical-api-base.json"
+  ],
+  "change_intent": "runtime_fix"
+}
