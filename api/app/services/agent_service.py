@@ -43,7 +43,6 @@ _COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --rea
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
 _OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
-_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
 # Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -77,10 +76,7 @@ def _executor_policy_enabled() -> bool:
 
 
 def _normalize_executor(value: str | None, default: str = "claude") -> str:
-    candidate = (value or "").strip().lower()
-    if candidate in _EXECUTOR_VALUES:
-        return candidate
-    return default
+    return routing_service.normalize_executor(value, default=default)
 
 
 def _cheap_executor_default() -> str:
@@ -623,7 +619,12 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
-    if model.startswith("openclaw/") or command.startswith("openclaw "):
+    if (
+        model.startswith("openclaw/")
+        or model.startswith("clawwork/")
+        or command.startswith("openclaw ")
+        or command.startswith("clawwork ")
+    ):
         return "openclaw"
     if command.startswith("aider "):
         return "aider"
@@ -781,7 +782,7 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw'."""
+    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw' (clawwork alias)."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
     elif executor == "openclaw":
@@ -1180,7 +1181,7 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: claude|cursor|openclaw."""
+    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|openclaw|clawwork."""
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()

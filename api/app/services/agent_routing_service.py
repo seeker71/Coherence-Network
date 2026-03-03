@@ -44,7 +44,9 @@ OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
 }
 
-EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+_EXECUTOR_ALIASES = {"clawwork": "openclaw"}
+EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES + tuple(_EXECUTOR_ALIASES.keys())
 
 REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -79,7 +81,8 @@ def executor_policy_enabled() -> bool:
 
 def normalize_executor(value: str | None, default: str = "claude") -> str:
     candidate = (value or "").strip().lower()
-    if candidate in EXECUTOR_VALUES:
+    candidate = _EXECUTOR_ALIASES.get(candidate, candidate)
+    if candidate in _CANONICAL_EXECUTOR_VALUES:
         return candidate
     return default
 
@@ -101,9 +104,10 @@ def escalation_executor_default() -> str:
 
 
 def executor_binary_name(executor: str) -> str:
-    if executor == "cursor":
+    normalized = normalize_executor(executor, default=executor.strip().lower())
+    if normalized == "cursor":
         return "agent"
-    if executor == "openclaw":
+    if normalized == "openclaw":
         for candidate in ("openclaw", "codex"):
             if shutil.which(candidate):
                 return candidate
@@ -209,6 +213,7 @@ def apply_model_override(command: str, override: str) -> tuple[str, str]:
 
 
 def classify_provider(*, executor: str, model: str, command: str, worker_id: str | None) -> tuple[str, str, bool]:
+    normalized_executor = normalize_executor(executor, default=(executor or "").strip().lower())
     lower_model = (model or "").strip().lower()
     lower_command = (command or "").strip().lower()
     normalized_worker = (worker_id or "").strip().lower()
@@ -228,11 +233,11 @@ def classify_provider(*, executor: str, model: str, command: str, worker_id: str
         provider = "openai"
     elif lower_command.startswith("codex "):
         provider = "openai-codex"
-    elif executor == "openclaw":
+    elif normalized_executor == "openclaw":
         provider = "openclaw"
-    elif executor == "cursor":
+    elif normalized_executor == "cursor":
         provider = "cursor"
-    elif executor in {"claude", "aider"}:
+    elif normalized_executor in {"claude", "aider"}:
         provider = "claude"
 
     billing_provider = provider

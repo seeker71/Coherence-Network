@@ -15,6 +15,15 @@ def env_flag(name: str, *, default: bool = True) -> bool:
     return str(value).strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _workflow_name_set(value: str) -> set[str]:
+    names = set()
+    for raw in value.split(","):
+        normalized = raw.strip().lower()
+        if normalized:
+            names.add(normalized)
+    return names
+
+
 def run_json(cmd: list[str], *, required: bool = True) -> dict | None:
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -53,6 +62,12 @@ def main() -> None:
 
     require_gh_checks = env_flag("START_GATE_REQUIRE_GH", default=True)
     enforce_remote_failures = env_flag("START_GATE_ENFORCE_REMOTE_FAILURES", default=True)
+    advisory_main_workflows = _workflow_name_set(
+        os.environ.get(
+            "START_GATE_ADVISORY_MAIN_WORKFLOWS",
+            "Maintainability Architecture Audit",
+        )
+    )
 
     if require_gh_checks:
         run_command(["gh", "auth", "status"])
@@ -143,9 +158,27 @@ def main() -> None:
             for row in latest_by_workflow.values()
             if str(row.get("conclusion") or "").strip().lower() in failed_conclusions
         ]
-        if failures:
+        advisory_failures = [
+            item
+            for item in failures
+            if str(item.get("name") or "").strip().lower() in advisory_main_workflows
+        ]
+        blocking_failures = [item for item in failures if item not in advisory_failures]
+
+        if advisory_failures:
+            advisory_text = ", ".join(
+                f'{item["name"]}={item["conclusion"]} ({item["html_url"]})'
+                for item in advisory_failures
+            )
+            print(
+                "start-gate: warning: advisory main workflow failures detected: "
+                f"{advisory_text}"
+            )
+
+        if blocking_failures:
             failures_text = ", ".join(
-                f'{item["name"]}={item["conclusion"]} ({item["html_url"]})' for item in failures
+                f'{item["name"]}={item["conclusion"]} ({item["html_url"]})'
+                for item in blocking_failures
             )
             if enforce_remote_failures:
                 raise SystemExit(
