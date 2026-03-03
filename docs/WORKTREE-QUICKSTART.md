@@ -31,7 +31,22 @@ Mandatory branch-base parity check (before any edits):
 test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 ```
 
-If this fails, stop and reset thread base:
+Must pass all:
+- running in linked worktree (not primary workspace),
+- current worktree clean,
+- primary workspace clean,
+- latest `main` CI green,
+- no open PRs with failing checks.
+
+## Mandatory Local Guard (before commit/push)
+
+Enable local git hook enforcement once per worktree (can be done once per checkout):
+
+```bash
+make install-pre-push-hook
+```
+
+Always rebase to latest main first:
 
 ```bash
 git fetch origin main

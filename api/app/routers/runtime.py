@@ -4,12 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
 
-from app.models.runtime import (
-    EndpointAttentionReport,
-    RuntimeEvent,
-    RuntimeEventCreate,
-    WebViewPerformanceReport,
-)
+from app.models.runtime import EndpointAttentionReport, RuntimeEvent, RuntimeEventCreate
 from app.services import runtime_service
 
 router = APIRouter()
@@ -70,19 +65,19 @@ async def runtime_summary_by_endpoint(
     }
 
 
-@router.get("/runtime/endpoints/slow")
-async def runtime_slow_endpoints(
+@router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport)
+async def runtime_endpoint_attention(
     seconds: int = Query(3600, ge=60, le=2592000),
-    threshold_ms: int | None = Query(None, ge=1, le=300000),
-    limit: int = Query(50, ge=1, le=500),
-) -> dict:
-    threshold = int(threshold_ms) if threshold_ms is not None else runtime_service.slow_threshold_ms()
-    rows = runtime_service.slow_endpoints_report(seconds=seconds, threshold_ms=threshold, limit=limit)
-    return {
-        "window_seconds": seconds,
-        "threshold_ms": threshold,
-        "endpoints": [row.model_dump(mode="json") for row in rows],
-    }
+    min_event_count: int = Query(1, ge=1, le=5000),
+    attention_threshold: float = Query(40.0, ge=0.0, le=1000.0),
+    limit: int = Query(200, ge=1, le=2000),
+) -> EndpointAttentionReport:
+    return runtime_service.summarize_endpoint_attention(
+        seconds=seconds,
+        min_event_count=min_event_count,
+        attention_threshold=attention_threshold,
+        limit=limit,
+    )
 
 
 @router.post("/runtime/exerciser/run")

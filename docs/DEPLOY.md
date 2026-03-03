@@ -35,8 +35,6 @@ API service (`coherence-network`):
 - `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS=8` (guard retries per deploy check loop)
 - `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS=60` (seconds between retries)
 - `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS=600` (escalate when deployment contract blocked for >10 minutes)
-- `PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA=1` (strictly require `/api/health` to expose deployed SHA and match `main`)
-- `PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA=1` (strictly require `/api/health-proxy` to expose web deployed SHA and match `main`)
 - `PAID_TOOL_8H_LIMIT=300`
 - `PAID_TOOL_WEEK_LIMIT=2200`
 - `PAID_TOOL_WINDOW_BUDGET_FRACTION=0.333`
@@ -95,7 +93,18 @@ VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
 - TLS termination at proxy
 - Process manager (systemd, supervisord) for API and agent_runner
 
-## Oracle Cloud VM deployment (recommended path)
+- `RAILWAY_TOKEN`
+ - `RAILWAY_PROJECT_ID`
+ - `RAILWAY_ENVIRONMENT`
+ - `RAILWAY_SERVICE`
+
+Optional repo variables to override deploy de-risk defaults:
+
+- `PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS`
+- `PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS`
+- `PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`
+- `PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`
+- `PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS`
 
 Use this for a full deployment with pipeline auto-contribution tracking.
 
