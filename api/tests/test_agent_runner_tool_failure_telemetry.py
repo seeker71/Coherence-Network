@@ -202,6 +202,10 @@ def test_infer_executor_detects_openclaw():
     assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"
 
 
+def test_infer_executor_detects_clawwork_alias():
+    assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
+
+
 def test_parse_diff_manifestation_blocks_extracts_file_line_ranges():
     diff_text = """diff --git a/api/app/demo.py b/api/app/demo.py
 index 1111111..2222222 100644

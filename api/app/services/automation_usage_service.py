@@ -186,6 +186,17 @@ def _normalize_required_provider_name(value: str | None) -> str:
         return "openai-codex"
     return normalized
 
+_PROVIDER_ALIASES: dict[str, str] = {
+    "clawwork": "openclaw",
+}
+
+
+def _normalize_provider_name(value: str | None) -> str:
+    candidate = str(value or "").strip().lower()
+    if not candidate:
+        return ""
+    return _PROVIDER_ALIASES.get(candidate, candidate)
+
 
 def _snapshots_path() -> Path:
     configured = os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH")
@@ -2063,17 +2074,11 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
 def _required_providers_from_env() -> list[str]:
     raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
     out = [
-        _normalize_required_provider_name(item)
+        _normalize_provider_name(item)
         for item in str(raw).split(",")
         if str(item).strip()
     ]
-    cheap_executor = str(os.getenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "")).strip().lower()
-    default_executor = str(os.getenv("AGENT_EXECUTOR_DEFAULT", "")).strip().lower()
-    if cheap_executor == "cursor" or default_executor == "cursor":
-        out.append("cursor")
-    if not out:
-        return list(_DEFAULT_REQUIRED_PROVIDERS)
-    return list(dict.fromkeys(out))
+    return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
 
 
 def _validation_required_providers_from_env() -> list[str]:
@@ -2145,7 +2150,12 @@ def _active_provider_usage_counts() -> dict[str, int]:
             counts[provider] = counts.get(provider, 0) + value
 
     executor_rows = by_executor if isinstance(by_executor, dict) else {}
-    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "claude-code"}
+    executor_provider_map = {
+        "cursor": "cursor",
+        "openclaw": "openclaw",
+        "clawwork": "openclaw",
+        "claude": "claude",
+    }
     for executor_name, row in executor_rows.items():
         provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
         if not provider:
@@ -5030,7 +5040,11 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
-    required = [item.strip().lower() for item in (required_providers or _required_providers_from_env()) if item.strip()]
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _required_providers_from_env())
+        if str(item).strip()
+    ]
     if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
         active_counts = _active_provider_usage_counts()
         for provider_name, count in active_counts.items():
@@ -5650,8 +5664,13 @@ def _record_provider_probe_event(provider: str, ok: bool, detail: str, runtime_m
         return
 
 
-def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
-    return {
+def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _validation_required_providers_from_env())
+        if str(item).strip()
+    ]
+    probe_map = {
         "coherence-internal": _probe_internal,
         "openai": _probe_openai,
         "openai-codex": _probe_openai,
@@ -6136,13 +6155,8 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         if explicit:
             providers.add(explicit)
 
-        raw_executor = str(metadata.get("executor") or "").strip().lower()
-        executor = raw_executor
-        if executor in {"clawwork", "openclaw"}:
-            # Legacy executor aliases map to codex for canonical execution,
-            # but still count as openclaw evidence for compatibility checks.
-            providers.add("openclaw")
-            executor = "codex"
+        executor = str(metadata.get("executor") or "").strip().lower()
+        executor = "openclaw" if executor == "clawwork" else executor
         model = str(metadata.get("model") or "").strip()
         model_lower = model.lower()
         worker_id = str(metadata.get("worker_id") or "").strip().lower()
@@ -6226,16 +6240,14 @@ def _build_provider_validation_report(
     runtime_window_seconds: int,
     min_execution_events: int,
 ) -> ProviderValidationReport:
-    usage_by_provider = {
-        family: row
-        for row in overview.providers
-        if (family := _provider_family_name(row.provider))
-    }
-    readiness_by_provider = {
-        _normalize_provider_name(row.provider): row
-        for row in readiness.providers
-        if _normalize_provider_name(row.provider)
-    }
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _validation_required_providers_from_env())
+        if str(item).strip()
+    ]
+    readiness = provider_readiness_report(required_providers=required, force_refresh=force_refresh)
+    readiness_by_provider = {row.provider.strip().lower(): row for row in readiness.providers}
+    runtime_rows = _runtime_validation_rows(required_providers=required, runtime_window_seconds=runtime_window_seconds)
 
     rows: list[ProviderValidationRow] = []
     blocking: list[str] = []

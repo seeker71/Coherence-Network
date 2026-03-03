@@ -63,7 +63,9 @@ CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _CLAUDE_CODE_MODEL_REVIEW,
 }
 
-EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+_EXECUTOR_ALIASES = {"clawwork": "openclaw"}
+EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES + tuple(_EXECUTOR_ALIASES.keys())
 
 REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -126,7 +128,7 @@ def executor_binary_name(executor: str) -> str:
     normalized = normalize_executor(executor, default=executor.strip().lower())
     if normalized == "cursor":
         return "agent"
-    if executor == "openclaw":
+    if normalized == "openclaw":
         for candidate in ("openclaw", "codex"):
             if shutil.which(candidate):
                 return candidate
@@ -325,6 +327,8 @@ def classify_provider(*, executor: str, model: str, command: str, worker_id: str
         provider = "gemini"
     elif lower_command.startswith("codex "):
         provider = "openai-codex"
+    elif normalized_executor == "openclaw":
+        provider = "openclaw"
     elif normalized_executor == "cursor":
         provider = "cursor"
     elif normalized_executor in {"claude", "aider"}:

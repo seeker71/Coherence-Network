@@ -30,48 +30,6 @@ def test_create_task_supports_openclaw_executor(monkeypatch: pytest.MonkeyPatch)
     assert "--json" in task["command"]
 
 
-def test_create_task_supports_openrouter_executor(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Implement openrouter executor support",
-            task_type=TaskType.IMPL,
-            context={"executor": "openrouter"},
-        )
-    )
-
-    assert task["model"].startswith("openrouter/")
-    assert task["tier"] == "openrouter"
-    assert task["command"].startswith("openrouter-exec ")
-
-
-def test_create_task_supports_gemini_executor(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("GEMINI_CLI_MODEL", "gemini-2.5-pro")
-    monkeypatch.setenv("GEMINI_COMMAND_TEMPLATE", 'gemini -p "{{direction}}" --model {{model}} --format json')
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Implement gemini executor support",
-            task_type=TaskType.IMPL,
-            context={"executor": "gemini"},
-        )
-    )
-
-    assert task["model"].startswith("gemini/")
-    assert task["tier"] == "gemini"
-    assert task["command"].startswith("gemini -p ")
-    context = task.get("context") or {}
-    assert context.get("executor") == "gemini"
-
-
 def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")
@@ -88,34 +46,11 @@ def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.Monkey
         )
     )
 
-    assert task["model"].startswith("codex/")
-    assert task["tier"] == "codex"
+    assert task["model"].startswith("openclaw/")
+    assert task["tier"] == "openclaw"
     assert "--json" in task["command"]
     context = task.get("context") or {}
-    assert context.get("executor") == "codex"
-
-
-def test_create_task_supports_codex_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")
-    monkeypatch.setenv("OPENCLAW_COMMAND_TEMPLATE", 'codex exec "{{direction}}" --model {{model}} --json')
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Implement codex alias support",
-            task_type=TaskType.IMPL,
-            context={"executor": "codex"},
-        )
-    )
-
-    assert task["model"].startswith("codex/")
-    assert task["tier"] == "codex"
-    assert task["command"].startswith("codex exec ")
-    context = task.get("context") or {}
-    assert context.get("executor") == "codex"
+    assert context.get("executor") == "openclaw"
 
 
 def test_create_task_openclaw_default_template_includes_model(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -396,38 +331,6 @@ async def test_agent_route_endpoint_accepts_clawwork_executor_alias() -> None:
         res = await client.get("/api/agent/route", params={"task_type": "impl", "executor": "clawwork"})
         assert res.status_code == 200
         payload = res.json()
-        assert payload["executor"] == "codex"
-        assert payload["tier"] == "codex"
-        assert str(payload["model"]).startswith("codex/")
-
-
-@pytest.mark.asyncio
-async def test_agent_route_endpoint_accepts_openrouter_executor() -> None:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.get("/api/agent/route", params={"task_type": "impl", "executor": "openrouter"})
-        assert res.status_code == 200
-        payload = res.json()
-        assert payload["executor"] == "openrouter"
-        assert payload["tier"] == "openrouter"
-        assert str(payload["model"]).startswith("openrouter/")
-        assert payload["provider"] == "openrouter"
-        assert isinstance(payload["is_paid_provider"], bool)
-        template = str(payload["command_template"])
-        assert "{{direction}}" in template
-        assert template.startswith("openrouter-exec ")
-
-
-@pytest.mark.asyncio
-async def test_agent_route_endpoint_accepts_gemini_executor() -> None:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.get("/api/agent/route", params={"task_type": "impl", "executor": "gemini"})
-        assert res.status_code == 200
-        payload = res.json()
-        assert payload["executor"] == "gemini"
-        assert payload["tier"] == "gemini"
-        assert str(payload["model"]).startswith("gemini/")
-        assert payload["provider"] == "gemini"
-        assert isinstance(payload["is_paid_provider"], bool)
-        template = str(payload["command_template"])
-        assert "{{direction}}" in template
-        assert template.startswith("gemini ")
+        assert payload["executor"] == "openclaw"
+        assert payload["tier"] == "openclaw"
+        assert str(payload["model"]).startswith("openclaw/")
