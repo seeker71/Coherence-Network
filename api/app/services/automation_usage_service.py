@@ -63,6 +63,12 @@ _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
 _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
 _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 _RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
+_CODEX_PROVIDER_USAGE_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": None}
+_CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS = 90.0
+_RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "rows": []}
+_RUNNER_PROVIDER_TELEMETRY_CACHE_TTL_SECONDS = 20.0
+_CURSOR_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
+_CLAUDE_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -133,6 +139,19 @@ _GEMINI_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
     "free": (10, 70),
     "pro": (50, 500),
     "advanced": (120, 840),
+}
+
+_CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "pro_plus": (100, 1000),
+}
+
+_CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (45, 315),
+    "max": (120, 840),
+    "team": (120, 840),
 }
 
 _CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
@@ -2341,6 +2360,28 @@ def _cursor_events_within_window(window_seconds: int) -> int:
         provider = _normalize_provider_name(str(metadata.get("provider") or ""))
         model = str(metadata.get("model") or "").strip().lower()
         if executor == "cursor" or provider == "cursor" or model.startswith("cursor/"):
+            count += 1
+    return count
+
+
+def _claude_events_within_window(window_seconds: int) -> int:
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+
+    count = 0
+    for event in events:
+        metadata = getattr(event, "metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            continue
+        executor = str(metadata.get("executor") or "").strip().lower()
+        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
+        model = str(metadata.get("model") or "").strip().lower()
+        agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        if (
+            executor == "claude"
+            or provider in {"claude", "claude-code"}
+            or "claude" in model
+            or agent_id.startswith("claude")
+        ):
             count += 1
     return count
 
