@@ -2,6 +2,8 @@
 
 import logging
 import os
+import json
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -73,6 +75,14 @@ _WEB_BASE_ENV_KEYS = (
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_WEB_URL",
 )
+_API_BASE_ENV_KEYS = (
+    "PUBLIC_API_URL",
+    "NEXT_PUBLIC_API_URL",
+    "RAILWAY_API_URL",
+    "API_URL",
+)
+_DEFAULT_PUBLIC_WEB_BASE = "https://coherence-web-production.up.railway.app"
+_DEFAULT_PUBLIC_API_BASE = "https://coherence-network-production.up.railway.app"
 
 
 def _escape_markdown(text: str) -> str:
@@ -187,7 +197,66 @@ def _base_web_url(context: dict[str, Any]) -> str:
         value = str(os.getenv(env_key) or "").strip()
         if value:
             return value
-    return ""
+    return _DEFAULT_PUBLIC_WEB_BASE
+
+
+def _base_api_url() -> str:
+    for env_key in _API_BASE_ENV_KEYS:
+        value = str(os.getenv(env_key) or "").strip()
+        if value:
+            return value
+    return _DEFAULT_PUBLIC_API_BASE
+
+
+def _join_url(base: str, path: str) -> str:
+    return f"{(base or '').rstrip('/')}{path}"
+
+
+def _logs_dir() -> str:
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+
+
+def _load_monitor_issues() -> dict[str, Any]:
+    path = os.path.join(_logs_dir(), "monitor_issues.json")
+    if not os.path.isfile(path):
+        return {"issues": [], "last_check": None}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+    return {"issues": [], "last_check": None}
+
+
+def _load_status_report() -> dict[str, Any]:
+    path = os.path.join(_logs_dir(), "pipeline_status_report.json")
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+    return {}
+
+
+def _orphan_threshold_seconds() -> int:
+    try:
+        return max(
+            60,
+            int(
+                os.environ.get(
+                    "PIPELINE_ORPHAN_RUNNING_SECONDS",
+                    os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        return 1800
 
 
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
@@ -502,6 +571,103 @@ def _format_agent_status_reply(
         orphan_threshold_seconds=_orphan_threshold_seconds(),
     )
 
+
+def _format_agent_status_reply(
+    summary: dict[str, Any],
+    pipeline_status: dict[str, Any],
+    monitor_issues: dict[str, Any],
+    status_report: dict[str, Any],
+) -> str:
+    by_status = summary.get("by_status") if isinstance(summary.get("by_status"), dict) else {}
+    needs = summary.get("needs_attention") if isinstance(summary.get("needs_attention"), list) else []
+    running = pipeline_status.get("running") if isinstance(pipeline_status.get("running"), list) else []
+    pending = pipeline_status.get("pending") if isinstance(pipeline_status.get("pending"), list) else []
+    recent_completed = (
+        pipeline_status.get("recent_completed")
+        if isinstance(pipeline_status.get("recent_completed"), list)
+        else []
+    )
+    attention = pipeline_status.get("attention") if isinstance(pipeline_status.get("attention"), dict) else {}
+    attention_flags = attention.get("flags") if isinstance(attention.get("flags"), list) else []
+
+    threshold_seconds = _orphan_threshold_seconds()
+    threshold_minutes = max(1, int(round(threshold_seconds / 60)))
+    stale_running: list[dict[str, Any]] = []
+    for row in running:
+        if not isinstance(row, dict):
+            continue
+        try:
+            run_seconds = float(row.get("running_seconds"))
+        except (TypeError, ValueError):
+            continue
+        if run_seconds > threshold_seconds:
+            stale_running.append(row)
+
+    issues = monitor_issues.get("issues") if isinstance(monitor_issues.get("issues"), list) else []
+    condition_names: list[str] = []
+    for issue in issues:
+        if not isinstance(issue, dict):
+            continue
+        cond = str(issue.get("condition") or "").strip()
+        if cond and cond not in condition_names:
+            condition_names.append(cond)
+    condition_preview = ", ".join(condition_names[:3]) if condition_names else "none"
+    if len(condition_names) > 3:
+        condition_preview += f", +{len(condition_names) - 3} more"
+
+    layer_3 = (
+        status_report.get("layer_3_attention")
+        if isinstance(status_report.get("layer_3_attention"), dict)
+        else {}
+    )
+    report_attention = str(layer_3.get("status") or "unknown").strip()
+    report_generated_at = str(status_report.get("generated_at") or "unknown").strip()
+
+    web_base = _base_web_url({})
+    api_base = _base_api_url()
+    reply = (
+        "*Agent status*\n"
+        f"Checked: `{_now_utc_label()}`\n"
+        f"Total tasks: `{int(summary.get('total') or 0)}`"
+    )
+    if by_status:
+        for key in sorted(by_status):
+            reply += f"\n`{key}`: `{int(by_status.get(key) or 0)}`"
+    if needs:
+        reply += f"\nAttention: `{len(needs)}` (use `/attention`)"
+    else:
+        reply += "\nAttention: `0`"
+    reply += (
+        f"\nPipeline: running `{len(running)}` pending `{len(pending)}` recent_completed `{len(recent_completed)}`"
+    )
+    if stale_running:
+        stale_ids = ", ".join(str(row.get("id") or "").strip() for row in stale_running[:3] if str(row.get("id") or "").strip())
+        if len(stale_running) > 3:
+            stale_ids += f", +{len(stale_running) - 3} more"
+        reply += f"\nStale running (>{threshold_minutes}m): `{len(stale_running)}`"
+        if stale_ids:
+            reply += f"\nStale IDs: `{stale_ids}`"
+    if attention_flags:
+        reply += f"\nPipeline flags: `{', '.join(str(flag) for flag in attention_flags[:6])}`"
+    reply += (
+        f"\nMonitor issues: `{len(issues)}` ({_escape_markdown(condition_preview)})"
+    )
+    last_check = str(monitor_issues.get("last_check") or "").strip()
+    if last_check:
+        reply += f"\nMonitor last check: `{last_check}`"
+    reply += f"\nStatus report: `{report_attention}` at `{report_generated_at}`"
+
+    reply += (
+        "\n\n*Public UI*"
+        f"\n[Tasks]({_join_url(web_base, '/tasks')}) · [Friction]({_join_url(web_base, '/friction')}) · [Usage]({_join_url(web_base, '/usage')}) · [Gates]({_join_url(web_base, '/gates')}) · [Agent]({_join_url(web_base, '/agent')})"
+    )
+    reply += (
+        "\n*Public API*"
+        f"\n[pipeline-status]({_join_url(api_base, '/api/agent/pipeline-status')}) · [monitor-issues]({_join_url(api_base, '/api/agent/monitor-issues')}) · [status-report]({_join_url(api_base, '/api/agent/status-report')}) · [effectiveness]({_join_url(api_base, '/api/agent/effectiveness')})"
+    )
+    return reply
+
+
 def _format_usage_reply(usage: dict[str, Any]) -> str:
     return telegram_report_formatter.format_usage_reply(usage)
 
@@ -526,6 +692,7 @@ def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
         task_url_builder=_task_web_url,
     )
 
+
 def _format_attention_reply(
     items: list[dict[str, Any]],
     total: int,
@@ -533,16 +700,59 @@ def _format_attention_reply(
     monitor_issues: dict[str, Any],
     pipeline_status: dict[str, Any],
 ) -> str:
-    return telegram_report_formatter.format_attention_reply(
-        items,
-        total,
-        monitor_issues=monitor_issues,
-        pipeline_status=pipeline_status,
-        tasks_url=_tasks_web_url({}),
-        web_base_url=_base_web_url({}),
-        orphan_threshold_seconds=_orphan_threshold_seconds(),
-        task_url_builder=_task_web_url,
+    reply = (
+        f"*Attention* ({total} need action)\n"
+        f"Checked: `{_now_utc_label()}`"
     )
+    running = pipeline_status.get("running") if isinstance(pipeline_status.get("running"), list) else []
+    threshold_seconds = _orphan_threshold_seconds()
+    threshold_minutes = max(1, int(round(threshold_seconds / 60)))
+    stale_count = 0
+    for row in running:
+        if not isinstance(row, dict):
+            continue
+        try:
+            run_seconds = float(row.get("running_seconds"))
+        except (TypeError, ValueError):
+            continue
+        if run_seconds > threshold_seconds:
+            stale_count += 1
+    if stale_count:
+        reply += f"\nStale running (>{threshold_minutes}m): `{stale_count}`"
+    if not items:
+        reply += "\nNo attention tasks right now."
+    else:
+        for task in items:
+            task_id = str(task.get("id") or "").strip()
+            status = str(task.get("status") or "unknown").strip()
+            direction = _escape_markdown(str(task.get("direction") or "").strip())
+            if len(direction) > 60:
+                direction = f"{direction[:57]}..."
+            reply += f"\n`{task_id}` `{status}` {direction}"
+            if task.get("decision_prompt"):
+                prompt = _escape_markdown(str(task.get("decision_prompt") or "").strip())
+                reply += f"\nPrompt: _{prompt[:100]}_"
+
+    issues = monitor_issues.get("issues") if isinstance(monitor_issues.get("issues"), list) else []
+    if issues:
+        reply += f"\n\nMonitor issues: `{len(issues)}`"
+        for issue in issues[:3]:
+            if not isinstance(issue, dict):
+                continue
+            condition = str(issue.get("condition") or "unknown").strip()
+            severity = str(issue.get("severity") or "unknown").strip()
+            message = _escape_markdown(str(issue.get("message") or "").strip())
+            if len(message) > 100:
+                message = f"{message[:97]}..."
+            reply += f"\n`{condition}` `{severity}` {message}"
+
+    web_base = _base_web_url({})
+    reply += (
+        "\n\n*Public UI*"
+        f"\n[Tasks]({_join_url(web_base, '/tasks')}) · [Friction]({_join_url(web_base, '/friction')}) · [Usage]({_join_url(web_base, '/usage')})"
+    )
+    return reply
+
 
 def _extract_status_filter(arg: str) -> str | None:
     return telegram_report_formatter.extract_status_filter(arg)

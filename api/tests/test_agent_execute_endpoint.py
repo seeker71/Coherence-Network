@@ -223,7 +223,6 @@ async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_o
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
     monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
     monkeypatch.setenv("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "1")
     monkeypatch.setenv("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "gpt-5-codex")

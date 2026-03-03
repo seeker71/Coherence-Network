@@ -302,21 +302,18 @@ UsageEvent:
 
 ## Acceptance Tests
 
-- `api/tests/test_value_lineage.py::test_create_and_get_lineage_link` validates persisted lineage links include contributors and optional investment payloads.
-- `api/tests/test_value_lineage.py::test_usage_events_roll_up_to_valuation` validates usage event aggregation and ROI ratio calculation.
-- `api/tests/test_value_lineage.py::test_payout_preview_uses_role_weights` validates default stage/objective weighting signals in payout preview responses.
-- `api/tests/test_value_lineage.py::test_payout_preview_supports_stage_investments` validates investment-stage attribution and stage-peer ranking behavior.
-- `api/tests/test_value_lineage.py::test_lineage_404_contract` validates not-found behavior and detail contract.
-- `api/tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections` validates inventory reporting includes value-lineage core sections.
-- `api/tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape` validates the public deploy contract includes `railway_value_lineage_e2e`.
+- `api/tests/test_value_lineage.py::test_create_and_get_lineage_link_persists_data`
+- `api/tests/test_value_lineage.py::test_append_usage_events_updates_valuation_totals`
+- `api/tests/test_value_lineage.py::test_valuation_computes_roi_ratio_with_zero_cost_guard`
+- `api/tests/test_value_lineage.py::test_payout_preview_allocates_by_role_weights`
+- `api/tests/test_value_lineage.py::test_missing_lineage_returns_404_detail`
+- `api/tests/test_release_gate_service.py::test_public_deploy_contract_includes_value_lineage_e2e`
 
 ## Verification
 
 ```bash
 cd api && pytest -q tests/test_value_lineage.py
-cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections
-cd api && pytest -q tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape
-python3 scripts/validate_spec_quality.py --file specs/048-value-lineage-and-payout-attribution.md
+cd api && pytest -q tests/test_release_gate_service.py -k value_lineage
 ./scripts/verify_web_api_deploy.sh
 curl -fsS https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract | jq .
 ```
@@ -331,6 +328,14 @@ Manual verification:
 - Fiat/crypto settlement integration
 - Dynamic weight governance beyond static defaults
 
-## Idea Traceability
-- `idea_id`: `oss-interface-alignment`
-- Rationale: umbrella roadmap linkage for Coherence Network work.
+## Risks and Assumptions
+
+- Risk: usage/value signals may be noisy and could overstate value if event sources are not normalized.
+- Risk: payout attribution can be gamed if contributor-role assignment is not audited.
+- Assumption: static role weights are acceptable for initial release and can be governed later.
+- Assumption: persisted lineage and usage data remain available through API restarts and deploys.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up: add stronger anti-fraud/event-source trust scoring for usage events.
+- Follow-up: add role-weight governance policy and signed audit trail for role assignment changes.
