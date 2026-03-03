@@ -73,6 +73,13 @@ _OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 
 _EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
+try:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = int(str(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900")).strip())
+except ValueError:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
+_TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
+_TARGET_STATE_MAX_TEXT = 600
+# Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
     re.compile(r"\bthis repository\b", re.IGNORECASE),
@@ -1392,9 +1399,6 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     _ensure_store_loaded(include_output=False)
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
-    validation = _task_card_validation(ctx)
-    if validation is not None:
-        ctx["task_card_validation"] = validation
     target_contract = _normalize_target_state_contract(
         direction=data.direction,
         task_type=data.task_type,
@@ -1759,6 +1763,20 @@ def update_task(
             next_context.update(context)
         else:
             next_context = dict(context)
+        if any(
+            key in next_context
+            for key in ("target_state", "success_evidence", "abort_evidence", "observation_window_sec")
+        ):
+            normalized_contract = _normalize_target_state_contract(
+                direction=str(task.get("direction") or ""),
+                task_type=task.get("task_type") if isinstance(task.get("task_type"), TaskType) else TaskType.IMPL,
+                target_state=next_context.get("target_state"),
+                success_evidence=next_context.get("success_evidence"),
+                abort_evidence=next_context.get("abort_evidence"),
+                observation_window_sec=next_context.get("observation_window_sec"),
+            )
+            next_context.update(normalized_contract)
+            next_context["target_state_contract"] = dict(normalized_contract)
         task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
