@@ -21,8 +21,12 @@ async def create_runtime_event(payload: RuntimeEventCreate) -> RuntimeEvent:
 
 
 @router.get("/runtime/events", response_model=list[RuntimeEvent])
-async def list_runtime_events(limit: int = Query(100, ge=1, le=2000)) -> list[RuntimeEvent]:
-    return runtime_service.list_events(limit=limit)
+async def list_runtime_events(
+    limit: int = Query(100, ge=1, le=2000),
+    source: str | None = Query(default=None, max_length=64),
+    force_refresh: bool = Query(False),
+) -> list[RuntimeEvent]:
+    return runtime_service.cached_runtime_events(limit=limit, source=source, force_refresh=force_refresh)
 
 
 @router.get("/runtime/change-token")
@@ -35,18 +39,18 @@ async def runtime_summary_by_idea(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(200, ge=1, le=2000),
     offset: int = Query(0, ge=0, le=10000),
+    force_refresh: bool = Query(False),
 ) -> dict:
-    rows = runtime_service.summarize_by_idea(
+    # Keep API latency bounded for UI summary requests by scaling event scan
+    # with requested output size instead of always scanning the full default.
+    event_limit = max(300, min(1500, int(limit) * 20))
+    return runtime_service.cached_runtime_ideas_summary_payload(
         seconds=seconds,
-        summary_limit=limit,
-        summary_offset=offset,
+        limit=limit,
+        offset=offset,
+        event_limit=event_limit,
+        force_refresh=force_refresh,
     )
-    return {
-        "window_seconds": seconds,
-        "offset": offset,
-        "limit": limit,
-        "ideas": [row.model_dump(mode="json") for row in rows],
-    }
 
 
 @router.get("/runtime/endpoints/summary")
@@ -66,12 +70,17 @@ async def runtime_web_view_summary(
     seconds: int = Query(21600, ge=60, le=2592000),
     limit: int = Query(100, ge=1, le=500),
     route_prefix: str | None = Query(default=None, max_length=200),
+    force_refresh: bool = Query(False),
 ) -> WebViewPerformanceReport:
-    return runtime_service.summarize_web_view_performance(
+    event_limit = max(300, min(1500, int(limit) * 30))
+    payload = runtime_service.cached_web_view_performance_payload(
         seconds=seconds,
         limit=limit,
         route_prefix=route_prefix,
+        event_limit=event_limit,
+        force_refresh=force_refresh,
     )
+    return WebViewPerformanceReport.model_validate(payload)
 
 
 @router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport)
