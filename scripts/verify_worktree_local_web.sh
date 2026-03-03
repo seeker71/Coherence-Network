@@ -103,6 +103,16 @@ npm_ci_hardened() {
   fi
 }
 
+ensure_npm_cache() {
+  mkdir -p "${NPM_CACHE}"
+  if [[ ! -w "${NPM_CACHE}" ]]; then
+    echo "npm cache directory is not writable: ${NPM_CACHE}"
+    exit 1
+  fi
+  export npm_config_cache="${NPM_CACHE}"
+  export NPM_CONFIG_CACHE="${NPM_CACHE}"
+}
+
 select_python() {
   local candidate
   for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/bin/python3" "$(command -v python3.11 || true)" "$(command -v python3 || true)"; do
@@ -335,9 +345,17 @@ maybe_dump_thread_ports
 echo "Using repo root: ${ROOT_DIR}"
 echo "Using API base: ${API_BASE}"
 echo "Using web base: ${WEB_BASE}"
-if [[ -n "${THREAD_RUNTIME_KEY:-}" ]]; then
-  echo "Thread runtime key: ${THREAD_RUNTIME_KEY}"
+echo "Using npm cache: ${NPM_CACHE}"
+ensure_npm_cache
+
+pushd "${WEB_DIR}" >/dev/null
+if [[ ! -d node_modules || ! -x node_modules/.bin/next ]]; then
+  echo "Installing web dependencies (node_modules missing)..."
+  npm ci
 fi
+echo "Building web app..."
+NEXT_PUBLIC_API_URL="${API_BASE}" npm run build
+popd >/dev/null
 
 if api_ready && web_ready; then
   echo "Local services already running; performing route checks only."

@@ -10,181 +10,108 @@ import re
 import subprocess
 import time
 import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
 import httpx
 
-_BRANCH_HEAD_SHA_CACHE: dict[tuple[str, str], tuple[float, str]] = {}
-
-try:  # noqa: SIM105
-    from app.services import telemetry_persistence_service
-except Exception:  # pragma: no cover - best effort import only
-    telemetry_persistence_service = None
+_FAILURE_SOLUTIONS_CACHE: dict[str, Any] | None = None
 
 
-DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS = 8
-DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS = 60
-DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS = 6.0
-DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS = 45.0
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[3]
 
 
-def _env_to_float(name: str, fallback: float) -> float:
-    raw = os.getenv(name)
-    if raw is None:
-        return float(fallback)
-    try:
-        value = float(raw)
-    except (TypeError, ValueError):
-        return float(fallback)
-    if value <= 0:
-        return float(fallback)
-    return value
+def _load_failure_solutions() -> dict[str, Any]:
+    global _FAILURE_SOLUTIONS_CACHE
+    if isinstance(_FAILURE_SOLUTIONS_CACHE, dict):
+        return _FAILURE_SOLUTIONS_CACHE
 
+    path = _project_root() / "config" / "codex_failure_solutions.json"
+    if not path.is_file():
+        _FAILURE_SOLUTIONS_CACHE = {}
+        return _FAILURE_SOLUTIONS_CACHE
 
-def _branch_head_lookup_timeout_seconds(timeout: float) -> float:
-    configured = _env_to_float("BRANCH_HEAD_SHA_TIMEOUT_SECONDS", timeout)
-    return max(1.0, min(float(timeout), configured))
-
-
-def _run_cmd_with_timeout(cmd: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
-    try:
-        proc = subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        return proc
-    except subprocess.TimeoutExpired as exc:
-        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
-        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-        return subprocess.CompletedProcess(
-            cmd,
-            124,
-            stdout=stdout,
-            stderr=f"{stderr}\ncommand timeout",
-        )
-
-
-def _record_gate_friction_event(
-    *,
-    job_id: str,
-    report: dict[str, Any],
-    status: str,
-    attempt: int,
-    max_attempts: int,
-) -> None:
-    from app.models.friction import FrictionEvent
-    from app.services import friction_service
-
-    block_type = (
-        "public_deploy_verification_failed"
-        if status == "failed"
-        else "public_deploy_verification_retry"
-    )
-    severity = "critical" if status == "failed" else "medium"
-    endpoint = f"/api/gates/public-deploy-verification-jobs/{job_id}"
-    reason = str(report.get("reason") or "public_deploy_contract_blocked")
-    try:
-        event = FrictionEvent(
-            id=f"fric_{uuid.uuid4().hex[:12]}",
-            timestamp=datetime.now(UTC),
-            endpoint=endpoint,
-            stage="public_deploy",
-            block_type=block_type,
-            severity=severity,
-            owner="release_gate",
-            unblock_condition=(
-                "Fix deployment blockers and rerun /api/gates/public-deploy-verification-jobs/{job_id}/tick"
-            ),
-            energy_loss_estimate=0.0,
-            cost_of_delay=0.0,
-            status="open",
-            notes=f"public-deploy verification {status} at attempt {attempt}/{max_attempts}: {reason}",
-            resolved_at=None,
-            time_open_hours=None,
-            resolution_action=None,
-        )
-        friction_service.append_event(event)
-    except Exception:
-        return
-
-
-def _github_token_fallback(github_token: str | None = None) -> str | None:
-    if github_token is not None and github_token.strip():
-        return github_token.strip()
-    token = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
-    return token or None
-
-
-def _public_deploy_verification_jobs_path() -> Path:
-    configured = os.getenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH")
-    if configured:
-        return Path(configured)
-    return Path(__file__).resolve().parents[2] / "logs" / "public_deploy_verification_jobs.json"
-
-
-def _now_iso() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _now_ts() -> float:
-    return time.time()
-
-
-def _read_public_deploy_verification_jobs() -> list[dict[str, Any]]:
-    path = _public_deploy_verification_jobs_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        return []
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    if not isinstance(payload, list):
-        return []
-    return payload
+    except ValueError:
+        _FAILURE_SOLUTIONS_CACHE = {}
+        return _FAILURE_SOLUTIONS_CACHE
+
+    _FAILURE_SOLUTIONS_CACHE = payload if isinstance(payload, dict) else {}
+    return _FAILURE_SOLUTIONS_CACHE
 
 
-def _write_public_deploy_verification_jobs(jobs: list[dict[str, Any]]) -> None:
-    path = _public_deploy_verification_jobs_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(jobs, f, indent=2)
+def _solution_entry(group: str, key: str) -> dict[str, Any]:
+    catalog = _load_failure_solutions()
+    group_map = catalog.get(group) if isinstance(catalog, dict) else None
+    if not isinstance(group_map, dict):
+        return {"summary": "No configured solution found.", "actions": []}
+
+    candidate = group_map.get(key)
+    if not isinstance(candidate, dict):
+        candidate = group_map.get("__default__")
+    if not isinstance(candidate, dict):
+        return {"summary": "No configured solution found.", "actions": []}
+
+    summary = str(candidate.get("summary") or "").strip()
+    actions_raw = candidate.get("actions")
+    actions = []
+    if isinstance(actions_raw, list):
+        actions = [str(item).strip() for item in actions_raw if isinstance(item, str) and str(item).strip()]
+    return {"summary": summary, "actions": actions}
 
 
-def _normalize_job_payload(job: dict[str, Any]) -> dict[str, Any]:
-    return dict(job)
+def _pr_failure_solutions(pr_gate: dict[str, Any]) -> list[dict[str, Any]]:
+    failing = pr_gate.get("failing_required_contexts")
+    missing = pr_gate.get("missing_required_contexts")
+    failing_rows = failing if isinstance(failing, list) else []
+    missing_rows = missing if isinstance(missing, list) else []
+
+    out: list[dict[str, Any]] = []
+    for context in failing_rows:
+        if not isinstance(context, str):
+            continue
+        solution = _solution_entry("github_actions_contexts", context)
+        out.append(
+            {
+                "failure_id": f"github_actions_context:{context}",
+                "context": context,
+                "status": "failing",
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    for context in missing_rows:
+        if not isinstance(context, str):
+            continue
+        solution = _solution_entry("github_actions_contexts", context)
+        out.append(
+            {
+                "failure_id": f"github_actions_context_missing:{context}",
+                "context": context,
+                "status": "missing",
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    return out
 
 
-def _branch_head_cache_ttl_seconds() -> float:
-    return _env_to_float("BRANCH_HEAD_SHA_CACHE_TTL_SECONDS", DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS)
-
-
-def _read_cached_branch_head_sha(repository: str, branch: str) -> str | None:
-    key = (repository, branch)
-    entry = _BRANCH_HEAD_SHA_CACHE.get(key)
-    if entry is None:
-        return None
-    expires_at, cached_sha = entry
-    if _now_ts() >= float(expires_at):
-        _BRANCH_HEAD_SHA_CACHE.pop(key, None)
-        return None
-    return cached_sha if isinstance(cached_sha, str) and cached_sha else None
-
-
-def _cache_branch_head_sha(repository: str, branch: str, sha: str) -> None:
-    if not isinstance(sha, str) or not sha:
-        return
-    ttl = _branch_head_cache_ttl_seconds()
-    _BRANCH_HEAD_SHA_CACHE[(repository, branch)] = (
-        _now_ts() + ttl,
-        sha,
-    )
+def _public_failure_solutions(failing_checks: list[str]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for check in failing_checks:
+        solution = _solution_entry("public_checks", check)
+        out.append(
+            {
+                "failure_id": f"public_check:{check}",
+                "check": check,
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    return out
 
 
 def _headers(github_token: str | None = None) -> dict[str, str]:
@@ -1266,6 +1193,12 @@ def evaluate_pr_to_public_report(
     pr_gate = evaluate_pr_gates(pr, commit_status, check_runs, required)
     report["pr_gate"] = pr_gate
     if not pr_gate.get("ready_to_merge"):
+        report["failure_api"] = {
+            "source": "github_actions_pr_gate",
+            "failing_required_contexts": pr_gate.get("failing_required_contexts", []),
+            "missing_required_contexts": pr_gate.get("missing_required_contexts", []),
+            "solutions": _pr_failure_solutions(pr_gate),
+        }
         report["result"] = "blocked"
         report["reason"] = "PR gates not fully green"
         return report
@@ -1580,6 +1513,11 @@ def evaluate_public_deploy_contract_report(
         failing.append(str(name))
     report["warnings"] = warnings
     report["failing_checks"] = failing
+    report["failure_api"] = {
+        "source": "public_deploy_contract",
+        "failing_checks": failing,
+        "solutions": _public_failure_solutions(failing),
+    }
     if failing:
         report["result"] = "blocked"
         report["reason"] = f"Public deployment contract failed: {', '.join(str(x) for x in failing)}"
