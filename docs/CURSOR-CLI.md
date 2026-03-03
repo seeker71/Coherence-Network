@@ -124,3 +124,43 @@ curl "http://localhost:8000/api/agent/route?task_type=impl&executor=clawwork"
 Notes:
 - `OPENCLAW_COMMAND_TEMPLATE` must include `{{direction}}`; `{{model}}` is optional and replaced automatically.
 - Runner telemetry classifies OpenClaw runs under `executor=openclaw` for usage/success-rate reporting.
+
+## Gemini CLI Integration
+
+Gemini CLI is supported through `context.executor=gemini` with OAuth-only auth mode (no API keys).
+
+### Required env (Railway/hosted runner)
+
+Set in `api/.env` (or Railway service variables):
+
+```bash
+AGENT_EXECUTOR_DEFAULT=gemini
+GEMINI_CLI_MODEL=gemini-2.5-pro
+GEMINI_CLI_REVIEW_MODEL=gemini-2.5-pro
+AGENT_GEMINI_AUTH_MODE=oauth
+AGENT_GEMINI_OAUTH_SESSION_B64=...    # base64 of oauth_creds.json
+```
+
+Optional:
+
+```bash
+AGENT_GEMINI_CONFIG_DIR=/root/.gemini
+```
+
+The runner always strips `GEMINI_API_KEY` and `GOOGLE_API_KEY` for Gemini tasks and enforces:
+- `settings.json -> security.auth.selectedType = oauth-personal`
+- `settings.json -> security.auth.enforcedType = oauth-personal`
+
+### API usage
+
+```bash
+curl -X POST http://localhost:8000/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Implement GET /api/foo","task_type":"impl","context":{"executor":"gemini"}}'
+```
+
+### Routing check
+
+```bash
+curl "http://localhost:8000/api/agent/route?task_type=impl&executor=gemini"
+```

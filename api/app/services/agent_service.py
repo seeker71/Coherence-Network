@@ -116,15 +116,15 @@ def _escalation_executor_default() -> str:
     if configured:
         return _normalize_executor(configured, default="claude")
     cheap = _cheap_executor_default()
+    if cheap == "gemini":
+        return "gemini"
     return "claude" if cheap != "claude" else "codex"
 
 
 def _executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
-    if executor == "codex":
-        return routing_service.executor_binary_name(executor)
-    if executor == "openrouter":
+    if executor in {"codex", "openrouter", "gemini"}:
         return routing_service.executor_binary_name(executor)
     return "claude"
 
@@ -149,7 +149,7 @@ def _first_available_executor(preferred: list[str]) -> str:
     if configured_default and _executor_available(configured_default):
         return configured_default
     # Final deterministic safety net: prefer codex when available.
-    for candidate in ("codex", "cursor", "claude"):
+    for candidate in ("codex", "gemini", "cursor", "claude"):
         if _executor_available(candidate):
             return candidate
     return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
@@ -160,6 +160,7 @@ def _executor_fallback_candidates() -> list[str]:
         _cheap_executor_default(),
         _escalation_executor_default(),
         "codex",
+        "gemini",
         "openrouter",
         "cursor",
         "claude",
@@ -176,7 +177,10 @@ def _select_executor_with_retry_policy(
     cheap = _cheap_executor_default()
     escalate_to = _escalation_executor_default()
     if escalate_to == cheap:
-        escalate_to = "claude" if cheap != "claude" else "codex"
+        if cheap == "gemini":
+            escalate_to = "gemini"
+        else:
+            escalate_to = "claude" if cheap != "claude" else "codex"
 
     stats = _prior_attempt_stats(task_fingerprint)
     retry_hint = _task_retry_hint(context)
@@ -187,7 +191,7 @@ def _select_executor_with_retry_policy(
         "failure_threshold" if should_escalate else "cheap_default"
     )
     if not _executor_available(selected):
-        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "codex", "openrouter"])
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "codex", "gemini", "openrouter"])
         return fallback, {
             "policy_applied": True,
             "reason": "selected_executor_unavailable",
@@ -364,6 +368,7 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
             "cursor",
             "claude",
             "codex",
+            "gemini",
         ])
         return selected, {
             "policy_applied": True,
@@ -375,6 +380,7 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
     selected_open = _first_available_executor([
         _open_question_executor_default(),
         "codex",
+        "gemini",
         "cursor",
         "claude",
     ])
@@ -463,6 +469,7 @@ def _integration_gaps() -> dict[str, Any]:
         "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
         "codex": _executor_available("codex"),
+        "gemini": _executor_available("gemini"),
         "openrouter": _executor_available("openrouter"),
     }
 
@@ -786,6 +793,8 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
+    if model.startswith("gemini/") or command.startswith("gemini "):
+        return "gemini"
     if model.startswith("openrouter/") or command.startswith("openrouter-exec "):
         return "openrouter"
     if model.startswith("codex/") or command.startswith("codex "):
@@ -1162,11 +1171,13 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default), 'cursor', 'codex', or 'openrouter'."""
+    """Build command for task. executor: 'claude' (default), 'cursor', 'codex', 'gemini', or 'openrouter'."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
     elif executor == "codex":
         template = _openclaw_command_template(task_type)
+    elif executor == "gemini":
+        template = routing_service.gemini_command_template(task_type)
     elif executor == "openrouter":
         template = _openrouter_command_template(task_type)
     elif executor == "claude":
@@ -1222,6 +1233,8 @@ def _resolve_task_route(
                     model = f"codex/{applied_override}"
                 elif executor == "cursor":
                     model = f"cursor/{applied_override}"
+                elif executor == "gemini":
+                    model = f"gemini/{applied_override}"
                 elif executor == "openrouter":
                     model = routing_service.enforce_openrouter_free_model(applied_override)
                 else:
@@ -1261,6 +1274,9 @@ def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None
         return
     if executor == "cursor":
         ctx["runner_cursor_auth_mode"] = "oauth"
+        return
+    if executor == "gemini":
+        ctx["runner_gemini_auth_mode"] = "oauth"
         return
     if executor == "claude":
         ctx["runner_claude_auth_mode"] = "oauth"
@@ -1736,7 +1752,7 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|codex|openrouter|openclaw|clawwork."""
+    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|codex|gemini|openrouter|openclaw|clawwork."""
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()

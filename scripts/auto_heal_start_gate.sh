@@ -66,6 +66,20 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+if [[ -z "$current_branch" ]]; then
+  echo "auto-heal-start-gate: failed to detect current branch name."
+  exit 1
+fi
+if [[ "$current_branch" == "HEAD" ]]; then
+  echo "auto-heal-start-gate: detached HEAD detected; refusing stash/rebase in detached state."
+  echo "Attach this worktree first, then rerun:"
+  echo "  git switch -c codex/<thread-name>"
+  echo "  # or"
+  echo "  git switch codex/<thread-name>"
+  exit 1
+fi
+
 restore_stash_if_needed() {
   local stash_ref="$1"
   local restore_flag="$2"

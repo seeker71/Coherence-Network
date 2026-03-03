@@ -16,6 +16,8 @@ _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")
 
 _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "auto")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
+_GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_CLI_MODEL", "gemini-2.5-pro")
+_GEMINI_MODEL_REVIEW = os.environ.get("GEMINI_CLI_REVIEW_MODEL", _GEMINI_MODEL_DEFAULT)
 
 DEFAULT_MODEL_ALIAS_MAP = (
     "gtp-5.3-codex-spark:gpt-5.3-codex-spark,"
@@ -100,6 +102,14 @@ OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
 }
 CODEX_MODEL_BY_TYPE = OPENCLAW_MODEL_BY_TYPE
 
+GEMINI_MODEL_BY_TYPE: dict[TaskType, str] = {
+    TaskType.SPEC: _GEMINI_MODEL_DEFAULT,
+    TaskType.TEST: _GEMINI_MODEL_DEFAULT,
+    TaskType.IMPL: _GEMINI_MODEL_DEFAULT,
+    TaskType.REVIEW: _GEMINI_MODEL_REVIEW,
+    TaskType.HEAL: _GEMINI_MODEL_REVIEW,
+}
+
 CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.SPEC: _CLAUDE_CODE_MODEL_DEFAULT,
     TaskType.TEST: _CLAUDE_CODE_MODEL_DEFAULT,
@@ -108,7 +118,7 @@ CLAUDE_CODE_MODEL_BY_TYPE: dict[TaskType, str] = {
     TaskType.HEAL: _CLAUDE_CODE_MODEL_REVIEW,
 }
 
-_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "codex", "openrouter")
+_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "codex", "gemini", "openrouter")
 _EXECUTOR_ALIASES = {"clawwork": "codex", "openclaw": "codex"}
 _OPENROUTER_FREE_MODEL = normalize_model_name(
     os.environ.get("OPENROUTER_FREE_MODEL", "openrouter/free")
@@ -167,6 +177,8 @@ def escalation_executor_default() -> str:
     if configured:
         return normalize_executor(configured, default="claude")
     cheap = cheap_executor_default()
+    if cheap == "gemini":
+        return "gemini"
     return "claude" if cheap != "claude" else "codex"
 
 
@@ -179,6 +191,11 @@ def executor_binary_name(executor: str) -> str:
         if configured:
             return configured
         return "codex"
+    if normalized == "gemini":
+        configured = os.environ.get("GEMINI_EXECUTABLE", "").strip()
+        if configured:
+            return configured
+        return "gemini"
     if normalized == "openrouter":
         return "server-executor"
     return "claude"
@@ -265,6 +282,17 @@ def openrouter_command_template(task_type: TaskType) -> str:
     return template.replace("{{model}}", resolved_model)
 
 
+def gemini_command_template(task_type: TaskType) -> str:
+    model = GEMINI_MODEL_BY_TYPE[task_type]
+    template = (
+        os.environ.get("GEMINI_COMMAND_TEMPLATE", "").strip()
+        or 'gemini -p "{{direction}}" --model {{model}}'
+    )
+    if "{{direction}}" not in template:
+        template = template.strip() + ' "{{direction}}"'
+    return template.replace("{{model}}", model)
+
+
 def enforce_openrouter_free_model(model: str | None) -> str:
     """OpenRouter execution policy: force free-tier model usage."""
     cleaned = normalize_model_name(str(model or "").strip())
@@ -322,6 +350,10 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
         model = enforce_openrouter_free_model(resolved_model)
         template = openrouter_command_template(task_type)
         tier = "openrouter"
+    elif normalized == "gemini":
+        model = f"gemini/{GEMINI_MODEL_BY_TYPE[task_type]}"
+        template = gemini_command_template(task_type)
+        tier = "gemini"
     elif normalized == "claude":
         cc_model = CLAUDE_CODE_MODEL_BY_TYPE[task_type]
         model = f"claude/{cc_model}" if cc_model else "claude/default"
@@ -369,7 +401,7 @@ def normalize_open_responses_model(model: str) -> str:
     cleaned = str(model or "").strip()
     if "/" in cleaned:
         prefix, _, suffix = cleaned.partition("/")
-        if prefix in {"codex", "openclaw", "clawwork", "cursor"} and suffix.strip():
+        if prefix in {"codex", "openclaw", "clawwork", "cursor", "gemini"} and suffix.strip():
             return suffix.strip()
     return cleaned
 
@@ -413,16 +445,24 @@ def classify_provider(*, executor: str, model: str, command: str, worker_id: str
         provider = "openai-codex"
     elif normalized_executor == "codex":
         provider = "openai-codex"
+    elif normalized_executor == "gemini":
+        provider = "gemini"
     elif normalized_executor == "openrouter":
         provider = "openrouter"
     elif "openrouter" in command_model or "openrouter" in lower_model:
         provider = "openrouter"
+    elif command_model.startswith(("gemini", "google/gemini")):
+        provider = "gemini"
     elif command_model.startswith("openai/") or command_model.startswith(("gpt", "o1", "o3", "o4")):
         provider = "openai-codex" if "codex" in command_model else "openai"
+    elif lower_model.startswith("gemini/") or lower_model.startswith("google/gemini"):
+        provider = "gemini"
     elif "codex" in lower_model:
         provider = "openai-codex"
     elif lower_model.startswith("openai/") or lower_model.startswith(("gpt", "o1", "o3", "o4")):
         provider = "openai"
+    elif lower_command.startswith("gemini "):
+        provider = "gemini"
     elif lower_command.startswith("codex "):
         provider = "openai-codex"
     elif normalized_executor == "cursor":
@@ -441,6 +481,6 @@ def is_paid_model(*, provider: str, model: str, command_model: str) -> bool:
         if "openrouter/free" in ref or ref.endswith("/free"):
             return False
         return True
-    if provider in {"openai", "openai-codex", "claude", "cursor"}:
+    if provider in {"openai", "openai-codex", "claude", "cursor", "gemini"}:
         return True
     return False

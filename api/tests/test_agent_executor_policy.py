@@ -257,6 +257,36 @@ def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
     assert str(task["model"]).startswith("codex/")
 
 
+def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
+    monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "gemini")
+    monkeypatch.delenv("AGENT_EXECUTOR_ESCALATE_TO", raising=False)
+    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
+    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
+    _which = {"agent": None, "claude": "/usr/bin/claude", "codex": None, "gemini": "/usr/bin/gemini"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    first = agent_service.create_task(
+        AgentTaskCreate(direction="Investigate repository drift signal", task_type=TaskType.IMPL)
+    )
+    assert (first.get("context") or {}).get("executor") == "gemini"
+    agent_service.update_task(first["id"], status=TaskStatus.FAILED, output="failed attempt")
+
+    second = agent_service.create_task(
+        AgentTaskCreate(direction="Investigate repository drift signal", task_type=TaskType.IMPL)
+    )
+
+    assert str(second["model"]).startswith("gemini/")
+    assert str(second["command"]).startswith("gemini ")
+    context = second.get("context") or {}
+    assert context.get("executor") == "gemini"
+    policy = context.get("executor_policy") or {}
+    assert policy.get("reason") == "failure_threshold"
+    assert policy.get("escalation_executor") == "gemini"
+
+
 def test_open_responses_normalization_is_shared_across_executors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
