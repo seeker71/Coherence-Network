@@ -85,14 +85,16 @@ VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
 ## CI/CD Validation
 
 - `.github/workflows/public-deploy-contract.yml` validates Railway API + Railway web.
-- If contract fails and Railway CLI secrets are present, workflow triggers Railway redeploy and revalidates.
+- If contract fails and Railway CLI secrets are present, workflow triggers Railway redeploy (API + web when both service secrets are set) and revalidates.
 
 Required repo secrets for automated redeploy:
 
 - `RAILWAY_TOKEN`
- - `RAILWAY_PROJECT_ID`
- - `RAILWAY_ENVIRONMENT`
- - `RAILWAY_SERVICE`
+- `RAILWAY_PROJECT_ID`
+- `RAILWAY_ENVIRONMENT`
+- `RAILWAY_API_SERVICE` (preferred; falls back to legacy `RAILWAY_SERVICE` if unset)
+- `RAILWAY_WEB_SERVICE` (required to auto-heal web SHA drift checks)
+- `RAILWAY_SERVICE` (legacy fallback for API service)
 
 Optional repo variables to override deploy de-risk defaults:
 
