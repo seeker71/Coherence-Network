@@ -1028,7 +1028,7 @@ def check_value_lineage_e2e_flow(api_base: str, timeout: float = 8.0) -> dict[st
     base = api_base.rstrip("/")
     marker = uuid.uuid4().hex[:8]
     create_payload = {
-        "idea_id": f"public-e2e-{marker}",
+        "idea_id": "deployment-gate-reliability",
         "spec_id": "048-value-lineage-and-payout-attribution",
         "implementation_refs": [f"contract:{marker}"],
         "contributors": {
