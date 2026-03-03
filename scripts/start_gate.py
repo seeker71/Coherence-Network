@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
@@ -172,7 +173,96 @@ def run_command(cmd: list[str], *, check: bool = True) -> subprocess.CompletedPr
     return proc
 
 
+def _normalized_mode(raw: str | None) -> str:
+    mode = str(raw or "").strip().lower()
+    if mode not in {"auto", "bootstrap", "continuation"}:
+        return "auto"
+    return mode
+
+
+def _sanitize_branch_token(value: str) -> str:
+    token = re.sub(r"[^a-z0-9._-]+", "-", str(value or "").strip().lower()).strip("-")
+    return token or "resume"
+
+
+def _current_branch_name() -> str | None:
+    proc = subprocess.run(
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    branch = (proc.stdout or "").strip()
+    return branch or None
+
+
+def _branches_pointing_at_head() -> list[str]:
+    proc = subprocess.run(
+        [
+            "git",
+            "for-each-ref",
+            "--format=%(refname:short)",
+            "--points-at",
+            "HEAD",
+            "refs/heads/codex",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    branches = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
+    return branches
+
+
+def _attach_detached_head(*, now: datetime) -> str:
+    for candidate in _branches_pointing_at_head():
+        proc = subprocess.run(
+            ["git", "switch", candidate],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0:
+            return candidate
+
+    worktree_hint = Path.cwd().resolve().parent.name or Path.cwd().resolve().name
+    branch_hint = _sanitize_branch_token(worktree_hint)
+    if branch_hint in {"coherence-network", "worktrees", "codex"}:
+        branch_hint = "resume"
+    stamp = now.strftime("%Y%m%d-%H%M%S")
+    short_sha = (run_command(["git", "rev-parse", "--short", "HEAD"]).stdout or "").strip() or "head"
+    new_branch = f"codex/{branch_hint}-resume-{stamp}-{short_sha}"
+    proc = subprocess.run(
+        ["git", "switch", "-c", new_branch],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip()
+        stdout = (proc.stdout or "").strip()
+        raise SystemExit(
+            "start-gate: detached HEAD detected and automatic branch attach failed. "
+            "Attach manually with `git switch -c codex/<topic>-<date>` or `git switch codex/<existing-branch>` "
+            f"({stderr or stdout or 'unknown failure'})."
+        )
+    return new_branch
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Run start-gate checks for a worktree thread.")
+    parser.add_argument(
+        "--mode",
+        choices=("auto", "bootstrap", "continuation"),
+        default=_normalized_mode(os.environ.get("START_GATE_MODE")),
+        help="auto: bootstrap for clean trees, continuation for dirty trees.",
+    )
+    args = parser.parse_args()
+
     if shutil.which("gh") is None:
         raise SystemExit("start-gate: required command not found: gh")
 
@@ -212,6 +302,10 @@ def main() -> None:
     if not git_marker.exists():
         raise SystemExit("start-gate: missing .git marker")
 
+    require_linked_worktree = env_flag("START_GATE_REQUIRE_LINKED_WORKTREE", default=True)
+    auto_attach_detached = env_flag("START_GATE_AUTO_ATTACH_DETACHED", default=True)
+    remote_failure_env_override = os.environ.get("START_GATE_ENFORCE_REMOTE_FAILURES")
+
     in_worktree = False
     if git_marker.is_file():
         gitdir_line = git_marker.read_text(encoding="utf-8").strip()
@@ -227,16 +321,52 @@ def main() -> None:
     else:
         raise SystemExit("start-gate: unrecognized .git marker type")
 
+    if require_linked_worktree and not in_worktree:
+        raise SystemExit(
+            "start-gate: run this command from a linked worktree (for example ~/.claude-worktrees/... or ~/.codex/worktrees/...)."
+        )
+
+    active_branch = _current_branch_name()
+    if active_branch is None:
+        if not auto_attach_detached:
+            raise SystemExit(
+                "start-gate: detached HEAD detected. Attach first with `git switch -c codex/<topic>-<date>` "
+                "or `git switch codex/<existing-branch>`."
+            )
+        active_branch = _attach_detached_head(now=now)
+        print(f"start-gate: detached HEAD auto-attached to `{active_branch}`.")
+
     proc = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         raise SystemExit("start-gate: failed to check current worktree state")
-    if proc.stdout.strip():
+    dirty_rows = [line for line in (proc.stdout or "").splitlines() if line.strip()]
+    dirty_worktree = bool(dirty_rows)
+    mode = args.mode
+    if mode == "auto":
+        mode = "continuation" if dirty_worktree else "bootstrap"
+
+    if dirty_worktree and mode == "bootstrap":
         raise SystemExit(
             "start-gate: current worktree has local changes. Do not abandon in-flight work: "
             "finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean worktree. "
-            "If you must run gates without abandoning changes, use "
-            "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate."
+            "For follow-up prompts on this thread, run continuation mode (`START_GATE_MODE=continuation make start-gate`) "
+            "or `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`."
         )
+
+    if mode == "continuation":
+        if dirty_worktree:
+            print(
+                "start-gate: continuation mode detected active in-flight work "
+                f"({len(dirty_rows)} changed path(s)); clean-start invariant skipped."
+            )
+        else:
+            print("start-gate: continuation mode requested on a clean worktree.")
+        if enforce_remote_failures and remote_failure_env_override is None:
+            enforce_remote_failures = False
+            print(
+                "start-gate: continuation mode defaults remote workflow failures to non-blocking "
+                "(override with START_GATE_ENFORCE_REMOTE_FAILURES=1)."
+            )
 
     proc = subprocess.run(
         ["git", "config", "--get", "remote.origin.url"],
@@ -455,7 +585,7 @@ def main() -> None:
     else:
         print("start-gate: skipping primary workspace cleanliness check (START_GATE_REQUIRE_PRIMARY_CLEAN=0)")
 
-    print("start-gate: passed")
+    print(f"start-gate: passed (mode={mode}, branch={active_branch})")
 
 
 if __name__ == "__main__":

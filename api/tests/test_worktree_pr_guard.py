@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -108,3 +109,18 @@ def test_n8n_security_floor_step_allows_fixed_versions() -> None:
     v2 = mod._n8n_security_floor_step("2.5.2", False)
     assert v1 is not None and v1.ok is True
     assert v2 is not None and v2.ok is True
+
+
+def test_rebase_freshness_guard_blocks_detached_head(monkeypatch) -> None:
+    mod = _load_module()
+
+    def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+        if cmd[:4] == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+            return subprocess.CompletedProcess(cmd, 0, "HEAD\n", "")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    step = mod._run_rebase_freshness_guard("origin/main")
+    assert step.ok is False
+    assert "detached HEAD detected" in step.output_tail
+    assert "git switch -c codex/" in step.output_tail
