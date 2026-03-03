@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -76,7 +77,7 @@ async def test_list_ideas_can_hide_internal_system_generated_ideas(
         created = await client.post(
             "/api/ideas",
             json={
-                "id": "spec-origin-cleanup-seed-1234abcd",
+                "id": "internal-cleanup-seed-1234abcd",
                 "name": "Internal seed",
                 "description": "System-generated idea should be hidden from actionable lists.",
                 "potential_value": 10.0,
@@ -91,11 +92,45 @@ async def test_list_ideas_can_hide_internal_system_generated_ideas(
 
         include_all = await client.get("/api/ideas?include_internal=true")
         assert include_all.status_code == 200
-        assert any(row["id"] == "spec-origin-cleanup-seed-1234abcd" for row in include_all.json()["ideas"])
+        assert any(row["id"] == "internal-cleanup-seed-1234abcd" for row in include_all.json()["ideas"])
 
         actionable_only = await client.get("/api/ideas?include_internal=false")
         assert actionable_only.status_code == 200
-        assert all(row["id"] != "spec-origin-cleanup-seed-1234abcd" for row in actionable_only.json()["ideas"])
+        assert all(row["id"] != "internal-cleanup-seed-1234abcd" for row in actionable_only.json()["ideas"])
+
+
+@pytest.mark.asyncio
+async def test_list_ideas_prunes_transient_public_e2e_idea_ids_from_discovery(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "true")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'ideas.db'}")
+    monkeypatch.setattr("app.services.spec_registry_service.list_specs", lambda *args, **kwargs: [])
+    monkeypatch.setattr("app.services.runtime_service.summarize_by_idea", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        "app.services.value_lineage_service.list_links",
+        lambda *args, **kwargs: [
+            SimpleNamespace(idea_id="public-e2e-deadbeef"),
+            SimpleNamespace(idea_id="spec-origin-cleanup-seed-1234abcd"),
+            SimpleNamespace(idea_id="endpoint-lineage-health-check-1234abcd"),
+            SimpleNamespace(idea_id="discovered-non-transient"),
+        ],
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas?include_internal=true&limit=500")
+
+    assert listed.status_code == 200
+    ids = {row["id"] for row in listed.json()["ideas"]}
+    assert "public-e2e-deadbeef" not in ids
+    assert "spec-origin-cleanup-seed-1234abcd" not in ids
+    assert "endpoint-lineage-health-check-1234abcd" not in ids
+    assert "deployment-gate-reliability" in ids
+    assert "portfolio-governance" in ids
+    assert "oss-interface-alignment" in ids
+    assert "discovered-non-transient" in ids
 
 
 @pytest.mark.asyncio
@@ -398,7 +433,7 @@ async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
 
-    internal_id = "spec-origin-cards-hidden-example"
+    internal_id = "internal-cards-hidden-example"
     external_id = "cards-visible-example"
     base_payload = {
         "name": "Cards Example",
@@ -411,7 +446,14 @@ async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        create_internal = await client.post("/api/ideas", json={"id": internal_id, **base_payload})
+        create_internal = await client.post(
+            "/api/ideas",
+            json={
+                "id": internal_id,
+                **base_payload,
+                "interfaces": ["machine:commit-evidence"],
+            },
+        )
         assert create_internal.status_code == 201
         create_external = await client.post("/api/ideas", json={"id": external_id, **base_payload})
         assert create_external.status_code == 201
