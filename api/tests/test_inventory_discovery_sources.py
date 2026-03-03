@@ -213,10 +213,49 @@ def test_inventory_reads_commit_evidence_from_store(
     assert str(records[0]["_evidence_file"]) == "memory:remote"
 
 
+def test_inventory_reads_commit_evidence_from_store_when_database_url_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {
+            "idea_ids": ["database-url-evidence"],
+            "spec_ids": ["091"],
+        },
+        "memory:database-url",
+    )
+
+    records = inventory_service._read_commit_evidence_records(limit=20)
+
+    assert len(records) == 1
+    assert records[0]["idea_ids"] == ["database-url-evidence"]
+    assert records[0]["spec_ids"] == ["091"]
+    assert str(records[0]["_evidence_file"]) == "memory:database-url"
+
+
 def test_inventory_commit_evidence_returns_empty_when_store_has_no_rows(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+
+    records = inventory_service._read_commit_evidence_records(limit=1000)
+
+    assert records == []
+
+
+def test_inventory_commit_evidence_database_source_does_not_fallback_to_files(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "commit_evidence_2026-03-03_fake.json").write_text(
+        '{"idea_ids": ["legacy-file-only"], "spec_ids": ["999"]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
     records = inventory_service._read_commit_evidence_records(limit=1000)
 
