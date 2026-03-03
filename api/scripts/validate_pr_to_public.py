@@ -103,7 +103,6 @@ def main() -> None:
     args = parser.parse_args()
 
     token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
-    n8n_version = args.n8n_version.strip() or os.getenv("N8N_VERSION", "").strip()
     endpoints = args.endpoint or _default_endpoints(args.api_base, args.web_base)
     report = gates.evaluate_pr_to_public_report(
         repository=args.repo,

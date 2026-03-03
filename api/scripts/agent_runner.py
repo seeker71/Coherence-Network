@@ -5202,14 +5202,14 @@ def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dic
     }
 
 
+def _uses_codex_cli(command: str) -> bool:
+    return command.strip().startswith("codex ")
+
+
 def _infer_executor(command: str, model: str) -> str:
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
-    if _uses_gemini_cli(command) or model_value.startswith("gemini/"):
-        return "gemini"
-    if _uses_openrouter_executor_command(command) or model_value.startswith("openrouter/"):
-        return "openrouter"
     if _uses_codex_cli(command):
         return "openai-codex"
     if _uses_openclaw_cli(command) or model_value.startswith("openclaw/"):
@@ -5865,33 +5865,15 @@ def run_one_task(
     popen_preexec_fn: Callable[[], None] | None = None
     command_exec_mode = "shell"
     if _uses_cursor_cli(command):
-        cursor_auth_state = _configure_cursor_cli_environment(
-            env=env,
-            task_id=task_id,
-            log=log,
-            task_ctx=task_ctx,
-        )
-        log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
-    elif _uses_gemini_cli(command):
-        gemini_auth_state = _configure_gemini_cli_environment(
-            env=env,
-            task_id=task_id,
-            log=log,
-            task_ctx=task_ctx,
-        )
-        log.info("task=%s using Gemini CLI (OAuth/session)", task_id)
+        # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
+        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
+        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
+        log.info("task=%s using Cursor CLI with OpenRouter", task_id)
     elif _uses_codex_cli(command):
-        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log, task_ctx=task_ctx)
-        command, codex_model_alias = _apply_codex_model_alias(command)
-        if codex_model_alias:
-            log.warning(
-                "task=%s remapped codex model %s -> %s",
-                task_id,
-                codex_model_alias["requested_model"],
-                codex_model_alias["effective_model"],
-            )
-        if "--dangerously-bypass-approvals-and-sandbox" not in command:
-            command = f"{command} --dangerously-bypass-approvals-and-sandbox"
+        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
+        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
+        log.info("task=%s using codex CLI", task_id)
     elif _uses_openclaw_cli(command):
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
@@ -5953,145 +5935,6 @@ def run_one_task(
 
     executor = _infer_executor(command, model)
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
-
-    target_contract = _normalize_task_target_contract(
-        task_ctx,
-        task_type=str(task_type or "impl"),
-        task_direction=task_direction,
-    )
-    task_ctx.update(target_contract)
-    task_snapshot = {"task_type": task_type, "context": task_ctx}
-    pr_mode = _should_run_pr_flow(task_snapshot)
-    repo_path = _repo_path_for_task(task_ctx)
-    if not pr_mode:
-        repo_path = _resolve_repo_path_for_execution(repo_path, log=log)
-    branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
-    run_id = f"run_{uuid.uuid4().hex[:12]}"
-    attempt = _next_task_attempt(task_id)
-    if attempt > 1:
-        retry_override_command = str(task_ctx.get("retry_override_command") or "").strip()
-        if retry_override_command:
-            log.info("task=%s applying retry_override_command for attempt=%s", task_id, attempt)
-            command = retry_override_command
-    _runner_heartbeat(
-        client,
-        runner_id=worker_id,
-        status="running",
-        active_task_id=task_id,
-        active_run_id=run_id,
-        metadata={"executor": executor, "task_type": task_type},
-    )
-    # Ensure the task runs from the target worktree in PR mode so file edits stay on a dedicated branch.
-    if pr_mode:
-        if not _prepare_pr_branch(task_id, repo_path, branch_name, log=log):
-            _sync_run_state(
-                client,
-                task_id=task_id,
-                run_id=run_id,
-                worker_id=worker_id,
-                patch={
-                    "task_id": task_id,
-                    "attempt": attempt,
-                    "status": "failed",
-                    "worker_id": worker_id,
-                    "task_type": task_type,
-                    "direction": task_direction,
-                    "branch": branch_name,
-                    "repo_path": repo_path,
-                    "failure_class": "branch_setup_failed",
-                    "next_action": "needs_attention",
-                    "completed_at": _utc_now_iso(),
-                },
-                lease_seconds=RUN_LEASE_SECONDS,
-                require_owner=False,
-            )
-            if verbose:
-                print(f"  -> pre-run branch setup failed for {task_id}")
-            client.patch(
-                f"{BASE}/api/agent/tasks/{task_id}",
-                json={"status": "failed", "output": f"[pr-flow] branch setup failed: {branch_name}"},
-            )
-            _runner_heartbeat(
-                client,
-                runner_id=worker_id,
-                status="degraded",
-                active_task_id="",
-                active_run_id="",
-                last_error="branch setup failed",
-                metadata={"task_id": task_id, "task_type": task_type},
-            )
-            return True
-
-    lease_ok = _claim_run_lease(
-        client,
-        task_id=task_id,
-        run_id=run_id,
-        worker_id=worker_id,
-        attempt=attempt,
-        branch=branch_name,
-        repo_path=repo_path,
-        task_type=task_type,
-        direction=task_direction,
-    )
-    if not lease_ok:
-        log.info("task=%s lease claim rejected by run-state owner", task_id)
-        try:
-            client.patch(
-                f"{BASE}/api/agent/tasks/{task_id}",
-                json={
-                    "current_step": "waiting for lease",
-                    "context": {
-                        "retry_not_before": (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(),
-                    },
-                },
-            )
-        except Exception:
-            pass
-        _sync_run_state(
-            client,
-            task_id=task_id,
-            run_id=run_id,
-            worker_id=worker_id,
-            patch={
-                "status": "skipped",
-                "failure_class": "lease_claim_rejected",
-                "next_action": "skip",
-                "completed_at": _utc_now_iso(),
-            },
-            lease_seconds=RUN_LEASE_SECONDS,
-            require_owner=False,
-        )
-        _runner_heartbeat(
-            client,
-            runner_id=worker_id,
-            status="idle",
-            active_task_id="",
-            active_run_id="",
-            metadata={"last_task_id": task_id, "detail": "lease_claim_rejected"},
-        )
-        return True
-
-    _record_observer_context_snapshot(
-        client,
-        task_id=task_id,
-        transition="claim",
-        run_id=run_id,
-        worker_id=worker_id,
-        status="claimed",
-        current_step="lease claimed",
-        context_hint={
-            "active_run_id": run_id,
-            "active_worker_id": worker_id,
-            "active_branch": branch_name if pr_mode else "",
-            "last_attempt": attempt,
-            "runner_state": "claimed",
-        },
-        details={
-            "task_type": str(task_type or "")[:40],
-            "direction": str(task_direction or "")[:200],
-            "repo_path": repo_path if pr_mode else "",
-        },
-    )
 
     # PATCH to running
     running_context: dict[str, Any] = {

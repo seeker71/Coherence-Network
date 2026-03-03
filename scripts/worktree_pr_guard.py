@@ -544,6 +544,7 @@ def _local_steps(
     require_gh_auth: bool,
     maintainability_output: str,
 ) -> list[tuple[str, str]]:
+    maintainability_output = os.getenv("WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT", "maintainability_audit_report.json")
     steps: list[tuple[str, str]] = []
     workflow_check = _existing_script_command("scripts/validate_workflow_references.py")
     if workflow_check:

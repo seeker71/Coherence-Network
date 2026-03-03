@@ -19,66 +19,8 @@ _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
 _GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_CLI_MODEL", "gemini-2.5-pro")
 _GEMINI_MODEL_REVIEW = os.environ.get("GEMINI_CLI_REVIEW_MODEL", _GEMINI_MODEL_DEFAULT)
 
-DEFAULT_MODEL_ALIAS_MAP = (
-    "gtp-5.3-codex-spark:gpt-5.3-codex-spark,"
-    "gtp-5.3-codex:gpt-5.3-codex"
-)
-
-
-def _parse_model_alias_map(raw: str) -> dict[str, str]:
-    aliases: dict[str, str] = {}
-    for pair in str(raw or "").split(","):
-        item = pair.strip()
-        if not item or ":" not in item:
-            continue
-        source, target = item.split(":", 1)
-        source_key = source.strip().lower()
-        target_value = target.strip()
-        if source_key and target_value:
-            aliases[source_key] = target_value
-    return aliases
-
-
-def _model_alias_map() -> dict[str, str]:
-    aliases = _parse_model_alias_map(DEFAULT_MODEL_ALIAS_MAP)
-    raw = os.environ.get("AGENT_MODEL_ALIAS_MAP", "")
-    if raw:
-        aliases.update(_parse_model_alias_map(str(raw)))
-    return aliases
-
-
-def normalize_model_name(model: str) -> str:
-    cleaned = str(model or "").strip()
-    if not cleaned:
-        return ""
-    aliases = _model_alias_map()
-    direct = aliases.get(cleaned.lower())
-    if direct:
-        return direct
-    if "/" in cleaned:
-        prefix, _, suffix = cleaned.partition("/")
-        mapped_suffix = aliases.get(suffix.strip().lower())
-        if mapped_suffix:
-            return f"{prefix}/{mapped_suffix}"
-    return cleaned
-
-
-_CODEX_MODEL_DEFAULT = normalize_model_name(
-    os.environ.get("CODEX_MODEL", os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark"))
-)
-_CODEX_MODEL_REVIEW = normalize_model_name(
-    os.environ.get("CODEX_REVIEW_MODEL", os.environ.get("OPENCLAW_REVIEW_MODEL", _CODEX_MODEL_DEFAULT))
-)
-
-# Claude Code CLI model tiers:
-# SPEC/TEST/IMPL → sonnet (fast, cheap, strong at code generation)
-# REVIEW/HEAL    → opus  (strongest reasoning, best for correctness checking)
-# Env vars allow override without code changes.
-_CLAUDE_CODE_MODEL_DEFAULT = os.environ.get("CLAUDE_CODE_MODEL", "claude-sonnet-4-5-20250929")
-_CLAUDE_CODE_MODEL_REVIEW = os.environ.get("CLAUDE_CODE_REVIEW_MODEL", "claude-opus-4-5")
-
-_CLAUDE_CODE_MODEL_DEFAULT = os.environ.get("CLAUDE_CODE_MODEL", "")
-_CLAUDE_CODE_MODEL_REVIEW = os.environ.get("CLAUDE_CODE_REVIEW_MODEL", _CLAUDE_CODE_MODEL_DEFAULT)
+_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark")
+_OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
 
 ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.SPEC: (_OLLAMA_MODEL, "openrouter"),
@@ -190,7 +132,7 @@ def executor_binary_name(executor: str) -> str:
                 return candidate
         configured = os.environ.get("OPENCLAW_EXECUTABLE")
         return configured.strip() if configured else "openclaw"
-    return "claude"
+    return "aider"
 
 
 def executor_available(executor: str) -> bool:
@@ -236,9 +178,14 @@ def open_question_executor_default() -> str:
 
 def cursor_command_template(task_type: TaskType) -> str:
     model = CURSOR_MODEL_BY_TYPE[task_type]
-    template = (
-        os.environ.get("CURSOR_COMMAND_TEMPLATE", "").strip()
-        or 'agent --trust --print --output-format json "{{direction}}" --model {{model}}'
+    return f'agent "{{{{direction}}}}" --model {model}'
+
+
+def openclaw_command_template(task_type: TaskType) -> str:
+    model = OPENCLAW_MODEL_BY_TYPE[task_type]
+    template = os.environ.get(
+        "OPENCLAW_COMMAND_TEMPLATE",
+        'codex exec "{{direction}}" --model {{model}} --reasoning-effort high --worktree --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

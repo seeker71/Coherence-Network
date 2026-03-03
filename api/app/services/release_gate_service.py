@@ -10,6 +10,7 @@ import re
 import subprocess
 import time
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
@@ -114,6 +115,101 @@ def _public_failure_solutions(failing_checks: list[str]) -> list[dict[str, Any]]
     return out
 
 
+DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS = 8
+DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS = 60
+
+
+def _record_gate_friction_event(
+    *,
+    job_id: str,
+    report: dict[str, Any],
+    status: str,
+    attempt: int,
+    max_attempts: int,
+) -> None:
+    from app.models.friction import FrictionEvent
+    from app.services import friction_service
+
+    block_type = (
+        "public_deploy_verification_failed"
+        if status == "failed"
+        else "public_deploy_verification_retry"
+    )
+    severity = "critical" if status == "failed" else "medium"
+    endpoint = f"/api/gates/public-deploy-verification-jobs/{job_id}"
+    reason = str(report.get("reason") or "public_deploy_contract_blocked")
+    try:
+        event = FrictionEvent(
+            id=f"fric_{uuid.uuid4().hex[:12]}",
+            timestamp=datetime.now(UTC),
+            endpoint=endpoint,
+            stage="public_deploy",
+            block_type=block_type,
+            severity=severity,
+            owner="release_gate",
+            unblock_condition=(
+                "Fix deployment blockers and rerun /api/gates/public-deploy-verification-jobs/{job_id}/tick"
+            ),
+            energy_loss_estimate=0.0,
+            cost_of_delay=0.0,
+            status="open",
+            notes=f"public-deploy verification {status} at attempt {attempt}/{max_attempts}: {reason}",
+            resolved_at=None,
+            time_open_hours=None,
+            resolution_action=None,
+        )
+        friction_service.append_event(event)
+    except Exception:
+        return
+
+
+def _github_token_fallback(github_token: str | None = None) -> str | None:
+    if github_token is not None and github_token.strip():
+        return github_token.strip()
+    token = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
+    return token or None
+
+
+def _public_deploy_verification_jobs_path() -> Path:
+    configured = os.getenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[2] / "logs" / "public_deploy_verification_jobs.json"
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _now_ts() -> float:
+    return time.time()
+
+
+def _read_public_deploy_verification_jobs() -> list[dict[str, Any]]:
+    path = _public_deploy_verification_jobs_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return payload
+
+
+def _write_public_deploy_verification_jobs(jobs: list[dict[str, Any]]) -> None:
+    path = _public_deploy_verification_jobs_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(jobs, f, indent=2)
+
+
+def _normalize_job_payload(job: dict[str, Any]) -> dict[str, Any]:
+    return dict(job)
+
+
 def _headers(github_token: str | None = None) -> dict[str, str]:
     headers = {
         "Accept": "application/vnd.github+json",
@@ -123,18 +219,6 @@ def _headers(github_token: str | None = None) -> dict[str, str]:
     if resolved_token:
         headers["Authorization"] = f"Bearer {resolved_token}"
     return headers
-
-
-def _env_to_bool(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    normalized = str(raw).strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "off"}:
-        return False
-    return default
 
 
 def _ensure_job_defaults(
@@ -426,9 +510,8 @@ def _branch_head_sha_via_git_ls_remote(repository: str, branch: str) -> str | No
     repo_url = f"https://github.com/{repository}.git"
     ref = f"refs/heads/{branch}"
     cmd = ["git", "ls-remote", repo_url, ref]
-    timeout = _branch_head_lookup_timeout_seconds(DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS)
     started = time.monotonic()
-    proc = _run_cmd_with_timeout(cmd, timeout=timeout)
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
     duration_ms = int((time.monotonic() - started) * 1000)
     status = "success" if proc.returncode == 0 else "error"
     _record_external_tool_usage(
@@ -1137,26 +1220,17 @@ def get_branch_head_sha(
             if response.status_code in {403, 429}:
                 sha = _branch_head_sha_via_git_ls_remote(repository, branch)
                 if sha:
-                    _cache_branch_head_sha(repository, branch, sha)
                     return sha
                 return _branch_head_sha_via_gh_cli(repository, branch)
             response.raise_for_status()
             data = response.json()
         sha = (data.get("commit") or {}).get("sha") if isinstance(data, dict) else None
-        if isinstance(sha, str) and sha:
-            _cache_branch_head_sha(repository, branch, sha)
-            return sha
-        return None
-    except (httpx.HTTPError, ValueError, TypeError):
+        return sha if isinstance(sha, str) else None
+    except httpx.HTTPError:
         sha = _branch_head_sha_via_git_ls_remote(repository, branch)
         if sha:
-            _cache_branch_head_sha(repository, branch, sha)
             return sha
-        sha = _branch_head_sha_via_gh_cli(repository, branch)
-        if sha:
-            _cache_branch_head_sha(repository, branch, sha)
-            return sha
-        return None
+        return _branch_head_sha_via_gh_cli(repository, branch)
 
 
 def evaluate_pr_to_public_report(
@@ -1441,29 +1515,6 @@ def evaluate_public_deploy_contract_report(
 
     paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
     checks.append(paid_override_header_check)
-
-    provider_readiness_url = f"{report['api_base']}/api/automation/usage/readiness"
-    provider_readiness = check_http_json_endpoint(provider_readiness_url, timeout=timeout)
-    provider_readiness["name"] = "railway_provider_readiness"
-    provider_readiness["required"] = require_provider_readiness
-    if provider_readiness.get("ok") and isinstance(provider_readiness.get("json"), dict):
-        payload = provider_readiness["json"]
-        all_required_ready = payload.get("all_required_ready")
-        blocking_payload = payload.get("blocking_issues")
-        blocking_issues = (
-            [str(item) for item in blocking_payload if str(item).strip()]
-            if isinstance(blocking_payload, list)
-            else []
-        )
-        provider_readiness["all_required_ready"] = all_required_ready if isinstance(all_required_ready, bool) else None
-        provider_readiness["blocking_issues_count"] = len(blocking_issues)
-        provider_readiness["blocking_issues"] = blocking_issues[:20]
-        if require_provider_readiness and all_required_ready is not True:
-            provider_readiness["ok"] = False
-            provider_readiness["error"] = "provider_readiness_blocked"
-    elif require_provider_readiness:
-        provider_readiness["ok"] = False
-    checks.append(provider_readiness)
 
     report["checks"] = checks
     warnings: list[str] = []

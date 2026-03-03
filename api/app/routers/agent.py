@@ -12,12 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Re
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
-from app.routers.agent_telegram import (
-    format_task_alert,
-    is_runner_task_update,
-    router as telegram_router,
-)
-from app.routers.assistant_telegram import router as assistant_telegram_router
+from app.routers.agent_telegram import format_task_alert, router as telegram_router
 
 from app.models.agent import (
     AgentRunnerHeartbeat,
@@ -48,16 +43,6 @@ from app.services import (
 
 router = APIRouter()
 router.include_router(telegram_router)
-router.include_router(assistant_telegram_router)
-
-_ISSUE_PRIORITY = {"high": 0, "medium": 1, "low": 2}
-
-
-def _task_status_value(task: dict[str, Any] | None) -> str:
-    if not isinstance(task, dict):
-        return ""
-    task_status = task.get("status")
-    return task_status.value if isinstance(task_status, TaskStatus) else str(task_status or "").strip().lower()
 
 
 def _truthy(value: str | bool | None) -> bool:
@@ -66,30 +51,6 @@ def _truthy(value: str | bool | None) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
-
-
-def _require_execute_token(
-    route_name: str,
-    x_agent_execute_token: Optional[str],
-    *,
-    require_when_token_not_configured: bool,
-) -> None:
-    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
-    if expected:
-        if (x_agent_execute_token or "").strip() != expected:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        return
-    if require_when_token_not_configured:
-        logger.warning(
-            "%s called without AGENT_EXECUTE_TOKEN configured; denying execution request",
-            route_name,
-        )
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-
-def _require_execute_token_when_unset() -> bool:
-    """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
-    return not _truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
 
 
 def _coerce_force_paid_override(request: Request) -> bool:
@@ -128,58 +89,6 @@ def _coerce_force_paid_override(request: Request) -> bool:
         if _truthy(raw):
             return True
     return False
-
-
-def _force_paid_override(
-    request: Request,
-    x_force_paid_providers: str | None = None,
-    force_paid_providers: str | None = None,
-    force_paid_provider: str | None = None,
-    force_allow_paid_providers: str | None = None,
-    allow_paid_providers: str | None = None,
-    allow_paid_provider: str | None = None,
-) -> bool:
-    """Read execute-time paid override from raw query, headers, and compatibility flags."""
-    return (
-        _truthy(x_force_paid_providers)
-        or _truthy(force_paid_providers)
-        or _truthy(force_paid_provider)
-        or _truthy(force_allow_paid_providers)
-        or _truthy(allow_paid_providers)
-        or _truthy(allow_paid_provider)
-        or _coerce_force_paid_override(request)
-    )
-
-
-def _task_status(task: dict[str, Any]) -> TaskStatus | None:
-    raw = task.get("status")
-    if isinstance(raw, TaskStatus):
-        return raw
-    if raw is None:
-        return None
-    try:
-        return TaskStatus(str(raw))
-    except ValueError:
-        return None
-
-
-def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
-    status = _task_status(task)
-    if status not in {TaskStatus.FAILED, TaskStatus.COMPLETED}:
-        return task
-
-    refreshed = agent_service.update_task(
-        task_id,
-        status=TaskStatus.PENDING,
-        current_step="requeued for manual execute",
-        context={
-            "manual_reexecute_requested": True,
-            "manual_reexecute_from_status": status.value,
-        },
-    )
-    if isinstance(refreshed, dict):
-        return refreshed
-    return task
 
 
 def _task_to_item(task: dict) -> dict:
@@ -563,6 +472,76 @@ async def pickup_and_execute_task(
 
 
 @router.post(
+    "/agent/tasks/{task_id}/execute",
+    responses={
+        403: {"description": "Forbidden (missing or invalid execute token)", "model": ErrorDetail},
+        404: {"description": "Task not found", "model": ErrorDetail},
+    },
+)
+async def execute_task(
+    task_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+    x_force_paid_providers: Optional[str] = Header(None, alias="X-Force-Paid-Providers"),
+    force_paid_providers: str | None = Query(None),
+    force_paid_provider: str | None = Query(None),
+    force_allow_paid_providers: str | None = Query(None),
+    allow_paid_providers: str | None = Query(None),
+    allow_paid_provider: str | None = Query(None),
+    max_cost_usd: float | None = Query(None, ge=0.0),
+    estimated_cost_usd: float | None = Query(None, ge=0.0),
+    cost_slack_ratio: float | None = Query(None, ge=1.0),
+) -> dict:
+    """Execute a task server-side (background).
+
+    If AGENT_EXECUTE_TOKEN is set, callers must provide header X-Agent-Execute-Token.
+    """
+    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    if expected and (x_agent_execute_token or "").strip() != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    task = agent_service.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    from app.services import agent_execution_service
+
+    force_paid_override = (
+        _truthy(force_paid_providers)
+        or _truthy(force_paid_provider)
+        or _truthy(force_allow_paid_providers)
+        or _truthy(allow_paid_providers)
+        or _truthy(allow_paid_provider)
+        or _truthy(x_force_paid_providers)
+        or _coerce_force_paid_override(request)
+    )
+    if force_paid_override:
+        task_ctx = task.get("context")
+        ctx: dict[str, object] = task_ctx if isinstance(task_ctx, dict) else {}
+        if not _truthy(str(ctx.get("force_paid_providers") or "")):
+            agent_service.update_task(
+                task_id,
+                context={
+                    "force_paid_providers": True,
+                    "force_paid_override_source": "query"
+                    if _coerce_force_paid_override(request)
+                    else "header",
+                },
+            )
+
+    background_tasks.add_task(
+        agent_execution_service.execute_task,
+        task_id,
+        force_paid_providers=force_paid_override,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+    )
+    return {"ok": True, "task_id": task_id}
+
+
+@router.post(
     "/agent/tasks/upsert-active",
     responses={
         409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
@@ -650,7 +629,10 @@ async def update_task(
     Sends Telegram alerts for needs_decision/failed status only.
     When decision present and task needs_decision, sets status→running.
     """
-    if not _task_update_has_fields(data):
+    if all(
+        getattr(data, f) is None
+        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
+    ):
         raise HTTPException(status_code=400, detail="At least one field required")
     existing_task = agent_service.get_task(task_id)
     previous_status_value = _task_status_value(existing_task)
@@ -664,7 +646,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
-            context=context_patch if context_patch else None,
+            context=data.context,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
@@ -685,7 +667,7 @@ async def update_task(
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
-            msg = format_task_alert(task, runner_update=runner_update)
+            msg = format_task_alert(task)
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)

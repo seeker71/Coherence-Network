@@ -136,7 +136,7 @@ def _executor_binary_name(executor: str) -> str:
                 return candidate
         configured = os.environ.get("OPENCLAW_EXECUTABLE")
         return configured.strip() if configured else "openclaw"
-    return "claude"
+    return "aider"
 
 
 def _executor_available(executor: str) -> bool:
@@ -1751,27 +1751,7 @@ def update_task(
             next_context.update(context)
         else:
             next_context = dict(context)
-        if any(
-            key in next_context
-            for key in ("target_state", "success_evidence", "abort_evidence", "observation_window_sec")
-        ):
-            normalized_contract = _normalize_target_state_contract(
-                direction=str(task.get("direction") or ""),
-                task_type=task.get("task_type") if isinstance(task.get("task_type"), TaskType) else TaskType.IMPL,
-                target_state=next_context.get("target_state"),
-                success_evidence=next_context.get("success_evidence"),
-                abort_evidence=next_context.get("abort_evidence"),
-                observation_window_sec=next_context.get("observation_window_sec"),
-            )
-            next_context.update(normalized_contract)
-            next_context["target_state_contract"] = dict(normalized_contract)
         task["context"] = next_context
-    preferred_graph_state = None
-    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    if isinstance(task_context.get("agent_graph_state"), dict):
-        preferred_graph_state = dict(task_context.get("agent_graph_state") or {})
-    _apply_agent_graph_state_contract(task, preferred_state=preferred_graph_state)
-    _ensure_failed_task_diagnostics(task)
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
     current_status_value = _status_value(task.get("status"))
@@ -2052,173 +2032,6 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
     }
 
 
-def _task_activity_time(task: dict[str, Any]) -> datetime | None:
-    for key in ("updated_at", "created_at", "started_at"):
-        value = task.get(key)
-        if isinstance(value, datetime):
-            return value
-        parsed = _parse_dt(value)
-        if parsed is not None:
-            return parsed
-    return None
-
-
-def _is_host_runner_claimant(claimed_by: str) -> bool:
-    cleaned = claimed_by.strip().lower()
-    if not cleaned:
-        return False
-    return "railway-runner" in cleaned or cleaned.startswith("openai-codex:")
-
-
-def _host_runner_usage_summary(tasks: list[dict[str, Any]], *, window_hours: int = 24) -> dict[str, Any]:
-    now = _now()
-    cutoff = now - timedelta(hours=max(1, min(int(window_hours), 24 * 30)))
-    host_tasks: list[dict[str, Any]] = []
-    for task in tasks:
-        claimed_by = str(task.get("claimed_by") or "")
-        if not _is_host_runner_claimant(claimed_by):
-            continue
-        task_time = _task_activity_time(task)
-        if task_time is None or task_time < cutoff:
-            continue
-        host_tasks.append(task)
-
-    status_counts: dict[str, int] = {}
-    task_type_counts: dict[str, dict[str, int]] = {}
-    for task in host_tasks:
-        status = _status_value(task.get("status")) or "unknown"
-        status_counts[status] = status_counts.get(status, 0) + 1
-        task_type_value = _status_value(task.get("task_type")) or "unknown"
-        row = task_type_counts.setdefault(task_type_value, {"total": 0})
-        row["total"] += 1
-        row[status] = row.get(status, 0) + 1
-
-    return {
-        "window_hours": max(1, min(int(window_hours), 24 * 30)),
-        "generated_at": now.isoformat(),
-        "total_runs": len(host_tasks),
-        "failed_runs": status_counts.get("failed", 0),
-        "completed_runs": status_counts.get("completed", 0),
-        "running_runs": status_counts.get("running", 0),
-        "pending_runs": status_counts.get("pending", 0) + status_counts.get("needs_decision", 0),
-        "status_counts": status_counts,
-        "by_task_type": task_type_counts,
-    }
-
-
-def _linked_task_ids_from_friction_events() -> set[str]:
-    try:
-        from app.services import friction_service
-
-        events, _ignored = friction_service.load_events()
-    except Exception:
-        return set()
-    linked_ids: set[str] = set()
-    for event in events:
-        linked_task_id = str(getattr(event, "task_id", "") or "").strip()
-        if linked_task_id:
-            linked_ids.add(linked_task_id)
-    return linked_ids
-
-
-def _record_task_failure_friction(task: dict[str, Any], *, linked_task_ids: set[str] | None = None) -> bool:
-    task_id = str(task.get("id") or "").strip()
-    if not task_id:
-        return False
-    if linked_task_ids is None:
-        linked_task_ids = _linked_task_ids_from_friction_events()
-    if task_id in linked_task_ids:
-        return False
-
-    notes_parts = [
-        f"task_id={task_id}",
-        f"task_type={_status_value(task.get('task_type')) or 'unknown'}",
-        f"claimed_by={_normalize_worker_id(task.get('claimed_by'))}",
-        "failure_reason=task transitioned to failed without linked friction event",
-    ]
-    output = _task_output_text(task).strip()
-    if output:
-        notes_parts.append(f"output_preview={output[:400]}")
-
-    try:
-        from uuid import uuid4
-
-        from app.models.friction import FrictionEvent
-        from app.services import friction_service
-    except Exception:
-        return False
-
-    event = FrictionEvent(
-        id=f"fric_{uuid4().hex[:12]}",
-        timestamp=_now(),
-        task_id=task_id,
-        endpoint="tool:agent-task-completion",
-        stage="agent_runner",
-        block_type="task_failure",
-        severity="high",
-        owner="agent_pipeline",
-        unblock_condition="Investigate failed task output, then rerun or close with a documented resolution.",
-        energy_loss_estimate=0.0,
-        cost_of_delay=0.0,
-        status="open",
-        notes=" | ".join(notes_parts)[:1200],
-        resolved_at=None,
-        time_open_hours=None,
-        resolution_action=None,
-    )
-    try:
-        friction_service.append_event(event)
-    except Exception:
-        return False
-    linked_task_ids.add(task_id)
-    return True
-
-
-def backfill_host_runner_failure_observability(*, window_hours: int = 24) -> dict[str, Any]:
-    """Ensure host-runner failed tasks are linked to completion + friction telemetry."""
-    _ensure_store_loaded()
-    bounded_window = max(1, min(int(window_hours), 24 * 30))
-    now = _now()
-    cutoff = now - timedelta(hours=bounded_window)
-
-    host_failed_tasks: list[dict[str, Any]] = []
-    for task in _store.values():
-        if _status_value(task.get("status")) != "failed":
-            continue
-        if not _is_host_runner_claimant(str(task.get("claimed_by") or "")):
-            continue
-        task_time = _task_activity_time(task)
-        if task_time is None or task_time < cutoff:
-            continue
-        host_failed_tasks.append(task)
-
-    completion_backfilled = 0
-    friction_backfilled = 0
-    affected_task_ids: list[str] = []
-    linked_task_ids = _linked_task_ids_from_friction_events()
-    for task in host_failed_tasks:
-        task_id = str(task.get("id") or "").strip()
-        if not task_id:
-            continue
-        had_completion = _has_completion_tracking_event(task_id, "failed")
-        if not had_completion:
-            _record_completion_tracking_event(task)
-            completion_backfilled += 1
-            affected_task_ids.append(task_id)
-        if _record_task_failure_friction(task, linked_task_ids=linked_task_ids):
-            friction_backfilled += 1
-            if task_id not in affected_task_ids:
-                affected_task_ids.append(task_id)
-
-    return {
-        "window_hours": bounded_window,
-        "host_failed_tasks": len(host_failed_tasks),
-        "completion_events_backfilled": completion_backfilled,
-        "friction_events_backfilled": friction_backfilled,
-        "affected_task_ids": affected_task_ids[:50],
-    }
-
-
 def _pipeline_task_status_item(
     task: dict[str, Any], now: datetime
 ) -> tuple[str, dict[str, Any]]:
@@ -2308,7 +2121,7 @@ def _pipeline_latest_activity(
                     "direction": task.get("direction"),
                     "prompt_preview": (task.get("command") or "")[:500],
                 }
-            out = _task_output_text(task)
+            out = task.get("output") or ""
             latest_response = {
                 "task_id": task.get("id"),
                 "status": task.get("status"),
@@ -2342,7 +2155,7 @@ def _pipeline_attention_summary(
     output_empty = False
     for completed_item in completed[:5]:
         t = _store.get(completed_item["id"]) or {}
-        if len(_task_output_text(t)) == 0 and _status_value(t) == "completed":
+        if len(t.get("output") or "") == 0 and _status_value(t) == "completed":
             output_empty = True
             attention_flags.append("output_empty")
             break
@@ -2350,7 +2163,7 @@ def _pipeline_attention_summary(
     executor_fail = False
     for completed_item in completed[:5]:
         t = _store.get(completed_item["id"]) or {}
-        if len(_task_output_text(t)) == 0 and _status_value(t) == "failed":
+        if len(t.get("output") or "") == 0 and _status_value(t) == "failed":
             executor_fail = True
             attention_flags.append("executor_fail")
             break
@@ -2385,99 +2198,6 @@ def _pipeline_attention_summary(
         "low_success_rate": low_success_rate,
         "flags": attention_flags,
         "by_phase": by_phase,
-    }
-
-
-def _task_type_name(value: Any) -> str:
-    if hasattr(value, "value"):
-        return str(getattr(value, "value") or "").strip().lower()
-    return str(value or "").strip().lower()
-
-
-def _failure_reason_bucket(task: dict[str, Any]) -> str:
-    return _failure_classification(task)["bucket"]
-
-
-def _failure_classification(task: dict[str, Any], *, output_text: str | None = None) -> dict[str, str]:
-    output_value = _task_output_text(task) if output_text is None else str(output_text or "")
-    context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    detail = ""
-    if isinstance(context, dict):
-        for key in ("last_error", "error", "failure_reason", "runner_error", "message", "details", "exception"):
-            maybe = _context_failure_detail(context, key)
-            if maybe:
-                detail = maybe
-                break
-    failure_class = str((context or {}).get("last_failure_class") or (context or {}).get("failure_class") or "")
-    return failure_taxonomy_service.classify_failure(
-        output_text=output_value,
-        result_error=detail,
-        failure_class=failure_class,
-    )
-
-
-def _pipeline_queue_diagnostics(
-    running: list[dict[str, Any]],
-    pending: list[dict[str, Any]],
-    completed: list[dict[str, Any]],
-) -> dict[str, Any]:
-    pending_by_task_type: dict[str, int] = {}
-    running_by_task_type: dict[str, int] = {}
-    for item in pending:
-        task_type = _task_type_name(item.get("task_type"))
-        key = task_type or "unknown"
-        pending_by_task_type[key] = pending_by_task_type.get(key, 0) + 1
-    for item in running:
-        task_type = _task_type_name(item.get("task_type"))
-        key = task_type or "unknown"
-        running_by_task_type[key] = running_by_task_type.get(key, 0) + 1
-
-    reason_counts: dict[str, int] = {}
-    recent_failed: list[dict[str, Any]] = []
-    for completed_item in completed[:12]:
-        task = _store.get(completed_item["id"]) or {}
-        if _status_value(task.get("status")) != "failed":
-            continue
-        reason = _failure_reason_bucket(task)
-        reason_counts[reason] = reason_counts.get(reason, 0) + 1
-        failure_signature = (
-            str((task.get("context") or {}).get("failure_signature") or "").strip()
-            if isinstance(task.get("context"), dict)
-            else ""
-        )
-        recent_failed.append(
-            {
-                "task_id": task.get("id"),
-                "task_type": _task_type_name(task.get("task_type")) or "unknown",
-                "reason": reason,
-                "signature": failure_signature or _failure_classification(task).get("signature", ""),
-            }
-        )
-
-    recent_failed_reasons = [
-        {"reason": reason, "count": count}
-        for reason, count in sorted(reason_counts.items(), key=lambda row: (-row[1], row[0]))
-    ]
-
-    total_pending = sum(pending_by_task_type.values())
-    dominant_pending_type = ""
-    dominant_pending_share = 0.0
-    if total_pending > 0:
-        dominant_pending_type, dominant_count = max(
-            pending_by_task_type.items(),
-            key=lambda row: row[1],
-        )
-        dominant_pending_share = round(float(dominant_count) / float(total_pending), 4)
-    queue_mix_warning = bool(total_pending >= 5 and dominant_pending_share >= 0.8)
-
-    return {
-        "pending_by_task_type": pending_by_task_type,
-        "running_by_task_type": running_by_task_type,
-        "recent_failed_count": len(recent_failed),
-        "recent_failed_reasons": recent_failed_reasons,
-        "queue_mix_warning": queue_mix_warning,
-        "dominant_pending_task_type": dominant_pending_type,
-        "dominant_pending_share": dominant_pending_share,
     }
 
 
@@ -3055,7 +2775,7 @@ def upsert_active_task(
 
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     """Pipeline visibility: running, pending with wait times, recent completed with duration."""
-    _ensure_store_loaded(include_output=False)
+    _ensure_store_loaded()
     now = now_utc or datetime.now(timezone.utc)
 
     running, pending, completed = _collect_pipeline_status_items(now)
@@ -3063,7 +2783,6 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
 
     latest_request, latest_response = _pipeline_latest_activity(running, completed)
     attention = _pipeline_attention_summary(running, pending, completed)
-    diagnostics = _pipeline_queue_diagnostics(running, pending, completed)
 
     return {
         "running": running[:10],

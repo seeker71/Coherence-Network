@@ -6,11 +6,8 @@ import json
 import os
 import re
 import time
-import hashlib
-import logging
-import threading
-from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Any, Callable
+import asyncio
+from typing import Any
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -24,45 +21,8 @@ from app.models.runtime import (
     IdeaRuntimeSummary,
     RuntimeEvent,
     RuntimeEventCreate,
-    WebViewPerformanceReport,
 )
-from app.services import (
-    agent_task_store_service,
-    idea_lineage_service,
-    route_registry_service,
-    runtime_exerciser_service,
-    runtime_event_store,
-    runtime_web_view_service,
-    telemetry_persistence_service,
-    value_lineage_service,
-)
-
-logger = logging.getLogger(__name__)
-
-
-_RUNTIME_EVENTS_CACHE: dict[str, Any] = {
-    "expires_at": 0.0,
-    "cache_key": "",
-    "rows": [],
-}
-_RUNTIME_EVENTS_CACHE_TTL_SECONDS = 30.0
-
-_LIVE_CHANGE_CACHE: dict[str, Any] = {
-    "expires_at": 0.0,
-    "payload": {},
-}
-_LIVE_CHANGE_CACHE_TTL_SECONDS = 5.0
-
-_RUNTIME_ENDPOINT_CACHE_NAMESPACE = "runtime_endpoint_cache_v1"
-_RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 120.0
-_RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
-_RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
-_RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
-_RUNTIME_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
-    max_workers=max(2, min(int(os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
-    thread_name_prefix="runtime-endpoint-cache-refresh",
-)
-_RUNTIME_ENDPOINT_CACHE_BUSTER = 0
+from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
 
 
 def _default_events_path() -> Path:
@@ -1261,6 +1221,277 @@ def slow_endpoints_report(*, seconds: int, threshold_ms: int, limit: int) -> lis
     return flagged[: max(1, min(int(limit), 500))]
 
 
+def _parse_status_code(value: str) -> int:
+    try:
+        return int(str(value))
+    except Exception:
+        return 0
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _load_idea_value_rows() -> dict[str, dict[str, float]]:
+    try:
+        from app.services import idea_service
+    except Exception:
+        return {}
+
+    rows: dict[str, dict[str, float]] = {}
+    try:
+        ideas = idea_service.list_ideas()
+    except Exception:
+        return rows
+
+    for idea in ideas.ideas:
+        rows[str(idea.id)] = {
+            "potential_value": float(idea.potential_value or 0.0),
+            "actual_value": float(idea.actual_value or 0.0),
+            "estimated_cost": float(idea.estimated_cost or 0.0),
+            "actual_cost": float(idea.actual_cost or 0.0),
+            "confidence": float(idea.confidence or 0.0),
+        }
+    return rows
+
+
+def _endpoint_friction_counts(seconds: int) -> dict[str, int]:
+    from app.services import friction_service
+
+    try:
+        events, _ignored = friction_service.load_events()
+    except Exception:
+        return {}
+
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, min(seconds, 60 * 60 * 24 * 30)))
+    counts: dict[str, int] = {}
+    for event in events:
+        if event.timestamp < cutoff:
+            continue
+        endpoint = str(getattr(event, "endpoint", "") or "").strip()
+        if not endpoint:
+            continue
+        counts[endpoint] = counts.get(endpoint, 0) + 1
+    return counts
+
+
+def _attention_reasons(
+    *,
+    success_rate: float,
+    paid_ratio: float,
+    friction_density: float,
+    value_gap: float,
+    cost_per_event: float,
+    event_count: int,
+) -> list[str]:
+    reasons: list[str] = []
+    if event_count < 5:
+        reasons.append("low_sample")
+    if success_rate < 0.90:
+        reasons.append(f"low_success_rate:{round(success_rate * 100.0, 2)}%")
+    if paid_ratio > 0.0:
+        reasons.append(f"paid_requests:{round(paid_ratio * 100.0, 2)}%")
+    if friction_density > 0.0:
+        reasons.append(f"friction_density:{round(friction_density * 100.0, 2)}%")
+    if value_gap > 1.0:
+        reasons.append(f"value_gap:{round(value_gap, 4)}")
+    if cost_per_event > 0.002:
+        reasons.append(f"cost_per_event:{round(cost_per_event, 6)}")
+    return reasons
+
+
+def _endpoint_attention_score(
+    *,
+    event_count: int,
+    success_rate: float,
+    paid_ratio: float,
+    friction_density: float,
+    value_gap: float,
+    cost_per_event: float,
+    attention_threshold: float,
+) -> tuple[float, bool]:
+    """Compute attention score and whether attention_threshold is exceeded."""
+    failure_score = (1.0 - success_rate) * 100.0
+    paid_score = min(paid_ratio * 60.0, 30.0)
+    cost_score = min(cost_per_event * 1000.0, 25.0)
+    friction_score = min(friction_density * 300.0, 20.0)
+    value_gap_score = min(value_gap / 5.0, 25.0)
+    sample_score = min(event_count / 20.0, 1.0) * 10.0
+
+    attention_score = (
+        failure_score * min(event_count / 5.0, 1.0)
+        + paid_score
+        + cost_score
+        + friction_score
+        + value_gap_score
+        + sample_score
+    )
+    return attention_score, attention_score >= attention_threshold
+
+
+def _endpoint_attention_status_counts(
+    row: EndpointRuntimeSummary,
+) -> tuple[int, int]:
+    success_count = 0
+    failure_count = 0
+    for code_str, count in row.status_counts.items():
+        code = _parse_status_code(code_str)
+        if 200 <= code < 400:
+            success_count += _safe_int(count, 0)
+        else:
+            failure_count += _safe_int(count, 0)
+    return success_count, failure_count
+
+
+def _endpoint_attention_paid_counts(
+    endpoint_events: list[RuntimeEvent],
+) -> tuple[int, int]:
+    paid_tool_event_count = 0
+    paid_tool_failure_count = 0
+    for event in endpoint_events:
+        metadata = event.metadata if isinstance(event.metadata, dict) else {}
+        if bool(metadata.get("is_paid_provider")):
+            paid_tool_event_count += 1
+            if event.status_code >= 400:
+                paid_tool_failure_count += 1
+    return paid_tool_event_count, paid_tool_failure_count
+
+
+def _build_endpoint_attention_row(
+    row: EndpointRuntimeSummary,
+    *,
+    min_event_count: int,
+    attention_threshold: float,
+    endpoint_events: list[RuntimeEvent],
+    friction_count: int,
+    idea_rows: dict[str, dict[str, float]],
+) -> EndpointAttentionRow | None:
+    event_count = int(row.event_count)
+    if event_count < max(1, int(min_event_count)):
+        return None
+
+    success_count, failure_count = _endpoint_attention_status_counts(row)
+
+    success_rate = float(success_count) / float(event_count) if event_count else 0.0
+
+    paid_tool_event_count, paid_tool_failure_count = _endpoint_attention_paid_counts(endpoint_events)
+
+    paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
+    friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
+
+    idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
+    potential_value = _safe_float(idea_data.get("potential_value", 0.0))
+    actual_value = _safe_float(idea_data.get("actual_value", 0.0))
+    estimated_cost = _safe_float(idea_data.get("estimated_cost", 0.0))
+    actual_cost = _safe_float(idea_data.get("actual_cost", 0.0))
+    idea_confidence = _safe_float(idea_data.get("confidence", 0.0), default=0.0)
+
+    value_gap = max(potential_value - actual_value, 0.0)
+    cost_per_event = float(row.runtime_cost_estimate) / float(max(event_count, 1))
+
+    confidence = min(event_count / 20.0, 1.0) * 0.75 + 0.25 * idea_confidence
+    attention_score, needs_attention = _endpoint_attention_score(
+        event_count=event_count,
+        success_rate=success_rate,
+        paid_ratio=paid_ratio,
+        friction_density=friction_density,
+        value_gap=value_gap,
+        cost_per_event=cost_per_event,
+        attention_threshold=attention_threshold,
+    )
+
+    return EndpointAttentionRow(
+        endpoint=row.endpoint,
+        methods=row.methods,
+        idea_id=row.idea_id,
+        origin_idea_id=row.origin_idea_id,
+        event_count=event_count,
+        success_count=success_count,
+        failure_count=failure_count,
+        success_rate=round(success_rate, 4),
+        runtime_cost_estimate=round(float(row.runtime_cost_estimate), 8),
+        cost_per_event=round(cost_per_event, 8),
+        paid_tool_event_count=paid_tool_event_count,
+        paid_tool_failure_count=paid_tool_failure_count,
+        paid_tool_ratio=round(paid_ratio, 4),
+        friction_event_count=friction_count,
+        friction_event_density=round(friction_density, 4),
+        potential_value=round(potential_value, 4),
+        actual_value=round(actual_value, 4),
+        estimated_cost=round(estimated_cost, 4),
+        actual_cost=round(actual_cost, 4),
+        value_gap=round(value_gap, 4),
+        attention_score=round(attention_score, 3),
+        confidence=round(max(0.0, min(confidence, 1.0)), 4),
+        needs_attention=needs_attention,
+        reasons=_attention_reasons(
+            success_rate=success_rate,
+            paid_ratio=paid_ratio,
+            friction_density=friction_density,
+            value_gap=value_gap,
+            cost_per_event=cost_per_event,
+            event_count=event_count,
+        ),
+    )
+
+
+def summarize_endpoint_attention(
+    *,
+    seconds: int = 3600,
+    min_event_count: int = 1,
+    attention_threshold: float = 40.0,
+    limit: int | None = None,
+) -> EndpointAttentionReport:
+    window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
+    endpoint_rows = summarize_by_endpoint(seconds=window_seconds)
+    friction_by_endpoint = _endpoint_friction_counts(window_seconds)
+    idea_rows = _load_idea_value_rows()
+
+    window_start = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    attention_events = [e for e in list_events(limit=2000) if e.recorded_at >= window_start]
+    by_endpoint: dict[str, list[RuntimeEvent]] = {}
+    for event in attention_events:
+        by_endpoint.setdefault(event.endpoint, []).append(event)
+
+    rows: list[EndpointAttentionRow] = []
+    for row in endpoint_rows:
+        built = _build_endpoint_attention_row(
+            row,
+            min_event_count=min_event_count,
+            attention_threshold=attention_threshold,
+            endpoint_events=by_endpoint.get(row.endpoint, []),
+            friction_count=int(friction_by_endpoint.get(row.endpoint, 0)),
+            idea_rows=idea_rows,
+        )
+        if built is None:
+            continue
+        rows.append(built)
+
+    rows.sort(key=lambda row: row.attention_score, reverse=True)
+    if limit is not None:
+        rows = rows[: max(1, min(int(limit), len(rows), 2000))]
+
+    attention_count = sum(1 for row in rows if row.needs_attention)
+    return EndpointAttentionReport(
+        window_seconds=window_seconds,
+        attention_threshold=round(float(attention_threshold), 3),
+        min_event_count=max(1, int(min_event_count)),
+        total_endpoints=len(rows),
+        attention_count=attention_count,
+        endpoints=rows,
+    )
+
+
 def verify_internal_vs_public_usage(
     *,
     public_api_base: str,
@@ -1315,6 +1546,94 @@ def verify_internal_vs_public_usage(
     }
 
 
+_EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
+    "/api/agent/route": {"task_type": "impl"},
+    "/api/agent/tasks": {"limit": "20", "offset": "0"},
+    "/api/agent/tasks/attention": {"limit": "20"},
+    "/api/agent/tasks/count": {},
+    "/api/runtime/events": {"limit": "100"},
+    "/api/runtime/ideas/summary": {"seconds": "3600"},
+    "/api/runtime/endpoints/summary": {"seconds": "3600"},
+    "/api/runtime/endpoints/attention": {
+        "seconds": "3600",
+        "min_event_count": "1",
+        "attention_threshold": "0.0",
+    },
+    "/api/inventory/process-completeness": {"runtime_window_seconds": "86400"},
+    "/api/inventory/questions/proactive": {"limit": "20", "top": "20"},
+    "/api/inventory/endpoint-traceability": {"runtime_window_seconds": "86400"},
+    "/api/inventory/system-lineage": {"runtime_window_seconds": "3600"},
+    "/api/automation/usage/snapshots": {"limit": "200"},
+    "/api/automation/usage/provider-validation": {
+        "runtime_window_seconds": "86400",
+        "min_execution_events": "1",
+    },
+}
+
+
+def _sample_path_value(param_name: str) -> str:
+    key = (param_name or "").strip().lower()
+    if key == "task_id":
+        try:
+            from app.services import agent_service
+
+            rows, total = agent_service.list_tasks(limit=1)
+            if total > 0 and rows:
+                value = str(rows[0].get("id") or "").strip()
+                if value:
+                    return value
+        except Exception:
+            pass
+        return "task_missing"
+    if key == "lineage_id":
+        try:
+            rows = value_lineage_service.list_links(limit=1)
+            if rows:
+                return rows[0].id
+        except Exception:
+            pass
+        return "lineage_missing"
+    if key == "spec_id":
+        try:
+            from app.services import spec_registry_service
+
+            rows = spec_registry_service.list_specs(limit=1)
+            if rows:
+                return rows[0].spec_id
+        except Exception:
+            pass
+        return "spec_missing"
+    if key == "idea_id":
+        return "portfolio-governance"
+    return f"{key}_sample"
+
+
+def _materialize_route_path(path_template: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        return _sample_path_value(name)
+
+    return re.sub(r"\{([^{}]+)\}", _replace, path_template)
+
+
+def _discover_get_api_paths(app) -> list[str]:
+    paths: list[str] = []
+    for route in getattr(app, "routes", []):
+        if not isinstance(route, APIRoute):
+            continue
+        methods = {m.upper() for m in (route.methods or set())}
+        if "GET" not in methods:
+            continue
+        path = str(getattr(route, "path", "") or "").strip()
+        if not path.startswith("/api/"):
+            continue
+        if path.startswith("/api/runtime/exerciser"):
+            continue
+        paths.append(path)
+    unique = sorted(set(paths))
+    return unique
+
+
 async def run_get_endpoint_exerciser(
     *,
     app,
@@ -1325,12 +1644,110 @@ async def run_get_endpoint_exerciser(
     timeout_seconds: float = 8.0,
     runtime_window_seconds: int = 86400,
 ) -> dict:
-    return await runtime_exerciser_service.run_get_endpoint_exerciser(
+    total_cycles = max(1, min(int(cycles), 200))
+    endpoint_limit = max(1, min(int(max_endpoints), 2000))
+    per_call_delay = max(0, min(int(delay_ms), 30000))
+    timeout = max(1.0, min(float(timeout_seconds), 60.0))
+    paths = _discover_get_api_paths(app)[:endpoint_limit]
+
+    before_with_usage, before_total = _exerciser_inventory_snapshot(
+        runtime_window_seconds=runtime_window_seconds
+    )
+    results, by_status = await _run_get_endpoint_exerciser_calls(
         app=app,
         base_url=base_url,
-        cycles=cycles,
-        max_endpoints=max_endpoints,
-        delay_ms=delay_ms,
-        timeout_seconds=timeout_seconds,
-        runtime_window_seconds=runtime_window_seconds,
+        paths=paths,
+        total_cycles=total_cycles,
+        per_call_delay=per_call_delay,
+        timeout=timeout,
     )
+    after_with_usage, after_total = _exerciser_inventory_snapshot(
+        runtime_window_seconds=runtime_window_seconds
+    )
+
+    return {
+        "result": "runtime_get_endpoint_exerciser_completed",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "config": {
+            "cycles": total_cycles,
+            "max_endpoints": endpoint_limit,
+            "delay_ms": per_call_delay,
+            "timeout_seconds": timeout,
+            "runtime_window_seconds": runtime_window_seconds,
+        },
+        "coverage": {
+            "before_with_usage_events": before_with_usage,
+            "after_with_usage_events": after_with_usage,
+            "delta_with_usage_events": after_with_usage - before_with_usage,
+            "before_total_endpoints": before_total,
+            "after_total_endpoints": after_total,
+        },
+        "summary": {
+            "discovered_get_endpoints": len(paths),
+            "total_calls": len(results),
+            "status_counts": by_status,
+            "successful_calls": sum(1 for row in results if int(row["status_code"]) < 400),
+            "failed_calls": sum(1 for row in results if int(row["status_code"]) >= 400),
+        },
+        "calls": results[:500],
+    }
+
+
+def _exerciser_inventory_snapshot(runtime_window_seconds: int) -> tuple[int, int]:
+    from app.services import inventory_service
+
+    snapshot = inventory_service.build_endpoint_traceability_inventory(
+        runtime_window_seconds=runtime_window_seconds
+    )
+    with_usage = int((snapshot.get("summary") or {}).get("with_usage_events") or 0)
+    total = int((snapshot.get("summary") or {}).get("total_endpoints") or 0)
+    return with_usage, total
+
+
+async def _run_get_endpoint_exerciser_calls(
+    *,
+    app,
+    base_url: str,
+    paths: list[str],
+    total_cycles: int,
+    per_call_delay: int,
+    timeout: float,
+) -> tuple[list[dict[str, object]], dict[str, int]]:
+    results: list[dict[str, object]] = []
+    by_status: dict[str, int] = {}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url=base_url.rstrip("/"),
+        timeout=timeout,
+        follow_redirects=True,
+    ) as client:
+        for cycle in range(1, total_cycles + 1):
+            for path_template in paths:
+                path = _materialize_route_path(path_template)
+                params = dict(_EXERCISER_QUERY_DEFAULTS.get(path_template, {}))
+                started = time.perf_counter()
+                status_code = 599
+                error = None
+                try:
+                    response = await client.get(path, params=params, headers={"x-endpoint-exerciser": "1"})
+                    status_code = int(response.status_code)
+                except Exception as exc:
+                    error = str(exc)
+                elapsed_ms = round(max(0.1, (time.perf_counter() - started) * 1000.0), 4)
+                status_key = str(status_code)
+                by_status[status_key] = by_status.get(status_key, 0) + 1
+                row: dict[str, object] = {
+                    "cycle": cycle,
+                    "path_template": path_template,
+                    "path_called": path,
+                    "query_params": params,
+                    "status_code": status_code,
+                    "runtime_ms": elapsed_ms,
+                }
+                if error:
+                    row["error"] = error
+                results.append(row)
+                if per_call_delay > 0:
+                    await asyncio.sleep(per_call_delay / 1000.0)
+    return results, by_status

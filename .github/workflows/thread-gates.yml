@@ -111,7 +111,7 @@ jobs:
 
       - name: Build web
         run: |
-          cd web && npm ci --allow-git=none && npm run build
+          cd web && npm ci && npm run build
 
       - name: Check open PR failures (PRs only)
         if: github.event_name == 'pull_request'
@@ -122,5 +122,4 @@ jobs:
             --repo "${{ github.repository }}" \
             --base main \
             --head-prefix codex/ \
-            --head-ref "${{ github.event.pull_request.head.ref }}" \
             --fail-on-detected

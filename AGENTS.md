@@ -77,6 +77,12 @@ git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<t
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 make prompt-gate
 
+# Worktree setup for Codex thread start
+git fetch origin main
+git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
+cd ~/.claude-worktrees/Coherence-Network/<thread-name>
+python3 scripts/ensure_worktree_start_clean.py --json
+
 # API
 cd api && uvicorn app.main:app --reload --port 8000
 
@@ -89,6 +95,22 @@ cd web && npm run dev
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 # Optional npm cache override (default is per-worktree .cache/npm):
 NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
+
+# Public production verify (required before merge/roll-forward)
+./scripts/verify_web_api_deploy.sh
+
+# Start gate (required before starting a new task)
+python3 scripts/ensure_worktree_start_clean.py --json
+
+# PR check failure prevention + tracking (default before commit/push)
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+# Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
+python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
+# Dedicated triage for open PR check failures (+ optional auto-rerun for flaky GitHub Actions checks):
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
+python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --rerun-failed-actions --fail-on-detected
+# Tighten deploy freshness requirement if needed (default 6h):
+python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)" --deploy-success-max-age-hours 2
 
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
