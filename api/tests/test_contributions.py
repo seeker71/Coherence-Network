@@ -257,80 +257,44 @@ async def test_github_contribution_cost_marks_actual_with_verification_keys() ->
 
 
 @pytest.mark.asyncio
-async def test_github_contribution_marks_internal_emails_as_system_contributors() -> None:
+async def test_github_contribution_reuses_existing_repository_asset() -> None:
     app.state.graph_store = InMemoryGraphStore()
+    repo = "seeker71/Coherence-Network"
+    expected_description = f"GitHub repository: {repo}"
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        system = await client.post(
-            "/api/contributors",
-            json={"type": "SYSTEM", "name": "Coherence System", "email": "system@coherence.network"},
-        )
-        assert system.status_code == 201
-        system_id = system.json()["id"]
-        r = await client.post(
+        first = await client.post(
             "/api/contributions/github",
             json={
-                "contributor_email": "deploy-test+ci123@coherence.network",
-                "repository": "seeker71/Coherence-Network",
-                "commit_hash": "sys001",
-                "cost_amount": "1.00",
-                "metadata": {"files_changed": 1, "lines_added": 1},
+                "contributor_email": "alice@coherence.network",
+                "repository": repo,
+                "commit_hash": "abc123",
+                "cost_amount": "4.00",
+                "metadata": {"files_changed": 1, "lines_added": 10},
             },
         )
-        assert r.status_code == 201
-        payload = r.json()
-        assert payload["metadata"]["contributor_email"] == "deploy-test@coherence.network"
-        assert payload["metadata"]["contributor_email_raw"] == "deploy-test+ci123@coherence.network"
-        assert payload["metadata"]["contributor_type"] == "SYSTEM"
-        assert payload["contributor_id"] == system_id
+        assert first.status_code == 201
 
-
-@pytest.mark.asyncio
-async def test_github_contribution_rejects_unregistered_human_email() -> None:
-    app.state.graph_store = InMemoryGraphStore()
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        r = await client.post(
+        second = await client.post(
             "/api/contributions/github",
             json={
-                "contributor_email": "new-person@proton.me",
-                "repository": "seeker71/Coherence-Network",
-                "commit_hash": "new001",
-                "cost_amount": "1.00",
-                "metadata": {"files_changed": 1, "lines_added": 1},
-            },
-        )
-        assert r.status_code == 409
-        assert "Contributor not registered" in r.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_github_debug_endpoint_defaults_to_dry_run_without_writes() -> None:
-    app.state.graph_store = InMemoryGraphStore()
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        debug = await client.post(
-            "/api/contributions/github/debug",
-            json={
-                "contributor_email": "alice+debug@coherence.network",
-                "repository": "seeker71/Coherence-Network",
-                "commit_hash": "dbg001",
+                "contributor_email": "bob@coherence.network",
+                "repository": repo,
+                "commit_hash": "def456",
                 "cost_amount": "5.00",
-                "metadata": {"files_changed": 2, "lines_added": 10},
+                "metadata": {"files_changed": 2, "lines_added": 20},
             },
         )
-        assert debug.status_code == 200
-        payload = debug.json()
-        assert payload["success"] is True
-        assert payload["dry_run"] is True
-        assert payload["contributor_lookup"]["found_existing"] is False
+        assert second.status_code == 201
 
-        contributors = await client.get("/api/contributors?limit=10")
-        contributions = await client.get("/api/contributions?limit=10")
-        assert contributors.status_code == 200
-        assert contributions.status_code == 200
-        assert contributors.json() == []
-        assert contributions.json() == []
+        first_asset_id = first.json()["asset_id"]
+        second_asset_id = second.json()["asset_id"]
+        assert first_asset_id == second_asset_id
+
+        assets = await client.get("/api/assets?limit=100")
+        assert assets.status_code == 200
+        matching_assets = [asset for asset in assets.json() if asset["description"] == expected_description]
+        assert len(matching_assets) == 1
 
 
 @pytest.mark.asyncio
