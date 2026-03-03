@@ -117,6 +117,7 @@ logger = logging.getLogger("coherence.inventory")
 _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
     "system_lineage": {"expires_at": 0.0, "items": {}},
     "flow": {"expires_at": 0.0, "items": {}},
+    "idea_cards": {"expires_at": 0.0, "items": {}},
 }
 
 
@@ -5326,3 +5327,480 @@ def next_unblock_task_from_flow(
         ),
     }
     return report
+
+
+_IDEA_CARD_STATE_ORDER: dict[str, int] = {
+    "none": 0,
+    "spec": 1,
+    "implemented": 2,
+    "validated": 3,
+    "measured": 4,
+}
+_IDEA_CARD_STATE_ICON: dict[str, str] = {
+    "none": "sparkle",
+    "spec": "file-text",
+    "implemented": "box",
+    "validated": "shield-check",
+    "measured": "chart-line",
+}
+_IDEA_CARD_ATTENTION_ORDER: dict[str, int] = {
+    "none": 0,
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+}
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _normalize_card_enum(value: str | None, allowed: set[str], default: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return default
+    return normalized if normalized in allowed else default
+
+
+def _friendly_card_title(name: str, fallback_idea_id: str) -> str:
+    raw = str(name or "").strip() or str(fallback_idea_id or "").strip()
+    if not raw:
+        return "Idea"
+    if "_" not in raw and raw.lower() != str(fallback_idea_id or "").strip().lower():
+        return raw
+    words = [part for part in re.split(r"[_\\-]+", raw) if part]
+    if not words:
+        return raw
+    return " ".join(word.capitalize() for word in words)
+
+
+def _idea_card_state(flow_row: dict[str, Any]) -> str:
+    spec = bool((flow_row.get("spec") or {}).get("tracked"))
+    implementation = bool((flow_row.get("implementation") or {}).get("tracked"))
+    validation = bool((flow_row.get("validation") or {}).get("tracked"))
+    contributions = flow_row.get("contributions") or {}
+    measured = (
+        bool(contributions.get("tracked"))
+        or _safe_float(contributions.get("measured_value_total")) > 0.0
+        or _safe_int((flow_row.get("implementation") or {}).get("runtime_events_count")) > 0
+    )
+    if measured:
+        return "measured"
+    if validation:
+        return "validated"
+    if implementation:
+        return "implemented"
+    if spec:
+        return "spec"
+    return "none"
+
+
+def _idea_card_state_from_manifestation(status: str | None) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "validated":
+        return "validated"
+    if normalized == "partial":
+        return "implemented"
+    return "none"
+
+
+def _idea_card_attention(flow_row: dict[str, Any], state: str, value_gap: float) -> tuple[str, float, str]:
+    interdependencies = flow_row.get("interdependencies") or {}
+    blocked = bool(interdependencies.get("blocked"))
+    blocking_stage = str(interdependencies.get("blocking_stage") or "").strip()
+    unblock_priority = _safe_float(interdependencies.get("unblock_priority_score"))
+    score = round(
+        unblock_priority
+        + (12.0 if blocked else 0.0)
+        + (_IDEA_CARD_STATE_ORDER.get("measured", 4) - _IDEA_CARD_STATE_ORDER.get(state, 0)) * 2.0
+        + min(max(value_gap, 0.0) * 0.15, 20.0),
+        4,
+    )
+
+    if blocked and (unblock_priority >= 25.0 or state in {"none", "spec"}):
+        return "high", score, f"blocked:{blocking_stage or 'unknown'}"
+    if blocked or unblock_priority >= 12.0 or (state in {"none", "spec"} and value_gap >= 20.0):
+        return "medium", score, (f"blocked:{blocking_stage}" if blocked else "focus-upstream")
+    if value_gap > 0.0:
+        return "low", score, "improvement-opportunity"
+    return "none", score, "healthy"
+
+
+def build_idea_cards_feed(
+    q: str = "",
+    state: str = "all",
+    attention: str = "all",
+    sort: str = "attention_desc",
+    cursor: str | None = None,
+    limit: int = 50,
+    include_internal_ideas: bool = True,
+    only_actionable: bool = False,
+    min_roi: float | None = None,
+    min_value_gap: float | None = None,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    query_text = str(q or "").strip()
+    normalized_query = query_text.lower()
+    normalized_state = _normalize_card_enum(
+        state,
+        {"all", "none", "spec", "implemented", "validated", "measured"},
+        "all",
+    )
+    normalized_attention = _normalize_card_enum(
+        attention,
+        {"all", "none", "low", "medium", "high"},
+        "all",
+    )
+    normalized_sort = _normalize_card_enum(
+        sort,
+        {"attention_desc", "roi_desc", "gap_desc", "name_asc", "state_desc"},
+        "attention_desc",
+    )
+    safe_limit = max(1, min(int(limit), 200))
+    try:
+        safe_offset = max(0, int(str(cursor or "0").strip() or "0"))
+    except ValueError:
+        safe_offset = 0
+    bounded_runtime_window = max(60, min(int(runtime_window_seconds), 60 * 60 * 24 * 30))
+    min_roi_value = None if min_roi is None else _safe_float(min_roi)
+    min_gap_value = None if min_value_gap is None else _safe_float(min_value_gap)
+
+    cache_key = _cache_key(
+        "cards",
+        normalized_query,
+        normalized_state,
+        normalized_attention,
+        normalized_sort,
+        safe_limit,
+        safe_offset,
+        include_internal_ideas,
+        only_actionable,
+        min_roi_value,
+        min_gap_value,
+        bounded_runtime_window,
+        _inventory_environment_cache_key(),
+    )
+    cached = _read_inventory_cache("idea_cards", cache_key)
+    if cached is not None:
+        return cached
+
+    flow = build_spec_process_implementation_validation_flow(
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=bounded_runtime_window,
+        contributor_rows=[],
+        contribution_rows=[],
+        asset_rows=[],
+        spec_registry_limit=500,
+        lineage_link_limit=800,
+        usage_event_limit=3000,
+        commit_evidence_limit=2000,
+        runtime_event_limit=3000,
+        list_item_limit=8,
+    )
+    flow_items = flow.get("items") if isinstance(flow.get("items"), list) else []
+    flow_by_idea: dict[str, dict[str, Any]] = {}
+    for row in flow_items:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        if idea_id and idea_id not in flow_by_idea:
+            flow_by_idea[idea_id] = row
+
+    portfolio = idea_service.list_ideas(include_internal=True, limit=None, offset=0)
+
+    candidates: list[dict[str, Any]] = []
+    for idea_model in portfolio.ideas:
+        idea_id = str(idea_model.id).strip()
+        if not idea_id:
+            continue
+
+        flow_row = flow_by_idea.get(idea_id, {})
+        classification = flow_row.get("idea_classification") if isinstance(flow_row, dict) else {}
+        if not isinstance(classification, dict):
+            classification = {}
+        inferred_internal = idea_service.is_internal_idea_id(idea_id, getattr(idea_model, "interfaces", []))
+        internal = bool(classification.get("internal", inferred_internal))
+        actionable = bool(classification.get("actionable", not internal))
+
+        if not include_internal_ideas and internal:
+            continue
+        if only_actionable and not actionable:
+            continue
+
+        title = _friendly_card_title(
+            str(getattr(idea_model, "name", "") or flow_row.get("idea_name") or idea_id),
+            fallback_idea_id=idea_id,
+        )
+        subtitle = str(getattr(idea_model, "description", "") or "").strip()
+        manifestation_raw = getattr(idea_model, "manifestation_status", "none")
+        manifestation_value = manifestation_raw.value if hasattr(manifestation_raw, "value") else str(manifestation_raw)
+
+        flow_state = _idea_card_state(flow_row) if flow_row else "none"
+        manifestation_state = _idea_card_state_from_manifestation(manifestation_value)
+        state_value = flow_state
+        if _IDEA_CARD_STATE_ORDER.get(manifestation_state, 0) > _IDEA_CARD_STATE_ORDER.get(state_value, 0):
+            state_value = manifestation_state
+
+        idea_signals = flow_row.get("idea_signals") if isinstance(flow_row, dict) else {}
+        potential_value = _safe_float(
+            getattr(idea_model, "potential_value", None),
+            _safe_float(idea_signals.get("potential_value")),
+        )
+        actual_value = _safe_float(
+            getattr(idea_model, "actual_value", None),
+            _safe_float(idea_signals.get("actual_value")),
+        )
+        value_gap = round(
+            max(
+                _safe_float(idea_signals.get("value_gap")),
+                max(potential_value - actual_value, 0.0),
+            ),
+            4,
+        )
+        measured_contribution = _safe_float((flow_row.get("contributions") or {}).get("measured_value_total"))
+        measured_value = round(max(measured_contribution, actual_value), 4)
+        estimated_cost = max(
+            _safe_float(
+                getattr(idea_model, "estimated_cost", None),
+                _safe_float(idea_signals.get("estimated_cost")),
+            ),
+            0.0,
+        )
+        measured_roi = round((measured_value / estimated_cost), 4) if estimated_cost > 0 else round(measured_value, 4)
+
+        if state_value != "measured" and measured_value > 0.0:
+            state_value = "measured"
+        state_icon = _IDEA_CARD_STATE_ICON.get(state_value, "sparkle")
+
+        attention_level, attention_score, attention_reason = _idea_card_attention(flow_row, state_value, value_gap)
+        spec_ids = list((flow_row.get("spec") or {}).get("spec_ids") or [])
+        top_spec_id = str(spec_ids[0]).strip() if spec_ids else ""
+
+        if normalized_query:
+            haystack = " ".join(
+                [
+                    idea_id,
+                    title,
+                    subtitle,
+                    manifestation_value,
+                    " ".join(str(item) for item in spec_ids if isinstance(item, str)),
+                    " ".join(str(item) for item in getattr(idea_model, "interfaces", []) if isinstance(item, str)),
+                    attention_reason,
+                ]
+            ).lower()
+            if normalized_query not in haystack:
+                continue
+
+        if normalized_state != "all" and state_value != normalized_state:
+            continue
+        if normalized_attention != "all" and attention_level != normalized_attention:
+            continue
+        if min_roi_value is not None and measured_roi < min_roi_value:
+            continue
+        if min_gap_value is not None and value_gap < min_gap_value:
+            continue
+
+        candidates.append(
+            {
+                "idea_id": idea_id,
+                "title": title,
+                "subtitle": subtitle,
+                "state": state_value,
+                "state_icon": state_icon,
+                "attention_level": attention_level,
+                "attention_score": attention_score,
+                "attention_reason": attention_reason,
+                "blocked": bool((flow_row.get("interdependencies") or {}).get("blocked")),
+                "blocking_stage": str((flow_row.get("interdependencies") or {}).get("blocking_stage") or "") or None,
+                "value_gap": value_gap,
+                "measured_roi": measured_roi,
+                "measured_value": measured_value,
+                "spec_count": _safe_int((flow_row.get("spec") or {}).get("count")),
+                "implementation_ref_count": _safe_int((flow_row.get("implementation") or {}).get("lineage_link_count")),
+                "actionable": actionable,
+                "internal": internal,
+                "links": {
+                    "web_detail_path": f"/ideas/{quote(idea_id, safe='')}",
+                    "api_detail_path": f"/api/ideas/{quote(idea_id, safe='')}",
+                    "web_usage_path": f"/usage?idea_id={quote(idea_id, safe='')}",
+                    "web_spec_path": f"/specs/{quote(top_spec_id, safe='')}" if top_spec_id else None,
+                },
+            }
+        )
+
+    state_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_STATE_ORDER}
+    attention_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_ATTENTION_ORDER}
+    for row in candidates:
+        state_key = str(row.get("state") or "none")
+        attention_key = str(row.get("attention_level") or "none")
+        state_counts[state_key] = state_counts.get(state_key, 0) + 1
+        attention_counts[attention_key] = attention_counts.get(attention_key, 0) + 1
+
+    if normalized_sort == "name_asc":
+        candidates.sort(key=lambda row: (str(row.get("title") or "").lower(), str(row.get("idea_id") or "")))
+    elif normalized_sort == "roi_desc":
+        candidates.sort(
+            key=lambda row: (
+                -_safe_float(row.get("measured_roi")),
+                -_safe_float(row.get("value_gap")),
+                str(row.get("title") or "").lower(),
+            )
+        )
+    elif normalized_sort == "gap_desc":
+        candidates.sort(
+            key=lambda row: (
+                -_safe_float(row.get("value_gap")),
+                -_safe_float(row.get("measured_roi")),
+                str(row.get("title") or "").lower(),
+            )
+        )
+    elif normalized_sort == "state_desc":
+        candidates.sort(
+            key=lambda row: (
+                -_IDEA_CARD_STATE_ORDER.get(str(row.get("state") or "none"), 0),
+                -_safe_float(row.get("value_gap")),
+                str(row.get("title") or "").lower(),
+            )
+        )
+    else:
+        candidates.sort(
+            key=lambda row: (
+                -_IDEA_CARD_ATTENTION_ORDER.get(str(row.get("attention_level") or "none"), 0),
+                -_safe_float(row.get("attention_score")),
+                -_safe_float(row.get("value_gap")),
+                -_safe_float(row.get("measured_roi")),
+                str(row.get("title") or "").lower(),
+            )
+        )
+
+    filtered_total = len(candidates)
+    page_items = candidates[safe_offset:safe_offset + safe_limit]
+    returned = len(page_items)
+    has_more = (safe_offset + returned) < filtered_total
+    next_cursor = str(safe_offset + returned) if has_more else None
+    change_token_payload = build_idea_cards_change_token(
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=bounded_runtime_window,
+    )
+
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "query": {
+            "q": query_text,
+            "state": normalized_state,
+            "attention": normalized_attention,
+            "sort": normalized_sort,
+            "cursor": str(safe_offset),
+            "limit": safe_limit,
+            "include_internal_ideas": include_internal_ideas,
+            "only_actionable": only_actionable,
+            "min_roi": min_roi_value,
+            "min_value_gap": min_gap_value,
+            "runtime_window_seconds": bounded_runtime_window,
+        },
+        "summary": {
+            "total": filtered_total,
+            "returned": returned,
+            "state_counts": state_counts,
+            "attention_counts": attention_counts,
+            "needs_attention": attention_counts.get("high", 0) + attention_counts.get("medium", 0),
+        },
+        "pagination": {
+            "cursor": str(safe_offset),
+            "next_cursor": next_cursor,
+            "limit": safe_limit,
+            "returned": returned,
+            "has_more": has_more,
+        },
+        "change_token": change_token_payload.get("token"),
+        "items": page_items,
+    }
+    _write_inventory_cache("idea_cards", cache_key, payload)
+    return payload
+
+
+def build_idea_cards_change_token(
+    include_internal_ideas: bool = True,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    runtime_payload = runtime_service.live_change_token(force_refresh=False)
+    runtime_token = str(runtime_payload.get("token") or "")
+
+    ideas = idea_service.list_ideas(include_internal=True, limit=None, offset=0).ideas
+    idea_digest = hashlib.sha256()
+    idea_count = 0
+    for idea in sorted(ideas, key=lambda row: row.id):
+        if (not include_internal_ideas) and idea_service.is_internal_idea_id(idea.id, idea.interfaces):
+            continue
+        idea_count += 1
+        idea_digest.update(
+            (
+                f"{idea.id}|{idea.manifestation_status.value}|"
+                f"{float(idea.actual_value):.4f}|{float(idea.potential_value):.4f}|"
+                f"{float(idea.estimated_cost):.4f}|{float(idea.confidence):.4f}|"
+                f"{len(idea.open_questions)};"
+            ).encode("utf-8")
+        )
+
+    spec_summary = spec_registry_service.summary()
+    latest_specs = spec_registry_service.list_specs(limit=1, offset=0)
+    latest_spec = latest_specs[0].updated_at.isoformat() if latest_specs else None
+
+    try:
+        commit_checkpoint = commit_evidence_service.checkpoint()
+    except Exception:
+        commit_checkpoint = {}
+    try:
+        lineage_checkpoint = value_lineage_service.checkpoint()
+    except Exception:
+        lineage_checkpoint = {}
+
+    components = {
+        "runtime_token": runtime_token,
+        "runtime_window_seconds": max(60, min(int(runtime_window_seconds), 60 * 60 * 24 * 30)),
+        "idea_count": idea_count,
+        "idea_digest": idea_digest.hexdigest()[:24],
+        "spec_count": int(spec_summary.get("count") or 0),
+        "spec_latest_updated_at": latest_spec,
+        "commit_evidence": commit_checkpoint,
+        "value_lineage": lineage_checkpoint,
+        "include_internal_ideas": include_internal_ideas,
+    }
+    token_basis = json.dumps(components, sort_keys=True, default=str)
+    token = hashlib.sha256(token_basis.encode("utf-8")).hexdigest()[:24]
+    return {
+        "token": token,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "components": components,
+    }
+
+
+def build_idea_cards_changes(
+    since_token: str | None = None,
+    include_internal_ideas: bool = True,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    current = build_idea_cards_change_token(
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+    current_token = str(current.get("token") or "")
+    previous = str(since_token or "").strip()
+    changed = (not previous) or (previous != current_token)
+    return {
+        "changed": changed,
+        "since_token": previous or None,
+        "token": current_token,
+        "generated_at": current.get("generated_at"),
+        "poll_after_ms": 5000,
+    }
