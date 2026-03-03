@@ -17,22 +17,13 @@ async def get_automation_usage(
     compact: bool = Query(False, description="Return a trimmed payload for lower-bandwidth clients"),
     include_raw: bool = Query(False, description="Include provider raw payload in compact mode"),
 ) -> dict:
-    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
-    try:
-        return await asyncio.wait_for(
-            asyncio.to_thread(
-                automation_usage_service.cached_usage_overview_payload,
-                force_refresh=force_refresh,
-                compact=compact,
-                include_raw=include_raw,
-            ),
-            timeout=timeout_seconds,
-        )
-    except TimeoutError:
-        return automation_usage_service.usage_overview_payload_from_snapshots(
-            compact=compact,
+    overview = automation_usage_service.collect_usage_overview(force_refresh=force_refresh)
+    if compact:
+        return automation_usage_service.compact_usage_overview_payload(
+            overview,
             include_raw=include_raw,
         )
+    return overview.model_dump(mode="json")
 
 
 @router.get("/automation/usage/snapshots")
