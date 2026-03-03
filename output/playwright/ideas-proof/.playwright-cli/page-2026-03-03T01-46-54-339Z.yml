@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - heading "Production Ideas Parity Proof" [level=1] [ref=e2]
+  - generic [ref=e3]: 2026-03-03 01:46:35 UTC
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: /api/ideas?include_internal=true
+      - generic [ref=e7]: "112"
+    - generic [ref=e8]:
+      - generic [ref=e9]: /api/inventory/flow?include_internal_ideas=true
+      - generic [ref=e10]: "112"
+    - generic [ref=e11]:
+      - generic [ref=e12]: Missing IDs (flow not in ideas)
+      - generic [ref=e13]: "0"
+  - generic [ref=e14]: "Expected SHA: 86728f6e9ad2bd70501aedeb08c6d1a12cb0f52b Observed SHA: 86728f6e9ad2bd70501aedeb08c6d1a12cb0f52b Endpoints: coherence-network-production.up.railway.app/api/ideas and /api/inventory/flow"
