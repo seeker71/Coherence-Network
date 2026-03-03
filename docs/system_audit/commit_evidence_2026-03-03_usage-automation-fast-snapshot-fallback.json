@@ -47,7 +47,14 @@
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
   ],
   "change_files": [
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/runtime.py",
     "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_runtime_api.py",
+    "docs/system_audit/maintainability_baseline.json",
     "web/app/automation/page.tsx",
     "web/app/usage/page.tsx"
   ],
