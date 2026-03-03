@@ -1,0 +1,101 @@
+{
+  "base": "main",
+  "branch": "codex/unify-native-provider-telemetry",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T05:35:32Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "pass",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.32,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `codex/unify-native-provider-telemetry` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.01,
+        "exit_code": 0,
+        "hint": "No action required.",
+        "name": "commit-evidence-guard",
+        "ok": true,
+        "output_tail": "No changed files detected in range origin/main..HEAD or current worktree; evidence guard skipped."
+      },
+      {
+        "command": "python3 scripts/check_runtime_drift.py",
+        "duration_seconds": 0.03,
+        "exit_code": 0,
+        "hint": "Review command output tail, fix root cause, and re-run this guard before push.",
+        "name": "runtime-drift-guard",
+        "ok": true,
+        "output_tail": "OK: runtime drift within allowlist baseline"
+      },
+      {
+        "command": "cd api && pytest -q",
+        "duration_seconds": 143.52,
+        "exit_code": 0,
+        "hint": "Reproduce locally with failing test subset, fix implementation, re-run full api pytest.",
+        "name": "api-tests",
+        "ok": true,
+        "output_tail": "tests/test_release_gate_service.py: 16 warnings\ntests/test_runtime_api.py: 8 warnings\n  /opt/homebrew/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_governance_api.py: 1 warning\ntests/test_inventory_api.py: 105 warnings\ntests/test_spec_registry_api.py: 3 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:257: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_inventory_api.py: 104 warnings\ntests/test_spec_registry_api.py: 1 warning\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:314: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_assets.py: 1 warning\ntests/test_contributions.py: 25 warnings\ntests/test_contributor_hygiene.py: 6 warnings\ntests/test_contributors.py: 5 warnings\ntests/test_distributions.py: 8 warnings\ntests/test_github_indexing.py: 26 warnings\ntests/test_governance_api.py: 6 warnings\ntests/test_inventory_api.py: 3 warnings\n  /opt/homebrew/lib/python3.14/site-packages/pydantic/main.py:250: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:156: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    created_at=datetime.utcnow(),\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:157: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    updated_at=datetime.utcnow(),\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:347: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:431: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:406: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_inventory_api.py: 6 warnings\ntests/test_inventory_discovery_sources.py: 7 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_service.py:198: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n627 passed, 10 skipped, 382 warnings in 142.91s (0:02:22)"
+      },
+      {
+        "command": "cd web && npm ci --allow-git=none && npm run build",
+        "duration_seconds": 16.22,
+        "exit_code": 0,
+        "hint": "Fix web build/type/runtime issues and re-run npm ci --allow-git=none && npm run build in web/.",
+        "name": "web-build",
+        "ok": true,
+        "output_tail": "\n   \u25b2 Next.js 15.5.12\n\n   Creating an optimized production build ...\n \u2713 Compiled successfully in 2.4s\n   Linting and checking validity of types ...\n   Collecting page data ...\n   Generating static pages (0/27) ...\n   Generating static pages (6/27) \n   Generating static pages (13/27) \n   Generating static pages (20/27) \n \u2713 Generating static pages (27/27)\n   Finalizing page optimization ...\n   Collecting build traces ...\n\nRoute (app)                                 Size  First Load JS  Revalidate  Expire\n\u250c \u25cb /                                      183 B         106 kB         \u22482m      1y\n\u251c \u25cb /_not-found                            994 B         103 kB\n\u251c \u0192 /agent                                 183 B         106 kB\n\u251c \u25cb /api-coverage                        4.37 kB         119 kB\n\u251c \u25cb /api-health                          1.35 kB         107 kB\n\u251c \u0192 /api/[...path]                         134 B         102 kB\n\u251c \u0192 /api/health-proxy                      134 B         102 kB\n\u251c \u0192 /api/runtime-beacon                    134 B         102 kB\n\u251c \u0192 /api/web-version                       134 B         102 kB\n\u251c \u25cb /assets                              1.73 kB         107 kB\n\u251c \u0192 /automation                            183 B         106 kB\n\u251c \u25cb /contribute                          4.52 kB         110 kB\n\u251c \u25cb /contributions                       2.37 kB         108 kB\n\u251c \u25cb /contributors                        2.38 kB         108 kB\n\u251c \u0192 /flow                                  183 B         106 kB\n\u251c \u25cb /friction                            2.17 kB         108 kB\n\u251c \u25cb /gates                               2.71 kB         118 kB\n\u251c \u0192 /ideas                                 183 B         106 kB\n\u251c \u0192 /ideas/[idea_id]                       183 B         106 kB\n\u251c \u25cb /import                              2.42 kB         117 kB\n\u251c \u25cb /portfolio                           3.29 kB         118 kB\n\u251c \u0192 /project/[ecosystem]/[name]          1.72 kB         107 kB\n\u251c \u25cb /remote-ops                          4.66 kB         120 kB\n\u251c \u25cb /runtime                               134 B         102 kB\n\u251c \u25cb /search                               2.3 kB         117 kB\n\u251c \u0192 /specs                                 183 B         106 kB\n\u251c \u0192 /specs/[spec_id]                       183 B         106 kB\n\u251c \u25cb /tasks                               3.81 kB         109 kB\n\u2514 \u0192 /usage                                 183 B         106 kB\n+ First Load JS shared by all             102 kB\n  \u251c chunks/255-ebd51be49873d76c.js         46 kB\n  \u251c chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB\n  \u2514 other shared chunks (total)          1.92 kB\n\n\n\u25cb  (Static)   prerendered as static content\n\u0192  (Dynamic)  server-rendered on demand\n\n\nnpm warn Unknown cli config \"--allow-git\". This will stop working in the next major version of npm.\n(node:31161) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/tailwind.config.ts?id=1772516287659 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+      },
+      {
+        "command": "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+        "duration_seconds": 12.86,
+        "exit_code": 0,
+        "hint": "Inspect API/web runtime logs emitted by verify_worktree_local_web.sh and fix failing route/runtime errors.",
+        "name": "worktree-runtime-web-guard",
+        "ok": true,
+        "output_tail": "HTTP status: 200\nPASS\n==> API ideas: http://127.0.0.1:18004/api/ideas\nHTTP status: 200\nPASS\n==> API tasks: http://127.0.0.1:18004/api/agent/tasks\nHTTP status: 200\nPASS\n==> API system lineage: http://127.0.0.1:18004/api/inventory/system-lineage\nHTTP status: 200\nPASS\n==> API endpoint runtime summary: http://127.0.0.1:18004/api/runtime/endpoints/summary\nHTTP status: 200\nPASS\n==> Web root: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web root nav flow: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web root nav specs: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web root nav tasks: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web root nav contribute: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web root nav gates: http://127.0.0.1:3104/\nHTTP status: 200\nPASS\n==> Web ideas: http://127.0.0.1:3104/ideas\nHTTP status: 200\nPASS\n==> Web specs: http://127.0.0.1:3104/specs\nHTTP status: 200\nPASS\n==> Web flow: http://127.0.0.1:3104/flow\nHTTP status: 200\nPASS\n==> Web tasks: http://127.0.0.1:3104/tasks\nHTTP status: 200\nPASS\n==> Web gates: http://127.0.0.1:3104/gates\nHTTP status: 200\nPASS\n==> Web contribute: http://127.0.0.1:3104/contribute\nHTTP status: 200\nPASS\n==> Web API health page: http://127.0.0.1:3104/api-health\nHTTP status: 200\nPASS\n\nLocal worktree web validation passed.\n\n(node:31526) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/tailwind.config.ts?id=1772516298692 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": true,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "All selected checks passed.",
+  "tool": "scripts/worktree_pr_guard.py"
+}

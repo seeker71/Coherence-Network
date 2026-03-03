@@ -1,0 +1,92 @@
+{
+  "base": "main",
+  "branch": "codex/unify-native-provider-telemetry",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T17:05:32Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "fail",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.37,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `codex/unify-native-provider-telemetry` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.05,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.1,
+        "exit_code": 0,
+        "hint": "Commit evidence contract passed for CI-parity and worktree coverage validation.",
+        "name": "commit-evidence-guard",
+        "ok": true,
+        "output_tail": "$ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-03_endpoint-swr-singleflight-cache.json\nOK: evidence validation passed for docs/system_audit/commit_evidence_2026-03-03_endpoint-swr-singleflight-cache.json\n\n$ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-03_usage-automation-fast-snapshot-fallback.json\nOK: evidence validation passed for docs/system_audit/commit_evidence_2026-03-03_usage-automation-fast-snapshot-fallback.json"
+      },
+      {
+        "command": "python3 scripts/check_runtime_drift.py",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Review command output tail, fix root cause, and re-run this guard before push.",
+        "name": "runtime-drift-guard",
+        "ok": true,
+        "output_tail": "OK: runtime drift within allowlist baseline"
+      },
+      {
+        "command": "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+        "duration_seconds": 0.44,
+        "exit_code": 0,
+        "hint": "Address maintainability regressions or update baseline with explicit review evidence.",
+        "name": "maintainability-regression-guard",
+        "ok": true,
+        "output_tail": "Maintainability Audit\n====================\nseverity: high\nrisk_score: 183\ncounts: layer_violations=0, large_modules=7, very_large_modules=5, long_functions=21, placeholders=1\nregression: no\nrecommended_tasks:\n  - runtime-placeholder-elimination: roi=14.2857 cost_h=1.4 value=20.0\n  - architecture-modularization-review: roi=6.6225 cost_h=15.1 value=100.0"
+      },
+      {
+        "command": "cd api && pytest -q",
+        "duration_seconds": 104.22,
+        "exit_code": 1,
+        "hint": "Reproduce locally with failing test subset, fix implementation, re-run full api pytest.",
+        "name": "api-tests",
+        "ok": false,
+        "output_tail": "  /opt/homebrew/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_governance_api.py: 1 warning\ntests/test_inventory_api.py: 105 warnings\ntests/test_spec_registry_api.py: 3 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:257: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_inventory_api.py: 104 warnings\ntests/test_spec_registry_api.py: 1 warning\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:314: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_assets.py: 1 warning\ntests/test_contributions.py: 25 warnings\ntests/test_contributor_hygiene.py: 6 warnings\ntests/test_contributors.py: 5 warnings\ntests/test_distributions.py: 8 warnings\ntests/test_github_indexing.py: 26 warnings\ntests/test_governance_api.py: 6 warnings\ntests/test_inventory_api.py: 3 warnings\n  /opt/homebrew/lib/python3.14/site-packages/pydantic/main.py:250: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:156: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    created_at=datetime.utcnow(),\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:157: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    updated_at=datetime.utcnow(),\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:347: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:431: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:406: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_inventory_api.py: 6 warnings\ntests/test_inventory_discovery_sources.py: 7 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_service.py:198: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/test_automation_usage_api.py::test_automation_usage_endpoint_compact_mode_trims_payload\n1 failed, 628 passed, 10 skipped, 421 warnings in 103.47s (0:01:43)"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": false,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "Blocking failures detected; see local_preflight/remote_pr_checks details.",
+  "tool": "scripts/worktree_pr_guard.py"
+}

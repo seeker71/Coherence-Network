@@ -1,0 +1,101 @@
+{
+  "base": "main",
+  "branch": "tmp/resolve-pr-320",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T19:40:36Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "pass",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.31,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `tmp/resolve-pr-320` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.05,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.06,
+        "exit_code": 0,
+        "hint": "Commit evidence contract passed for CI-parity and worktree coverage validation.",
+        "name": "commit-evidence-guard",
+        "ok": true,
+        "output_tail": "$ python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence\nOK: evidence validation passed for /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/docs/system_audit/commit_evidence_2026-03-03_dependabot-tailwindcss-postcss-4.2.1-merge-main.json"
+      },
+      {
+        "command": "python3 scripts/check_runtime_drift.py",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Review command output tail, fix root cause, and re-run this guard before push.",
+        "name": "runtime-drift-guard",
+        "ok": true,
+        "output_tail": "OK: runtime drift within allowlist baseline"
+      },
+      {
+        "command": "cd api && pytest -q",
+        "duration_seconds": 110.43,
+        "exit_code": 0,
+        "hint": "Reproduce locally with failing test subset, fix implementation, re-run full api pytest.",
+        "name": "api-tests",
+        "ok": true,
+        "output_tail": "tests/test_release_gate_service.py: 14 warnings\ntests/test_runtime_api.py: 48 warnings\n  /opt/homebrew/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_governance_api.py: 1 warning\ntests/test_inventory_api.py: 105 warnings\ntests/test_spec_registry_api.py: 3 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:257: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_agent_execute_endpoint.py: 1 warning\ntests/test_inventory_api.py: 104 warnings\ntests/test_spec_registry_api.py: 1 warning\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/spec_registry_service.py:314: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_assets.py: 1 warning\ntests/test_contributions.py: 25 warnings\ntests/test_contributor_hygiene.py: 6 warnings\ntests/test_contributors.py: 5 warnings\ntests/test_distributions.py: 8 warnings\ntests/test_github_indexing.py: 26 warnings\ntests/test_governance_api.py: 6 warnings\ntests/test_inventory_api.py: 3 warnings\n  /opt/homebrew/lib/python3.14/site-packages/pydantic/main.py:250: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:156: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    created_at=datetime.utcnow(),\n\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\ntests/test_commit_evidence_registry_service.py::test_commit_evidence_registry_import_and_tracked_ideas\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_registry_service.py:157: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    updated_at=datetime.utcnow(),\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:347: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\ntests/test_governance_api.py::test_change_request_vote_rejects_spec_update\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:431: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_governance_api.py::test_change_request_vote_applies_idea_create\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/governance_service.py:406: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    row.updated_at = datetime.utcnow()\n\ntests/test_inventory_api.py: 6 warnings\ntests/test_inventory_discovery_sources.py: 7 warnings\n  /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/api/app/services/commit_evidence_service.py:198: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    now = datetime.utcnow()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n637 passed, 10 skipped, 419 warnings in 109.62s (0:01:49)"
+      },
+      {
+        "command": "cd web && npm ci --allow-git=none && npm run build",
+        "duration_seconds": 15.08,
+        "exit_code": 0,
+        "hint": "Fix web build/type/runtime issues and re-run npm ci --allow-git=none && npm run build in web/.",
+        "name": "web-build",
+        "ok": true,
+        "output_tail": "npm warn While resolving: eslint-plugin-jsx-a11y@6.10.2\nnpm warn Found: eslint@10.0.2\nnpm warn node_modules/eslint\nnpm warn   dev eslint@\"^10\" from the root project\nnpm warn   8 more (@eslint-community/eslint-utils, ...)\nnpm warn\nnpm warn Could not resolve dependency:\nnpm warn peer eslint@\"^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9\" from eslint-plugin-jsx-a11y@6.10.2\nnpm warn node_modules/eslint-config-next/node_modules/eslint-plugin-jsx-a11y\nnpm warn   eslint-plugin-jsx-a11y@\"^6.10.0\" from eslint-config-next@16.1.6\nnpm warn   node_modules/eslint-config-next\nnpm warn\nnpm warn Conflicting peer dependency: eslint@9.39.3\nnpm warn node_modules/eslint\nnpm warn   peer eslint@\"^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9\" from eslint-plugin-jsx-a11y@6.10.2\nnpm warn   node_modules/eslint-config-next/node_modules/eslint-plugin-jsx-a11y\nnpm warn     eslint-plugin-jsx-a11y@\"^6.10.0\" from eslint-config-next@16.1.6\nnpm warn     node_modules/eslint-config-next\nnpm warn ERESOLVE overriding peer dependency\nnpm warn While resolving: eslint-plugin-react@7.37.5\nnpm warn Found: eslint@10.0.2\nnpm warn node_modules/eslint\nnpm warn   dev eslint@\"^10\" from the root project\nnpm warn   8 more (@eslint-community/eslint-utils, ...)\nnpm warn\nnpm warn Could not resolve dependency:\nnpm warn peer eslint@\"^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7\" from eslint-plugin-react@7.37.5\nnpm warn node_modules/eslint-config-next/node_modules/eslint-plugin-react\nnpm warn   eslint-plugin-react@\"^7.37.0\" from eslint-config-next@16.1.6\nnpm warn   node_modules/eslint-config-next\nnpm warn\nnpm warn Conflicting peer dependency: eslint@9.39.3\nnpm warn node_modules/eslint\nnpm warn   peer eslint@\"^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7\" from eslint-plugin-react@7.37.5\nnpm warn   node_modules/eslint-config-next/node_modules/eslint-plugin-react\nnpm warn     eslint-plugin-react@\"^7.37.0\" from eslint-config-next@16.1.6\nnpm warn     node_modules/eslint-config-next\nnpm warn ERESOLVE overriding peer dependency\nnpm warn While resolving: eslint-plugin-react-hooks@7.0.1\nnpm warn Found: eslint@10.0.2\nnpm warn node_modules/eslint\nnpm warn   dev eslint@\"^10\" from the root project\nnpm warn   8 more (@eslint-community/eslint-utils, ...)\nnpm warn\nnpm warn Could not resolve dependency:\nnpm warn peer eslint@\"^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0 || ^9.0.0\" from eslint-plugin-react-hooks@7.0.1\nnpm warn node_modules/eslint-config-next/node_modules/eslint-plugin-react-hooks\nnpm warn   eslint-plugin-react-hooks@\"^7.0.0\" from eslint-config-next@16.1.6\nnpm warn   node_modules/eslint-config-next\nnpm warn\nnpm warn Conflicting peer dependency: eslint@9.39.3\nnpm warn node_modules/eslint\nnpm warn   peer eslint@\"^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0 || ^9.0.0\" from eslint-plugin-react-hooks@7.0.1\nnpm warn   node_modules/eslint-config-next/node_modules/eslint-plugin-react-hooks\nnpm warn     eslint-plugin-react-hooks@\"^7.0.0\" from eslint-config-next@16.1.6\nnpm warn     node_modules/eslint-config-next\n(node:11853) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/tailwind.config.ts?id=1772566957211 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+      },
+      {
+        "command": "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+        "duration_seconds": 16.78,
+        "exit_code": 0,
+        "hint": "Inspect API/web runtime logs emitted by verify_worktree_local_web.sh and fix failing route/runtime errors.",
+        "name": "worktree-runtime-web-guard",
+        "ok": true,
+        "output_tail": "HTTP status: 200\nPASS\n==> API ideas: http://127.0.0.1:18272/api/ideas\nHTTP status: 200\nPASS\n==> API tasks: http://127.0.0.1:18272/api/agent/tasks\nHTTP status: 200\nPASS\n==> API system lineage: http://127.0.0.1:18272/api/inventory/system-lineage\nHTTP status: 200\nPASS\n==> API endpoint runtime summary: http://127.0.0.1:18272/api/runtime/endpoints/summary\nHTTP status: 200\nPASS\n==> Web root: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web root nav flow: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web root nav specs: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web root nav tasks: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web root nav contribute: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web root nav gates: http://127.0.0.1:18273/\nHTTP status: 200\nPASS\n==> Web ideas: http://127.0.0.1:18273/ideas\nHTTP status: 200\nPASS\n==> Web specs: http://127.0.0.1:18273/specs\nHTTP status: 200\nPASS\n==> Web flow: http://127.0.0.1:18273/flow\nHTTP status: 200\nPASS\n==> Web tasks: http://127.0.0.1:18273/tasks\nHTTP status: 200\nPASS\n==> Web gates: http://127.0.0.1:18273/gates\nHTTP status: 200\nPASS\n==> Web contribute: http://127.0.0.1:18273/contribute\nHTTP status: 200\nPASS\n==> Web API health page: http://127.0.0.1:18273/api-health\nHTTP status: 200\nPASS\n\nLocal worktree web validation passed.\n\n(node:12238) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/tailwind.config.ts?id=1772566968400 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": true,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "All selected checks passed.",
+  "tool": "scripts/worktree_pr_guard.py"
+}
