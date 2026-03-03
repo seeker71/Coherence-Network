@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from typing import Any
 
 import httpx
@@ -336,6 +337,43 @@ def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     assert out["result"] in {"public_contract_passed", "blocked"}
     assert isinstance(out.get("failing_checks"), list)
     assert isinstance(out.get("warnings"), list)
+
+
+@respx.mock
+def test_check_value_lineage_e2e_flow_uses_stable_idea_id() -> None:
+    base_url = "https://example.test"
+    lineage_id = "lnk_test123"
+    captured_payload: dict[str, Any] = {}
+
+    def _capture_create(request: httpx.Request) -> httpx.Response:
+        captured_payload.update(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(201, json={"id": lineage_id})
+
+    respx.post(f"{base_url}/api/value-lineage/links").mock(side_effect=_capture_create)
+    respx.post(f"{base_url}/api/value-lineage/links/{lineage_id}/usage-events").mock(
+        return_value=httpx.Response(201, json={"id": "evt_1"})
+    )
+    respx.get(f"{base_url}/api/value-lineage/links/{lineage_id}/valuation").mock(
+        return_value=httpx.Response(200, json={"measured_value_total": 5.0, "event_count": 1})
+    )
+    respx.post(f"{base_url}/api/value-lineage/links/{lineage_id}/payout-preview").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "payouts": [
+                    {"role": "idea", "amount": 10.0},
+                    {"role": "spec", "amount": 20.0},
+                    {"role": "implementation", "amount": 50.0},
+                    {"role": "review", "amount": 20.0},
+                ]
+            },
+        )
+    )
+
+    result = gates.check_value_lineage_e2e_flow(base_url, timeout=1.0)
+
+    assert result["ok"] is True
+    assert captured_payload["idea_id"] == "deployment-gate-reliability"
 
 
 def test_evaluate_public_deploy_contract_report_fails_without_paid_override_header(monkeypatch) -> None:
