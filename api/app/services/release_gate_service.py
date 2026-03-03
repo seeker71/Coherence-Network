@@ -8,10 +8,108 @@ import json
 import re
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
 import httpx
+
+_FAILURE_SOLUTIONS_CACHE: dict[str, Any] | None = None
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_failure_solutions() -> dict[str, Any]:
+    global _FAILURE_SOLUTIONS_CACHE
+    if isinstance(_FAILURE_SOLUTIONS_CACHE, dict):
+        return _FAILURE_SOLUTIONS_CACHE
+
+    path = _project_root() / "config" / "codex_failure_solutions.json"
+    if not path.is_file():
+        _FAILURE_SOLUTIONS_CACHE = {}
+        return _FAILURE_SOLUTIONS_CACHE
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        _FAILURE_SOLUTIONS_CACHE = {}
+        return _FAILURE_SOLUTIONS_CACHE
+
+    _FAILURE_SOLUTIONS_CACHE = payload if isinstance(payload, dict) else {}
+    return _FAILURE_SOLUTIONS_CACHE
+
+
+def _solution_entry(group: str, key: str) -> dict[str, Any]:
+    catalog = _load_failure_solutions()
+    group_map = catalog.get(group) if isinstance(catalog, dict) else None
+    if not isinstance(group_map, dict):
+        return {"summary": "No configured solution found.", "actions": []}
+
+    candidate = group_map.get(key)
+    if not isinstance(candidate, dict):
+        candidate = group_map.get("__default__")
+    if not isinstance(candidate, dict):
+        return {"summary": "No configured solution found.", "actions": []}
+
+    summary = str(candidate.get("summary") or "").strip()
+    actions_raw = candidate.get("actions")
+    actions = []
+    if isinstance(actions_raw, list):
+        actions = [str(item).strip() for item in actions_raw if isinstance(item, str) and str(item).strip()]
+    return {"summary": summary, "actions": actions}
+
+
+def _pr_failure_solutions(pr_gate: dict[str, Any]) -> list[dict[str, Any]]:
+    failing = pr_gate.get("failing_required_contexts")
+    missing = pr_gate.get("missing_required_contexts")
+    failing_rows = failing if isinstance(failing, list) else []
+    missing_rows = missing if isinstance(missing, list) else []
+
+    out: list[dict[str, Any]] = []
+    for context in failing_rows:
+        if not isinstance(context, str):
+            continue
+        solution = _solution_entry("github_actions_contexts", context)
+        out.append(
+            {
+                "failure_id": f"github_actions_context:{context}",
+                "context": context,
+                "status": "failing",
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    for context in missing_rows:
+        if not isinstance(context, str):
+            continue
+        solution = _solution_entry("github_actions_contexts", context)
+        out.append(
+            {
+                "failure_id": f"github_actions_context_missing:{context}",
+                "context": context,
+                "status": "missing",
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    return out
+
+
+def _public_failure_solutions(failing_checks: list[str]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for check in failing_checks:
+        solution = _solution_entry("public_checks", check)
+        out.append(
+            {
+                "failure_id": f"public_check:{check}",
+                "check": check,
+                "summary": solution["summary"],
+                "actions": solution["actions"],
+            }
+        )
+    return out
 
 
 def _headers(github_token: str | None = None) -> dict[str, str]:
@@ -551,6 +649,12 @@ def evaluate_pr_to_public_report(
     pr_gate = evaluate_pr_gates(pr, commit_status, check_runs, required)
     report["pr_gate"] = pr_gate
     if not pr_gate.get("ready_to_merge"):
+        report["failure_api"] = {
+            "source": "github_actions_pr_gate",
+            "failing_required_contexts": pr_gate.get("failing_required_contexts", []),
+            "missing_required_contexts": pr_gate.get("missing_required_contexts", []),
+            "solutions": _pr_failure_solutions(pr_gate),
+        }
         report["result"] = "blocked"
         report["reason"] = "PR gates not fully green"
         return report
@@ -754,6 +858,11 @@ def evaluate_public_deploy_contract_report(
         failing.append(str(name))
     report["warnings"] = warnings
     report["failing_checks"] = failing
+    report["failure_api"] = {
+        "source": "public_deploy_contract",
+        "failing_checks": failing,
+        "solutions": _public_failure_solutions(failing),
+    }
     if failing:
         report["result"] = "blocked"
         report["reason"] = f"Public deployment contract failed: {', '.join(str(x) for x in failing)}"

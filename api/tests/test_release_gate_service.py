@@ -6,12 +6,14 @@ import httpx
 import pytest
 import respx
 
+from app.services import release_gate_service as gates
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
     evaluate_collective_review_gates,
     evaluate_commit_traceability_report,
     evaluate_merged_change_contract_report,
     evaluate_public_deploy_contract_report,
+    evaluate_pr_to_public_report,
     evaluate_pr_gates,
     extract_actions_run_id,
     get_branch_head_sha,
@@ -328,3 +330,97 @@ def test_list_spec_paths_at_ref_returns_empty_on_429_rate_limit() -> None:
 
     assert out == []
     assert route.call_count == 1
+
+
+def test_pr_to_public_report_exposes_failure_api_with_solutions(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        gates,
+        "get_open_prs",
+        lambda repository, head_branch=None, github_token=None, timeout=10.0: [
+            {"number": 7, "draft": False, "mergeable_state": "clean", "head": {"sha": "a" * 40}}
+        ],
+    )
+    monkeypatch.setattr(
+        gates,
+        "get_commit_status",
+        lambda repository, sha, github_token=None, timeout=10.0: {
+            "state": "failure",
+            "statuses": [{"context": "Test", "state": "failure"}],
+        },
+    )
+    monkeypatch.setattr(
+        gates,
+        "get_check_runs",
+        lambda repository, sha, github_token=None, timeout=10.0: [
+            {"name": "Test", "conclusion": "failure"},
+            {"name": "Thread Gates", "conclusion": "success"},
+        ],
+    )
+    monkeypatch.setattr(
+        gates,
+        "get_required_contexts",
+        lambda repository, base_branch, github_token=None, timeout=10.0: ["Test", "Thread Gates"],
+    )
+
+    report = evaluate_pr_to_public_report(
+        repository="seeker71/Coherence-Network",
+        branch="codex/example",
+    )
+
+    assert report["result"] == "blocked"
+    failure_api = report.get("failure_api")
+    assert isinstance(failure_api, dict)
+    assert failure_api.get("source") == "github_actions_pr_gate"
+    assert "Test" in failure_api.get("failing_required_contexts", [])
+    solutions = failure_api.get("solutions")
+    assert isinstance(solutions, list)
+    assert any(
+        isinstance(item, dict)
+        and item.get("failure_id") == "github_actions_context:Test"
+        and isinstance(item.get("summary"), str)
+        and item.get("summary")
+        for item in solutions
+    )
+
+
+def test_public_deploy_contract_report_exposes_failure_api_with_solutions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: "b" * 40)
+    monkeypatch.setattr(
+        gates,
+        "check_http_json_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": False, "status_code": 503}
+        if url.endswith("/api/health")
+        else {"url": url, "ok": True, "status_code": 200, "json": {"sha": "b" * 40}},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {"url": f"{api_base}/api/value-lineage/links/x", "ok": True, "status_code": 200},
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "blocked"
+    assert "railway_health" in report.get("failing_checks", [])
+    failure_api = report.get("failure_api")
+    assert isinstance(failure_api, dict)
+    assert failure_api.get("source") == "public_deploy_contract"
+    solutions = failure_api.get("solutions")
+    assert isinstance(solutions, list)
+    assert any(
+        isinstance(item, dict)
+        and item.get("failure_id") == "public_check:railway_health"
+        and isinstance(item.get("summary"), str)
+        and item.get("summary")
+        for item in solutions
+    )
