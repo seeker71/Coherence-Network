@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 import uuid
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -38,8 +42,20 @@ from app.services import (
     telemetry_persistence_service,
 )
 
+logger = logging.getLogger(__name__)
+
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
-_CACHE_TTL_SECONDS = 120.0
+_CACHE_TTL_SECONDS = 1800.0
+_CACHE_REFRESH_LOCK = threading.Lock()
+_ENDPOINT_CACHE_NAMESPACE = "automation_endpoint_cache_v1"
+_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
+_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 180.0
+_ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
+_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
+_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
+    max_workers=max(2, min(int(os.getenv("AUTOMATION_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    thread_name_prefix="automation-endpoint-cache-refresh",
+)
 _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
     "url": "",
     "sample": None,
@@ -284,6 +300,163 @@ def _coerce_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _usage_overview_cache_ttl_seconds(default: float = _CACHE_TTL_SECONDS) -> float:
+    parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_OVERVIEW_CACHE_TTL_SECONDS"))
+    if parsed is None:
+        return max(10.0, min(float(default), 86400.0))
+    return max(10.0, min(float(parsed), 86400.0))
+
+
+def _endpoint_cache_ttl_seconds(cache_name: str, default: float = _ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
+    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
+    env_key = f"AUTOMATION_ENDPOINT_CACHE_TTL_{env_suffix}"
+    parsed = _coerce_float(os.getenv(env_key))
+    if parsed is None:
+        return max(1.0, min(float(default), 86400.0))
+    return max(1.0, min(float(parsed), 86400.0))
+
+
+def _endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
+    scope_parts = [
+        str(os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH") or ""),
+        str(os.getenv("TELEMETRY_DATABASE_URL") or ""),
+        str(os.getenv("DATABASE_URL") or ""),
+        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
+        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
+    ]
+    scope_digest = hashlib.sha1("||".join(scope_parts).encode("utf-8")).hexdigest()[:12]
+    canonical = json.dumps(params or {}, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha1(f"{endpoint}|{canonical}".encode("utf-8")).hexdigest()
+    return f"{_ENDPOINT_CACHE_NAMESPACE}::{scope_digest}::{endpoint}::{digest}"
+
+
+def _parse_cache_timestamp(raw: Any) -> datetime | None:
+    value = str(raw or "").strip()
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _endpoint_cache_read(
+    endpoint: str,
+    params: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, float | None]:
+    key = _endpoint_cache_meta_key(endpoint, params)
+    raw = telemetry_persistence_service.get_meta_value(key)
+    if not raw:
+        return None, None
+    try:
+        envelope = json.loads(raw)
+    except (TypeError, ValueError):
+        return None, None
+    if not isinstance(envelope, dict):
+        return None, None
+    payload = envelope.get("payload")
+    if not isinstance(payload, dict):
+        return None, None
+    stored_at = _parse_cache_timestamp(envelope.get("stored_at"))
+    if stored_at is None:
+        return payload, None
+    age_seconds = max(0.0, (datetime.now(timezone.utc) - stored_at).total_seconds())
+    if age_seconds > float(_ENDPOINT_CACHE_MAX_STALE_SECONDS):
+        return None, None
+    return payload, age_seconds
+
+
+def _endpoint_cache_write(endpoint: str, payload: dict[str, Any], params: dict[str, Any] | None = None) -> None:
+    key = _endpoint_cache_meta_key(endpoint, params)
+    envelope = {
+        "stored_at": datetime.now(timezone.utc).isoformat(),
+        "payload": payload,
+    }
+    telemetry_persistence_service.set_meta_value(
+        key,
+        json.dumps(envelope, separators=(",", ":"), default=str),
+    )
+
+
+def _endpoint_cache_schedule_refresh(
+    endpoint: str,
+    *,
+    producer: Callable[[], dict[str, Any]],
+    params: dict[str, Any] | None = None,
+) -> bool:
+    key = _endpoint_cache_meta_key(endpoint, params)
+    with _ENDPOINT_CACHE_REFRESH_LOCK:
+        active = _ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
+        if active is not None and not active.done():
+            return False
+
+        def _run_refresh() -> dict[str, Any]:
+            payload = producer()
+            if isinstance(payload, dict):
+                _endpoint_cache_write(endpoint, payload, params=params)
+            return payload
+
+        future = _ENDPOINT_CACHE_REFRESH_POOL.submit(_run_refresh)
+        _ENDPOINT_CACHE_REFRESH_FUTURES[key] = future
+
+        def _cleanup(done_future: Future[Any]) -> None:
+            with _ENDPOINT_CACHE_REFRESH_LOCK:
+                current = _ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
+                if current is done_future:
+                    _ENDPOINT_CACHE_REFRESH_FUTURES.pop(key, None)
+            try:
+                done_future.result()
+            except Exception:
+                logger.exception("automation endpoint cache refresh failed", extra={"endpoint": endpoint})
+
+        future.add_done_callback(_cleanup)
+        return True
+
+
+def _endpoint_cached_payload(
+    endpoint: str,
+    *,
+    fresh_ttl_seconds: float,
+    refresh_producer: Callable[[], dict[str, Any]],
+    fallback_producer: Callable[[], dict[str, Any] | None] | None = None,
+    params: dict[str, Any] | None = None,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    if force_refresh:
+        payload = refresh_producer()
+        if isinstance(payload, dict):
+            _endpoint_cache_write(endpoint, payload, params=params)
+        return payload
+
+    ttl = _endpoint_cache_ttl_seconds(endpoint, default=fresh_ttl_seconds)
+    cached_payload, cached_age = _endpoint_cache_read(endpoint, params=params)
+    if cached_payload is not None and cached_age is not None and cached_age <= ttl:
+        return cached_payload
+    if cached_payload is not None:
+        _endpoint_cache_schedule_refresh(
+            endpoint,
+            producer=refresh_producer,
+            params=params,
+        )
+        return cached_payload
+
+    try:
+        payload = refresh_producer()
+        if isinstance(payload, dict):
+            _endpoint_cache_write(endpoint, payload, params=params)
+        return payload
+    except Exception:
+        if fallback_producer is not None:
+            fallback_payload = fallback_producer()
+            if isinstance(fallback_payload, dict):
+                _endpoint_cache_write(endpoint, fallback_payload, params=params)
+                return fallback_payload
+        raise
 
 
 def _normalize_ratio_threshold(value: Any, *, default: float) -> float:
@@ -4227,19 +4400,28 @@ def collect_usage_overview(force_refresh: bool = False) -> ProviderUsageOverview
     ):
         return ProviderUsageOverview(**_CACHE["overview"])
 
-    providers = _collect_provider_snapshots()
-    overview = coalesce_usage_overview_families(
-        ProviderUsageOverview(
-            providers=providers,
-            unavailable_providers=[p.provider for p in providers if p.status != "ok"],
-            tracked_providers=len(providers),
-            limit_coverage={},
+    with _CACHE_REFRESH_LOCK:
+        now = time.time()
+        if (
+            not force_refresh
+            and _CACHE.get("overview") is not None
+            and float(_CACHE.get("expires_at") or 0.0) > now
+        ):
+            return ProviderUsageOverview(**_CACHE["overview"])
+
+        providers = _collect_provider_snapshots()
+        overview = coalesce_usage_overview_families(
+            ProviderUsageOverview(
+                providers=providers,
+                unavailable_providers=[p.provider for p in providers if p.status != "ok"],
+                tracked_providers=len(providers),
+                limit_coverage={},
+            )
         )
-    )
-    overview = refresh_usage_overview_limit_coverage(overview)
-    _CACHE["overview"] = overview.model_dump(mode="json")
-    _CACHE["expires_at"] = now + _CACHE_TTL_SECONDS
-    return overview
+        overview = refresh_usage_overview_limit_coverage(overview)
+        _CACHE["overview"] = overview.model_dump(mode="json")
+        _CACHE["expires_at"] = now + _usage_overview_cache_ttl_seconds()
+        return overview
 
 
 def refresh_usage_overview_limit_coverage(overview: ProviderUsageOverview) -> ProviderUsageOverview:
@@ -4514,6 +4696,35 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
 
 
+def evaluate_usage_alerts_from_snapshots(threshold_ratio: float = 0.2) -> UsageAlertReport:
+    ratio = max(0.0, min(float(threshold_ratio), 1.0))
+    overview = usage_overview_from_snapshots()
+    readiness = provider_readiness_report_from_snapshots()
+    required = set(_required_providers_from_env())
+    active_counts = _active_provider_usage_counts()
+
+    alerts: list[UsageAlert] = []
+    seen_alert_ids: set[str] = set()
+    for provider in overview.providers:
+        provider_name = _normalize_provider_name(provider.provider)
+        _append_usage_alerts_for_provider(
+            provider=provider,
+            provider_name=provider_name,
+            required=required,
+            active_usage=int(active_counts.get(provider_name, 0)),
+            ratio=ratio,
+            alerts=alerts,
+            seen_alert_ids=seen_alert_ids,
+        )
+    _append_readiness_alerts(
+        readiness=readiness,
+        alerts=alerts,
+        seen_alert_ids=seen_alert_ids,
+    )
+
+    return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
+
+
 def _latest_provider_snapshots(limit: int = 800) -> dict[str, ProviderUsageSnapshot]:
     rows = list_usage_snapshots(limit=max(10, min(int(limit), 2000)))
     by_provider: dict[str, ProviderUsageSnapshot] = {}
@@ -4539,11 +4750,164 @@ def usage_overview_from_snapshots() -> ProviderUsageOverview:
     return refresh_usage_overview_limit_coverage(overview)
 
 
-def usage_endpoint_timeout_seconds(default: float = 10.0) -> float:
+def usage_endpoint_timeout_seconds(default: float = 3.0) -> float:
     parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS"))
     if parsed is None:
         return max(0.1, min(float(default), 10.0))
     return max(0.1, min(float(parsed), 300.0))
+
+
+def _usage_payload_from_overview(
+    overview: ProviderUsageOverview,
+    *,
+    compact: bool,
+    include_raw: bool,
+) -> dict[str, Any]:
+    normalized = coalesce_usage_overview_families(overview)
+    normalized = refresh_usage_overview_limit_coverage(normalized)
+    if compact:
+        return compact_usage_overview_payload(
+            normalized,
+            include_raw=include_raw,
+        )
+    return normalized.model_dump(mode="json")
+
+
+def usage_overview_payload_from_snapshots(*, compact: bool = False, include_raw: bool = False) -> dict[str, Any]:
+    return _usage_payload_from_overview(
+        usage_overview_from_snapshots(),
+        compact=compact,
+        include_raw=include_raw,
+    )
+
+
+def cached_usage_overview_payload(
+    *,
+    force_refresh: bool = False,
+    compact: bool = False,
+    include_raw: bool = False,
+) -> dict[str, Any]:
+    params = {"compact": bool(compact), "include_raw": bool(include_raw)}
+    return _endpoint_cached_payload(
+        "automation_usage_overview",
+        fresh_ttl_seconds=180.0,
+        refresh_producer=lambda: _usage_payload_from_overview(
+            collect_usage_overview(force_refresh=True),
+            compact=compact,
+            include_raw=include_raw,
+        ),
+        fallback_producer=lambda: _usage_payload_from_overview(
+            usage_overview_from_snapshots(),
+            compact=compact,
+            include_raw=include_raw,
+        ),
+        params=params,
+        force_refresh=force_refresh,
+    )
+
+
+def cached_usage_alerts_payload(
+    *,
+    threshold_ratio: float = 0.2,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    ratio = max(0.0, min(float(threshold_ratio), 1.0))
+    params = {"threshold_ratio": round(ratio, 6)}
+    return _endpoint_cached_payload(
+        "automation_usage_alerts",
+        fresh_ttl_seconds=120.0,
+        refresh_producer=lambda: evaluate_usage_alerts(
+            threshold_ratio=ratio,
+            force_refresh=True,
+        ).model_dump(mode="json"),
+        fallback_producer=lambda: evaluate_usage_alerts_from_snapshots(threshold_ratio=ratio).model_dump(mode="json"),
+        params=params,
+        force_refresh=force_refresh,
+    )
+
+
+def cached_provider_readiness_payload(
+    *,
+    required_providers: list[str] | None = None,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    required = sorted(set(required_providers or []))
+    params = {"required_providers": required}
+    return _endpoint_cached_payload(
+        "automation_usage_readiness",
+        fresh_ttl_seconds=120.0,
+        refresh_producer=lambda: provider_readiness_report(
+            required_providers=required or None,
+            force_refresh=True,
+        ).model_dump(mode="json"),
+        fallback_producer=lambda: provider_readiness_report_from_snapshots(
+            required_providers=required or None,
+        ).model_dump(mode="json"),
+        params=params,
+        force_refresh=force_refresh,
+    )
+
+
+def cached_provider_validation_payload(
+    *,
+    required_providers: list[str] | None = None,
+    runtime_window_seconds: int = 86400,
+    min_execution_events: int = 1,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    required = sorted(set(required_providers or []))
+    window = max(60, min(int(runtime_window_seconds), 2592000))
+    min_events = max(1, min(int(min_execution_events), 50))
+    params = {
+        "required_providers": required,
+        "runtime_window_seconds": window,
+        "min_execution_events": min_events,
+    }
+    return _endpoint_cached_payload(
+        "automation_usage_provider_validation",
+        fresh_ttl_seconds=120.0,
+        refresh_producer=lambda: provider_validation_report(
+            required_providers=required or None,
+            runtime_window_seconds=window,
+            min_execution_events=min_events,
+            force_refresh=True,
+        ).model_dump(mode="json"),
+        fallback_producer=lambda: provider_validation_report(
+            required_providers=required or None,
+            runtime_window_seconds=window,
+            min_execution_events=min_events,
+            force_refresh=False,
+        ).model_dump(mode="json"),
+        params=params,
+        force_refresh=force_refresh,
+    )
+
+
+def cached_daily_system_summary_payload(
+    *,
+    window_hours: int = 24,
+    top_n: int = 3,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    window = max(1, min(int(window_hours), 24 * 30))
+    top_count = max(1, min(int(top_n), 20))
+    params = {"window_hours": window, "top_n": top_count}
+    return _endpoint_cached_payload(
+        "automation_usage_daily_summary",
+        fresh_ttl_seconds=120.0,
+        refresh_producer=lambda: daily_system_summary(
+            window_hours=window,
+            top_n=top_count,
+            force_refresh=True,
+        ),
+        fallback_producer=lambda: daily_system_summary(
+            window_hours=window,
+            top_n=top_count,
+            force_refresh=False,
+        ),
+        params=params,
+        force_refresh=force_refresh,
+    )
 
 
 def daily_system_summary(
@@ -5838,28 +6202,15 @@ def _provider_has_full_subscription_windows(snapshot: ProviderUsageSnapshot | No
     return "hourly" in buckets and "weekly" in buckets
 
 
-def provider_validation_report(
+def _build_provider_validation_report(
     *,
-    required_providers: list[str] | None = None,
-    runtime_window_seconds: int = 86400,
-    min_execution_events: int = 1,
-    force_refresh: bool = True,
+    required: list[str],
+    overview: ProviderUsageOverview,
+    readiness: ProviderReadinessReport,
+    runtime_rows: dict[str, dict[str, Any]],
+    runtime_window_seconds: int,
+    min_execution_events: int,
 ) -> ProviderValidationReport:
-    required = [
-        _normalize_provider_name(item)
-        for item in (required_providers or _validation_required_providers_from_env())
-        if str(item).strip()
-    ]
-    required = _dedupe_preserve_order([item for item in required if item])
-    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
-    required_set = _resolved_required_provider_set(required, active_counts=active_counts)
-    overview = coalesce_usage_overview_families(
-        collect_usage_overview(force_refresh=force_refresh)
-    )
-    readiness = provider_readiness_report(
-        required_providers=sorted(required_set),
-        force_refresh=force_refresh,
-    )
     usage_by_provider = {
         family: row
         for row in overview.providers
@@ -5870,10 +6221,6 @@ def provider_validation_report(
         for row in readiness.providers
         if _normalize_provider_name(row.provider)
     }
-    runtime_rows = _runtime_validation_rows(
-        required_providers=required,
-        runtime_window_seconds=runtime_window_seconds,
-    )
 
     rows: list[ProviderValidationRow] = []
     blocking: list[str] = []
@@ -5946,6 +6293,73 @@ def provider_validation_report(
         all_required_validated=len(blocking) == 0,
         blocking_issues=blocking,
         providers=rows,
+    )
+
+
+def provider_validation_report(
+    *,
+    required_providers: list[str] | None = None,
+    runtime_window_seconds: int = 86400,
+    min_execution_events: int = 1,
+    force_refresh: bool = True,
+) -> ProviderValidationReport:
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _validation_required_providers_from_env())
+        if str(item).strip()
+    ]
+    required = _dedupe_preserve_order([item for item in required if item])
+    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+    required_set = _resolved_required_provider_set(required, active_counts=active_counts)
+    overview = coalesce_usage_overview_families(
+        collect_usage_overview(force_refresh=force_refresh)
+    )
+    readiness = provider_readiness_report(
+        required_providers=sorted(required_set),
+        force_refresh=force_refresh,
+    )
+    runtime_rows = _runtime_validation_rows(
+        required_providers=required,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+
+    return _build_provider_validation_report(
+        required=required,
+        overview=overview,
+        readiness=readiness,
+        runtime_rows=runtime_rows,
+        runtime_window_seconds=runtime_window_seconds,
+        min_execution_events=min_execution_events,
+    )
+
+
+def provider_validation_report_from_snapshots(
+    *,
+    required_providers: list[str] | None = None,
+    runtime_window_seconds: int = 86400,
+    min_execution_events: int = 1,
+) -> ProviderValidationReport:
+    required = [
+        _normalize_provider_name(item)
+        for item in (required_providers or _validation_required_providers_from_env())
+        if str(item).strip()
+    ]
+    required = _dedupe_preserve_order([item for item in required if item])
+    active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+    required_set = _resolved_required_provider_set(required, active_counts=active_counts)
+    overview = coalesce_usage_overview_families(usage_overview_from_snapshots())
+    readiness = provider_readiness_report_from_snapshots(required_providers=sorted(required_set))
+    runtime_rows = {
+        provider: {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []}
+        for provider in required
+    }
+    return _build_provider_validation_report(
+        required=required,
+        overview=overview,
+        readiness=readiness,
+        runtime_rows=runtime_rows,
+        runtime_window_seconds=runtime_window_seconds,
+        min_execution_events=min_execution_events,
     )
 
 

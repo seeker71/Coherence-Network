@@ -2741,3 +2741,73 @@ async def test_automation_usage_endpoints_trace_back_to_spec_100(
     for row in rows:
         assert row["spec"]["tracked"] is True
         assert "100" in row["spec"]["spec_ids"]
+
+
+def test_cached_provider_readiness_payload_stale_refresh_singleflight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telemetry_db = tmp_path / "telemetry_cache.db"
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{telemetry_db}")
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setattr(automation_usage_service, "_endpoint_cache_ttl_seconds", lambda cache_name, default=0.0: 0.0)
+
+    calls = {"refresh": 0}
+
+    def _report(note: str) -> ProviderReadinessReport:
+        return ProviderReadinessReport(
+            required_providers=["openai"],
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openai",
+                    kind="subscription_window",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[note],
+                )
+            ],
+        )
+
+    def _refresh(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+        _ = required_providers
+        _ = force_refresh
+        calls["refresh"] += 1
+        time.sleep(0.2)
+        return _report(f"refresh-{calls['refresh']}")
+
+    monkeypatch.setattr(automation_usage_service, "provider_readiness_report", _refresh)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report_from_snapshots",
+        lambda required_providers=None: _report("snapshot"),
+    )
+
+    seeded = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=True,
+    )
+    assert seeded["providers"][0]["notes"] == ["refresh-1"]
+    assert calls["refresh"] == 1
+
+    first_stale = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=False,
+    )
+    second_stale = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=False,
+    )
+    assert first_stale["providers"][0]["notes"] == ["refresh-1"]
+    assert second_stale["providers"][0]["notes"] == ["refresh-1"]
+
+    deadline = time.time() + 2.0
+    while calls["refresh"] < 2 and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert calls["refresh"] == 2

@@ -108,6 +108,8 @@ type ProviderValidationResponse = {
 };
 
 export const revalidate = 120;
+const API_REVALIDATE_SECONDS = 120;
+const API_FETCH_TIMEOUT_MS = 3000;
 
 const DEFAULT_USAGE: AutomationUsageResponse = {
   generated_at: "",
@@ -346,14 +348,21 @@ function presentIssue(issue: string): string {
 }
 
 async function fetchJsonOrDefault<T>(url: string, fallback: T): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort("automation_fetch_timeout"), API_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, {
+      next: { revalidate: API_REVALIDATE_SECONDS },
+      signal: controller.signal,
+    });
     if (!response.ok) {
       return fallback;
     }
     return (await response.json()) as T;
   } catch {
     return fallback;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
