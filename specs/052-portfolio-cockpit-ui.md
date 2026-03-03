@@ -20,3 +20,7 @@ Provide a human interface to prioritize unanswered questions by ROI, submit answ
 - `web/app/portfolio/page.tsx`
 - `web/app/page.tsx`
 
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

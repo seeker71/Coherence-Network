@@ -64,3 +64,7 @@ Organization:
 
 - Schema change (new node types) — human approve
 - GITHUB_TOKEN in CI — use Actions token; no secrets in code
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

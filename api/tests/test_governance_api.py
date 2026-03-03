@@ -119,3 +119,68 @@ async def test_change_request_vote_rejects_spec_update(
         payload = voted.json()
         assert payload["status"] == "rejected"
         assert payload["rejections"] == 1
+
+
+@pytest.mark.asyncio
+async def test_change_request_vote_applies_existing_idea_create_idempotently(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("CHANGE_REQUEST_MIN_APPROVALS", "1")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        seeded = await client.post(
+            "/api/ideas",
+            json={
+                "id": "governance-idea-existing",
+                "name": "Governance existing idea",
+                "description": "Already exists before governance apply.",
+                "potential_value": 12.0,
+                "estimated_cost": 4.0,
+                "confidence": 0.5,
+            },
+        )
+        assert seeded.status_code == 201
+
+        contributor = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
+        )
+        assert contributor.status_code == 201
+        contributor_id = contributor.json()["id"]
+
+        created = await client.post(
+            "/api/governance/change-requests",
+            json={
+                "request_type": "idea_create",
+                "title": "Create idea from governance pipeline",
+                "payload": {
+                    "id": "governance-idea-existing",
+                    "name": "Governance existing idea",
+                    "description": "Already exists before governance apply.",
+                    "potential_value": 12.0,
+                    "estimated_cost": 4.0,
+                    "confidence": 0.5,
+                },
+                "proposer_id": contributor_id,
+                "proposer_type": "human",
+                "auto_apply_on_approval": True,
+            },
+        )
+        assert created.status_code == 201
+        request_id = created.json()["id"]
+
+        voted = await client.post(
+            f"/api/governance/change-requests/{request_id}/votes",
+            json={
+                "voter_id": contributor_id,
+                "voter_type": "human",
+                "decision": "yes",
+                "rationale": "Looks good",
+            },
+        )
+        assert voted.status_code == 200
+        payload = voted.json()
+        assert payload["status"] == "applied"
+        assert payload["applied_result"]["kind"] == "idea"
+        assert payload["applied_result"]["action"] == "already_exists"

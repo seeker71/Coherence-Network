@@ -59,6 +59,7 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
         "description": "Created through API for attribution pipeline.",
         "potential_value": 35.0,
         "estimated_cost": 8.0,
+        "resistance_risk": 3.0,
         "confidence": 0.6,
         "interfaces": ["human:web", "machine:api"],
         "open_questions": [
@@ -70,6 +71,7 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
         created = await client.post("/api/ideas", json=create_payload)
         assert created.status_code == 201
         assert created.json()["id"] == "new-contributor-idea"
+        assert created.json()["resistance_risk"] == 3.0
 
         duplicate = await client.post("/api/ideas", json=create_payload)
         assert duplicate.status_code == 409
@@ -109,6 +111,7 @@ async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_pa
             json={
                 "actual_value": 34.5,
                 "actual_cost": 8.0,
+                "resistance_risk": 6.0,
                 "confidence": 0.75,
                 "manifestation_status": "validated",
             },
@@ -120,6 +123,7 @@ async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_pa
     payload = refetched.json()
     assert payload["actual_value"] == 34.5
     assert payload["actual_cost"] == 8.0
+    assert payload["resistance_risk"] == 6.0
     assert payload["confidence"] == 0.75
     assert payload["manifestation_status"] == "validated"
 

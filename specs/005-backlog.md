@@ -18,3 +18,6 @@ One work item per line. Orchestrator processes in order. Prefix with spec filena
 13. specs/002-agent-orchestration-api.md — Any remaining agent API items
 14. Add or improve tests for existing API endpoints per specs
 15. Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

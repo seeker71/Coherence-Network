@@ -45,3 +45,7 @@ Prefer adding to `api/tests/test_project_manager.py` to mirror other CLI-flag te
 ## Decision Gates (if any)
 
 None.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

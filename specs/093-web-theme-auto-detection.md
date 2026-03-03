@@ -36,3 +36,7 @@ Make the web UI automatically use light or dark theme based on the user’s OS/b
 - Manual:
   - Open web app with system light mode, verify light palette.
   - Switch system to dark mode, verify dark palette without reload logic changes.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

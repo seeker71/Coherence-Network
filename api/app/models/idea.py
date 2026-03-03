@@ -65,6 +65,7 @@ class IdeaPortfolioResponse(BaseModel):
 class IdeaUpdate(BaseModel):
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
+    resistance_risk: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
 
@@ -75,6 +76,7 @@ class IdeaCreate(BaseModel):
     description: str = Field(min_length=1)
     potential_value: float = Field(ge=0.0)
     estimated_cost: float = Field(ge=0.0)
+    resistance_risk: float = Field(default=1.0, ge=0.0)
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)

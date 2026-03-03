@@ -200,7 +200,10 @@ def _apply_change_request(change_request: ChangeRequest) -> dict[str, Any]:
             ],
         )
         if created is None:
-            raise ValueError("idea already exists")
+            existing = idea_service.get_idea(str(payload["id"]))
+            if existing is None:
+                raise ValueError("idea already exists")
+            return {"kind": "idea", "id": existing.id, "action": "already_exists"}
         return {"kind": "idea", "id": created.id, "action": "created"}
 
     if request_type == ChangeRequestType.IDEA_UPDATE:

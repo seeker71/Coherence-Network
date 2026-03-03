@@ -23,3 +23,7 @@ Work that improves the pipeline itself. Runs through the same spec→impl→test
 10. Add hierarchical view to check_pipeline (goal → PM → tasks → artifacts)
 11. Set up GitHub Discussions as public forum; add "Join the conversation" to README
 12. Add meta-pipeline items to overnight backlog rotation (20% capacity)
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

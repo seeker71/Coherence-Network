@@ -59,3 +59,7 @@ Also ensure web pages that fetch the API work in production even when `NEXT_PUBL
 ## Validation
 - `cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_web-ideas-specs-usage-pages.json`
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -82,3 +82,7 @@ Checks:
 ## Decision Gates
 
 None.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

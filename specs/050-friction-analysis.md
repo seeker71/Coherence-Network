@@ -65,7 +65,7 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 }
 ```
 
-## Files
+## Files to Create/Modify
 
 - `api/app/routers/friction.py` (implemented)
 - `api/app/services/friction_service.py` (implemented)
@@ -74,7 +74,31 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 
 ## Acceptance Tests
 
-- [x] `test_friction_events_create_list_and_filter` — Create and filter events
-- [x] `test_friction_report_aggregates` — Verify report aggregation
+- [x] `api/tests/test_friction_api.py::test_friction_events_create_list_and_filter` — Create and filter events
+- [x] `api/tests/test_friction_api.py::test_friction_report_aggregates` — Verify report aggregation
 
 All tests passing.
+
+## Verification
+
+```bash
+cd api && .venv/bin/pytest -q tests/test_friction_api.py
+```
+
+## Out of Scope
+
+- Real-time alerting/notifications for friction events.
+- Automated remediation suggestions for detected friction patterns.
+
+## Risks and Assumptions
+
+- Risk: append-only log growth may increase report latency; mitigation is periodic compaction or archival.
+- Assumption: event producers provide valid and sufficiently descriptive metadata for useful aggregation.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up task: add retention policy and compaction strategy for `api/logs/friction.jsonl`.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

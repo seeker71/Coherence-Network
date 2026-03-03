@@ -133,6 +133,11 @@ const API_NAV_CARDS: Array<{ href: string; title: string; description: string }>
     description: "Validate merge/deploy contracts and endpoint traceability coverage.",
   },
   {
+    href: "/api-coverage",
+    title: "API Coverage",
+    description: "Probe live API endpoints and surface coverage gaps with explicit failures.",
+  },
+  {
     href: "/import",
     title: "Import",
     description: "Analyze dependency manifests and identify coherence risk.",

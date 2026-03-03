@@ -3,8 +3,7 @@ name: Auto Heal Deploy Gates
 on:
   workflow_run:
     workflows:
-      - Test
-      - Thread Gates
+      - Public Deploy Contract
       - Change Contract
     types: [completed]
     branches:
@@ -22,6 +21,9 @@ concurrency:
 
 jobs:
   heal-main-checks:
+    concurrency:
+      group: auto-heal-deploy-gates-job-${{ github.event.workflow_run.head_sha || github.sha }}
+      cancel-in-progress: true
     if: >
       github.event_name == 'workflow_dispatch' ||
       (

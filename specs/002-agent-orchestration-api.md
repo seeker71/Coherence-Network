@@ -408,3 +408,7 @@ None for MVP.
 - [003-agent-telegram-decision-loop.md](003-agent-telegram-decision-loop.md) — Telegram webhook integration
 - [docs/MODEL-ROUTING.md](../docs/MODEL-ROUTING.md) — routing table and fallbacks
 - [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — monitor-issues usage
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

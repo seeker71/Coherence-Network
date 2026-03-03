@@ -19,3 +19,7 @@ Require each change set to include a machine-readable provenance artifact that l
 
 ## Validation
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_provenance-gate-mainline.json`
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

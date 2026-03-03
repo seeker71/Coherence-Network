@@ -77,3 +77,7 @@ All tests above must pass for landing to be considered complete.
 ## Decision Gates
 
 - Deploy target and credentials require human approval
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

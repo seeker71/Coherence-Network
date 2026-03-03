@@ -67,6 +67,14 @@ cd web && npm run build
 
 If manual validation is required, include explicit steps and expected results.
 
+## Registry Sync (ideas only)
+
+If this spec introduces or modifies ideas, include API-based persistence steps:
+
+- `POST /api/ideas` for new idea records (include `potential_value`, `estimated_cost`, `resistance_risk`, `confidence`).
+- `PATCH /api/ideas/{idea_id}` for updated ROI measurements (`actual_value`, `actual_cost`, `resistance_risk`, `confidence`, `manifestation_status`).
+- Verify with `GET /api/ideas/{idea_id}` and ensure the idea appears in `GET /api/ideas`.
+
 ## Out of Scope
 
 - [What this spec does not include]
@@ -84,3 +92,7 @@ If manual validation is required, include explicit steps and expected results.
 ## Decision Gates (if any)
 
 - [Decisions that need human approval before implementation]
+
+## Idea Traceability
+- `idea_id`: `[registered-idea-id]`
+- Rationale: [Why this spec advances that specific idea.]

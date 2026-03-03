@@ -41,3 +41,7 @@ None.
 
 - `specs/006-overnight-backlog.md` — backlog item "Expand docs/SETUP.md: add Troubleshooting section, venv path note for scripts"
 - `specs/TEMPLATE.md` — spec format
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

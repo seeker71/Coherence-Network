@@ -166,3 +166,7 @@ All 3 tests passing.
 ## Decision Gates
 
 None — implementation already complete and tested.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

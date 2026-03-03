@@ -235,3 +235,7 @@ Verifies the full inbound path (webhook → record_webhook → [optional: parse_
 ## Decision Gates
 
 - Agent runner: run in same process as API or separate? Recommend separate (script) for MVP.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -28,6 +28,87 @@ def test_idea_service_derives_missing_ideas_from_commit_evidence(
     assert "derived-runtime-observability" in idea_service.list_tracked_idea_ids()
 
 
+def test_idea_service_skips_default_tracked_ids_for_custom_portfolio_without_evidence_dir(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+    monkeypatch.setattr(idea_service, "_tracked_idea_ids_from_local", lambda max_files=400: ["unexpected-local"])
+    monkeypatch.setattr(
+        idea_service, "_tracked_idea_ids_from_github", lambda max_files=80, timeout=8.0: ["unexpected-remote"]
+    )
+
+    assert idea_service.list_tracked_idea_ids() == []
+
+
+def test_idea_service_tracked_cache_is_scoped_by_repository_ref(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(tmp_path / "system_audit"))
+    monkeypatch.setattr(idea_service, "_tracked_idea_ids_from_local", lambda max_files=400: [])
+
+    class FakeResponse:
+        def __init__(self, status_code: int, payload):
+            self.status_code = status_code
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            if self.status_code >= 400:
+                raise RuntimeError("http error")
+
+        def json(self):
+            return self._payload
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url, params=None):
+            if url.endswith("/contents/docs/system_audit"):
+                ref = (params or {}).get("ref")
+                if ref == "main":
+                    return FakeResponse(
+                        200,
+                        [
+                            {
+                                "name": "commit_evidence_main.json",
+                                "download_url": "https://example.test/main.json",
+                            }
+                        ],
+                    )
+                return FakeResponse(
+                    200,
+                    [
+                        {
+                            "name": "commit_evidence_alt.json",
+                            "download_url": "https://example.test/alt.json",
+                        }
+                    ],
+                )
+            if url == "https://example.test/main.json":
+                return FakeResponse(200, {"idea_ids": ["tracked-main"]})
+            if url == "https://example.test/alt.json":
+                return FakeResponse(200, {"idea_ids": ["tracked-alt"]})
+            return FakeResponse(404, {"detail": "not found"})
+
+    idea_service._TRACKED_IDEA_CACHE["expires_at"] = 0.0
+    idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
+    idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
+    monkeypatch.setattr(idea_service.httpx, "Client", lambda *args, **kwargs: FakeClient())
+    monkeypatch.setenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+    monkeypatch.setenv("TRACKING_REPOSITORY_REF", "main")
+    first = idea_service.list_tracked_idea_ids()
+    monkeypatch.setenv("TRACKING_REPOSITORY_REF", "feature/test")
+    second = idea_service.list_tracked_idea_ids()
+
+    assert first == ["tracked-main"]
+    assert second == ["tracked-alt"]
+
+
 def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
     monkeypatch, tmp_path: Path
 ) -> None:

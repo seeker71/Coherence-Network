@@ -54,6 +54,47 @@ Use the venv Python explicitly for script reliability:
 
 Copy `api/.env.example` to `api/.env` and fill required keys.
 
+## Worktree Task Start (Required)
+
+When starting a new task in a worktree, run:
+
+```bash
+./scripts/setup_worktree_context.sh
+```
+
+This setup step:
+- copies `api/.env` from the main repository root to the worktree if missing
+- copies `web/.env.local` from the source repo when present, otherwise seeds from `web/.env.example`
+- does not overwrite existing worktree env files
+
+Optional explicit source root:
+
+```bash
+WORKTREE_ENV_SOURCE=/path/to/main/repo ./scripts/setup_worktree_context.sh
+```
+
+## Local CI/CD Context Validation (GitHub-parity)
+
+Before pushing changes, run:
+
+```bash
+./scripts/run_local_ci_context.sh
+```
+
+This mirrors `.github/workflows/test.yml` order in local context:
+1. commit evidence validation
+2. spec quality validation
+3. workflow reference validation
+4. API test suite (`pytest -v`) with CI-like env sanitization
+5. web build (`npm ci && npm run build`)
+
+Make targets:
+
+```bash
+make worktree-setup
+make local-ci-context
+```
+
 ## Deployment baseline
 
 Use the managed-hosting baseline from `docs/DEPLOY.md`:

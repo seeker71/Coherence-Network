@@ -206,3 +206,7 @@ UsageEvent:
 - On-chain payout execution
 - Fiat/crypto settlement integration
 - Dynamic weight governance beyond static defaults
+
+## Idea Traceability
+- `idea_id`: `oss-interface-alignment`
+- Rationale: umbrella roadmap linkage for Coherence Network work.
