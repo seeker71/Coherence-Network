@@ -64,6 +64,12 @@ _COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
 _OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
+try:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = int(str(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900")).strip())
+except ValueError:
+    _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
+_TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
+_TARGET_STATE_MAX_TEXT = 600
 # Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
