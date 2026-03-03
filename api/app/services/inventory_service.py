@@ -4637,7 +4637,6 @@ def build_spec_process_implementation_validation_flow(
         commit_evidence_limit,
         runtime_event_limit,
         bounded_list_item_limit,
-        include_internal_ideas,
         _inventory_environment_cache_key(),
         _row_signature(contributor_rows),
         _row_signature(contribution_rows),

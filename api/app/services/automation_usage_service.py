@@ -63,12 +63,6 @@ _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
 _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
 _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 _RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
-_CODEX_PROVIDER_USAGE_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": None}
-_CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS = 90.0
-_RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "rows": []}
-_RUNNER_PROVIDER_TELEMETRY_CACHE_TTL_SECONDS = 20.0
-_CURSOR_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
-_CLAUDE_CLI_CONTEXT_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
 
 _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "coherence-internal": {"kind": "internal", "all_of": []},
@@ -2351,9 +2345,8 @@ def _cursor_events_within_window(window_seconds: int) -> int:
     return count
 
 
-def _claude_events_within_window(window_seconds: int) -> int:
+def _codex_events_within_window(window_seconds: int) -> int:
     events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-
     count = 0
     for event in events:
         metadata = getattr(event, "metadata", {}) or {}
