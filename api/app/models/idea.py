@@ -65,6 +65,8 @@ class IdeaPortfolioResponse(BaseModel):
 class IdeaUpdate(BaseModel):
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
+    potential_value: Optional[float] = Field(default=None, ge=0.0)
+    estimated_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
 

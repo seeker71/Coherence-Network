@@ -367,7 +367,7 @@ def _github_headers() -> dict[str, str]:
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
@@ -747,7 +747,7 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
     ref = _tracking_ref()
     list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
     remote_out: list[dict[str, Any]] = []
-    has_token = bool(os.getenv("GITHUB_TOKEN"))
+    has_token = bool(os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"))
     try:
         with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
             response = client.get(list_url, params={"ref": ref})

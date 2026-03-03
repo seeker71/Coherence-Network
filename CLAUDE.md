@@ -42,3 +42,18 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 - Every changed feature spec must include explicit `Verification`, `Risks and Assumptions`, and `Known Gaps and Follow-up Tasks` sections.
 - Keep changes scoped to requested files/tasks.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.
+
+## Context-Conscious Exploration
+
+Before scanning many files for a task, run the budget helper first:
+
+- `python3 scripts/context_budget.py <files-or-dirs-or-patterns>`
+
+The helper reports file sizes, estimated token cost, and compact summaries using a cache in
+`.cache/context_budget/summary_cache.json`, so future passes avoid re-reading large files.
+
+Suggested workflow:
+1. Run a manifest pass to see sizes and estimated token impact.
+2. Open only the highest-signal file subset.
+3. If a file is large, use a cached summary first (`--force-summaries` only when needed),
+   then read targeted line ranges.

@@ -12,6 +12,16 @@ Detect and report failures for open `codex/*` PRs:
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/
 ```
 
+CI now runs this triage check during `pull_request` thread-gates:
+
+```bash
+python3 scripts/pr_check_failure_triage.py \
+  --repo seeker71/Coherence-Network \
+  --base main \
+  --head-prefix codex/ \
+  --fail-on-detected
+```
+
 Detect and fail local/CI step if failures exist:
 
 ```bash

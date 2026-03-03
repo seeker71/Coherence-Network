@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import base64
 import binascii
+import os
 import json
 import re
 import subprocess
 import time
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -21,14 +23,334 @@ except Exception:  # pragma: no cover - best effort import only
     telemetry_persistence_service = None
 
 
+DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS = 8
+DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS = 60
+
+
+def _record_gate_friction_event(
+    *,
+    job_id: str,
+    report: dict[str, Any],
+    status: str,
+    attempt: int,
+    max_attempts: int,
+) -> None:
+    from app.models.friction import FrictionEvent
+    from app.services import friction_service
+
+    block_type = (
+        "public_deploy_verification_failed"
+        if status == "failed"
+        else "public_deploy_verification_retry"
+    )
+    severity = "critical" if status == "failed" else "medium"
+    endpoint = f"/api/gates/public-deploy-verification-jobs/{job_id}"
+    reason = str(report.get("reason") or "public_deploy_contract_blocked")
+    try:
+        event = FrictionEvent(
+            id=f"fric_{uuid.uuid4().hex[:12]}",
+            timestamp=datetime.now(UTC),
+            endpoint=endpoint,
+            stage="public_deploy",
+            block_type=block_type,
+            severity=severity,
+            owner="release_gate",
+            unblock_condition=(
+                "Fix deployment blockers and rerun /api/gates/public-deploy-verification-jobs/{job_id}/tick"
+            ),
+            energy_loss_estimate=0.0,
+            cost_of_delay=0.0,
+            status="open",
+            notes=f"public-deploy verification {status} at attempt {attempt}/{max_attempts}: {reason}",
+            resolved_at=None,
+            time_open_hours=None,
+            resolution_action=None,
+        )
+        friction_service.append_event(event)
+    except Exception:
+        return
+
+
+def _github_token_fallback(github_token: str | None = None) -> str | None:
+    if github_token is not None and github_token.strip():
+        return github_token.strip()
+    token = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
+    return token or None
+
+
+def _public_deploy_verification_jobs_path() -> Path:
+    configured = os.getenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[2] / "logs" / "public_deploy_verification_jobs.json"
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _now_ts() -> float:
+    return time.time()
+
+
+def _read_public_deploy_verification_jobs() -> list[dict[str, Any]]:
+    path = _public_deploy_verification_jobs_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return payload
+
+
+def _write_public_deploy_verification_jobs(jobs: list[dict[str, Any]]) -> None:
+    path = _public_deploy_verification_jobs_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(jobs, f, indent=2)
+
+
+def _normalize_job_payload(job: dict[str, Any]) -> dict[str, Any]:
+    return dict(job)
+
+
 def _headers(github_token: str | None = None) -> dict[str, str]:
     headers = {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token}"
+    resolved_token = _github_token_fallback(github_token)
+    if resolved_token:
+        headers["Authorization"] = f"Bearer {resolved_token}"
     return headers
+
+
+def _ensure_job_defaults(
+    repository: str,
+    branch: str,
+    api_base: str,
+    web_base: str,
+    expected_sha: str | None,
+    max_attempts: int | None,
+    timeout: float,
+    poll_seconds: float,
+) -> dict[str, Any]:
+    resolved_max_attempts = int(max_attempts) if max_attempts else int(
+        os.getenv(
+            "PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS",
+            str(DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS),
+        )
+    )
+    if resolved_max_attempts < 1:
+        resolved_max_attempts = 1
+    return {
+        "job_id": uuid.uuid4().hex[:16],
+        "repository": repository.strip() or "seeker71/Coherence-Network",
+        "branch": branch.strip() or "main",
+        "api_base": api_base.strip() or "https://coherence-network-production.up.railway.app",
+        "web_base": web_base.strip() or "https://coherence-web-production.up.railway.app",
+        "expected_sha": (expected_sha or "").strip() or None,
+        "timeout": max(1.0, float(timeout)),
+        "poll_seconds": max(1.0, float(poll_seconds)),
+        "status": "scheduled",
+        "attempts": 0,
+        "max_attempts": resolved_max_attempts,
+        "last_result": None,
+        "last_error": None,
+        "last_run_at": None,
+        "next_run_at": _now_ts(),
+        "created_at": _now_iso(),
+        "updated_at": _now_iso(),
+        "completed_at": None,
+    }
+
+
+def create_public_deploy_verification_job(
+    *,
+    repository: str = "seeker71/Coherence-Network",
+    branch: str = "main",
+    api_base: str = "https://coherence-network-production.up.railway.app",
+    web_base: str = "https://coherence-web-production.up.railway.app",
+    expected_sha: str | None = None,
+    max_attempts: int | None = None,
+    timeout: float = 8.0,
+    poll_seconds: float = 30.0,
+    github_token: str | None = None,
+) -> dict[str, Any]:
+    token_present = bool(_github_token_fallback(github_token))
+    job = _ensure_job_defaults(
+        repository=repository,
+        branch=branch,
+        api_base=api_base,
+        web_base=web_base,
+        max_attempts=max_attempts,
+        expected_sha=expected_sha,
+        timeout=timeout,
+        poll_seconds=poll_seconds,
+    )
+    job["github_token_present"] = token_present
+    jobs = _read_public_deploy_verification_jobs()
+    jobs.append(job)
+    _write_public_deploy_verification_jobs(jobs)
+    return _normalize_job_payload(job)
+
+
+def list_public_deploy_verification_jobs() -> list[dict[str, Any]]:
+    return [_normalize_job_payload(job) for job in _read_public_deploy_verification_jobs()]
+
+
+def _load_job(job_id: str) -> tuple[dict[str, Any] | None, list[dict[str, Any]], int]:
+    jobs = _read_public_deploy_verification_jobs()
+    target = str(job_id).strip()
+    if not target:
+        return None, jobs, -1
+    for index, job in enumerate(jobs):
+        if str(job.get("job_id") or "") == target:
+            return dict(job), jobs, index
+    return None, jobs, -1
+
+
+def _next_retry_delay_seconds(attempt: int, *, base_seconds: int) -> int:
+    # Keep deployment retries bounded for cost and speed.
+    del attempt
+    return max(1, base_seconds)
+
+
+def _is_job_due(job: dict[str, Any], now: float) -> bool:
+    status = str(job.get("status") or "")
+    if status not in {"scheduled", "retrying"}:
+        return False
+    next_run_at = job.get("next_run_at")
+    if next_run_at is None:
+        return True
+    try:
+        if isinstance(next_run_at, (int, float)):
+            return now >= float(next_run_at)
+        next_run_ts = float(next_run_at)
+        return now >= next_run_ts
+    except Exception:
+        pass
+    try:
+        parsed = datetime.fromisoformat(str(next_run_at).replace("Z", "+00:00")).timestamp()
+        return now >= parsed
+    except Exception:
+        return True
+
+
+def _run_public_deploy_verification_report(job: dict[str, Any], github_token: str | None) -> dict[str, Any]:
+    return evaluate_public_deploy_contract_report(
+        repository=str(job.get("repository") or "seeker71/Coherence-Network"),
+        branch=str(job.get("branch") or "main"),
+        api_base=str(job.get("api_base") or "https://coherence-network-production.up.railway.app"),
+        web_base=str(job.get("web_base") or "https://coherence-web-production.up.railway.app"),
+        expected_sha=(str(job.get("expected_sha") or "") or None),
+        timeout=float(job.get("timeout") or 8.0),
+        github_token=_github_token_fallback(github_token),
+    )
+
+
+def _save_job(jobs: list[dict[str, Any]], index: int, job_update: dict[str, Any]) -> dict[str, Any]:
+    jobs[index].update(job_update)
+    jobs[index]["updated_at"] = _now_iso()
+    _write_public_deploy_verification_jobs(jobs)
+    return _normalize_job_payload(jobs[index])
+
+
+def tick_public_deploy_verification_job(
+    *,
+    job_id: str,
+    github_token: str | None = None,
+) -> dict[str, Any]:
+    job, jobs, index = _load_job(job_id)
+    if job is None or index < 0:
+        return {"ok": False, "status": "not_found", "job_id": str(job_id)}
+
+    report = _run_public_deploy_verification_report(job, github_token=_github_token_fallback(github_token))
+    attempts = int(job.get("attempts") or 0) + 1
+    max_attempts = max(
+        1,
+        int(
+            job.get("max_attempts")
+            if job.get("max_attempts") is not None
+            else DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS
+        ),
+    )
+
+    update: dict[str, Any] = {
+        "attempts": attempts,
+        "last_result": report,
+        "last_run_at": _now_iso(),
+        "last_error": None if report.get("result") == "public_contract_passed" else str(report.get("reason") or "public_deploy_contract_blocked"),
+    }
+
+    if report.get("result") == "public_contract_passed":
+        update.update(
+            status="completed",
+            completed_at=_now_iso(),
+            next_run_at=None,
+        )
+        return _save_job(jobs, index, update)
+
+    if attempts >= max_attempts:
+        _record_gate_friction_event(
+            job_id=job.get("job_id", ""),
+            report=report,
+            status="failed",
+            attempt=attempts,
+            max_attempts=max_attempts,
+        )
+        update.update(status="failed", next_run_at=None)
+        return _save_job(jobs, index, update)
+
+    delay_seconds = _next_retry_delay_seconds(
+        attempts,
+        base_seconds=int(
+            os.getenv(
+                "PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS",
+                str(DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS),
+            )
+        ),
+    )
+    _record_gate_friction_event(
+        job_id=job.get("job_id", ""),
+        report=report,
+        status="retrying",
+        attempt=attempts,
+        max_attempts=max_attempts,
+    )
+    update.update(
+        status="retrying",
+        next_run_at=_now_ts() + delay_seconds,
+    )
+    return _save_job(jobs, index, update)
+
+
+def tick_public_deploy_verification_jobs(
+    *,
+    github_token: str | None = None,
+    due_only: bool = True,
+) -> dict[str, Any]:
+    now = _now_ts()
+    updated: list[dict[str, Any]] = []
+    jobs = _read_public_deploy_verification_jobs()
+    for index, job in enumerate(jobs):
+        status = str(job.get("status") or "")
+        if status in {"completed", "failed", "cancelled"}:
+            continue
+        if due_only and not _is_job_due(job, now):
+            continue
+        result = tick_public_deploy_verification_job(
+            job_id=str(job.get("job_id") or ""),
+            github_token=github_token,
+        )
+        if isinstance(result, dict):
+            updated.append(result)
+
+    return {"ok": True, "jobs": updated}
 
 
 def _record_external_tool_usage(
@@ -87,6 +409,34 @@ def _branch_head_sha_via_gh_cli(repository: str, branch: str) -> str | None:
     commit = payload.get("commit") if isinstance(payload, dict) else None
     sha = commit.get("sha") if isinstance(commit, dict) else None
     return sha if isinstance(sha, str) else None
+
+
+def _branch_head_sha_via_git_ls_remote(repository: str, branch: str) -> str | None:
+    # Works in GitHub Actions even when GitHub API is rate-limited or gh CLI is unavailable.
+    # Uses unauthenticated HTTPS; relies on git being installed in CI.
+    repo_url = f"https://github.com/{repository}.git"
+    ref = f"refs/heads/{branch}"
+    cmd = ["git", "ls-remote", repo_url, ref]
+    started = time.monotonic()
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    duration_ms = int((time.monotonic() - started) * 1000)
+    status = "success" if proc.returncode == 0 else "error"
+    _record_external_tool_usage(
+        tool_name="git",
+        provider="github-actions",
+        operation="get_branch_head_sha_git_fallback",
+        resource=f"{repository}/{ref}",
+        status=status,
+        duration_ms=duration_ms,
+        payload={"returncode": proc.returncode},
+    )
+    if proc.returncode != 0:
+        return None
+    line = (proc.stdout or "").strip().splitlines()[0] if (proc.stdout or "").strip() else ""
+    sha = line.split("\t", 1)[0].strip() if "\t" in line else line.split(" ", 1)[0].strip()
+    if not sha or len(sha) < 7:
+        return None
+    return sha
 
 
 def _gh_api_json_via_cli(path: str, *, params: dict[str, str] | None = None) -> Any:
@@ -527,6 +877,68 @@ def check_http_json_endpoint(url: str, timeout: float = 8.0) -> dict[str, Any]:
         return {"url": url, "ok": False, "status_code": None, "error": str(exc)}
 
 
+def check_api_execute_paid_override_header_support(api_base: str, timeout: float = 8.0) -> dict[str, Any]:
+    """Verify the execute endpoint advertises the paid-provider header override.
+
+    This is used in public deployment contract checks to distinguish stale API
+    deployments that still expose an older schema.
+    """
+    base = api_base.rstrip("/")
+    openapi_url = f"{base}/openapi.json"
+    report = check_http_json_endpoint(openapi_url, timeout=timeout)
+    report["name"] = "railway_api_execute_paid_override_header"
+
+    if not report.get("ok") or not isinstance(report.get("json"), dict):
+        report["ok"] = False
+        report["error"] = report.get("error") or "openapi_unavailable"
+        return report
+
+    payload = report.get("json")
+    if not isinstance(payload, dict):
+        report["ok"] = False
+        report["error"] = "openapi_payload_invalid"
+        return report
+
+    paths = payload.get("paths")
+    if not isinstance(paths, dict):
+        report["ok"] = False
+        report["error"] = "openapi_paths_missing"
+        return report
+
+    execute_path = paths.get("/api/agent/tasks/{task_id}/execute")
+    if not isinstance(execute_path, dict):
+        report["ok"] = False
+        report["error"] = "execute_route_missing"
+        return report
+
+    post_op = execute_path.get("post")
+    if not isinstance(post_op, dict):
+        report["ok"] = False
+        report["error"] = "execute_route_post_missing"
+        return report
+
+    parameters = post_op.get("parameters")
+    if not isinstance(parameters, list):
+        report["ok"] = False
+        report["error"] = "execute_route_parameters_missing"
+        return report
+
+    has_header_override = any(
+        isinstance(param, dict)
+        and str(param.get("in") or "").lower() == "header"
+        and str(param.get("name") or "").lower() == "x-force-paid-providers"
+        for param in parameters
+    )
+    if not has_header_override:
+        report["ok"] = False
+        report["error"] = "x-force-paid-providers_header_missing"
+        return report
+
+    report["ok"] = True
+    report["has_header_override"] = True
+    return report
+
+
 def check_value_lineage_e2e_flow(api_base: str, timeout: float = 8.0) -> dict[str, Any]:
     """Run a live public transaction check for value-lineage contract behavior."""
     base = api_base.rstrip("/")
@@ -706,11 +1118,19 @@ def get_branch_head_sha(
                 http_status=response.status_code,
                 duration_ms=duration_ms,
             )
+            if response.status_code in {403, 429}:
+                sha = _branch_head_sha_via_git_ls_remote(repository, branch)
+                if sha:
+                    return sha
+                return _branch_head_sha_via_gh_cli(repository, branch)
             response.raise_for_status()
             data = response.json()
         sha = (data.get("commit") or {}).get("sha") if isinstance(data, dict) else None
         return sha if isinstance(sha, str) else None
     except httpx.HTTPError:
+        sha = _branch_head_sha_via_git_ls_remote(repository, branch)
+        if sha:
+            return sha
         return _branch_head_sha_via_gh_cli(repository, branch)
 
 
@@ -933,6 +1353,9 @@ def evaluate_public_deploy_contract_report(
     value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
     value_lineage_e2e["name"] = "railway_value_lineage_e2e"
     checks.append(value_lineage_e2e)
+
+    paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
+    checks.append(paid_override_header_check)
 
     report["checks"] = checks
     warnings: list[str] = []

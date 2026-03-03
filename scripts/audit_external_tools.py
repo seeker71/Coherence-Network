@@ -35,29 +35,56 @@ def _extract_command(line: str) -> str | None:
     s = line.strip()
     if not s or s.startswith("#"):
         return None
+
     if s.startswith("- "):
         s = s[2:].strip()
     if not s:
         return None
-    # Handle command substitution assignments like VAR=$(git log -1 ...)
-    assignment_cmd = re.match(r"^[A-Za-z_][A-Za-z0-9_]*=\$\((.+)\)\s*$", s)
-    if assignment_cmd:
-        s = assignment_cmd.group(1).strip()
 
-    # Strip simple VAR=... prefixes with following command.
-    while re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", s):
-        parts = s.split(None, 1)
-        if len(parts) == 1:
+    # Ignore shell function definitions like:
+    #   run_validate() { ... }
+    #   c() { ... }
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\s*\(\)\s*\{?\s*$", s):
+        return None
+
+    # Handle command substitution assignments like:
+    #   VAR=$(git log -1 ...)
+    #   VAR="$(git rev-parse HEAD)"
+    assignment_cmd = re.match(
+        r"^(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=(?:\"|')?\$\((.+)\)(?:\"|')?\s*$",
+        s,
+    )
+    if assignment_cmd:
+        inner = assignment_cmd.group(1).strip()
+        # Likely a local function call: exit_code=$(run_validate)
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", inner):
             return None
-        s = parts[1].strip()
+        s = inner
+    else:
+        # Ignore pure assignment lines (including GitHub expression assignments).
+        # These commonly contain spaces and are not "env prefix + command" patterns.
+        if re.match(r"^(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=", s):
+            return None
+
+        # Strip simple env-var prefixes that precede a command, e.g.:
+        #   FOO=bar BAR=baz git status
+        # Only applies when values are whitespace-free.
+        while True:
+            m = re.match(r"^(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=[^\s\"']+\s+(.+)$", s)
+            if not m:
+                break
+            s = m.group(1).strip()
+
     if not s:
         return None
-    token = re.split(r"[ \t|;&()]+", s, maxsplit=1)[0]
-    token = token.strip()
+
+    token = re.split(r"[ \t|;&()]+", s, maxsplit=1)[0].strip()
     if not token:
         return None
-    if token.startswith(('"', "'", "-", "${", "steps.", "}") ):
+
+    if token.startswith(("\"", "'", "-", "${", "steps.", "}")):
         return None
+
     shell_keywords = {
         "if",
         "then",
@@ -82,24 +109,41 @@ def _extract_command(line: str) -> str | None:
     }
     if token in shell_keywords:
         return None
+
+    # Ignore local script paths; this audit is about external tooling.
+    if "/" in token:
+        return None
+
+    # Normalize common variants.
+    if token == "python3":
+        token = "python"
+
     return token
 
 
 def _discover_workflow_cli_tools(workflows_dir: Path) -> set[str]:
     tools: set[str] = set()
     run_re = re.compile(r"^(\s*)run:\s*\|\s*$")
+
     for wf in sorted(workflows_dir.glob("*.yml")):
         lines = wf.read_text(encoding="utf-8").splitlines()
         i = 0
         in_continuation = False
+        heredoc_end: str | None = None
+        in_single_quote_literal = False
+
         while i < len(lines):
             m = run_re.match(lines[i])
             if not m:
                 i += 1
                 continue
+
             indent = len(m.group(1))
             i += 1
             in_continuation = False
+            heredoc_end = None
+            in_single_quote_literal = False
+
             while i < len(lines):
                 raw = lines[i]
                 if raw.strip() == "":
@@ -108,16 +152,42 @@ def _discover_workflow_cli_tools(workflows_dir: Path) -> set[str]:
                 current_indent = len(raw) - len(raw.lstrip(" "))
                 if current_indent <= indent:
                     break
+
                 stripped = raw.strip()
+
+                # Skip heredoc bodies; they are data, not executed commands.
+                if heredoc_end is not None:
+                    if stripped == heredoc_end:
+                        heredoc_end = None
+                    i += 1
+                    continue
+
+                # Skip single-quoted multi-line literals (for example awk programs or JSON passed to curl).
+                if in_single_quote_literal:
+                    if stripped.count("'") % 2 == 1:
+                        in_single_quote_literal = False
+                    i += 1
+                    continue
+
                 if in_continuation:
                     in_continuation = stripped.endswith("\\")
                     i += 1
                     continue
+
+                heredoc_start = re.search(r"<<-?\s*(?:'|\")?([A-Za-z_][A-Za-z0-9_]*)(?:'|\")?", stripped)
+                if heredoc_start:
+                    heredoc_end = heredoc_start.group(1)
+
                 cmd = _extract_command(stripped)
                 if cmd:
                     tools.add(cmd)
+
+                if stripped.count("'") % 2 == 1:
+                    in_single_quote_literal = True
+
                 in_continuation = stripped.endswith("\\")
                 i += 1
+
     return tools
 
 

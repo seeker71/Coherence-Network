@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from typing import Any
 
 import httpx
 import pytest
@@ -330,9 +331,182 @@ def test_evaluate_public_deploy_contract_report_live_shape() -> None:
     assert "railway_web_gates_page" in check_names
     assert "railway_web_health_proxy" in check_names
     assert "railway_value_lineage_e2e" in check_names
+    assert "railway_api_execute_paid_override_header" in check_names
     assert out["result"] in {"public_contract_passed", "blocked"}
     assert isinstance(out.get("failing_checks"), list)
     assert isinstance(out.get("warnings"), list)
+
+
+def test_evaluate_public_deploy_contract_report_fails_without_paid_override_header(monkeypatch) -> None:
+    expected_sha = "x" * 40
+
+    monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
+
+    def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
+        del timeout
+        if url.endswith("/api/health"):
+            return {"url": url, "ok": True, "status_code": 200, "json": {"status": "ok"}}
+        if url.endswith("/api/gates/main-head"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {"sha": expected_sha},
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {
+                                "parameters": [
+                                    {"name": "X-Agent-Execute-Token", "in": "header"},
+                                    {"name": "force_paid_providers", "in": "query"},
+                                ]
+                            }
+                        }
+                    }
+                },
+            }
+        if url.endswith("/api/health-proxy"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "api": {"status": "ok"},
+                    "web": {"updated_at": "unknown"},
+                    "checked_at": "2026-02-18T00:00:00Z",
+                },
+            }
+        if url.endswith("/gates"):
+            return {"url": url, "ok": True, "status_code": 200}
+        return {"url": url, "ok": True, "status_code": 200, "json": {}}
+
+    monkeypatch.setattr(gates, "check_http_json_endpoint", _check_http_json)
+    monkeypatch.setattr(
+        gates,
+        "check_http_endpoint",
+        lambda url, timeout=8.0: {"url": url, "ok": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        gates,
+        "check_value_lineage_e2e_flow",
+        lambda api_base, timeout=8.0: {
+            "url": f"{api_base}/api/value-lineage/links/x",
+            "ok": True,
+            "status_code": 200,
+        },
+    )
+
+    report = evaluate_public_deploy_contract_report(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+    )
+
+    assert report["result"] == "blocked"
+    assert "railway_api_execute_paid_override_header" in report.get("failing_checks", [])
+    assert report.get("failing_checks", []) == ["railway_api_execute_paid_override_header"]
+
+
+def test_public_deploy_verification_jobs_complete_when_contract_passes(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+
+    monkeypatch.setattr(
+        gates,
+        "evaluate_public_deploy_contract_report",
+        lambda **kwargs: {
+            "result": "public_contract_passed",
+            "reason": "ok",
+            "repository": kwargs.get("repository"),
+        },
+    )
+
+    created = gates.create_public_deploy_verification_job(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        timeout=8.0,
+        poll_seconds=1.0,
+        max_attempts=3,
+    )
+    assert created["status"] == "scheduled"
+    job_id = str(created["job_id"])
+
+    listed = gates.list_public_deploy_verification_jobs()
+    assert len(listed) == 1
+
+    ticked = gates.tick_public_deploy_verification_job(job_id=job_id)
+    assert ticked["status"] == "completed"
+    assert ticked["attempts"] == 1
+
+    listed = gates.list_public_deploy_verification_jobs()
+    assert listed[0]["status"] == "completed"
+    assert listed[0]["attempts"] == 1
+
+
+def test_public_deploy_verification_job_fails_after_max_attempts(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+
+    monkeypatch.setattr(
+        gates,
+        "evaluate_public_deploy_contract_report",
+        lambda **kwargs: {"result": "blocked", "reason": "temporary failure"},
+    )
+
+    created = gates.create_public_deploy_verification_job(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        timeout=8.0,
+        poll_seconds=1.0,
+        max_attempts=1,
+    )
+
+    ticked = gates.tick_public_deploy_verification_job(job_id=created["job_id"])
+    assert ticked["status"] == "failed"
+    assert ticked["attempts"] == 1
+    assert ticked["last_error"] == "temporary failure"
+
+
+def test_public_deploy_verification_job_tracks_friction_events(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+
+    from app.services import friction_service
+
+    monkeypatch.setenv("FRICTION_USE_DB", "0")
+
+    calls = {"count": 0}
+
+    def _blocked_report(**_kwargs) -> dict:
+        calls["count"] += 1
+        return {"result": "blocked", "reason": f"failure-{calls['count']}"}
+
+    monkeypatch.setattr(gates, "evaluate_public_deploy_contract_report", _blocked_report)
+
+    created = gates.create_public_deploy_verification_job(
+        repository="seeker71/Coherence-Network",
+        branch="main",
+        timeout=8.0,
+        poll_seconds=1.0,
+        max_attempts=2,
+    )
+    job_id = str(created["job_id"])
+
+    first = gates.tick_public_deploy_verification_job(job_id=job_id)
+    assert first["status"] == "retrying"
+    assert first["attempts"] == 1
+
+    second = gates.tick_public_deploy_verification_job(job_id=job_id)
+    assert second["status"] == "failed"
+    assert second["attempts"] == 2
+
+    events, _ignored = friction_service.load_events()
+    block_types = {event.block_type for event in events if event.endpoint and job_id in event.endpoint}
+    assert "public_deploy_verification_retry" in block_types
+    assert "public_deploy_verification_failed" in block_types
 
 
 def test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning(monkeypatch) -> None:
@@ -362,6 +536,24 @@ def test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning(monkey
                 "json": {
                     "api": {"status": "ok"},
                     "web": {"updated_at": "unknown"},
+                },
+            }
+        if url.endswith("/openapi.json"):
+            return {
+                "url": url,
+                "ok": True,
+                "status_code": 200,
+                "json": {
+                    "paths": {
+                        "/api/agent/tasks/{task_id}/execute": {
+                            "post": {
+                                "parameters": [
+                                    {"name": "X-Force-Paid-Providers", "in": "header"},
+                                    {"name": "X-Agent-Execute-Token", "in": "header"},
+                                ]
+                            }
+                        }
+                    }
                 },
             }
         return {"url": url, "ok": True, "status_code": 200, "json": {}}

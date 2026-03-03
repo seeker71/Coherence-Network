@@ -17,7 +17,7 @@ _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")
 _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
 
-_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.1-codex")
+_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.3-codex-spark")
 _OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
 
 ROUTING: dict[TaskType, tuple[str, str]] = {
@@ -104,7 +104,11 @@ def executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
     if executor == "openclaw":
-        return "openclaw"
+        for candidate in ("openclaw", "codex"):
+            if shutil.which(candidate):
+                return candidate
+        configured = os.environ.get("OPENCLAW_EXECUTABLE")
+        return configured.strip() if configured else "openclaw"
     return "aider"
 
 
@@ -156,7 +160,7 @@ def openclaw_command_template(task_type: TaskType) -> str:
     model = OPENCLAW_MODEL_BY_TYPE[task_type]
     template = os.environ.get(
         "OPENCLAW_COMMAND_TEMPLATE",
-        'codex exec "{{direction}}" --model {{model}} --skip-git-repo-check --json',
+        'codex exec "{{direction}}" --model {{model}} --reasoning-effort high --worktree --skip-git-repo-check --json',
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

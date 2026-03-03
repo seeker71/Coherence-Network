@@ -66,6 +66,28 @@ api/logs/task_{task_id}.log
 tail -100 api/logs/task_task_xxx.log
 ```
 
+### 2b. Control context budget before opening more files
+
+Before opening many files for analysis, run:
+
+```bash
+python3 scripts/context_budget.py --token-budget 50000 \
+  api/app/services/release_gate_service.py \
+  docs/PIPELINE-MONITORING-AUTOMATED.md
+```
+
+It prints:
+- byte size / line count / rough token cost per file
+- compact cached summaries to choose what to open next
+- cache reuse path (`.cache/context_budget/summary_cache.json`) for future turns
+
+If one file is still large, read its summary first and open only targeted slices:
+
+```bash
+python3 scripts/context_budget.py --force-summaries api/app/services/release_gate_service.py
+sed -n '1,140p' api/app/services/release_gate_service.py
+```
+
 ### 3. Check runner log
 
 ```bash

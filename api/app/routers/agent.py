@@ -3,13 +3,16 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
+from urllib.parse import parse_qs
 
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+from app.routers.agent_telegram import format_task_alert, router as telegram_router
 
 from app.models.agent import (
     AgentTask,
@@ -26,6 +29,53 @@ from app.models.error import ErrorDetail
 from app.services import agent_service
 
 router = APIRouter()
+router.include_router(telegram_router)
+
+
+def _truthy(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
+def _coerce_force_paid_override(request: Request) -> bool:
+    """Read force-paid override flags directly from raw query values."""
+    raw_query = request.url.query
+    if not raw_query:
+        return False
+
+    query_flag_names = {
+        "force_paid_providers",
+        "force_paid_provider",
+        "force_allow_paid_providers",
+        "allow_paid_providers",
+        "allow_paid_provider",
+        "force_paid",
+    }
+
+    normalized_queries = parse_qs(raw_query, keep_blank_values=True, strict_parsing=False)
+    for raw_key, raw_values in normalized_queries.items():
+        normalized_key = re.sub(r"[^a-z0-9]+", "_", raw_key.strip().lower())
+        if normalized_key not in query_flag_names:
+            continue
+        if any(raw_values):
+            if any(_truthy(raw_value) for raw_value in raw_values):
+                return True
+            continue
+        return True
+
+    query = request.query_params
+    for name in query_flag_names:
+        raw = query.get(name)
+        if raw is None:
+            continue
+        if raw == "":
+            return True
+        if _truthy(raw):
+            return True
+    return False
 
 
 def _task_to_item(task: dict) -> dict:
@@ -81,10 +131,100 @@ def _task_to_full(task: dict) -> dict:
     status_code=201,
     responses={422: {"description": "Invalid task_type, empty direction, or validation error (detail: list of {loc, msg, type})"}},
 )
-async def create_task(data: AgentTaskCreate) -> AgentTask:
-    """Submit a task and get routed model + command."""
-    task = agent_service.create_task(data)
+async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) -> AgentTask:
+    """Submit a task and get routed model + command.
+
+    When AGENT_AUTO_EXECUTE=1, tasks are executed server-side in the background using the
+    OpenRouter free model, and completion is tracked via runtime events.
+    """
+    auto = _truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0"))
+    if auto:
+        ctx = data.context if isinstance(data.context, dict) else {}
+        patched_ctx = dict(ctx)
+        patched_ctx.setdefault("executor", "openclaw")
+        patched_ctx.setdefault("model_override", os.environ.get("AGENT_AUTO_EXECUTE_MODEL", "openrouter/free"))
+        patched = data.model_copy(update={"context": patched_ctx})
+        task = agent_service.create_task(patched)
+        try:
+            from app.services import agent_execution_service
+
+            background_tasks.add_task(agent_execution_service.execute_task, task["id"])
+        except Exception:
+            # Task creation should remain usable even if the executor module is unavailable.
+            pass
+    else:
+        task = agent_service.create_task(data)
     return AgentTask(**_task_to_full(task))
+
+
+@router.post(
+    "/agent/tasks/{task_id}/execute",
+    responses={
+        403: {"description": "Forbidden (missing or invalid execute token)", "model": ErrorDetail},
+        404: {"description": "Task not found", "model": ErrorDetail},
+    },
+)
+async def execute_task(
+    task_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_agent_execute_token: Optional[str] = Header(None, alias="X-Agent-Execute-Token"),
+    x_force_paid_providers: Optional[str] = Header(None, alias="X-Force-Paid-Providers"),
+    force_paid_providers: str | None = Query(None),
+    force_paid_provider: str | None = Query(None),
+    force_allow_paid_providers: str | None = Query(None),
+    allow_paid_providers: str | None = Query(None),
+    allow_paid_provider: str | None = Query(None),
+    max_cost_usd: float | None = Query(None, ge=0.0),
+    estimated_cost_usd: float | None = Query(None, ge=0.0),
+    cost_slack_ratio: float | None = Query(None, ge=1.0),
+) -> dict:
+    """Execute a task server-side (background).
+
+    If AGENT_EXECUTE_TOKEN is set, callers must provide header X-Agent-Execute-Token.
+    """
+    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    if expected and (x_agent_execute_token or "").strip() != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    task = agent_service.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    from app.services import agent_execution_service
+
+    force_paid_override = (
+        _truthy(force_paid_providers)
+        or _truthy(force_paid_provider)
+        or _truthy(force_allow_paid_providers)
+        or _truthy(allow_paid_providers)
+        or _truthy(allow_paid_provider)
+        or _truthy(x_force_paid_providers)
+        or _coerce_force_paid_override(request)
+    )
+    if force_paid_override:
+        task_ctx = task.get("context")
+        ctx: dict[str, object] = task_ctx if isinstance(task_ctx, dict) else {}
+        if not _truthy(str(ctx.get("force_paid_providers") or "")):
+            agent_service.update_task(
+                task_id,
+                context={
+                    "force_paid_providers": True,
+                    "force_paid_override_source": "query"
+                    if _coerce_force_paid_override(request)
+                    else "header",
+                },
+            )
+
+    background_tasks.add_task(
+        agent_execution_service.execute_task,
+        task_id,
+        force_paid_providers=force_paid_override,
+        max_cost_usd=max_cost_usd,
+        estimated_cost_usd=estimated_cost_usd,
+        cost_slack_ratio=cost_slack_ratio,
+    )
+    return {"ok": True, "task_id": task_id}
 
 
 @router.post(
@@ -158,17 +298,6 @@ async def get_task(task_id: str) -> AgentTask:
     return AgentTask(**_task_to_full(task))
 
 
-def _format_alert(task: dict) -> str:
-    """Format task for Telegram alert. Includes decision_prompt when set."""
-    status = task.get("status", "?")
-    status_str = status.value if hasattr(status, "value") else str(status)
-    direction = (task.get("direction") or "")[:80]
-    msg = f"⚠️ *{status_str}*\n\n{direction}\n\nTask: `{task.get('id', '')}`"
-    if task.get("decision_prompt"):
-        msg += f"\n\n{task['decision_prompt']}"
-    return msg
-
-
 @router.patch(
     "/agent/tasks/{task_id}",
     responses={
@@ -187,7 +316,7 @@ async def update_task(
     """
     if all(
         getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "worker_id")
+        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
     try:
@@ -199,6 +328,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
+            context=data.context,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
@@ -210,7 +340,7 @@ async def update_task(
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
-            msg = _format_alert(task)
+            msg = format_task_alert(task)
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)
@@ -243,108 +373,6 @@ async def update_task(
         except ImportError:
             pass
     return AgentTask(**_task_to_full(task))
-
-
-@router.post("/agent/telegram/webhook")
-async def telegram_webhook(update: dict = Body(...)) -> dict:
-    """Receive Telegram updates. Parse commands and reply.
-
-    Commands: /status, /tasks [status], /task {id}, /direction "..." or plain text.
-    Requires TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_IDS.
-    """
-    from app.services import telegram_adapter
-    from app.services import telegram_diagnostics
-
-    telegram_diagnostics.record_webhook(update)
-    logger.info("Telegram webhook received: %s", list(update.keys()))
-    if not telegram_adapter.has_token():
-        logger.warning("Telegram webhook: no token configured")
-        return {"ok": True}
-    msg = update.get("message") or update.get("edited_message")
-    if not msg:
-        logger.info("Telegram webhook: no message in update")
-        return {"ok": True}
-    chat_id = msg.get("chat", {}).get("id")
-    text = msg.get("text", "").strip()
-    user_id = (msg.get("from") or {}).get("id")
-    logger.info("Telegram webhook: user_id=%s chat_id=%s text=%r", user_id, chat_id, text[:50])
-    # When TELEGRAM_ALLOWED_USER_IDS is set, require a known user (reject missing from / unauthenticated)
-    if not telegram_adapter.is_user_allowed(user_id):
-        if user_id is None:
-            logger.warning("Telegram webhook: message has no 'from' (reject when TELEGRAM_ALLOWED_USER_IDS set)")
-        else:
-            logger.warning("Telegram webhook: user %s not allowed (check TELEGRAM_ALLOWED_USER_IDS)", user_id)
-        return {"ok": True}
-    cmd, arg = telegram_adapter.parse_command(text)
-    reply = ""
-    if cmd == "status":
-        summary = agent_service.get_review_summary()
-        needs = summary["needs_attention"]
-        reply = f"*Agent status*\nTasks: {summary['total']}\n"
-        reply += "\n".join(f"  {k}: {v}" for k, v in summary["by_status"].items())
-        if needs:
-            reply += f"\n\n⚠️ *{len(needs)} need attention*"
-    elif cmd == "usage":
-        usage = agent_service.get_usage_summary()
-        reply = "*Usage by model*\n"
-        for model, u in usage.get("by_model", {}).items():
-            reply += f"\n`{model}`: {u.get('count', 0)} tasks"
-            if u.get("by_status"):
-                reply += " " + ", ".join(f"{k}:{v}" for k, v in u["by_status"].items())
-        reply += "\n\n*Routing*: " + ", ".join(
-            f"{t}={d['model']}" for t, d in usage.get("routing", {}).items()
-        )
-    elif cmd == "tasks":
-        status_filter = arg if arg in ("pending", "running", "completed", "failed", "needs_decision") else None
-        status_enum = TaskStatus(status_filter) if status_filter else None
-        items, total = agent_service.list_tasks(status=status_enum, limit=10)
-        reply = f"*Tasks* ({total} total)\n"
-        for t in items:
-            reply += f"\n`{t['id']}` {t['status']} — {str(t['direction'])[:50]}..."
-    elif cmd == "task":
-        if not arg:
-            reply = "Usage: /task {id}"
-        else:
-            task = agent_service.get_task(arg.strip())
-            if not task:
-                reply = f"Task `{arg}` not found"
-            else:
-                reply = _format_alert(task) if task.get("status") in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED) else f"*Task* `{task['id']}`\n{task['status']}\n{task.get('direction', '')[:200]}"
-    elif cmd == "reply":
-        # /reply {task_id} {decision}
-        parts = (arg or "").split(maxsplit=1)
-        task_id = (parts[0] or "").strip()
-        decision = (parts[1] or "").strip() if len(parts) > 1 else ""
-        if not task_id or not decision:
-            reply = "Usage: /reply {task_id} {decision}"
-        else:
-            task = agent_service.update_task(task_id, decision=decision)
-            if not task:
-                reply = f"Task `{task_id}` not found"
-            else:
-                reply = f"Decision recorded for `{task_id}`"
-    elif cmd == "attention":
-        items, total = agent_service.get_attention_tasks(limit=10)
-        reply = f"*Attention* ({total} need action)\n"
-        for t in items:
-            reply += f"\n`{t['id']}` {t['status']} — {str(t.get('direction', ''))[:40]}..."
-            if t.get("decision_prompt"):
-                reply += f"\n  _{t['decision_prompt'][:60]}_"
-    elif cmd == "direction" or (not cmd and text):
-        direction = arg if cmd == "direction" else text
-        if not direction:
-            reply = "Send a direction: e.g. /direction Add GET /api/projects"
-        else:
-            created = agent_service.create_task(AgentTaskCreate(direction=direction, task_type=TaskType.IMPL))
-            reply = f"✅ Task `{created['id']}`\n\nRun:\n`{created['command']}`"
-    else:
-        reply = "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, /attention, /usage, /direction \"...\" or just type your direction"
-    if reply:
-        ok = await telegram_adapter.send_reply(chat_id, reply)
-        logger.info("Telegram reply sent: %s", ok)
-        if not ok:
-            logger.warning("Telegram send_reply failed — check bot token and that user has /start with bot")
-    return {"ok": True}
 
 
 @router.get("/agent/usage")
