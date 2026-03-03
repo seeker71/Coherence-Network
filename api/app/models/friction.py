@@ -67,6 +67,11 @@ class FrictionEntryPoint(BaseModel):
     recommended_action: str = Field(min_length=1)
     evidence_links: list[str] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
+    semantic_domain: Optional[str] = Field(default=None, max_length=80)
+    potential_roi: Optional[float] = Field(default=None, ge=0.0)
+    roi_estimator: Optional[str] = Field(default=None, max_length=120)
+    roi_calibration_ratio: Optional[float] = Field(default=None, ge=0.0)
+    cheap_model_split_hint: Optional[str] = Field(default=None, max_length=300)
 
 
 class FrictionEntryPointReport(BaseModel):
