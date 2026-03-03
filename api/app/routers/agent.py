@@ -92,14 +92,6 @@ def _coerce_force_paid_override(request: Request) -> bool:
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
-    status_value = task.get("status")
-    status_name = status_value.value if hasattr(status_value, "value") else str(status_value or "")
-    is_failed = str(status_name).strip().lower() == "failed"
-    failure_preview = None
-    if is_failed:
-        output = str(task.get("output") or "").strip()
-        if output:
-            failure_preview = output[:240]
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -114,10 +106,6 @@ def _task_to_item(task: dict) -> dict:
         "success_evidence": ctx.get("success_evidence"),
         "abort_evidence": ctx.get("abort_evidence"),
         "observation_window_sec": ctx.get("observation_window_sec"),
-        "failure_reason_bucket": ctx.get("failure_reason_bucket") if is_failed else None,
-        "failure_diagnostics_present": ctx.get("failure_diagnostics_present") if is_failed else None,
-        "failure_diagnostics_source": ctx.get("failure_diagnostics_source") if is_failed else None,
-        "failure_output_preview": failure_preview,
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
@@ -606,13 +594,8 @@ async def update_task(
     Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
     When decision present and task needs_decision, sets status→running.
     """
-    if all(
-        getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
-    ):
+    if not _task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
-    existing_task = agent_service.get_task(task_id)
-    previous_status_value = _task_status_value(existing_task)
     context_patch = _target_state_context_patch(data)
     try:
         task = agent_service.update_task(
@@ -623,7 +606,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
-            context=data.context,
+            context=context_patch if context_patch else None,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
@@ -631,7 +614,10 @@ async def update_task(
         raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    runner_update = is_runner_task_update(worker_id=data.worker_id, context_patch=data.context)
+    runner_update = is_runner_task_update(
+        worker_id=data.worker_id,
+        context_patch=context_patch if context_patch else data.context,
+    )
     if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
         from app.services import telegram_adapter
 
