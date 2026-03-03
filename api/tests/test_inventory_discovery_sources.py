@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
-from app.services import commit_evidence_service, idea_service, inventory_service
+from app.services import (
+    commit_evidence_service,
+    idea_service,
+    inventory_service,
+    runtime_service,
+    spec_registry_service,
+    value_lineage_service,
+)
 
 
 def test_idea_service_derives_missing_ideas_from_commit_evidence(
@@ -63,6 +71,40 @@ def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(tmp_path / "system_audit"))
     tracked = idea_service.list_tracked_idea_ids()
     assert tracked == ["tracked-alt", "tracked-main"]
+
+
+def test_idea_service_derives_missing_ideas_from_other_registry_domains(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    monkeypatch.setattr(
+        spec_registry_service,
+        "list_specs",
+        lambda limit=200, offset=0: [SimpleNamespace(idea_id="derived-from-spec-registry")],
+    )
+    monkeypatch.setattr(
+        value_lineage_service,
+        "list_links",
+        lambda limit=200: [SimpleNamespace(idea_id="derived-from-lineage")],
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_idea",
+        lambda seconds=3600, event_limit=2000, summary_limit=500, summary_offset=0, event_rows=None: [
+            SimpleNamespace(idea_id="derived-from-runtime")
+        ],
+    )
+
+    listed = idea_service.list_ideas(include_internal=True)
+    idea_ids = {item.id for item in listed.ideas}
+
+    assert "derived-from-spec-registry" in idea_ids
+    assert "derived-from-lineage" in idea_ids
+    assert "derived-from-runtime" in idea_ids
 
 
 def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
