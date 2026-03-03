@@ -33,7 +33,7 @@ git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
-make start-gate
+make prompt-gate
 ```
 
 ### Phase 0: Start Gate (required before new task work)
@@ -41,21 +41,17 @@ make start-gate
 Run from the target worktree:
 
 ```bash
-make start-gate
+make prompt-gate
 ```
 
 Gate status:
-- PASS only when running from a linked worktree (`.git` points to a worktree gitdir, not the primary `.git` directory).
-- PASS in bootstrap mode when current worktree is clean.
-- PASS in continuation mode when current worktree is dirty from in-flight thread work.
-- PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
-- PASS only when current start-command checks succeed, including remote `main` workflow health and open `codex/*` PR checks.
-- PASS only when detached `HEAD` is resolved (start-gate now auto-attaches to a `codex/...` branch in linked worktrees).
+- PASS only when not detached (`HEAD` is attached to a named branch).
+- PASS only when not working directly on `main`/`master`.
+- PASS only when thread context is valid: linked worktree OR `codex/*` branch.
 
 Start command:
-- `make start-gate` in `auto` mode selects bootstrap/continuation automatically based on worktree cleanliness.
-- Continuation mode downgrades remote workflow failures to warnings by default so follow-up prompts on active threads do not deadlock.
-- `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate` remains the stash/rebase recovery path and now auto-attaches detached `HEAD` first.
+- `make prompt-gate` is the required prompt-entry command (clean tree runs start-gate + rebase + local guard; dirty tree enters continuation mode).
+- `make start-gate` is intentionally minimal and only validates branch/worktree safety.
 
 ### Phase A: Local Validation (required before commit)
 

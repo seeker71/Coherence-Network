@@ -21,19 +21,12 @@ Spec → Test → Implement → CI → Review → Merge
 1. Worktree-only execution
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
-2. Start gate (required before any edits)
-   - Run: `make start-gate`
-   - `make start-gate` now runs in auto mode:
-     - clean tree => bootstrap,
-     - dirty tree => continuation (for follow-up prompts on same thread),
-     - detached `HEAD` => auto-attach to `codex/...` branch in linked worktrees.
-   - If it fails, fix blockers first.
-   - If stash/rebase healing is needed: `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
-   - Main-workflow failure policy:
-     - Temporary waivers must be declared in `config/start_gate_main_workflow_waivers.json`.
-     - Each waiver must include `workflow`, `owner`, `reason`, `expires_at`, and should scope by `run_url_contains` when possible.
-     - Owner mappings for blocking workflows must exist in `config/start_gate_workflow_owners.json`.
-     - Waivers are short-lived and must be removed after root-cause repair.
+2. Prompt entry gate (required before any edits)
+   - Run: `make prompt-gate`
+   - Clean worktree: runs start-gate + rebase + local guard.
+   - Dirty worktree: continuation mode (skip re-bootstrap/start-gate and continue in-flight task).
+   - Detached `HEAD`: attach a branch first (`git switch -c codex/<thread-name>` or `git switch codex/<thread-name>`).
+   - If it fails, stop and fix blockers first.
 3. Pre-commit local gate (required)
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
@@ -143,14 +136,14 @@ Spec → Test → Implement → CI → Review → Merge
 ## Commands
 
 ```bash
-# Mandatory first step for every thread
-make start-gate
+# Mandatory first step for every prompt (new thread + follow-up)
+make prompt-gate
 
 # Worktree setup for Codex thread start
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
-make start-gate
+make prompt-gate
 
 # API
 cd api && uvicorn app.main:app --reload --port 8000
@@ -168,10 +161,8 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 # Public production verify (required before merge/roll-forward)
 ./scripts/verify_web_api_deploy.sh
 
-# Start gate (required before starting a new task)
-make start-gate
-# For detached/stash/rebase recovery:
-./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate
+# Prompt entry gate (required before starting a new task)
+make prompt-gate
 
 # PR check failure prevention + tracking (default before commit/push)
 # Optional for n8n-backed automation flows:
@@ -277,12 +268,13 @@ Use these as design guidance for web changes. They are intended to keep the expe
 ### Worktree Stability Guidance
 
 - Before running stash/rebase helper flows, confirm the worktree is on a named branch (`git rev-parse --abbrev-ref HEAD` should not be `HEAD`).
-- If detached, `make start-gate` and `./scripts/auto_heal_start_gate.sh` now auto-attach to a `codex/...` branch in linked worktrees.
+- If detached, create or switch to a `codex/...` branch first. This avoids ambiguous stash restoration and preserves in-progress UI decisions.
 - During long UI iterations, capture screenshots in `.playwright-cli/` and keep a short decision summary in the task thread so visual intent can be restored quickly if recovery tooling resets files.
-- Observed failure mode: repeated stash+rebase while detached can make state recovery noisy and confusing; use the updated helper so branch attach is deterministic.
+- Observed failure mode: repeated use of stash+rebase helper scripts while detached can make state recovery noisy and confusing. The helper does not detach by itself; it assumes branch state is already valid.
 - Suggested preflight before any auto-heal command:
   - run `git rev-parse --abbrev-ref HEAD`
-  - if output is `HEAD`, either attach manually (`git switch -c codex/<topic>-<date>`) or let `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate` auto-attach
+  - if output is `HEAD`, attach first: `git switch -c codex/<topic>-<date>` (or `git switch codex/<existing-branch>`)
+  - only then run `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
 - If `make start-gate` fails only because the worktree is dirty from active task work, prefer continuing the same task and running local validation gates directly rather than repeatedly stashing/restoring mid-task.
 - Suggested Codex thread start check (quick, lightweight): confirm branch name, run `git status --short`, and record if the worktree is intentionally dirty before running any recovery helpers.
 - For deploy-focused threads, prefer a clean dedicated branch/worktree for release scope. Keep unrelated in-progress edits in another branch/worktree so deploy evidence and PR diffs stay easy to verify.
