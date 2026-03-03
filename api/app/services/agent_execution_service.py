@@ -74,7 +74,7 @@ def _paid_route_override_requested(task: dict[str, Any]) -> bool:
 
 def _extract_underlying_model(task_model: str) -> str:
     cleaned = (task_model or "").strip()
-    if cleaned.startswith("openclaw/"):
+    if cleaned.startswith("openclaw/") or cleaned.startswith("clawwork/"):
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):
         return cleaned.split("/", 1)[1].strip()
