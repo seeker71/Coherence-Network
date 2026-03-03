@@ -347,7 +347,7 @@ function presentIssue(issue: string): string {
 
 async function fetchJsonOrDefault<T>(url: string, fallback: T): Promise<T> {
   try {
-    const response = await fetch(url, { cache: "force-cache" });
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       return fallback;
     }
