@@ -69,3 +69,7 @@ None. Adding or expanding this test does not require new dependencies or API con
 - [010-request-validation.md](010-request-validation.md) — direction min_length, validation rules, test names
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — POST /api/agent/tasks contract and test list
 - [037-post-tasks-invalid-task-type-422.md](037-post-tasks-invalid-task-type-422.md) — parallel spec for invalid task_type 422
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

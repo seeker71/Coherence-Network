@@ -41,3 +41,7 @@ Ensure all key web pages remain reachable via visible navigation and reliably re
   - Open `/`, `/usage`, `/friction`, `/gates`.
   - Confirm live-update bar refreshes quickly after tab focus.
   - Confirm context/nav links expose all key pages including `/friction`, `/import`, `/api-health`.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

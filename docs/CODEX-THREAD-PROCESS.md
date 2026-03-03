@@ -4,8 +4,8 @@ Date: 2026-02-14
 
 Purpose: ensure each Codex thread can work independently, commit only its own scope, and advance phases only when validation gates pass.
 
-Canonical setup reference:
-- `docs/WORKTREE-QUICKSTART.md` (mandatory for every new thread)
+Source of truth:
+- `AGENTS.md` defines the mandatory process contract for all tasks.
 
 ## Core Rules
 
@@ -17,6 +17,31 @@ Canonical setup reference:
    - Include evidence that process gates were executed.
 3. Phase gating
    - Do not move to next phase until current phase gates pass.
+
+## Task Start Protocol (Required)
+
+Before any code changes in a new worktree/thread:
+
+```bash
+./scripts/setup_worktree_context.sh
+./scripts/run_local_ci_context.sh
+```
+
+Then complete:
+1. Read required context:
+   - `CLAUDE.md`
+   - `docs/SPEC-TRACKING.md`
+   - `docs/SPEC-QUALITY-GATE.md`
+2. Confirm scope:
+   - Only modify files listed in the active spec/issue.
+3. Follow process order:
+   - Spec -> Test -> Implement -> CI -> Review -> Merge
+4. Post-change gate:
+   - Re-run local CI-equivalent checks before handoff.
+
+Failure policy:
+- If bootstrap or CI gates fail, stop implementation and report the exact failing command and output.
+- Do not continue in a dirty worktree; create or switch to a clean worktree first.
 
 ## Required Phase Gates
 
@@ -58,15 +83,9 @@ Start command:
 Run and record:
 
 ```bash
-# Optional for n8n-backed flows: export N8N_VERSION=<deployed-version>
-python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
-python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
-python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
-./scripts/thread-runtime.sh check
-
-# Optional auto-heal (only for merge-ready stale codex PRs):
-# python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict \
-#   --auto-merge-ready-stale --auto-merge-method merge
+./scripts/run_local_ci_context.sh
+./scripts/verify_worktree_local_web.sh
+python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
 
 Gate status:
@@ -83,15 +102,13 @@ Optional runtime smoke (only when runtime-surface files under `api/` or `web/` c
 ```
 
 Worktree notes:
-- This command is the default local PR failure-prevention guard for Codex threads.
-- `./scripts/verify_worktree_local_web.sh` is readiness-first by default (it validates existing local API/web services).
-- Start services intentionally with `THREAD_RUNTIME_START_SERVERS=1` only when needed.
-- `./scripts/verify_worktree_local_web.sh --thread-ports` prints current thread-runtime port usage across active threads.
-- Thread runtime defaults to per-thread deterministic base ports using `THREAD_RUNTIME_API_BASE_PORT` / `THREAD_RUNTIME_WEB_BASE_PORT`.
-- It writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
-- `thread-runtime.sh run-e2e` does runtime API smoke against the active local API and is cache-aware.
-- Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
-- If running `./scripts/verify_worktree_local_web.sh` directly, npm cache defaults to per-worktree `<worktree>/.cache/npm` (override via `NPM_CACHE=...`).
+- This command is the default local web validation for Codex threads.
+- It runs API + web inside the current worktree, validates key API/web routes, and fails on runtime errors in page content.
+- npm cache is isolated per worktree by default (`<worktree>/.cache/npm`) to avoid cross-thread cache permission collisions.
+- Override ports when needed:
+  - `API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh`
+- Override npm cache when needed:
+  - `NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh`
 
 ### Phase B: CI Validation (required before merge)
 

@@ -43,3 +43,7 @@ ideas -> specs -> processes/routes -> implementations -> contributors/contributi
   - `GET https://coherence-network-production.up.railway.app/api/inventory/page-lineage`
   - `GET https://coherence-network-production.up.railway.app/api/value-lineage/links`
   - `GET https://coherence-network.vercel.app/portfolio` and links to the new pages return 200
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

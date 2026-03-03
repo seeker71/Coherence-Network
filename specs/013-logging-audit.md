@@ -94,3 +94,7 @@ Example line:
 ## Decision gates
 
 - Adding a new pip dependency solely for JSON logging: needs-decision (stdlib only preferred).
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

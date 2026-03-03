@@ -1140,7 +1140,7 @@ def test_list_spec_paths_at_ref_returns_empty_on_429_rate_limit() -> None:
     assert route.call_count == 1
 
 
-def test_pr_to_public_report_exposes_failure_api_with_solutions(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pr_to_public_report_exposes_failure_api_with_solutions(monkeypatch) -> None:
     monkeypatch.setattr(
         gates,
         "get_open_prs",
@@ -1191,9 +1191,7 @@ def test_pr_to_public_report_exposes_failure_api_with_solutions(monkeypatch: pyt
     )
 
 
-def test_public_deploy_contract_report_exposes_failure_api_with_solutions(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_public_deploy_contract_report_exposes_failure_api_with_solutions(monkeypatch) -> None:
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: "b" * 40)
     monkeypatch.setattr(
         gates,

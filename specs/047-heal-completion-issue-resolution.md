@@ -72,3 +72,7 @@ See `api/tests/test_agent.py` (and any new tests for monitor resolution / option
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Item 2 (this spec); Item 5 (heal task effectiveness tracking / heal_resolved_count).
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — GET /api/agent/monitor-issues, GET /api/agent/effectiveness.
 - [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — Monitor flow, resolution tracking, issue shape.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

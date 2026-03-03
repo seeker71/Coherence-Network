@@ -261,9 +261,7 @@
       ],
       "purpose": "Provider adapter usage and normalized automation capacity metrics",
       "idea_id": "coherence-network-agent-pipeline",
-      "spec_ids": [
-        "100"
-      ]
+      "spec_ids": ["100"]
     },
     {
       "path": "/api/automation/usage/alerts",
@@ -272,9 +270,7 @@
       ],
       "purpose": "Threshold alerts for provider usage remaining capacity",
       "idea_id": "coherence-network-agent-pipeline",
-      "spec_ids": [
-        "100"
-      ]
+      "spec_ids": ["100"]
     },
     {
       "path": "/api/automation/usage/snapshots",
@@ -283,72 +279,21 @@
       ],
       "purpose": "Historical normalized provider usage snapshots",
       "idea_id": "coherence-network-agent-pipeline",
-      "spec_ids": [
-        "100"
-      ]
+      "spec_ids": ["100"]
     },
     {
       "path": "/api/automation/usage/subscription-estimator",
-      "methods": [
-        "GET"
-      ],
+      "methods": ["GET"],
       "purpose": "Estimate provider subscription upgrade cost/benefit and ROI",
       "idea_id": "coherence-network-agent-pipeline",
-      "spec_ids": [
-        "100"
-      ]
+      "spec_ids": ["100"]
     },
     {
       "path": "/api/automation/usage/readiness",
-      "methods": [
-        "GET"
-      ],
+      "methods": ["GET"],
       "purpose": "Report required provider readiness and blocking gaps",
       "idea_id": "coherence-network-agent-pipeline",
-      "spec_ids": [
-        "100"
-      ]
-    },
-    {
-      "path": "/api/friction/entry-points",
-      "methods": [
-        "GET"
-      ],
-      "purpose": "Unified high-impact friction entry points from failures, high-cost tasks, and CI usage waste",
-      "idea_id": "coherence-network-agent-pipeline"
-    },
-    {
-      "path": "/api/gates/public-deploy-contract",
-      "methods": [
-        "GET"
-      ],
-      "purpose": "Check that public API/web deployment matches branch-head expectations",
-      "idea_id": "oss-interface-alignment"
-    },
-    {
-      "path": "/api/gates/public-deploy-verification-jobs",
-      "methods": [
-        "GET",
-        "POST"
-      ],
-      "purpose": "Create and list persisted public-deploy verification jobs",
-      "idea_id": "oss-interface-alignment"
-    },
-    {
-      "path": "/api/gates/public-deploy-verification-jobs/{job_id}/tick",
-      "methods": [
-        "POST"
-      ],
-      "purpose": "Manually run one persisted public-deploy verification job",
-      "idea_id": "oss-interface-alignment"
-    },
-    {
-      "path": "/api/gates/public-deploy-verification-jobs/tick",
-      "methods": [
-        "POST"
-      ],
-      "purpose": "Tick due public-deploy verification jobs for scheduled retries",
-      "idea_id": "oss-interface-alignment"
+      "spec_ids": ["100"]
     }
   ],
   "web_routes": [

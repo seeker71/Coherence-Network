@@ -20,3 +20,7 @@ Make the web UI behave like a modern operational interface:
 
 - `cd web && npm run build`
 - Manual: verify live-update indicator toggles ON/OFF and pages update without manual reload.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

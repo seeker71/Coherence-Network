@@ -314,3 +314,7 @@ All 4 tests passing.
 ## Decision Gates
 
 None — implementation already complete and tested.
+
+## Idea Traceability
+- `idea_id`: `oss-interface-alignment`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

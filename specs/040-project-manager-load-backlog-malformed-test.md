@@ -46,3 +46,7 @@ N/A. Backlog format: lines matching `^\d+\.\s+(.+)$` are included; other lines a
 ## Decision Gates (if any)
 
 None.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.
