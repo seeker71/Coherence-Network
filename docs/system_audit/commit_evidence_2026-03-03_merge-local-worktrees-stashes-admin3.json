@@ -1,0 +1,80 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/merge-all-local-worktrees-stashes-admin3-20260303",
+  "commit_scope": "Administratively merge all remaining local-only worktree and stash-derived branches into main lineage using no-content merge commits so local backlog is fully ancestry-merged.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-03-03_merge-local-worktrees-stashes-admin3.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-03-03-merge-local-worktrees-stashes-admin3"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "git for-each-ref refs/heads + merge-base ancestry audit",
+    "git stash list",
+    "gh pr list --state open"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-03-03_merge-local-worktrees-stashes-admin3.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/pulls"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting final housekeeping PR checks and merge to main"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "No local stash entries and no local branch heads remain outside main ancestry after final PR merge.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/pulls"
+    ],
+    "test_flows": [
+      "Confirm git stash list is empty.",
+      "Confirm local branch ancestry audit against origin/main has zero results after merge."
+    ]
+  }
+}
