@@ -61,6 +61,7 @@ type IdeaCardsResponse = {
     cursor: string;
     limit: number;
     include_internal_ideas: boolean;
+    only_actionable: boolean;
     min_roi: number | null;
     min_value_gap: number | null;
   };
@@ -75,6 +76,7 @@ const FILTER_STATES = ["all", "spec", "implemented", "validated", "measured"] as
 const ATTENTION_LEVELS = ["all", "none", "low", "medium", "high"] as const;
 const SORT_OPTIONS = ["attention_desc", "roi_desc", "gap_desc", "state_desc", "name_asc"] as const;
 const VIEW_OPTIONS = ["list", "focus"] as const;
+const SCOPE_OPTIONS = ["contributors", "all"] as const;
 const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
 
 const SORT_LABEL: Record<(typeof SORT_OPTIONS)[number], string> = {
@@ -219,6 +221,7 @@ async function loadIdeaCards(params: {
   minRoi: number | null;
   minValueGap: number | null;
   includeInternalIdeas: boolean;
+  onlyActionable: boolean;
 }): Promise<IdeaCardsResponse> {
   const API = getApiBase();
   const search = new URLSearchParams({
@@ -229,6 +232,7 @@ async function loadIdeaCards(params: {
     cursor: String(params.cursor),
     limit: String(params.limit),
     include_internal_ideas: params.includeInternalIdeas ? "true" : "false",
+    only_actionable: params.onlyActionable ? "true" : "false",
     runtime_window_seconds: String(UI_RUNTIME_SUMMARY_WINDOW),
   });
   if (params.minRoi !== null) search.set("min_roi", String(params.minRoi));
@@ -250,10 +254,13 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
   const attention = parseEnum(readParam(resolved.attention, "all"), ATTENTION_LEVELS, "all");
   const sort = parseEnum(readParam(resolved.sort, "attention_desc"), SORT_OPTIONS, "attention_desc");
   const view = parseEnum(readParam(resolved.view, "list"), VIEW_OPTIONS, "list");
+  const scope = parseEnum(readParam(resolved.scope, "contributors"), SCOPE_OPTIONS, "contributors");
   const cursor = parseCursor(readParam(resolved.cursor, "0"));
   const limit = parseLimit(readParam(resolved.limit, String(DEFAULT_LIMIT)));
   const minRoi = parseOptionalNumber(readParam(resolved.min_roi));
   const minValueGap = parseOptionalNumber(readParam(resolved.min_value_gap));
+  const includeInternalIdeas = scope === "all";
+  const onlyActionable = scope !== "all";
 
   const currentParams = new URLSearchParams();
   if (q) currentParams.set("q", q);
@@ -261,6 +268,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
   if (attention !== "all") currentParams.set("attention", attention);
   if (sort !== "attention_desc") currentParams.set("sort", sort);
   if (view !== "list") currentParams.set("view", view);
+  if (scope !== "contributors") currentParams.set("scope", scope);
   if (cursor > 0) currentParams.set("cursor", String(cursor));
   if (limit !== DEFAULT_LIMIT) currentParams.set("limit", String(limit));
   if (minRoi !== null) currentParams.set("min_roi", String(minRoi));
@@ -275,7 +283,8 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
     limit,
     minRoi,
     minValueGap,
-    includeInternalIdeas: true,
+    includeInternalIdeas,
+    onlyActionable,
   });
 
   const items = payload.items;
@@ -307,6 +316,9 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Ideas In Motion</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
             A global community bringing ideas to life with care, coherence, and measurable impact.
+          </p>
+          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+            {scope === "all" ? "Showing all ideas (including system/internal)." : "Showing contributor-actionable ideas."}
           </p>
         </section>
 
@@ -357,6 +369,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
             <input type="hidden" name="attention" value={attention} />
             <input type="hidden" name="sort" value={sort} />
             <input type="hidden" name="view" value={view} />
+            <input type="hidden" name="scope" value={scope} />
             <input type="hidden" name="limit" value={String(limit)} />
             {minRoi !== null ? <input type="hidden" name="min_roi" value={String(minRoi)} /> : null}
             {minValueGap !== null ? <input type="hidden" name="min_value_gap" value={String(minValueGap)} /> : null}
@@ -393,6 +406,26 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
 
         <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={buildHref(currentParams, { scope: "contributors", ...clearCursor })}
+              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition ${
+                scope === "contributors"
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-border/70 bg-background/55 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Contributor Ideas
+            </Link>
+            <Link
+              href={buildHref(currentParams, { scope: "all", ...clearCursor })}
+              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition ${
+                scope === "all"
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-border/70 bg-background/55 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Ideas
+            </Link>
             {[
               {
                 label: "All",
