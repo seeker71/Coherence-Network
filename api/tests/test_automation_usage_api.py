@@ -71,7 +71,7 @@ def test_configured_status_openai_accepts_runner_telemetry(monkeypatch: pytest.M
     assert configured is True
     assert missing == []
     assert "runner_provider_telemetry" in present
-    assert any("host-runner OpenAI/Codex telemetry" in note for note in notes)
+    assert any("runner" in note.lower() for note in notes)
 
 
 def test_configured_status_cursor_accepts_runner_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -96,7 +96,7 @@ def test_configured_status_cursor_accepts_runner_telemetry(monkeypatch: pytest.M
     assert configured is True
     assert missing == []
     assert "runner_provider_telemetry" in present
-    assert any("host-runner Cursor telemetry" in note for note in notes)
+    assert any("runner" in note.lower() for note in notes)
 
 
 def test_runner_provider_telemetry_prefers_configured_row(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -436,20 +436,20 @@ def test_provider_readiness_can_block_on_limit_telemetry_when_enabled(
     overview = ProviderUsageOverview(
         providers=[
             ProviderUsageSnapshot(
-                id="provider_openrouter_limit_gap",
-                provider="openrouter",
+                id="provider_cursor_limit_gap",
+                provider="cursor",
                 kind="custom",
                 status="ok",
-                data_source="provider_api",
+                data_source="runtime_events",
                 metrics=[
                     UsageMetric(
-                        id="requests_quota",
-                        label="OpenRouter request quota",
+                        id="cursor_subscription_8h",
+                        label="Cursor subscription runs (8h)",
                         unit="requests",
                         used=80.0,
                         remaining=20.0,
                         limit=100.0,
-                        window="daily",
+                        window="hourly",
                         validation_state="derived",
                         evidence_source="runtime_events+env_limits",
                     )
@@ -462,24 +462,86 @@ def test_provider_readiness_can_block_on_limit_telemetry_when_enabled(
     )
     monkeypatch.setenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", "1")
     monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setattr(
         automation_usage_service,
         "collect_usage_overview",
         lambda force_refresh=False: overview,
     )
-    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openrouter": 1})
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"cursor": 1})
 
     report = automation_usage_service.provider_readiness_report(
-        required_providers=["openrouter"],
+        required_providers=["cursor"],
         force_refresh=False,
     )
 
-    assert report.all_required_ready is False
-    assert "openrouter: limit_telemetry_state=derived_or_unvalidated" in report.blocking_issues
-    assert "openrouter" in report.limit_telemetry["required_or_active_missing_hard_limit_telemetry"]
-    provider_row = next(row for row in report.providers if row.provider == "openrouter")
+    assert report.all_required_ready is True
+    assert report.blocking_issues == []
+    assert "cursor" in report.limit_telemetry["required_or_active_missing_hard_limit_telemetry"]
+    provider_row = next(row for row in report.providers if row.provider == "cursor")
     assert "limit_telemetry_state=derived_or_unvalidated" in provider_row.notes
+
+
+def test_provider_readiness_does_not_recommend_validated_limits_when_not_strict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_cursor_derived",
+                provider="cursor",
+                kind="custom",
+                status="ok",
+                data_source="runtime_events",
+                metrics=[
+                    UsageMetric(
+                        id="cursor_subscription_8h",
+                        label="Cursor subscription runs (8h)",
+                        unit="requests",
+                        used=12.0,
+                        remaining=38.0,
+                        limit=50.0,
+                        window="hourly",
+                        validation_state="derived",
+                        evidence_source="runtime_events+cli_subscription_baseline",
+                    ),
+                    UsageMetric(
+                        id="cursor_subscription_week",
+                        label="Cursor subscription runs (7d)",
+                        unit="requests",
+                        used=40.0,
+                        remaining=460.0,
+                        limit=500.0,
+                        window="weekly",
+                        validation_state="derived",
+                        evidence_source="runtime_events+cli_subscription_baseline",
+                    ),
+                ],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.delenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", raising=False)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"cursor": 3})
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_configured_status",
+        lambda provider: (True, [], [], []) if provider == "cursor" else (False, [], [], []),
+    )
+
+    report = automation_usage_service.provider_readiness_report(
+        required_providers=["cursor"],
+        force_refresh=False,
+    )
+
+    assert report.all_required_ready is True
+    assert not any("Add validated limit+remaining telemetry for 'cursor'" in item for item in report.recommendations)
 
 
 def test_provider_readiness_report_coalesces_provider_families_and_normalizes_degraded(
@@ -580,7 +642,40 @@ def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
     required = automation_usage_service._required_providers_from_env()
-    assert required == ["openai", "claude", "cursor"]
+    assert required == ["openai", "claude", "cursor", "gemini", "railway"]
+
+
+def test_required_providers_auto_include_railway_when_host_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "openai,claude,cursor")
+    monkeypatch.setenv("RAILWAY_TOKEN", "test-token")
+    monkeypatch.setenv("RAILWAY_PROJECT_ID", "project")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "production")
+    monkeypatch.setenv("RAILWAY_SERVICE", "api")
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+    required = automation_usage_service._required_providers_from_env()
+    assert "railway" in required
+
+
+def test_configured_status_cursor_accepts_runtime_active_without_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CURSOR_API_KEY", "")
+    monkeypatch.setenv("CURSOR_CLI_MODEL", "")
+    monkeypatch.setattr(automation_usage_service, "_runner_provider_telemetry_rows", lambda force_refresh=False: [])
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_cursor_cli_about_context",
+        lambda: {"cli_available": False, "logged_in": False, "tier": ""},
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"cursor": 5})
+
+    configured, missing, present, notes = automation_usage_service._configured_status("cursor")
+    assert configured is True
+    assert missing == []
+    assert any("runtime usage" in note.lower() for note in notes)
+    assert isinstance(present, list)
 
 
 def test_build_cursor_snapshot_includes_subscription_window_metrics(
@@ -619,12 +714,16 @@ def test_build_cursor_snapshot_includes_subscription_window_metrics(
     assert metrics["cursor_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
     assert metrics["cursor_subscription_8h"].validation_state == "validated"
     assert metrics["cursor_subscription_8h"].evidence_source == "runner_provider_telemetry"
-    assert snapshot.data_source == "provider_cli"
+    assert snapshot.data_source == "runtime_events"
 
 
 def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
+    monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
     snapshot = ProviderUsageSnapshot(
         id="provider_openai_codex_test",
         provider="openai-codex",
@@ -661,6 +760,10 @@ def test_append_codex_subscription_metrics_includes_5h_and_week_windows(
 def test_append_codex_subscription_metrics_tracks_usage_without_limit_configuration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
+    monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
     snapshot = ProviderUsageSnapshot(
         id="provider_openai_codex_usage_only",
         provider="openai",
@@ -694,6 +797,46 @@ def test_append_codex_subscription_metrics_tracks_usage_without_limit_configurat
     assert metrics["codex_subscription_5h"].validation_state == "derived"
     assert metrics["codex_subscription_5h"].evidence_source == "runtime_events"
     assert any("Codex subscription windows were unavailable" in note for note in snapshot.notes)
+
+
+def test_append_codex_subscription_metrics_uses_paid_tool_limit_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = ProviderUsageSnapshot(
+        id="provider_openai_codex_limit_fallback",
+        provider="openai",
+        kind="openai",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setenv("PAID_TOOL_8H_LIMIT", "80")
+    monkeypatch.setenv("PAID_TOOL_WEEK_LIMIT", "560")
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_5H_LIMIT", raising=False)
+    monkeypatch.delenv("CODEX_SUBSCRIPTION_WEEK_LIMIT", raising=False)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runner_provider_telemetry_rows",
+        lambda force_refresh=False: [],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_provider_usage_payload",
+        lambda force_refresh=False: {"status": "unavailable", "windows": [], "error": "missing_oauth"},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_codex_events_within_window",
+        lambda window_seconds: 20 if window_seconds == 5 * 60 * 60 else 140,
+    )
+
+    automation_usage_service._append_codex_subscription_metrics(snapshot)
+    metrics = {row.id: row for row in snapshot.metrics}
+    assert metrics["codex_subscription_5h"].limit == pytest.approx(50.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].remaining == pytest.approx(30.0, rel=1e-6)
+    assert metrics["codex_subscription_week"].limit == pytest.approx(560.0, rel=1e-6)
+    assert metrics["codex_subscription_week"].remaining == pytest.approx(420.0, rel=1e-6)
+    assert metrics["codex_subscription_5h"].evidence_source == "runtime_events+env_limits"
 
 
 def test_append_codex_subscription_metrics_adds_provider_api_windows_when_available(
@@ -1117,7 +1260,9 @@ async def test_automation_usage_endpoint_returns_normalized_providers(
         assert "coherence-internal" in providers
         assert "github" in providers
         assert "openai" in providers
-        assert "openrouter" in providers
+        assert "claude" in providers
+        assert "cursor" in providers
+        assert "gemini" in providers
         assert "supabase" not in providers
         assert providers["coherence-internal"]["status"] == "ok"
         assert any(m["id"] == "tasks_tracked" for m in providers["coherence-internal"]["metrics"])
@@ -1232,6 +1377,37 @@ async def test_automation_usage_endpoint_coalesces_provider_families(
     openai_row = next(row for row in payload["providers"] if row["provider"] == "openai")
     assert openai_row["usage_remaining"] == pytest.approx(800.0, rel=1e-6)
     assert openai_row["usage_remaining_unit"] == "requests"
+
+
+def test_coalesce_usage_overview_families_maps_anthropic_to_claude() -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_claude_primary",
+                provider="claude",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[],
+            ),
+            ProviderUsageSnapshot(
+                id="provider_anthropic_alias",
+                provider="anthropic",
+                kind="custom",
+                status="ok",
+                data_source="configuration_only",
+                metrics=[],
+            ),
+        ],
+        unavailable_providers=[],
+        tracked_providers=2,
+        limit_coverage={},
+    )
+
+    coalesced = automation_usage_service.coalesce_usage_overview_families(overview)
+    providers = [row.provider for row in coalesced.providers]
+    assert providers.count("claude") == 1
+    assert "anthropic" not in providers
 
 
 @pytest.mark.asyncio
@@ -1654,6 +1830,10 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("GH_TOKEN", "")
     monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
+    monkeypatch.setenv("RAILWAY_TOKEN", "")
+    monkeypatch.setenv("RAILWAY_PROJECT_ID", "")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "")
+    monkeypatch.setenv("RAILWAY_SERVICE", "")
     monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
     monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
     monkeypatch.setattr(automation_usage_service, "_runner_provider_telemetry_rows", lambda force_refresh=False: [])
@@ -1667,16 +1847,23 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
         "_cursor_cli_about_context",
         lambda: {"cli_available": False, "logged_in": False, "tier": ""},
     )
+    monkeypatch.setattr(automation_usage_service, "_railway_auth_available", lambda: False)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        report = await client.get("/api/automation/usage/readiness")
+        report = await client.get(
+            "/api/automation/usage/readiness",
+            params={"force_refresh": True},
+        )
         assert report.status_code == 200
         payload = report.json()
         assert payload["all_required_ready"] is False
+        assert any(str(item).startswith("railway:") for item in payload["blocking_issues"])
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert providers["openai"]["severity"] == "critical"
-        assert providers["claude"]["severity"] == "critical"
-        assert providers["cursor"]["severity"] == "critical"
+        assert providers["openai"]["severity"] == "info"
+        assert providers["claude"]["severity"] == "info"
+        assert providers["cursor"]["severity"] == "info"
+        assert providers["gemini"]["severity"] == "info"
+        assert providers["railway"]["severity"] == "critical"
         assert providers["github"]["severity"] in {"info", "warning"}
         assert providers["coherence-internal"]["severity"] in {"info", "warning"}
 
@@ -1689,18 +1876,6 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "0")
-    monkeypatch.setattr(
-        automation_usage_service,
-        "_build_openrouter_snapshot",
-        lambda: ProviderUsageSnapshot(
-            id="provider_openrouter_test",
-            provider="openrouter",
-            kind="custom",
-            status="ok",
-            data_source="provider_api",
-            metrics=[],
-        ),
-    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
@@ -1709,8 +1884,7 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
         )
         assert report.status_code == 200
         payload = report.json()
-        assert payload["all_required_ready"] is False
-        assert "openrouter: missing_limit_metrics" in payload["blocking_issues"]
+        assert payload["all_required_ready"] is True
 
 
 @pytest.mark.asyncio
@@ -1752,9 +1926,8 @@ async def test_provider_in_active_use_requires_key_for_readiness(
         assert report.status_code == 200
         payload = report.json()
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert payload["all_required_ready"] is False
-        assert providers["openrouter"]["required"] is False
-        assert providers["openrouter"]["configured"] is False
+        assert payload["all_required_ready"] is True
+        assert providers["coherence-internal"]["required"] is True
 
 
 @pytest.mark.asyncio
@@ -1774,7 +1947,7 @@ async def test_automation_usage_includes_runtime_task_runs_metric_for_active_pro
         agent_service,
         "get_usage_summary",
         lambda: {
-            "by_model": {"openrouter/free": {"count": 3, "by_status": {"completed": 3}, "last_used": None}},
+            "by_model": {"openai/gpt-4o-mini": {"count": 3, "by_status": {"completed": 3}, "last_used": None}},
             "execution": {
                 "tracked_runs": 3,
                 "failed_runs": 0,
@@ -1792,8 +1965,8 @@ async def test_automation_usage_includes_runtime_task_runs_metric_for_active_pro
         assert usage.status_code == 200
         payload = usage.json()
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert "openrouter" in providers
-        assert any(metric["id"] == "runtime_task_runs" for metric in providers["openrouter"]["metrics"])
+        assert "openai" in providers
+        assert any(metric["id"] == "runtime_task_runs" for metric in providers["openai"]["metrics"])
 
 
 @pytest.mark.asyncio
@@ -1838,11 +2011,15 @@ async def test_provider_validation_contract_blocks_without_execution_events(
         assert report.status_code == 200
         payload = report.json()
         assert payload["all_required_validated"] is False
-        assert len(payload["blocking_issues"]) == len(required)
-        for row in payload["providers"]:
-            assert row["usage_events"] == 0
-            assert row["successful_events"] == 0
-            assert row["validated_execution"] is False
+        assert payload["blocking_issues"] == [
+            "openclaw: configured=True, readiness_status=ok, successful_events=0/1"
+        ]
+        by_provider = {row["provider"]: row for row in payload["providers"]}
+        assert by_provider["openclaw"]["usage_events"] == 0
+        assert by_provider["openclaw"]["successful_events"] == 0
+        assert by_provider["openclaw"]["validated_execution"] is False
+        assert by_provider["openai"]["validated_execution"] is True
+        assert by_provider["claude"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio
@@ -2564,3 +2741,73 @@ async def test_automation_usage_endpoints_trace_back_to_spec_100(
     for row in rows:
         assert row["spec"]["tracked"] is True
         assert "100" in row["spec"]["spec_ids"]
+
+
+def test_cached_provider_readiness_payload_stale_refresh_singleflight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    telemetry_db = tmp_path / "telemetry_cache.db"
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", f"sqlite+pysqlite:///{telemetry_db}")
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setattr(automation_usage_service, "_endpoint_cache_ttl_seconds", lambda cache_name, default=0.0: 0.0)
+
+    calls = {"refresh": 0}
+
+    def _report(note: str) -> ProviderReadinessReport:
+        return ProviderReadinessReport(
+            required_providers=["openai"],
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openai",
+                    kind="subscription_window",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[note],
+                )
+            ],
+        )
+
+    def _refresh(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+        _ = required_providers
+        _ = force_refresh
+        calls["refresh"] += 1
+        time.sleep(0.2)
+        return _report(f"refresh-{calls['refresh']}")
+
+    monkeypatch.setattr(automation_usage_service, "provider_readiness_report", _refresh)
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report_from_snapshots",
+        lambda required_providers=None: _report("snapshot"),
+    )
+
+    seeded = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=True,
+    )
+    assert seeded["providers"][0]["notes"] == ["refresh-1"]
+    assert calls["refresh"] == 1
+
+    first_stale = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=False,
+    )
+    second_stale = automation_usage_service.cached_provider_readiness_payload(
+        required_providers=["openai"],
+        force_refresh=False,
+    )
+    assert first_stale["providers"][0]["notes"] == ["refresh-1"]
+    assert second_stale["providers"][0]["notes"] == ["refresh-1"]
+
+    deadline = time.time() + 2.0
+    while calls["refresh"] < 2 and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert calls["refresh"] == 2

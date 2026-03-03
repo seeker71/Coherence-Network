@@ -8,6 +8,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
+
 from app.models.idea import (
     Idea,
     PaginationInfo,
@@ -21,6 +24,9 @@ from app.models.idea import (
 )
 from app.services import idea_registry_service
 from app.services import commit_evidence_service
+from app.services import runtime_service
+from app.services import spec_registry_service
+from app.services import value_lineage_service
 
 
 DEFAULT_IDEAS: list[dict[str, Any]] = [
@@ -261,7 +267,11 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
 def _should_include_default_tracked_ideas() -> bool:
     # When callers isolate ideas into a custom portfolio path (common in tests),
     # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
-    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR") or os.getenv("COMMIT_EVIDENCE_DATABASE_URL"):
+    if (
+        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+    ):
         return True
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
 
@@ -285,7 +295,10 @@ def _ideas_cache_key() -> str:
         f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
         f"{os.getenv('DATABASE_URL','')}|"
         f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
+        f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
     )
 
 
@@ -308,6 +321,7 @@ def _tracked_idea_ids() -> list[str]:
     now = time.time()
     cache_key = (
         f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
+        f"|{os.getenv('DATABASE_URL','')}"
         f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
         f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
         f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
@@ -324,6 +338,152 @@ def _tracked_idea_ids() -> list[str]:
     _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
     _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
     return idea_ids
+
+
+def _should_discover_registry_domain_ideas() -> bool:
+    if not _should_include_default_tracked_ideas():
+        return False
+    explicit = str(os.getenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "")).strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+    # Keep isolated pytest runs deterministic unless explicitly enabled.
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    # In runtime/deploy environments, always discover registry-domain ideas.
+    return True
+
+
+def _discover_registry_domain_idea_ids() -> list[str]:
+    if not _should_discover_registry_domain_ideas():
+        return []
+
+    discovered: set[str] = set(_tracked_idea_ids())
+
+    try:
+        spec_rows = spec_registry_service.list_specs(limit=2000, offset=0)
+    except Exception:
+        spec_rows = []
+    for row in spec_rows:
+        idea_id = str(getattr(row, "idea_id", "") or "").strip()
+        if idea_id:
+            discovered.add(idea_id)
+
+    try:
+        lineage_rows = value_lineage_service.list_links(limit=2000)
+    except Exception:
+        lineage_rows = []
+    for row in lineage_rows:
+        idea_id = str(getattr(row, "idea_id", "") or "").strip()
+        if idea_id:
+            discovered.add(idea_id)
+
+    try:
+        runtime_window_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_WINDOW_SECONDS", "86400")).strip() or "86400")
+    except ValueError:
+        runtime_window_raw = 86400
+    runtime_window_seconds = max(60, min(runtime_window_raw, 60 * 60 * 24 * 30))
+
+    try:
+        runtime_limit_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_EVENT_LIMIT", "2000")).strip() or "2000")
+    except ValueError:
+        runtime_limit_raw = 2000
+    runtime_event_limit = max(1, min(runtime_limit_raw, 5000))
+    try:
+        runtime_rows = runtime_service.summarize_by_idea(
+            seconds=runtime_window_seconds,
+            event_limit=runtime_event_limit,
+            summary_limit=2000,
+            summary_offset=0,
+        )
+    except Exception:
+        runtime_rows = []
+    for row in runtime_rows:
+        idea_id = str(getattr(row, "idea_id", "") or "").strip()
+        if idea_id and idea_id != "unmapped":
+            discovered.add(idea_id)
+
+    discovered.update(_contribution_metadata_idea_ids())
+
+    return sorted(discovered)
+
+
+def _contribution_metadata_idea_ids() -> list[str]:
+    database_url = str(os.getenv("DATABASE_URL", "")).strip()
+    if not database_url:
+        return []
+
+    try:
+        contribution_limit_raw = int(str(os.getenv("IDEA_SYNC_CONTRIBUTION_LIMIT", "3000")).strip() or "3000")
+    except ValueError:
+        contribution_limit_raw = 3000
+    contribution_limit = max(1, min(contribution_limit_raw, 20000))
+
+    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
+    if database_url.startswith("sqlite"):
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+        engine_kwargs["poolclass"] = NullPool
+
+    rows: list[Any] = []
+    try:
+        engine = create_engine(database_url, **engine_kwargs)
+        with engine.connect() as conn:
+            rows = list(
+                conn.execute(
+                    text("SELECT meta FROM contributions ORDER BY timestamp DESC LIMIT :limit"),
+                    {"limit": contribution_limit},
+                )
+            )
+    except Exception:
+        return []
+    finally:
+        try:
+            engine.dispose()
+        except Exception:
+            pass
+
+    discovered: set[str] = set()
+    for row in rows:
+        metadata: Any = None
+        try:
+            metadata = row[0] if isinstance(row, tuple) else row.meta  # type: ignore[attr-defined]
+        except Exception:
+            try:
+                metadata = row[0]
+            except Exception:
+                metadata = None
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except ValueError:
+                metadata = None
+        if not isinstance(metadata, dict):
+            continue
+        raw_single = metadata.get("idea_id")
+        if isinstance(raw_single, str) and raw_single.strip():
+            discovered.add(raw_single.strip())
+        raw_multi = metadata.get("idea_ids")
+        if isinstance(raw_multi, list):
+            for item in raw_multi:
+                if isinstance(item, str) and item.strip():
+                    discovered.add(item.strip())
+    return sorted(discovered)
+
+
+def _ensure_registry_domain_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    discovered_ids = _discover_registry_domain_idea_ids()
+    if not discovered_ids:
+        return ideas, False
+    existing = {idea.id for idea in ideas}
+    changed = False
+    for idea_id in discovered_ids:
+        if idea_id in existing:
+            continue
+        ideas.append(_derived_idea_for_id(idea_id))
+        existing.add(idea_id)
+        changed = True
+    return ideas, changed
 
 
 def _humanize_idea_id(idea_id: str) -> str:
@@ -460,6 +620,7 @@ def _read_ideas() -> list[Idea]:
         ideas, source = _read_legacy_file_ideas()
         ideas, required_changed = _ensure_required_system_ideas(ideas)
         ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+        ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
         ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
         bootstrap_source = source
@@ -467,6 +628,8 @@ def _read_ideas() -> list[Idea]:
             bootstrap_source = f"{bootstrap_source}+required_system_ideas"
         if tracked_changed or source == "defaults":
             bootstrap_source = f"{bootstrap_source}+derived"
+        if domain_discovered_changed:
+            bootstrap_source = f"{bootstrap_source}+domain_discovery"
         if standing_changed or pruned_changed:
             bootstrap_source = f"{bootstrap_source}+standing_question"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
@@ -476,9 +639,10 @@ def _read_ideas() -> list[Idea]:
 
     ideas, required_changed = _ensure_required_system_ideas(ideas)
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
+    ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
     ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if required_changed or tracked_changed or standing_changed or pruned_changed:
+    if required_changed or tracked_changed or domain_discovered_changed or standing_changed or pruned_changed:
         _write_ideas(ideas)
     else:
         path = _portfolio_path()

@@ -146,6 +146,8 @@ SOURCES: tuple[SourceSpec, ...] = (
     ),
 )
 
+N8N_SECURITY_ADVISORIES_API = "https://api.github.com/repos/n8n-io/n8n/security-advisories?per_page=100"
+
 
 _CATEGORY_WEIGHT: dict[str, float] = {
     "coding_agent": 1.0,
@@ -198,6 +200,82 @@ def _fetch_source(client: httpx.Client, source: SourceSpec, timeout_seconds: flo
         }
 
 
+def _normalize_severity(value: str) -> str:
+    severity = str(value or "").strip().lower()
+    if severity in {"critical", "high", "medium", "low"}:
+        return severity
+    return "info"
+
+
+def _build_n8n_advisory_sources(
+    payload: list[dict[str, Any]],
+    *,
+    now: datetime,
+    window_days: int,
+) -> list[SourceSpec]:
+    out: list[SourceSpec] = []
+    window_days = max(1, int(window_days))
+    for row in payload:
+        if not isinstance(row, dict):
+            continue
+        severity = _normalize_severity(str(row.get("severity") or ""))
+        if severity not in {"high", "critical"}:
+            continue
+        ghsa_id = str(row.get("ghsa_id") or "").strip()
+        advisory_url = str(row.get("html_url") or "").strip()
+        published_at = str(row.get("published_at") or "").strip()
+        if not ghsa_id or not advisory_url or not published_at:
+            continue
+        try:
+            published_dt = _parse_iso(published_at)
+        except ValueError:
+            continue
+        age_days = max(0.0, (now - published_dt).total_seconds() / 86400.0)
+        if age_days > float(window_days):
+            continue
+        out.append(
+            SourceSpec(
+                id=f"n8n_{ghsa_id.lower()}",
+                url=advisory_url,
+                title_hint=f"n8n advisory {ghsa_id}",
+                published_at=published_dt.isoformat().replace("+00:00", "Z"),
+                source_type="official_advisory",
+                category="security",
+                tags=("security", "n8n", "automation-workflow", "ghsa"),
+                why_it_matters=(
+                    "n8n powers automation workflows and high/critical advisories "
+                    "can directly impact autonomous task execution safety."
+                ),
+                severity=severity,
+            )
+        )
+    return out
+
+
+def _fetch_n8n_security_advisory_sources(
+    client: httpx.Client,
+    *,
+    timeout_seconds: float,
+    now: datetime,
+    window_days: int,
+) -> list[SourceSpec]:
+    try:
+        response = client.get(
+            N8N_SECURITY_ADVISORIES_API,
+            headers={"Accept": "application/vnd.github+json"},
+            follow_redirects=True,
+            timeout=timeout_seconds,
+        )
+        if int(response.status_code) >= 400:
+            return []
+        payload = response.json()
+    except Exception:  # pragma: no cover - network behavior
+        return []
+    if not isinstance(payload, list):
+        return []
+    return _build_n8n_advisory_sources(payload, now=now, window_days=window_days)
+
+
 def _relevance_score(*, category: str, days_old: float, window_days: int, severity: str) -> float:
     recency = max(0.0, 1.0 - (days_old / max(float(window_days), 1.0)))
     category_weight = _CATEGORY_WEIGHT.get(category, 0.8)
@@ -211,7 +289,14 @@ def _build_digest(window_days: int, timeout_seconds: float) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
 
     with httpx.Client(headers={"User-Agent": "coherence-network-intel-collector/1.0"}) as client:
-        for source in SOURCES:
+        dynamic_sources = _fetch_n8n_security_advisory_sources(
+            client,
+            timeout_seconds=timeout_seconds,
+            now=now,
+            window_days=window_days,
+        )
+        all_sources: tuple[SourceSpec, ...] = SOURCES + tuple(dynamic_sources)
+        for source in all_sources:
             published = _parse_iso(source.published_at)
             days_old = max(0.0, (now - published).total_seconds() / 86400.0)
             fetched = _fetch_source(client, source, timeout_seconds)

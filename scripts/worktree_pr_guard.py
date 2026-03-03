@@ -257,6 +257,19 @@ def _run_rebase_freshness_guard(base_ref: str) -> StepResult:
         text=True,
     )
     branch = (branch_proc.stdout or "").strip() or "unknown-branch"
+    if branch == "HEAD":
+        return StepResult(
+            name="rebase-freshness-guard",
+            command=f"git fetch origin main && git rebase {base_ref}",
+            ok=False,
+            exit_code=1,
+            duration_seconds=round(time.monotonic() - start, 2),
+            output_tail=(
+                "ERROR: detached HEAD detected. Attach this worktree to a named branch before rebase.\n"
+                "Run: git switch -c codex/<topic>-<date> (or git switch codex/<existing-branch>)"
+            ),
+            hint="Attach a codex/* branch before rebase and rerun guard.",
+        )
 
     # Keep base ref current when it points to a remote tracking branch.
     if "/" in base_ref:

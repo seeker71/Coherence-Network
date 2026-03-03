@@ -1,0 +1,93 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/unify-native-provider-telemetry",
+  "commit_scope": "Reduce automation/usage render latency by tightening API timeouts, adding cache-thundering-herd protection, extending overview cache TTL, and adding compact usage-provider fallback rows on /usage when daily-summary is unavailable.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "web/app/automation/page.tsx",
+    "web/app/usage/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_usage-automation-fast-snapshot-fallback.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-03-03-usage-automation-latency-and-data-fallback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py -k 'automation_usage_endpoint_times_out_to_cached_fallback or provider_readiness_endpoint_times_out_to_cached_fallback or automation_usage_snapshots_endpoint_returns_persisted_rows'",
+    "cd web && npm run build",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "change_files": [
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_runtime_api.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "web/app/automation/page.tsx",
+    "web/app/usage/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py -k 'automation_usage_endpoint_times_out_to_cached_fallback or provider_readiness_endpoint_times_out_to_cached_fallback or automation_usage_snapshots_endpoint_returns_persisted_rows'",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push/PR checks and production page render verification under live API load"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Automation and usage pages render quickly with persisted provider telemetry fallback and reduced timeout stalls.",
+    "public_endpoints": [
+      "https://coherence-web-production.up.railway.app/automation",
+      "https://coherence-web-production.up.railway.app/usage"
+    ],
+    "test_flows": [
+      "Load /automation and verify cards populate from usage/readiness/validation without 10s wait.",
+      "Load /usage and verify Providers + Limits has real provider rows even when daily-summary call is unavailable."
+    ]
+  }
+}
