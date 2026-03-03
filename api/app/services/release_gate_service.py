@@ -1411,9 +1411,6 @@ def evaluate_public_deploy_contract_report(
 
     checks: list[dict[str, Any]] = []
     require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
-    require_provider_readiness = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", default=False)
-    require_api_health_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", default=False)
-    require_web_health_proxy_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
@@ -1541,26 +1538,6 @@ def evaluate_public_deploy_contract_report(
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
-            if name == "railway_health":
-                observed_raw = str(check.get("observed_sha") or "").strip().lower()
-                if (
-                    not require_api_health_sha
-                    and observed_raw in {"", "unknown", "none", "n/a"}
-                ):
-                    warnings.append("railway_health_unknown_sha")
-            if name == "railway_web_health_proxy":
-                observed_raw = str(check.get("observed_sha") or "").strip().lower()
-                if (
-                    not require_web_health_proxy_sha
-                    and observed_raw in {"", "unknown", "none", "n/a"}
-                ):
-                    warnings.append("railway_web_health_proxy_unknown_sha")
-            if (
-                name == "railway_provider_readiness"
-                and not require_provider_readiness
-                and check.get("all_required_ready") is False
-            ):
-                warnings.append("railway_provider_readiness_blocked")
             if (
                 name == "railway_telegram_alert_config"
                 and not require_telegram_alerts
