@@ -2156,7 +2156,9 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
-    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
+    commit_evidence_db_url = str(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "")).strip()
+    shared_database_url = str(os.getenv("DATABASE_URL", "")).strip()
+    db_url_configured = bool(commit_evidence_db_url or shared_database_url)
     use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
     use_db = use_db_raw in {"1", "true", "yes", "on"}
     if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
@@ -2172,7 +2174,7 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
             backend_url = os.getenv("DATABASE_URL", "").strip().lower()
             use_db = required and ("postgresql" in backend_url)
     if use_db:
-        source_key = f"db:{os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '').strip()}|{os.getenv('DATABASE_URL', '').strip()}"
+        source_key = f"db:{commit_evidence_db_url}|{shared_database_url}"
         now = time.time()
         cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
         if (
