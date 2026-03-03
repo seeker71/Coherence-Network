@@ -1,6 +1,7 @@
 """Health check endpoint (spec 001)."""
 
 from datetime import datetime, timezone
+import os
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Request
@@ -12,6 +13,13 @@ router = APIRouter()
 
 HEALTH_VERSION = "1.0.0"
 SERVICE_STARTED_AT = datetime.now(timezone.utc)
+_DEPLOY_SHA_ENV_KEYS = (
+    "RAILWAY_GIT_COMMIT_SHA",
+    "RAILWAY_GIT_SHA",
+    "GIT_COMMIT_SHA",
+    "COMMIT_SHA",
+    "SOURCE_VERSION",
+)
 
 
 def _iso_utc(ts: datetime) -> str:
@@ -35,6 +43,14 @@ def _uptime_human(seconds: int) -> str:
     return f"{secs}s"
 
 
+def _deployed_sha() -> tuple[str | None, str | None]:
+    for env_key in _DEPLOY_SHA_ENV_KEYS:
+        value = str(os.getenv(env_key, "")).strip()
+        if value:
+            return value, env_key
+    return None, None
+
+
 class HealthResponse(BaseModel):
     """GET /api/health response."""
 
@@ -45,6 +61,14 @@ class HealthResponse(BaseModel):
     started_at: Annotated[str, Field(description="ISO8601 UTC when service process started")]
     uptime_seconds: Annotated[int, Field(description="Seconds service has been up")]
     uptime_human: Annotated[str, Field(description="Human readable uptime")]
+    deployed_sha: Annotated[
+        str | None,
+        Field(description="Deployed commit SHA when available from runtime environment"),
+    ] = None
+    deployed_sha_source: Annotated[
+        str | None,
+        Field(description="Environment variable source for deployed_sha"),
+    ] = None
 
 
 class ReadyResponse(BaseModel):
@@ -57,6 +81,14 @@ class ReadyResponse(BaseModel):
     started_at: Annotated[str, Field(description="ISO8601 UTC when service process started")]
     uptime_seconds: Annotated[int, Field(description="Seconds service has been up")]
     uptime_human: Annotated[str, Field(description="Human readable uptime")]
+    deployed_sha: Annotated[
+        str | None,
+        Field(description="Deployed commit SHA when available from runtime environment"),
+    ] = None
+    deployed_sha_source: Annotated[
+        str | None,
+        Field(description="Environment variable source for deployed_sha"),
+    ] = None
 
 
 @router.get("/version")
@@ -83,6 +115,7 @@ async def ready(request: Request):
         )
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
+    deployed_sha, deployed_sha_source = _deployed_sha()
     return ReadyResponse(
         status="ready",
         version=HEALTH_VERSION,
@@ -90,6 +123,8 @@ async def ready(request: Request):
         started_at=_iso_utc(SERVICE_STARTED_AT),
         uptime_seconds=up,
         uptime_human=_uptime_human(up),
+        deployed_sha=deployed_sha,
+        deployed_sha_source=deployed_sha_source,
     )
 
 
@@ -104,6 +139,7 @@ async def health():
     """Return API health status."""
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
+    deployed_sha, deployed_sha_source = _deployed_sha()
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -111,4 +147,6 @@ async def health():
         started_at=_iso_utc(SERVICE_STARTED_AT),
         uptime_seconds=up,
         uptime_human=_uptime_human(up),
+        deployed_sha=deployed_sha,
+        deployed_sha_source=deployed_sha_source,
     )

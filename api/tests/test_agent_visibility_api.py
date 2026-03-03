@@ -236,3 +236,102 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
         assert execution["by_tool"]["pytest"]["failed"] == 1
         assert execution["by_tool"]["pytest"]["success_rate"] == 0.0
         assert payload["proof"]["all_pass"] is True
+
+
+@pytest.mark.asyncio
+async def test_agent_orchestration_guidance_exposes_defaults_and_route_matrix(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/agent/orchestration/guidance")
+        assert response.status_code == 200
+        payload = response.json()
+
+        assert payload.get("mode") == "guidance"
+        assert payload.get("enforcement") == "advisory"
+        defaults = payload.get("defaults") or {}
+        assert str(defaults.get("cheap_executor") or "")
+        assert str(defaults.get("escalation_executor") or "")
+        assert str(defaults.get("repo_question_executor") or "")
+        assert str(defaults.get("open_question_executor") or "")
+
+        matrix = payload.get("recommended_routes") or {}
+        for task_type in ("spec", "test", "impl", "review", "heal"):
+            row = matrix.get(task_type) or {}
+            cheap = row.get("cheap") or {}
+            escalation = row.get("escalation") or {}
+            assert str(cheap.get("executor") or "")
+            assert str(cheap.get("model") or "")
+            assert str(escalation.get("executor") or "")
+            assert str(escalation.get("model") or "")
+
+        assert isinstance(payload.get("guidance"), list)
+
+
+@pytest.mark.asyncio
+async def test_agent_orchestration_guidance_flags_low_execution_success_rate(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        task = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Exercise orchestration guidance", "task_type": "impl"},
+        )
+        assert task.status_code == 201
+        task_id = task.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openai-codex"},
+        )
+        assert running.status_code == 200
+        completed = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "completed", "output": "done"},
+        )
+        assert completed.status_code == 200
+
+        failed_runtime = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:pytest",
+                "method": "RUN",
+                "status_code": 500,
+                "runtime_ms": 18.0,
+                "idea_id": "coherence-network-agent-pipeline",
+                "metadata": {"task_id": task_id, "executor": "cursor", "agent_id": "openai-codex"},
+            },
+        )
+        assert failed_runtime.status_code == 201
+
+        response = await client.get("/api/agent/orchestration/guidance")
+        assert response.status_code == 200
+        payload = response.json()
+
+        awareness = payload.get("awareness") or {}
+        assert float(awareness.get("execution_success_rate") or 0.0) < 0.8
+        failing_tools = awareness.get("top_failing_tools") or []
+        assert any(str(row.get("tool") or "") == "pytest" for row in failing_tools if isinstance(row, dict))
+
+        guidance = payload.get("guidance") or []
+        ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
+        assert "execution_success_low" in ids

@@ -5,7 +5,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
@@ -451,9 +451,9 @@ async def _prime_hot_caches() -> None:
         contribution_payload_rows: list[dict] = []
         asset_payload_rows: list[dict] = []
         if store is not None:
-            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
-            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
-            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
+            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=300)]
+            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=600)]
+            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=300)]
             contributor_rows = len(contributor_payload_rows)
             contribution_rows = len(contribution_payload_rows)
             asset_rows = len(asset_payload_rows)
@@ -464,11 +464,12 @@ async def _prime_hot_caches() -> None:
                 contributor_rows=contributor_payload_rows,
                 contribution_rows=contribution_payload_rows,
                 asset_rows=asset_payload_rows,
-                spec_registry_limit=200,
-                lineage_link_limit=300,
-                usage_event_limit=1200,
-                commit_evidence_limit=500,
-                runtime_event_limit=2000,
+                spec_registry_limit=160,
+                lineage_link_limit=180,
+                usage_event_limit=350,
+                commit_evidence_limit=200,
+                runtime_event_limit=600,
+                list_item_limit=12,
             )
             if not isinstance(flow_payload, dict):
                 flow_payload = {}

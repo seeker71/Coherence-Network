@@ -65,9 +65,6 @@ Set in `api/.env`:
 ```bash
 CURSOR_CLI_MODEL=auto
 CURSOR_CLI_REVIEW_MODEL=auto
-# Optional proactive backoff thresholds:
-# CURSOR_SUBSCRIPTION_8H_LIMIT=225
-# CURSOR_SUBSCRIPTION_WEEK_LIMIT=1200
 ```
 
 ## Command Format
@@ -80,7 +77,7 @@ Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed comma
 ## Best Practices
 
 1. **Default model strategy:** Keep `auto` for most tasks to let Cursor balance quality vs limits.
-2. **Backoff strategy:** Set `CURSOR_SUBSCRIPTION_8H_LIMIT` and `CURSOR_SUBSCRIPTION_WEEK_LIMIT`; monitor `/api/automation/usage` and `/api/automation/usage/alerts` to throttle before hard caps.
+2. **Backoff strategy:** Use host-runner telemetry + `/api/automation/usage` and `/api/automation/usage/alerts` to throttle before hard caps.
 3. **Isolation:** Run in a git worktree or DevContainer for safety.
 4. **Context:** Cursor respects `.cursor/rules/` in the repo; ensure rules are in place for consistency.
 5. **Fallback:** If Cursor CLI fails (exit 127), the task is marked failed; use Claude Code as fallback by omitting `--cursor`.
@@ -127,3 +124,43 @@ curl "http://localhost:8000/api/agent/route?task_type=impl&executor=clawwork"
 Notes:
 - `OPENCLAW_COMMAND_TEMPLATE` must include `{{direction}}`; `{{model}}` is optional and replaced automatically.
 - Runner telemetry classifies OpenClaw runs under `executor=openclaw` for usage/success-rate reporting.
+
+## Gemini CLI Integration
+
+Gemini CLI is supported through `context.executor=gemini` with OAuth-only auth mode (no API keys).
+
+### Required env (Railway/hosted runner)
+
+Set in `api/.env` (or Railway service variables):
+
+```bash
+AGENT_EXECUTOR_DEFAULT=gemini
+GEMINI_CLI_MODEL=gemini-2.5-pro
+GEMINI_CLI_REVIEW_MODEL=gemini-2.5-pro
+AGENT_GEMINI_AUTH_MODE=oauth
+AGENT_GEMINI_OAUTH_SESSION_B64=...    # base64 of oauth_creds.json
+```
+
+Optional:
+
+```bash
+AGENT_GEMINI_CONFIG_DIR=/root/.gemini
+```
+
+The runner always strips `GEMINI_API_KEY` and `GOOGLE_API_KEY` for Gemini tasks and enforces:
+- `settings.json -> security.auth.selectedType = oauth-personal`
+- `settings.json -> security.auth.enforcedType = oauth-personal`
+
+### API usage
+
+```bash
+curl -X POST http://localhost:8000/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Implement GET /api/foo","task_type":"impl","context":{"executor":"gemini"}}'
+```
+
+### Routing check
+
+```bash
+curl "http://localhost:8000/api/agent/route?task_type=impl&executor=gemini"
+```

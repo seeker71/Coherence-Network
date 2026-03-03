@@ -1,0 +1,54 @@
+auto-heal-start-gate: stashing local changes as auto_heal_start_gate_20260228T000405.
+auto-heal-start-gate: changes stashed in stash@{0}.
+start-gate: latest main workflow failures detected: Self Improve Cycle=failure (https://github.com/seeker71/Coherence-Network/actions/runs/22516968628) owner=@seeker71
+make: *** [start-gate] Error 1
+auto-heal-start-gate: restoring changes from stash@{0}.
+On branch codex/ai-agent-research-20260228
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   api/app/routers/agent.py
+	modified:   api/app/services/agent_execution_hooks.py
+	modified:   api/app/services/agent_execution_retry.py
+	modified:   api/app/services/agent_service.py
+	modified:   api/scripts/monitor_pipeline.py
+	modified:   api/tests/test_agent_execute_endpoint.py
+	modified:   api/tests/test_agent_task_persistence.py
+	modified:   api/tests/test_monitor_pipeline_github_actions.py
+	modified:   config/start_gate_main_workflow_waivers.json
+	modified:   scripts/auto_heal_start_gate.sh
+	modified:   scripts/start_gate.py
+	modified:   specs/TEMPLATE.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	api/app/services/collective_health_service.py
+	api/scripts/build_ai_agent_improvement_plan.py
+	api/scripts/collect_ai_agent_intel.py
+	api/scripts/prove_hosted_low_level_tasks.py
+	api/tests/test_agent_collective_health_api.py
+	docs/system_audit/ai_agent_10_point_plan_2026-02-28.json
+	docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json
+	docs/system_audit/ai_agent_biweekly_sources_latest.json
+	docs/system_audit/ai_agent_biweekly_summary_2026-02-28.md
+	docs/system_audit/ai_agent_implementation_proof_2026-02-28.md
+	docs/system_audit/ai_agent_security_watch_2026-02-28.json
+	docs/system_audit/ai_agent_security_watch_latest.json
+	docs/system_audit/collective_health_after_2026-02-28.json
+	docs/system_audit/collective_health_before_2026-02-28.json
+	docs/system_audit/collective_health_delta_2026-02-28.md
+	docs/system_audit/commit_evidence_2026-02-28_ai-agent-intel-feedback-loop.json
+	docs/system_audit/hosted_worker_low_level_after_2026-02-28.json
+	docs/system_audit/hosted_worker_low_level_before_2026-02-28.json
+	docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md
+	docs/system_audit/start_gate_output_after_2026-02-28.txt
+	docs/system_audit/start_gate_output_after_remote_failure_2026-02-28.txt
+	docs/system_audit/start_gate_output_before_2026-02-28.txt
+	specs/113-ai-agent-biweekly-intelligence-feedback-loop.md
+	specs/114-collective-coherence-resonance-flow-friction-health.md
+	specs/115-start-gate-continuation-and-hosted-worker-proof.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped stash@{0} (4b43110140f3524aba9bcfae0c9876d26f52786a)

@@ -1,0 +1,89 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/runner-oauth-default-20260228",
+  "commit_scope": "Default Codex/OpenClaw runner auth to oauth, disable implicit OPENAI API-key fallback, and keep api_key mode explicit-only.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_run_self_improve_cycle.py"
+  ],
+  "idea_ids": [
+    "idea-runner-codex-auth-default-oauth"
+  ],
+  "spec_ids": [
+    "spec-openclaw-runner-auth-mode-defaulting"
+  ],
+  "task_ids": [
+    "task-2026-02-28-runner-codex-auth-default-oauth"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260228T083200Z_codex-runner-oauth-default-20260228.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/commit_evidence_2026-02-28_runner-codex-auth-default-oauth.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate (via scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate)",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_run_self_improve_cycle.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check app/services/agent_service.py scripts/agent_runner.py scripts/run_self_improve_cycle.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_openclaw_executor_integration.py tests/test_run_self_improve_cycle.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "New Codex/OpenClaw tasks default to oauth auth mode and no longer inject OPENAI_API_KEY implicitly unless api_key mode is explicitly selected.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "Create openclaw task without runner_codex_auth_mode and verify context defaults to oauth.",
+      "Run Codex oauth-mode environment wiring and verify OPENAI_* auth env vars are stripped from the execution env.",
+      "Trigger oauth refresh-token reuse output and verify api_key fallback is not scheduled when AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK is unset/false."
+    ]
+  }
+}

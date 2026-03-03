@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-03-01T09:59:59.402474Z",
+  "routes": {
+    "codex": {
+      "task_type": "impl",
+      "model": "codex/gpt-5.3-codex-spark",
+      "command_template": "codex exec \"{{direction}}\" --model gpt-5.3-codex-spark --skip-git-repo-check --json",
+      "tier": "codex",
+      "executor": "codex",
+      "provider": "openai-codex",
+      "billing_provider": "openai-codex",
+      "is_paid_provider": true
+    },
+    "claude": {
+      "task_type": "impl",
+      "model": "claude/claude-sonnet-4-5-20250929",
+      "command_template": "claude -p \"{{direction}}\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+      "tier": "claude",
+      "executor": "claude",
+      "provider": "claude",
+      "billing_provider": "claude",
+      "is_paid_provider": true
+    },
+    "cursor": {
+      "task_type": "impl",
+      "model": "cursor/auto",
+      "command_template": "agent --trust --print --output-format json \"{{direction}}\" --model auto",
+      "tier": "cursor",
+      "executor": "cursor",
+      "provider": "cursor",
+      "billing_provider": "cursor",
+      "is_paid_provider": true
+    },
+    "openrouter": {
+      "task_type": "impl",
+      "model": "openrouter/free",
+      "command_template": "openrouter-exec \"{{direction}}\" --model openrouter/free",
+      "tier": "openrouter",
+      "executor": "openrouter",
+      "provider": "openrouter",
+      "billing_provider": "openrouter",
+      "is_paid_provider": false
+    },
+    "openclaw": {
+      "task_type": "impl",
+      "model": "codex/gpt-5.3-codex-spark",
+      "command_template": "codex exec \"{{direction}}\" --model gpt-5.3-codex-spark --skip-git-repo-check --json",
+      "tier": "codex",
+      "executor": "codex",
+      "provider": "openai-codex",
+      "billing_provider": "openai-codex",
+      "is_paid_provider": true
+    },
+    "clawwork": {
+      "task_type": "impl",
+      "model": "codex/gpt-5.3-codex-spark",
+      "command_template": "codex exec \"{{direction}}\" --model gpt-5.3-codex-spark --skip-git-repo-check --json",
+      "tier": "codex",
+      "executor": "codex",
+      "provider": "openai-codex",
+      "billing_provider": "openai-codex",
+      "is_paid_provider": true
+    }
+  }
+}

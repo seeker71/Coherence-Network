@@ -1,0 +1,95 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/nav-warm-global-20260302",
+  "commit_scope": "Redesign global web navigation and context surfaces across pages with a warm dark theme, compact live-sync controls, and documented UX/worktree guidance to reduce repeated detached-head recovery issues.",
+  "files_owned": [
+    "AGENTS.md",
+    "web/app/globals.css",
+    "web/app/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_global-navigation-warm-guidance.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-03-03-global-navigation-warm-guidance"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "cd web && npm run build",
+    "Playwright screenshots: /.playwright-cli/page-2026-03-03T00-08-08-159Z.png, /.playwright-cli/page-2026-03-03T00-08-09-717Z.png, /.playwright-cli/page-2026-03-03T00-08-10-713Z.png"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "web/app/globals.css",
+    "web/app/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR creation, and CI/deploy checks"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "All web pages use the same compact global header and context strip pattern; top-level chrome uses less vertical space while preserving deep navigation through menus.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/",
+      "https://coherence-network-production.up.railway.app/ideas"
+    ],
+    "test_flows": [
+      "Open home page and confirm focused global header with workspace menu and floating live-sync control.",
+      "Open /ideas and confirm the same header and compact context strip pattern are preserved.",
+      "Open mobile viewport and confirm menu-based navigation remains accessible without stacked top bars."
+    ]
+  }
+}

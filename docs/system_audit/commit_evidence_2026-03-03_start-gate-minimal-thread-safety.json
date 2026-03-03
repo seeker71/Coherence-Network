@@ -1,0 +1,81 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/followup-gate-stability-20260303",
+  "commit_scope": "Simplify start-gate to minimal thread-safety checks (no main/master, no detached HEAD, valid branch/worktree context), add prompt-entry command wiring, and align docs/tests with the simplified workflow.",
+  "files_owned": [
+    "AGENT.md",
+    "AGENTS.md",
+    "Makefile",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/start_gate.py",
+    "scripts/prompt_entry_gate.sh",
+    "api/tests/test_start_gate.py",
+    "docs/system_audit/commit_evidence_2026-03-03_start-gate-minimal-thread-safety.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "make prompt-gate",
+      "python3 -m py_compile scripts/start_gate.py",
+      "cd api && pytest -q tests/test_start_gate.py",
+      "cd api && ruff check tests/test_start_gate.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Not a runtime feature; no deploy contract run required for this process change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI validation pending until PR checks complete and merge is done."
+  },
+  "idea_ids": [
+    "thread-workflow-hardening"
+  ],
+  "spec_ids": [
+    "start-gate-minimal-thread-safety"
+  ],
+  "task_ids": [
+    "task_2026_03_03_start_gate_minimal_thread_safety"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "workflow-hardening"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/start_gate.py",
+    "api/tests/test_start_gate.py",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "change_files": [
+    "AGENT.md",
+    "AGENTS.md",
+    "Makefile",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/start_gate.py",
+    "scripts/prompt_entry_gate.sh",
+    "api/tests/test_start_gate.py",
+    "docs/system_audit/commit_evidence_2026-03-03_start-gate-minimal-thread-safety.json"
+  ],
+  "change_intent": "process_only"
+}

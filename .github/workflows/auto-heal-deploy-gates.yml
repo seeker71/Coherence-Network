@@ -46,7 +46,7 @@ jobs:
           cat ../auto_heal_report.json
 
       - name: Upload auto-heal report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: auto_heal_report_${{ github.sha }}
           path: auto_heal_report.json
