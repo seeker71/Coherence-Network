@@ -84,7 +84,3 @@ TaskMetricRecord:
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — Parent spec; Phases 2–6.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — Agent API; GET /api/agent/metrics listed there.
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Backlog item: Implement spec 026 Phase 1.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -43,7 +43,3 @@ Runs a full minimum E2E flow and returns generated lineage id, usage event id, v
 - `api/tests/test_ideas.py`
 - `api/tests/test_value_lineage.py`
 
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

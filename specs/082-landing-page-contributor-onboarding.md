@@ -19,7 +19,3 @@ Make the root web page inviting for new contributors while clearly explaining th
 ```bash
 cd web && npm run build
 ```
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

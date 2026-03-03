@@ -20,7 +20,3 @@ Allow the system to derive idea/spec/implementation traceability from a commit S
 
 ## Validation
 - `cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_release_gate_service.py tests/test_gates.py`
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

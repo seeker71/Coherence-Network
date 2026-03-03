@@ -45,7 +45,3 @@ Close the loop on autonomous operation: auto-commit progress so work persists to
 
 - `PIPELINE_AUTO_COMMIT` default off in .env.example; enable in autonomous runs via run_autonomous.
 - `PIPELINE_AUTO_PUSH` default off; human enables only when confident in pipeline quality.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

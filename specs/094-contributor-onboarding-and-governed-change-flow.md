@@ -53,7 +53,3 @@ Enable a new human contributor to register, propose idea/spec/question updates, 
   - `cd web && npm run build`
 - Manual:
   - Open `/contribute`, register contributor, submit request, vote yes/no, verify state transitions.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

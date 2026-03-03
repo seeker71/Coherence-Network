@@ -19,7 +19,3 @@ Ensure implementation-request questions are never dropped by converting them int
 ```bash
 cd api && pytest -q tests/test_inventory_api.py
 ```
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

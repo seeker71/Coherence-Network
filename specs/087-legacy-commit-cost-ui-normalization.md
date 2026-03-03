@@ -21,7 +21,3 @@ cd web && npm run build
 ## Out of Scope
 - Rewriting historical stored contribution records.
 - Changing API contribution schemas in this follow-up slice.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

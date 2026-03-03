@@ -41,7 +41,3 @@ Comparable products in the space (dependency intelligence / OSS discovery) empha
 ## Validation
 - `cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit --prefer-offline && npm run build`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_ui-alignment-overhaul.json`
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

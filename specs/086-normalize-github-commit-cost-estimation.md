@@ -29,7 +29,3 @@ cd web && npm ci --cache .npm-cache && npm run build
 ## Out of Scope
 - Backfilling historical contribution records already persisted with inflated cost values.
 - Redesigning payout/distribution weighting formulas.
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

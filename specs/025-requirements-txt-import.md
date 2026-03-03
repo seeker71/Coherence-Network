@@ -34,7 +34,3 @@ Accept: package-lock.json (npm) or requirements.txt (PyPI).
 
 - Pipfile, poetry.lock (future)
 - Resolving version specs (use pinned version when ==, else "unknown" version)
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.

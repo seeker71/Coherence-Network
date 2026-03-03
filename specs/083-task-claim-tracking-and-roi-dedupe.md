@@ -25,7 +25,3 @@ Prevent parallel contributors/agents from working the same ROI-ranked task at th
 ```bash
 cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py tests/test_contributions.py
 ```
-
-## Idea Traceability
-- `idea_id`: `coherence-network-overall`
-- Rationale: umbrella roadmap linkage for Coherence Network work.
