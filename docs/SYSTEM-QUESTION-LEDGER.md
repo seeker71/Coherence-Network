@@ -1,6 +1,6 @@
 # System Question Ledger (Cost/Value Ordered)
 
-Date: 2026-02-14  
+Date: 2026-02-28  
 Author/Agent: OpenAI Codex
 
 This ledger orders open questions by **lowest answer cost** and **highest system value**, then records factual answers and learning actions.
@@ -24,17 +24,16 @@ Scoring:
 
 ## Answers Completed This Cycle
 
-### 1) Mounted API surface vs expectations (answered)
+### 1) Mounted API surface vs expectations (answered, refreshed 2026-02-28)
 
 Evidence:
-- Runtime audit artifact: `/Users/ursmuff/source/Coherence-Network/docs/system_audit/runtime_surface_audit_2026-02-14.json`
 - Script: `/Users/ursmuff/source/Coherence-Network/api/scripts/audit_runtime_surface.py`
+- Command run: `cd api && .venv/bin/python scripts/audit_runtime_surface.py`
 
 Findings:
-- Mounted routes: 21 total.
-- Mounted functional surface is `/v1/*` contribution network + `/api/health` + `/api/ready` + admin reset.
-- Agent router declares 16 routes but 0 are mounted in `app.main`.
-- Web expects `/api/import/stack`, `/api/projects/*`, `/api/search`, and these are currently missing from mounted routes.
+- Mounted routes: 144 total.
+- Agent router declares 29 routes and all 29 are mounted under `/api/agent/*`.
+- Web/API drift now concentrates in unresolved endpoints (`/api/import/stack`, `/api/projects/*`, `/api/search`) plus query-parameter path comparisons that should be normalized in drift checks.
 
 Value:
 - Prevents false assumptions in planning and monitoring.
@@ -89,18 +88,43 @@ Findings:
 - Known current drift is baselined explicitly.
 - New drift now fails CI in `Thread Gates` via `check_runtime_drift.py`.
 
+### 6) Docs/runtime drift list with exact file-by-file corrections (answered)
+
+Evidence:
+- Runtime audit command output from `scripts/audit_runtime_surface.py` on 2026-02-28.
+- Source references inspected in `web/app/**/*` for API calls and `api/app/main.py` mounted routers.
+
+Corrections queued:
+1. `web/app/**` references to `/api/import/stack` are currently unmatched by mounted API routes.
+2. `web/app/**` references to `/api/projects/*` are currently unmatched by mounted API routes.
+3. `web/app/**` references to `/api/search` are currently unmatched by mounted API routes.
+4. Drift comparison should normalize query strings for route-presence checks so endpoints like `/api/friction/events?limit=20` compare against `/api/friction/events`.
+
+### 7) Production parity verification (Railway live runtime vs local) (answered)
+
+Evidence:
+- Command run: `./scripts/verify_web_api_deploy.sh` on 2026-02-28.
+
+Findings:
+- Web endpoints are reachable (`/`, `/gates`, `/api-health` returned HTTP 200).
+- Production API checks timed out (`/api/health`, `/api/gates/main-head`, `/api/health/persistence`).
+- Web API proxy returned degraded/unreachable (`/api/health-proxy` returned HTTP 502 with upstream unreachable message).
+- Result: production parity is currently blocked by live API reachability, not by local route registration.
+
+### 8) Economic value realized (actual contribution/distribution totals over time) (answered baseline)
+
+Evidence:
+- Command run:
+  - `cd api && .venv/bin/python - <<'PY' ... idea_service.list_ideas(); value_lineage_service.list_links(); value_lineage_service.list_usage_events() ... PY`
+
+Findings:
+- Portfolio totals: `potential_value=378.0`, `actual_value=30.0`, `value_gap=348.0`.
+- Value-lineage records: `lineage_links=0`, `usage_events=0`, `usage_value_total=0`.
+- Interpretation: realized value is still estimate-driven; end-to-end economic realization is not yet captured in lineage/usage events.
+
 ## Still Open (next answer queue)
 
-1. **Docs/runtime drift list with exact file-by-file corrections**  
-   Why open: drift is confirmed, but not fully enumerated and reconciled.
-
-2. **Production parity verification (Railway live runtime vs local)**  
-   Why open: docs claim live endpoints, but this cycle did not perform live endpoint audit.
-
-3. **Economic value realized (actual contribution/distribution totals over time)**  
-   Why open: models and endpoints exist, but no consolidated factual report yet.
-
-4. **Optimization experiments (route/model/prompt changes vs measurable success delta)**  
+1. **Optimization experiments (route/model/prompt changes vs measurable success delta)**  
    Why open: baseline exists, controlled intervention and re-measurement not yet done.
 
 ## Codex Learning Loop (repeat each cycle)

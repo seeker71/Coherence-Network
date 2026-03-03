@@ -1,0 +1,88 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/open-questions-unblock-20260228",
+  "commit_scope": "Backfill concrete answers for open portfolio questions, unblock spec-stage flow blockers via fallback spec links, and refresh the system question ledger with current runtime and deploy parity evidence.",
+  "files_owned": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-02-28_open-questions-and-flow-unblock.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance",
+    "coherence-signal-depth",
+    "federated-instance-aggregation"
+  ],
+  "spec_ids": [
+    "049-system-lineage-inventory-and-runtime-telemetry",
+    "094-contributor-onboarding-and-governed-change-flow"
+  ],
+  "task_ids": [
+    "task-2026-02-28-answer-open-questions",
+    "task-2026-02-28-unblock-flow-spec-stage"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/python scripts/audit_runtime_surface.py",
+    "cd api && .venv/bin/pytest -q tests/test_ideas.py tests/test_inventory_api.py",
+    "cd api && .venv/bin/python - <<'PY' ... unanswered_questions/spec_blocked_count check ... PY",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-02-28_open-questions-and-flow-unblock.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_ideas.py tests/test_inventory_api.py",
+      "cd api && .venv/bin/python scripts/audit_runtime_surface.py",
+      "cd api && .venv/bin/python - <<'PY' ... unanswered_questions/spec_blocked_count check ... PY"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "fail",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Public deploy parity verification failed: production API endpoints timed out and web API proxy returned upstream-unreachable degradation."
+  },
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "Idea question inventory is pre-answered for known high-ROI prompts and flow inventory no longer reports spec-stage blockers for coherence-signal-depth and federated-instance-aggregation.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/ideas",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
+      "https://coherence-web-production.up.railway.app/api-health"
+    ],
+    "test_flows": [
+      "GET /api/ideas and verify open questions include non-empty answer fields for default/system prompts.",
+      "POST /api/inventory/flow/next-unblock-task and verify top blocker is no longer blocking_stage=spec for target ideas.",
+      "Run ./scripts/verify_web_api_deploy.sh and capture upstream parity outcome."
+    ]
+  }
+}
