@@ -7,8 +7,11 @@ usage() {
   cat <<'USAGE'
 Usage: auto_heal_start_gate.sh [--with-pr-gate] [--with-rebase] [--skip-restore] [--start-command CMD]
 
-Run start-gate in a clean worktree, stashing local changes first and restoring them
-afterward.
+Run start-gate safely for active threads:
+- auto-attach detached HEAD to a named `codex/...` branch,
+- stash local changes when needed,
+- run start-gate (continuation mode when stashed),
+- restore local changes afterward.
 
 Options:
   --with-pr-gate     also run `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`.
@@ -24,6 +27,7 @@ run_rebase=0
 run_restore=1
 start_cmd="make start-gate"
 start_cmd_label="make start-gate"
+custom_start_cmd=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,6 +51,7 @@ while [[ $# -gt 0 ]]; do
       fi
       start_cmd="$1"
       start_cmd_label="$1"
+      custom_start_cmd=1
       shift
       ;;
     -h|--help)
@@ -65,6 +70,41 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "auto-heal-start-gate: not inside a git worktree."
   exit 1
 fi
+
+sanitize_branch_token() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//'
+}
+
+ensure_named_branch() {
+  local branch
+  branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+  if [[ -n "$branch" ]]; then
+    echo "auto-heal-start-gate: active branch -> ${branch}."
+    return
+  fi
+
+  local candidate
+  while IFS= read -r candidate; do
+    [[ -z "$candidate" ]] && continue
+    if git switch "$candidate" >/dev/null 2>&1; then
+      echo "auto-heal-start-gate: detached HEAD reattached to existing branch ${candidate}."
+      return
+    fi
+  done < <(git for-each-ref --format='%(refname:short)' --points-at HEAD refs/heads/codex)
+
+  local hint
+  hint="$(basename "$(dirname "$PWD")")"
+  hint="$(sanitize_branch_token "$hint")"
+  if [[ -z "$hint" || "$hint" == "coherence-network" || "$hint" == "worktrees" || "$hint" == "codex" ]]; then
+    hint="resume"
+  fi
+  local short_sha
+  short_sha="$(git rev-parse --short HEAD 2>/dev/null || echo head)"
+  local new_branch
+  new_branch="codex/${hint}-resume-$(date +%Y%m%d-%H%M%S)-${short_sha}"
+  git switch -c "$new_branch" >/dev/null
+  echo "auto-heal-start-gate: detached HEAD reattached by creating ${new_branch}."
+}
 
 restore_stash_if_needed() {
   local stash_ref="$1"
@@ -87,6 +127,7 @@ restore_stash_if_needed() {
 }
 
 cd "$SCRIPT_DIR/.."
+ensure_named_branch
 
 initial_clean=0
 if [[ -z "$(git status --short --untracked-files=all)" ]]; then
@@ -97,6 +138,10 @@ stash_ref=""
 if [[ "$initial_clean" == "1" ]]; then
   echo "auto-heal-start-gate: worktree already clean."
 else
+  if [[ "$custom_start_cmd" == "0" ]]; then
+    start_cmd="START_GATE_MODE=continuation make start-gate"
+    start_cmd_label="$start_cmd (auto-applied for dirty continuation)"
+  fi
   stash_name="auto_heal_start_gate_$(date +%Y%m%dT%H%M%S)"
   echo "auto-heal-start-gate: stashing local changes as ${stash_name}."
   git stash push --include-untracked --message "$stash_name" >/dev/null

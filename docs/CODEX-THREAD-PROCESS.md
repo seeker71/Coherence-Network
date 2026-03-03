@@ -46,12 +46,16 @@ make start-gate
 
 Gate status:
 - PASS only when running from a linked worktree (`.git` points to a worktree gitdir, not the primary `.git` directory).
-- PASS only when current worktree has no local changes before starting the next task.
+- PASS in bootstrap mode when current worktree is clean.
+- PASS in continuation mode when current worktree is dirty from in-flight thread work.
 - PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
 - PASS only when current start-command checks succeed, including remote `main` workflow health and open `codex/*` PR checks.
+- PASS only when detached `HEAD` is resolved (start-gate now auto-attaches to a `codex/...` branch in linked worktrees).
 
 Start command:
-- `make start-gate` enforces worktree-only execution, current+primary clean checks, and remote guard checks via GitHub (`gh`).
+- `make start-gate` in `auto` mode selects bootstrap/continuation automatically based on worktree cleanliness.
+- Continuation mode downgrades remote workflow failures to warnings by default so follow-up prompts on active threads do not deadlock.
+- `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate` remains the stash/rebase recovery path and now auto-attaches detached `HEAD` first.
 
 ### Phase A: Local Validation (required before commit)
 
