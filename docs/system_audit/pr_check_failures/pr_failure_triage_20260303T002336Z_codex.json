@@ -1,0 +1,50 @@
+{
+  "auto_rerun_actions": [],
+  "base": "main",
+  "generated_at": "2026-03-03T00:23:36Z",
+  "has_blocking_failures": true,
+  "head_prefix": "codex/",
+  "head_ref": "",
+  "open_prs": [
+    {
+      "blocking_status_contexts": [],
+      "combined_status_state": "success",
+      "failing_check_runs": [
+        {
+          "actions_run_id": 22602113704,
+          "conclusion": "failure",
+          "details_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22602113704/job/65486098020",
+          "html_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22602113704/job/65486098020",
+          "name": "test",
+          "status": "completed",
+          "suggested_local_preflight": "cd api && pytest -q"
+        },
+        {
+          "actions_run_id": 22602113696,
+          "conclusion": "failure",
+          "details_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22602113696/job/65486097940",
+          "html_url": "https://github.com/seeker71/Coherence-Network/actions/runs/22602113696/job/65486097940",
+          "name": "validate-thread-process",
+          "status": "completed",
+          "suggested_local_preflight": "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+        }
+      ],
+      "failing_required_contexts": [],
+      "failing_status_contexts": [],
+      "head_branch": "codex/nav-warm-global-20260302",
+      "head_sha": "908261b6095b273a266847f1479b1d53a8ee1200",
+      "missing_required_contexts": [],
+      "pr_number": 393,
+      "pr_url": "https://github.com/seeker71/Coherence-Network/pull/393",
+      "ready_to_merge": true,
+      "title": "Web: global warm navigation + stability guidance"
+    }
+  ],
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "repo": "seeker71/Coherence-Network",
+  "status": "ok",
+  "summary": "Checked 1 PR(s); blocking failures in 1 PR(s).",
+  "tool": "scripts/pr_check_failure_triage.py"
+}

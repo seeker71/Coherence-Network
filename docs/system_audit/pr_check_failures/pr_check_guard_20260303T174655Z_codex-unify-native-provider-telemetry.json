@@ -1,0 +1,37 @@
+{
+  "base": "main",
+  "branch": "codex/unify-native-provider-telemetry",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T17:46:55Z",
+  "local_preflight": {
+    "status": "fail",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.44,
+        "exit_code": 1,
+        "hint": "Rebase before push: `git fetch origin main && git rebase origin/main`.",
+        "name": "rebase-freshness-guard",
+        "ok": false,
+        "output_tail": "ERROR: branch `codex/unify-native-provider-telemetry` is not rebased on `origin/main`.\nahead=0, behind=1\nRun: git fetch origin main && git rebase origin/main"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped_rebase_failed"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": false,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "Blocking failures detected; see local_preflight/remote_pr_checks details.",
+  "tool": "scripts/worktree_pr_guard.py"
+}
