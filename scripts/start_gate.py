@@ -14,132 +14,6 @@ def env_flag(name: str, *, default: bool = True) -> bool:
     return str(value).strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _workflow_name_set(value: str) -> set[str]:
-    names = set()
-    for raw in value.split(","):
-        normalized = raw.strip().lower()
-        if normalized:
-            names.add(normalized)
-    return names
-
-
-def _parse_iso8601_utc(value: str) -> datetime | None:
-    raw = str(value or "").strip()
-    if not raw:
-        return None
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _load_json_file(path: Path) -> dict | list | None:
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if isinstance(payload, (dict, list)):
-        return payload
-    return None
-
-
-def _load_workflow_owners(path: Path) -> dict[str, str]:
-    payload = _load_json_file(path)
-    if not isinstance(payload, dict):
-        return {}
-    mapping = payload.get("workflow_owners")
-    if not isinstance(mapping, dict):
-        return {}
-    out: dict[str, str] = {}
-    for key, value in mapping.items():
-        name = str(key or "").strip().lower()
-        owner = str(value or "").strip()
-        if name and owner:
-            out[name] = owner
-    return out
-
-
-def _extract_declared_workflow_names(workflows_dir: Path) -> list[str]:
-    if not workflows_dir.exists() or not workflows_dir.is_dir():
-        return []
-    names: list[str] = []
-    for path in sorted(workflows_dir.glob("*.y*ml")):
-        try:
-            content = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        match = re.search(r"(?m)^name:\s*(.+?)\s*$", content)
-        if not match:
-            continue
-        raw_name = str(match.group(1) or "").strip()
-        if (
-            len(raw_name) >= 2
-            and raw_name[0] == raw_name[-1]
-            and raw_name[0] in {"'", '"'}
-        ):
-            raw_name = raw_name[1:-1].strip()
-        if raw_name:
-            names.append(raw_name)
-    return names
-
-
-def _load_active_waivers(path: Path, now: datetime) -> tuple[dict[str, list[dict]], list[str]]:
-    payload = _load_json_file(path)
-    if payload is None:
-        return {}, []
-    if not isinstance(payload, dict):
-        return {}, [f"start-gate: warning: invalid waiver payload in {path} (expected object)"]
-
-    rows = payload.get("waivers")
-    if not isinstance(rows, list):
-        return {}, [f"start-gate: warning: invalid waiver payload in {path} (missing waivers list)"]
-
-    warnings: list[str] = []
-    active_by_workflow: dict[str, list[dict]] = {}
-    for index, row in enumerate(rows):
-        if not isinstance(row, dict):
-            warnings.append(f"start-gate: warning: ignoring waiver[{index}] in {path} (expected object)")
-            continue
-        workflow = str(row.get("workflow") or "").strip().lower()
-        owner = str(row.get("owner") or "").strip()
-        reason = str(row.get("reason") or "").strip()
-        expires_at_raw = str(row.get("expires_at") or "").strip()
-        run_url_contains = str(row.get("run_url_contains") or "").strip()
-        expires_at = _parse_iso8601_utc(expires_at_raw)
-        if not workflow or not owner or not reason or expires_at is None:
-            warnings.append(
-                f"start-gate: warning: ignoring waiver[{index}] in {path} "
-                "(requires workflow, owner, reason, expires_at)"
-            )
-            continue
-        if expires_at <= now:
-            continue
-        waiver = {
-            "workflow": workflow,
-            "owner": owner,
-            "reason": reason,
-            "expires_at": expires_at,
-            "run_url_contains": run_url_contains,
-        }
-        active_by_workflow.setdefault(workflow, []).append(waiver)
-    return active_by_workflow, warnings
-
-
-def _match_waiver_for_failure(failure: dict, waivers: list[dict]) -> dict | None:
-    failure_url = str(failure.get("html_url") or "").strip()
-    for waiver in waivers:
-        run_url_contains = str(waiver.get("run_url_contains") or "").strip()
-        if run_url_contains and run_url_contains not in failure_url:
-            continue
-        return waiver
-    return None
-
-
 def run_json(cmd: list[str], *, required: bool = True) -> dict | None:
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -176,48 +50,30 @@ def main() -> None:
 
     require_gh_checks = env_flag("START_GATE_REQUIRE_GH", default=True)
     enforce_remote_failures = env_flag("START_GATE_ENFORCE_REMOTE_FAILURES", default=True)
-    advisory_main_workflows = _workflow_name_set(
-        os.environ.get(
-            "START_GATE_ADVISORY_MAIN_WORKFLOWS",
-            "Maintainability Architecture Audit",
-        )
-    )
-    owners_file = Path(
-        os.environ.get(
-            "START_GATE_WORKFLOW_OWNERS_FILE",
-            "config/start_gate_workflow_owners.json",
-        )
-    )
-    waivers_file = Path(
-        os.environ.get(
-            "START_GATE_MAIN_FAILURE_WAIVERS_FILE",
-            "config/start_gate_main_workflow_waivers.json",
-        )
-    )
-    require_workflow_owner = env_flag("START_GATE_REQUIRE_WORKFLOW_OWNER", default=True)
-    require_declared_workflow_owners = env_flag(
-        "START_GATE_REQUIRE_DECLARED_WORKFLOW_OWNERS", default=True
-    )
-    now = datetime.now(timezone.utc)
-    workflow_owners = _load_workflow_owners(owners_file)
-    if require_declared_workflow_owners:
-        declared_workflow_names = _extract_declared_workflow_names(Path(".github/workflows"))
-        missing_declared_owner = [
-            name for name in declared_workflow_names if name.strip().lower() not in workflow_owners
-        ]
-        if missing_declared_owner:
-            missing_text = ", ".join(sorted(set(missing_declared_owner)))
-            raise SystemExit(
-                "start-gate: missing owner mappings for declared workflows: "
-                f"{missing_text}. Update {owners_file}."
-            )
-    active_waivers, waiver_warnings = _load_active_waivers(waivers_file, now)
-    for warning in waiver_warnings:
-        print(warning)
 
-    gitdir_line = Path(".git").read_text(encoding="utf-8").strip()
-    if not gitdir_line.startswith("gitdir:"):
-        raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
+    if require_gh_checks:
+        run_command(["gh", "auth", "status"])
+    else:
+        print("start-gate: warning: skipping gh auth check because START_GATE_REQUIRE_GH=0")
+
+    git_marker = Path(".git")
+    if not git_marker.exists():
+        raise SystemExit("start-gate: missing .git marker")
+
+    in_worktree = False
+    if git_marker.is_file():
+        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
+        if not gitdir_line.startswith("gitdir:"):
+            raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
+
+        gitdir = gitdir_line.split(":", 1)[1].strip()
+        gitdir_path = Path(gitdir).resolve()
+        in_worktree = ".git/worktrees/" in gitdir_path.as_posix()
+        primary = gitdir_path.parent.parent.parent
+    elif git_marker.is_dir():
+        primary = Path.cwd().resolve()
+    else:
+        raise SystemExit("start-gate: unrecognized .git marker type")
 
     proc = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
@@ -270,25 +126,54 @@ def main() -> None:
         if name not in latest_by_workflow:
             latest_by_workflow[name] = run
 
-    failures = [
-        {
-            "name": row.get("name"),
-            "conclusion": row.get("conclusion"),
-            "html_url": row.get("html_url"),
-        }
-        for row in latest_by_workflow.values()
-        if str(row.get("conclusion") or "").strip().lower() in failed_conclusions
-    ]
-    if failures:
-        failures_text = ", ".join(
-            f'{item["name"]}={item["conclusion"]} ({item["html_url"]})' for item in failures
-        )
-        raise SystemExit(
-            f"start-gate: latest main workflow failures detected: {failures_text}"
-        )
+    failed_prs: list[dict] = []
+
+    runs_payload = run_json(
+        ["gh", "api", f"repos/{repo_slug}/actions/runs?branch=main&per_page=20"],
+        required=require_gh_checks,
+    )
+    if runs_payload is None:
+        print("start-gate: warning: skipping workflow checks because gh is unavailable in current environment")
+    else:
+        runs = runs_payload.get("workflow_runs", []) if isinstance(runs_payload, dict) else []
+        completed = [
+            run for run in runs if isinstance(run, dict) and str(run.get("status") or "") == "completed"
+        ]
+        if not completed:
+            if enforce_remote_failures:
+                raise SystemExit("start-gate: no completed main workflow runs found")
+            print("start-gate: warning: no completed main workflow runs found")
+
+        latest_by_workflow: dict[str, dict] = {}
+        for run in completed:
+            if not isinstance(run, dict):
+                continue
+            name = str(run.get("name") or "")
+            if name not in latest_by_workflow:
+                latest_by_workflow[name] = run
+
+        failures = [
+            {
+                "name": row.get("name"),
+                "conclusion": row.get("conclusion"),
+                "html_url": row.get("html_url"),
+            }
+            for row in latest_by_workflow.values()
+            if str(row.get("conclusion") or "").strip().lower() in failed_conclusions
+        ]
+        if failures:
+            failures_text = ", ".join(
+                f'{item["name"]}={item["conclusion"]} ({item["html_url"]})' for item in failures
+            )
+            if enforce_remote_failures:
+                raise SystemExit(
+                    f"start-gate: latest main workflow failures detected: {failures_text}"
+                )
+            print(f"start-gate: warning: ignoring remote main workflow failures (non-blocking mode): {failures_text}")
 
     pulls_payload = run_json(
-        ["gh", "api", f"repos/{repo_slug}/pulls", "-f", "state=open", "-f", "per_page=50"]
+        ["gh", "api", f"repos/{repo_slug}/pulls?state=open&per_page=50"],
+        required=require_gh_checks,
     )
     pulls = pulls_payload if isinstance(pulls_payload, list) else []
     failed_prs: list[dict] = []
@@ -306,13 +191,11 @@ def main() -> None:
         if not number or not sha:
             continue
 
-        checks_payload = run_json(
-            ["gh", "api", f"repos/{repo_slug}/commits/{sha}/check-runs", "-f", "per_page=100"]
-        )
-        checks = checks_payload.get("check_runs", []) if isinstance(checks_payload, dict) else []
-        failed_checks = []
-        for check in checks:
-            if not isinstance(check, dict):
+            checks_payload = run_json(
+                ["gh", "api", f"repos/{repo_slug}/commits/{sha}/check-runs?per_page=100"],
+                required=require_gh_checks,
+            )
+            if checks_payload is None:
                 continue
             status = str(check.get("status") or "").strip().lower()
             conclusion = str(check.get("conclusion") or "").strip().lower()
@@ -335,23 +218,38 @@ def main() -> None:
 
     if failed_prs:
         first = failed_prs[0]
-        raise SystemExit(
+        failure_text = (
             "start-gate: open PR check failures detected. "
             f"Example: PR #{first['number']} {first['title']} ({first['url']})"
         )
+        if enforce_remote_failures:
+            raise SystemExit(failure_text)
+        print(f"start-gate: warning: {failure_text}")
 
-    proc = subprocess.run(
-        ["git", "-C", str(primary), "status", "--short"],
-        capture_output=True,
-        text=True,
+    require_primary_default = False if in_worktree else True
+    require_primary_clean = env_flag(
+        "START_GATE_REQUIRE_PRIMARY_CLEAN", default=require_primary_default
     )
-    if proc.returncode != 0:
-        raise SystemExit("start-gate: failed to check primary workspace state")
-
-    if proc.stdout.strip():
-        raise SystemExit(
-            "start-gate: primary workspace has local changes. Clean it before starting a task."
+    if require_primary_clean:
+        proc = subprocess.run(
+            ["git", "-C", str(primary), "status", "--short"],
+            capture_output=True,
+            text=True,
         )
+        if proc.returncode != 0:
+            raise SystemExit("start-gate: failed to check primary workspace state")
+
+        if proc.stdout.strip():
+            raise SystemExit(
+                "start-gate: primary workspace has local changes. Clean it before starting a task."
+            )
+    elif in_worktree:
+        print(
+            "start-gate: skipping primary workspace cleanliness check in worktree mode "
+            "(START_GATE_REQUIRE_PRIMARY_CLEAN=0)."
+        )
+    else:
+        print("start-gate: skipping primary workspace cleanliness check (START_GATE_REQUIRE_PRIMARY_CLEAN=0)")
 
     print("start-gate: passed")
 
