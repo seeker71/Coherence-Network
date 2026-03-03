@@ -110,6 +110,50 @@ run_with_retries_capture() {
   return "$rc"
 }
 
+run_with_retries() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  while (( attempt <= attempts )); do
+    if "$@"; then
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..."
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
+
+run_with_retries_capture() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  local output=""
+  while (( attempt <= attempts )); do
+    if output="$("$@")"; then
+      printf "%s" "$output"
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..." >&2
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
+
 check_url() {
   local name="$1"
   local url="$2"
