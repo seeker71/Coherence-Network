@@ -31,7 +31,7 @@ jobs:
 
       - name: Upload audit report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: external_tools_audit_report_${{ github.sha }}
           path: external_tools_audit_report.json

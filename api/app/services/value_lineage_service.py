@@ -255,6 +255,49 @@ def _write_store(data: dict) -> None:
         json.dump(data, f, indent=2)
 
 
+def checkpoint() -> dict[str, object]:
+    path = _path()
+    data = _read_store()
+    links_raw = data.get("links") if isinstance(data.get("links"), list) else []
+    events_raw = data.get("events") if isinstance(data.get("events"), list) else []
+    max_link_updated_at: datetime | None = None
+    max_event_captured_at: datetime | None = None
+
+    for raw in links_raw:
+        try:
+            link = LineageLink(**raw)
+        except Exception:
+            continue
+        if max_link_updated_at is None or link.updated_at > max_link_updated_at:
+            max_link_updated_at = link.updated_at
+
+    for raw in events_raw:
+        try:
+            event = UsageEvent(**raw)
+        except Exception:
+            continue
+        if max_event_captured_at is None or event.captured_at > max_event_captured_at:
+            max_event_captured_at = event.captured_at
+
+    try:
+        stat = path.stat()
+        size = int(stat.st_size)
+        mtime_ns = int(stat.st_mtime_ns)
+    except OSError:
+        size = 0
+        mtime_ns = 0
+
+    return {
+        "path": str(path),
+        "link_count": len(links_raw),
+        "event_count": len(events_raw),
+        "max_link_updated_at": max_link_updated_at.isoformat() if max_link_updated_at else None,
+        "max_event_captured_at": max_event_captured_at.isoformat() if max_event_captured_at else None,
+        "file_size": size,
+        "file_mtime_ns": mtime_ns,
+    }
+
+
 def create_link(payload: LineageLinkCreate) -> LineageLink:
     now = datetime.now(timezone.utc)
     link = LineageLink(
