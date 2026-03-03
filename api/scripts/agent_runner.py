@@ -221,6 +221,8 @@ except ValueError:
 PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
+DEFAULT_CODEX_MODEL_ALIAS_MAP = "gpt-5.3-codex-spark:gpt-5-codex,gpt-5.3-codex:gpt-5-codex"
+CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
 
 
 def _tool_token(command: str) -> str:
@@ -2587,6 +2589,44 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
+def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for pair in str(raw or "").split(","):
+        item = pair.strip()
+        if not item or ":" not in item:
+            continue
+        source, target = item.split(":", 1)
+        source_key = source.strip().lower()
+        target_value = target.strip()
+        if source_key and target_value:
+            aliases[source_key] = target_value
+    return aliases
+
+
+def _codex_model_alias_map() -> dict[str, str]:
+    raw = os.environ.get("AGENT_CODEX_MODEL_ALIAS_MAP", DEFAULT_CODEX_MODEL_ALIAS_MAP)
+    return _parse_codex_model_alias_map(str(raw))
+
+
+def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+    if not _uses_codex_cli(command):
+        return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
+    requested_model = match.group("model").strip()
+    if not requested_model:
+        return command, None
+    target_model = _codex_model_alias_map().get(requested_model.lower(), "").strip()
+    if not target_model or target_model.lower() == requested_model.lower():
+        return command, None
+    remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
+    return remapped, {
+        "requested_model": requested_model,
+        "effective_model": target_model,
+    }
+
+
 def _infer_executor(command: str, model: str) -> str:
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
@@ -3091,28 +3131,6 @@ def run_one_task(
         )
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
-    claude_model_alias: dict[str, str] | None = None
-    codex_auth_state: dict[str, Any] | None = None
-    cursor_auth_state: dict[str, Any] | None = None
-    gemini_auth_state: dict[str, Any] | None = None
-    claude_auth_state: dict[str, Any] | None = None
-    cli_bootstrap_ok = True
-    cli_bootstrap_detail = ""
-    cli_bootstrap_ok, cli_bootstrap_detail = _ensure_cli_for_command(
-        command=command,
-        env=env,
-        task_id=task_id,
-        log=log,
-    )
-    if cli_bootstrap_detail:
-        if cli_bootstrap_ok:
-            log.info("task=%s %s", task_id, cli_bootstrap_detail)
-        else:
-            log.warning("task=%s %s", task_id, cli_bootstrap_detail)
-    popen_command: str | list[str] = command
-    popen_shell = True
-    popen_preexec_fn: Callable[[], None] | None = None
-    command_exec_mode = "shell"
     if _uses_cursor_cli(command):
         # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
         env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
@@ -3123,6 +3141,14 @@ def run_one_task(
         env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
         env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
         log.info("task=%s using codex CLI", task_id)
+        command, codex_model_alias = _apply_codex_model_alias(command)
+        if codex_model_alias:
+            log.warning(
+                "task=%s remapped codex model %s -> %s",
+                task_id,
+                codex_model_alias["requested_model"],
+                codex_model_alias["effective_model"],
+            )
         if "--dangerously-bypass-approvals-and-sandbox" not in command:
             command = f"{command} --dangerously-bypass-approvals-and-sandbox"
     elif _uses_openclaw_cli(command):
@@ -3332,27 +3358,9 @@ def run_one_task(
         "active_branch": branch_name if pr_mode else "",
         "last_attempt": attempt,
     }
-    if cli_bootstrap_detail:
-        running_context["runner_cli_bootstrap"] = {
-            "ok": bool(cli_bootstrap_ok),
-            "detail": cli_bootstrap_detail,
-            "at": _utc_now_iso(),
-        }
-    if codex_auth_state:
-        running_context["runner_codex_auth"] = {
-            **codex_auth_state,
-            "at": _utc_now_iso(),
-        }
-    if codex_model_alias or claude_model_alias:
-        active_model_alias = codex_model_alias or claude_model_alias
+    if codex_model_alias:
         running_context["runner_model_alias"] = {
-            **(active_model_alias or {}),
-            "at": _utc_now_iso(),
-        }
-    if non_root_detail:
-        running_context["runner_exec_user"] = {
-            "ok": bool(non_root_ok),
-            "detail": non_root_detail,
+            **codex_model_alias,
             "at": _utc_now_iso(),
         }
     r = client.patch(
@@ -3360,12 +3368,7 @@ def run_one_task(
         json={
             "status": "running",
             "worker_id": worker_id,
-            "context": {
-                "active_run_id": run_id,
-                "active_worker_id": worker_id,
-                "active_branch": branch_name if pr_mode else "",
-                "last_attempt": attempt,
-            },
+            "context": running_context,
         },
     )
     if r.status_code != 200:
@@ -3463,26 +3466,12 @@ def run_one_task(
     out_file = os.path.join(LOG_DIR, f"task_{task_id}.log")
     output_lines: list[str] = []
     reader_done = threading.Event()
-    auth_note = ""
-    if codex_auth_state:
-        auth_note = (
-            "[runner-codex-auth] requested_mode="
-            f"{codex_auth_state['requested_mode']} effective_mode={codex_auth_state['effective_mode']} "
-            f"oauth_session={'true' if codex_auth_state['oauth_session'] else 'false'} "
-            f"oauth_source={codex_auth_state['oauth_source']} "
-            f"api_key_present={'true' if codex_auth_state['api_key_present'] else 'false'} "
-            f"oauth_missing={'true' if codex_auth_state['oauth_missing'] else 'false'}\n"
-        )
     alias_note = ""
-    effective_model_alias = codex_model_alias or claude_model_alias
-    if effective_model_alias:
+    if codex_model_alias:
         alias_note = (
             "[runner-model-alias] requested_model="
-            f"{effective_model_alias['requested_model']} effective_model={effective_model_alias['effective_model']}\n"
+            f"{codex_model_alias['requested_model']} effective_model={codex_model_alias['effective_model']}\n"
         )
-    exec_mode_note = ""
-    if _uses_codex_cli(command):
-        exec_mode_note = f"[runner-command-exec] mode={command_exec_mode}\n"
 
     def _stream_reader(proc: subprocess.Popen) -> None:
         """Read process stdout line-by-line, write to log file + collect output."""
@@ -3491,15 +3480,9 @@ def run_one_task(
                 f.write(f"# task_id={task_id} status=running\n")
                 f.write(f"# command={command}\n")
                 f.write("---\n")
-                if auth_note:
-                    f.write(auth_note)
-                    output_lines.append(auth_note)
                 if alias_note:
                     f.write(alias_note)
                     output_lines.append(alias_note)
-                if exec_mode_note:
-                    f.write(exec_mode_note)
-                    output_lines.append(exec_mode_note)
                 f.flush()
                 for line in iter(proc.stdout.readline, ""):
                     f.write(line)
