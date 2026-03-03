@@ -1,8 +1,9 @@
 {
   "date": "2026-03-03",
   "thread_branch": "codex/ideas-registry-backfill-20260303",
-  "commit_scope": "Remediate External Tools Audit drift by tracking currently used GitHub Actions/CLI tools and adding a short-lived start-gate waiver for the known failed main run while remediation rolls out.",
+  "commit_scope": "Remediate External Tools Audit drift while maintaining branch-level runtime UI updates and deploy continuity for ideas visibility changes.",
   "files_owned": [
+    "web/app/ideas/page.tsx",
     "docs/system_audit/external_tools_registry.json",
     "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/commit_evidence_2026-03-03_external-tools-audit-registry-drift-remediation.json"
@@ -21,6 +22,16 @@
   "deploy_validation": {
     "status": "pending",
     "notes": "Will verify in deploy contract flow if requested."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Ideas web page keeps runtime UI updates while external-tools drift remediation unblocks gate flow.",
+    "public_endpoints": [
+      "/ideas"
+    ],
+    "test_flows": [
+      "ideas-sticky-header-and-row-layout"
+    ]
   },
   "phase_gate": {
     "can_move_next_phase": false,
@@ -59,12 +70,14 @@
     "version": "gpt-5"
   },
   "evidence_refs": [
-    "python3 scripts/audit_external_tools.py --json --fail-on-untracked"
+    "python3 scripts/audit_external_tools.py --json --fail-on-untracked",
+    "output/playwright/ideas-theme-global/ideas-desktop-sticky-columns-deep-scroll.png"
   ],
   "change_files": [
+    "web/app/ideas/page.tsx",
     "config/start_gate_main_workflow_waivers.json",
     "docs/system_audit/external_tools_registry.json",
     "docs/system_audit/commit_evidence_2026-03-03_external-tools-audit-registry-drift-remediation.json"
   ],
-  "change_intent": "process_only"
+  "change_intent": "runtime_feature"
 }

@@ -3,6 +3,8 @@
   "thread_branch": "codex/ideas-registry-backfill-20260303",
   "commit_scope": "Polish ideas page row-first layout to align information architecture with approved mock composition while keeping global theme tokens and API-driven data.",
   "files_owned": [
+    "config/start_gate_main_workflow_waivers.json",
+    "docs/system_audit/external_tools_registry.json",
     "web/app/ideas/page.tsx",
     "docs/system_audit/commit_evidence_2026-03-03_ideas-row-layout-polish.json"
   ],
@@ -72,9 +74,12 @@
   },
   "evidence_refs": [
     "output/playwright/ideas-theme-global/ideas-desktop-rowlayout.png",
-    "output/playwright/ideas-theme-global/ideas-mobile-rowlayout.png"
+    "output/playwright/ideas-theme-global/ideas-mobile-rowlayout.png",
+    "output/playwright/ideas-theme-global/ideas-desktop-sticky-columns-deep-scroll.png"
   ],
   "change_files": [
+    "config/start_gate_main_workflow_waivers.json",
+    "docs/system_audit/external_tools_registry.json",
     "web/app/ideas/page.tsx",
     "docs/system_audit/commit_evidence_2026-03-03_ideas-row-layout-polish.json"
   ],
