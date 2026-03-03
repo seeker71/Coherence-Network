@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.adapters.graph_store import GraphStore
@@ -16,6 +17,7 @@ from app.services.contribution_cost_service import (
     ESTIMATOR_VERSION,
     estimate_commit_cost_with_provenance,
 )
+from app.services.contributor_hygiene import is_internal_contributor_email, normalize_contributor_email
 
 router = APIRouter()
 
@@ -71,6 +73,43 @@ def calculate_coherence(contribution: ContributionCreate, store: GraphStore) -> 
         score += 0.1
 
     return min(score, 1.0)
+
+
+def _contributor_type_for_email(email: str) -> ContributorType:
+    return ContributorType.SYSTEM if is_internal_contributor_email(email) else ContributorType.HUMAN
+
+
+def _canonical_system_contributor(store: GraphStore) -> Contributor | None:
+    systems = [
+        row
+        for row in store.list_contributors(limit=1000)
+        if str(getattr(row.type, "value", row.type)).upper() == "SYSTEM"
+    ]
+    if not systems:
+        return None
+    systems.sort(key=lambda row: (str(row.created_at), str(row.id)))
+    return systems[0]
+
+
+def _resolve_registered_contributor(store: GraphStore, normalized_email: str) -> Contributor:
+    existing = None
+    if hasattr(store, "find_contributor_by_email"):
+        existing = store.find_contributor_by_email(normalized_email)
+    if existing is not None:
+        return existing
+
+    if is_internal_contributor_email(normalized_email):
+        system = _canonical_system_contributor(store)
+        if system is not None:
+            return system
+        raise HTTPException(
+            status_code=409,
+            detail="System contributor is not configured. Register one SYSTEM contributor first.",
+        )
+    raise HTTPException(
+        status_code=409,
+        detail="Contributor not registered. Register via /api/contributors with real name and real email first.",
+    )
 
 
 @router.post("/contributions", response_model=Contribution, status_code=201)
@@ -135,25 +174,12 @@ async def get_contributor_contributions(
 async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
     """Track contribution from GitHub webhook.
 
-    Auto-creates contributor and asset if they don't exist.
+    Requires contributor to be explicitly registered.
     """
-    # Find or create contributor by email
-    contributor = None
-    if hasattr(store, "find_contributor_by_email"):
-        contributor = store.find_contributor_by_email(payload.contributor_email)
-
-    if not contributor:
-        # Create new contributor
-        contributor_name = payload.contributor_email.split("@")[0]
-        contributor = Contributor(
-            type=ContributorType.HUMAN,
-            name=contributor_name,
-            email=payload.contributor_email
-        )
-        try:
-            contributor = store.create_contributor(contributor)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Resolve contributor by normalized email (or map internal emails to canonical SYSTEM).
+    raw_email = str(payload.contributor_email).strip()
+    normalized_email = normalize_contributor_email(raw_email)
+    contributor = _resolve_registered_contributor(store, normalized_email)
 
     # Find or create asset for repository
     asset = None
@@ -185,16 +211,14 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
         asset_id=asset.id,
         cost_amount=normalized_cost,
         coherence_score=coherence,
-        metadata={
-            **payload.metadata,
-            "commit_hash": payload.commit_hash,
-            "repository": payload.repository,
-            "contributor_email": payload.contributor_email,
-            "raw_cost_amount": str(payload.cost_amount),
-            "normalized_cost_amount": str(normalized_cost),
-            "cost_estimator_version": ESTIMATOR_VERSION,
-            **provenance,
-        },
+        metadata=_github_contribution_metadata(
+            payload=payload,
+            normalized_email=normalized_email,
+            raw_email=raw_email,
+            normalized_cost=normalized_cost,
+            contributor=contributor,
+            provenance=provenance,
+        ),
     )
 
 
@@ -217,36 +241,84 @@ def calculate_coherence_from_github_metadata(metadata: dict) -> float:
     return min(score, 1.0)
 
 
+def _github_contribution_metadata(
+    payload: GitHubContribution,
+    normalized_email: str,
+    raw_email: str,
+    normalized_cost: Decimal,
+    contributor: Contributor,
+    provenance: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        **payload.metadata,
+        "commit_hash": payload.commit_hash,
+        "repository": payload.repository,
+        "contributor_email": normalized_email,
+        "contributor_email_raw": raw_email,
+        "raw_cost_amount": str(payload.cost_amount),
+        "normalized_cost_amount": str(normalized_cost),
+        "cost_estimator_version": ESTIMATOR_VERSION,
+        "contributor_type": str(getattr(contributor.type, "value", contributor.type)),
+        **provenance,
+    }
+
+
+def _debug_github_dry_run_payload(
+    payload: GitHubContribution,
+    normalized_email: str,
+    raw_email: str,
+    contributor: Contributor | None,
+    contributor_type: ContributorType,
+    asset: Asset | None,
+    coherence: float,
+    normalized_cost: Decimal,
+    provenance: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "success": True,
+        "dry_run": True,
+        "contributor_lookup": {
+            "normalized_email": normalized_email,
+            "raw_email": raw_email,
+            "found_existing": contributor is not None,
+            "type_if_created": contributor_type.value,
+            "registration_required": contributor is None and contributor_type == ContributorType.HUMAN,
+            "will_map_to_canonical_system": contributor is None and contributor_type == ContributorType.SYSTEM,
+        },
+        "asset_lookup": {
+            "repository": payload.repository,
+            "found_existing": asset is not None,
+        },
+        "estimation": {
+            "coherence_score": coherence,
+            "normalized_cost_amount": str(normalized_cost),
+            "raw_cost_amount": str(payload.cost_amount),
+            "provenance": provenance,
+        },
+    }
+
+
 @router.post("/contributions/github/debug", response_model=dict, status_code=200)
-async def debug_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> dict:
+async def debug_github_contribution(
+    payload: GitHubContribution,
+    persist: bool = Query(False, description="When true, persist contributor/asset/contribution records."),
+    store: GraphStore = Depends(get_store),
+) -> dict:
     """Debug version that returns detailed error info instead of raising."""
     import traceback
     try:
+        raw_email = str(payload.contributor_email).strip()
+        normalized_email = normalize_contributor_email(raw_email)
         # Find or create contributor by email
         contributor = None
         if hasattr(store, "find_contributor_by_email"):
-            contributor = store.find_contributor_by_email(payload.contributor_email)
-
-        if not contributor:
-            contributor_name = payload.contributor_email.split("@")[0]
-            contributor = Contributor(
-                type=ContributorType.HUMAN,
-                name=contributor_name,
-                email=payload.contributor_email
-            )
-            contributor = store.create_contributor(contributor)
+            contributor = store.find_contributor_by_email(normalized_email)
+        contributor_type = _contributor_type_for_email(normalized_email)
 
         # Find or create asset
         asset = None
         if hasattr(store, "find_asset_by_name"):
             asset = store.find_asset_by_name(payload.repository)
-
-        if not asset:
-            asset = Asset(
-                type=AssetType.CODE,
-                description=f"GitHub repository: {payload.repository}"
-            )
-            asset = store.create_asset(asset)
 
         # Calculate coherence
         coherence = calculate_coherence_from_github_metadata(payload.metadata)
@@ -259,22 +331,43 @@ async def debug_github_contribution(payload: GitHubContribution, store: GraphSto
             metadata=payload.metadata,
         )
 
+        if not persist:
+            return _debug_github_dry_run_payload(
+                payload=payload,
+                normalized_email=normalized_email,
+                raw_email=raw_email,
+                contributor=contributor,
+                contributor_type=contributor_type,
+                asset=asset,
+                coherence=coherence,
+                normalized_cost=normalized_cost,
+                provenance=provenance,
+            )
+
+        if not contributor:
+            contributor = _resolve_registered_contributor(store, normalized_email)
+
+        if not asset:
+            asset = Asset(
+                type=AssetType.CODE,
+                description=f"GitHub repository: {payload.repository}"
+            )
+            asset = store.create_asset(asset)
+
         # Create contribution
         contrib = store.create_contribution(
             contributor_id=contributor.id,
             asset_id=asset.id,
             cost_amount=normalized_cost,
             coherence_score=coherence,
-            metadata={
-                **payload.metadata,
-                "commit_hash": payload.commit_hash,
-                "repository": payload.repository,
-                "contributor_email": payload.contributor_email,
-                "raw_cost_amount": str(payload.cost_amount),
-                "normalized_cost_amount": str(normalized_cost),
-                "cost_estimator_version": ESTIMATOR_VERSION,
-                **provenance,
-            }
+            metadata=_github_contribution_metadata(
+                payload=payload,
+                normalized_email=normalized_email,
+                raw_email=raw_email,
+                normalized_cost=normalized_cost,
+                contributor=contributor,
+                provenance=provenance,
+            ),
         )
 
         return {

@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
+import {
+  buildRuntimeSummarySearchParams,
+  buildSystemLineageSearchParams,
+} from "@/lib/egress";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
 type IdeaQuestion = {
@@ -67,88 +71,69 @@ type OpportunityIdea = IdeaWithScore & {
   estimated_collective_upside: number;
 };
 
-const API_NAV_CARDS: Array<{ href: string; title: string; description: string }> = [
+const LANDING_PATHS: Array<{
+  title: string;
+  description: string;
+  links: Array<{ href: string; label: string }>;
+}> = [
   {
-    href: "/search",
-    title: "Search",
-    description: "Find projects, then drill into per-project runtime and coherence signals.",
+    title: "Start Exploring",
+    description: "Understand where value and uncertainty are concentrated before picking work.",
+    links: [
+      { href: "/ideas", label: "High-upside ideas" },
+      { href: "/search", label: "Project search" },
+      { href: "/flow", label: "System flow map" },
+    ],
   },
   {
-    href: "/portfolio",
-    title: "Portfolio",
-    description: "ROI-first governance: questions, costs, signals, and next actions.",
+    title: "Contribute With Context",
+    description: "Use one guided contribution chain so each change maps to measurable system value.",
+    links: [
+      { href: "/contribute", label: "Contribution console" },
+      { href: "/portfolio", label: "Portfolio governance" },
+      { href: "/tasks", label: "Execution tasks" },
+    ],
   },
   {
-    href: "/flow",
-    title: "Flow",
-    description: "See how ideas, contributors, contributions, and assets connect.",
-  },
-  {
-    href: "/contribute",
-    title: "Contribute",
-    description: "Register, propose changes, and review with yes/no votes.",
-  },
-  {
-    href: "/ideas",
-    title: "Ideas",
-    description: "Browse high-upside ideas and unresolved questions.",
-  },
-  {
-    href: "/specs",
-    title: "Specs",
-    description: "Specs discovered from system lineage inventory.",
-  },
-  {
-    href: "/usage",
-    title: "Usage",
-    description: "Runtime telemetry and friction signals.",
-  },
-  {
-    href: "/friction",
-    title: "Friction",
-    description: "Inspect blockers and delay-cost hotspots in the execution pipeline.",
-  },
-  {
-    href: "/contributors",
-    title: "Contributors",
-    description: "Register contributors and track who created value.",
-  },
-  {
-    href: "/contributions",
-    title: "Contributions",
-    description: "Trace contributor work to assets, specs, and realized impact.",
-  },
-  {
-    href: "/assets",
-    title: "Assets",
-    description: "Track code/docs/endpoints as measurable system assets.",
-  },
-  {
-    href: "/tasks",
-    title: "Tasks",
-    description: "Track active and queued execution items with ownership and status.",
-  },
-  {
-    href: "/gates",
-    title: "Gates",
-    description: "Validate merge/deploy contracts and endpoint traceability coverage.",
-  },
-  {
-    href: "/api-coverage",
-    title: "API Coverage",
-    description: "Probe live API endpoints and surface coverage gaps with explicit failures.",
-  },
-  {
-    href: "/import",
-    title: "Import",
-    description: "Analyze dependency manifests and identify coherence risk.",
-  },
-  {
-    href: "/api-health",
-    title: "API Health",
-    description: "Monitor API readiness and web/API version alignment.",
+    title: "Operate Reliably",
+    description: "Monitor runtime, automation, and deployment gates without hunting across pages.",
+    links: [
+      { href: "/usage", label: "Runtime usage" },
+      { href: "/automation", label: "Automation readiness" },
+      { href: "/gates", label: "Gate status" },
+    ],
   },
 ];
+
+const ADVANCED_SURFACES: Array<{ href: string; label: string }> = [
+  { href: "/specs", label: "Specs" },
+  { href: "/friction", label: "Friction" },
+  { href: "/contributors", label: "Contributors" },
+  { href: "/contributions", label: "Contributions" },
+  { href: "/assets", label: "Assets" },
+  { href: "/agent", label: "Agent" },
+  { href: "/api-coverage", label: "API Coverage" },
+  { href: "/import", label: "Import" },
+  { href: "/api-health", label: "API Health" },
+  { href: "/remote-ops", label: "Remote Ops" },
+];
+
+const WELCOME_SIGNALS: Array<{ label: string; value: string }> = [
+  {
+    label: "Always visible",
+    value: "Home and the core actions to explore, collaborate, and ship",
+  },
+  {
+    label: "In menus",
+    value: "Specialized pages for deeper operational and governance work",
+  },
+  {
+    label: "For deep work",
+    value: "Context links stay nearby without crowding the page",
+  },
+];
+
+export const revalidate = 90;
 
 async function loadIdeas(): Promise<IdeasResponse | null> {
   const data = await fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas`, {}, 5000);
@@ -159,9 +144,10 @@ async function loadIdeas(): Promise<IdeasResponse | null> {
 }
 
 async function loadInventory(): Promise<InventoryResponse | null> {
+  const params = buildSystemLineageSearchParams();
   const data = await fetchJsonOrNull<InventoryResponse>(
-    `${getApiBase()}/api/inventory/system-lineage?runtime_window_seconds=86400`,
-    { cache: "no-store" },
+    `${getApiBase()}/api/inventory/system-lineage?${params.toString()}`,
+    undefined,
     5000,
   );
   if (!data) {
@@ -171,9 +157,10 @@ async function loadInventory(): Promise<InventoryResponse | null> {
 }
 
 async function loadRuntimeSummary(): Promise<RuntimeSummaryResponse | null> {
+  const params = buildRuntimeSummarySearchParams();
   const data = await fetchJsonOrNull<RuntimeSummaryResponse>(
-    `${getApiBase()}/api/runtime/ideas/summary?seconds=86400`,
-    { cache: "no-store" },
+    `${getApiBase()}/api/runtime/ideas/summary?${params.toString()}`,
+    undefined,
     5000,
   );
   if (!data) {
@@ -223,30 +210,30 @@ export default async function Home() {
   return (
     <main className="min-h-[calc(100vh-3.5rem)] px-4 md:px-8 py-10">
       <section className="mx-auto max-w-6xl grid gap-8">
-        <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-background via-background to-muted/40 p-6 md:p-10">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-2xl" />
-          <div className="absolute -left-10 bottom-0 h-36 w-36 rounded-full bg-emerald-400/15 blur-2xl" />
+        <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-background to-accent/20 p-6 md:p-10">
+          <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute -left-8 bottom-0 h-36 w-36 rounded-full bg-chart-2/20 blur-3xl" />
 
           <div className="relative grid gap-5">
-            <p className="text-sm text-muted-foreground">Collective intelligence operating system</p>
+            <p className="text-sm text-muted-foreground">Collaborative open source workspace</p>
             <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight max-w-4xl">
-              Turn ideas into measurable collective value.
+              Find meaningful work, build together, and see real impact.
             </h1>
             <p className="max-w-3xl text-muted-foreground">
-              Coherence Network links ideas to specs, implementations, runtime usage, and contributor attribution so new
-              contributors can see where help is needed and where impact is highest.
+              Coherence Network helps people discover where help is needed, connect work across teams, and follow each
+              contribution from intention to outcome.
             </p>
 
             <div className="flex flex-wrap gap-3 pt-1">
               <Button asChild>
-                <Link href="/contribute">Start Contributing</Link>
+                <Link href="/contribute">Join the Workspace</Link>
               </Button>
               <Button asChild variant="secondary">
-                <Link href="/ideas">Pick a High-Upside Idea</Link>
+                <Link href="/ideas">Explore Opportunities</Link>
               </Button>
               <Button asChild variant="outline">
                 <a href={`${getApiBase()}/docs`} target="_blank" rel="noopener noreferrer">
-                  API For Machines
+                  Developer Docs
                 </a>
               </Button>
             </div>
@@ -270,11 +257,10 @@ export default async function Home() {
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <article className="rounded-xl border p-5 space-y-3">
-            <p className="text-sm text-muted-foreground">Main Idea</p>
-            <h2 className="text-xl font-semibold">One walkable chain from idea to realized value</h2>
+            <p className="text-sm text-muted-foreground">Shared Journey</p>
+            <h2 className="text-xl font-semibold">A clear path from intention to impact</h2>
             <p className="text-sm text-muted-foreground">
-              Every contribution should be traceable through the same chain: idea to spec to process to implementation
-              to usage to measurable value.
+              Each contribution follows one easy story: identify a need, align on a plan, build it, then see how it helps.
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
               {[
@@ -293,12 +279,12 @@ export default async function Home() {
           </article>
 
           <article className="rounded-xl border p-5 space-y-3">
-            <p className="text-sm text-muted-foreground">Contributor Onboarding</p>
-            <h2 className="text-xl font-semibold">Best first path for a new contributor</h2>
+            <p className="text-sm text-muted-foreground">Getting Started</p>
+            <h2 className="text-xl font-semibold">A calm first path for new contributors</h2>
             <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-              <li>Register in the contributor registry and declare your role.</li>
-              <li>Pick one high-upside idea or unanswered question.</li>
-              <li>Submit a change request, then vote yes/no to approve and apply with attribution.</li>
+              <li>Set up your profile and share what you like to work on.</li>
+              <li>Choose one idea where your help can create momentum.</li>
+              <li>Ship a change and keep attribution connected to the result.</li>
             </ol>
             <div className="flex gap-2 flex-wrap">
               <Link href="/contribute" className="text-sm underline text-muted-foreground hover:text-foreground">
@@ -310,6 +296,18 @@ export default async function Home() {
               <Link href="/tasks" className="text-sm underline text-muted-foreground hover:text-foreground">
                 Open tasks
               </Link>
+            </div>
+          </article>
+
+          <article className="rounded-xl border bg-background/60 p-5 space-y-3">
+            <p className="text-sm text-muted-foreground">Simple By Default</p>
+            <h2 className="text-xl font-semibold">Keep the essentials visible, tuck depth into menus</h2>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {WELCOME_SIGNALS.map((signal) => (
+                <p key={signal.label}>
+                  <span className="font-medium text-foreground">{signal.label}:</span> {signal.value}
+                </p>
+              ))}
             </div>
           </article>
         </section>
@@ -396,20 +394,35 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {API_NAV_CARDS.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="rounded-lg border bg-background/60 p-4 hover:bg-background/80 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold">{card.title}</h3>
-                <span className="text-muted-foreground text-sm">→</span>
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {LANDING_PATHS.map((path) => (
+            <article key={path.title} className="rounded-lg border bg-background/60 p-4 space-y-3">
+              <h3 className="font-semibold">{path.title}</h3>
+              <p className="text-sm text-muted-foreground">{path.description}</p>
+              <div className="flex flex-wrap gap-2">
+                {path.links.map((link) => (
+                  <Link key={link.href} href={link.href} className="rounded border px-2 py-1 text-sm hover:bg-accent">
+                    {link.label}
+                  </Link>
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">{card.description}</p>
-            </Link>
+            </article>
           ))}
+        </section>
+
+        <section className="rounded-xl border bg-background/60 p-4">
+          <details>
+            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+              Advanced surfaces (show all)
+            </summary>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {ADVANCED_SURFACES.map((item) => (
+                <Link key={item.href} href={item.href} className="rounded border px-2 py-1 text-sm hover:bg-accent">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
         </section>
       </section>
     </main>

@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/next-24h-gap-20260225-02f0",
+  "commit_scope": "Expose web deployed SHA metadata via health-proxy and harden deploy-contract/runtime verification to support optional strict web SHA parity enforcement.",
+  "files_owned": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/verify_web_api_deploy.sh",
+    "web/app/api/health-proxy/route.ts"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-26-web-health-sha-freshness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T004919Z_codex-next-24h-gap-20260225-02f0.json"
+  ],
+  "change_files": [
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/verify_web_api_deploy.sh",
+    "web/app/api/health-proxy/route.ts",
+    "docs/system_audit/commit_evidence_2026-02-26_web-health-sha-freshness-contract.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_release_gate_service.py -k \"web_proxy_sha or web_deployed_sha_field or api_health_sha or evaluate_public_deploy_contract_report_live_shape\"",
+      "cd api && ruff check app/services/release_gate_service.py tests/test_release_gate_service.py",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "./scripts/verify_web_api_deploy.sh",
+      "cd web && npm ci",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and rollout verification for web health-proxy deployed SHA metadata."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Deploy verification and public deploy contract can now read web deployed SHA from health-proxy and optionally enforce strict parity against expected main-head SHA.",
+    "public_endpoints": [
+      "https://coherence-web-production.up.railway.app/api/health-proxy",
+      "https://coherence-network-production.up.railway.app/api/gates/main-head",
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy/verify"
+    ],
+    "test_flows": [
+      "Verify /api/health-proxy returns web.deployed_sha and web.deployed_sha_source when runtime env exposes commit SHA.",
+      "Run public deploy contract report and confirm railway_web_health_proxy uses web deployed SHA first and reports warning/blocking per strict mode.",
+      "Run scripts/verify_web_api_deploy.sh and verify new web SHA parity check warns in non-strict mode and fails in strict mode when missing or mismatched.",
+      "Confirm web SHA mismatch causes a blocking contract result while preserving non-blocking unknown-sha warning when strict mode is disabled."
+    ]
+  }
+}

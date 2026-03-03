@@ -1411,10 +1411,30 @@ def evaluate_public_deploy_contract_report(
 
     checks: list[dict[str, Any]] = []
     require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
+    require_provider_readiness = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", default=False)
+    require_api_health_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", default=False)
+    require_web_health_proxy_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
     api_health["name"] = "railway_health"
+    api_health["required_sha"] = require_api_health_sha
+    if api_health.get("ok") and isinstance(api_health.get("json"), dict):
+        health_payload = api_health["json"]
+        observed_sha = ""
+        for key in ("deployed_sha", "updated_at", "commit_sha", "git_sha"):
+            candidate = str(health_payload.get(key) or "").strip()
+            if candidate:
+                observed_sha = candidate
+                api_health["observed_sha_key"] = key
+                break
+        api_health["observed_sha"] = observed_sha or None
+        if observed_sha:
+            api_health["sha_match"] = observed_sha == target_sha
+            api_health["ok"] = bool(api_health["ok"] and api_health["sha_match"])
+        elif require_api_health_sha:
+            api_health["ok"] = False
+            api_health["error"] = "missing_api_health_sha"
     checks.append(api_health)
 
     api_gates_head_url = f"{report['api_base']}/api/gates/main-head"
@@ -1435,19 +1455,31 @@ def evaluate_public_deploy_contract_report(
     web_proxy_url = f"{report['web_base']}/api/health-proxy"
     web_proxy = check_http_json_endpoint(web_proxy_url, timeout=timeout)
     web_proxy["name"] = "railway_web_health_proxy"
+    web_proxy["required_sha"] = require_web_health_proxy_sha
     if web_proxy.get("ok") and isinstance(web_proxy.get("json"), dict):
         payload = web_proxy["json"]
         api_payload = payload.get("api") if isinstance(payload.get("api"), dict) else {}
         web_payload = payload.get("web") if isinstance(payload.get("web"), dict) else {}
-        updated_at = web_payload.get("updated_at")
+        observed_sha = ""
+        for key in ("deployed_sha", "updated_at", "commit_sha", "git_sha"):
+            candidate = str(web_payload.get(key) or "").strip()
+            if candidate:
+                observed_sha = candidate
+                web_proxy["observed_sha_key"] = key
+                break
         api_status = api_payload.get("status")
-        web_proxy["web_updated_at"] = updated_at
+        web_proxy["web_updated_at"] = web_payload.get("updated_at")
+        web_proxy["observed_sha"] = observed_sha or None
         web_proxy["api_status"] = api_status
-        web_proxy["sha_match"] = updated_at == target_sha
+        web_proxy["sha_match"] = observed_sha == target_sha if observed_sha else None
         web_proxy["api_ok"] = api_status == "ok"
-        web_proxy["ok"] = bool(
-            web_proxy["ok"] and web_proxy["sha_match"] and web_proxy["api_ok"]
-        )
+        web_proxy_ok = bool(web_proxy["ok"] and web_proxy["api_ok"])
+        if observed_sha:
+            web_proxy_ok = bool(web_proxy_ok and web_proxy["sha_match"])
+        elif require_web_health_proxy_sha:
+            web_proxy_ok = False
+            web_proxy["error"] = "missing_web_health_proxy_sha"
+        web_proxy["ok"] = web_proxy_ok
     checks.append(web_proxy)
 
     telegram_diag_url = f"{report['api_base']}/api/agent/telegram/diagnostics"
@@ -1480,12 +1512,55 @@ def evaluate_public_deploy_contract_report(
     paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
     checks.append(paid_override_header_check)
 
+    provider_readiness_url = f"{report['api_base']}/api/automation/usage/readiness"
+    provider_readiness = check_http_json_endpoint(provider_readiness_url, timeout=timeout)
+    provider_readiness["name"] = "railway_provider_readiness"
+    provider_readiness["required"] = require_provider_readiness
+    if provider_readiness.get("ok") and isinstance(provider_readiness.get("json"), dict):
+        payload = provider_readiness["json"]
+        all_required_ready = payload.get("all_required_ready")
+        blocking_payload = payload.get("blocking_issues")
+        blocking_issues = (
+            [str(item) for item in blocking_payload if str(item).strip()]
+            if isinstance(blocking_payload, list)
+            else []
+        )
+        provider_readiness["all_required_ready"] = all_required_ready if isinstance(all_required_ready, bool) else None
+        provider_readiness["blocking_issues_count"] = len(blocking_issues)
+        provider_readiness["blocking_issues"] = blocking_issues[:20]
+        if require_provider_readiness and all_required_ready is not True:
+            provider_readiness["ok"] = False
+            provider_readiness["error"] = "provider_readiness_blocked"
+    elif require_provider_readiness:
+        provider_readiness["ok"] = False
+    checks.append(provider_readiness)
+
     report["checks"] = checks
     warnings: list[str] = []
     failing: list[str] = []
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
+            if name == "railway_health":
+                observed_raw = str(check.get("observed_sha") or "").strip().lower()
+                if (
+                    not require_api_health_sha
+                    and observed_raw in {"", "unknown", "none", "n/a"}
+                ):
+                    warnings.append("railway_health_unknown_sha")
+            if name == "railway_web_health_proxy":
+                observed_raw = str(check.get("observed_sha") or "").strip().lower()
+                if (
+                    not require_web_health_proxy_sha
+                    and observed_raw in {"", "unknown", "none", "n/a"}
+                ):
+                    warnings.append("railway_web_health_proxy_unknown_sha")
+            if (
+                name == "railway_provider_readiness"
+                and not require_provider_readiness
+                and check.get("all_required_ready") is False
+            ):
+                warnings.append("railway_provider_readiness_blocked")
             if (
                 name == "railway_telegram_alert_config"
                 and not require_telegram_alerts
@@ -1494,11 +1569,13 @@ def evaluate_public_deploy_contract_report(
                 warnings.append("railway_telegram_alert_not_configured")
             continue
         if name == "railway_web_health_proxy":
-            updated_raw = str(check.get("web_updated_at") or "").strip().lower()
+            observed_raw = str(check.get("observed_sha") or "").strip().lower()
             if (
+                not require_web_health_proxy_sha
+                and
                 check.get("status_code") == 200
                 and bool(check.get("api_ok"))
-                and updated_raw in {"", "unknown", "none", "n/a"}
+                and observed_raw in {"", "unknown", "none", "n/a"}
             ):
                 warnings.append("railway_web_health_proxy_unknown_sha")
                 continue
@@ -1514,6 +1591,14 @@ def evaluate_public_deploy_contract_report(
             )
         ):
             warnings.append("railway_gates_main_head_unavailable")
+            continue
+        if name == "railway_health":
+            observed_raw = str(check.get("observed_sha") or "").strip().lower()
+            if not require_api_health_sha and observed_raw in {"", "unknown", "none", "n/a"}:
+                warnings.append("railway_health_unknown_sha")
+                continue
+        if name == "railway_provider_readiness" and not require_provider_readiness:
+            warnings.append("railway_provider_readiness_unavailable")
             continue
         failing.append(str(name))
     report["warnings"] = warnings

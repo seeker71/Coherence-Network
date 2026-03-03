@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-02-28T10:04:17.235126Z",
+  "open_critical_severity": [],
+  "open_high_severity": [
+    {
+      "http_status": 200,
+      "id": "nvd_cve_2026_27794",
+      "published_at": "2026-02-26T00:00:00Z",
+      "severity": "high",
+      "title": "NVD - CVE-2026-27794",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-27794"
+    },
+    {
+      "http_status": 404,
+      "id": "checkpoint_mcp_vulnerability",
+      "published_at": "2026-02-24T00:00:00Z",
+      "severity": "high",
+      "title": "Page not found - Check Point Research",
+      "url": "https://research.checkpoint.com/2026/from-prompt-to-pwn-analyzing-vulnerabilities-in-mcp-powered-ai-agent/"
+    }
+  ],
+  "source_digest_file": "/Users/ursmuff/.claude-worktrees/Coherence-Network/ai-agent-research-20260228/docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json"
+}

@@ -219,10 +219,21 @@ class RouteResponse(BaseModel):
     model: str
     command_template: str
     tier: str
-    executor: Optional[str] = None  # "claude", "cursor", or "openclaw" (accepts "clawwork" alias)
+    executor: Optional[str] = None  # "claude", "cursor", "codex"/"openclaw", "gemini", or "openrouter"
     provider: Optional[str] = None
     billing_provider: Optional[str] = None
     is_paid_provider: Optional[bool] = None
+
+
+class NormalizedResponseCall(BaseModel):
+    """Provider-agnostic Open Responses-compatible task call envelope."""
+
+    task_id: str
+    executor: str
+    provider: str
+    model: str
+    request_schema: str = "open_responses_v1"
+    input: List[Dict[str, Any]]
 
 
 class AgentRunStateClaim(BaseModel):

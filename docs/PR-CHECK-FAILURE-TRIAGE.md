@@ -55,6 +55,19 @@ Common mappings:
 - `Validate commit evidence` -> `python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence`
 - `Validate spec quality` -> `python3 scripts/validate_spec_quality.py --base origin/main --head HEAD`
 - `Public Deploy Contract` -> `./scripts/verify_web_api_deploy.sh`
+- `n8n security floor/HITL readiness` -> `cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch <branch> --wait-public --n8n-version \"${N8N_VERSION}\"`
+
+## n8n Blocker Pattern
+
+When deploy readiness reports `result=blocked_n8n_version`:
+
+1. Confirm deployed n8n runtime version.
+2. Upgrade to the minimum secure floor (`>=1.123.17` for v1 or `>=2.5.2` for v2).
+3. Re-run:
+   ```bash
+   cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch <branch> --wait-public --n8n-version "${N8N_VERSION}"
+   ```
+4. Verify HITL approvals still block destructive/external-impact actions until explicit approval.
 
 ## Catch-Next-Time Automation
 

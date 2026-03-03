@@ -9,9 +9,58 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
 CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
+CURL_RETRIES="${CURL_RETRIES:-3}"
+CURL_RETRY_SLEEP_SECONDS="${CURL_RETRY_SLEEP_SECONDS:-3}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
+VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
+VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
+VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
+
+run_with_retries() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  while (( attempt <= attempts )); do
+    if "$@"; then
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..."
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
+
+run_with_retries_capture() {
+  local attempts="$1"
+  local sleep_seconds="$2"
+  shift 2
+  local attempt=1
+  local rc=0
+  local output=""
+  while (( attempt <= attempts )); do
+    if output="$("$@")"; then
+      printf "%s" "$output"
+      return 0
+    fi
+    rc=$?
+    if (( attempt == attempts )); then
+      return "$rc"
+    fi
+    echo "WARN: request attempt ${attempt}/${attempts} failed; retrying in ${sleep_seconds}s..." >&2
+    sleep "$sleep_seconds"
+    attempt=$((attempt + 1))
+  done
+  return "$rc"
+}
 
 check_url() {
   local name="$1"
@@ -24,7 +73,7 @@ check_url() {
   echo
   echo "==> ${name}: ${url}"
 
-  if ! curl -sS -L -D "$headers_file" -o "$body_file" \
+  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" >/dev/null; then
@@ -70,7 +119,7 @@ check_cors() {
   echo
   echo "==> CORS check: ${api_health_url} with Origin ${web_origin}"
 
-  if ! curl -sS -D "$headers_file" -o /dev/null \
+  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -D "$headers_file" -o /dev/null \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     -H "Origin: ${web_origin}" "$api_health_url" >/dev/null; then
@@ -101,7 +150,7 @@ check_persistence_contract() {
 
   echo
   echo "==> Persistence contract: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" || true)"
@@ -144,7 +193,7 @@ check_telegram_alert_config() {
 
   echo
   echo "==> Telegram alert diagnostics: ${url}"
-  status="$(curl -sS -o "$body_file" -w "%{http_code}" \
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" || true)"
@@ -175,6 +224,232 @@ check_telegram_alert_config() {
   return 1
 }
 
+check_provider_readiness() {
+  local url="$1"
+  local required="${2:-0}"
+  local body_file="$TMP_DIR/provider_readiness.body.json"
+  local status
+
+  echo
+  echo "==> Provider readiness: ${url} (required=${required})"
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" || true)"
+  echo "HTTP status: ${status:-unknown}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: readiness endpoint unavailable"
+      head -c 300 "$body_file" || true
+      echo
+      return 1
+    fi
+    echo "WARN: readiness endpoint unavailable (non-blocking)"
+    return 0
+  fi
+
+  local all_ready blocking_count
+  if command -v jq >/dev/null 2>&1; then
+    all_ready="$(jq -r 'if has("all_required_ready") then (.all_required_ready | tostring) else "unknown" end' "$body_file" 2>/dev/null || echo "unknown")"
+    blocking_count="$(jq -r '(.blocking_issues // []) | length' "$body_file" 2>/dev/null || echo "0")"
+  else
+    all_ready="$(grep -q '"all_required_ready"[[:space:]]*:[[:space:]]*true' "$body_file" && echo "true" || echo "false")"
+    blocking_count="$(grep -o '"blocking_issues"[[:space:]]*:[[:space:]]*\\[[^]]*\\]' "$body_file" | grep -o ',' | wc -l | tr -d ' ')"
+  fi
+  echo "all_required_ready: ${all_ready} | blocking_issues: ${blocking_count}"
+
+  if [[ "$all_ready" == "true" ]]; then
+    echo "PASS"
+    return 0
+  fi
+
+  if [[ "$required" == "1" ]]; then
+    echo "FAIL: required provider readiness is not healthy"
+    if command -v jq >/dev/null 2>&1; then
+      jq '.blocking_issues // []' "$body_file" 2>/dev/null || true
+    else
+      head -c 300 "$body_file" || true
+      echo
+    fi
+    return 1
+  fi
+
+  echo "WARN: provider readiness has blocking issues (non-blocking)"
+  return 0
+}
+
+check_api_runtime_sha() {
+  local health_url="$1"
+  local main_head_url="$2"
+  local required="${3:-0}"
+  local health_body="$TMP_DIR/api_health_sha.body.json"
+  local main_head_body="$TMP_DIR/api_main_head_sha.body.json"
+  local health_status main_head_status
+
+  echo
+  echo "==> API runtime SHA parity: ${health_url} vs ${main_head_url} (required=${required})"
+  health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$health_url" || true)"
+  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$main_head_url" || true)"
+  echo "health status: ${health_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+  if [[ -z "$health_status" || "$health_status" -lt 200 || "$health_status" -ge 400 ]]; then
+    echo "FAIL: api health endpoint unavailable for SHA parity check"
+    return 1
+  fi
+  if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: main-head endpoint unavailable for required SHA parity check"
+      return 1
+    fi
+    echo "WARN: main-head endpoint unavailable (non-blocking SHA parity check)"
+    return 0
+  fi
+
+  local expected_sha observed_sha
+  expected_sha=""
+  observed_sha=""
+  if command -v jq >/dev/null 2>&1; then
+    expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
+    observed_sha="$(
+      jq -r '(.deployed_sha // .updated_at // .commit_sha // .git_sha // "")' "$health_body" 2>/dev/null || true
+    )"
+  else
+    expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$health_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+  fi
+  expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
+  observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
+  echo "expected_sha: ${expected_sha:-<missing>}"
+  echo "observed_sha: ${observed_sha:-<missing>}"
+
+  if [[ -z "$expected_sha" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: expected SHA is missing from main-head response"
+      return 1
+    fi
+    echo "WARN: expected SHA missing from main-head response"
+    return 0
+  fi
+
+  local observed_normalized
+  observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
+  if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: API health does not expose deployed SHA (required)"
+      return 1
+    fi
+    echo "WARN: API health does not expose deployed SHA (non-blocking)"
+    return 0
+  fi
+
+  if [[ "$observed_sha" != "$expected_sha" ]]; then
+    echo "FAIL: API deployed SHA does not match expected main-head SHA"
+    return 1
+  fi
+
+  echo "PASS"
+  return 0
+}
+
+check_web_runtime_sha() {
+  local proxy_url="$1"
+  local main_head_url="$2"
+  local required="${3:-0}"
+  local proxy_body="$TMP_DIR/web_health_proxy_sha.body.json"
+  local main_head_body="$TMP_DIR/web_main_head_sha.body.json"
+  local proxy_status main_head_status
+
+  echo
+  echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
+  proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$proxy_url" || true)"
+  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$main_head_url" || true)"
+  echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+  if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
+    echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
+    return 1
+  fi
+  if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: main-head endpoint unavailable for required web SHA parity check"
+      return 1
+    fi
+    echo "WARN: main-head endpoint unavailable (non-blocking web SHA parity check)"
+    return 0
+  fi
+
+  local expected_sha observed_sha api_status
+  expected_sha=""
+  observed_sha=""
+  api_status=""
+  if command -v jq >/dev/null 2>&1; then
+    expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
+    observed_sha="$(
+      jq -r '(.web.deployed_sha // .web.updated_at // .web.commit_sha // .web.git_sha // "")' "$proxy_body" 2>/dev/null || true
+    )"
+    api_status="$(jq -r '.api.status // ""' "$proxy_body" 2>/dev/null || true)"
+  else
+    expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    if [[ -z "$observed_sha" ]]; then
+      observed_sha="$(grep -o '"updated_at"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"updated_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    fi
+    api_status="$(grep -o '"status"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+  fi
+  expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
+  observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
+  api_status="$(echo "${api_status:-}" | tr -d '\r')"
+  echo "expected_sha: ${expected_sha:-<missing>}"
+  echo "observed_sha: ${observed_sha:-<missing>}"
+  echo "api_status: ${api_status:-<missing>}"
+
+  if [[ -n "$api_status" && "$api_status" != "ok" ]]; then
+    echo "FAIL: web health-proxy indicates API is not healthy"
+    return 1
+  fi
+
+  if [[ -z "$expected_sha" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: expected SHA is missing from main-head response"
+      return 1
+    fi
+    echo "WARN: expected SHA missing from main-head response"
+    return 0
+  fi
+
+  local observed_normalized
+  observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
+  if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: web health-proxy does not expose deployed SHA (required)"
+      return 1
+    fi
+    echo "WARN: web health-proxy does not expose deployed SHA (non-blocking)"
+    return 0
+  fi
+
+  if [[ "$observed_sha" != "$expected_sha" ]]; then
+    echo "FAIL: web deployed SHA does not match expected main-head SHA"
+    return 1
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 fail=0
 check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
@@ -183,16 +458,25 @@ else
   echo
   echo "==> Skipping Railway gates main head check (VERIFY_REQUIRE_GATES_MAIN_HEAD=0)"
 fi
+check_api_runtime_sha \
+  "${API_URL%/}/api/health" \
+  "${API_URL%/}/api/gates/main-head" \
+  "$VERIFY_REQUIRE_API_HEALTH_SHA" || fail=1
 if [[ "$VERIFY_REQUIRE_PERSISTENCE_CHECK" == "1" ]]; then
   check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
 else
   echo
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
+check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
 check_url "Railway web root" "${WEB_URL%/}/" || fail=1
 check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1
 check_url "Railway web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
+check_web_runtime_sha \
+  "${WEB_URL%/}/api/health-proxy" \
+  "${API_URL%/}/api/gates/main-head" \
+  "$VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA" || fail=1
 check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
 if [[ "$VERIFY_REQUIRE_TELEGRAM_ALERTS" == "1" ]]; then
   check_telegram_alert_config "${API_URL%/}/api/agent/telegram/diagnostics" || fail=1

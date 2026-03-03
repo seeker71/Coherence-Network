@@ -23,6 +23,9 @@ class UsageMetric(BaseModel):
     remaining: float | None = Field(default=None, ge=0.0)
     limit: float | None = Field(default=None, ge=0.0)
     window: str | None = Field(default=None, max_length=120)
+    validation_state: str | None = Field(default=None, max_length=40)
+    validation_detail: str | None = Field(default=None, max_length=400)
+    evidence_source: str | None = Field(default=None, max_length=200)
 
 
 class ProviderUsageSnapshot(BaseModel):
@@ -111,6 +114,7 @@ class ProviderReadinessReport(BaseModel):
     blocking_issues: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     providers: list[ProviderReadinessRow] = Field(default_factory=list)
+    limit_telemetry: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProviderValidationRow(BaseModel):

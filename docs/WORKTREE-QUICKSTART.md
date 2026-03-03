@@ -28,14 +28,13 @@ git pull --ff-only origin main
 ## Mandatory Preflight (before edits)
 
 ```bash
-./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
+make prompt-gate
 ```
 
-Recommended. This command:
-- stashes local changes temporarily,
-- runs `make start-gate`,
-- refreshes `origin/main` with `git fetch/rebase` when requested,
-- runs local preflight guard.
+Mandatory for every prompt (new or follow-up). This command is continuation-safe:
+- clean worktree: runs full preflight (`start-gate`, rebase refresh, local guard),
+- dirty worktree: skips start-gate/rebase and treats the prompt as in-flight continuation,
+- detached HEAD: fails fast with exact branch attach commands.
 
 Equivalent legacy flow (manual/clean tree): `make start-gate`.
 
@@ -55,6 +54,8 @@ git rebase origin/main
 ```
 
 ```bash
+# Optional: set deployed n8n version when automation flows depend on n8n
+# export N8N_VERSION=1.123.17
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
 # optional explicit startup (for manual end-to-end contract check)
@@ -66,6 +67,8 @@ THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
 Optional remote/deploy gate check:
 
 ```bash
+# Optional n8n security-floor enforcement in remote/deploy-aware mode:
+# N8N_VERSION=1.123.17 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
 ```
 

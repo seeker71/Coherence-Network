@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -79,6 +80,8 @@ class TaskMetricRecord(Base):
 
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+_SCHEMA_CACHE: dict[str, Any] = {"url": "", "initialized": False}
+_SCHEMA_LOCK = threading.Lock()
 
 
 def _repo_root() -> Path:
@@ -139,7 +142,13 @@ def _session() -> Session:
 
 def ensure_schema() -> None:
     engine = _engine()
-    Base.metadata.create_all(bind=engine)
+    url = database_url()
+    with _SCHEMA_LOCK:
+        if bool(_SCHEMA_CACHE.get("initialized")) and _SCHEMA_CACHE.get("url") == url:
+            return
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        _SCHEMA_CACHE["url"] = url
+        _SCHEMA_CACHE["initialized"] = True
 
 
 def backend_info() -> dict[str, Any]:
@@ -231,6 +240,24 @@ def _meta_set(session: Session, key: str, value: str) -> None:
     else:
         row.value = value
         session.add(row)
+
+
+def get_meta_value(key: str) -> str:
+    ensure_schema()
+    normalized = str(key or "").strip()
+    if not normalized:
+        return ""
+    with _session() as session:
+        return _meta_get(session, normalized)
+
+
+def set_meta_value(key: str, value: str) -> None:
+    ensure_schema()
+    normalized = str(key or "").strip()
+    if not normalized:
+        return
+    with _session() as session:
+        _meta_set(session, normalized, str(value or ""))
 
 
 def append_automation_snapshot(payload: dict[str, Any], max_rows: int = 800) -> None:

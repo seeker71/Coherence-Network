@@ -13,7 +13,7 @@ from app.models.idea import (
     IdeaUpdate,
     IdeaWithScore,
 )
-from app.services import idea_service
+from app.services import idea_service, inventory_service
 
 router = APIRouter()
 
@@ -21,13 +21,72 @@ router = APIRouter()
 @router.get("/ideas", response_model=IdeaPortfolioResponse)
 async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
+    include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> IdeaPortfolioResponse:
-    return idea_service.list_ideas(only_unvalidated=only_unvalidated)
+    return idea_service.list_ideas(
+        only_unvalidated=only_unvalidated,
+        include_internal=include_internal,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/ideas/storage", response_model=IdeaStorageInfo)
 async def get_idea_storage_info() -> IdeaStorageInfo:
     return idea_service.storage_info()
+
+
+@router.get("/ideas/cards")
+async def list_idea_cards(
+    q: str = Query("", description="Free-text search across idea title/description/spec IDs."),
+    state: str = Query(
+        "all",
+        description="One of: all, none, spec, implemented, validated, measured.",
+    ),
+    attention: str = Query(
+        "all",
+        description="One of: all, none, low, medium, high.",
+    ),
+    sort: str = Query(
+        "attention_desc",
+        description="One of: attention_desc, roi_desc, gap_desc, state_desc, name_asc.",
+    ),
+    cursor: str | None = Query(default=None, description="Offset cursor returned by previous page."),
+    limit: int = Query(50, ge=1, le=200),
+    include_internal_ideas: bool = Query(True),
+    only_actionable: bool = Query(False),
+    min_roi: float | None = Query(default=None),
+    min_value_gap: float | None = Query(default=None),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.build_idea_cards_feed(
+        q=q,
+        state=state,
+        attention=attention,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+        include_internal_ideas=include_internal_ideas,
+        only_actionable=only_actionable,
+        min_roi=min_roi,
+        min_value_gap=min_value_gap,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+
+
+@router.get("/ideas/cards/changes")
+async def list_idea_card_changes(
+    since_token: str | None = Query(default=None),
+    include_internal_ideas: bool = Query(True),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.build_idea_cards_changes(
+        since_token=since_token,
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+    )
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)

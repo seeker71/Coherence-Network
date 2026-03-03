@@ -13,43 +13,67 @@ curl -fsS https://coherence-network-production.up.railway.app/api/ready | jq .
 
 echo ""
 echo "3. Contributors Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/contributors | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/contributors | jq .
 
 echo ""
 echo "4. Assets Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/v1/assets | jq .
+curl -fsS https://coherence-network-production.up.railway.app/api/assets | jq .
 
 echo ""
-echo "5. Test Contribution Creation..."
-RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/v1/contributions/github \
-  -H "Content-Type: application/json" \
-  -d '{
-    "contributor_email": "deploy-test@coherence.network",
-    "repository": "seeker71/Coherence-Network",
-    "commit_hash": "deploy-verification-'"$(date +%s)"'",
-    "cost_amount": 100.00,
-    "metadata": {
-      "files_changed": 5,
-      "lines_added": 150,
-      "test": true
-    }
-  }')
-
-echo "$RESPONSE" | jq .
-
-if echo "$RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-  echo "✅ Contribution created successfully!"
-  CONTRIB_ID=$(echo "$RESPONSE" | jq -r '.id')
-  echo "Contribution ID: $CONTRIB_ID"
+echo "5. Contribution Ingest Contract Check (read-only by default)..."
+if [[ "${ALLOW_WRITE_PROBE:-0}" == "1" ]]; then
+  echo "ALLOW_WRITE_PROBE=1 set; creating a real contribution probe."
+  RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
+    -H "Content-Type: application/json" \
+    -d '{
+      "contributor_email": "deploy-test@coherence.network",
+      "repository": "seeker71/Coherence-Network",
+      "commit_hash": "deploy-verification-'"$(date +%s)"'",
+      "cost_amount": 100.00,
+      "metadata": {
+        "files_changed": 5,
+        "lines_added": 150,
+        "verification_probe": true
+      }
+    }')
+  echo "$RESPONSE" | jq .
+  if echo "$RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+    echo "✅ Contribution created successfully!"
+    CONTRIB_ID=$(echo "$RESPONSE" | jq -r '.id')
+    echo "Contribution ID: $CONTRIB_ID"
+  else
+    echo "❌ Failed to create contribution"
+    echo "Response: $RESPONSE"
+    exit 1
+  fi
 else
-  echo "❌ Failed to create contribution"
-  echo "Response: $RESPONSE"
-  exit 1
+  echo "ALLOW_WRITE_PROBE not set; running dry-run debug probe (no persistence)."
+  RESPONSE=$(curl -s -X POST "https://coherence-network-production.up.railway.app/api/contributions/github/debug?persist=false" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "contributor_email": "deploy-test@coherence.network",
+      "repository": "seeker71/Coherence-Network",
+      "commit_hash": "deploy-verification-dry-run",
+      "cost_amount": 100.00,
+      "metadata": {
+        "files_changed": 5,
+        "lines_added": 150,
+        "verification_probe": true
+      }
+    }')
+  echo "$RESPONSE" | jq .
+  if echo "$RESPONSE" | jq -e '.success == true and .dry_run == true' > /dev/null 2>&1; then
+    echo "✅ Dry-run ingest contract verified without writing production data."
+  else
+    echo "❌ Dry-run ingest contract failed"
+    echo "Response: $RESPONSE"
+    exit 1
+  fi
 fi
 
 echo ""
-echo "6. Verify Contribution Was Saved..."
-CONTRIBUTORS=$(curl -fsS https://coherence-network-production.up.railway.app/v1/contributors)
+echo "6. Verify Contributor Registry Reachability..."
+CONTRIBUTORS=$(curl -fsS https://coherence-network-production.up.railway.app/api/contributors)
 echo "$CONTRIBUTORS" | jq .
 CONTRIB_COUNT=$(echo "$CONTRIBUTORS" | jq 'length')
 echo "Total contributors in database: $CONTRIB_COUNT"
@@ -80,9 +104,9 @@ echo "=== Deployment Verification Summary ==="
 echo "✅ API is responding"
 echo "✅ Database is connected"
 if [[ "$CONTRIB_COUNT" -gt 0 ]]; then
-  echo "✅ Contributions are being persisted"
+  echo "✅ Contributor registry is reachable"
 else
-  echo "⚠️  No contributions in database yet"
+  echo "⚠️  No contributors in database yet"
 fi
 
 echo ""

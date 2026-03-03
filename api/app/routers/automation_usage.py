@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Query
 
 from app.services import automation_usage_service
@@ -10,9 +12,27 @@ router = APIRouter()
 
 
 @router.get("/automation/usage")
-async def get_automation_usage(force_refresh: bool = Query(False)) -> dict:
-    overview = automation_usage_service.collect_usage_overview(force_refresh=force_refresh)
-    return overview.model_dump(mode="json")
+async def get_automation_usage(
+    force_refresh: bool = Query(False),
+    compact: bool = Query(False, description="Return a trimmed payload for lower-bandwidth clients"),
+    include_raw: bool = Query(False, description="Include provider raw payload in compact mode"),
+) -> dict:
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_usage_overview_payload,
+                force_refresh=force_refresh,
+                compact=compact,
+                include_raw=include_raw,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.usage_overview_payload_from_snapshots(
+            compact=compact,
+            include_raw=include_raw,
+        )
 
 
 @router.get("/automation/usage/snapshots")
@@ -43,11 +63,21 @@ async def get_automation_usage_alerts(
     threshold_ratio: float = Query(0.2, ge=0.0, le=1.0),
     force_refresh: bool = Query(False),
 ) -> dict:
-    report = automation_usage_service.evaluate_usage_alerts(
-        threshold_ratio=threshold_ratio,
-        force_refresh=force_refresh,
-    )
-    return report.model_dump(mode="json")
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_usage_alerts_payload,
+                threshold_ratio=threshold_ratio,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.evaluate_usage_alerts(
+            threshold_ratio=threshold_ratio,
+            force_refresh=False,
+        ).model_dump(mode="json")
 
 
 @router.get("/automation/usage/subscription-estimator")
@@ -62,11 +92,45 @@ async def get_provider_readiness(
     force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
-    report = automation_usage_service.provider_readiness_report(
-        required_providers=requested or None,
-        force_refresh=force_refresh,
-    )
-    return report.model_dump(mode="json")
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_provider_readiness_payload,
+                required_providers=requested or None,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.provider_readiness_report_from_snapshots(
+            required_providers=requested or None,
+        ).model_dump(mode="json")
+
+
+@router.get("/automation/usage/daily-summary")
+async def get_automation_usage_daily_summary(
+    window_hours: int = Query(24, ge=1, le=24 * 30),
+    top_n: int = Query(3, ge=1, le=20),
+    force_refresh: bool = Query(False),
+) -> dict:
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_daily_system_summary_payload,
+                window_hours=window_hours,
+                top_n=top_n,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.cached_daily_system_summary_payload(
+            window_hours=window_hours,
+            top_n=top_n,
+            force_refresh=False,
+        )
 
 
 @router.post("/automation/usage/provider-validation/run")
@@ -86,6 +150,7 @@ async def run_provider_auto_heal(
     max_rounds: int = Query(2, ge=1, le=6),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     min_execution_events: int = Query(1, ge=1, le=10),
+    enable_cli_installs: bool = Query(False, description="Attempt provider-specific CLI installers when binaries are missing"),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     report = automation_usage_service.run_provider_auto_heal(
@@ -93,6 +158,7 @@ async def run_provider_auto_heal(
         max_rounds=max_rounds,
         runtime_window_seconds=runtime_window_seconds,
         min_execution_events=min_execution_events,
+        enable_cli_installs=enable_cli_installs,
     )
     return report
 
@@ -105,10 +171,22 @@ async def get_provider_validation_report(
     force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
-    report = automation_usage_service.provider_validation_report(
-        required_providers=requested or None,
-        runtime_window_seconds=runtime_window_seconds,
-        min_execution_events=min_execution_events,
-        force_refresh=force_refresh,
-    )
-    return report.model_dump(mode="json")
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_provider_validation_payload,
+                required_providers=requested or None,
+                runtime_window_seconds=runtime_window_seconds,
+                min_execution_events=min_execution_events,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.cached_provider_validation_payload(
+            required_providers=requested or None,
+            runtime_window_seconds=runtime_window_seconds,
+            min_execution_events=min_execution_events,
+            force_refresh=False,
+        )

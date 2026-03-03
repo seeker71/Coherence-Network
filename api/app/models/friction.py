@@ -11,7 +11,15 @@ from pydantic import BaseModel, Field
 class FrictionEvent(BaseModel):
     id: str = Field(min_length=1)
     timestamp: datetime
+    task_id: Optional[str] = None
     endpoint: Optional[str] = None
+    task_id: Optional[str] = None
+    run_id: Optional[str] = None
+    provider: Optional[str] = None
+    billing_provider: Optional[str] = None
+    tool: Optional[str] = None
+    model: Optional[str] = None
+    return_code: Optional[int] = None
     stage: str = Field(min_length=1)
     block_type: str = Field(min_length=1)
     severity: str = Field(min_length=1)
@@ -67,4 +75,25 @@ class FrictionEntryPointReport(BaseModel):
     total_entry_points: int = Field(ge=0)
     open_entry_points: int = Field(ge=0)
     entry_points: list[FrictionEntryPoint] = Field(default_factory=list)
+    source_files: list[str] = Field(default_factory=list)
+
+
+class FrictionCategory(BaseModel):
+    key: str = Field(min_length=1)
+    severity: str = Field(min_length=1, max_length=40)
+    entry_point_count: int = Field(ge=0)
+    open_entry_points: int = Field(ge=0)
+    event_count: int = Field(ge=0)
+    energy_loss: float = Field(ge=0.0)
+    cost_of_delay: float = Field(ge=0.0)
+    wasted_minutes: float = Field(ge=0.0)
+    top_entry_keys: list[str] = Field(default_factory=list)
+    recommended_actions: list[str] = Field(default_factory=list)
+
+
+class FrictionCategoryReport(BaseModel):
+    generated_at: datetime
+    window_days: int = Field(ge=1)
+    total_categories: int = Field(ge=0)
+    categories: list[FrictionCategory] = Field(default_factory=list)
     source_files: list[str] = Field(default_factory=list)

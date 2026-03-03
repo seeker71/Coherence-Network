@@ -11,22 +11,32 @@ Debug: Logs to api/logs/agent_runner.log; full output in api/logs/task_{id}.log
 """
 
 import argparse
+import base64
 import logging
 import math
 import os
+import pwd
 import socket
+import shlex
 import shutil
 import subprocess
 import sys
 import threading
 import time
+import tempfile
 from datetime import datetime, timedelta, timezone
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
-from typing import Any, Optional
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Callable, Optional
 from urllib.parse import quote
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - non-posix fallback
+    fcntl = None
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -239,13 +249,47 @@ except ValueError:
 AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = max(0, AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS)
 _last_idle_task_generation_ts = 0.0
 
+RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
+try:
+    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = int(
+        os.environ.get("AGENT_RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS", "120")
+    )
+except ValueError:
+    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = 120
+RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = max(15, min(RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS, 1800))
+
+CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "pro_plus": (100, 1000),
+}
+
+CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (45, 315),
+    "max": (120, 840),
+    "team": (120, 840),
+}
+
+GEMINI_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
+    "free": (10, 70),
+    "pro": (50, 500),
+    "advanced": (120, 840),
+}
+
 TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
 DEFAULT_CODEX_MODEL_ALIAS_MAP = (
-    "openrouter/free:gpt-5-codex,"
-    "gpt-5.3-codex-spark:gpt-5.3-codex,"
-    "gtp-5.3-codex-spark:gpt-5.3-codex,"
-    "gtp-5.3-codex:gpt-5.3-codex"
+    "gpt-5.3-codex:gpt-5-codex,"
+    "gpt-5.3-codex-spark:gpt-5-codex,"
+    "gtp-5.3-codex:gpt-5-codex,"
+    "gtp-5.3-codex-spark:gpt-5-codex"
 )
+MANDATORY_CODEX_MODEL_ALIAS_MAP = {
+    "gpt-5.3-codex": "gpt-5-codex",
+    "gpt-5.3-codex-spark": "gpt-5-codex",
+    "gtp-5.3-codex": "gpt-5-codex",
+    "gtp-5.3-codex-spark": "gpt-5-codex",
+}
 DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
     "gpt-5.3-codex-spark:gpt-5-codex,"
@@ -253,7 +297,10 @@ DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gtp-5.3-codex-spark:gpt-5-codex"
 )
 CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
-CODEX_AUTH_MODE_VALUES = {"api_key", "oauth", "auto"}
+CODEX_AUTH_MODE_VALUES = {"oauth"}
+CURSOR_AUTH_MODE_VALUES = {"oauth"}
+CLAUDE_AUTH_MODE_VALUES = {"oauth"}
+GEMINI_AUTH_MODE_VALUES = {"oauth"}
 
 
 def _tool_token(command: str) -> str:
@@ -320,6 +367,353 @@ def _safe_float(value: object) -> float | None:
         return float(str(value).strip())
     except Exception:
         return None
+
+
+def _coerce_nonnegative_int(value: object, *, default: int = 0) -> int:
+    parsed = _safe_float(value)
+    if parsed is None:
+        return default
+    return max(0, int(parsed))
+
+
+def _cli_output(command: list[str], *, timeout: int = 8) -> tuple[bool, str]:
+    try:
+        completed = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=timeout,
+        )
+    except Exception as exc:
+        return False, str(exc)
+    output = (completed.stdout or completed.stderr or "").strip()
+    return completed.returncode == 0, output
+
+
+def _normalize_subscription_tier(value: str) -> str:
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {"free", "pro", "pro_plus", "max", "team", "advanced"}:
+        return normalized
+    if normalized in {"gemini_advanced", "google_ai_advanced"}:
+        return "advanced"
+    if normalized in {"proplus", "plus"}:
+        return "pro_plus"
+    return normalized
+
+
+def _runner_claude_auth_context() -> dict[str, Any]:
+    if shutil.which("claude") is None:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status", "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env={**os.environ, "CLAUDECODE": ""},
+        )
+    except Exception:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    if result.returncode != 0:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    try:
+        payload = json.loads(result.stdout.strip())
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    logged_in = bool(payload.get("loggedIn"))
+    auth_method = str(payload.get("authMethod") or "").strip()
+    subscription_type = _normalize_subscription_tier(str(payload.get("subscriptionType") or ""))
+    return {
+        "configured": logged_in,
+        "tier": subscription_type,
+        "auth_source": f"claude_cli_auth_status:{auth_method}" if auth_method else "claude_cli_auth_status",
+        "details": {
+            "auth_method": auth_method,
+            "api_provider": str(payload.get("apiProvider") or "").strip(),
+        },
+    }
+
+
+def _runner_cursor_about_context() -> dict[str, Any]:
+    if shutil.which("agent") is None:
+        return {"configured": False, "tier": "", "auth_source": ""}
+    status_ok, status_detail = _cli_output(["agent", "status"])
+    about_ok, about_detail = _cli_output(["agent", "about"])
+    output = f"{status_detail}\n{about_detail}".strip()
+    normalized = output.lower()
+    configured = bool(status_ok and ("logged in" in normalized or "authenticated" in normalized))
+
+    tier = ""
+    for line in output.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key_clean = key.strip().lower()
+        value_clean = value.strip().lower()
+        if key_clean in {"plan", "subscription", "subscription type"} and value_clean:
+            tier = _normalize_subscription_tier(value_clean)
+            break
+    if not tier:
+        for candidate in ("pro_plus", "pro plus", "pro", "free"):
+            if candidate in normalized:
+                tier = _normalize_subscription_tier(candidate)
+                break
+
+    email = ""
+    for line in output.splitlines():
+        if "@" not in line:
+            continue
+        token = line.split()[-1].strip()
+        if "@" in token:
+            email = token
+            break
+    return {
+        "configured": configured,
+        "tier": tier,
+        "auth_source": "cursor_cli_status",
+        "details": {"email": email},
+    }
+
+
+def _runner_gemini_auth_context() -> dict[str, Any]:
+    env = dict(os.environ)
+    oauth_ok, oauth_source = _gemini_oauth_session_status(env)
+    tier_raw = str(os.environ.get("GEMINI_SUBSCRIPTION_TIER", "pro")).strip()
+    tier = _normalize_subscription_tier(tier_raw)
+    if tier not in GEMINI_SUBSCRIPTION_LIMITS_BY_TIER:
+        tier = "pro"
+    return {
+        "configured": bool(oauth_ok),
+        "tier": tier,
+        "auth_source": oauth_source,
+        "details": {
+            "auth_mode": "oauth",
+            "oauth_source": oauth_source,
+        },
+    }
+
+
+def _runner_codex_oauth_access_context(env: dict[str, str]) -> tuple[str | None, str | None, str]:
+    for candidate in _codex_oauth_session_candidates(env):
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        tokens = payload.get("tokens") if isinstance(payload.get("tokens"), dict) else {}
+        access_token = str(
+            tokens.get("access_token")
+            or payload.get("access_token")
+            or tokens.get("id_token")
+            or payload.get("id_token")
+            or ""
+        ).strip()
+        if not access_token:
+            continue
+        if access_token.lower().startswith("bearer "):
+            access_token = access_token[7:].strip()
+        account_id = str(
+            tokens.get("account_id")
+            or payload.get("account_id")
+            or payload.get("chatgpt_account_id")
+            or ""
+        ).strip()
+        return access_token, (account_id or None), f"session_file:{candidate}"
+    return None, None, ""
+
+
+def _runner_codex_window_label(limit_window_seconds: int, fallback: str) -> str:
+    seconds = max(0, int(limit_window_seconds))
+    if seconds <= 0:
+        return str(fallback or "window").strip() or "window"
+    if seconds % (7 * 24 * 3600) == 0:
+        weeks = max(1, int(seconds / (7 * 24 * 3600)))
+        return "7d" if weeks == 1 else f"{weeks}w"
+    if seconds % (24 * 3600) == 0:
+        days = max(1, int(seconds / (24 * 3600)))
+        return "24h" if days == 1 else f"{days}d"
+    if seconds % 3600 == 0:
+        return f"{max(1, int(seconds / 3600))}h"
+    if seconds % 60 == 0:
+        return f"{max(1, int(seconds / 60))}m"
+    return f"{seconds}s"
+
+
+def _runner_parse_codex_usage_windows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rate_limit = payload.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        return []
+    out: list[dict[str, Any]] = []
+    for key in ("primary_window", "secondary_window"):
+        row = rate_limit.get(key)
+        if not isinstance(row, dict):
+            continue
+        used_percent = _safe_float(row.get("used_percent"))
+        if used_percent is None:
+            used_percent = _safe_float(row.get("utilization"))
+        if used_percent is None:
+            remaining_percent = _safe_float(row.get("remaining_percent") or row.get("percent_remaining"))
+            if remaining_percent is not None:
+                used_percent = 100.0 - remaining_percent
+        if used_percent is None:
+            continue
+        used_percent = max(0.0, min(float(used_percent), 100.0))
+        limit_seconds = _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0)
+        reset_at_unix = _coerce_nonnegative_int(row.get("reset_at"), default=0)
+        reset_at_iso: str | None = None
+        if reset_at_unix > 0:
+            try:
+                reset_at_iso = (
+                    datetime.fromtimestamp(reset_at_unix, timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+            except Exception:
+                reset_at_iso = None
+        label = _runner_codex_window_label(limit_seconds, key)
+        out.append(
+            {
+                "metric_id": f"codex_provider_window_{'primary' if key == 'primary_window' else 'secondary'}",
+                "source_key": key,
+                "label": label,
+                "window": label,
+                "used_percent": used_percent,
+                "remaining_percent": max(0.0, 100.0 - used_percent),
+                "limit_window_seconds": limit_seconds,
+                "reset_at_unix": reset_at_unix or None,
+                "reset_at_iso": reset_at_iso,
+            }
+        )
+    return out
+
+
+def _runner_codex_usage_telemetry() -> dict[str, Any]:
+    env = dict(os.environ)
+    oauth_ok, oauth_source = _codex_oauth_session_status(env)
+    payload: dict[str, Any] = {
+        "configured": bool(oauth_ok),
+        "auth_source": oauth_source,
+        "usage_windows": [],
+        "plan": "",
+        "usage_url": str(os.getenv("CODEX_USAGE_URL", "https://chatgpt.com/backend-api/wham/usage")).strip(),
+        "limits": {},
+        "limits_source": "",
+    }
+    if not oauth_ok:
+        return payload
+    token, account_id, access_source = _runner_codex_oauth_access_context(env)
+    if access_source:
+        payload["auth_source"] = access_source
+    if not token:
+        return payload
+    headers: dict[str, str] = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "User-Agent": "coherence-network-agent-runner/1.0",
+    }
+    if account_id:
+        headers["ChatGPT-Account-Id"] = account_id
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            response = client.get(payload["usage_url"])
+            response.raise_for_status()
+            body = response.json()
+    except Exception:
+        return payload
+    body_dict = body if isinstance(body, dict) else {}
+    payload["usage_windows"] = _runner_parse_codex_usage_windows(body_dict)
+    payload["limits_source"] = "codex_usage_api"
+    plan = str(body_dict.get("plan_type") or "").strip()
+    credits = body_dict.get("credits")
+    if isinstance(credits, dict) and credits.get("balance") is not None:
+        balance = _safe_float(credits.get("balance"))
+        if balance is not None:
+            plan = f"{plan} (${balance:.2f})" if plan else f"${balance:.2f}"
+    payload["plan"] = plan
+    return payload
+
+
+def _runner_provider_telemetry_payload(*, force_refresh: bool = False) -> dict[str, Any]:
+    now = time.time()
+    cached = RUNNER_PROVIDER_TELEMETRY_CACHE.get("payload")
+    if (
+        not force_refresh
+        and isinstance(cached, dict)
+        and float(RUNNER_PROVIDER_TELEMETRY_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return dict(cached)
+
+    cursor = _runner_cursor_about_context()
+    cursor_tier = _normalize_subscription_tier(str(cursor.get("tier") or ""))
+    cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER.get(cursor_tier) if cursor_tier else None
+    if cursor_limits is None:
+        cursor_tier = "pro"
+        cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER[cursor_tier]
+
+    claude = _runner_claude_auth_context()
+    claude_tier = _normalize_subscription_tier(str(claude.get("tier") or ""))
+    claude_limits = CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER.get(claude_tier) if claude_tier else None
+
+    gemini = _runner_gemini_auth_context()
+    gemini_tier = _normalize_subscription_tier(str(gemini.get("tier") or ""))
+    gemini_limits = GEMINI_SUBSCRIPTION_LIMITS_BY_TIER.get(gemini_tier) if gemini_tier else None
+    if gemini_limits is None:
+        gemini_tier = "pro"
+        gemini_limits = GEMINI_SUBSCRIPTION_LIMITS_BY_TIER[gemini_tier]
+
+    openai = _runner_codex_usage_telemetry()
+    payload: dict[str, Any] = {
+        "openai": {
+            "configured": bool(openai.get("configured")),
+            "auth_source": str(openai.get("auth_source") or ""),
+            "usage_windows": list(openai.get("usage_windows") or []),
+            "plan": str(openai.get("plan") or ""),
+            "usage_url": str(openai.get("usage_url") or ""),
+            "limits_source": str(openai.get("limits_source") or ""),
+        },
+        "claude": {
+            "configured": bool(claude.get("configured")),
+            "auth_source": str(claude.get("auth_source") or ""),
+            "tier": claude_tier,
+            "limits_source": "cli_subscription_baseline" if claude_limits else "",
+            "limits": {
+                "subscription_8h": int(claude_limits[0]) if claude_limits else 0,
+                "subscription_week": int(claude_limits[1]) if claude_limits else 0,
+            },
+            "details": claude.get("details") if isinstance(claude.get("details"), dict) else {},
+        },
+        "cursor": {
+            "configured": bool(cursor.get("configured")),
+            "auth_source": str(cursor.get("auth_source") or ""),
+            "tier": cursor_tier,
+            "limits_source": "cli_subscription_baseline",
+            "limits": {
+                "subscription_8h": int(cursor_limits[0]),
+                "subscription_week": int(cursor_limits[1]),
+            },
+            "details": cursor.get("details") if isinstance(cursor.get("details"), dict) else {},
+        },
+        "gemini": {
+            "configured": bool(gemini.get("configured")),
+            "auth_source": str(gemini.get("auth_source") or ""),
+            "tier": gemini_tier,
+            "limits_source": "gemini_subscription_tier_baseline",
+            "limits": {
+                "subscription_8h": int(gemini_limits[0]),
+                "subscription_week": int(gemini_limits[1]),
+            },
+            "details": gemini.get("details") if isinstance(gemini.get("details"), dict) else {},
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    RUNNER_PROVIDER_TELEMETRY_CACHE["payload"] = dict(payload)
+    RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = now + RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS
+    return payload
 
 
 def _context_first_float(context: dict[str, Any], keys: tuple[str, ...]) -> float | None:
@@ -1847,6 +2241,19 @@ def _schedule_retry_if_configured(
     return True, message
 
 
+def _retry_explicitly_disabled(task_ctx: dict[str, Any]) -> bool:
+    for key in ("runner_retry_max", "retry_max", "max_retries"):
+        if key not in task_ctx:
+            continue
+        raw_value = task_ctx.get(key)
+        if raw_value is None:
+            continue
+        if isinstance(raw_value, str) and not raw_value.strip():
+            continue
+        return _to_int(raw_value, 0) <= 0
+    return False
+
+
 def _sanitize_branch_name(raw: str, fallback: str) -> str:
     slug = re.sub(r"[^A-Za-z0-9_.-/]", "-", (raw or "").strip())
     slug = slug.strip("/").strip(".-")
@@ -1947,6 +2354,31 @@ def _to_int(value: object, default: int) -> int:
         return default
 
 
+_TASK_RUNTIME_DEFAULTS = {
+    "spec": 1200,
+    "impl": 2400,
+    "test": 1800,
+    "review": 1200,
+    "heal": 1200,
+}
+_TASK_RUNTIME_ENV_BY_TYPE = {
+    "spec": "AGENT_TASK_TIMEOUT_SPEC",
+    "impl": "AGENT_TASK_TIMEOUT_IMPL",
+    "test": "AGENT_TASK_TIMEOUT_TEST",
+    "review": "AGENT_TASK_TIMEOUT_REVIEW",
+    "heal": "AGENT_TASK_TIMEOUT_HEAL",
+}
+
+
+def _default_runtime_seconds_for_task_type(task_type: str) -> int:
+    task_type_normalized = str(task_type or "").strip().lower()
+    baseline = _TASK_RUNTIME_DEFAULTS.get(task_type_normalized, TASK_TIMEOUT)
+    env_name = _TASK_RUNTIME_ENV_BY_TYPE.get(task_type_normalized)
+    if env_name:
+        baseline = _to_int(os.environ.get(env_name), baseline)
+    return max(30, min(TASK_TIMEOUT, baseline))
+
+
 def _read_run_records() -> dict[str, Any]:
     if not os.path.exists(RUN_RECORDS_FILE):
         return {"runs": []}
@@ -1965,34 +2397,65 @@ def _read_run_records() -> dict[str, Any]:
 
 def _write_run_records(payload: dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
-    tmp = f"{RUN_RECORDS_FILE}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
-    os.replace(tmp, RUN_RECORDS_FILE)
+    fd, tmp = tempfile.mkstemp(
+        prefix=f"{os.path.basename(RUN_RECORDS_FILE)}.",
+        suffix=".tmp",
+        dir=os.path.dirname(RUN_RECORDS_FILE),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+        os.replace(tmp, RUN_RECORDS_FILE)
+    finally:
+        try:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        except OSError:
+            pass
+
+
+@contextmanager
+def _run_records_file_lock():
+    os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
+    lock_path = f"{RUN_RECORDS_FILE}.lock"
+    with open(lock_path, "a+", encoding="utf-8") as lock_file:
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def _record_run_update(run_id: str, patch: dict[str, Any]) -> None:
     if not run_id:
         return
     with RUN_RECORDS_LOCK:
-        payload = _read_run_records()
-        runs = payload.get("runs")
-        if not isinstance(runs, list):
-            runs = []
-        target: dict[str, Any] | None = None
-        for rec in runs:
-            if isinstance(rec, dict) and str(rec.get("run_id") or "") == run_id:
-                target = rec
-                break
-        if target is None:
-            target = {"run_id": run_id, "created_at": _utc_now_iso()}
-            runs.append(target)
-        target.update(patch)
-        target["updated_at"] = _utc_now_iso()
-        if len(runs) > MAX_RUN_RECORDS:
-            runs = runs[-MAX_RUN_RECORDS:]
-        payload["runs"] = runs
-        _write_run_records(payload)
+        with _run_records_file_lock():
+            payload = _read_run_records()
+            runs = payload.get("runs")
+            if not isinstance(runs, list):
+                runs = []
+            target: dict[str, Any] | None = None
+            for rec in runs:
+                if isinstance(rec, dict) and str(rec.get("run_id") or "") == run_id:
+                    target = rec
+                    break
+            if target is None:
+                target = {"run_id": run_id, "created_at": _utc_now_iso()}
+                runs.append(target)
+            target.update(patch)
+            target["updated_at"] = _utc_now_iso()
+            if len(runs) > MAX_RUN_RECORDS:
+                runs = runs[-MAX_RUN_RECORDS:]
+            payload["runs"] = runs
+            _write_run_records(payload)
 
 
 def _claim_run_lease(
@@ -2078,6 +2541,12 @@ def _runner_heartbeat(
     metadata: dict[str, Any] | None = None,
 ) -> None:
     lease_seconds = max(20, min(3600, RUN_HEARTBEAT_SECONDS * 3))
+    merged_metadata: dict[str, Any] = {}
+    if isinstance(metadata, dict):
+        merged_metadata.update(metadata)
+    telemetry = _runner_provider_telemetry_payload(force_refresh=False)
+    if telemetry:
+        merged_metadata["provider_telemetry"] = telemetry
     payload = {
         "runner_id": runner_id,
         "status": str(status or "idle"),
@@ -2088,7 +2557,7 @@ def _runner_heartbeat(
         "active_task_id": active_task_id[:200],
         "active_run_id": active_run_id[:200],
         "last_error": last_error[:2000],
-        "metadata": metadata or {},
+        "metadata": merged_metadata,
     }
     try:
         client.post(f"{BASE}/api/agent/runners/heartbeat", json=payload, timeout=HTTP_TIMEOUT)
@@ -2100,7 +2569,8 @@ def _next_task_attempt(task_id: str) -> int:
     if not task_id:
         return 1
     with RUN_RECORDS_LOCK:
-        payload = _read_run_records()
+        with _run_records_file_lock():
+            payload = _read_run_records()
     runs = payload.get("runs")
     if not isinstance(runs, list):
         return 1
@@ -2637,6 +3107,11 @@ def _try_commit(task_id: str, task_type: str, log: logging.Logger) -> None:
         log.warning("commit_progress error: %s", e)
 
 
+def _uses_claude_cli(command: str) -> bool:
+    """True if command uses Claude Code CLI (claude -p ...)."""
+    return command.strip().startswith("claude ")
+
+
 def _uses_anthropic_cloud(command: str) -> bool:
     """True if command uses Anthropic cloud (e.g. HEAL with claude-3-5-haiku), not Ollama."""
     if "ollama/" in command:
@@ -2649,6 +3124,11 @@ def _uses_cursor_cli(command: str) -> bool:
     return command.strip().startswith("agent ")
 
 
+def _uses_gemini_cli(command: str) -> bool:
+    """True if command uses Gemini CLI."""
+    return command.strip().startswith("gemini ")
+
+
 def _uses_openclaw_cli(command: str) -> bool:
     """True if command uses OpenClaw CLI."""
     stripped = command.strip()
@@ -2659,11 +3139,721 @@ def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
 
-def _codex_auth_mode() -> str:
-    raw = str(os.environ.get("AGENT_CODEX_AUTH_MODE", "api_key")).strip().lower()
+def _uses_openrouter_executor_command(command: str) -> bool:
+    return command.strip().startswith("openrouter-exec ")
+
+
+def _non_root_min_uid() -> int:
+    try:
+        value = int(os.getenv("AGENT_RUN_AS_MIN_UID", "1000"))
+    except Exception:
+        value = 1000
+    return max(1, value)
+
+
+def _non_root_auto_create_enabled() -> bool:
+    return _as_bool(os.getenv("AGENT_RUN_AS_AUTO_CREATE", "1"))
+
+
+def _auto_create_non_root_exec_user(*, min_uid: int, preferred_user: str = "") -> tuple[str, int, int, str]:
+    try:
+        if os.geteuid() != 0:
+            return "", -1, -1, ""
+    except Exception:
+        return "", -1, -1, ""
+    if not _non_root_auto_create_enabled():
+        return "", -1, -1, ""
+
+    configured = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_USER", "")).strip()
+    user_name = configured or str(preferred_user or "").strip() or "runner"
+    if not user_name:
+        user_name = "runner"
+    user_name = re.sub(r"[^a-zA-Z0-9_.-]", "-", user_name).strip("-") or "runner"
+    home_dir = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_HOME", f"/home/{user_name}")).strip() or f"/home/{user_name}"
+    shell = str(os.getenv("AGENT_RUN_AS_AUTO_CREATE_SHELL", "/bin/sh")).strip() or "/bin/sh"
+    try:
+        requested_uid = int(os.getenv("AGENT_RUN_AS_AUTO_CREATE_UID", str(min_uid)))
+    except Exception:
+        requested_uid = min_uid
+    requested_uid = max(min_uid, requested_uid)
+
+    try:
+        existing = pwd.getpwnam(user_name)
+        if int(existing.pw_uid) >= min_uid:
+            home = str(existing.pw_dir or "").strip()
+            if home and os.path.isdir(home):
+                return str(existing.pw_name), int(existing.pw_uid), int(existing.pw_gid), home
+    except KeyError:
+        pass
+    except Exception:
+        pass
+
+    create_commands: list[list[str]] = []
+    if shutil.which("useradd"):
+        create_commands.extend(
+            [
+                ["useradd", "-m", "-d", home_dir, "-s", shell, "-u", str(requested_uid), user_name],
+                ["useradd", "-m", "-d", home_dir, "-s", shell, user_name],
+            ]
+        )
+    elif shutil.which("adduser"):
+        create_commands.extend(
+            [
+                ["adduser", "-D", "-h", home_dir, "-s", shell, "-u", str(requested_uid), user_name],
+                ["adduser", "-D", "-h", home_dir, "-s", shell, user_name],
+            ]
+        )
+    else:
+        return "", -1, -1, ""
+
+    for argv in create_commands:
+        try:
+            proc = subprocess.run(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=20,
+            )
+        except Exception:
+            continue
+        output = f"{proc.stdout or ''}\n{proc.stderr or ''}".lower()
+        if proc.returncode == 0 or "already exists" in output:
+            break
+    else:
+        return "", -1, -1, ""
+
+    try:
+        created = pwd.getpwnam(user_name)
+    except Exception:
+        return "", -1, -1, ""
+    uid = int(created.pw_uid)
+    gid = int(created.pw_gid)
+    if uid < min_uid:
+        return "", -1, -1, ""
+    home = str(created.pw_dir or "").strip() or home_dir
+    try:
+        os.makedirs(home, exist_ok=True)
+    except Exception:
+        pass
+    if not os.path.isdir(home):
+        return "", -1, -1, ""
+    try:
+        os.chown(home, uid, gid)
+    except Exception:
+        pass
+    return str(created.pw_name), uid, gid, home
+
+
+def _resolve_non_root_exec_user(preferred_user: str) -> tuple[str, int, int, str]:
+    min_uid = _non_root_min_uid()
+    candidates: list[str] = []
+    preferred = str(preferred_user or "").strip()
+    if preferred:
+        candidates.append(preferred)
+    fallback_raw = str(os.getenv("AGENT_RUN_AS_USER_FALLBACKS", "agent,app,coder,runner,ubuntu")).strip()
+    if fallback_raw:
+        for raw in fallback_raw.split(","):
+            candidate = str(raw or "").strip()
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+    for candidate in candidates:
+        try:
+            row = pwd.getpwnam(candidate)
+        except KeyError:
+            continue
+        except Exception:
+            continue
+        if int(row.pw_uid) < min_uid:
+            continue
+        home = str(row.pw_dir or "").strip()
+        if not home or not os.path.isdir(home):
+            continue
+        return str(row.pw_name), int(row.pw_uid), int(row.pw_gid), home
+
+    if not _as_bool(os.getenv("AGENT_RUN_AS_AUTO_DISCOVER", "1")):
+        return _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
+
+    try:
+        for row in sorted(pwd.getpwall(), key=lambda item: int(item.pw_uid)):
+            uid = int(row.pw_uid)
+            if uid < min_uid:
+                continue
+            shell = str(row.pw_shell or "").strip().lower()
+            if shell.endswith("nologin") or shell.endswith("false"):
+                continue
+            home = str(row.pw_dir or "").strip()
+            if not home or not os.path.isdir(home):
+                continue
+            return str(row.pw_name), uid, int(row.pw_gid), home
+    except Exception:
+        return _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
+
+    created_user = _auto_create_non_root_exec_user(min_uid=min_uid, preferred_user=preferred)
+    if created_user[0]:
+        return created_user
+    return "", -1, -1, ""
+
+
+def _prepare_non_root_execution_for_command(
+    *,
+    command: str,
+    env: dict[str, str],
+) -> tuple[bool, str, Callable[[], None] | None]:
+    if "--dangerously-skip-permissions" not in str(command or ""):
+        return True, "", None
+    try:
+        if os.geteuid() != 0:
+            return True, "", None
+    except Exception:
+        return True, "", None
+
+    preferred = str(os.getenv("AGENT_RUN_AS_USER", "")).strip()
+    user_name, uid, gid, home = _resolve_non_root_exec_user(preferred)
+    if not user_name or uid <= 0:
+        return False, "runner_non_root_user_unavailable", None
+
+    env["HOME"] = home
+    env["USER"] = user_name
+    env["LOGNAME"] = user_name
+    local_bin = os.path.join(home, ".local", "bin")
+    current_path = str(env.get("PATH", ""))
+    filtered_parts = [part for part in current_path.split(os.pathsep) if part and not part.startswith("/root/")]
+    current_path = os.pathsep.join(filtered_parts)
+    if local_bin and not current_path.startswith(local_bin):
+        env["PATH"] = f"{local_bin}{os.pathsep}{current_path}" if current_path else local_bin
+
+    def _demote() -> None:
+        os.setgid(gid)
+        try:
+            os.initgroups(user_name, gid)
+        except Exception:
+            pass
+        os.setuid(uid)
+
+    return True, f"runner_non_root_exec_user:{user_name}:{uid}:{gid}", _demote
+
+
+def _cli_auto_install_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST") and not _as_bool(os.getenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "0")):
+        return False
+    return _as_bool(os.getenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1"))
+
+
+def _cli_install_timeout_seconds() -> int:
+    try:
+        value = int(os.getenv("AGENT_RUNNER_INSTALL_TIMEOUT_SECONDS", "300"))
+    except Exception:
+        value = 300
+    return max(30, min(value, 900))
+
+
+def _cli_install_provider_for_command(command: str) -> str:
+    if _uses_cursor_cli(command):
+        return "cursor"
+    if _uses_claude_cli(command):
+        return "claude"
+    if _uses_gemini_cli(command):
+        return "gemini"
+    if _uses_codex_cli(command):
+        return "codex"
+    return ""
+
+
+def _cli_binary_for_provider(provider: str) -> str:
+    mapping = {
+        "cursor": "agent",
+        "claude": "claude",
+        "gemini": "gemini",
+        "codex": "codex",
+    }
+    return mapping.get(provider, "")
+
+
+def _cli_install_commands(provider: str) -> list[str]:
+    def _package_bootstrap(packages: list[str]) -> str:
+        joined = " ".join(packages)
+        return (
+            "if command -v apt-get >/dev/null 2>&1; then "
+            "apt-get update && DEBIAN_FRONTEND=noninteractive "
+            f"apt-get install -y --no-install-recommends {joined}; "
+            "elif command -v apk >/dev/null 2>&1; then "
+            f"apk add --no-cache {joined}; "
+            "elif command -v dnf >/dev/null 2>&1; then "
+            f"dnf install -y {joined}; "
+            "elif command -v yum >/dev/null 2>&1; then "
+            f"yum install -y {joined}; "
+            "else echo 'no_supported_pkg_manager'; exit 1; fi"
+        )
+
+    ensure_curl_cmd = (
+        "if ! command -v curl >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['curl'])}; "
+        "fi"
+    )
+    ensure_node_cmd = (
+        "if ! command -v npm >/dev/null 2>&1; then "
+        f"{_package_bootstrap(['nodejs', 'npm'])}; "
+        "fi"
+    )
+
+    env_overrides = {
+        "cursor": "AGENT_RUNNER_CURSOR_INSTALL_COMMANDS",
+        "claude": "AGENT_RUNNER_CLAUDE_INSTALL_COMMANDS",
+        "gemini": "AGENT_RUNNER_GEMINI_INSTALL_COMMANDS",
+        "codex": "AGENT_RUNNER_CODEX_INSTALL_COMMANDS",
+    }
+    default_commands = {
+        "cursor": [
+            ensure_curl_cmd,
+            "curl -fsSL https://cursor.com/install | bash",
+        ],
+        "claude": [
+            ensure_curl_cmd,
+            ensure_node_cmd,
+            "curl -fsSL https://claude.ai/install.sh | bash",
+            "npm install -g @anthropic-ai/claude-code",
+        ],
+        "gemini": [
+            ensure_node_cmd,
+            "npm install -g @google/gemini-cli",
+        ],
+        "codex": [
+            ensure_node_cmd,
+            "npm install -g @openai/codex",
+        ],
+    }
+
+    override_key = env_overrides.get(provider, "")
+    override_raw = str(os.getenv(override_key, "")).strip() if override_key else ""
+    if override_raw:
+        return [item.strip() for item in override_raw.split("||") if item.strip()]
+    return list(default_commands.get(provider, []))
+
+
+def _candidate_cli_paths(binary: str, env: dict[str, str]) -> list[str]:
+    home = str(env.get("HOME", "")).strip() or str(Path.home())
+    candidates = [
+        os.path.join(home, ".local", "bin", binary),
+        os.path.join(home, ".cursor", "bin", binary),
+        os.path.join(home, ".cursor", "agent", "bin", binary),
+        os.path.join(home, ".npm-global", "bin", binary),
+        os.path.join(home, "bin", binary),
+        f"/usr/local/bin/{binary}",
+        f"/usr/bin/{binary}",
+    ]
+    out: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return out
+
+
+def _promote_binary_to_shared_path(binary: str, source_path: str) -> str:
+    for target in (f"/usr/local/bin/{binary}", f"/usr/bin/{binary}"):
+        try:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copy2(source_path, target)
+            os.chmod(target, 0o755)
+            return target
+        except Exception:
+            continue
+    return ""
+
+
+def _resolve_cli_binary(binary: str, env: dict[str, str]) -> str:
+    discovered = shutil.which(binary, path=str(env.get("PATH", "")))
+    if discovered:
+        return discovered
+    for candidate in _candidate_cli_paths(binary, env):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return ""
+
+
+def _cursor_binary_runtime_layout(binary_path: str) -> tuple[bool, str]:
+    normalized = _abs_expanded_path(binary_path)
+    if not normalized:
+        return False, "cursor_binary_path_missing"
+    if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+        return False, "cursor_binary_missing_or_not_executable"
+    real_binary = _abs_expanded_path(os.path.realpath(normalized)) or normalized
+    runtime_dir = os.path.dirname(real_binary)
+    index_js = os.path.join(runtime_dir, "index.js")
+    node_bin = os.path.join(runtime_dir, "node")
+    if os.path.isfile(index_js) and os.path.isfile(node_bin) and os.access(node_bin, os.X_OK):
+        return True, f"cursor_runtime_layout_ok:{runtime_dir}"
+    return False, f"cursor_runtime_layout_missing:{runtime_dir}"
+
+
+def _resolve_cursor_cli_binary(binary: str, env: dict[str, str]) -> tuple[str, bool, str]:
+    candidates = _candidate_cli_paths(binary, env)
+    discovered = shutil.which(binary, path=str(env.get("PATH", "")))
+    if discovered:
+        discovered_normalized = _abs_expanded_path(discovered)
+        if discovered_normalized and discovered_normalized not in candidates:
+            candidates.append(discovered_normalized)
+
+    fallback = ""
+    fallback_detail = "cursor_binary_missing"
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if not normalized:
+            continue
+        if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+            continue
+        if not fallback:
+            fallback = normalized
+        layout_ok, layout_detail = _cursor_binary_runtime_layout(normalized)
+        if layout_ok:
+            return normalized, True, layout_detail
+        fallback_detail = layout_detail
+
+    if fallback:
+        return fallback, False, fallback_detail
+    if discovered:
+        normalized = _abs_expanded_path(discovered)
+        if normalized:
+            layout_ok, layout_detail = _cursor_binary_runtime_layout(normalized)
+            return normalized, bool(layout_ok), layout_detail
+    return "", False, "cursor_binary_missing"
+
+
+def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
+    directory = os.path.dirname(binary_path)
+    if not directory:
+        return
+    current = str(env.get("PATH", ""))
+    parts = [item for item in current.split(os.pathsep) if item]
+    if directory not in parts:
+        env["PATH"] = directory + (os.pathsep + current if current else "")
+    process_current = str(os.environ.get("PATH", ""))
+    process_parts = [item for item in process_current.split(os.pathsep) if item]
+    if directory not in process_parts:
+        os.environ["PATH"] = directory + (os.pathsep + process_current if process_current else "")
+
+
+def _resolve_node_binary(env: dict[str, str]) -> str:
+    def _is_node_shim(path: str) -> bool:
+        lowered = str(path or "").lower()
+        return "/mise/shims/" in lowered or "/.asdf/shims/" in lowered
+
+    def _resolve_node_shim_target(path: str) -> str:
+        lowered = str(path or "").lower()
+        commands: list[list[str]] = []
+        if "/mise/shims/" in lowered:
+            commands.extend(
+                [
+                    ["mise", "which", "node"],
+                    ["/mise/bin/mise", "which", "node"],
+                ]
+            )
+        elif "/.asdf/shims/" in lowered:
+            commands.extend(
+                [
+                    ["asdf", "which", "nodejs"],
+                    ["asdf", "which", "node"],
+                ]
+            )
+        for argv in commands:
+            try:
+                completed = subprocess.run(
+                    argv,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True,
+                    timeout=6,
+                    env=env,
+                )
+            except Exception:
+                continue
+            if completed.returncode != 0:
+                continue
+            candidate = _abs_expanded_path(str(completed.stdout or "").strip())
+            if not candidate:
+                continue
+            if candidate == path:
+                continue
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+        return ""
+
+    def _usable_binary(path: str, *, allow_shim: bool = False) -> str:
+        normalized = _abs_expanded_path(path)
+        if not normalized:
+            return ""
+        if not os.path.isfile(normalized) or not os.access(normalized, os.X_OK):
+            return ""
+        resolved = _abs_expanded_path(os.path.realpath(normalized))
+        active_path = resolved or normalized
+        if _is_node_shim(active_path):
+            concrete = _resolve_node_shim_target(active_path)
+            if concrete:
+                return concrete
+            if not allow_shim:
+                return ""
+        return normalized
+
+    for candidate in ("/usr/bin/node", "/bin/node", "/opt/homebrew/bin/node", "/usr/local/bin/node"):
+        normalized = _abs_expanded_path(candidate)
+        usable = _usable_binary(normalized)
+        if usable:
+            return usable
+    discovered = shutil.which("node", path=str(env.get("PATH", "")))
+    if discovered:
+        normalized = _abs_expanded_path(discovered)
+        usable = _usable_binary(normalized)
+        if usable:
+            return usable
+        usable_shim = _usable_binary(normalized, allow_shim=True)
+        if usable_shim:
+            return usable_shim
+    return ""
+
+
+def _cursor_node_shim_path(*, cursor_binary: str = "") -> str:
+    configured = _abs_expanded_path(str(os.getenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", "")).strip())
+    if configured:
+        return configured
+    cursor_path = _abs_expanded_path(cursor_binary)
+    if cursor_path:
+        resolved_cursor_path = _abs_expanded_path(os.path.realpath(cursor_path)) or cursor_path
+        cursor_dir = os.path.dirname(resolved_cursor_path)
+        if cursor_dir:
+            return os.path.join(cursor_dir, "node")
+    return "/usr/local/bin/node"
+
+
+def _node_binary_accepts_use_system_ca(node_binary: str, *, env: dict[str, str]) -> bool:
+    binary = _abs_expanded_path(node_binary)
+    if not binary:
+        return False
+    if not os.path.isfile(binary) or not os.access(binary, os.X_OK):
+        return False
+    try:
+        completed = subprocess.run(
+            [binary, "--use-system-ca", "-e", "process.exit(0)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=8,
+            env=env,
+        )
+    except Exception:
+        return False
+    return completed.returncode == 0
+
+
+def _write_cursor_node_compat_wrapper(*, shim_path: str, node_binary: str) -> None:
+    quoted_binary = shlex.quote(node_binary)
+    content = (
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "while [ \"${1-}\" = \"--use-system-ca\" ]; do\n"
+        "  shift\n"
+        "done\n"
+        f"exec {quoted_binary} \"$@\"\n"
+    )
+    with open(shim_path, "w", encoding="utf-8") as file:
+        file.write(content)
+    os.chmod(shim_path, 0o755)
+
+
+def _ensure_cursor_node_shim(*, env: dict[str, str], cursor_binary: str = "") -> tuple[bool, str]:
+    shim_path = _cursor_node_shim_path(cursor_binary=cursor_binary)
+    shim_exists = os.path.lexists(shim_path)
+    if os.path.isfile(shim_path) and os.access(shim_path, os.X_OK):
+        if _node_binary_accepts_use_system_ca(shim_path, env=env):
+            return True, f"cursor_node_shim_present:{shim_path}"
+        shim_exists = True
+    node_binary = _resolve_node_binary(env)
+    if not node_binary:
+        return False, "cursor_node_missing"
+    supports_use_system_ca = _node_binary_accepts_use_system_ca(node_binary, env=env)
+    try:
+        shim_dir = os.path.dirname(shim_path) or "."
+        os.makedirs(shim_dir, exist_ok=True)
+        if os.path.lexists(shim_path):
+            os.remove(shim_path)
+        if supports_use_system_ca:
+            os.symlink(node_binary, shim_path)
+        else:
+            _write_cursor_node_compat_wrapper(shim_path=shim_path, node_binary=node_binary)
+    except Exception as exc:
+        return False, f"cursor_node_shim_failed:{type(exc).__name__}"
+    if not _node_binary_accepts_use_system_ca(shim_path, env=env):
+        return False, "cursor_node_shim_failed:unsupported_use_system_ca"
+    if supports_use_system_ca:
+        event = "cursor_node_shim_repaired" if shim_exists else "cursor_node_shim_created"
+    else:
+        event = "cursor_node_shim_repaired_compat" if shim_exists else "cursor_node_shim_created_compat"
+    return True, f"{event}:{shim_path}->{node_binary}"
+
+
+def _run_cli_install_command(command: str, *, env: dict[str, str], timeout_seconds: int) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-lc", command],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        return False, str(exc)
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    combined = stdout if stdout else stderr
+    if not combined:
+        combined = f"exit_code={result.returncode}"
+    return result.returncode == 0, combined[:400]
+
+
+def _ensure_cli_for_command(
+    *,
+    command: str,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    provider = _cli_install_provider_for_command(command)
+    if not provider:
+        return True, ""
+    binary = _cli_binary_for_provider(provider)
+    if not binary:
+        return True, ""
+
+    preinstall_notes: list[str] = []
+    cursor_layout_ok = True
+    cursor_layout_detail = ""
+    if provider == "cursor":
+        existing, cursor_layout_ok, cursor_layout_detail = _resolve_cursor_cli_binary(binary, env)
+    else:
+        existing = _resolve_cli_binary(binary, env)
+    if existing:
+        try:
+            if os.geteuid() == 0 and provider != "cursor":
+                promoted = _promote_binary_to_shared_path(binary, existing)
+                if promoted:
+                    existing = promoted
+        except Exception:
+            pass
+        _prepend_cli_path(existing, env)
+        if provider == "cursor":
+            shim_ok, shim_detail = _ensure_cursor_node_shim(env=env, cursor_binary=existing)
+            runtime_unhealthy_detail = ""
+            if not shim_ok:
+                runtime_unhealthy_detail = shim_detail
+            elif not cursor_layout_ok:
+                runtime_unhealthy_detail = cursor_layout_detail
+            if not runtime_unhealthy_detail:
+                return True, f"runner_cli_present:{provider}:{binary}:{existing}:{shim_detail}:{cursor_layout_detail}"
+            if not _cli_auto_install_enabled():
+                return False, (
+                    f"runner_cli_present_but_runtime_unhealthy:{provider}:{binary}:{runtime_unhealthy_detail}"
+                )
+            preinstall_notes.append(f"cursor_runtime:{runtime_unhealthy_detail}")
+        else:
+            return True, f"runner_cli_present:{provider}:{binary}:{existing}"
+
+    if not _cli_auto_install_enabled():
+        return False, f"runner_cli_missing_auto_install_disabled:{provider}:{binary}"
+
+    commands = _cli_install_commands(provider)
+    if not commands:
+        return False, f"runner_cli_missing_no_install_commands:{provider}:{binary}"
+
+    timeout_seconds = _cli_install_timeout_seconds()
+    notes: list[str] = list(preinstall_notes)
+    for index, install_command in enumerate(commands, start=1):
+        ok, detail = _run_cli_install_command(install_command, env=env, timeout_seconds=timeout_seconds)
+        notes.append(f"cmd{index}:{'ok' if ok else 'fail'}:{detail}")
+        if not ok:
+            continue
+        if provider == "cursor":
+            resolved, resolved_layout_ok, resolved_layout_detail = _resolve_cursor_cli_binary(binary, env)
+        else:
+            resolved = _resolve_cli_binary(binary, env)
+            resolved_layout_ok = True
+            resolved_layout_detail = ""
+        if resolved:
+            try:
+                if os.geteuid() == 0 and provider != "cursor":
+                    promoted = _promote_binary_to_shared_path(binary, resolved)
+                    if promoted:
+                        resolved = promoted
+            except Exception:
+                pass
+            _prepend_cli_path(resolved, env)
+            if provider == "cursor":
+                shim_ok, shim_detail = _ensure_cursor_node_shim(env=env, cursor_binary=resolved)
+                if not shim_ok:
+                    notes.append(f"cursor_runtime:{shim_detail}")
+                    continue
+                if not resolved_layout_ok:
+                    notes.append(f"cursor_runtime:{resolved_layout_detail}")
+                    continue
+                return True, (
+                    f"runner_cli_install_ok:{provider}:{binary}:{resolved}:{shim_detail}:{resolved_layout_detail}"
+                )
+            return True, f"runner_cli_install_ok:{provider}:{binary}:{resolved}"
+
+    log.warning("task=%s cli install failed provider=%s notes=%s", task_id, provider, "; ".join(notes)[:500])
+    return False, f"runner_cli_install_failed:{provider}:{binary}:{'; '.join(notes)[:500]}"
+
+
+def _prepare_cli_command_for_exec(command: str) -> tuple[str | list[str], bool, str]:
+    """Run supported CLI commands via argv to avoid shell expansion in prompt text."""
+    cmd = str(command or "")
+    if not (
+        _uses_codex_cli(cmd)
+        or _uses_cursor_cli(cmd)
+        or _uses_gemini_cli(cmd)
+        or _uses_openclaw_cli(cmd)
+        or _uses_claude_cli(cmd)
+    ):
+        return cmd, True, "shell"
+    try:
+        argv = shlex.split(cmd, posix=True)
+    except ValueError:
+        return cmd, True, "shell_parse_error"
+    if not argv:
+        return cmd, True, "shell_empty_argv"
+    if argv[0] in {"sh", "bash", "/bin/sh", "/bin/bash"}:
+        return cmd, True, "shell_wrapper"
+    return argv, False, "argv"
+
+
+def _normalize_oauth_only_auth_mode(raw: Any, *, default: str = "oauth", allowed: set[str] | None = None) -> str:
+    mode = str(raw or "").strip().lower()
+    allowed_modes = allowed or {"oauth"}
+    if mode in allowed_modes:
+        return mode
+    return default
+
+
+def _normalize_codex_auth_mode(raw: Any, *, default: str = "oauth") -> str:
+    mode = str(raw or "").strip().lower()
+    if mode in CODEX_AUTH_MODE_VALUES:
+        return mode
+    return default
+
+
+def _codex_auth_mode(override: str | None = None) -> str:
+    raw = override if str(override or "").strip() else os.environ.get("AGENT_CODEX_AUTH_MODE", "oauth")
     if raw in CODEX_AUTH_MODE_VALUES:
-        return raw
-    return "api_key"
+        return str(raw).strip().lower()
+    return _normalize_codex_auth_mode(raw, default="oauth")
 
 
 def _abs_expanded_path(path: str) -> str:
@@ -2671,6 +3861,188 @@ def _abs_expanded_path(path: str) -> str:
     if not value:
         return ""
     return os.path.abspath(os.path.expanduser(value))
+
+
+def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
+    if not str(value or "").strip():
+        return
+    if str(env.get(key, "")).strip():
+        return
+    env[key] = value
+
+
+def _codex_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    if not codex_home:
+        codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
+    if codex_home:
+        return _abs_expanded_path(os.path.join(codex_home, "auth.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".codex", "auth.json"))
+    return ""
+
+
+def _find_nested_token_value(node: Any, token_key: str) -> str:
+    if isinstance(node, dict):
+        direct = node.get(token_key)
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+        for value in node.values():
+            found = _find_nested_token_value(value, token_key)
+            if found:
+                return found
+        return ""
+    if isinstance(node, list):
+        for item in node:
+            found = _find_nested_token_value(item, token_key)
+            if found:
+                return found
+    return ""
+
+
+def _find_first_nested_token_value(node: Any, token_keys: tuple[str, ...]) -> str:
+    for token_key in token_keys:
+        found = _find_nested_token_value(node, token_key)
+        if found:
+            return found
+    return ""
+
+
+def _extract_codex_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_nested_token_value(payload, "access_token")
+    refresh_token = _find_nested_token_value(payload, "refresh_token")
+    return access_token, refresh_token
+
+
+def _read_json_object_file(path: str) -> dict[str, Any]:
+    candidate = _abs_expanded_path(path)
+    if not candidate:
+        return {}
+    try:
+        with open(candidate, encoding="utf-8") as file:
+            payload = json.load(file)
+    except Exception:
+        return {}
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def _bootstrap_codex_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_codex_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CODEX_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _codex_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_codex_oauth_tokens(existing_payload)
+    if existing_access_token or existing_refresh_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing codex oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+            return False, f"oauth_session_preserved_existing:{target_path}"
+    existing_had_tokens = bool(existing_access_token or existing_refresh_token)
+    if existing_had_tokens and overwrite_existing:
+        env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+
+    compact = "".join(encoded.split())
+    if not compact:
+        return False, "oauth_session_b64_empty"
+    padded = compact + ("=" * ((4 - (len(compact) % 4)) % 4))
+
+    decoded_text = ""
+    decode_errors: list[str] = []
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            decoded_text = decoder(padded.encode("utf-8")).decode("utf-8")
+            if decoded_text:
+                break
+        except Exception as exc:
+            decode_errors.append(type(exc).__name__)
+    if not decoded_text:
+        detail = "/".join(decode_errors) if decode_errors else "unknown"
+        log.warning("task=%s failed to decode AGENT_CODEX_OAUTH_SESSION_B64 detail=%s", task_id, detail)
+        return False, f"oauth_session_b64_decode_failed:{detail[:80]}"
+
+    try:
+        payload = json.loads(decoded_text)
+    except Exception as exc:
+        return False, f"oauth_session_json_invalid:{type(exc).__name__}"
+    if not isinstance(payload, dict):
+        return False, "oauth_session_json_not_object"
+
+    access_token, refresh_token = _extract_codex_oauth_tokens(payload)
+    if not refresh_token and not access_token:
+        return False, "oauth_session_missing_tokens"
+
+    if access_token:
+        payload["access_token"] = access_token
+    if refresh_token:
+        payload["refresh_token"] = refresh_token
+    payload.setdefault("auth_mode", "oauth")
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+    if existing_had_tokens and overwrite_existing:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_codex_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_codex_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CODEX_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_codex_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
 
 
 def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
@@ -2686,11 +4058,13 @@ def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
         seen.add(candidate)
         candidates.append(candidate)
 
-    explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         _append(explicit_session_file)
 
-    codex_home = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
     if not codex_home:
         codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
     if codex_home:
@@ -2718,11 +4092,15 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
         except OSError:
             continue
 
-    codex_binary = shutil.which("codex")
-    if codex_binary:
+    status_commands = (
+        (["codex", "login", "status"], "codex_login_status"),
+        (["codex", "auth", "status"], "codex_auth_status"),
+    )
+    success_markers = ("logged in", "authenticated", "oauth")
+    for argv, source in status_commands:
         try:
             completed = subprocess.run(
-                ["codex", "auth", "status"],
+                argv,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=False,
@@ -2730,10 +4108,13 @@ def _codex_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
                 timeout=8,
                 env=env,
             )
-            if completed.returncode == 0:
-                return True, "codex_auth_status"
         except Exception:
-            pass
+            continue
+        if completed.returncode != 0:
+            continue
+        output = f"{completed.stdout or ''}\n{completed.stderr or ''}".lower()
+        if any(marker in output for marker in success_markers):
+            return True, source
 
     if candidates:
         return False, f"missing_session_file:{candidates[0]}"
@@ -2745,46 +4126,49 @@ def _configure_codex_cli_environment(
     env: dict[str, str],
     task_id: str,
     log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    requested_mode = _codex_auth_mode()
+    requested_mode_raw = str((task_ctx or {}).get("runner_codex_auth_mode") or "").strip().lower()
+    requested_mode = _codex_auth_mode(requested_mode_raw or None)
     codex_home_override = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
     if codex_home_override:
         env["CODEX_HOME"] = _abs_expanded_path(codex_home_override)
 
-    openai_api_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
-    openai_admin_key = str(os.environ.get("OPENAI_ADMIN_API_KEY", "")).strip()
-    api_key_present = bool(openai_api_key or openai_admin_key)
+    oauth_session_bootstrapped = False
+    oauth_session_bootstrap_detail = ""
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing codex auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_codex_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    env.pop("OPENAI_API_KEY", None)
+    env.pop("OPENAI_ADMIN_API_KEY", None)
+    env.pop("OPENAI_API_BASE", None)
+    env.pop("OPENAI_BASE_URL", None)
+
     oauth_available, oauth_source = _codex_oauth_session_status(env)
-    allow_oauth_fallback = _as_bool(os.environ.get("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0"))
-
-    effective_mode = requested_mode
-    if requested_mode == "auto":
-        effective_mode = "api_key" if api_key_present else ("oauth" if oauth_available else "api_key")
-
-    if effective_mode == "oauth":
-        if allow_oauth_fallback:
-            env.setdefault("OPENAI_API_KEY", openai_api_key)
-            env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-            env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
-        else:
-            env.pop("OPENAI_API_KEY", None)
-            env.pop("OPENAI_ADMIN_API_KEY", None)
-            env.pop("OPENAI_API_BASE", None)
-            env.pop("OPENAI_BASE_URL", None)
-    else:
-        env.setdefault("OPENAI_API_KEY", openai_api_key)
-        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"))
-        env.setdefault("OPENAI_BASE_URL", env.get("OPENAI_API_BASE"))
-
-    oauth_missing = bool(effective_mode == "oauth" and not oauth_available and not allow_oauth_fallback)
+    oauth_missing = bool(not oauth_available)
     auth_state = {
         "requested_mode": requested_mode,
         "effective_mode": effective_mode,
         "oauth_session": bool(oauth_available),
         "oauth_source": oauth_source,
-        "api_key_present": bool(api_key_present),
-        "oauth_fallback_allowed": bool(allow_oauth_fallback),
+        "api_key_present": False,
+        "oauth_fallback_allowed": False,
         "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+        "api_key_login_bootstrapped": False,
+        "api_key_login_source": "",
     }
     if oauth_missing:
         log.warning(
@@ -2793,15 +4177,894 @@ def _configure_codex_cli_environment(
             oauth_source,
         )
     log.info(
-        "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s api_key_present=%s",
+        "task=%s using codex CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
         task_id,
         requested_mode,
         effective_mode,
         bool(oauth_available),
         oauth_source,
-        bool(api_key_present),
+        oauth_session_bootstrap_detail or "none",
     )
     return auth_state
+
+
+def _oauth_session_b64_from_task_or_env(
+    *,
+    task_ctx: dict[str, Any] | None,
+    task_ctx_key: str,
+    env: dict[str, str],
+    env_key: str,
+) -> str:
+    task_value = str((task_ctx or {}).get(task_ctx_key) or "").strip()
+    if task_value:
+        return task_value
+    env_value = str(env.get(env_key, "")).strip()
+    if env_value:
+        return env_value
+    return str(os.environ.get(env_key, "")).strip()
+
+
+def _decode_oauth_session_b64_payload(
+    *,
+    encoded: str,
+    task_id: str,
+    log: logging.Logger,
+    env_key: str,
+) -> tuple[dict[str, Any], str]:
+    compact = "".join(encoded.split())
+    if not compact:
+        return {}, "oauth_session_b64_empty"
+    padded = compact + ("=" * ((4 - (len(compact) % 4)) % 4))
+
+    decoded_text = ""
+    decode_errors: list[str] = []
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            decoded_text = decoder(padded.encode("utf-8")).decode("utf-8")
+            if decoded_text:
+                break
+        except Exception as exc:
+            decode_errors.append(type(exc).__name__)
+    if not decoded_text:
+        detail = "/".join(decode_errors) if decode_errors else "unknown"
+        log.warning("task=%s failed to decode %s detail=%s", task_id, env_key, detail)
+        return {}, f"oauth_session_b64_decode_failed:{detail[:80]}"
+
+    try:
+        payload = json.loads(decoded_text)
+    except Exception as exc:
+        return {}, f"oauth_session_json_invalid:{type(exc).__name__}"
+    if not isinstance(payload, dict):
+        return {}, "oauth_session_json_not_object"
+    return payload, ""
+
+
+def _cursor_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    config_dir = str(env.get("CURSOR_CONFIG_DIR", "")).strip() or str(os.environ.get("CURSOR_CONFIG_DIR", "")).strip()
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "auth.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    xdg_config_home = str(env.get("XDG_CONFIG_HOME", "")).strip() or str(os.environ.get("XDG_CONFIG_HOME", "")).strip()
+    if not xdg_config_home and home:
+        xdg_config_home = os.path.join(home, ".config")
+
+    names_raw = (
+        str(env.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
+        or str(os.environ.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
+        or "cagent,cursor"
+    )
+    names = [item.strip() for item in names_raw.split(",") if item.strip()]
+    if not names:
+        names = ["cagent", "cursor"]
+
+    candidates: list[str] = []
+    for name in names:
+        if xdg_config_home:
+            candidates.append(os.path.join(xdg_config_home, name, "auth.json"))
+        if home:
+            candidates.append(os.path.join(home, f".{name}", "auth.json"))
+
+    for candidate in candidates:
+        normalized = _abs_expanded_path(candidate)
+        if normalized and os.path.isfile(normalized):
+            return normalized
+    if candidates:
+        return _abs_expanded_path(candidates[0])
+    return ""
+
+
+def _extract_cursor_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _cursor_oauth_session_candidates(env: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    config_dir = str(env.get("CURSOR_CONFIG_DIR", "")).strip() or str(os.environ.get("CURSOR_CONFIG_DIR", "")).strip()
+    if config_dir:
+        _append(os.path.join(config_dir, "auth.json"))
+
+    target = _cursor_oauth_session_target_path(env)
+    if target:
+        _append(target)
+    return candidates
+
+
+def _cursor_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    candidates = _cursor_oauth_session_candidates(env)
+    for candidate in candidates:
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        access_token, refresh_token = _extract_cursor_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{candidate}"
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_cursor_oauth_session"
+
+
+def _bootstrap_cursor_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_cursor_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _cursor_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_cursor_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing cursor oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_CURSOR_OAUTH_SESSION_FILE"] = target_path
+            env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_cursor_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["accessToken"] = access_token
+    payload["refreshToken"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CURSOR_OAUTH_SESSION_FILE"] = target_path
+    env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_cursor_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_cursor_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CURSOR_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_cursor_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
+
+
+def _configure_cursor_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_cursor_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_CURSOR_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=CURSOR_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing cursor auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_cursor_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    env.pop("CURSOR_API_KEY", None)
+    env.pop("OPENAI_API_KEY", None)
+    env.pop("OPENAI_ADMIN_API_KEY", None)
+    env.pop("OPENAI_API_BASE", None)
+    env.pop("OPENAI_BASE_URL", None)
+
+    target_path = _cursor_oauth_session_target_path(env)
+    if target_path:
+        env["CURSOR_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+
+    oauth_available, oauth_source = _cursor_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s cursor oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using cursor CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+    )
+    return auth_state
+
+
+def _configure_gemini_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_gemini_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_GEMINI_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=GEMINI_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing gemini auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+    gemini_config_override = str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+    if gemini_config_override:
+        env["AGENT_GEMINI_CONFIG_DIR"] = _abs_expanded_path(gemini_config_override)
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_gemini_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    settings_configured, settings_config_detail = _ensure_gemini_oauth_settings(
+        env=env,
+        task_id=task_id,
+        log=log,
+    )
+
+    env.pop("GEMINI_API_KEY", None)
+    env.pop("GOOGLE_API_KEY", None)
+
+    target_oauth_path = _gemini_oauth_creds_target_path(env)
+    if target_oauth_path:
+        env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_oauth_path
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        env["AGENT_GEMINI_CONFIG_DIR"] = config_dir
+
+    oauth_available, oauth_source = _gemini_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+        "oauth_settings_configured": bool(settings_configured),
+        "oauth_settings_config_detail": settings_config_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s gemini oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using gemini CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s settings=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+        settings_config_detail or "none",
+    )
+    return auth_state
+
+
+def _gemini_config_dir(env: dict[str, str]) -> str:
+    config_dir = (
+        str(env.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+        or str(env.get("GEMINI_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("GEMINI_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        return _abs_expanded_path(config_dir)
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".gemini"))
+    return ""
+
+
+def _gemini_oauth_creds_target_path(env: dict[str, str]) -> str:
+    explicit = str(env.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
+    if not explicit:
+        explicit = str(os.environ.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
+    if explicit:
+        return _abs_expanded_path(explicit)
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "oauth_creds.json"))
+    return ""
+
+
+def _gemini_settings_target_path(env: dict[str, str]) -> str:
+    explicit = str(env.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
+    if not explicit:
+        explicit = str(os.environ.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
+    if explicit:
+        return _abs_expanded_path(explicit)
+    config_dir = _gemini_config_dir(env)
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, "settings.json"))
+    return ""
+
+
+def _extract_gemini_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token", "oauth_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _gemini_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    target = _gemini_oauth_creds_target_path(env)
+    if not target:
+        return False, "missing_gemini_oauth_session"
+    payload = _read_json_object_file(target)
+    if payload:
+        access_token, refresh_token = _extract_gemini_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{target}"
+    return False, f"missing_session_file:{target}"
+
+
+def _bootstrap_gemini_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_gemini_oauth_session_b64",
+        env=env,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _gemini_oauth_creds_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_gemini_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing gemini oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_path
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_gemini_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["access_token"] = access_token
+    payload["refresh_token"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_GEMINI_OAUTH_CREDS_FILE"] = target_path
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_gemini_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_gemini_oauth_session_b64",
+        env=env,
+        env_key="AGENT_GEMINI_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_gemini_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
+
+
+def _ensure_gemini_oauth_settings(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    settings_path = _gemini_settings_target_path(env)
+    if not settings_path:
+        return False, "oauth_settings_target_missing"
+    payload = _read_json_object_file(settings_path)
+    if not payload:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    security = payload.get("security")
+    if not isinstance(security, dict):
+        security = {}
+    auth = security.get("auth")
+    if not isinstance(auth, dict):
+        auth = {}
+
+    selected = str(auth.get("selectedType") or "").strip().lower()
+    enforced = str(auth.get("enforcedType") or "").strip().lower()
+    desired = "oauth-personal"
+    if selected == desired and enforced == desired:
+        env["AGENT_GEMINI_SETTINGS_FILE"] = settings_path
+        return False, f"oauth_settings_preserved_existing:{settings_path}"
+
+    auth["selectedType"] = desired
+    auth["enforcedType"] = desired
+    security["auth"] = auth
+    payload["security"] = security
+
+    try:
+        os.makedirs(os.path.dirname(settings_path) or ".", exist_ok=True)
+        with open(settings_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(settings_path, 0o600)
+    except Exception as exc:
+        log.warning("task=%s failed to configure gemini oauth settings detail=%s", task_id, type(exc).__name__)
+        return False, f"oauth_settings_write_failed:{type(exc).__name__}"
+
+    env["AGENT_GEMINI_SETTINGS_FILE"] = settings_path
+    return True, f"oauth_settings_bootstrapped:{settings_path}"
+
+
+def _claude_oauth_session_target_path(env: dict[str, str]) -> str:
+    explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        return _abs_expanded_path(explicit_session_file)
+
+    config_dir = (
+        str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        return _abs_expanded_path(os.path.join(config_dir, ".credentials.json"))
+
+    home = str(env.get("HOME", "")).strip() or str(os.environ.get("HOME", "")).strip()
+    if home:
+        return _abs_expanded_path(os.path.join(home, ".claude", ".credentials.json"))
+    return ""
+
+
+def _extract_claude_oauth_tokens(payload: Any) -> tuple[str, str]:
+    access_token = _find_first_nested_token_value(payload, ("accessToken", "access_token", "oauth_token"))
+    refresh_token = _find_first_nested_token_value(payload, ("refreshToken", "refresh_token"))
+    return access_token, refresh_token
+
+
+def _claude_oauth_session_candidates(env: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _append(path: str) -> None:
+        candidate = _abs_expanded_path(path)
+        if not candidate:
+            return
+        if candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if not explicit_session_file:
+        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+    if explicit_session_file:
+        _append(explicit_session_file)
+
+    config_dir = (
+        str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
+    )
+    if config_dir:
+        _append(os.path.join(config_dir, ".credentials.json"))
+
+    target = _claude_oauth_session_target_path(env)
+    if target:
+        _append(target)
+    return candidates
+
+
+def _claude_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
+    candidates = _claude_oauth_session_candidates(env)
+    for candidate in candidates:
+        payload = _read_json_object_file(candidate)
+        if not payload:
+            continue
+        access_token, refresh_token = _extract_claude_oauth_tokens(payload)
+        if refresh_token or access_token:
+            return True, f"session_file:{candidate}"
+
+    if not os.getenv("PYTEST_CURRENT_TEST"):
+        try:
+            completed = subprocess.run(
+                ["claude", "auth", "status", "--json"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=8,
+                env={**env, "CLAUDECODE": ""},
+            )
+            if completed.returncode == 0:
+                payload = json.loads(str(completed.stdout or "{}").strip())
+                if isinstance(payload, dict) and bool(payload.get("loggedIn")):
+                    return True, "claude_cli_auth_status"
+        except Exception:
+            pass
+
+    if candidates:
+        return False, f"missing_session_file:{candidates[0]}"
+    return False, "missing_claude_oauth_session"
+
+
+def _bootstrap_claude_oauth_session_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+    overwrite_existing: bool = False,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_claude_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, ""
+    target_path = _claude_oauth_session_target_path(env)
+    if not target_path:
+        return False, "oauth_session_target_missing"
+
+    existing_payload = _read_json_object_file(target_path)
+    existing_access_token, existing_refresh_token = _extract_claude_oauth_tokens(existing_payload)
+    if existing_refresh_token or existing_access_token:
+        if overwrite_existing:
+            log.info("task=%s replacing existing claude oauth session at %s", task_id, target_path)
+        else:
+            env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+            env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+            return False, f"oauth_session_preserved_existing:{target_path}"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not payload:
+        return False, decode_detail or "oauth_session_b64_decode_failed"
+
+    access_token, refresh_token = _extract_claude_oauth_tokens(payload)
+    if not refresh_token:
+        return False, "oauth_session_missing_refresh_token"
+    if access_token:
+        payload["accessToken"] = access_token
+    payload["refreshToken"] = refresh_token
+    payload.pop("apiKey", None)
+    payload.pop("api_key", None)
+
+    try:
+        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+        with open(target_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        os.chmod(target_path, 0o600)
+    except Exception as exc:
+        return False, f"oauth_session_write_failed:{type(exc).__name__}"
+
+    env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+    env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+    if existing_refresh_token or existing_access_token:
+        return True, f"oauth_session_overwritten:{target_path}"
+    return True, f"oauth_session_bootstrapped:{target_path}"
+
+
+def _attempt_claude_oauth_session_refresh_from_env(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    encoded = _oauth_session_b64_from_task_or_env(
+        task_ctx=task_ctx,
+        task_ctx_key="runner_claude_oauth_session_b64",
+        env=env,
+        env_key="AGENT_CLAUDE_OAUTH_SESSION_B64",
+    )
+    if not encoded:
+        return False, "oauth_session_refresh_b64_missing"
+    refreshed, detail = _bootstrap_claude_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+        overwrite_existing=True,
+    )
+    if refreshed:
+        return True, detail or "oauth_session_refreshed"
+    return False, detail or "oauth_session_refresh_failed"
+
+
+def _configure_claude_cli_environment(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+    task_ctx: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    requested_mode_raw = str((task_ctx or {}).get("runner_claude_auth_mode") or "").strip().lower()
+    requested_mode = _normalize_oauth_only_auth_mode(
+        requested_mode_raw or str(os.environ.get("AGENT_CLAUDE_AUTH_MODE", "oauth")),
+        default="oauth",
+        allowed=CLAUDE_AUTH_MODE_VALUES,
+    )
+    effective_mode = "oauth"
+    if requested_mode_raw and requested_mode_raw != "oauth":
+        log.info(
+            "task=%s forcing claude auth mode to oauth; ignoring requested=%s",
+            task_id,
+            requested_mode_raw,
+        )
+
+    claude_config_override = str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+    if claude_config_override:
+        env["CLAUDE_CONFIG_DIR"] = _abs_expanded_path(claude_config_override)
+
+    oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_claude_oauth_session_from_env(
+        env=env,
+        task_id=task_id,
+        log=log,
+        task_ctx=task_ctx,
+    )
+    env.pop("ANTHROPIC_API_KEY", None)
+    env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    env.pop("ANTHROPIC_BASE_URL", None)
+    env.pop("CLAUDE_API_KEY", None)
+    env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+
+    target_path = _claude_oauth_session_target_path(env)
+    if target_path:
+        env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
+
+    oauth_available, oauth_source = _claude_oauth_session_status(env)
+    oauth_missing = bool(not oauth_available)
+    auth_state = {
+        "requested_mode": requested_mode,
+        "effective_mode": effective_mode,
+        "oauth_session": bool(oauth_available),
+        "oauth_source": oauth_source,
+        "api_key_present": False,
+        "oauth_missing": oauth_missing,
+        "oauth_session_bootstrapped": bool(oauth_session_bootstrapped),
+        "oauth_session_bootstrap_detail": oauth_session_bootstrap_detail,
+    }
+    if oauth_missing:
+        log.warning(
+            "task=%s claude oauth mode requested but no session detected source=%s",
+            task_id,
+            oauth_source,
+        )
+    log.info(
+        "task=%s using claude CLI auth requested=%s effective=%s oauth_session=%s source=%s oauth_bootstrap=%s",
+        task_id,
+        requested_mode,
+        effective_mode,
+        bool(oauth_available),
+        oauth_source,
+        oauth_session_bootstrap_detail or "none",
+    )
+    return auth_state
+
+
+def _codex_oauth_auto_relogin_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST") and not _as_bool(
+        os.getenv("AGENT_RUNNER_CODEX_OAUTH_AUTO_RELOGIN_IN_TESTS", "0")
+    ):
+        return False
+    return _as_bool(os.getenv("AGENT_RUNNER_CODEX_OAUTH_AUTO_RELOGIN", "1"))
+
+
+def _attempt_codex_oauth_relogin(
+    *,
+    env: dict[str, str],
+    task_id: str,
+    log: logging.Logger,
+) -> tuple[bool, str]:
+    if not _codex_oauth_auto_relogin_enabled():
+        return False, "oauth_relogin_disabled"
+
+    codex_binary = _resolve_cli_binary("codex", env) or ""
+    if not codex_binary:
+        return False, "oauth_relogin_codex_missing"
+
+    login_commands = (
+        ([codex_binary, "login", "--device-auth"], "codex_login_device_auth"),
+        ([codex_binary, "auth", "login", "--device-auth"], "codex_auth_login_device_auth"),
+    )
+    last_error = "oauth_relogin_command_failed"
+    for argv, source in login_commands:
+        try:
+            completed = subprocess.run(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                text=True,
+                timeout=45,
+                env=env,
+            )
+        except Exception as exc:
+            last_error = f"{source}_exception:{type(exc).__name__}"
+            continue
+        if completed.returncode == 0:
+            session_ok, session_source = _codex_oauth_session_status(env)
+            if session_ok:
+                return True, f"{source}:{session_source}"
+            return True, source
+        stderr = str(completed.stderr or "").strip()
+        stdout = str(completed.stdout or "").strip()
+        detail = (stderr or stdout or "unknown_error")[:180]
+        last_error = f"{source}_rc{completed.returncode}:{detail}"
+
+    log.warning("task=%s codex oauth relogin failed detail=%s", task_id, last_error)
+    return False, last_error
 
 
 def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
@@ -2847,7 +5110,38 @@ def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
     requested_model = _codex_command_model(command)
     if not requested_model:
         return command, None
-    target_model = _codex_model_alias_map().get(requested_model.lower(), "").strip()
+    requested_model_key = requested_model.lower()
+    target_model = MANDATORY_CODEX_MODEL_ALIAS_MAP.get(requested_model_key, "").strip()
+    if not target_model:
+        target_model = _codex_model_alias_map().get(requested_model_key, "").strip()
+    if not target_model or target_model.lower() == requested_model.lower():
+        return command, None
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return command, None
+    remapped = f"{command[:match.start('model')]}{target_model}{command[match.end('model'):]}"
+    return remapped, {
+        "requested_model": requested_model,
+        "effective_model": target_model,
+    }
+
+
+def _claude_command_model(command: str) -> str:
+    if not _uses_claude_cli(command):
+        return ""
+    match = CODEX_MODEL_ARG_RE.search(command or "")
+    if match is None:
+        return ""
+    return match.group("model").strip()
+
+
+def _apply_claude_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
+    requested_model = _claude_command_model(command)
+    if not requested_model:
+        return command, None
+    target_model = requested_model
+    if requested_model.lower().startswith("claude/"):
+        target_model = requested_model.split("/", 1)[1].strip()
     if not target_model or target_model.lower() == requested_model.lower():
         return command, None
     match = CODEX_MODEL_ARG_RE.search(command or "")
@@ -2875,6 +5169,43 @@ def _codex_model_not_found_or_access_error(output: str) -> bool:
     return False
 
 
+def _codex_oauth_refresh_token_reused_error(output: str) -> bool:
+    lowered = (output or "").lower()
+    if not lowered:
+        return False
+    if "refresh_token_reused" in lowered:
+        return True
+    if "refresh token has already been used" in lowered:
+        return True
+    if "access token could not be refreshed because your refresh token was already used" in lowered:
+        return True
+    if "failed to refresh token: 401 unauthorized" in lowered:
+        return True
+    return False
+
+
+def _oauth_session_refresh_or_auth_error(output: str) -> bool:
+    lowered = (output or "").lower()
+    if not lowered:
+        return False
+    direct_markers = (
+        "refresh_token_reused",
+        "failed to refresh token",
+        "refresh token has already been used",
+        "invalid_grant",
+        "grant_type=refresh_token",
+        "reauthenticate",
+        "login required",
+        "not logged in",
+        "authentication required",
+    )
+    if any(marker in lowered for marker in direct_markers):
+        return True
+    has_token_context = any(marker in lowered for marker in ("oauth", "token", "auth"))
+    has_auth_error = any(marker in lowered for marker in ("unauthorized", "401", "forbidden", "invalid token"))
+    return bool(has_token_context and has_auth_error)
+
+
 def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dict[str, str] | None]:
     if not _codex_model_not_found_or_access_error(output):
         return command, None
@@ -2896,17 +5227,20 @@ def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dic
 
 
 def _infer_executor(command: str, model: str) -> str:
-    s = (command or "").strip()
     model_value = (model or "").strip().lower()
     if _uses_cursor_cli(command) or model_value.startswith("cursor/"):
         return "cursor"
+    if _uses_gemini_cli(command) or model_value.startswith("gemini/"):
+        return "gemini"
+    if _uses_openrouter_executor_command(command) or model_value.startswith("openrouter/"):
+        return "openrouter"
     if _uses_codex_cli(command):
-        return "openai-codex"
+        return "codex"
     if _uses_openclaw_cli(command) or model_value.startswith(("openclaw/", "clawwork/")):
-        return "openclaw"
-    if s.startswith("aider "):
-        return "aider"
-    if s.startswith("claude "):
+        return "codex"
+    if model_value.startswith("codex/"):
+        return "codex"
+    if _uses_claude_cli(command) or model_value.startswith("claude/"):
         return "claude"
     return "unknown"
 
@@ -3420,6 +5754,93 @@ def _handle_pr_failure_handoff(
     return next_status, summary
 
 
+def _dispatch_openrouter_server_executor(
+    *,
+    client: httpx.Client,
+    task_id: str,
+    task_ctx: dict[str, Any],
+    task_type: str,
+    worker_id: str,
+    log: logging.Logger,
+) -> bool:
+    headers: dict[str, str] = {}
+    execute_token = str(os.environ.get("AGENT_EXECUTE_TOKEN", "")).strip()
+    if execute_token:
+        headers["X-Agent-Execute-Token"] = execute_token
+
+    force_paid = _as_bool(task_ctx.get("force_paid_providers"))
+    params: dict[str, str] = {}
+    if force_paid:
+        headers["X-Force-Paid-Providers"] = "true"
+        params["force_paid_providers"] = "true"
+
+    execute_url = f"{BASE}/api/agent/tasks/{quote(task_id)}/execute"
+    response = _http_with_retry(
+        client,
+        "post",
+        execute_url,
+        log,
+        headers=headers or None,
+        params=params or None,
+    )
+    if response is None:
+        client.patch(
+            f"{BASE}/api/agent/tasks/{task_id}",
+            json={"status": "failed", "output": "Execution failed: openrouter executor dispatch failed (no API response)."},
+        )
+        return True
+
+    if int(response.status_code) >= 400:
+        detail = (response.text or "").strip()
+        message = f"Execution failed: openrouter executor dispatch denied ({response.status_code})"
+        if detail:
+            message = f"{message}: {detail[:500]}"
+        client.patch(
+            f"{BASE}/api/agent/tasks/{task_id}",
+            json={"status": "failed", "output": message[:4000]},
+        )
+        return True
+
+    default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
+    requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
+    max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
+    deadline = time.monotonic() + float(max_runtime_seconds)
+    while time.monotonic() < deadline:
+        snapshot = _safe_get_task_snapshot(client, task_id)
+        if snapshot:
+            status = str(snapshot.get("status") or "").strip().lower()
+            if status in {"completed", "failed", "needs_decision"}:
+                _runner_heartbeat(
+                    client,
+                    runner_id=worker_id,
+                    status="idle",
+                    active_task_id="",
+                    active_run_id="",
+                    metadata={"last_task_id": task_id, "executor": "openrouter"},
+                )
+                return status != "needs_decision"
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="running",
+            active_task_id=task_id,
+            active_run_id="",
+            metadata={"executor": "openrouter", "task_type": task_type},
+        )
+        time.sleep(2)
+
+    log.warning("task=%s openrouter executor dispatch timed out waiting for terminal status", task_id)
+    _runner_heartbeat(
+        client,
+        runner_id=worker_id,
+        status="running",
+        active_task_id=task_id,
+        active_run_id="",
+        metadata={"executor": "openrouter", "detail": "server_execution_timeout"},
+    )
+    return True
+
+
 def run_one_task(
     client: httpx.Client,
     task_id: str,
@@ -3432,16 +5853,61 @@ def run_one_task(
     task_direction: str = "",
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
+    task_ctx = task_context or {}
+    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    requested_executor = str(task_ctx.get("executor") or "").strip().lower()
+    inferred_executor = _infer_executor(command, model)
+    if requested_executor == "openrouter" or inferred_executor == "openrouter":
+        return _dispatch_openrouter_server_executor(
+            client=client,
+            task_id=task_id,
+            task_ctx=task_ctx,
+            task_type=str(task_type or "impl"),
+            worker_id=worker_id,
+            log=log,
+        )
     env = os.environ.copy()
     codex_model_alias: dict[str, str] | None = None
+    claude_model_alias: dict[str, str] | None = None
     codex_auth_state: dict[str, Any] | None = None
+    cursor_auth_state: dict[str, Any] | None = None
+    gemini_auth_state: dict[str, Any] | None = None
+    claude_auth_state: dict[str, Any] | None = None
+    cli_bootstrap_ok = True
+    cli_bootstrap_detail = ""
+    cli_bootstrap_ok, cli_bootstrap_detail = _ensure_cli_for_command(
+        command=command,
+        env=env,
+        task_id=task_id,
+        log=log,
+    )
+    if cli_bootstrap_detail:
+        if cli_bootstrap_ok:
+            log.info("task=%s %s", task_id, cli_bootstrap_detail)
+        else:
+            log.warning("task=%s %s", task_id, cli_bootstrap_detail)
+    popen_command: str | list[str] = command
+    popen_shell = True
+    popen_preexec_fn: Callable[[], None] | None = None
+    command_exec_mode = "shell"
     if _uses_cursor_cli(command):
-        # Cursor CLI uses Cursor app auth; ensure OpenAI-compatible env vars for OpenRouter
-        env.setdefault("OPENAI_API_KEY", os.environ.get("OPENROUTER_API_KEY", ""))
-        env.setdefault("OPENAI_API_BASE", os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
-        log.info("task=%s using Cursor CLI with OpenRouter", task_id)
+        cursor_auth_state = _configure_cursor_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Cursor CLI (OAuth/session)", task_id)
+    elif _uses_gemini_cli(command):
+        gemini_auth_state = _configure_gemini_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Gemini CLI (OAuth/session)", task_id)
     elif _uses_codex_cli(command):
-        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log)
+        codex_auth_state = _configure_codex_cli_environment(env=env, task_id=task_id, log=log, task_ctx=task_ctx)
         command, codex_model_alias = _apply_codex_model_alias(command)
         if codex_model_alias:
             log.warning(
@@ -3456,26 +5922,56 @@ def run_one_task(
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
+    elif _uses_claude_cli(command):
+        claude_auth_state = _configure_claude_cli_environment(
+            env=env,
+            task_id=task_id,
+            log=log,
+            task_ctx=task_ctx,
+        )
+        log.info("task=%s using Claude Code CLI (OAuth/session)", task_id)
+        command, claude_model_alias = _apply_claude_model_alias(command)
+        if claude_model_alias:
+            log.warning(
+                "task=%s remapped claude model %s -> %s",
+                task_id,
+                claude_model_alias["requested_model"],
+                claude_model_alias["effective_model"],
+            )
     elif _uses_anthropic_cloud(command):
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        env.setdefault("ANTHROPIC_API_KEY", api_key)
-        log.info("task=%s using Anthropic cloud has_key=%s", task_id, bool(api_key))
+        env.pop("ANTHROPIC_API_KEY", None)
+        log.warning(
+            "task=%s anthropic cloud API-key auth disabled; use Claude CLI OAuth/session for paid Anthropic access",
+            task_id,
+        )
     else:
         env.setdefault("ANTHROPIC_AUTH_TOKEN", "ollama")
         env.setdefault("ANTHROPIC_BASE_URL", "http://localhost:11434")
         env.setdefault("ANTHROPIC_API_KEY", "")
+    popen_command, popen_shell, command_exec_mode = _prepare_cli_command_for_exec(command)
+    if _uses_codex_cli(command):
+        log.info("task=%s codex execution mode=%s", task_id, command_exec_mode)
     # Suppress Claude Code requests to unsupported local-model endpoints (GitHub #13949)
     env.setdefault("DISABLE_TELEMETRY", "1")
     env.setdefault("DISABLE_ERROR_REPORTING", "1")
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
 
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    non_root_ok, non_root_detail, non_root_preexec = _prepare_non_root_execution_for_command(
+        command=command,
+        env=env,
+    )
+    if non_root_detail:
+        if non_root_ok:
+            log.info("task=%s %s", task_id, non_root_detail)
+            popen_preexec_fn = non_root_preexec
+        else:
+            log.warning("task=%s %s", task_id, non_root_detail)
+
     executor = _infer_executor(command, model)
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
-    task_ctx = task_context or {}
     target_contract = _normalize_task_target_contract(
         task_ctx,
         task_type=str(task_type or "impl"),
@@ -3622,14 +6118,27 @@ def run_one_task(
         "active_branch": branch_name if pr_mode else "",
         "last_attempt": attempt,
     }
+    if cli_bootstrap_detail:
+        running_context["runner_cli_bootstrap"] = {
+            "ok": bool(cli_bootstrap_ok),
+            "detail": cli_bootstrap_detail,
+            "at": _utc_now_iso(),
+        }
     if codex_auth_state:
         running_context["runner_codex_auth"] = {
             **codex_auth_state,
             "at": _utc_now_iso(),
         }
-    if codex_model_alias:
+    if codex_model_alias or claude_model_alias:
+        active_model_alias = codex_model_alias or claude_model_alias
         running_context["runner_model_alias"] = {
-            **codex_model_alias,
+            **(active_model_alias or {}),
+            "at": _utc_now_iso(),
+        }
+    if non_root_detail:
+        running_context["runner_exec_user"] = {
+            "ok": bool(non_root_ok),
+            "detail": non_root_detail,
             "at": _utc_now_iso(),
         }
     r = client.patch(
@@ -3746,11 +6255,15 @@ def run_one_task(
             f"oauth_missing={'true' if codex_auth_state['oauth_missing'] else 'false'}\n"
         )
     alias_note = ""
-    if codex_model_alias:
+    effective_model_alias = codex_model_alias or claude_model_alias
+    if effective_model_alias:
         alias_note = (
             "[runner-model-alias] requested_model="
-            f"{codex_model_alias['requested_model']} effective_model={codex_model_alias['effective_model']}\n"
+            f"{effective_model_alias['requested_model']} effective_model={effective_model_alias['effective_model']}\n"
         )
+    exec_mode_note = ""
+    if _uses_codex_cli(command):
+        exec_mode_note = f"[runner-command-exec] mode={command_exec_mode}\n"
 
     def _stream_reader(proc: subprocess.Popen) -> None:
         """Read process stdout line-by-line, write to log file + collect output."""
@@ -3765,6 +6278,9 @@ def run_one_task(
                 if alias_note:
                     f.write(alias_note)
                     output_lines.append(alias_note)
+                if exec_mode_note:
+                    f.write(exec_mode_note)
+                    output_lines.append(exec_mode_note)
                 f.flush()
                 for line in iter(proc.stdout.readline, ""):
                     f.write(line)
@@ -3776,11 +6292,53 @@ def run_one_task(
             reader_done.set()
 
     try:
+        if not non_root_ok:
+            failure_output = (
+                "[runner-exec-user] root execution blocked for --dangerously-skip-permissions: "
+                f"{non_root_detail}. Configure AGENT_RUN_AS_USER to an existing non-root account."
+            )
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": "failed", "output": failure_output},
+            )
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "task_id": task_id,
+                    "attempt": attempt,
+                    "status": "failed",
+                    "worker_id": worker_id,
+                    "task_type": task_type,
+                    "direction": task_direction,
+                    "branch": branch_name,
+                    "repo_path": repo_path,
+                    "failure_class": "runner_exec_user_unavailable",
+                    "next_action": "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=False,
+            )
+            _runner_heartbeat(
+                client,
+                runner_id=worker_id,
+                status="degraded",
+                active_task_id="",
+                active_run_id="",
+                last_error="runner_exec_user_unavailable",
+                metadata={"task_id": task_id, "task_type": task_type},
+            )
+            return True
+
         process = subprocess.Popen(
-            command,
-            shell=True,
+            popen_command,
+            shell=popen_shell,
             env=env,
             cwd=repo_path,
+            preexec_fn=popen_preexec_fn,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -3789,7 +6347,8 @@ def run_one_task(
         reader = threading.Thread(target=_stream_reader, args=(process,), daemon=False)
         reader.start()
 
-        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), TASK_TIMEOUT)
+        default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
+        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
         max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
         timed_out = False
         stopped_for_usage = False
@@ -4187,10 +6746,11 @@ def run_one_task(
             if manifest_context_patch:
                 _patch_task_context(client, task_id=task_id, context_patch=manifest_context_patch)
 
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={"status": status, "output": output[:4000]},
-        )
+        if status == "completed" and not pr_mode:
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": status, "output": output[:4000]},
+            )
         _sync_run_state(
             client,
             task_id=task_id,
@@ -4278,32 +6838,378 @@ def run_one_task(
         elif (not hold_policy_applied) and (not pr_mode) and status != "completed":
             retry_task_ctx = task_ctx
             retry_context_patch: dict[str, Any] | None = None
-            if _uses_codex_cli(command) and _codex_model_not_found_or_access_error(output):
-                fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
-                fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
-                if fallback_alias and not fallback_already_attempted:
-                    retry_task_ctx = dict(task_ctx)
-                    retry_task_ctx["retry_override_command"] = fallback_command
-                    retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                    requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                    retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                    retry_context_patch = {
-                        "retry_override_command": fallback_command,
-                        "runner_model_not_found_fallback_attempted": True,
-                        "runner_model_not_found_fallback": {
-                            **fallback_alias,
+            if _uses_codex_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_codex_oauth_refresh_retry_attempted"))
+                oauth_relogin_attempted = _as_bool(task_ctx.get("runner_codex_oauth_relogin_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_codex_oauth_session_refresh_attempted"))
+                auth_mode = str((codex_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(
+                    codex_auth_state
+                    and auth_mode == "oauth"
+                )
+                if oauth_refresh_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_codex_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+
+                        relogin_ok = False
+                        relogin_detail = "oauth_relogin_skipped"
+                        relogin_was_attempted = False
+                        if session_refresh_ok:
+                            relogin_detail = "oauth_relogin_not_needed_session_refreshed"
+                        elif not oauth_relogin_attempted:
+                            relogin_was_attempted = True
+                            relogin_ok, relogin_detail = _attempt_codex_oauth_relogin(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                            )
+                        else:
+                            relogin_detail = "oauth_relogin_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_codex_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_codex_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_codex_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_codex_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
                             "at": _utc_now_iso(),
-                        },
-                    }
-                    output = (
-                        f"{output}\n[runner-model-fallback] model unavailable; "
-                        f"retrying with --model {fallback_alias['effective_model']}."
-                    )
-                elif fallback_already_attempted:
-                    output = (
-                        f"{output}\n[runner-model-fallback] "
-                        "model unavailable after fallback attempt; not retrying fallback."
-                    )
+                        }
+                        retry_task_ctx["runner_codex_oauth_relogin_attempted"] = bool(
+                            oauth_relogin_attempted or relogin_was_attempted
+                        )
+                        retry_task_ctx["runner_codex_oauth_relogin"] = {
+                            "ok": bool(relogin_ok),
+                            "detail": relogin_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_codex_auth_mode": "oauth",
+                            "runner_codex_oauth_refresh_retry_attempted": True,
+                            "runner_codex_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_codex_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_codex_oauth_relogin_attempted": bool(
+                                oauth_relogin_attempted or relogin_was_attempted
+                            ),
+                            "runner_codex_oauth_relogin": {
+                                "ok": bool(relogin_ok),
+                                "detail": relogin_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_codex_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_token_reused",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "oauth_relogin_ok": bool(relogin_ok),
+                                "oauth_relogin_detail": relogin_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        session_refresh_message = ""
+                        if session_refresh_was_attempted:
+                            session_refresh_status = "ok" if session_refresh_ok else "failed"
+                            session_refresh_message = (
+                                f" oauth session refresh {session_refresh_status} ({session_refresh_detail});"
+                            )
+                        relogin_message = ""
+                        if relogin_was_attempted:
+                            relogin_status = "ok" if relogin_ok else "failed"
+                            relogin_message = (
+                                f" oauth relogin {relogin_status} ({relogin_detail});"
+                            )
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-codex-auth-retry] oauth refresh token reuse detected; "
+                            f"{session_refresh_message}{relogin_message} {retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-codex-auth-retry] "
+                            "oauth refresh-token retry already attempted; not retrying auth retry."
+                        )
+                if _codex_model_not_found_or_access_error(output):
+                    fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
+                    fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
+                    if fallback_alias and not fallback_already_attempted:
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["retry_override_command"] = fallback_command
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "retry_override_command": fallback_command,
+                            "runner_model_not_found_fallback_attempted": True,
+                            "runner_model_not_found_fallback": {
+                                **fallback_alias,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        if retry_disabled:
+                            output = (
+                                f"{output}\n[runner-model-fallback] model unavailable; "
+                                "fallback planned but retry disabled by explicit retry_max=0."
+                            )
+                        else:
+                            output = (
+                                f"{output}\n[runner-model-fallback] model unavailable; "
+                                f"retrying with --model {fallback_alias['effective_model']}."
+                            )
+                    elif fallback_already_attempted:
+                        output = (
+                            f"{output}\n[runner-model-fallback] "
+                            "model unavailable after fallback attempt; not retrying fallback."
+                        )
+            elif _uses_cursor_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_session_refresh_attempted"))
+                auth_mode = str((cursor_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(cursor_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_cursor_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_cursor_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_cursor_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_cursor_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_cursor_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_cursor_auth_mode": "oauth",
+                            "runner_cursor_oauth_refresh_retry_attempted": True,
+                            "runner_cursor_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_cursor_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_cursor_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-cursor-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-cursor-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
+                        )
+            elif _uses_gemini_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_session_refresh_attempted"))
+                auth_mode = str((gemini_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(gemini_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_gemini_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_gemini_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_gemini_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_gemini_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_gemini_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_gemini_auth_mode": "oauth",
+                            "runner_gemini_oauth_refresh_retry_attempted": True,
+                            "runner_gemini_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_gemini_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_gemini_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-gemini-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-gemini-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
+                        )
+            elif _uses_claude_cli(command):
+                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_claude_oauth_refresh_retry_attempted"))
+                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_claude_oauth_session_refresh_attempted"))
+                auth_mode = str((claude_auth_state or {}).get("effective_mode") or "").strip().lower()
+                oauth_refresh_retry_eligible = bool(claude_auth_state and auth_mode == "oauth")
+                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
+                    if not oauth_refresh_retry_attempted:
+                        session_refresh_ok = False
+                        session_refresh_detail = "oauth_session_refresh_skipped"
+                        session_refresh_was_attempted = False
+                        if not oauth_session_refresh_attempted:
+                            session_refresh_was_attempted = True
+                            session_refresh_ok, session_refresh_detail = _attempt_claude_oauth_session_refresh_from_env(
+                                env=env,
+                                task_id=task_id,
+                                log=log,
+                                task_ctx=task_ctx,
+                            )
+                        else:
+                            session_refresh_detail = "oauth_session_refresh_already_attempted"
+                        retry_task_ctx = dict(retry_task_ctx)
+                        retry_task_ctx["runner_claude_auth_mode"] = "oauth"
+                        retry_task_ctx["runner_claude_oauth_refresh_retry_attempted"] = True
+                        retry_task_ctx["runner_claude_oauth_session_refresh_attempted"] = bool(
+                            oauth_session_refresh_attempted or session_refresh_was_attempted
+                        )
+                        retry_task_ctx["runner_claude_oauth_session_refresh"] = {
+                            "ok": bool(session_refresh_ok),
+                            "detail": session_refresh_detail,
+                            "at": _utc_now_iso(),
+                        }
+                        retry_disabled = _retry_explicitly_disabled(task_ctx)
+                        if retry_disabled:
+                            retry_task_ctx["runner_retry_max"] = 0
+                        else:
+                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
+                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
+                        retry_context_patch = (retry_context_patch or {}) | {
+                            "runner_claude_auth_mode": "oauth",
+                            "runner_claude_oauth_refresh_retry_attempted": True,
+                            "runner_claude_oauth_session_refresh_attempted": bool(
+                                oauth_session_refresh_attempted or session_refresh_was_attempted
+                            ),
+                            "runner_claude_oauth_session_refresh": {
+                                "ok": bool(session_refresh_ok),
+                                "detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                            "runner_claude_oauth_refresh_retry": {
+                                "trigger": "oauth_refresh_or_auth_error",
+                                "mode": "oauth",
+                                "oauth_session_refresh_ok": bool(session_refresh_ok),
+                                "oauth_session_refresh_detail": session_refresh_detail,
+                                "at": _utc_now_iso(),
+                            },
+                        }
+                        retry_suffix = (
+                            "retry disabled by explicit retry_max=0."
+                            if retry_disabled
+                            else "retrying with oauth auth mode."
+                        )
+                        output = (
+                            f"{output}\n[runner-claude-auth-retry] oauth auth failure detected; "
+                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
+                            f"{retry_suffix}"
+                        )
+                    else:
+                        output = (
+                            f"{output}\n[runner-claude-auth-retry] "
+                            "oauth refresh retry already attempted; not retrying auth retry."
+                        )
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
                 task_id=task_id,
@@ -4364,6 +7270,10 @@ def run_one_task(
                     require_owner=True,
                 )
             else:
+                client.patch(
+                    f"{BASE}/api/agent/tasks/{task_id}",
+                    json={"status": status, "output": output[:4000]},
+                )
                 _sync_run_state(
                     client,
                     task_id=task_id,

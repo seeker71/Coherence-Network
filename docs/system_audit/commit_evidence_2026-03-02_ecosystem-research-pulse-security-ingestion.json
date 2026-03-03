@@ -1,0 +1,86 @@
+{
+  "date": "2026-03-02",
+  "thread_branch": "codex/ecosystem-research-pulse-20260302",
+  "commit_scope": "Ecosystem research pulse refresh with n8n advisory ingestion, updated prioritized backlog tasks, and 2026-03-02 intelligence artifacts.",
+  "files_owned": [
+    "api/scripts/collect_ai_agent_intel.py",
+    "api/scripts/build_ai_agent_improvement_plan.py",
+    "api/tests/test_collect_ai_agent_intel.py",
+    "specs/006-overnight-backlog.md",
+    "docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json",
+    "docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+    "docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+    "docs/system_audit/ai_agent_biweekly_summary_2026-03-02.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_collect_ai_agent_intel.py",
+      "cd api && python3 scripts/collect_ai_agent_intel.py --window-days 14 --output ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --security-output ../docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+      "cd api && python3 scripts/build_ai_agent_improvement_plan.py --intel ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --output ../docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No remote CI run in this local automation cycle."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy requested."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation for this deploy-requested run."
+  },
+  "idea_ids": [
+    "idea_ecosystem_research_pulse_2026_03_02"
+  ],
+  "spec_ids": [
+    "113-ai-agent-biweekly-intelligence-feedback-loop",
+    "006-overnight-backlog"
+  ],
+  "task_ids": [
+    "task_ecosystem_research_pulse_2026_03_02"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "research",
+        "implementation",
+        "testing",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json",
+    "docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+    "docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+    "docs/system_audit/ai_agent_biweekly_summary_2026-03-02.md",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260302T201739Z_HEAD.json"
+  ],
+  "change_files": [
+    "api/scripts/build_ai_agent_improvement_plan.py",
+    "api/scripts/collect_ai_agent_intel.py",
+    "api/tests/test_collect_ai_agent_intel.py",
+    "docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+    "docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json",
+    "docs/system_audit/ai_agent_biweekly_sources_latest.json",
+    "docs/system_audit/ai_agent_biweekly_summary_2026-03-02.md",
+    "docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+    "docs/system_audit/ai_agent_security_watch_latest.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/006-overnight-backlog.md"
+  ],
+  "change_intent": "process_only"
+}
