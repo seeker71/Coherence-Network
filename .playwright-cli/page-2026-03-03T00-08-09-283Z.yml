@@ -1,0 +1,111 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network A shared home for open source collaboration" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - paragraph [ref=e6]: Coherence Network
+        - paragraph [ref=e7]: A shared home for open source collaboration
+      - navigation [ref=e8]:
+        - link "Explore Ideas" [ref=e9] [cursor=pointer]:
+          - /url: /ideas
+        - link "Network Graph" [ref=e10] [cursor=pointer]:
+          - /url: /flow
+        - link "Collaborate" [ref=e11] [cursor=pointer]:
+          - /url: /contribute
+        - link "Execution" [ref=e12] [cursor=pointer]:
+          - /url: /tasks
+      - generic [ref=e13]:
+        - textbox "Search projects or ideas" [ref=e14]
+        - button "Search" [ref=e15]
+      - group [ref=e16]:
+        - generic "Workspace" [ref=e17] [cursor=pointer]
+      - link "API Docs" [ref=e18] [cursor=pointer]:
+        - /url: http://localhost:8000/docs
+      - link "Start Here" [ref=e19] [cursor=pointer]:
+        - /url: /contribute
+  - group [ref=e20]:
+    - generic "Live sync Standby" [ref=e21] [cursor=pointer]
+  - generic [ref=e24]:
+    - paragraph [ref=e25]: You are here Ideas
+    - generic [ref=e26]: Focus portfolio governance
+    - group [ref=e27]:
+      - generic "Navigate" [ref=e28] [cursor=pointer]
+    - group [ref=e29]:
+      - generic "Data links" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - link "← Home" [ref=e33] [cursor=pointer]:
+        - /url: /
+      - link "Portfolio" [ref=e34] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e35] [cursor=pointer]:
+        - /url: /flow
+      - link "Specs" [ref=e36] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e37] [cursor=pointer]:
+        - /url: /usage
+    - generic [ref=e38]:
+      - heading "Ideas" [level=1] [ref=e39]
+      - paragraph [ref=e40]: "Unified view of idea stage coverage: spec, implementation, validation, and measurement."
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - paragraph [ref=e43]: Ideas visible
+        - paragraph [ref=e44]: 0 / 0
+      - generic [ref=e45]:
+        - paragraph [ref=e46]: With spec
+        - paragraph [ref=e47]: "0"
+      - generic [ref=e48]:
+        - paragraph [ref=e49]: Implemented
+        - paragraph [ref=e50]: "0"
+      - generic [ref=e51]:
+        - paragraph [ref=e52]: Validated
+        - paragraph [ref=e53]: "0"
+      - generic [ref=e54]:
+        - paragraph [ref=e55]: Measured
+        - paragraph [ref=e56]: "0"
+    - generic [ref=e57]:
+      - paragraph [ref=e58]: Manifestation status meanings
+      - paragraph [ref=e59]: "none: no material implementation evidence yet."
+      - paragraph [ref=e60]: "partial: some spec or implementation progress exists, but end-to-end validation is incomplete."
+      - paragraph [ref=e61]: "validated: validated through passing validation signals and tracked as validated in the idea registry."
+    - generic [ref=e63]:
+      - textbox "Search idea name or id" [ref=e64]
+      - combobox [ref=e65]:
+        - option "All stages" [selected]
+        - option "Needs spec"
+        - option "Has spec"
+        - option "Implemented"
+        - option "Validated"
+        - option "Measured"
+        - option "Blocked"
+      - combobox [ref=e66]:
+        - option "All manifestation states" [selected]
+        - option "none"
+        - option "partial"
+        - option "validated"
+      - combobox [ref=e67]:
+        - option "Sort by unblock priority" [selected]
+        - option "Sort by value gap"
+        - option "Sort by measured ROI"
+        - option "Sort by free energy"
+        - option "Sort by name"
+      - combobox [ref=e68]:
+        - option "12 / page"
+        - option "24 / page" [selected]
+        - option "48 / page"
+        - option "96 / page"
+      - generic [ref=e69]:
+        - checkbox "Actionable only" [ref=e70]
+        - text: Actionable only
+      - generic [ref=e71]:
+        - button "Apply" [ref=e72]
+        - link "Reset" [ref=e73] [cursor=pointer]:
+          - /url: /ideas
+    - generic [ref=e74]:
+      - generic [ref=e75]:
+        - paragraph [ref=e76]: Showing 0 of 0 | page 1 / 1
+        - generic [ref=e77]:
+          - generic [ref=e78]: Previous
+          - generic [ref=e79]: Next
+      - list [ref=e80]:
+        - listitem [ref=e81]: No ideas found for this filter set.
