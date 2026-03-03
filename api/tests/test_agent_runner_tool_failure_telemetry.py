@@ -1068,140 +1068,6 @@ def test_retry_explicitly_disabled_ignores_null_values():
     assert agent_runner._retry_explicitly_disabled({"retry_max": 0}) is True
 
 
-def test_configure_cursor_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
-    session_payload = {
-        "accessToken": "cursor-access-token",
-        "refreshToken": "cursor-refresh-token",
-        "apiKey": "should-be-removed",
-    }
-    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
-    monkeypatch.setenv("AGENT_CURSOR_AUTH_MODE", "oauth")
-    monkeypatch.setenv("AGENT_CURSOR_OAUTH_SESSION_B64", encoded)
-    monkeypatch.delenv("AGENT_CURSOR_OAUTH_SESSION_FILE", raising=False)
-
-    env = {
-        "HOME": str(tmp_path),
-        "CURSOR_API_KEY": "cursor-key",
-        "OPENAI_API_KEY": "openai-key",
-        "OPENAI_ADMIN_API_KEY": "openai-admin-key",
-        "OPENAI_API_BASE": "https://api.openai.com/v1",
-        "OPENAI_BASE_URL": "https://api.openai.com/v1",
-    }
-    auth = agent_runner._configure_cursor_cli_environment(
-        env=env,
-        task_id="task_cursor_auth_bootstrap_b64",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["requested_mode"] == "oauth"
-    assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_session_bootstrapped"] is True
-    assert auth["oauth_session"] is True
-    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
-    assert "CURSOR_API_KEY" not in env
-    assert "OPENAI_API_KEY" not in env
-    assert "OPENAI_ADMIN_API_KEY" not in env
-    assert "OPENAI_API_BASE" not in env
-    assert "OPENAI_BASE_URL" not in env
-    target = env.get("AGENT_CURSOR_OAUTH_SESSION_FILE") or ""
-    assert target.endswith("/.config/cagent/auth.json")
-    assert env.get("CURSOR_CONFIG_DIR") == str(Path(target).parent)
-    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
-    assert loaded.get("refreshToken") == "cursor-refresh-token"
-    assert loaded.get("accessToken") == "cursor-access-token"
-    assert "apiKey" not in loaded
-
-
-def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
-    session_payload = {
-        "accessToken": "claude-access-token",
-        "refreshToken": "claude-refresh-token",
-        "apiKey": "should-be-removed",
-    }
-    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
-    monkeypatch.setenv("AGENT_CLAUDE_AUTH_MODE", "oauth")
-    monkeypatch.setenv("AGENT_CLAUDE_OAUTH_SESSION_B64", encoded)
-    monkeypatch.delenv("AGENT_CLAUDE_OAUTH_SESSION_FILE", raising=False)
-
-    env = {
-        "HOME": str(tmp_path),
-        "ANTHROPIC_API_KEY": "anthropic-key",
-        "ANTHROPIC_AUTH_TOKEN": "anthropic-auth",
-        "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
-        "CLAUDE_CODE_OAUTH_TOKEN": "short-lived-token",
-    }
-    auth = agent_runner._configure_claude_cli_environment(
-        env=env,
-        task_id="task_claude_auth_bootstrap_b64",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["requested_mode"] == "oauth"
-    assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_session_bootstrapped"] is True
-    assert auth["oauth_session"] is True
-    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
-    assert "ANTHROPIC_API_KEY" not in env
-    assert "ANTHROPIC_AUTH_TOKEN" not in env
-    assert "ANTHROPIC_BASE_URL" not in env
-    assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
-    target = env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE") or ""
-    assert target.endswith("/.claude/.credentials.json")
-    assert env.get("CLAUDE_CONFIG_DIR") == str(Path(target).parent)
-    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
-    assert loaded.get("refreshToken") == "claude-refresh-token"
-    assert loaded.get("accessToken") == "claude-access-token"
-    assert "apiKey" not in loaded
-
-
-def test_configure_gemini_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
-    session_payload = {
-        "access_token": "gemini-access-token",
-        "refresh_token": "gemini-refresh-token",
-        "apiKey": "should-be-removed",
-    }
-    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
-    monkeypatch.setenv("AGENT_GEMINI_AUTH_MODE", "oauth")
-    monkeypatch.setenv("AGENT_GEMINI_OAUTH_SESSION_B64", encoded)
-    monkeypatch.delenv("AGENT_GEMINI_OAUTH_CREDS_FILE", raising=False)
-    monkeypatch.delenv("AGENT_GEMINI_SETTINGS_FILE", raising=False)
-
-    env = {
-        "HOME": str(tmp_path),
-        "GEMINI_API_KEY": "gemini-key",
-        "GOOGLE_API_KEY": "google-key",
-    }
-    auth = agent_runner._configure_gemini_cli_environment(
-        env=env,
-        task_id="task_gemini_auth_bootstrap_b64",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["requested_mode"] == "oauth"
-    assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_session_bootstrapped"] is True
-    assert auth["oauth_session"] is True
-    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
-    assert str(auth.get("oauth_settings_config_detail") or "").startswith(
-        ("oauth_settings_bootstrapped:", "oauth_settings_preserved_existing:")
-    )
-    assert "GEMINI_API_KEY" not in env
-    assert "GOOGLE_API_KEY" not in env
-    target = env.get("AGENT_GEMINI_OAUTH_CREDS_FILE") or ""
-    assert target.endswith("/.gemini/oauth_creds.json")
-    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
-    assert loaded.get("refresh_token") == "gemini-refresh-token"
-    assert loaded.get("access_token") == "gemini-access-token"
-    assert "apiKey" not in loaded
-    settings_target = env.get("AGENT_GEMINI_SETTINGS_FILE") or ""
-    assert settings_target.endswith("/.gemini/settings.json")
-    settings = json.loads(Path(settings_target).read_text(encoding="utf-8"))
-    security = settings.get("security") if isinstance(settings, dict) else {}
-    auth_settings = security.get("auth") if isinstance(security, dict) else {}
-    assert auth_settings.get("selectedType") == "oauth-personal"
-    assert auth_settings.get("enforcedType") == "oauth-personal"
-
-
 def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
@@ -1565,7 +1431,7 @@ def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, 
     assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
 
 
-def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_b64(monkeypatch, tmp_path):
     t = [5300.0]
 
     def _mono():
