@@ -1,0 +1,76 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/flow-live-data-20260303",
+  "commit_scope": "Force /flow to render live backend data and align idea scope with full inventory so stale pre-rendered counts cannot drift from API truth.",
+  "files_owned": [
+    "web/app/flow/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-live-dynamic-parity.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The /flow page no longer serves stale pre-rendered counts and stays aligned with live API counts for ideas/contributors/contributions.",
+    "public_endpoints": [
+      "/flow",
+      "/api/inventory/flow",
+      "/api/ideas",
+      "/api/contributors"
+    ],
+    "test_flows": [
+      "vercel-flow-page-live-count-parity"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification."
+  },
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "085-tracked-count-parity-and-source-discovery"
+  ],
+  "task_ids": [
+    "task_flow_page_live_dynamic_parity_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-live-dynamic-parity.json"
+  ],
+  "change_files": [
+    "web/app/flow/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-03_flow-page-live-dynamic-parity.json"
+  ],
+  "change_intent": "runtime_fix"
+}
