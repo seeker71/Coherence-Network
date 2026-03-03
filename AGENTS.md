@@ -30,6 +30,8 @@ Spec → Test → Implement → CI → Review → Merge
    - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
 5. PR + CI contract
    - Open PR immediately after push.
+   - Before push, run `git fetch origin main && git rebase origin/main`.
+   - Before push, run `python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence`.
    - Monitor checks until green, or report blocker with failing check links and remediation command.
 6. Finish contract
    - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.

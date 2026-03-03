@@ -25,6 +25,19 @@ cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
 ```
 
+Mandatory branch-base parity check (before any edits):
+
+```bash
+test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+```
+
+If this fails, stop and reset thread base:
+
+```bash
+git fetch origin main
+git rebase origin/main
+```
+
 ## Mandatory Preflight (before edits)
 
 ```bash
@@ -52,6 +65,19 @@ python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbr
 ```
 
 ## Commit + PR
+
+Before push, always sync branch to latest `origin/main`:
+
+```bash
+git fetch origin main
+git rebase origin/main
+python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence
+```
+
+If commit evidence fails after rebase:
+- update `change_files` in the changed `docs/system_audit/commit_evidence_*.json`,
+- include at least one changed evidence file in the commit range,
+- re-run the validator before push.
 
 ```bash
 git add <files>
