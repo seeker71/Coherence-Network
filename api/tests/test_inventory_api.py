@@ -1103,7 +1103,7 @@ async def test_next_unblock_task_defaults_to_actionable_ideas_only(
             {
                 "ideas": [
                     {
-                        "id": "spec-origin-internal-1234abcd",
+                        "id": "internal-derived-1234abcd",
                         "name": "Internal derived idea",
                         "description": "Should not be first unblock target in actionable mode.",
                         "potential_value": 120.0,
@@ -1142,16 +1142,16 @@ async def test_next_unblock_task_defaults_to_actionable_ideas_only(
         assert default_resp.status_code == 200
         default_payload = default_resp.json()
         assert default_payload["result"] == "task_suggested"
-        assert default_payload["idea_id"] != "spec-origin-internal-1234abcd"
+        assert default_payload["idea_id"] != "internal-derived-1234abcd"
 
         include_internal = await client.post(
             "/api/inventory/flow/next-unblock-task",
-            params={"include_internal_ideas": True, "idea_id": "spec-origin-internal-1234abcd"},
+            params={"include_internal_ideas": True, "idea_id": "internal-derived-1234abcd"},
         )
         assert include_internal.status_code == 200
         include_payload = include_internal.json()
         assert include_payload["result"] == "task_suggested"
-        assert include_payload["idea_id"] == "spec-origin-internal-1234abcd"
+        assert include_payload["idea_id"] == "internal-derived-1234abcd"
 
 
 @pytest.mark.asyncio
@@ -1214,8 +1214,8 @@ async def test_flow_inventory_counts_spec_registry_specs_for_idea(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    idea_id = "public-e2e-flow-gate-automation"
-    spec_id = "095-public-e2e-flow-gate-automation-test"
+    idea_id = "deployment-gate-reliability"
+    spec_id = "095-deployment-gate-reliability-test"
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create_spec = await client.post(
