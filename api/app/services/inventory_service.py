@@ -4600,7 +4600,12 @@ def _direct_idea_ids_from_contribution_metadata(metadata: Any) -> list[str]:
         for item in raw_multi:
             if isinstance(item, str) and item.strip():
                 out.add(item.strip())
-    return sorted(out)
+    canonical: set[str] = set()
+    for item in out:
+        canonical_item = idea_service.canonical_discovered_idea_id(item)
+        if canonical_item:
+            canonical.add(canonical_item)
+    return sorted(canonical)
 
 
 def _sorted_limited(values: set[str], *, limit: int) -> tuple[list[str], int, bool]:
@@ -4683,7 +4688,18 @@ def build_spec_process_implementation_validation_flow(
     )
     stage_timings["runtime_rows"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
-    runtime_by_idea = {row.idea_id: row for row in runtime_rows}
+    runtime_by_idea: dict[str, dict[str, float]] = {}
+    for row in runtime_rows:
+        canonical_runtime_idea_id = idea_service.canonical_discovered_idea_id(getattr(row, "idea_id", ""))
+        if not canonical_runtime_idea_id:
+            continue
+        bucket = runtime_by_idea.setdefault(
+            canonical_runtime_idea_id,
+            {"event_count": 0.0, "total_runtime_ms": 0.0, "runtime_cost_estimate": 0.0},
+        )
+        bucket["event_count"] += float(getattr(row, "event_count", 0) or 0)
+        bucket["total_runtime_ms"] += float(getattr(row, "total_runtime_ms", 0.0) or 0.0)
+        bucket["runtime_cost_estimate"] += float(getattr(row, "runtime_cost_estimate", 0.0) or 0.0)
     registry_specs = spec_registry_service.list_specs(limit=max(1, min(int(spec_registry_limit), 1000)))
     stage_timings["registry_specs"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
@@ -4736,6 +4752,7 @@ def build_spec_process_implementation_validation_flow(
     stage_timings["evidence_records"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
+    requested_idea_id = idea_service.canonical_discovered_idea_id(idea_id) if idea_id else None
     discovered_ids: set[str] = set(idea_name_map.keys())
     discovered_ids.update(link.idea_id for link in lineage_links if link.idea_id)
     discovered_ids.update(
@@ -4750,9 +4767,18 @@ def build_spec_process_implementation_validation_flow(
                 if isinstance(candidate, str) and candidate.strip():
                     discovered_ids.add(candidate.strip())
 
-    filtered_ids = sorted(discovered_ids)
+    canonical_discovered_ids = {
+        canonical_id
+        for candidate in discovered_ids
+        if (canonical_id := idea_service.canonical_discovered_idea_id(candidate))
+    }
+
+    filtered_ids = sorted(canonical_discovered_ids)
     if idea_id:
-        filtered_ids = [item for item in filtered_ids if item == idea_id]
+        if requested_idea_id is None:
+            filtered_ids = []
+        else:
+            filtered_ids = [item for item in filtered_ids if item == requested_idea_id]
     elif not include_internal_ideas:
         filtered_ids = [
             item
@@ -4777,9 +4803,12 @@ def build_spec_process_implementation_validation_flow(
         return flows[idea_key]
 
     for link in lineage_links:
-        if idea_id and link.idea_id != idea_id:
+        current_idea_id = idea_service.canonical_discovered_idea_id(link.idea_id)
+        if not current_idea_id:
             continue
-        flow = ensure(link.idea_id)
+        if requested_idea_id and current_idea_id != requested_idea_id:
+            continue
+        flow = ensure(current_idea_id)
         flow["_spec_ids"].add(link.spec_id)
         flow["_lineage_ids"].add(link.id)
         for ref in link.implementation_refs:
@@ -4793,10 +4822,10 @@ def build_spec_process_implementation_validation_flow(
         flow["measured_value_total"] += float(usage_by_lineage_value.get(link.id, 0.0))
 
     for spec in registry_specs:
-        spec_idea_id = str(spec.idea_id or "").strip()
+        spec_idea_id = idea_service.canonical_discovered_idea_id(str(spec.idea_id or "").strip())
         if not spec_idea_id:
             continue
-        if idea_id and spec_idea_id != idea_id:
+        if requested_idea_id and spec_idea_id != requested_idea_id:
             continue
         flow = ensure(spec_idea_id)
         flow["_spec_ids"].add(spec.spec_id)
@@ -4811,11 +4840,17 @@ def build_spec_process_implementation_validation_flow(
         raw_idea_ids = record.get("idea_ids")
         if not isinstance(raw_idea_ids, list):
             continue
-        record_idea_ids = [
-            item.strip()
-            for item in raw_idea_ids
-            if isinstance(item, str) and item.strip() and (not idea_id or item.strip() == idea_id)
-        ]
+        record_idea_ids: list[str] = []
+        for item in raw_idea_ids:
+            if not isinstance(item, str) or not item.strip():
+                continue
+            canonical_item = idea_service.canonical_discovered_idea_id(item.strip())
+            if not canonical_item:
+                continue
+            if requested_idea_id and canonical_item != requested_idea_id:
+                continue
+            record_idea_ids.append(canonical_item)
+        record_idea_ids = sorted(set(record_idea_ids))
         if not record_idea_ids:
             continue
 
@@ -4893,12 +4928,12 @@ def build_spec_process_implementation_validation_flow(
     stage_start = time.perf_counter()
 
     for current_idea_id, runtime in runtime_by_idea.items():
-        if idea_id and current_idea_id != idea_id:
+        if requested_idea_id and current_idea_id != requested_idea_id:
             continue
         flow = ensure(current_idea_id)
-        flow["runtime_events_count"] = int(runtime.event_count)
-        flow["runtime_total_ms"] = float(runtime.total_runtime_ms)
-        flow["runtime_cost_estimate"] = float(runtime.runtime_cost_estimate)
+        flow["runtime_events_count"] += int(runtime["event_count"])
+        flow["runtime_total_ms"] += float(runtime["total_runtime_ms"])
+        flow["runtime_cost_estimate"] += float(runtime["runtime_cost_estimate"])
     stage_timings["runtime_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
@@ -4919,7 +4954,7 @@ def build_spec_process_implementation_validation_flow(
 
     # Direct mapping: contribution metadata explicitly references idea ids.
     for current_idea_id, rows in direct_contribs_by_idea.items():
-        if idea_id and current_idea_id != idea_id:
+        if requested_idea_id and current_idea_id != requested_idea_id:
             continue
         flow = ensure(current_idea_id)
         for row in rows:
