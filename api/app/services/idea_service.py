@@ -130,6 +130,61 @@ STANDING_QUESTION_TEXT = (
     "How can we improve this idea, and if it cannot be measured yet how can it be measured, "
     "and if it is measured how can that measurement be improved?"
 )
+STANDING_QUESTION_DEFAULT_ANSWER = (
+    "Run a weekly loop: pick one measurable constraint, run the smallest experiment that changes it, "
+    "record the delta, and update estimated_cost/confidence before reprioritizing."
+)
+
+
+def _normalize_question_text(value: str) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
+_DEFAULT_QUESTION_ANSWERS_RAW: dict[str, dict[str, Any]] = {
+    "Which route set is canonical for current milestone?": {
+        "answer": (
+            "Use `/api/*` routes defined by `/api/inventory/routes/canonical` as the canonical surface. "
+            "Treat `/v1/*` as compatibility aliases until explicitly removed."
+        ),
+    },
+    "What is the minimum E2E flow to validate machine-human interface integrity?": {
+        "answer": (
+            "Minimum E2E contract: API `/api/health` is healthy, `/api/agent/tasks` POST/GET roundtrip works, "
+            "and web `/api-health` loads a non-error API proxy response."
+        ),
+    },
+    "Which leading indicators best represent energy flow to the whole?": {
+        "answer": (
+            "Use five leading indicators: unblock queue burn-down, task success rate, friction open-event count, "
+            "runtime cost per completed task, and idea value-gap reduction."
+        ),
+    },
+    "What minimal GitHub ingestion yields measurable component uplift?": {
+        "answer": (
+            "Ingest only PR/commit metadata, changed files, check conclusions, and contributor identity; "
+            "link these to idea/spec ids before adding deeper code-content ingestion."
+        ),
+    },
+    "What is the minimal federation contract for cross-instance data aggregation with provenance?": {
+        "answer": (
+            "Require per-record `instance_id`, `idea_id`, `spec_ids`, `task_fingerprint`, `source_commit_sha`, "
+            "`evidence_refs`, and signed timestamp so aggregation is auditable."
+        ),
+    },
+    "Which anti-duplication and trust signals are required before federated data affects ROI ranking?": {
+        "answer": (
+            "Gate federated influence on dedupe fingerprint (`repo+commit+task_fingerprint`), signer identity, "
+            "freshness window, and validation status before contributing to ROI."
+        ),
+    },
+    STANDING_QUESTION_TEXT: {
+        "answer": STANDING_QUESTION_DEFAULT_ANSWER,
+    },
+}
+DEFAULT_QUESTION_ANSWERS: dict[str, dict[str, Any]] = {
+    _normalize_question_text(question): value
+    for question, value in _DEFAULT_QUESTION_ANSWERS_RAW.items()
+}
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
@@ -479,6 +534,7 @@ def _read_ideas() -> list[Idea]:
         ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
         ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
+        ideas, default_answers_changed = _ensure_default_question_answers(ideas)
         bootstrap_source = source
         if required_changed:
             bootstrap_source = f"{bootstrap_source}+required_system_ideas"
@@ -488,6 +544,8 @@ def _read_ideas() -> list[Idea]:
             bootstrap_source = f"{bootstrap_source}+domain_discovery"
         if standing_changed or pruned_changed or transient_pruned_changed:
             bootstrap_source = f"{bootstrap_source}+standing_question"
+        if default_answers_changed:
+            bootstrap_source = f"{bootstrap_source}+default_answers"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
         _write_snapshot_file(ideas)
         _cache_ideas(ideas)
@@ -499,14 +557,8 @@ def _read_ideas() -> list[Idea]:
     ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
     ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if (
-        required_changed
-        or tracked_changed
-        or domain_discovered_changed
-        or standing_changed
-        or pruned_changed
-        or transient_pruned_changed
-    ):
+    ideas, default_answers_changed = _ensure_default_question_answers(ideas)
+    if required_changed or tracked_changed or standing_changed or default_answers_changed:
         _write_ideas(ideas)
     else:
         path = _portfolio_path()
@@ -537,23 +589,32 @@ def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
                 question=STANDING_QUESTION_TEXT,
                 value_to_whole=default_value,
                 estimated_cost=default_cost,
+                answer=STANDING_QUESTION_DEFAULT_ANSWER,
             )
         )
         changed = True
     return ideas, changed
 
 
-def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+def _ensure_default_question_answers(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     changed = False
     for idea in ideas:
-        if not is_internal_idea_id(idea.id, idea.interfaces):
-            continue
-        before = len(idea.open_questions)
-        if before == 0:
-            continue
-        idea.open_questions = [q for q in idea.open_questions if q.question != STANDING_QUESTION_TEXT]
-        if len(idea.open_questions) != before:
-            changed = True
+        for question in idea.open_questions:
+            normalized = _normalize_question_text(question.question)
+            payload = DEFAULT_QUESTION_ANSWERS.get(normalized)
+            if not payload:
+                continue
+            answer = str(payload.get("answer") or "").strip()
+            if answer and not str(question.answer or "").strip():
+                question.answer = answer
+                changed = True
+            measured_delta = payload.get("measured_delta")
+            if measured_delta is not None and question.measured_delta is None:
+                try:
+                    question.measured_delta = float(measured_delta)
+                    changed = True
+                except (TypeError, ValueError):
+                    continue
     return ideas, changed
 
 
