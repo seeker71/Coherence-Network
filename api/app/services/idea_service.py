@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -186,6 +187,15 @@ DEFAULT_INTERNAL_IDEA_PREFIXES = (
     "e2e-idea-",
 )
 DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS = {"machine:commit-evidence"}
+TRANSIENT_INTERNAL_ID_PATTERNS = (
+    re.compile(r"^public-e2e-[0-9a-f]{8}$"),
+)
+DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^public-e2e-"), "deployment-gate-reliability"),
+    (re.compile(r"^e2e-idea-"), "deployment-gate-reliability"),
+    (re.compile(r"^spec-origin-"), "portfolio-governance"),
+    (re.compile(r"^endpoint-lineage-"), "oss-interface-alignment"),
+)
 
 
 def _default_portfolio_path() -> str:
@@ -235,6 +245,29 @@ def is_internal_idea_id(idea_id: str, interfaces: list[str] | None = None) -> bo
         if tags.intersection(_configured_internal_idea_interface_tags()):
             return True
     return False
+
+
+def _is_transient_internal_idea_id(idea_id: str) -> bool:
+    normalized_id = str(idea_id or "").strip().lower()
+    if not normalized_id:
+        return False
+    return any(pattern.match(normalized_id) for pattern in TRANSIENT_INTERNAL_ID_PATTERNS)
+
+
+def _canonical_discovered_idea_id(idea_id: str) -> str | None:
+    normalized_id = str(idea_id or "").strip().lower()
+    if not normalized_id or normalized_id == "unmapped":
+        return None
+    for pattern, target_id in DISCOVERED_INTERNAL_ID_ALIASES:
+        if pattern.match(normalized_id):
+            return target_id
+    if _is_transient_internal_idea_id(normalized_id):
+        return None
+    return normalized_id
+
+
+def _should_track_discovered_idea_id(idea_id: str) -> bool:
+    return _canonical_discovered_idea_id(idea_id) is not None
 
 
 def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
@@ -359,7 +392,11 @@ def _discover_registry_domain_idea_ids() -> list[str]:
     if not _should_discover_registry_domain_ideas():
         return []
 
-    discovered: set[str] = set(_tracked_idea_ids())
+    discovered: set[str] = {
+        idea_id
+        for idea_id in _tracked_idea_ids()
+        if _should_track_discovered_idea_id(idea_id)
+    }
 
     try:
         spec_rows = spec_registry_service.list_specs(limit=2000, offset=0)
@@ -367,8 +404,9 @@ def _discover_registry_domain_idea_ids() -> list[str]:
         spec_rows = []
     for row in spec_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        if idea_id:
-            discovered.add(idea_id)
+        canonical_id = _canonical_discovered_idea_id(idea_id)
+        if canonical_id:
+            discovered.add(canonical_id)
 
     try:
         lineage_rows = value_lineage_service.list_links(limit=2000)
@@ -376,8 +414,9 @@ def _discover_registry_domain_idea_ids() -> list[str]:
         lineage_rows = []
     for row in lineage_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        if idea_id:
-            discovered.add(idea_id)
+        canonical_id = _canonical_discovered_idea_id(idea_id)
+        if canonical_id:
+            discovered.add(canonical_id)
 
     try:
         runtime_window_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_WINDOW_SECONDS", "86400")).strip() or "86400")
@@ -401,10 +440,13 @@ def _discover_registry_domain_idea_ids() -> list[str]:
         runtime_rows = []
     for row in runtime_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        if idea_id and idea_id != "unmapped":
-            discovered.add(idea_id)
-
-    discovered.update(_contribution_metadata_idea_ids())
+        canonical_id = _canonical_discovered_idea_id(idea_id)
+        if canonical_id:
+            discovered.add(canonical_id)
+    for idea_id in _contribution_metadata_idea_ids():
+        canonical_id = _canonical_discovered_idea_id(idea_id)
+        if canonical_id:
+            discovered.add(canonical_id)
 
     return sorted(discovered)
 
@@ -478,12 +520,29 @@ def _ensure_registry_domain_idea_entries(ideas: list[Idea]) -> tuple[list[Idea],
     existing = {idea.id for idea in ideas}
     changed = False
     for idea_id in discovered_ids:
+        if not _should_track_discovered_idea_id(idea_id):
+            continue
         if idea_id in existing:
             continue
         ideas.append(_derived_idea_for_id(idea_id))
         existing.add(idea_id)
         changed = True
     return ideas, changed
+
+
+def _prune_transient_internal_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    kept: list[Idea] = []
+    changed = False
+    for idea in ideas:
+        canonical_id = _canonical_discovered_idea_id(idea.id)
+        if canonical_id is not None and canonical_id != str(idea.id).strip().lower():
+            changed = True
+            continue
+        if _is_transient_internal_idea_id(idea.id):
+            changed = True
+            continue
+        kept.append(idea)
+    return kept, changed
 
 
 def _humanize_idea_id(idea_id: str) -> str:
@@ -621,6 +680,7 @@ def _read_ideas() -> list[Idea]:
         ideas, required_changed = _ensure_required_system_ideas(ideas)
         ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
         ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
+        ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
         ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
         bootstrap_source = source
@@ -630,7 +690,7 @@ def _read_ideas() -> list[Idea]:
             bootstrap_source = f"{bootstrap_source}+derived"
         if domain_discovered_changed:
             bootstrap_source = f"{bootstrap_source}+domain_discovery"
-        if standing_changed or pruned_changed:
+        if standing_changed or pruned_changed or transient_pruned_changed:
             bootstrap_source = f"{bootstrap_source}+standing_question"
         idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
         _write_snapshot_file(ideas)
@@ -640,9 +700,17 @@ def _read_ideas() -> list[Idea]:
     ideas, required_changed = _ensure_required_system_ideas(ideas)
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
     ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
+    ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
     ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if required_changed or tracked_changed or domain_discovered_changed or standing_changed or pruned_changed:
+    if (
+        required_changed
+        or tracked_changed
+        or domain_discovered_changed
+        or standing_changed
+        or pruned_changed
+        or transient_pruned_changed
+    ):
         _write_ideas(ideas)
     else:
         path = _portfolio_path()
