@@ -571,7 +571,6 @@ def list_ideas(
     only_unvalidated: bool = False,
     limit: int | None = None,
     offset: int = 0,
-    include_internal: bool = True,
 ) -> IdeaPortfolioResponse:
     ideas = _read_ideas()
     if not include_internal:

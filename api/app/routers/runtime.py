@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
 
-from app.models.runtime import EndpointAttentionReport, RuntimeEvent, RuntimeEventCreate
+from app.models.runtime import (
+    EndpointAttentionReport,
+    RuntimeEvent,
+    RuntimeEventCreate,
+    WebViewPerformanceReport,
+)
 from app.services import runtime_service
 
 router = APIRouter()
@@ -39,18 +44,18 @@ async def runtime_summary_by_idea(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(200, ge=1, le=2000),
     offset: int = Query(0, ge=0, le=10000),
-    force_refresh: bool = Query(False),
 ) -> dict:
-    # Keep API latency bounded for UI summary requests by scaling event scan
-    # with requested output size instead of always scanning the full default.
-    event_limit = max(300, min(1500, int(limit) * 20))
-    return runtime_service.cached_runtime_ideas_summary_payload(
+    rows = runtime_service.summarize_by_idea(
         seconds=seconds,
-        limit=limit,
-        offset=offset,
-        event_limit=event_limit,
-        force_refresh=force_refresh,
+        summary_limit=limit,
+        summary_offset=offset,
     )
+    return {
+        "window_seconds": seconds,
+        "offset": offset,
+        "limit": limit,
+        "ideas": [row.model_dump(mode="json") for row in rows],
+    }
 
 
 @router.get("/runtime/endpoints/summary")
@@ -63,6 +68,19 @@ async def runtime_summary_by_endpoint(
         "window_seconds": seconds,
         "endpoints": [row.model_dump(mode="json") for row in rows],
     }
+
+
+@router.get("/runtime/web/views/summary", response_model=WebViewPerformanceReport)
+async def runtime_web_view_summary(
+    seconds: int = Query(21600, ge=60, le=2592000),
+    limit: int = Query(100, ge=1, le=500),
+    route_prefix: str | None = Query(default=None, max_length=200),
+) -> WebViewPerformanceReport:
+    return runtime_service.summarize_web_view_performance(
+        seconds=seconds,
+        limit=limit,
+        route_prefix=route_prefix,
+    )
 
 
 @router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport)

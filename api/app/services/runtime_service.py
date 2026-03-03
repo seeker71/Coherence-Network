@@ -21,6 +21,8 @@ from app.models.runtime import (
     IdeaRuntimeSummary,
     RuntimeEvent,
     RuntimeEventCreate,
+    WebViewPerformanceReport,
+    WebViewPerformanceRow,
 )
 from app.services import idea_lineage_service, route_registry_service, runtime_event_store, value_lineage_service
 
@@ -100,169 +102,6 @@ def _runtime_events_cache_key(limit: int, since: datetime | None, source: str | 
         cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
     source_value = str(source or "").strip().lower() or "all"
     return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}|source={source_value}"
-
-
-def _runtime_endpoint_cache_ttl_seconds(cache_name: str, default: float = _RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
-    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
-    env_key = f"RUNTIME_ENDPOINT_CACHE_TTL_{env_suffix}"
-    raw = str(os.getenv(env_key) or "").strip()
-    if not raw:
-        return max(1.0, min(float(default), 86400.0))
-    try:
-        parsed = float(raw)
-    except (TypeError, ValueError):
-        return max(1.0, min(float(default), 86400.0))
-    return max(1.0, min(float(parsed), 86400.0))
-
-
-def _runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
-    scope_parts = [
-        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
-        str(os.getenv("RUNTIME_DATABASE_URL") or ""),
-        str(os.getenv("DATABASE_URL") or ""),
-        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
-        str(_runtime_events_store_cache_key()),
-        str(_RUNTIME_ENDPOINT_CACHE_BUSTER),
-    ]
-    scope_digest = hashlib.sha1("||".join(scope_parts).encode("utf-8")).hexdigest()[:12]
-    canonical = json.dumps(params or {}, sort_keys=True, separators=(",", ":"), default=str)
-    digest = hashlib.sha1(f"{endpoint}|{canonical}".encode("utf-8")).hexdigest()
-    return f"{_RUNTIME_ENDPOINT_CACHE_NAMESPACE}::{scope_digest}::{endpoint}::{digest}"
-
-
-def _parse_runtime_cache_timestamp(raw: Any) -> datetime | None:
-    value = str(raw or "").strip()
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _runtime_endpoint_cache_read(
-    endpoint: str,
-    params: dict[str, Any] | None = None,
-) -> tuple[Any | None, float | None]:
-    key = _runtime_endpoint_cache_meta_key(endpoint, params)
-    raw = telemetry_persistence_service.get_meta_value(key)
-    if not raw:
-        return None, None
-    try:
-        envelope = json.loads(raw)
-    except (TypeError, ValueError):
-        return None, None
-    if not isinstance(envelope, dict) or "payload" not in envelope:
-        return None, None
-    payload = envelope.get("payload")
-    stored_at = _parse_runtime_cache_timestamp(envelope.get("stored_at"))
-    if stored_at is None:
-        return payload, None
-    age_seconds = max(0.0, (datetime.now(timezone.utc) - stored_at).total_seconds())
-    if age_seconds > float(_RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS):
-        return None, None
-    return payload, age_seconds
-
-
-def _runtime_endpoint_cache_write(endpoint: str, payload: Any, params: dict[str, Any] | None = None) -> None:
-    key = _runtime_endpoint_cache_meta_key(endpoint, params)
-    envelope = {
-        "stored_at": datetime.now(timezone.utc).isoformat(),
-        "payload": payload,
-    }
-    telemetry_persistence_service.set_meta_value(
-        key,
-        json.dumps(envelope, separators=(",", ":"), default=str),
-    )
-
-
-def _runtime_endpoint_cache_schedule_refresh(
-    endpoint: str,
-    *,
-    producer: Callable[[], Any],
-    params: dict[str, Any] | None = None,
-) -> bool:
-    key = _runtime_endpoint_cache_meta_key(endpoint, params)
-    with _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK:
-        active = _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
-        if active is not None and not active.done():
-            return False
-
-        def _run_refresh() -> Any:
-            payload = producer()
-            _runtime_endpoint_cache_write(endpoint, payload, params=params)
-            return payload
-
-        future = _RUNTIME_ENDPOINT_CACHE_REFRESH_POOL.submit(_run_refresh)
-        _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES[key] = future
-
-        def _cleanup(done_future: Future[Any]) -> None:
-            with _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK:
-                current = _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
-                if current is done_future:
-                    _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.pop(key, None)
-            try:
-                done_future.result()
-            except Exception:
-                logger.exception("runtime endpoint cache refresh failed", extra={"endpoint": endpoint})
-
-        future.add_done_callback(_cleanup)
-        return True
-
-
-def _runtime_endpoint_cached_value(
-    endpoint: str,
-    *,
-    fresh_ttl_seconds: float,
-    refresh_producer: Callable[[], Any],
-    fallback_producer: Callable[[], Any] | None = None,
-    params: dict[str, Any] | None = None,
-    force_refresh: bool = False,
-) -> Any:
-    if force_refresh:
-        payload = refresh_producer()
-        _runtime_endpoint_cache_write(endpoint, payload, params=params)
-        return payload
-
-    ttl = _runtime_endpoint_cache_ttl_seconds(endpoint, default=fresh_ttl_seconds)
-    cached_payload, cached_age = _runtime_endpoint_cache_read(endpoint, params=params)
-    if cached_payload is not None and cached_age is not None and cached_age <= ttl:
-        return cached_payload
-    if cached_payload is not None:
-        _runtime_endpoint_cache_schedule_refresh(
-            endpoint,
-            producer=refresh_producer,
-            params=params,
-        )
-        return cached_payload
-    try:
-        payload = refresh_producer()
-        _runtime_endpoint_cache_write(endpoint, payload, params=params)
-        return payload
-    except Exception:
-        if fallback_producer is not None:
-            fallback_payload = fallback_producer()
-            _runtime_endpoint_cache_write(endpoint, fallback_payload, params=params)
-            return fallback_payload
-        raise
-
-
-def _coerce_runtime_event_rows(payload: Any, *, limit: int) -> list[RuntimeEvent]:
-    if not isinstance(payload, list):
-        return []
-    rows: list[RuntimeEvent] = []
-    for raw in payload:
-        if not isinstance(raw, dict):
-            continue
-        try:
-            rows.append(RuntimeEvent(**raw))
-        except Exception:
-            continue
-    rows.sort(key=lambda row: row.recorded_at, reverse=True)
-    return rows[: max(1, min(int(limit), 5000))]
 
 
 def _invalidate_runtime_events_cache() -> None:
@@ -687,50 +526,6 @@ def summarize_by_idea(
     return summaries[safe_offset:safe_offset + safe_limit]
 
 
-def cached_runtime_ideas_summary_payload(
-    *,
-    seconds: int = 3600,
-    limit: int = 200,
-    offset: int = 0,
-    event_limit: int | None = None,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    window_seconds = max(60, min(int(seconds), 60 * 60 * 24 * 30))
-    requested_limit = max(1, min(int(limit), 2000))
-    requested_offset = max(0, int(offset))
-    scan_limit = (
-        max(1, min(int(event_limit), 5000))
-        if event_limit is not None
-        else max(300, min(1500, requested_limit * 20))
-    )
-    params = {
-        "seconds": window_seconds,
-        "limit": requested_limit,
-        "offset": requested_offset,
-        "event_limit": scan_limit,
-    }
-    return _runtime_endpoint_cached_value(
-        "runtime_ideas_summary",
-        fresh_ttl_seconds=90.0,
-        refresh_producer=lambda: {
-            "window_seconds": window_seconds,
-            "offset": requested_offset,
-            "limit": requested_limit,
-            "ideas": [
-                row.model_dump(mode="json")
-                for row in summarize_by_idea(
-                    seconds=window_seconds,
-                    event_limit=scan_limit,
-                    summary_limit=requested_limit,
-                    summary_offset=requested_offset,
-                )
-            ],
-        },
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
 def summarize_by_endpoint(seconds: int = 3600, summary_limit: int = 500) -> list[EndpointRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
@@ -820,6 +615,39 @@ def summarize_by_endpoint(seconds: int = 3600, summary_limit: int = 500) -> list
     return summaries[: max(1, min(int(summary_limit), 2000))]
 
 
+def _metadata_string(event: RuntimeEvent, key: str) -> str:
+    metadata = event.metadata if isinstance(event.metadata, dict) else {}
+    value = metadata.get(key)
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _metadata_float(event: RuntimeEvent, key: str, default: float = 0.0) -> float:
+    metadata = event.metadata if isinstance(event.metadata, dict) else {}
+    value = metadata.get(key)
+    try:
+        if value is None:
+            return float(default)
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return round(ordered[0], 4)
+    rank = max(0.0, min(float(percentile), 1.0)) * (len(ordered) - 1)
+    lower = int(rank)
+    upper = min(lower + 1, len(ordered) - 1)
+    weight = rank - lower
+    interpolated = ordered[lower] + (ordered[upper] - ordered[lower]) * weight
+    return round(interpolated, 4)
+
+
 def summarize_web_view_performance(
     *,
     seconds: int = 21600,
@@ -831,61 +659,98 @@ def summarize_web_view_performance(
     requested_limit = max(1, min(int(limit), 500))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
     rows = list_events(limit=max(1, min(int(event_limit), 5000)), since=cutoff)
-    return runtime_web_view_service.summarize_web_view_performance_from_rows(
-        rows=rows,
-        window_seconds=window_seconds,
-        requested_limit=requested_limit,
-        route_prefix=(route_prefix or "").strip() or None,
-    )
+    prefix = (route_prefix or "").strip()
 
+    api_events_by_view: dict[str, list[RuntimeEvent]] = {}
+    for event in rows:
+        if event.source != "api":
+            continue
+        view_id = _metadata_string(event, "page_view_id")
+        if not view_id:
+            continue
+        api_events_by_view.setdefault(view_id, []).append(event)
 
-def cached_web_view_performance_payload(
-    *,
-    seconds: int = 21600,
-    limit: int = 100,
-    route_prefix: str | None = None,
-    event_limit: int | None = None,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    window_seconds = max(60, min(int(seconds), 60 * 60 * 24 * 30))
-    requested_limit = max(1, min(int(limit), 500))
-    normalized_route_prefix = (route_prefix or "").strip() or None
-    scan_limit = (
-        max(1, min(int(event_limit), 5000))
-        if event_limit is not None
-        else max(300, min(1500, requested_limit * 30))
-    )
-    params = {
-        "seconds": window_seconds,
-        "limit": requested_limit,
-        "route_prefix": normalized_route_prefix or "",
-        "event_limit": scan_limit,
-    }
+    grouped: dict[str, list[dict[str, float | datetime]]] = {}
+    for event in rows:
+        if event.source != "web":
+            continue
+        tracking_kind = _metadata_string(event, "tracking_kind")
+        if tracking_kind != "web_view_complete":
+            continue
+        route = str(event.endpoint or "").strip()
+        if not route:
+            continue
+        if prefix and not route.startswith(prefix):
+            continue
 
-    def _refresh() -> dict[str, Any]:
-        report = summarize_web_view_performance(
-            seconds=window_seconds,
-            limit=requested_limit,
-            route_prefix=normalized_route_prefix,
-            event_limit=scan_limit,
+        view_id = _metadata_string(event, "page_view_id")
+        linked_api_events = api_events_by_view.get(view_id, []) if view_id else []
+        api_call_count = _metadata_float(event, "api_call_count", default=float(len(linked_api_events)))
+        if linked_api_events:
+            default_endpoint_count = float(len({api_event.endpoint for api_event in linked_api_events}))
+            default_api_runtime = float(sum(float(api_event.runtime_ms) for api_event in linked_api_events))
+            default_api_cost = float(sum(float(api_event.runtime_cost_estimate) for api_event in linked_api_events))
+        else:
+            default_endpoint_count = 0.0
+            default_api_runtime = 0.0
+            default_api_cost = 0.0
+        api_endpoint_count = _metadata_float(event, "api_endpoint_count", default=default_endpoint_count)
+        api_runtime_ms = _metadata_float(event, "api_runtime_ms", default=default_api_runtime)
+        api_runtime_cost = _metadata_float(
+            event,
+            "api_runtime_cost_estimate",
+            default=_metadata_float(event, "api_runtime_cost_usd", default=default_api_cost),
         )
-        return report.model_dump(mode="json")
+        grouped.setdefault(route, []).append(
+            {
+                "render_ms": float(event.runtime_ms),
+                "api_call_count": max(0.0, api_call_count),
+                "api_endpoint_count": max(0.0, api_endpoint_count),
+                "api_runtime_ms": max(0.0, api_runtime_ms),
+                "api_runtime_cost_estimate": max(0.0, api_runtime_cost),
+                "recorded_at": event.recorded_at,
+            }
+        )
 
-    def _fallback() -> dict[str, Any]:
-        return WebViewPerformanceReport(
-            window_seconds=window_seconds,
-            route_prefix=normalized_route_prefix,
-            total_routes=0,
-            rows=[],
-        ).model_dump(mode="json")
+    report_rows: list[WebViewPerformanceRow] = []
+    for route, route_rows in grouped.items():
+        if not route_rows:
+            continue
+        render_values = [float(row["render_ms"]) for row in route_rows]
+        api_call_values = [float(row["api_call_count"]) for row in route_rows]
+        api_endpoint_values = [float(row["api_endpoint_count"]) for row in route_rows]
+        api_runtime_values = [float(row["api_runtime_ms"]) for row in route_rows]
+        api_cost_values = [float(row["api_runtime_cost_estimate"]) for row in route_rows]
+        latest_row = max(route_rows, key=lambda row: row["recorded_at"])
+        report_rows.append(
+            WebViewPerformanceRow(
+                route=route,
+                views=len(route_rows),
+                p50_render_ms=_percentile(render_values, 0.5),
+                p95_render_ms=_percentile(render_values, 0.95),
+                average_render_ms=round(sum(render_values) / len(render_values), 4),
+                average_api_call_count=round(sum(api_call_values) / len(api_call_values), 4),
+                average_api_endpoint_count=round(sum(api_endpoint_values) / len(api_endpoint_values), 4),
+                average_api_runtime_ms=round(sum(api_runtime_values) / len(api_runtime_values), 4),
+                average_api_runtime_cost_estimate=round(sum(api_cost_values) / len(api_cost_values), 8),
+                last_render_ms=round(float(latest_row["render_ms"]), 4),
+                last_api_runtime_ms=round(float(latest_row["api_runtime_ms"]), 4),
+                last_api_runtime_cost_estimate=round(float(latest_row["api_runtime_cost_estimate"]), 8),
+                last_view_at=latest_row["recorded_at"],
+            )
+        )
 
-    return _runtime_endpoint_cached_value(
-        "runtime_web_view_summary",
-        fresh_ttl_seconds=120.0,
-        refresh_producer=_refresh,
-        fallback_producer=_fallback,
-        params=params,
-        force_refresh=force_refresh,
+    report_rows.sort(
+        key=lambda row: (row.average_api_runtime_cost_estimate, row.p95_render_ms, row.route),
+        reverse=True,
+    )
+    total_routes = len(report_rows)
+    report_rows = report_rows[:requested_limit]
+    return WebViewPerformanceReport(
+        window_seconds=window_seconds,
+        route_prefix=prefix or None,
+        total_routes=total_routes,
+        rows=report_rows,
     )
 
 
@@ -1057,337 +922,6 @@ def _build_endpoint_attention_row(
     paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
     friction_density_raw = (float(friction_count) / float(event_count)) if event_count else 0.0
     friction_density = min(max(friction_density_raw, 0.0), 1.0)
-
-    idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
-    potential_value = _safe_float(idea_data.get("potential_value", 0.0))
-    actual_value = _safe_float(idea_data.get("actual_value", 0.0))
-    estimated_cost = _safe_float(idea_data.get("estimated_cost", 0.0))
-    actual_cost = _safe_float(idea_data.get("actual_cost", 0.0))
-    idea_confidence = _safe_float(idea_data.get("confidence", 0.0), default=0.0)
-
-    value_gap = max(potential_value - actual_value, 0.0)
-    cost_per_event = float(row.runtime_cost_estimate) / float(max(event_count, 1))
-
-    confidence = min(event_count / 20.0, 1.0) * 0.75 + 0.25 * idea_confidence
-    attention_score, needs_attention = _endpoint_attention_score(
-        event_count=event_count,
-        success_rate=success_rate,
-        paid_ratio=paid_ratio,
-        friction_density=friction_density,
-        value_gap=value_gap,
-        cost_per_event=cost_per_event,
-        attention_threshold=attention_threshold,
-    )
-
-    return EndpointAttentionRow(
-        endpoint=row.endpoint,
-        methods=row.methods,
-        idea_id=row.idea_id,
-        origin_idea_id=row.origin_idea_id,
-        event_count=event_count,
-        success_count=success_count,
-        failure_count=failure_count,
-        success_rate=round(success_rate, 4),
-        runtime_cost_estimate=round(float(row.runtime_cost_estimate), 8),
-        cost_per_event=round(cost_per_event, 8),
-        paid_tool_event_count=paid_tool_event_count,
-        paid_tool_failure_count=paid_tool_failure_count,
-        paid_tool_ratio=round(paid_ratio, 4),
-        friction_event_count=friction_count,
-        friction_event_density=round(friction_density, 4),
-        potential_value=round(potential_value, 4),
-        actual_value=round(actual_value, 4),
-        estimated_cost=round(estimated_cost, 4),
-        actual_cost=round(actual_cost, 4),
-        value_gap=round(value_gap, 4),
-        attention_score=round(attention_score, 3),
-        confidence=round(max(0.0, min(confidence, 1.0)), 4),
-        needs_attention=needs_attention,
-        reasons=_attention_reasons(
-            success_rate=success_rate,
-            paid_ratio=paid_ratio,
-            friction_density=friction_density,
-            value_gap=value_gap,
-            cost_per_event=cost_per_event,
-            event_count=event_count,
-        ),
-    )
-
-
-def summarize_endpoint_attention(
-    *,
-    seconds: int = 3600,
-    min_event_count: int = 1,
-    attention_threshold: float = 40.0,
-    limit: int | None = None,
-) -> EndpointAttentionReport:
-    window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
-    endpoint_rows = summarize_by_endpoint(seconds=window_seconds)
-    friction_by_endpoint = _endpoint_friction_counts(window_seconds)
-    idea_rows = _load_idea_value_rows()
-
-    window_start = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    attention_events = list_events(limit=2000, since=window_start)
-    by_endpoint: dict[str, list[RuntimeEvent]] = {}
-    for event in attention_events:
-        by_endpoint.setdefault(event.endpoint, []).append(event)
-
-    rows: list[EndpointAttentionRow] = []
-    for row in endpoint_rows:
-        built = _build_endpoint_attention_row(
-            row,
-            min_event_count=min_event_count,
-            attention_threshold=attention_threshold,
-            endpoint_events=by_endpoint.get(row.endpoint, []),
-            friction_count=int(friction_by_endpoint.get(row.endpoint, 0)),
-            idea_rows=idea_rows,
-        )
-        if built is None:
-            continue
-        rows.append(built)
-
-    rows.sort(key=lambda row: row.attention_score, reverse=True)
-    if limit is not None:
-        rows = rows[: max(1, min(int(limit), len(rows), 2000))]
-
-    attention_count = sum(1 for row in rows if row.needs_attention)
-    return EndpointAttentionReport(
-        window_seconds=window_seconds,
-        attention_threshold=round(float(attention_threshold), 3),
-        min_event_count=max(1, int(min_event_count)),
-        total_endpoints=len(rows),
-        attention_count=attention_count,
-        endpoints=rows,
-    )
-
-
-def slow_threshold_ms() -> int:
-    raw = os.getenv("RUNTIME_SLOW_REQUEST_MS", "2000").strip()
-    try:
-        val = int(float(raw))
-    except Exception:
-        val = 2000
-    return max(1, min(val, 300000))
-
-
-def list_events_filtered(
-    *,
-    limit: int = 100,
-    endpoint: str | None = None,
-    method: str | None = None,
-    min_runtime_ms: float | None = None,
-    status_code: int | None = None,
-) -> list[RuntimeEvent]:
-    rows = list_events(limit=max(1, min(int(limit), 2000)))
-    out: list[RuntimeEvent] = []
-    normalized_endpoint = None
-    if endpoint and str(endpoint).strip():
-        normalized_endpoint = normalize_endpoint(str(endpoint).strip(), method=str(method or "").strip() or None)
-    normalized_method = (str(method).strip().upper() if method and str(method).strip() else None)
-    min_rt = None
-    if min_runtime_ms is not None:
-        try:
-            min_rt = float(min_runtime_ms)
-        except Exception:
-            min_rt = None
-    st = None
-    if status_code is not None:
-        try:
-            st = int(status_code)
-        except Exception:
-            st = None
-    for row in rows:
-        if normalized_endpoint and row.endpoint != normalized_endpoint:
-            continue
-        if normalized_method and row.method.upper() != normalized_method:
-            continue
-        if st is not None and int(row.status_code) != st:
-            continue
-        if min_rt is not None and float(row.runtime_ms) < float(min_rt):
-            continue
-        out.append(row)
-    return out[: max(1, min(int(limit), 2000))]
-
-
-def slow_endpoints_report(*, seconds: int, threshold_ms: int, limit: int) -> list[EndpointRuntimeSummary]:
-    rows = summarize_by_endpoint(seconds=seconds)
-    thr = max(1, min(int(threshold_ms), 300000))
-    flagged = [
-        row
-        for row in rows
-        if float(row.p95_runtime_ms) >= float(thr) or float(row.max_runtime_ms) >= float(thr)
-    ]
-    flagged.sort(key=lambda r: (float(r.p95_runtime_ms), float(r.max_runtime_ms), r.endpoint), reverse=True)
-    return flagged[: max(1, min(int(limit), 500))]
-
-
-def _parse_status_code(value: str) -> int:
-    try:
-        return int(str(value))
-    except Exception:
-        return 0
-
-
-def _safe_float(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except Exception:
-        return default
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except Exception:
-        return default
-
-
-def _load_idea_value_rows() -> dict[str, dict[str, float]]:
-    try:
-        from app.services import idea_service
-    except Exception:
-        return {}
-
-    rows: dict[str, dict[str, float]] = {}
-    try:
-        ideas = idea_service.list_ideas()
-    except Exception:
-        return rows
-
-    for idea in ideas.ideas:
-        rows[str(idea.id)] = {
-            "potential_value": float(idea.potential_value or 0.0),
-            "actual_value": float(idea.actual_value or 0.0),
-            "estimated_cost": float(idea.estimated_cost or 0.0),
-            "actual_cost": float(idea.actual_cost or 0.0),
-            "confidence": float(idea.confidence or 0.0),
-        }
-    return rows
-
-
-def _endpoint_friction_counts(seconds: int) -> dict[str, int]:
-    from app.services import friction_service
-
-    try:
-        events, _ignored = friction_service.load_events()
-    except Exception:
-        return {}
-
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, min(seconds, 60 * 60 * 24 * 30)))
-    counts: dict[str, int] = {}
-    for event in events:
-        if event.timestamp < cutoff:
-            continue
-        endpoint = str(getattr(event, "endpoint", "") or "").strip()
-        if not endpoint:
-            continue
-        counts[endpoint] = counts.get(endpoint, 0) + 1
-    return counts
-
-
-def _attention_reasons(
-    *,
-    success_rate: float,
-    paid_ratio: float,
-    friction_density: float,
-    value_gap: float,
-    cost_per_event: float,
-    event_count: int,
-) -> list[str]:
-    reasons: list[str] = []
-    if event_count < 5:
-        reasons.append("low_sample")
-    if success_rate < 0.90:
-        reasons.append(f"low_success_rate:{round(success_rate * 100.0, 2)}%")
-    if paid_ratio > 0.0:
-        reasons.append(f"paid_requests:{round(paid_ratio * 100.0, 2)}%")
-    if friction_density > 0.0:
-        reasons.append(f"friction_density:{round(friction_density * 100.0, 2)}%")
-    if value_gap > 1.0:
-        reasons.append(f"value_gap:{round(value_gap, 4)}")
-    if cost_per_event > 0.002:
-        reasons.append(f"cost_per_event:{round(cost_per_event, 6)}")
-    return reasons
-
-
-def _endpoint_attention_score(
-    *,
-    event_count: int,
-    success_rate: float,
-    paid_ratio: float,
-    friction_density: float,
-    value_gap: float,
-    cost_per_event: float,
-    attention_threshold: float,
-) -> tuple[float, bool]:
-    """Compute attention score and whether attention_threshold is exceeded."""
-    failure_score = (1.0 - success_rate) * 100.0
-    paid_score = min(paid_ratio * 60.0, 30.0)
-    cost_score = min(cost_per_event * 1000.0, 25.0)
-    friction_score = min(friction_density * 300.0, 20.0)
-    value_gap_score = min(value_gap / 5.0, 25.0)
-    sample_score = min(event_count / 20.0, 1.0) * 10.0
-
-    attention_score = (
-        failure_score * min(event_count / 5.0, 1.0)
-        + paid_score
-        + cost_score
-        + friction_score
-        + value_gap_score
-        + sample_score
-    )
-    return attention_score, attention_score >= attention_threshold
-
-
-def _endpoint_attention_status_counts(
-    row: EndpointRuntimeSummary,
-) -> tuple[int, int]:
-    success_count = 0
-    failure_count = 0
-    for code_str, count in row.status_counts.items():
-        code = _parse_status_code(code_str)
-        if 200 <= code < 400:
-            success_count += _safe_int(count, 0)
-        else:
-            failure_count += _safe_int(count, 0)
-    return success_count, failure_count
-
-
-def _endpoint_attention_paid_counts(
-    endpoint_events: list[RuntimeEvent],
-) -> tuple[int, int]:
-    paid_tool_event_count = 0
-    paid_tool_failure_count = 0
-    for event in endpoint_events:
-        metadata = event.metadata if isinstance(event.metadata, dict) else {}
-        if bool(metadata.get("is_paid_provider")):
-            paid_tool_event_count += 1
-            if event.status_code >= 400:
-                paid_tool_failure_count += 1
-    return paid_tool_event_count, paid_tool_failure_count
-
-
-def _build_endpoint_attention_row(
-    row: EndpointRuntimeSummary,
-    *,
-    min_event_count: int,
-    attention_threshold: float,
-    endpoint_events: list[RuntimeEvent],
-    friction_count: int,
-    idea_rows: dict[str, dict[str, float]],
-) -> EndpointAttentionRow | None:
-    event_count = int(row.event_count)
-    if event_count < max(1, int(min_event_count)):
-        return None
-
-    success_count, failure_count = _endpoint_attention_status_counts(row)
-
-    success_rate = float(success_count) / float(event_count) if event_count else 0.0
-
-    paid_tool_event_count, paid_tool_failure_count = _endpoint_attention_paid_counts(endpoint_events)
-
-    paid_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
-    friction_density = (float(friction_count) / float(event_count)) if event_count else 0.0
 
     idea_data = idea_rows.get(row.idea_id) or idea_rows.get(row.origin_idea_id, {})
     potential_value = _safe_float(idea_data.get("potential_value", 0.0))

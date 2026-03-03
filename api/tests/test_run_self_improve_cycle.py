@@ -24,13 +24,10 @@ class _FakeClient:
         self,
         *,
         usage_payload: dict,
-        tasks_payload: object | None = None,
-        needs_decision_payload: object | None = None,
-        friction_payload: object | None = None,
-        friction_categories_payload: object | None = None,
-        runtime_payload: object | None = None,
-        unblock_payload: dict | None = None,
-        roi_payload: dict | None = None,
+        tasks_payload: list[dict] | None = None,
+        needs_decision_payload: list[dict] | None = None,
+        friction_payload: list[dict] | None = None,
+        runtime_payload: dict | None = None,
         daily_summary_payload: dict | None = None,
         usage_error: Exception | None = None,
         tasks_error: Exception | None = None,
@@ -53,37 +50,10 @@ class _FakeClient:
         self._task_post_status_plan = list(task_post_status_plan or [])
         self._stage_output_overrides = dict(stage_output_overrides or {})
         self.usage_payload = usage_payload
-        self.tasks_payload = tasks_payload if tasks_payload is not None else []
-        self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
-        self.friction_payload = friction_payload if friction_payload is not None else []
-        self.friction_categories_payload = friction_categories_payload if friction_categories_payload is not None else {
-            "categories": [
-                {
-                    "key": "failed-tasks",
-                    "severity": "high",
-                    "entry_point_count": 1,
-                    "open_entry_points": 1,
-                    "event_count": 2,
-                    "energy_loss": 12.0,
-                    "cost_of_delay": 8.0,
-                    "wasted_minutes": 12.0,
-                    "recommended_actions": ["Reduce repeated failed task retries."],
-                }
-            ]
-        }
-        self.runtime_payload = runtime_payload if runtime_payload is not None else {}
-        self.unblock_payload = unblock_payload or {
-            "result": "task_suggested",
-            "blocking_stage": "spec",
-            "unblock_priority_score": 2.2,
-            "direction": "Create a spec-first unblock task for the top flow gap.",
-        }
-        self.roi_payload = roi_payload or {
-            "result": "task_suggested",
-            "question_roi": 2.6,
-            "answer_roi": 0.0,
-            "question": "What is the highest-ROI next implementation task?",
-        }
+        self.tasks_payload = tasks_payload or []
+        self.needs_decision_payload = needs_decision_payload or []
+        self.friction_payload = friction_payload or []
+        self.runtime_payload = runtime_payload or {}
         self.daily_summary_payload = daily_summary_payload or {
             "quality_awareness": {
                 "status": "ok",
@@ -246,39 +216,6 @@ def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
     assert "proof of meaning" in lowered
     assert "maintainability guidance" in lowered
     assert "quality-awareness" in lowered
-    assert "friction-category prioritization" in lowered
-
-
-def test_plan_prompt_includes_friction_focus_when_bundle_present() -> None:
-    prompt = run_self_improve_cycle.build_plan_direction(
-        {
-            "friction_categories": {
-                "records": [
-                    {
-                        "key": "monitor",
-                        "severity": "high",
-                        "event_count": 4,
-                        "wasted_minutes": 22.0,
-                        "recommended_actions": ["Fix monitor issue root cause first."],
-                    }
-                ]
-            },
-            "unblock_queue": {"payload": {"result": "task_suggested", "blocking_stage": "spec", "direction": "Ship spec"}},
-            "roi_next_task": {
-                "payload": {
-                    "result": "task_suggested",
-                    "question_roi": 3.1,
-                    "answer_roi": 0.0,
-                    "question": "Highest ROI item",
-                }
-            },
-        }
-    )
-
-    assert "Current friction-category signals to prioritize:" in prompt
-    assert "monitor" in prompt
-    assert "flow_unblock" in prompt
-    assert "roi_queue" in prompt
 
 
 def test_stage_payloads_pin_expected_models() -> None:

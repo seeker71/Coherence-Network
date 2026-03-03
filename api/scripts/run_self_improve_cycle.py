@@ -231,8 +231,6 @@ def build_plan_direction(input_bundle: dict[str, Any] | None = None) -> str:
         "10. Failure anticipation: include how the solution could degrade in two weeks and what guardrails detect it.\n"
         "11. Proof of meaning: define why this is better for humans/operators, not only that commands passed.\n"
         "12. Maintainability guidance: use quality-awareness signals (hotspots + recommendations) to reduce code drift.\n"
-        "13. Friction-category prioritization: start with highest-ROI category signals and prefer spec-first unblock steps for gaps.\n"
-        f"{focus_text}"
         "Output only the plan content, no preamble."
     )
 
@@ -581,6 +579,39 @@ def _collect_usage_snapshot(
     if usage_source == "live" and usage_ok and usage_status_code == 200:
         _save_cached_usage_payload(usage_cache_path, usage_payload)
 
+    task_ok, tasks_payload_raw, task_error, task_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?limit=40",
+    )
+    task_records = _coerce_list(tasks_payload_raw, [])
+
+    needs_decision_ok, needs_decision_payload_raw, needs_decision_error, needs_decision_status_code = _safe_get(
+        client,
+        f"{base_url}/api/agent/tasks?status=needs_decision&limit=20",
+    )
+    needs_decision_records = _coerce_list(needs_decision_payload_raw, [])
+
+    friction_ok, friction_payload_raw, friction_error, friction_status_code = _safe_get(
+        client,
+        f"{base_url}/api/friction/events?status=open&limit=50",
+    )
+    friction_records = _coerce_list(friction_payload_raw, [])
+
+    runtime_ok, runtime_payload_raw, runtime_error, runtime_status_code = _safe_get(
+        client,
+        f"{base_url}/api/runtime/endpoints/summary?limit=25",
+    )
+    runtime_payload = _coerce_dict(runtime_payload_raw, {})
+    daily_summary_ok, daily_summary_payload_raw, daily_summary_error, daily_summary_status_code = _safe_get(
+        client,
+        f"{base_url}/api/automation/usage/daily-summary?window_hours=24&top_n=5",
+    )
+    daily_summary_payload = _coerce_dict(daily_summary_payload_raw, {})
+    quality_awareness = _coerce_dict(daily_summary_payload.get("quality_awareness"), {})
+    quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
+    quality_hotspots = _coerce_list(quality_awareness.get("hotspots"), [])
+    quality_guidance = _coerce_list(quality_awareness.get("guidance"), [])
+
     usage_alerts = _coerce_list(usage_payload.get("alerts"), [])
     blocking_alerts: list[dict[str, Any]] = []
     target_providers = {"openai", "openrouter", "coherence-internal"}
@@ -767,13 +798,7 @@ def _collect_input_bundle(
     data_quality_mode = "full"
     if str(usage.get("source") or "") in {"cached", "missing"}:
         data_quality_mode = "degraded_usage"
-    if (
-        not task_ok
-        or not needs_decision_ok
-        or not bool(_coerce_dict(friction_awareness.get("friction"), {}).get("ok"))
-        or not bool(_coerce_dict(quality.get("runtime"), {}).get("ok"))
-        or not bool(_coerce_dict(quality.get("daily_summary"), {}).get("ok"))
-    ):
+    if not task_ok or not needs_decision_ok or not friction_ok or not runtime_ok or not daily_summary_ok:
         data_quality_mode = "degraded_partial"
     quality_awareness = _coerce_dict(quality.get("quality_awareness"), {})
     quality_summary = _coerce_dict(quality_awareness.get("summary"), {})
@@ -800,7 +825,6 @@ def _collect_input_bundle(
             "quality_hotspot_count": len(quality_hotspots),
             "quality_guidance_count": len(quality_guidance),
             "quality_severity": str(quality_summary.get("severity") or "unknown"),
-            "awareness_gap_count": len(awareness_gaps),
         },
         "usage": usage,
         "tasks": {
@@ -818,14 +842,32 @@ def _collect_input_bundle(
             "records": needs_decision_records,
             "count": len(needs_decision_records),
         },
-        "friction": _coerce_dict(friction_awareness.get("friction"), {}),
-        "friction_categories": _coerce_dict(friction_awareness.get("friction_categories"), {}),
-        "unblock_queue": _coerce_dict(friction_awareness.get("unblock_queue"), {}),
-        "roi_next_task": _coerce_dict(friction_awareness.get("roi_next_task"), {}),
-        "runtime": _coerce_dict(quality.get("runtime"), {}),
-        "daily_summary": _coerce_dict(quality.get("daily_summary"), {}),
-        "quality_awareness": quality_awareness,
-        "awareness_gaps": awareness_gaps,
+        "friction": {
+            "ok": friction_ok,
+            "error": friction_error,
+            "status_code": friction_status_code,
+            "records": friction_records,
+            "count": len(friction_records),
+        },
+        "runtime": {
+            "ok": runtime_ok,
+            "error": runtime_error,
+            "status_code": runtime_status_code,
+            "payload": runtime_payload,
+        },
+        "daily_summary": {
+            "ok": daily_summary_ok,
+            "error": daily_summary_error,
+            "status_code": daily_summary_status_code,
+            "payload": daily_summary_payload,
+        },
+        "quality_awareness": {
+            "status": str(quality_awareness.get("status") or "unavailable"),
+            "summary": quality_summary,
+            "hotspots": quality_hotspots[:10],
+            "guidance": quality_guidance[:8],
+            "recommended_tasks": _coerce_list(quality_awareness.get("recommended_tasks"), [])[:5],
+        },
         "data_quality_mode": data_quality_mode,
     }
 
@@ -840,12 +882,9 @@ def _input_bundle_summary(bundle: dict[str, Any]) -> dict[str, Any]:
         "task_count": summary.get("task_count", 0),
         "needs_decision_count": summary.get("needs_decision_count", 0),
         "friction_open_count": summary.get("friction_open_count", 0),
-        "friction_category_count": summary.get("friction_category_count", 0),
-        "top_friction_categories": summary.get("top_friction_categories", []),
         "quality_hotspot_count": summary.get("quality_hotspot_count", 0),
         "quality_guidance_count": summary.get("quality_guidance_count", 0),
         "quality_severity": summary.get("quality_severity", "unknown"),
-        "awareness_gap_count": summary.get("awareness_gap_count", 0),
     }
 
 
@@ -897,8 +936,6 @@ def _build_delta_summary(
             f"tasks={before_summary.get('task_count', 0)}; "
             f"needs_decision={before_summary.get('needs_decision_count', 0)}; "
             f"friction={before_summary.get('friction_open_count', 0)}; "
-            f"friction_categories={before_summary.get('friction_category_count', 0)}; "
-            f"awareness_gaps={before_summary.get('awareness_gap_count', 0)}; "
             f"quality_hotspots={before_summary.get('quality_hotspot_count', 0)}"
         ),
         "action": "Captured fresh runtime/task/friction bundle before and after cycle execution.",
@@ -908,16 +945,12 @@ def _build_delta_summary(
                 "task_count": before_summary.get("task_count", 0),
                 "needs_decision_count": before_summary.get("needs_decision_count", 0),
                 "friction_open_count": before_summary.get("friction_open_count", 0),
-                "friction_category_count": before_summary.get("friction_category_count", 0),
-                "awareness_gap_count": before_summary.get("awareness_gap_count", 0),
                 "quality_hotspot_count": before_summary.get("quality_hotspot_count", 0),
             },
             "after_counts": {
                 "task_count": after_summary.get("task_count", 0),
                 "needs_decision_count": after_summary.get("needs_decision_count", 0),
                 "friction_open_count": after_summary.get("friction_open_count", 0),
-                "friction_category_count": after_summary.get("friction_category_count", 0),
-                "awareness_gap_count": after_summary.get("awareness_gap_count", 0),
                 "quality_hotspot_count": after_summary.get("quality_hotspot_count", 0),
             },
         },

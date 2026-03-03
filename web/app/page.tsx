@@ -166,34 +166,6 @@ const LANDING_PATHS: Array<{
   },
 ];
 
-const ADVANCED_SURFACES: Array<{ href: string; label: string }> = [
-  { href: "/specs", label: "Specs" },
-  { href: "/friction", label: "Friction" },
-  { href: "/contributors", label: "Contributors" },
-  { href: "/contributions", label: "Contributions" },
-  { href: "/assets", label: "Assets" },
-  { href: "/agent", label: "Agent" },
-  { href: "/api-coverage", label: "API Coverage" },
-  { href: "/import", label: "Import" },
-  { href: "/api-health", label: "API Health" },
-  { href: "/remote-ops", label: "Remote Ops" },
-];
-
-const WELCOME_SIGNALS: Array<{ label: string; value: string }> = [
-  {
-    label: "Always visible",
-    value: "Home and the core actions to explore, collaborate, and ship",
-  },
-  {
-    label: "In menus",
-    value: "Specialized pages for deeper operational and governance work",
-  },
-  {
-    label: "For deep work",
-    value: "Context links stay nearby without crowding the page",
-  },
-];
-
 export const revalidate = 90;
 
 async function loadIdeas(): Promise<IdeasResponse | null> {

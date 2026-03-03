@@ -5,6 +5,8 @@ import {
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
 
+export const revalidate = 15;
+
 type RuntimeIdeaRow = {
   idea_id: string;
   event_count: number;
@@ -170,30 +172,6 @@ type DailySummary = {
   };
 };
 
-type CompactUsageMetric = {
-  label?: string;
-  used?: number;
-  unit?: string;
-  remaining?: number | null;
-  limit?: number | null;
-  window?: string | null;
-  validation_state?: string | null;
-  validation_detail?: string | null;
-  evidence_source?: string | null;
-};
-
-type CompactUsageProvider = {
-  provider: string;
-  status: string;
-  data_source: string;
-  metrics?: CompactUsageMetric[];
-  notes?: string[];
-};
-
-type CompactUsageResponse = {
-  providers: CompactUsageProvider[];
-};
-
 type UsageSearchParams = Promise<{
   page?: string | string[];
   page_size?: string | string[];
@@ -205,14 +183,7 @@ type RuntimeSlice = {
   warnings: string[];
 };
 
-export const revalidate = 60;
-const API_REVALIDATE_SECONDS = 60;
-const FETCH_TIMEOUT_MS = 7000;
-const RUNTIME_SUMMARY_TIMEOUT_MS = 2500;
-const RUNTIME_EVENTS_FALLBACK_TIMEOUT_MS = 2500;
-const DAILY_SUMMARY_TIMEOUT_MS = 3500;
-const PROVIDER_SNAPSHOT_FALLBACK_TIMEOUT_MS = 2500;
-const VIEW_PERFORMANCE_TIMEOUT_MS = 3000;
+const FETCH_TIMEOUT_MS = 12000;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 
@@ -300,14 +271,7 @@ async function fetchJsonOrNull<T>(
     effectiveTimeoutMs,
   );
   try {
-    const res = await fetch(
-      url,
-      {
-        next: { revalidate: API_REVALIDATE_SECONDS },
-        ...init,
-        signal: controller.signal,
-      },
-    );
+    const res = await fetch(url, { cache: "force-cache", ...init, signal: controller.signal });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
@@ -364,7 +328,7 @@ function summarizeRuntimeEvents(
 
 async function loadRuntimeSlice(apiBase: string, pageSize: number, offset: number): Promise<RuntimeSlice> {
   const warnings: string[] = [];
-  const attempts = [UI_RUNTIME_SUMMARY_WINDOW];
+  const attempts = [UI_RUNTIME_SUMMARY_WINDOW, 3600, 900];
   for (const seconds of attempts) {
     const params = new URLSearchParams({
       seconds: String(seconds),
@@ -373,7 +337,7 @@ async function loadRuntimeSlice(apiBase: string, pageSize: number, offset: numbe
     });
     const payload = await fetchJsonOrNull<RuntimeSummaryResponse>(
       `${apiBase}/api/runtime/ideas/summary?${params.toString()}`,
-      RUNTIME_SUMMARY_TIMEOUT_MS,
+      9000,
     );
     if (payload && Array.isArray(payload.ideas)) {
       return {
@@ -386,8 +350,8 @@ async function loadRuntimeSlice(apiBase: string, pageSize: number, offset: numbe
   }
 
   const fallbackEvents = await fetchJsonOrNull<RuntimeEvent[]>(
-    `${apiBase}/api/runtime/events?limit=${Math.max(150, pageSize * 6)}`,
-    RUNTIME_EVENTS_FALLBACK_TIMEOUT_MS,
+    `${apiBase}/api/runtime/events?limit=${Math.max(200, pageSize * 8)}`,
+    7000,
   );
   if (fallbackEvents && Array.isArray(fallbackEvents)) {
     const fallback = summarizeRuntimeEvents(fallbackEvents, pageSize, offset);
@@ -411,64 +375,14 @@ async function loadRuntimeSlice(apiBase: string, pageSize: number, offset: numbe
   };
 }
 
-function _pickProviderMetric(metrics: CompactUsageMetric[] | undefined): CompactUsageMetric | null {
-  if (!Array.isArray(metrics) || metrics.length === 0) {
-    return null;
-  }
-  const quota = metrics.find((metric) => metric.limit != null || metric.remaining != null);
-  return quota ?? metrics[0];
-}
-
-async function loadCompactProviderRows(apiBase: string): Promise<DailySummaryProviderRow[]> {
-  const usage = await fetchJsonOrNull<CompactUsageResponse>(
-    `${apiBase}/api/automation/usage?compact=true`,
-    PROVIDER_SNAPSHOT_FALLBACK_TIMEOUT_MS,
-  );
-  if (!usage || !Array.isArray(usage.providers)) {
-    return [];
-  }
-  return usage.providers.map((row) => {
-    const metric = _pickProviderMetric(row.metrics);
-    return {
-      provider: row.provider,
-      status: row.status || "unknown",
-      data_source: row.data_source || "snapshot",
-      usage: metric
-        ? {
-            label: metric.label || "usage",
-            used: Number(metric.used || 0),
-            unit: metric.unit || "units",
-            remaining: metric.remaining ?? null,
-            limit: metric.limit ?? null,
-            window: metric.window ?? null,
-            validation_state: metric.validation_state ?? null,
-            validation_detail: metric.validation_detail ?? null,
-            evidence_source: metric.evidence_source ?? null,
-          }
-        : null,
-      notes: Array.isArray(row.notes) ? row.notes : [],
-    };
-  });
-}
-
 async function loadDailySummary(apiBase: string): Promise<{ summary: DailySummary; warnings: string[] }> {
   const summary = await fetchJsonOrNull<DailySummary>(
     `${apiBase}/api/automation/usage/daily-summary?window_hours=24&top_n=8`,
-    DAILY_SUMMARY_TIMEOUT_MS,
+    { cache: "no-store" },
+    10000,
   );
   if (summary) {
     return { summary, warnings: [] };
-  }
-  const compactProviders = await loadCompactProviderRows(apiBase);
-  if (compactProviders.length > 0) {
-    return {
-      summary: {
-        ...DEFAULT_DAILY_SUMMARY,
-        generated_at: new Date().toISOString(),
-        providers: compactProviders,
-      },
-      warnings: ["daily usage summary unavailable (using compact provider snapshots)"],
-    };
   }
   return { summary: DEFAULT_DAILY_SUMMARY, warnings: ["daily usage summary unavailable"] };
 }
@@ -480,7 +394,8 @@ async function loadViewPerformance(apiBase: string): Promise<WebViewPerformanceR
   });
   return fetchJsonOrNull<WebViewPerformanceReport>(
     `${apiBase}/api/runtime/web/views/summary?${params.toString()}`,
-    VIEW_PERFORMANCE_TIMEOUT_MS,
+    { cache: "no-store" },
+    7000,
   );
 }
 
