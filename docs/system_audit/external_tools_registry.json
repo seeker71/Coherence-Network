@@ -5,15 +5,21 @@
   },
   "github_actions": [
     "actions/checkout@v4",
+    "actions/github-script@v7",
     "actions/github-script@v8",
+    "actions/setup-node@v4",
     "actions/setup-node@v6",
     "actions/setup-python@v5",
+    "actions/upload-artifact@v4",
     "actions/upload-artifact@v6"
   ],
   "workflow_cli_tools": [
+    ":",
     "bc",
     "cat",
     "cd",
+    "claude",
+    "cp",
     "curl",
     "echo",
     "gh",
@@ -25,7 +31,9 @@
     "python3",
     "printf",
     "railway",
-    "sleep"
+    "sleep",
+    "timeout",
+    "which"
   ],
   "dependency_ecosystems": [
     "github-actions",
