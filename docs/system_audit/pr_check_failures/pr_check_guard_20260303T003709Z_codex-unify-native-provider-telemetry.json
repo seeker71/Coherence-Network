@@ -1,0 +1,65 @@
+{
+  "base": "main",
+  "branch": "codex/unify-native-provider-telemetry",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T00:37:08Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "fail",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.62,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `codex/unify-native-provider-telemetry` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.03,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.05,
+        "exit_code": 1,
+        "hint": "Update change_files to include all changed worktree paths before commit.",
+        "name": "commit-evidence-guard",
+        "ok": false,
+        "output_tail": "$ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-03_automation-usage-single-source-truth.json\nOK: evidence validation passed for docs/system_audit/commit_evidence_2026-03-03_automation-usage-single-source-truth.json\n\nERROR: worktree evidence coverage missing changed paths: ['.playwright-cli/page-2026-03-02T23-38-17-952Z.yml', '.playwright-cli/page-2026-03-02T23-41-06-246Z.yml', '.playwright-cli/page-2026-03-02T23-52-17-430Z.yml', '.playwright-cli/page-2026-03-02T23-53-07-729Z.yml', '.playwright-cli/page-2026-03-02T23-54-15-218Z.yml', '.playwright-cli/page-2026-03-02T23-55-49-315Z.yml', '.playwright-cli/page-2026-03-03T00-05-14-723Z.yml', 'output/playwright/automation-live-2026-03-02.png', 'output/playwright/automation-local-clean-final-2026-03-02.png', 'output/playwright/automation-local-clean-final2-2026-03-02.png', 'output/playwright/automation-local-clean-focus-2026-03-02.png', 'output/playwright/automation-local-clean-focus-2026-03-02b.png', 'output/playwright/automation-local-clean-full-2026-03-02.png', 'output/playwright/automation-local-clean-top-2026-03-02.png', 'output/playwright/automation-real-data-preview-2026-03-03.png', 'output/playwright/automation-real-data-preview-full-2026-03-03.png', 'output/playwright/automation-real-data-unified-2026-03-03.png', 'output/playwright/automation-uniform-llm-2026-03-02.png', 'output/playwright/automation-uniform-llm-final-2026-03-02.png', 'output/playwright/automation-uniform-llm-final-clean-2026-03-02.png', 'output/playwright/automation-uniform-llm-final-clean2-2026-03-02.png', 'output/playwright/automation-uniform-llm-final-prodmode-2026-03-02.png', 'output/playwright/automation-uniform-llm-full-2026-03-02.png']"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": false,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "Blocking failures detected; see local_preflight/remote_pr_checks details.",
+  "tool": "scripts/worktree_pr_guard.py"
+}

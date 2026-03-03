@@ -1,0 +1,65 @@
+{
+  "base": "main",
+  "branch": "tmp/resolve-pr-318",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-03-03T19:37:32Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "fail",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.33,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `tmp/resolve-pr-318` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.03,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.06,
+        "exit_code": 1,
+        "hint": "Fix commit evidence fields to satisfy CI diff-range validation.",
+        "name": "commit-evidence-guard",
+        "ok": false,
+        "output_tail": "$ python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence\nERROR: evidence validation failed for /Users/ursmuff/.codex/worktrees/c3da/Coherence-Network/docs/system_audit/commit_evidence_2026-03-03_dependabot-tailwindcss-4.2.1-merge-main.json\n- change_intent requires runtime changes under api/app or web/app or web/components\n- e2e_validation.public_endpoints must be a non-empty list"
+      }
+    ]
+  },
+  "mode": "local",
+  "n8n_security_floor": {
+    "status": "skipped"
+  },
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": false,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+  "summary": "Blocking failures detected; see local_preflight/remote_pr_checks details.",
+  "tool": "scripts/worktree_pr_guard.py"
+}
