@@ -1496,6 +1496,12 @@ def test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
     )
+    failed_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "failed"
+    ]
+    assert failed_patches == []
     context = pending_patch.get("context") or {}
     assert context.get("runner_codex_auth_mode") == "oauth"
     assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
