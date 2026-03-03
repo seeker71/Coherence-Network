@@ -1,0 +1,153 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network A shared home for open source collaboration" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - paragraph [ref=e6]: Coherence Network
+        - paragraph [ref=e7]: A shared home for open source collaboration
+      - navigation [ref=e8]:
+        - link "Explore Ideas" [ref=e9] [cursor=pointer]:
+          - /url: /ideas
+        - link "Network Graph" [ref=e10] [cursor=pointer]:
+          - /url: /flow
+        - link "Collaborate" [ref=e11] [cursor=pointer]:
+          - /url: /contribute
+        - link "Execution" [ref=e12] [cursor=pointer]:
+          - /url: /tasks
+      - generic [ref=e13]:
+        - textbox "Search projects or ideas" [ref=e14]
+        - button "Search" [ref=e15]
+      - group [ref=e16]:
+        - generic "Workspace" [ref=e17] [cursor=pointer]
+      - link "API Docs" [ref=e18] [cursor=pointer]:
+        - /url: http://localhost:8000/docs
+      - link "Start Here" [ref=e19] [cursor=pointer]:
+        - /url: /contribute
+  - group [ref=e20]:
+    - generic "Live sync Standby" [ref=e21] [cursor=pointer]
+  - generic [ref=e24]:
+    - paragraph [ref=e25]: You are here Home
+    - generic [ref=e26]: Focus portfolio governance
+    - group [ref=e27]:
+      - generic "Navigate" [ref=e28] [cursor=pointer]
+    - group [ref=e29]:
+      - generic "Data links" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e36]:
+        - paragraph [ref=e37]: Collaborative open source workspace
+        - heading "Find meaningful work, build together, and see real impact." [level=1] [ref=e38]
+        - paragraph [ref=e39]: Coherence Network helps people discover where help is needed, connect work across teams, and follow each contribution from intention to outcome.
+        - generic [ref=e40]:
+          - link "Join the Workspace" [ref=e41] [cursor=pointer]:
+            - /url: /contribute
+          - link "Explore Opportunities" [ref=e42] [cursor=pointer]:
+            - /url: /ideas
+          - link "Developer Docs" [ref=e43] [cursor=pointer]:
+            - /url: http://localhost:8000/docs
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - paragraph [ref=e46]: Ideas tracked
+            - paragraph [ref=e47]: "0"
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: Estimated total potential value
+            - paragraph [ref=e50]: "0"
+          - generic [ref=e51]:
+            - paragraph [ref=e52]: Remaining value gap
+            - paragraph [ref=e53]: "0"
+      - generic [ref=e54]:
+        - article [ref=e55]:
+          - paragraph [ref=e56]: Shared Journey
+          - heading "A clear path from intention to impact" [level=2] [ref=e57]
+          - paragraph [ref=e58]: "Each contribution follows one easy story: identify a need, align on a plan, build it, then see how it helps."
+          - generic [ref=e59]:
+            - generic [ref=e60]: Idea
+            - generic [ref=e61]: Spec
+            - generic [ref=e62]: Process
+            - generic [ref=e63]: Implementation
+            - generic [ref=e64]: Runtime Usage
+            - generic [ref=e65]: Value Attribution
+        - article [ref=e66]:
+          - paragraph [ref=e67]: Getting Started
+          - heading "A calm first path for new contributors" [level=2] [ref=e68]
+          - list [ref=e69]:
+            - listitem [ref=e70]: Set up your profile and share what you like to work on.
+            - listitem [ref=e71]: Choose one idea where your help can create momentum.
+            - listitem [ref=e72]: Ship a change and keep attribution connected to the result.
+          - generic [ref=e73]:
+            - link "Open contribution console" [ref=e74] [cursor=pointer]:
+              - /url: /contribute
+            - link "Open portfolio" [ref=e75] [cursor=pointer]:
+              - /url: /portfolio
+            - link "Open tasks" [ref=e76] [cursor=pointer]:
+              - /url: /tasks
+        - article [ref=e77]:
+          - paragraph [ref=e78]: Simple By Default
+          - heading "Keep the essentials visible, tuck depth into menus" [level=2] [ref=e79]
+          - generic [ref=e80]:
+            - paragraph [ref=e81]:
+              - generic [ref=e82]: "Always visible:"
+              - text: Home and the core actions to explore, collaborate, and ship
+            - paragraph [ref=e83]:
+              - generic [ref=e84]: "In menus:"
+              - text: Specialized pages for deeper operational and governance work
+            - paragraph [ref=e85]:
+              - generic [ref=e86]: "For deep work:"
+              - text: Context links stay nearby without crowding the page
+      - generic [ref=e87]:
+        - article [ref=e88]:
+          - generic [ref=e89]:
+            - heading "Highest Estimated Collective Benefit" [level=2] [ref=e90]
+            - link "View all ideas" [ref=e91] [cursor=pointer]:
+              - /url: /ideas
+          - paragraph [ref=e92]: No idea data available right now.
+        - article [ref=e93]:
+          - heading "Recent Achievements" [level=2] [ref=e94]
+          - paragraph [ref=e95]: No measured usage achievements yet.
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - heading "Search Projects" [level=2] [ref=e98]
+          - paragraph [ref=e99]:
+            - text: Try
+            - code [ref=e100]: react
+            - text: ","
+            - code [ref=e101]: fastapi
+            - text: ","
+            - code [ref=e102]: neo4j
+        - generic [ref=e103]:
+          - textbox "Search projects..." [ref=e104]
+          - button "Search" [ref=e105]
+        - paragraph [ref=e107]: No runtime activity captured in the last 24 hours.
+      - generic [ref=e108]:
+        - article [ref=e109]:
+          - heading "Start Exploring" [level=3] [ref=e110]
+          - paragraph [ref=e111]: Understand where value and uncertainty are concentrated before picking work.
+          - generic [ref=e112]:
+            - link "High-upside ideas" [ref=e113] [cursor=pointer]:
+              - /url: /ideas
+            - link "Project search" [ref=e114] [cursor=pointer]:
+              - /url: /search
+            - link "System flow map" [ref=e115] [cursor=pointer]:
+              - /url: /flow
+        - article [ref=e116]:
+          - heading "Contribute With Context" [level=3] [ref=e117]
+          - paragraph [ref=e118]: Use one guided contribution chain so each change maps to measurable system value.
+          - generic [ref=e119]:
+            - link "Contribution console" [ref=e120] [cursor=pointer]:
+              - /url: /contribute
+            - link "Portfolio governance" [ref=e121] [cursor=pointer]:
+              - /url: /portfolio
+            - link "Execution tasks" [ref=e122] [cursor=pointer]:
+              - /url: /tasks
+        - article [ref=e123]:
+          - heading "Operate Reliably" [level=3] [ref=e124]
+          - paragraph [ref=e125]: Monitor runtime, automation, and deployment gates without hunting across pages.
+          - generic [ref=e126]:
+            - link "Runtime usage" [ref=e127] [cursor=pointer]:
+              - /url: /usage
+            - link "Automation readiness" [ref=e128] [cursor=pointer]:
+              - /url: /automation
+            - link "Gate status" [ref=e129] [cursor=pointer]:
+              - /url: /gates
+      - group [ref=e131]:
+        - generic "Advanced surfaces (show all)" [ref=e132] [cursor=pointer]
