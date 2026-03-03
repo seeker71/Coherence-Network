@@ -350,3 +350,7 @@ class AgentTask(BaseModel):
 - [PostgreSQL best practices](https://wiki.postgresql.org/wiki/Don%27t_Do_This)
 - [FastAPI with databases](https://fastapi.tiangolo.com/advanced/async-sql-databases/)
 - See detailed implementation plan: `docs/POSTGRESQL-MIGRATION.md`
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test run setup lint web-worktree-validate spec-quality pr-preflight start-gate prompt-gate install-pre-push-hook
+.PHONY: test run setup lint web-worktree-validate spec-quality worktree-setup local-ci-context
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -20,11 +20,8 @@ web-worktree-validate:
 spec-quality:
 	python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 
-pr-preflight:
-	python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+worktree-setup:
+	./scripts/setup_worktree_context.sh
 
-install-pre-push-hook:
-	./scripts/setup_pre_push_hook.sh
-
-start-gate:
-	@/usr/bin/python3 scripts/start_gate.py
+local-ci-context:
+	./scripts/run_local_ci_context.sh

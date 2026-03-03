@@ -297,13 +297,14 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
     return sorted(out)
 
 
-def _should_include_default_tracked_ideas() -> bool:
-    # When callers isolate ideas into a custom portfolio path (common in tests),
-    # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
+def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> list[str]:
+    now = time.time()
+    cache_key = f"{_tracking_repository()}::{_tracking_ref()}"
+    cached_ids = _TRACKED_IDEA_CACHE.get("idea_ids")
     if (
-        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
-        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
+        isinstance(cached_ids, list)
+        and _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
+        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
     ):
         return True
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
@@ -315,234 +316,29 @@ def _invalidate_ideas_cache() -> None:
     _IDEAS_CACHE["cache_key"] = ""
 
 
-def _cache_ideas(ideas: list[Idea]) -> None:
-    _IDEAS_CACHE["items"] = [idea.model_copy(deep=True) for idea in ideas]
-    _IDEAS_CACHE["expires_at"] = time.time() + _IDEAS_CACHE_TTL_SECONDS
-    _IDEAS_CACHE["cache_key"] = _ideas_cache_key()
+    result = sorted(out)
+    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
+    _TRACKED_IDEA_CACHE["idea_ids"] = result
+    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    return result
 
 
-def _ideas_cache_key() -> str:
-    return (
-        f"{_portfolio_path()}|"
-        f"{os.getenv('IDEA_REGISTRY_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
-        f"{os.getenv('DATABASE_URL','')}|"
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
-        f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
-        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
-        f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
-    )
-
-
-def _read_ideas_cache() -> list[Idea] | None:
-    cache_key = _ideas_cache_key()
-    if (
-        _IDEAS_CACHE.get("cache_key") != cache_key
-        or _IDEAS_CACHE.get("expires_at", 0.0) <= time.time()
-    ):
-        return None
-    cached = _IDEAS_CACHE.get("items")
-    if not isinstance(cached, list):
-        return None
-    return [idea.model_copy(deep=True) for idea in cached]
+def _should_include_default_tracked_ideas() -> bool:
+    # When callers isolate ideas into a custom portfolio path (common in tests),
+    # do not implicitly pull tracked idea ids from repo-global evidence unless
+    # the evidence source is explicitly provided.
+    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR"):
+        return True
+    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
 
 
 def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
-    now = time.time()
-    cache_key = (
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
-        f"|{os.getenv('DATABASE_URL','')}"
-        f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
-        f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
-        f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
-        f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
-    )
-    if (
-        _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
-        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
-    ):
-        return list(_TRACKED_IDEA_CACHE.get("idea_ids", []))
-    idea_ids = _tracked_idea_ids_from_store()
-
-    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
-    _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
-    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
-    return idea_ids
-
-
-def _should_discover_registry_domain_ideas() -> bool:
-    if not _should_include_default_tracked_ideas():
-        return False
-    explicit = str(os.getenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "")).strip().lower()
-    if explicit in {"1", "true", "yes", "on"}:
-        return True
-    if explicit in {"0", "false", "no", "off"}:
-        return False
-    # Keep isolated pytest runs deterministic unless explicitly enabled.
-    if os.getenv("PYTEST_CURRENT_TEST"):
-        return False
-    # In runtime/deploy environments, always discover registry-domain ideas.
-    return True
-
-
-def _discover_registry_domain_idea_ids() -> list[str]:
-    if not _should_discover_registry_domain_ideas():
-        return []
-
-    discovered: set[str] = {
-        idea_id
-        for idea_id in _tracked_idea_ids()
-        if _should_track_discovered_idea_id(idea_id)
-    }
-
-    try:
-        spec_rows = spec_registry_service.list_specs(limit=2000, offset=0)
-    except Exception:
-        spec_rows = []
-    for row in spec_rows:
-        idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        canonical_id = _canonical_discovered_idea_id(idea_id)
-        if canonical_id:
-            discovered.add(canonical_id)
-
-    try:
-        lineage_rows = value_lineage_service.list_links(limit=2000)
-    except Exception:
-        lineage_rows = []
-    for row in lineage_rows:
-        idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        canonical_id = _canonical_discovered_idea_id(idea_id)
-        if canonical_id:
-            discovered.add(canonical_id)
-
-    try:
-        runtime_window_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_WINDOW_SECONDS", "86400")).strip() or "86400")
-    except ValueError:
-        runtime_window_raw = 86400
-    runtime_window_seconds = max(60, min(runtime_window_raw, 60 * 60 * 24 * 30))
-
-    try:
-        runtime_limit_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_EVENT_LIMIT", "2000")).strip() or "2000")
-    except ValueError:
-        runtime_limit_raw = 2000
-    runtime_event_limit = max(1, min(runtime_limit_raw, 5000))
-    try:
-        runtime_rows = runtime_service.summarize_by_idea(
-            seconds=runtime_window_seconds,
-            event_limit=runtime_event_limit,
-            summary_limit=2000,
-            summary_offset=0,
-        )
-    except Exception:
-        runtime_rows = []
-    for row in runtime_rows:
-        idea_id = str(getattr(row, "idea_id", "") or "").strip()
-        canonical_id = _canonical_discovered_idea_id(idea_id)
-        if canonical_id:
-            discovered.add(canonical_id)
-    for idea_id in _contribution_metadata_idea_ids():
-        canonical_id = _canonical_discovered_idea_id(idea_id)
-        if canonical_id:
-            discovered.add(canonical_id)
-
-    return sorted(discovered)
-
-
-def _contribution_metadata_idea_ids() -> list[str]:
-    database_url = str(os.getenv("DATABASE_URL", "")).strip()
-    if not database_url:
-        return []
-
-    try:
-        contribution_limit_raw = int(str(os.getenv("IDEA_SYNC_CONTRIBUTION_LIMIT", "3000")).strip() or "3000")
-    except ValueError:
-        contribution_limit_raw = 3000
-    contribution_limit = max(1, min(contribution_limit_raw, 20000))
-
-    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if database_url.startswith("sqlite"):
-        engine_kwargs["connect_args"] = {"check_same_thread": False}
-        engine_kwargs["poolclass"] = NullPool
-
-    rows: list[Any] = []
-    try:
-        engine = create_engine(database_url, **engine_kwargs)
-        with engine.connect() as conn:
-            rows = list(
-                conn.execute(
-                    text("SELECT meta FROM contributions ORDER BY timestamp DESC LIMIT :limit"),
-                    {"limit": contribution_limit},
-                )
-            )
-    except Exception:
-        return []
-    finally:
-        try:
-            engine.dispose()
-        except Exception:
-            pass
-
-    discovered: set[str] = set()
-    for row in rows:
-        metadata: Any = None
-        try:
-            metadata = row[0] if isinstance(row, tuple) else row.meta  # type: ignore[attr-defined]
-        except Exception:
-            try:
-                metadata = row[0]
-            except Exception:
-                metadata = None
-        if isinstance(metadata, str):
-            try:
-                metadata = json.loads(metadata)
-            except ValueError:
-                metadata = None
-        if not isinstance(metadata, dict):
-            continue
-        raw_single = metadata.get("idea_id")
-        if isinstance(raw_single, str) and raw_single.strip():
-            discovered.add(raw_single.strip())
-        raw_multi = metadata.get("idea_ids")
-        if isinstance(raw_multi, list):
-            for item in raw_multi:
-                if isinstance(item, str) and item.strip():
-                    discovered.add(item.strip())
-    return sorted(discovered)
-
-
-def _ensure_registry_domain_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    discovered_ids = _discover_registry_domain_idea_ids()
-    if not discovered_ids:
-        return ideas, False
-    existing = {idea.id for idea in ideas}
-    changed = False
-    for idea_id in discovered_ids:
-        if not _should_track_discovered_idea_id(idea_id):
-            continue
-        if idea_id in existing:
-            continue
-        ideas.append(_derived_idea_for_id(idea_id))
-        existing.add(idea_id)
-        changed = True
-    return ideas, changed
-
-
-def _prune_transient_internal_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    kept: list[Idea] = []
-    changed = False
-    for idea in ideas:
-        canonical_id = _canonical_discovered_idea_id(idea.id)
-        if canonical_id is not None and canonical_id != str(idea.id).strip().lower():
-            changed = True
-            continue
-        if _is_transient_internal_idea_id(idea.id):
-            changed = True
-            continue
-        kept.append(idea)
-    return kept, changed
+    local = _tracked_idea_ids_from_local()
+    if local:
+        return local
+    return _tracked_idea_ids_from_github()
 
 
 def _humanize_idea_id(idea_id: str) -> str:
@@ -828,6 +624,7 @@ def create_idea(
     description: str,
     potential_value: float,
     estimated_cost: float,
+    resistance_risk: float = 1.0,
     confidence: float = 0.5,
     interfaces: list[str] | None = None,
     open_questions: list[IdeaQuestionCreate] | None = None,
@@ -844,7 +641,7 @@ def create_idea(
         actual_value=0.0,
         estimated_cost=estimated_cost,
         actual_cost=0.0,
-        resistance_risk=1.0,
+        resistance_risk=max(0.0, resistance_risk),
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=ManifestationStatus.NONE,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
@@ -905,8 +702,7 @@ def update_idea(
     idea_id: str,
     actual_value: float | None = None,
     actual_cost: float | None = None,
-    potential_value: float | None = None,
-    estimated_cost: float | None = None,
+    resistance_risk: float | None = None,
     confidence: float | None = None,
     manifestation_status: ManifestationStatus | None = None,
 ) -> IdeaWithScore | None:
@@ -920,10 +716,8 @@ def update_idea(
             idea.actual_value = actual_value
         if actual_cost is not None:
             idea.actual_cost = actual_cost
-        if potential_value is not None:
-            idea.potential_value = potential_value
-        if estimated_cost is not None:
-            idea.estimated_cost = estimated_cost
+        if resistance_risk is not None:
+            idea.resistance_risk = resistance_risk
         if confidence is not None:
             idea.confidence = confidence
         if manifestation_status is not None:

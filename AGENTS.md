@@ -13,97 +13,28 @@ Spec → Test → Implement → CI → Review → Merge
 - Do NOT modify tests to make implementation pass
 - Only modify files listed in spec/issue
 
-## Mandatory Delivery Contract (No Exceptions)
+## Task Start Protocol (Required)
 
-- User-defined deploy contract: when the user asks to deploy, run the full end-to-end contract (start-gate, rebase, local gates, evidence validation, push/PR + checks), then report each proof artifact.
-- Deploy self-heal rule: do not stop for non-critical failures in this chain; implement/repair the blocker, rerun the failed step, and continue until the chain succeeds or you return a concrete blocking condition with exact blocker output + remediations applied.
+Before any code changes in a new worktree/thread:
 
-1. Worktree-only execution
-   - Never edit or run implementation commands in the primary workspace.
-   - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
-2. Prompt entry gate (required before any edits)
-   - Run: `make prompt-gate`
-   - Clean worktree: runs start-gate + rebase + local guard.
-   - Dirty worktree: continuation mode (skip re-bootstrap/start-gate and continue in-flight task).
-   - Detached `HEAD`: attach a branch first (`git switch -c codex/<thread-name>` or `git switch codex/<thread-name>`).
-   - If it fails, stop and fix blockers first.
-3. Pre-commit local gate (required)
-   - Run: `./scripts/fetch_origin_main.sh && git rebase origin/main` (must be cleanly rebased before push)
-   - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
-   - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
-   - If either fails, do not commit.
-4. Evidence contract (required per commit)
-   - Add/update `docs/system_audit/commit_evidence_<date>_<topic>.json`.
-   - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
-5. PR + CI contract
-   - Open PR immediately after push.
-   - Monitor checks until green, or report blocker with failing check links and remediation command.
-6. Finish contract
-   - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
-   - Do not start a new task while previous task has unresolved blocking checks.
+1. Run bootstrap:
+   - `./scripts/setup_worktree_context.sh`
+   - `./scripts/run_local_ci_context.sh`
+2. Read required context:
+   - `CLAUDE.md`
+   - `docs/SPEC-TRACKING.md`
+   - `docs/SPEC-QUALITY-GATE.md`
+3. Confirm scope:
+   - Only modify files listed in the active spec/issue.
+4. Follow process order:
+   - Spec → Test → Implement → CI → Review → Merge
+5. Post-change gate:
+   - Re-run local CI-equivalent checks before handoff.
 
-### Hard-Data Contract (Subscription + Routing Claims)
+Failure policy:
 
-- Do not claim provider limits, remaining quota, or routing behavior from assumptions or static docs alone.
-- For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
-  1. local fact report: `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py`
-  2. live usage/readiness API snapshots:
-     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage/readiness`
-     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage`
-  3. official provider source links (pricing/docs/limits page).
-- Required proof for routing claims:
-  - include executor-policy evidence (`routing_policy_proof`) and route matrix (`route_decision_matrix`) from the fact report.
-  - show at least one Cursor-routed case and one OpenClaw/Codex-routed case.
-- If a provider does not expose hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
-
-### 2-Tier Executor Contract (Cost/Speed Mode)
-
-- Use this mode for routine implementation/execution tasks unless the user explicitly asks for another approach.
-- Default executor: `openai/gpt-4o-mini`.
-- Escalation executor: stronger model only on explicit failure conditions.
-- No escalation loops. Max 1 escalation per task.
-- Max attempts: 2 on cheap executor, then optional single escalation attempt.
-
-### Task Card Shape (required input format)
-
-- `goal`: one sentence
-- `files_allowed`: exact file paths only
-- `done_when`: 1-3 measurable checks
-- `commands`: exact commands to run
-- `constraints`: hard rules (for example: no tests unless listed, no extra files)
-- Keep command scope limited to this card and touched file snippets only.
-- Never send full docs unless the task explicitly depends on them.
-
-### Budget and Output Rules
-
-- `input_max_tokens = 1200`
-- `output_max_tokens = 300`
-- `max_attempts_cheap = 2`
-- `max_attempts_strong = 1`
-- `max_total_tokens_per_task = 2500`
-- If `cost/quality` fails a cheap attempt, retry once only when failure is mechanical, format, or small fix.
-
-### Prompt Contract (fixed)
-
-- Response format must be exactly: `PLAN`, `PATCH`, `RUN`, `RESULT`.
-- Reject non-conforming outputs and retry once with: `Format violation. Use required sections only.`
-- No explanations unless asked.
-- Do only requested edits. No extra refactors.
-- Use `docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md` as the task-card starter.
-
-### Deterministic Validation Loop
-
-- Run only `commands` from the task card.
-- Compare command output directly against `done_when`.
-- If a command fails, collect exact stderr and retry once with a targeted fix.
-- If still failing and criteria match escalation conditions, run one escalation attempt.
-
-### Proof Record
-
-- Store one JSON record per task for execution proof in `docs/system_audit/model_executor_runs.jsonl`.
-- Required fields: `model_used`, `input_tokens`, `output_tokens`, `attempts`, `commands_run`, `pass_fail`, `failure_reason`.
-- Escalation packet must stay under 200 tokens.
-- Exit only when all `done_when` checks pass and scope constraints hold.
+- If bootstrap or CI gates fail, stop implementation and report the exact failing command and output.
+- Do not continue in a dirty worktree; create or switch to a clean worktree first.
 
 ## Key Files
 
@@ -157,24 +88,6 @@ cd web && npm run dev
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
 # Optional npm cache override (default is per-worktree .cache/npm):
 NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
-
-# Public production verify (required before merge/roll-forward)
-./scripts/verify_web_api_deploy.sh
-
-# Prompt entry gate (required before starting a new task)
-make prompt-gate
-
-# PR check failure prevention + tracking (default before commit/push)
-# Optional for n8n-backed automation flows:
-# export N8N_VERSION=1.123.17
-python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
-# Include remote PR check tracking (requires GH_TOKEN/GITHUB_TOKEN):
-python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
-# Dedicated triage for open PR check failures (+ optional auto-rerun for flaky GitHub Actions checks):
-python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
-python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --rerun-failed-actions --fail-on-detected
-# Tighten deploy freshness requirement if needed (default 6h):
-python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)" --deploy-success-max-age-hours 2
 
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
@@ -250,34 +163,12 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - **Spec cross-links** — specs have "See also" sections
 - **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
 
-## UX Guidance (Navigation + Landing)
+## Idea Recording Policy
 
-Use these as design guidance for web changes. They are intended to keep the experience welcoming and useful without hiding power users' workflows.
-
-- Keep global navigation consistent across all pages. The same core actions should stay visible in the same place, so users do not re-learn navigation per page.
-- Show only a small set of "always visible" actions (for example: explore, collaborate, execute). Place specialized/operational surfaces behind menus.
-- Prefer progressive disclosure over dense link walls. Users should discover depth in layers, not all at once.
-- Treat the top area as high-value space. Keep status/context strips compact; avoid stacking multiple full-height bars.
-- Use plain-language labels first, technical labels second. New contributors should understand page purpose without knowing internal system terms.
-- Keep context nearby but lightweight. A concise "you are here" indicator plus optional related/data menus is usually enough.
-- Design landing content around journeys, not indexes: "where to start", "how to contribute", "how to monitor progress".
-- Maintain a warm, human visual tone by default: high readability, soft contrast transitions, and restrained accent usage.
-- Optimize for first-time users and deep users at the same time: fast entry paths for newcomers, discoverable advanced surfaces for experts.
-- When uncertain, reduce visible complexity first, then reintroduce details where user intent is explicit (menus, drill-down pages, detail panels).
-
-### Worktree Stability Guidance
-
-- Before running stash/rebase helper flows, confirm the worktree is on a named branch (`git rev-parse --abbrev-ref HEAD` should not be `HEAD`).
-- If detached, create or switch to a `codex/...` branch first. This avoids ambiguous stash restoration and preserves in-progress UI decisions.
-- During long UI iterations, capture screenshots in `.playwright-cli/` and keep a short decision summary in the task thread so visual intent can be restored quickly if recovery tooling resets files.
-- Observed failure mode: repeated use of stash+rebase helper scripts while detached can make state recovery noisy and confusing. The helper does not detach by itself; it assumes branch state is already valid.
-- Suggested preflight before any auto-heal command:
-  - run `git rev-parse --abbrev-ref HEAD`
-  - if output is `HEAD`, attach first: `git switch -c codex/<topic>-<date>` (or `git switch codex/<existing-branch>`)
-  - only then run `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
-- If `make start-gate` fails only because the worktree is dirty from active task work, prefer continuing the same task and running local validation gates directly rather than repeatedly stashing/restoring mid-task.
-- Suggested Codex thread start check (quick, lightweight): confirm branch name, run `git status --short`, and record if the worktree is intentionally dirty before running any recovery helpers.
-- For deploy-focused threads, prefer a clean dedicated branch/worktree for release scope. Keep unrelated in-progress edits in another branch/worktree so deploy evidence and PR diffs stay easy to verify.
+- Every new idea must be persisted in the API registry before or alongside doc/spec updates.
+- Use `POST /api/ideas` to create ideas with full ROI fields (`potential_value`, `estimated_cost`, `resistance_risk`, `confidence`).
+- Use `PATCH /api/ideas/{idea_id}` to update measured ROI fields (`actual_value`, `actual_cost`, `resistance_risk`, `confidence`, `manifestation_status`).
+- Verify persistence with `GET /api/ideas/{idea_id}` and `GET /api/ideas`.
 
 ## Agent Orchestration API (spec 002)
 

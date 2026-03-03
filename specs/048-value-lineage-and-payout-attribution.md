@@ -329,16 +329,8 @@ Manual verification:
 
 - On-chain payout execution
 - Fiat/crypto settlement integration
-- Dynamic governance voting/weight tuning beyond static defaults
+- Dynamic weight governance beyond static defaults
 
-## Risks and Assumptions
-
-- Risk: usage/value signals may be noisy and could overstate value if event sources are not normalized.
-- Risk: payout attribution can be gamed if contributor-role assignment is not audited.
-- Assumption: static role weights are acceptable for initial release and can be governed later.
-- Assumption: persisted lineage and usage data remain available through API restarts and deploys.
-
-## Known Gaps and Follow-up Tasks
-
-- Follow-up: add stronger anti-fraud/event-source trust scoring for usage events.
-- Follow-up: add role-weight governance policy and signed audit trail for role assignment changes.
+## Idea Traceability
+- `idea_id`: `oss-interface-alignment`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

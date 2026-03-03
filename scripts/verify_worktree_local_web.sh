@@ -113,6 +113,16 @@ ensure_npm_cache() {
   export NPM_CONFIG_CACHE="${NPM_CACHE}"
 }
 
+ensure_npm_cache() {
+  mkdir -p "${NPM_CACHE}"
+  if [[ ! -w "${NPM_CACHE}" ]]; then
+    echo "npm cache directory is not writable: ${NPM_CACHE}"
+    exit 1
+  fi
+  export npm_config_cache="${NPM_CACHE}"
+  export NPM_CONFIG_CACHE="${NPM_CACHE}"
+}
+
 select_python() {
   local candidate
   for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/bin/python3" "$(command -v python3.11 || true)" "$(command -v python3 || true)"; do

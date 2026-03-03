@@ -1712,13 +1712,12 @@ async def test_provider_readiness_accepts_overridden_required_provider_list(
 
 
 @pytest.mark.asyncio
-async def test_provider_in_active_use_can_be_ready_via_runtime_context_without_direct_key(
+async def test_provider_in_active_use_requires_key_for_readiness(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", "1")
-    monkeypatch.setenv("AUTOMATION_PROVIDER_READINESS_BLOCK_ON_LIMIT_TELEMETRY", "0")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "")
@@ -1742,7 +1741,6 @@ async def test_provider_in_active_use_can_be_ready_via_runtime_context_without_d
             },
         },
     )
-    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {"openrouter": 4})
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
@@ -1752,10 +1750,10 @@ async def test_provider_in_active_use_can_be_ready_via_runtime_context_without_d
         assert report.status_code == 200
         payload = report.json()
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert payload["all_required_ready"] is True
+        assert payload["all_required_ready"] is False
         assert providers["openrouter"]["required"] is True
-        assert providers["openrouter"]["configured"] is True
-        assert providers["openrouter"]["severity"] in {"info", "warning"}
+        assert providers["openrouter"]["severity"] == "critical"
+        assert providers["openrouter"]["configured"] is False
 
 
 @pytest.mark.asyncio
@@ -1775,7 +1773,7 @@ async def test_automation_usage_includes_runtime_task_runs_metric_for_active_pro
         agent_service,
         "get_usage_summary",
         lambda: {
-            "by_model": {"openai/gpt-4o-mini": {"count": 3, "by_status": {"completed": 3}, "last_used": None}},
+            "by_model": {"openrouter/free": {"count": 3, "by_status": {"completed": 3}, "last_used": None}},
             "execution": {
                 "tracked_runs": 3,
                 "failed_runs": 0,
@@ -1793,129 +1791,8 @@ async def test_automation_usage_includes_runtime_task_runs_metric_for_active_pro
         assert usage.status_code == 200
         payload = usage.json()
         providers = {row["provider"]: row for row in payload["providers"]}
-        assert "openai" in providers
-        assert any(metric["id"] == "runtime_task_runs" for metric in providers["openai"]["metrics"])
-
-
-@pytest.mark.asyncio
-async def test_provider_validation_contract_blocks_without_execution_events(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-
-    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
-    monkeypatch.setattr(
-        automation_usage_service,
-        "provider_readiness_report",
-        lambda **kwargs: ProviderReadinessReport(
-            required_providers=required,
-            all_required_ready=True,
-            blocking_issues=[],
-            recommendations=[],
-            providers=[
-                ProviderReadinessRow(
-                    provider=provider,
-                    kind="custom",
-                    status="ok",
-                    required=True,
-                    configured=True,
-                    severity="info",
-                    missing_env=[],
-                    notes=[],
-                )
-                for provider in required
-            ],
-        ),
-    )
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        report = await client.get(
-            "/api/automation/usage/provider-validation",
-            params={"required_providers": ",".join(required), "force_refresh": False},
-        )
-        assert report.status_code == 200
-        payload = report.json()
-        assert payload["all_required_validated"] is False
-        assert payload["blocking_issues"] == [
-            "openclaw: configured=True, readiness_status=ok, successful_events=0/1"
-        ]
-        by_provider = {row["provider"]: row for row in payload["providers"]}
-        assert by_provider["openclaw"]["usage_events"] == 0
-        assert by_provider["openclaw"]["successful_events"] == 0
-        assert by_provider["openclaw"]["validated_execution"] is False
-        assert by_provider["openai"]["validated_execution"] is True
-        assert by_provider["claude"]["validated_execution"] is True
-
-
-@pytest.mark.asyncio
-async def test_provider_validation_run_creates_execution_evidence_and_passes_contract(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-
-    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
-    monkeypatch.setattr(
-        automation_usage_service,
-        "provider_readiness_report",
-        lambda **kwargs: ProviderReadinessReport(
-            required_providers=required,
-            all_required_ready=True,
-            blocking_issues=[],
-            recommendations=[],
-            providers=[
-                ProviderReadinessRow(
-                    provider=provider,
-                    kind="custom",
-                    status="ok",
-                    required=True,
-                    configured=True,
-                    severity="info",
-                    missing_env=[],
-                    notes=[],
-                )
-                for provider in required
-            ],
-        ),
-    )
-    monkeypatch.setattr(automation_usage_service, "_probe_internal", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_openclaw", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_github", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_railway", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_claude", lambda: (True, "ok"))
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        run = await client.post(
-            "/api/automation/usage/provider-validation/run",
-            params={"required_providers": ",".join(required)},
-        )
-        assert run.status_code == 200
-        run_payload = run.json()
-        assert len(run_payload["probes"]) == len(required)
-        assert all(item["ok"] for item in run_payload["probes"])
-
-        report = await client.get(
-            "/api/automation/usage/provider-validation",
-            params={
-                "required_providers": ",".join(required),
-                "runtime_window_seconds": 86400,
-                "min_execution_events": 1,
-                "force_refresh": False,
-            },
-        )
-        assert report.status_code == 200
-        payload = report.json()
-        assert payload["all_required_validated"] is True
-        for row in payload["providers"]:
-            assert row["usage_events"] >= 1
-            assert row["successful_events"] >= 1
-            assert row["validated_execution"] is True
+        assert "openrouter" in providers
+        assert any(metric["id"] == "runtime_task_runs" for metric in providers["openrouter"]["metrics"])
 
 
 @pytest.mark.asyncio

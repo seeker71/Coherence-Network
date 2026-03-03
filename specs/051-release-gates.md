@@ -92,3 +92,7 @@ Automated checks for deployment readiness. Validates that PRs meet quality gates
 - [x] `test_gate_main_head_502_when_unavailable`
 
 All tests passing.
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

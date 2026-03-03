@@ -17,8 +17,28 @@ from app.services import agent_routing_service as routing_service
 from app.services import agent_task_store_service
 from app.services import failure_taxonomy_service
 
-# Routing decisions and provider classification live in agent_routing_service.
-ROUTING = routing_service.ROUTING
+# Model fallback chain: local → cloud → claude (see docs/MODEL-ROUTING.md)
+_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "openrouter/free")  # Use OpenRouter free model as default
+_OLLAMA_CLOUD_MODEL = os.environ.get("OLLAMA_CLOUD_MODEL", "openrouter/free")  # Cloud fallback using OpenRouter
+_CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")  # Claude fallback using OpenRouter
+
+# Cursor CLI models (when context.executor == "cursor") — see docs/CURSOR-CLI.md
+# Default to OpenRouter free model when using Cursor CLI
+_CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "openrouter/free")
+_CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "openrouter/free")
+
+# OpenClaw models (when context.executor == "openclaw")
+_OPENCLAW_MODEL_DEFAULT = os.environ.get("OPENCLAW_MODEL", "gpt-5.1-codex")
+_OPENCLAW_MODEL_REVIEW = os.environ.get("OPENCLAW_REVIEW_MODEL", _OPENCLAW_MODEL_DEFAULT)
+
+# Routing: local first; use model_override in context for cloud/claude
+ROUTING: dict[TaskType, tuple[str, str]] = {
+    TaskType.SPEC: (f"openrouter/free", "openrouter"),
+    TaskType.TEST: (f"openrouter/free", "openrouter"),
+    TaskType.IMPL: (f"openrouter/free", "openrouter"),
+    TaskType.REVIEW: (f"openrouter/free", "openrouter"),
+    TaskType.HEAL: (f"openrouter/free", "openrouter"),
+}
 
 # Subagent mapping: task_type → Claude Code --agent name (from .claude/agents/)
 # HEAL uses default tools, no subagent
@@ -45,22 +65,15 @@ _COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
 _OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
-try:
-    _TARGET_STATE_DEFAULT_WINDOW_SEC = int(str(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900")).strip())
-except ValueError:
-    _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
-_TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
-_TARGET_STATE_MAX_TEXT = 600
-_AGENT_GRAPH_STATE_SCHEMA_ID = "coherence_agent_graph_state_v1"
-_AGENT_GRAPH_STATE_REQUIRED_FIELDS: tuple[str, ...] = ("task_id", "task_type", "phase", "direction")
-_AGENT_GRAPH_STATE_ALLOWED_PHASES: tuple[str, ...] = (
-    "queued",
-    "running",
-    "needs_decision",
-    "completed",
-    "failed",
-)
-# Heuristics to detect prompts that require repository-local context.
+_OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
+    TaskType.SPEC: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.TEST: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
+    TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
+    TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
+}
+
+_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
     re.compile(r"\bthis repository\b", re.IGNORECASE),
@@ -73,13 +86,6 @@ _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bweb/[A-Za-z0-9_.\-\/]+\b", re.IGNORECASE),
     re.compile(r"`[^`]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)`", re.IGNORECASE),
     re.compile(r"\b[A-Za-z0-9_.\-]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)\b", re.IGNORECASE),
-)
-_TASK_CARD_REQUIRED_FIELDS: tuple[str, ...] = (
-    "goal",
-    "files_allowed",
-    "done_when",
-    "commands",
-    "constraints",
 )
 
 
@@ -159,23 +165,111 @@ def _first_available_executor(preferred: list[str]) -> str:
     return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
 
 
-def _executor_fallback_candidates() -> list[str]:
-    return [
-        _cheap_executor_default(),
-        _escalation_executor_default(),
-        "codex",
-        "gemini",
-        "openrouter",
+def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
+    scope_hint = str(context.get("question_scope") or context.get("scope") or "").strip().lower()
+    if scope_hint in {"repo", "repository", "codebase"}:
+        return True
+    if scope_hint in {"open", "general"}:
+        return False
+
+    text = direction.strip()
+    if not text:
+        return False
+    return any(pattern.search(text) for pattern in _REPO_SCOPE_PATTERNS)
+
+
+def _repo_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="cursor")
+    return "cursor"
+
+
+def _open_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="openclaw")
+    return "openclaw"
+
+
+def _task_fingerprint(task_type: TaskType, direction: str) -> str:
+    basis = f"{task_type.value}:{direction.strip().lower()}"
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+
+
+def _task_retry_hint(context: dict[str, Any]) -> int:
+    for key in ("retry_count", "retry_index", "attempt", "attempt_count"):
+        raw = context.get(key)
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, (int, float)):
+            return max(0, int(raw))
+        if isinstance(raw, str):
+            value = raw.strip()
+            if value.isdigit():
+                return max(0, int(value))
+    return 0
+
+
+def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
+    attempts = 0
+    failed = 0
+    for task in _store.values():
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if str(context.get("task_fingerprint") or "").strip() != task_fingerprint:
+            continue
+        attempts += 1
+        status = task.get("status")
+        status_value = status.value if hasattr(status, "value") else str(status or "")
+        if status_value == "failed":
+            failed += 1
+    return {"attempts": attempts, "failed": failed}
+
+
+def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    explicit = _normalize_executor(context.get("executor"), default="")
+    if explicit:
+        return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+
+    if not _executor_policy_enabled():
+        default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+        return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+
+    task_fingerprint = str(context.get("task_fingerprint") or "").strip()
+    if not task_fingerprint:
+        task_fingerprint = _task_fingerprint(task_type, direction)
+        context["task_fingerprint"] = task_fingerprint
+
+    if _is_repo_scoped_question(direction, context):
+        selected = _first_available_executor([
+            _repo_question_executor_default(),
+            "cursor",
+            "claude",
+            "openclaw",
+        ])
+        return selected, {
+            "policy_applied": True,
+            "reason": "repo_scoped_question",
+            "task_fingerprint": task_fingerprint,
+            "repo_executor_preference": _repo_question_executor_default(),
+        }
+
+    selected_open = _first_available_executor([
+        _open_question_executor_default(),
+        "openclaw",
         "cursor",
         "claude",
-    ]
+    ])
+    if selected_open == "openclaw":
+        return selected_open, {
+            "policy_applied": True,
+            "reason": "open_question_default",
+            "task_fingerprint": task_fingerprint,
+            "open_question_executor": selected_open,
+        }
 
-
-def _select_executor_with_retry_policy(
-    *,
-    task_fingerprint: str,
-    context: dict[str, Any],
-) -> tuple[str, dict[str, Any]]:
     retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
     failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
     cheap = _cheap_executor_default()
@@ -414,13 +508,15 @@ def _cursor_command_template(task_type: TaskType) -> str:
 
 
 def _openclaw_command_template(task_type: TaskType) -> str:
-    """Codex CLI template configurable via env; must include {{direction}}."""
-    return routing_service.codex_command_template(task_type)
-
-
-def _openrouter_command_template(task_type: TaskType) -> str:
-    """Server-side OpenRouter executor marker template."""
-    return routing_service.openrouter_command_template(task_type)
+    """OpenClaw CLI template configurable via env; must include {{direction}}."""
+    model = _OPENCLAW_MODEL_BY_TYPE[task_type]
+    template = os.environ.get(
+        "OPENCLAW_COMMAND_TEMPLATE",
+        'codex exec "{{direction}}" --skip-git-repo-check --json',
+    )
+    if "{{direction}}" not in template:
+        template = template.strip() + ' "{{direction}}"'
+    return template.replace("{{model}}", model)
 
 
 def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]) -> str:
@@ -553,8 +649,6 @@ _store: dict[str, dict[str, Any]] = {}
 _store_loaded = False
 _store_loaded_path: str | None = None
 _store_loaded_test_context: str | None = None
-_store_loaded_includes_output = False
-_store_loaded_at_monotonic = 0.0
 ACTIVE_TASK_STATUSES = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.NEEDS_DECISION}
 
 
@@ -728,9 +822,8 @@ def _save_store_to_disk() -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = False) -> None:
+def _ensure_store_loaded() -> None:
     global _store_loaded, _store_loaded_path, _store_loaded_test_context
-    global _store_loaded_includes_output, _store_loaded_at_monotonic
     current_path = str(_store_path())
     current_test = os.getenv("PYTEST_CURRENT_TEST")
 
@@ -741,33 +834,14 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
         _store_loaded = False
         _store_loaded_path = None
         _store_loaded_test_context = current_test
-        _store_loaded_includes_output = False
-        _store_loaded_at_monotonic = 0.0
 
-    if agent_task_store_service.enabled():
-        now = time.monotonic()
-        need_upgrade = include_output and not _store_loaded_includes_output
-        expired = (now - _store_loaded_at_monotonic) >= _db_store_reload_ttl_seconds()
-        should_reload = force_reload or not _store_loaded or need_upgrade or expired
-        if should_reload:
-            _store.clear()
-            _store.update(_load_store_from_disk(include_output=include_output))
-            _store_loaded = True
-            _store_loaded_path = current_path
-            _store_loaded_test_context = current_test
-            _store_loaded_includes_output = include_output
-            _store_loaded_at_monotonic = now
-        return
-
-    if _store_loaded and _store_loaded_path == current_path and not force_reload:
+    if _store_loaded and _store_loaded_path == current_path:
         return
     _store.clear()
     _store.update(_load_store_from_disk(include_output=include_output))
     _store_loaded = True
     _store_loaded_path = current_path
     _store_loaded_test_context = current_test
-    _store_loaded_includes_output = include_output
-    _store_loaded_at_monotonic = time.monotonic()
 
 
 def _now() -> datetime:

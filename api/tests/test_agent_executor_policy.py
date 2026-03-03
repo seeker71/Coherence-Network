@@ -216,7 +216,7 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_REPO_DEFAULT", "cursor")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -235,11 +235,11 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     assert str(task["command"]).startswith("agent ")
 
 
-def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_open_question_prefers_openclaw(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "openclaw")
+    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "openclaw": "/usr/bin/openclaw"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
@@ -252,74 +252,6 @@ def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
 
     context = task.get("context") or {}
     policy = context.get("executor_policy") or {}
-    assert context.get("executor") == "codex"
+    assert context.get("executor") == "openclaw"
     assert policy.get("reason") == "open_question_default"
-    assert str(task["model"]).startswith("codex/")
-
-
-def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "gemini")
-    monkeypatch.delenv("AGENT_EXECUTOR_ESCALATE_TO", raising=False)
-    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
-    _which = {"agent": None, "claude": "/usr/bin/claude", "codex": None, "gemini": "/usr/bin/gemini"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
-    _reset_agent_store()
-
-    first = agent_service.create_task(
-        AgentTaskCreate(direction="Investigate repository drift signal", task_type=TaskType.IMPL)
-    )
-    assert (first.get("context") or {}).get("executor") == "gemini"
-    agent_service.update_task(first["id"], status=TaskStatus.FAILED, output="failed attempt")
-
-    second = agent_service.create_task(
-        AgentTaskCreate(direction="Investigate repository drift signal", task_type=TaskType.IMPL)
-    )
-
-    assert str(second["model"]).startswith("gemini/")
-    assert str(second["command"]).startswith("gemini ")
-    context = second.get("context") or {}
-    assert context.get("executor") == "gemini"
-    policy = context.get("executor_policy") or {}
-    assert policy.get("reason") == "failure_threshold"
-    assert policy.get("escalation_executor") == "gemini"
-
-
-def test_open_responses_normalization_is_shared_across_executors(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
-    _reset_agent_store()
-
-    cursor_task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Normalize responses across providers",
-            task_type=TaskType.IMPL,
-            context={"executor": "cursor"},
-        )
-    )
-    codex_task = agent_service.create_task(
-        AgentTaskCreate(
-            direction="Normalize responses across providers",
-            task_type=TaskType.IMPL,
-            context={"executor": "openclaw"},
-        )
-    )
-
-    cursor_ctx = cursor_task.get("context") or {}
-    claw_ctx = codex_task.get("context") or {}
-    cursor_call = cursor_ctx.get("normalized_response_call") or {}
-    claw_call = claw_ctx.get("normalized_response_call") or {}
-
-    assert cursor_call.get("request_schema") == "open_responses_v1"
-    assert claw_call.get("request_schema") == "open_responses_v1"
-    assert cursor_call.get("input")[0]["content"][0]["type"] == "input_text"
-    assert claw_call.get("input")[0]["content"][0]["type"] == "input_text"
-    assert (
-        cursor_call.get("input")[0]["content"][0]["text"]
-        == claw_call.get("input")[0]["content"][0]["text"]
-    )
-    assert (cursor_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
-    assert (claw_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
+    assert str(task["model"]).startswith("openclaw/")

@@ -51,3 +51,7 @@ Current endpoints expose parts of the system independently (`ideas`, `specs`, `v
 1. `cd api && pytest -q tests/test_inventory_api.py`
 2. `cd web && npm run build`
 
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

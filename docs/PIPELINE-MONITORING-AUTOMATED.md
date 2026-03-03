@@ -210,8 +210,7 @@ including value-lineage E2E, to pass.
 If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
-- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS`, default `8`) and sleep (`PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS`, default `60`) plus fail-fast conditions.
-- Web on Railway should use native Railway GitHub auto-deploy (service branch `main`, auto deploy enabled, and CI gate settings aligned).
+- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS`, default `12`) and sleep (`PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS`, default `15`) plus fail-fast conditions.
 
 Machine and human access:
 - Machine API: `GET /api/gates/public-deploy-contract`
@@ -253,12 +252,11 @@ To ensure provider configuration is continuously validated and failures are surf
 
 Contract behavior:
 1. Collect provider usage/readiness snapshots.
-2. Run live provider execution probes for required providers and record runtime events.
-3. Evaluate required providers from `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (fallback: `AUTOMATION_REQUIRED_PROVIDERS`).
+2. Evaluate required providers from `AUTOMATION_REQUIRED_PROVIDERS` (repo variable, comma-separated).
    - Providers observed in runtime usage are also required by default (`AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1`).
-4. Fail when any required provider lacks config/readiness or successful execution evidence.
-5. Upload `provider_readiness_report.json` artifact.
-6. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
+3. Fail when any required provider is not configured or not healthy.
+4. Upload `provider_readiness_report.json` artifact.
+5. Open/update issue `Provider readiness contract failing` when blocking issues exist; close it when healthy.
 
 Required provider defaults:
 - Readiness: `coherence-internal,github,openai,railway`

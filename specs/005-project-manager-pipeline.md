@@ -98,3 +98,7 @@ See `api/tests/test_project_manager.py` and `api/tests/test_project_manager_pipe
 
 - Backlog format and content: human maintains specs/005-backlog.md
 - needs_decision: human must /reply before pipeline resumes
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

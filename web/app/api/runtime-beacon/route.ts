@@ -44,6 +44,27 @@ async function postRuntimeEvent(payload: unknown): Promise<Response> {
     controller.abort(new DOMException("Request timed out", "TimeoutError"));
   }, RUNTIME_BEACON_UPSTREAM_TIMEOUT_MS);
 
+async function recordBeaconRuntime(statusCode: number, runtimeMs: number): Promise<void> {
+  try {
+    await fetch(`${API_URL}/api/runtime/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "web_api",
+        endpoint: "/api/runtime-beacon",
+        method: "POST",
+        status_code: statusCode,
+        runtime_ms: Number(Math.max(0.1, runtimeMs).toFixed(4)),
+      }),
+      cache: "no-store",
+    });
+  } catch {
+    // Usage telemetry must never break the endpoint.
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const started = performance.now();
   try {
     return await fetch(`${API_URL}/api/runtime/events`, {
       method: "POST",
@@ -52,14 +73,11 @@ async function postRuntimeEvent(payload: unknown): Promise<Response> {
       cache: "no-store",
       signal: controller.signal,
     });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const nowMs = Date.now();
-  if (runtimeBeaconCooldownUntilMs > nowMs) {
+    const body = await upstream.json();
+    await recordBeaconRuntime(upstream.status, performance.now() - started);
+    return NextResponse.json(body, { status: upstream.status });
+  } catch (error) {
+    await recordBeaconRuntime(502, performance.now() - started);
     return NextResponse.json(
       {
         status: "skipped",

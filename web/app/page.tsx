@@ -95,13 +95,74 @@ const LANDING_PATHS: Array<{
     ],
   },
   {
-    title: "Operate Reliably",
-    description: "Monitor runtime, automation, and deployment gates without hunting across pages.",
-    links: [
-      { href: "/usage", label: "Runtime usage" },
-      { href: "/automation", label: "Automation readiness" },
-      { href: "/gates", label: "Gate status" },
-    ],
+    href: "/flow",
+    title: "Flow",
+    description: "See how ideas, contributors, contributions, and assets connect.",
+  },
+  {
+    href: "/contribute",
+    title: "Contribute",
+    description: "Register, propose changes, and review with yes/no votes.",
+  },
+  {
+    href: "/ideas",
+    title: "Ideas",
+    description: "Browse high-upside ideas and unresolved questions.",
+  },
+  {
+    href: "/specs",
+    title: "Specs",
+    description: "Specs discovered from system lineage inventory.",
+  },
+  {
+    href: "/usage",
+    title: "Usage",
+    description: "Runtime telemetry and friction signals.",
+  },
+  {
+    href: "/friction",
+    title: "Friction",
+    description: "Inspect blockers and delay-cost hotspots in the execution pipeline.",
+  },
+  {
+    href: "/contributors",
+    title: "Contributors",
+    description: "Register contributors and track who created value.",
+  },
+  {
+    href: "/contributions",
+    title: "Contributions",
+    description: "Trace contributor work to assets, specs, and realized impact.",
+  },
+  {
+    href: "/assets",
+    title: "Assets",
+    description: "Track code/docs/endpoints as measurable system assets.",
+  },
+  {
+    href: "/tasks",
+    title: "Tasks",
+    description: "Track active and queued execution items with ownership and status.",
+  },
+  {
+    href: "/gates",
+    title: "Gates",
+    description: "Validate merge/deploy contracts and endpoint traceability coverage.",
+  },
+  {
+    href: "/api-coverage",
+    title: "API Coverage",
+    description: "Probe live API endpoints and surface coverage gaps with explicit failures.",
+  },
+  {
+    href: "/import",
+    title: "Import",
+    description: "Analyze dependency manifests and identify coherence risk.",
+  },
+  {
+    href: "/api-health",
+    title: "API Health",
+    description: "Monitor API readiness and web/API version alignment.",
   },
 ];
 

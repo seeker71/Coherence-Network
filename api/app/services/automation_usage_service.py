@@ -2211,6 +2211,66 @@ def _coalesce_usage_counts_by_family(counts: dict[str, int]) -> dict[str, int]:
     return coalesced
 
 
+def _env_truthy(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _infer_provider_from_model(model_name: str) -> str:
+    model = model_name.strip().lower()
+    if not model:
+        return ""
+    if model.startswith("cursor/"):
+        return "cursor"
+    if model.startswith("openclaw/"):
+        return "openclaw"
+    if model.startswith("openrouter/") or "openrouter" in model:
+        return "openrouter"
+    if "claude" in model:
+        return "anthropic"
+    if model.startswith(("gpt", "o1", "o3", "o4")) or model.startswith("openai/"):
+        return "openai"
+    return ""
+
+
+def _active_provider_usage_counts() -> dict[str, int]:
+    usage = agent_service.get_usage_summary()
+    by_model = usage.get("by_model") if isinstance(usage, dict) else {}
+    execution = usage.get("execution") if isinstance(usage, dict) else {}
+    by_executor = execution.get("by_executor") if isinstance(execution, dict) else {}
+
+    counts: dict[str, int] = {}
+
+    model_rows = by_model if isinstance(by_model, dict) else {}
+    for model_name, row in model_rows.items():
+        provider = _infer_provider_from_model(str(model_name))
+        if not provider:
+            continue
+        row_count = row.get("count") if isinstance(row, dict) else 0
+        try:
+            value = int(float(row_count or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            counts[provider] = counts.get(provider, 0) + value
+
+    executor_rows = by_executor if isinstance(by_executor, dict) else {}
+    executor_provider_map = {"cursor": "cursor", "openclaw": "openclaw", "claude": "anthropic"}
+    for executor_name, row in executor_rows.items():
+        provider = executor_provider_map.get(str(executor_name).strip().lower(), "")
+        if not provider:
+            continue
+        row_count = row.get("count") if isinstance(row, dict) else 0
+        try:
+            value = int(float(row_count or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            counts[provider] = max(counts.get(provider, 0), value)
+
+    return {k: v for k, v in counts.items() if v > 0}
+
+
 def _build_config_only_snapshot(provider: str) -> ProviderUsageSnapshot:
     rule = _PROVIDER_CONFIG_RULES.get(provider, {})
     kind = str(rule.get("kind") or "custom")
@@ -4507,12 +4567,14 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
         _build_config_only_snapshot("cursor"),
-        _build_railway_snapshot(),
+        _build_config_only_snapshot("openclaw"),
+        _build_config_only_snapshot("railway"),
+        _build_config_only_snapshot("vercel"),
     ]
     if _supabase_tracking_enabled():
         providers.append(_build_supabase_snapshot())
     for snapshot in providers:
-        active_count = int(active_usage.get(_normalize_provider_name(snapshot.provider), 0))
+        active_count = int(active_usage.get(snapshot.provider, 0))
         if active_count > 0:
             has_metric = any(metric.id == "runtime_task_runs" for metric in snapshot.metrics)
             if not has_metric:
@@ -4523,9 +4585,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                         unit="tasks",
                         used=float(active_count),
                         window="rolling",
-                        validation_state="derived",
-                        validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
-                        evidence_source="runtime_events",
                     )
                 )
             snapshot.raw["runtime_task_runs"] = active_count
@@ -4534,7 +4593,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                     "provider observed in runtime usage but key/config is missing or provider checks are failing"
                 )
                 snapshot.notes = list(dict.fromkeys(snapshot.notes))
-        snapshot = _finalize_snapshot(snapshot)
         _store_snapshot(snapshot)
     return providers
 
@@ -4971,437 +5029,14 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2, *, force_refresh: bool =
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
 
 
-def evaluate_usage_alerts_from_snapshots(threshold_ratio: float = 0.2) -> UsageAlertReport:
-    ratio = max(0.0, min(float(threshold_ratio), 1.0))
-    overview = usage_overview_from_snapshots()
-    readiness = provider_readiness_report_from_snapshots()
-    required = set(_required_providers_from_env())
-    active_counts = _active_provider_usage_counts()
-
-    alerts: list[UsageAlert] = []
-    seen_alert_ids: set[str] = set()
-    for provider in overview.providers:
-        provider_name = _normalize_provider_name(provider.provider)
-        _append_usage_alerts_for_provider(
-            provider=provider,
-            provider_name=provider_name,
-            required=required,
-            active_usage=int(active_counts.get(provider_name, 0)),
-            ratio=ratio,
-            alerts=alerts,
-            seen_alert_ids=seen_alert_ids,
-        )
-    _append_readiness_alerts(
-        readiness=readiness,
-        alerts=alerts,
-        seen_alert_ids=seen_alert_ids,
-    )
-
-    return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
-
-
-def _latest_provider_snapshots(limit: int = 800) -> dict[str, ProviderUsageSnapshot]:
-    rows = list_usage_snapshots(limit=max(10, min(int(limit), 2000)))
-    by_provider: dict[str, ProviderUsageSnapshot] = {}
-    for row in rows:
-        provider = _provider_family_name(row.provider)
-        if not provider or provider in by_provider:
-            continue
-        by_provider[provider] = row
-    return by_provider
-
-
-def usage_overview_from_snapshots() -> ProviderUsageOverview:
-    by_provider = _latest_provider_snapshots(limit=1000)
-    providers = [by_provider[key] for key in sorted(by_provider.keys())]
-    overview = coalesce_usage_overview_families(
-        ProviderUsageOverview(
-            providers=providers,
-            unavailable_providers=[row.provider for row in providers if row.status != "ok"],
-            tracked_providers=len(providers),
-            limit_coverage={},
-        )
-    )
-    return refresh_usage_overview_limit_coverage(overview)
-
-
-def usage_endpoint_timeout_seconds(default: float = 3.0) -> float:
-    parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS"))
-    if parsed is None:
-        return max(0.1, min(float(default), 10.0))
-    return max(0.1, min(float(parsed), 300.0))
-
-
-def _usage_payload_from_overview(
-    overview: ProviderUsageOverview,
-    *,
-    compact: bool,
-    include_raw: bool,
-) -> dict[str, Any]:
-    normalized = coalesce_usage_overview_families(overview)
-    normalized = refresh_usage_overview_limit_coverage(normalized)
-    if compact:
-        return compact_usage_overview_payload(
-            normalized,
-            include_raw=include_raw,
-        )
-    return normalized.model_dump(mode="json")
-
-
-def usage_overview_payload_from_snapshots(*, compact: bool = False, include_raw: bool = False) -> dict[str, Any]:
-    return _usage_payload_from_overview(
-        usage_overview_from_snapshots(),
-        compact=compact,
-        include_raw=include_raw,
-    )
-
-
-def cached_usage_overview_payload(
-    *,
-    force_refresh: bool = False,
-    compact: bool = False,
-    include_raw: bool = False,
-) -> dict[str, Any]:
-    params = {"compact": bool(compact), "include_raw": bool(include_raw)}
-    return _endpoint_cached_payload(
-        "automation_usage_overview",
-        fresh_ttl_seconds=180.0,
-        refresh_producer=lambda: _usage_payload_from_overview(
-            collect_usage_overview(force_refresh=True),
-            compact=compact,
-            include_raw=include_raw,
-        ),
-        fallback_producer=lambda: _usage_payload_from_overview(
-            usage_overview_from_snapshots(),
-            compact=compact,
-            include_raw=include_raw,
-        ),
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
-def cached_usage_alerts_payload(
-    *,
-    threshold_ratio: float = 0.2,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    ratio = max(0.0, min(float(threshold_ratio), 1.0))
-    params = {"threshold_ratio": round(ratio, 6)}
-    return _endpoint_cached_payload(
-        "automation_usage_alerts",
-        fresh_ttl_seconds=120.0,
-        refresh_producer=lambda: evaluate_usage_alerts(
-            threshold_ratio=ratio,
-            force_refresh=True,
-        ).model_dump(mode="json"),
-        fallback_producer=lambda: evaluate_usage_alerts_from_snapshots(threshold_ratio=ratio).model_dump(mode="json"),
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
-def cached_provider_readiness_payload(
-    *,
-    required_providers: list[str] | None = None,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    required = sorted(set(required_providers or []))
-    params = {"required_providers": required}
-    return _endpoint_cached_payload(
-        "automation_usage_readiness",
-        fresh_ttl_seconds=120.0,
-        refresh_producer=lambda: provider_readiness_report(
-            required_providers=required or None,
-            force_refresh=True,
-        ).model_dump(mode="json"),
-        fallback_producer=lambda: provider_readiness_report_from_snapshots(
-            required_providers=required or None,
-        ).model_dump(mode="json"),
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
-def cached_provider_validation_payload(
-    *,
-    required_providers: list[str] | None = None,
-    runtime_window_seconds: int = 86400,
-    min_execution_events: int = 1,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    required = sorted(set(required_providers or []))
-    window = max(60, min(int(runtime_window_seconds), 2592000))
-    min_events = max(1, min(int(min_execution_events), 50))
-    params = {
-        "required_providers": required,
-        "runtime_window_seconds": window,
-        "min_execution_events": min_events,
-    }
-    return _endpoint_cached_payload(
-        "automation_usage_provider_validation",
-        fresh_ttl_seconds=120.0,
-        refresh_producer=lambda: provider_validation_report(
-            required_providers=required or None,
-            runtime_window_seconds=window,
-            min_execution_events=min_events,
-            force_refresh=True,
-        ).model_dump(mode="json"),
-        fallback_producer=lambda: provider_validation_report(
-            required_providers=required or None,
-            runtime_window_seconds=window,
-            min_execution_events=min_events,
-            force_refresh=False,
-        ).model_dump(mode="json"),
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
-def cached_daily_system_summary_payload(
-    *,
-    window_hours: int = 24,
-    top_n: int = 3,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    window = max(1, min(int(window_hours), 24 * 30))
-    top_count = max(1, min(int(top_n), 20))
-    params = {"window_hours": window, "top_n": top_count}
-    return _endpoint_cached_payload(
-        "automation_usage_daily_summary",
-        fresh_ttl_seconds=120.0,
-        refresh_producer=lambda: daily_system_summary(
-            window_hours=window,
-            top_n=top_count,
-            force_refresh=True,
-        ),
-        fallback_producer=lambda: daily_system_summary(
-            window_hours=window,
-            top_n=top_count,
-            force_refresh=False,
-        ),
-        params=params,
-        force_refresh=force_refresh,
-    )
-
-
-def daily_system_summary(
-    *,
-    window_hours: int = 24,
-    top_n: int = 3,
-    force_refresh: bool = False,
-) -> dict[str, Any]:
-    window_seconds = max(3600, min(int(window_hours) * 3600, 30 * 24 * 3600))
-    top_count = max(1, min(int(top_n), 20))
-    try:
-        host_observability_backfill = agent_service.backfill_host_runner_failure_observability(
-            window_hours=max(1, int(window_seconds / 3600))
-        )
-    except Exception:
-        host_observability_backfill = {
-            "window_hours": max(1, int(window_seconds / 3600)),
-            "host_failed_tasks": 0,
-            "completion_events_backfilled": 0,
-            "friction_events_backfilled": 0,
-            "affected_task_ids": [],
-            "error": "backfill_failed",
-        }
-    usage = agent_service.get_usage_summary()
-    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
-    host_runner = usage.get("host_runner") if isinstance(usage.get("host_runner"), dict) else {}
-
-    try:
-        from app.services import friction_service
-
-        friction_events, _ignored = friction_service.load_events()
-        friction_summary = friction_service.summarize(
-            friction_events,
-            window_days=max(1, int(round(window_seconds / 86400))),
-        )
-        friction_entry_points = friction_service.friction_entry_points(
-            window_days=max(1, int(round(window_seconds / 86400))),
-            limit=20,
-        )
-    except Exception:
-        friction_summary = {
-            "total_events": 0,
-            "open_events": 0,
-            "total_energy_loss": 0.0,
-            "total_cost_of_delay": 0.0,
-            "top_block_types": [],
-            "top_stages": [],
-        }
-        friction_entry_points = {"entry_points": []}
-
-    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-    worker_total = len(worker_events)
-    worker_failed = sum(1 for event in worker_events if int(getattr(event, "status_code", 0) or 0) >= 400)
-    tool_counts: dict[str, dict[str, int]] = {}
-    for event in worker_events:
-        endpoint = str(getattr(event, "endpoint", "") or "").strip() or "unknown"
-        row = tool_counts.setdefault(endpoint, {"count": 0, "failed": 0})
-        row["count"] += 1
-        if int(getattr(event, "status_code", 0) or 0) >= 400:
-            row["failed"] += 1
-    top_tools = sorted(
-        (
-            {"tool": tool, "events": values["count"], "failed": values["failed"]}
-            for tool, values in tool_counts.items()
-        ),
-        key=lambda row: (row["events"], row["failed"]),
-        reverse=True,
-    )[: max(5, top_count)]
-
-    try:
-        from app.services import runtime_service
-
-        attention = runtime_service.summarize_endpoint_attention(
-            seconds=window_seconds,
-            min_event_count=1,
-            limit=max(20, top_count),
-        )
-        top_attention = [
-            {
-                "endpoint": row.endpoint,
-                "events": row.event_count,
-                "attention_score": row.attention_score,
-                "runtime_cost_estimate": row.runtime_cost_estimate,
-                "friction_event_count": row.friction_event_count,
-            }
-            for row in attention.endpoints[:top_count]
-        ]
-    except Exception:
-        top_attention = []
-
-    latest_provider_rows = _latest_provider_snapshots(limit=1000)
-    if not latest_provider_rows:
-        overview = collect_usage_overview(force_refresh=force_refresh)
-        latest_provider_rows = {
-            _normalize_provider_name(row.provider): row
-            for row in overview.providers
-            if _normalize_provider_name(row.provider)
-        }
-
-    provider_priority = ["github", "openai", "gemini", "openrouter", "railway", "db-host", "coherence-internal"]
-    ordered_provider_keys = sorted(
-        latest_provider_rows.keys(),
-        key=lambda name: (provider_priority.index(name) if name in provider_priority else 999, name),
-    )
-    providers: list[dict[str, Any]] = []
-    for provider_name in ordered_provider_keys:
-        row = latest_provider_rows[provider_name]
-        if _normalize_provider_name(row.provider) == "openai":
-            _append_codex_subscription_metrics(row)
-        metric = _summary_metric(row.metrics)
-        providers.append(
-            {
-                "provider": _normalize_provider_name(row.provider),
-                "status": row.status,
-                "data_source": row.data_source,
-                "usage": (
-                    {
-                        "label": metric.label,
-                        "used": metric.used,
-                        "unit": metric.unit,
-                        "remaining": metric.remaining,
-                        "limit": metric.limit,
-                        "window": metric.window,
-                        "validation_state": metric.validation_state,
-                        "validation_detail": metric.validation_detail,
-                        "evidence_source": metric.evidence_source,
-                    }
-                    if metric is not None
-                    else None
-                ),
-                "notes": row.notes[:2],
-            }
-        )
-
-    host_failed = int(host_runner.get("failed_runs") or 0)
-    friction_total = int(friction_summary.get("total_events") or 0)
-    contract_gaps: list[str] = []
-    if host_failed > friction_total:
-        contract_gaps.append(
-            f"failed host-runner tasks ({host_failed}) exceed friction events ({friction_total})"
-        )
-    if host_failed > worker_failed:
-        contract_gaps.append(
-            f"failed host-runner tasks ({host_failed}) exceed failed worker tool events ({worker_failed})"
-        )
-    if int(execution.get("tracked_runs") or 0) == 0 and int(host_runner.get("total_runs") or 0) > 0:
-        contract_gaps.append("execution tracked_runs is zero while host-runner task runs exist")
-    codex_row = next((row for row in providers if row.get("provider") == "openai"), None)
-    codex_usage = codex_row.get("usage") if isinstance(codex_row, dict) else None
-    codex_validation = (
-        str(codex_usage.get("validation_state") or "").strip().lower()
-        if isinstance(codex_usage, dict)
-        else ""
-    )
-    if codex_usage and codex_validation and codex_validation != "validated":
-        contract_gaps.append(
-            "openai usage is derived from runtime telemetry/local limits; provider hard quota headers/API not available."
-        )
-    quality_awareness = quality_awareness_service.build_quality_awareness_summary(
-        top_n=top_count,
-        force_refresh=force_refresh,
-    )
-
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "window_hours": int(window_seconds / 3600),
-        "host_failure_observability_backfill": host_observability_backfill,
-        "host_runner": host_runner,
-        "execution": {
-            "tracked_runs": int(execution.get("tracked_runs") or 0),
-            "failed_runs": int(execution.get("failed_runs") or 0),
-            "success_runs": int(execution.get("success_runs") or 0),
-            "coverage": execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {},
-        },
-        "tool_usage": {
-            "worker_events": worker_total,
-            "worker_failed_events": worker_failed,
-            "top_tools": top_tools,
-        },
-        "friction": {
-            "total_events": friction_total,
-            "open_events": int(friction_summary.get("open_events") or 0),
-            "top_block_types": list(friction_summary.get("top_block_types") or [])[:top_count],
-            "top_stages": list(friction_summary.get("top_stages") or [])[:top_count],
-            "entry_points": list(friction_entry_points.get("entry_points") or [])[:top_count],
-        },
-        "providers": providers,
-        "top_attention_areas": top_attention,
-        "contract_gaps": contract_gaps,
-        "quality_awareness": quality_awareness,
-    }
-
-
-def _provider_limit_guard_result(
-    *,
-    allowed: bool,
-    provider: str,
-    reason: str,
-    blocked_metrics: list[dict[str, Any]] | None = None,
-    evaluated_metrics: list[dict[str, Any]] | None = None,
-    status: str | None = None,
-) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "allowed": bool(allowed),
-        "provider": provider,
-        "reason": reason,
-        "blocked_metrics": list(blocked_metrics or []),
-        "evaluated_metrics": list(evaluated_metrics or []),
-    }
-    if status is not None:
-        payload["status"] = status
-    return payload
-
-
-def _provider_snapshot_for_guard(
-    provider: str,
-    *,
-    force_refresh: bool,
-) -> ProviderUsageSnapshot | None:
+def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
+    required = [item.strip().lower() for item in (required_providers or _required_providers_from_env()) if item.strip()]
+    if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
+        active_counts = _active_provider_usage_counts()
+        for provider_name, count in active_counts.items():
+            if count > 0:
+                required.append(provider_name)
+    required_set = set(required)
     overview = collect_usage_overview(force_refresh=force_refresh)
     return next(
         (

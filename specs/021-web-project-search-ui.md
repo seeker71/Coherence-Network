@@ -37,3 +37,7 @@ Consumes existing API:
 - Auth, user management
 - Graph visualization
 - PyPI (npm only for MVP)
+
+## Idea Traceability
+- `idea_id`: `coherence-network-overall`
+- Rationale: umbrella roadmap linkage for Coherence Network work.

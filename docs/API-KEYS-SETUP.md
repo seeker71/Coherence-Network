@@ -184,10 +184,6 @@ The provider readiness contract checks required provider configuration every 6 h
 - API: `GET /api/automation/usage/provider-validation`
 - CI workflow: `.github/workflows/provider-readiness-contract.yml`
 - Required providers variable: `AUTOMATION_REQUIRED_PROVIDERS` (comma-separated)
-- Required validation providers variable: `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (comma-separated)
-
-Default validation set:
-- `coherence-internal,openai-codex,github,railway,claude`
 - Active-provider key policy: `AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1` (default)
   - Any provider observed in runtime usage is treated as required and must have its API key/config present.
 
@@ -207,6 +203,10 @@ RAILWAY_TOKEN=
 RAILWAY_PROJECT_ID=
 RAILWAY_ENVIRONMENT=
 RAILWAY_SERVICE=
+
+# Vercel deploy health automation
+VERCEL_TOKEN=
+VERCEL_PROJECT_ID=
 
 # OpenClaw usage tracking
 OPENCLAW_API_KEY=
