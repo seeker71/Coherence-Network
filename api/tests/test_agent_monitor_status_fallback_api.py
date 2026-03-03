@@ -58,6 +58,7 @@ async def test_monitor_issues_derives_orphan_running_when_monitor_file_missing(
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("PIPELINE_ORPHAN_RUNNING_SECONDS", "60")
+    monkeypatch.setenv("AGENT_MONITOR_AUTO_RECOVER_STALE_RUNNING", "0")
     monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
     _reset_agent_store()
 
@@ -90,12 +91,54 @@ async def test_monitor_issues_derives_orphan_running_when_monitor_file_missing(
 
 
 @pytest.mark.asyncio
+async def test_monitor_issues_auto_recovers_stale_running_when_enabled(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("PIPELINE_ORPHAN_RUNNING_SECONDS", "60")
+    monkeypatch.setenv("AGENT_MONITOR_AUTO_RECOVER_STALE_RUNNING", "1")
+    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    _reset_agent_store()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Monitor fallback auto recovery", "task_type": "impl"},
+        )
+        assert created.status_code == 201
+        task_id = created.json()["id"]
+
+        running = await client.patch(
+            f"/api/agent/tasks/{task_id}",
+            json={"status": "running", "worker_id": "openai-codex"},
+        )
+        assert running.status_code == 200
+
+        agent_service._store[task_id]["started_at"] = datetime.now(timezone.utc) - timedelta(seconds=180)
+
+        response = await client.get("/api/agent/monitor-issues")
+        assert response.status_code == 200
+        payload = response.json()
+        recovery = payload.get("auto_recovered_stale_running") or {}
+        assert int(recovery.get("count") or 0) >= 1
+        assert task_id in set(recovery.get("task_ids") or [])
+
+        refreshed = await client.get(f"/api/agent/tasks/{task_id}")
+        assert refreshed.status_code == 200
+        task = refreshed.json()
+        assert task["status"] == "failed"
+        assert "auto-recovered" in str(task.get("output") or "")
+
+
+@pytest.mark.asyncio
 async def test_status_report_falls_back_to_derived_live_report_when_file_missing(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("PIPELINE_ORPHAN_RUNNING_SECONDS", "60")
+    monkeypatch.setenv("AGENT_MONITOR_AUTO_RECOVER_STALE_RUNNING", "0")
     monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
     _reset_agent_store()
 
@@ -124,4 +167,3 @@ async def test_status_report_falls_back_to_derived_live_report_when_file_missing
     assert payload["overall"]["status"] == "needs_attention"
     assert payload["layer_3_attention"]["status"] == "needs_attention"
     assert "orphan_running" in payload["overall"]["needs_attention"]
-
