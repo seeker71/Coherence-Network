@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T08:20:44.604941+00:00",
+  "generated_at": "2026-02-19T08:21:36.566925+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -21,16 +21,13 @@
     "layer_violation_count": 0,
     "large_module_count": 7,
     "very_large_module_count": 4,
-    "long_function_count": 17,
+    "long_function_count": 16,
     "placeholder_count": 1,
-    "risk_score": 160,
+    "risk_score": 158,
     "severity": "high",
     "blocking_gap": true,
-    "regression": true,
-    "regression_reasons": [
-      "max_long_function_count: 17 > baseline 16",
-      "max_risk_score: 160 > baseline 158"
-    ]
+    "regression": false,
+    "regression_reasons": []
   },
   "architecture": {
     "python_module_count": 78,
@@ -58,7 +55,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 886
+        "line_count": 893
       },
       {
         "file": "api/app/services/idea_service.py",
@@ -175,12 +172,6 @@
         "line_start": 3887
       },
       {
-        "file": "api/app/routers/agent.py",
-        "function": "update_task",
-        "line_count": 94,
-        "line_start": 525
-      },
-      {
         "file": "api/app/main.py",
         "function": "capture_runtime_metrics",
         "line_count": 91,
@@ -214,9 +205,9 @@
       "task_id": "architecture-modularization-review",
       "title": "Architecture modularization review",
       "direction": "Refactor high-risk modules and remove cross-layer dependencies. Split oversized files and long functions, then re-run maintainability audit.",
-      "estimated_cost_hours": 13.45,
+      "estimated_cost_hours": 13.35,
       "value_to_whole": 100.0,
-      "roi_estimate": 7.4349,
+      "roi_estimate": 7.4906,
       "priority": "high"
     }
   ]
