@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T07:47:18.678297+00:00",
+  "generated_at": "2026-02-19T08:20:44.604941+00:00",
   "policy": {
     "large_module_lines": 600,
     "very_large_module_lines": 1000,
@@ -21,13 +21,16 @@
     "layer_violation_count": 0,
     "large_module_count": 7,
     "very_large_module_count": 4,
-    "long_function_count": 16,
+    "long_function_count": 17,
     "placeholder_count": 1,
-    "risk_score": 158,
+    "risk_score": 160,
     "severity": "high",
     "blocking_gap": true,
-    "regression": false,
-    "regression_reasons": []
+    "regression": true,
+    "regression_reasons": [
+      "max_long_function_count: 17 > baseline 16",
+      "max_risk_score: 160 > baseline 158"
+    ]
   },
   "architecture": {
     "python_module_count": 78,
@@ -47,7 +50,7 @@
       },
       {
         "file": "api/app/services/agent_service.py",
-        "line_count": 1701
+        "line_count": 1796
       },
       {
         "file": "api/app/services/runtime_service.py",
@@ -55,7 +58,7 @@
       },
       {
         "file": "api/app/routers/agent.py",
-        "line_count": 851
+        "line_count": 886
       },
       {
         "file": "api/app/services/idea_service.py",
@@ -77,7 +80,7 @@
       },
       {
         "file": "api/app/services/agent_service.py",
-        "line_count": 1701
+        "line_count": 1796
       }
     ],
     "long_functions": [
@@ -133,7 +136,7 @@
         "file": "api/app/services/agent_service.py",
         "function": "_execution_usage_summary",
         "line_count": 126,
-        "line_start": 1214
+        "line_start": 1309
       },
       {
         "file": "api/app/routers/agent_telegram.py",
@@ -172,6 +175,12 @@
         "line_start": 3887
       },
       {
+        "file": "api/app/routers/agent.py",
+        "function": "update_task",
+        "line_count": 94,
+        "line_start": 525
+      },
+      {
         "file": "api/app/main.py",
         "function": "capture_runtime_metrics",
         "line_count": 91,
@@ -205,9 +214,9 @@
       "task_id": "architecture-modularization-review",
       "title": "Architecture modularization review",
       "direction": "Refactor high-risk modules and remove cross-layer dependencies. Split oversized files and long functions, then re-run maintainability audit.",
-      "estimated_cost_hours": 13.35,
+      "estimated_cost_hours": 13.45,
       "value_to_whole": 100.0,
-      "roi_estimate": 7.4906,
+      "roi_estimate": 7.4349,
       "priority": "high"
     }
   ]
