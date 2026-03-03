@@ -505,7 +505,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
               <h2 className="text-xl font-semibold tracking-tight">Active Ideas</h2>
               <p className="text-xs text-muted-foreground">sorted by {SORT_LABEL[sort]}</p>
             </div>
-            <div className="sticky top-[56px] z-30 mb-3 hidden grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] items-center rounded-lg border border-border/70 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm lg:grid">
+            <div className="sticky top-[56px] z-30 mb-3 hidden grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] items-center rounded-lg border border-border/70 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm md:grid">
               <span className="inline-flex items-center gap-1.5">
                 <Circle className="h-3.5 w-3.5" aria-hidden />
                 idea
@@ -528,7 +528,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
               </span>
               <span className="ml-2 justify-self-end border-l border-primary/35 pl-3 text-right uppercase tracking-wide">open</span>
             </div>
-            <div className="sticky top-[56px] z-30 mb-2 flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm lg:hidden">
+            <div className="sticky top-[56px] z-30 mb-2 flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm md:hidden">
               <span className="inline-flex items-center gap-1">
                 <Link2 className="h-3 w-3" aria-hidden />
                 links
@@ -557,7 +557,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
 
                 return (
                   <li key={item.idea_id} className="rounded-xl border border-border/70 bg-background/45 p-2.5 shadow-sm sm:p-3.5">
-                    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] lg:items-center">
+                    <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_56px_76px_76px_120px_72px] md:items-center">
                       <div className="min-w-0">
                         <div className="flex items-start gap-3">
                           <span
@@ -578,7 +578,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                                 </Link>
                               ) : null}
                             </div>
-                            <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground lg:line-clamp-1">
+                            <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground md:line-clamp-1">
                               {item.subtitle || "No description yet. Add context to improve implementation and ROI decisions."}
                             </p>
                             {reason ? <p className="mt-0.5 text-xs text-muted-foreground">{reason}</p> : null}
@@ -586,20 +586,20 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                         </div>
                       </div>
 
-                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground lg:block">
+                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground md:block">
                         {formatCompactNumber(linksCount)}
                       </div>
-                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground lg:block">
+                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground md:block">
                         {formatMetric(item.value_gap)}
                       </div>
-                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground lg:block">
+                      <div className="hidden text-right text-sm font-medium tabular-nums text-foreground md:block">
                         {formatMetric(item.measured_roi)}
                       </div>
-                      <div className="hidden items-center justify-end gap-2 text-sm text-muted-foreground lg:flex">
+                      <div className="hidden items-center justify-end gap-2 text-sm text-muted-foreground md:flex">
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${attentionMeta.dot}`} />
                         {attentionMeta.label}
                       </div>
-                      <div className="hidden justify-end lg:flex">
+                      <div className="hidden justify-end md:flex">
                         <Link
                           href={item.links.web_detail_path}
                           className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-2 hover:underline"
@@ -609,7 +609,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                         </Link>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs lg:hidden">
+                      <div className="grid grid-cols-2 gap-2 text-xs md:hidden">
                         <div className="rounded-lg border border-border/60 bg-muted/30 px-2 py-1.5">
                           <p className="text-muted-foreground">links</p>
                           <p className="tabular-nums text-foreground">{formatCompactNumber(linksCount)}</p>
@@ -627,7 +627,7 @@ export default async function IdeasPage({ searchParams }: { searchParams: IdeaSe
                           <p className="tabular-nums text-foreground">{formatMetric(item.measured_value)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between lg:hidden">
+                      <div className="flex items-center justify-between md:hidden">
                         <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                           <span className={`inline-block h-2 w-2 rounded-full ${attentionMeta.dot}`} />
                           {attentionMeta.label}
