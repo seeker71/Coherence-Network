@@ -11,6 +11,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlparse
@@ -60,6 +61,12 @@ _FLOW_STAGE_TASK_TYPE: dict[str, TaskType] = {
     "process": TaskType.SPEC,
     "implementation": TaskType.IMPL,
     "validation": TaskType.TEST,
+}
+_FLOW_FALLBACK_SPEC_IDS_BY_IDEA: dict[str, tuple[str, ...]] = {
+    # Keep high-value ideas from being blocked at spec stage when their coverage
+    # exists in repository specs but has not been linked by runtime evidence yet.
+    "coherence-signal-depth": ("049-system-lineage-inventory-and-runtime-telemetry",),
+    "federated-instance-aggregation": ("094-contributor-onboarding-and-governed-change-flow",),
 }
 _TRACEABILITY_GAP_DEFAULT_IDEA_ID = "portfolio-governance"
 _TRACEABILITY_GAP_CONTRIBUTOR_ID = "openai-codex"
@@ -119,6 +126,30 @@ _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
     "flow": {"expires_at": 0.0, "items": {}},
     "idea_cards": {"expires_at": 0.0, "items": {}},
 }
+
+
+@lru_cache(maxsize=1)
+def _repo_spec_ids() -> set[str]:
+    specs_dir = Path(__file__).resolve().parents[3] / "specs"
+    if not specs_dir.exists():
+        return set()
+    return {
+        path.stem.strip()
+        for path in specs_dir.glob("*.md")
+        if path.is_file() and path.stem.strip()
+    }
+
+
+def _apply_flow_fallback_spec_ids(flow: dict[str, Any], idea_id: str) -> None:
+    if flow.get("_spec_ids"):
+        return
+    fallback = _FLOW_FALLBACK_SPEC_IDS_BY_IDEA.get(str(idea_id).strip())
+    if not fallback:
+        return
+    valid = _repo_spec_ids()
+    for spec_id in fallback:
+        if spec_id in valid:
+            flow["_spec_ids"].add(spec_id)
 
 
 def _inventory_cache_ttl_seconds() -> float:
@@ -4961,6 +4992,7 @@ def build_spec_process_implementation_validation_flow(
     active_task_cache: dict[str, dict[str, Any] | None] = {}
     for current_idea_id in sorted(flows.keys()):
         flow = flows[current_idea_id]
+        _apply_flow_fallback_spec_ids(flow, current_idea_id)
         spec_count = len(flow["_spec_ids"])
         spec_ids = sorted(flow["_spec_ids"])
         process_tracked = bool(flow["process_evidence_count"] > 0 or flow["_task_ids"] or flow["_evidence_refs"])
