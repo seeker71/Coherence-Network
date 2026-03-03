@@ -252,7 +252,10 @@
         "GET"
       ],
       "purpose": "Provider adapter usage and normalized automation capacity metrics",
-      "idea_id": "coherence-network-agent-pipeline"
+      "idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": [
+        "100"
+      ]
     },
     {
       "path": "/api/automation/usage/alerts",
@@ -260,7 +263,10 @@
         "GET"
       ],
       "purpose": "Threshold alerts for provider usage remaining capacity",
-      "idea_id": "coherence-network-agent-pipeline"
+      "idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": [
+        "100"
+      ]
     },
     {
       "path": "/api/automation/usage/snapshots",
@@ -268,7 +274,32 @@
         "GET"
       ],
       "purpose": "Historical normalized provider usage snapshots",
-      "idea_id": "coherence-network-agent-pipeline"
+      "idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": [
+        "100"
+      ]
+    },
+    {
+      "path": "/api/automation/usage/subscription-estimator",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Estimate provider subscription upgrade cost/benefit and ROI",
+      "idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": [
+        "100"
+      ]
+    },
+    {
+      "path": "/api/automation/usage/readiness",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Report required provider readiness and blocking gaps",
+      "idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": [
+        "100"
+      ]
     },
     {
       "path": "/api/friction/entry-points",

@@ -78,6 +78,8 @@ cd web && npm run dev
 ./scripts/verify_worktree_local_web.sh
 # Optional ports when running multiple worktrees:
 API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh
+# Optional npm cache override (default is per-worktree .cache/npm):
+NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 
 # Start gate (required before starting a new task)
 python3 scripts/ensure_worktree_start_clean.py --json

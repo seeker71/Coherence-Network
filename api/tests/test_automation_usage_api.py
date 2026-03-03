@@ -417,3 +417,34 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
             assert row["usage_events"] >= 1
             assert row["successful_events"] >= 1
             assert row["validated_execution"] is True
+
+
+@pytest.mark.asyncio
+async def test_automation_usage_endpoints_trace_back_to_spec_100(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "")
+
+    expected_paths = {
+        "/api/automation/usage",
+        "/api/automation/usage/snapshots",
+        "/api/automation/usage/alerts",
+        "/api/automation/usage/subscription-estimator",
+        "/api/automation/usage/readiness",
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        traceability = await client.get("/api/inventory/endpoint-traceability")
+        assert traceability.status_code == 200
+        items = traceability.json()["items"]
+
+    rows = [row for row in items if row["path"] in expected_paths]
+    assert len(rows) == len(expected_paths)
+    for row in rows:
+        assert row["spec"]["tracked"] is True
+        assert "100" in row["spec"]["spec_ids"]

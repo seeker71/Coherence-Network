@@ -55,7 +55,7 @@ async def test_change_request_vote_applies_idea_create(
         )
         assert voted.status_code == 200
         voted_payload = voted.json()
-        assert voted_payload["status"] == "applied"
+        assert voted_payload["status"] == "applied", voted_payload
         assert voted_payload["approvals"] == 1
         assert voted_payload["applied_result"]["kind"] == "idea"
 
