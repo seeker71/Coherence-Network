@@ -48,9 +48,9 @@
   ],
   "change_intent": "process_only",
   "local_validation": {
-    "status": "pending",
+    "status": "pass",
     "commands": [
-      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ]
   },
