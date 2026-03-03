@@ -44,7 +44,9 @@
     "gh pr list --state open",
     "gh pr create --base main --head codex/merge-all-local-worktrees-stashes-admin-20260303"
   ],
-  "change_files": [],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-03-03_merge-local-worktrees-stashes-admin.json"
+  ],
   "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
