@@ -58,7 +58,15 @@ Minimum startup sequence:
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
-make prompt-gate
+test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+python3 scripts/ensure_worktree_start_clean.py --json
+```
+
+If the parity check fails (`HEAD != origin/main`), stop and repair base before any edits:
+
+```bash
+git fetch origin main
+git rebase origin/main
 ```
 
 ### Phase 0: Start Gate (required before new task work)
@@ -119,6 +127,18 @@ If CI fails:
 - Fix in the same thread scope.
 - Re-run local validation.
 - Push fix and wait for green CI.
+
+Required pre-push base sync:
+
+```bash
+git fetch origin main
+git rebase origin/main
+python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence
+```
+
+Why this is mandatory:
+- prevents stale-branch PR diffs against `main`,
+- prevents commit-evidence failures caused by unrelated files appearing in the PR diff range.
 
 Collective review signal:
 - `thread-gates.yml` records collective review status on PRs (non-blocking).

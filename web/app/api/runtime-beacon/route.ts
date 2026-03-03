@@ -63,6 +63,26 @@ async function recordBeaconRuntime(statusCode: number, runtimeMs: number): Promi
   }
 }
 
+async function recordBeaconRuntime(statusCode: number, runtimeMs: number): Promise<void> {
+  try {
+    // Track beacon endpoint usage itself so web API routes are visible in runtime coverage.
+    await fetch(`${API_URL}/api/runtime/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "web_api",
+        endpoint: "/api/runtime-beacon",
+        method: "POST",
+        status_code: statusCode,
+        runtime_ms: Number(Math.max(0.1, runtimeMs).toFixed(4)),
+      }),
+      cache: "no-store",
+    });
+  } catch {
+    // Usage telemetry must never break the endpoint.
+  }
+}
+
 export async function POST(request: NextRequest) {
   const started = performance.now();
   try {
