@@ -4,25 +4,28 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-  cat <<'USAGE'
-Usage: auto_heal_start_gate.sh [--with-pr-gate] [--with-rebase] [--skip-restore] [--start-command CMD]
+  cat <<'EOF'
+Usage: auto_heal_start_gate.sh [--with-pr-gate] [--with-rebase]
 
-Run start-gate in a clean worktree, stashing local changes first and restoring them
-afterward.
+Run start-gate in a clean state by stashing local changes first, then restore
+them (or keep the stash) after completion.
 
 Options:
-  --with-pr-gate     also run `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`.
-  --with-rebase      also run `git fetch origin main` and `git rebase origin/main`.
-  --skip-restore     do not restore stashed worktree changes after completion.
-  --start-command CMD command string to run instead of start-gate (default: make start-gate)
+  --with-pr-gate     also run `worktree_pr_guard` in local mode.
+  --with-rebase      also run `git fetch origin main` and `git rebase origin/main`
+                     (typically for pre-push readiness checks).
+  --skip-restore     skip automatic stash restoration at the end.
+  --start-command CMD run this command instead of `make start-gate`.
+                     May be passed multiple times for spaces, e.g.
+                     --start-command make start-gate.
   -h, --help         show this help text.
-USAGE
+EOF
 }
 
 run_pr_gate=0
 run_rebase=0
 run_restore=1
-start_cmd="make start-gate"
+start_cmd=("make" "start-gate")
 start_cmd_label="make start-gate"
 
 while [[ $# -gt 0 ]]; do
@@ -42,10 +45,10 @@ while [[ $# -gt 0 ]]; do
     --start-command)
       shift
       if [[ $# -eq 0 ]]; then
-        echo "auto-heal-start-gate: --start-command requires a command string"
+        echo "auto-heal-start-gate: --start-command requires a command token."
         exit 1
       fi
-      start_cmd="$1"
+      start_cmd=("$1")
       start_cmd_label="$1"
       shift
       ;;
@@ -66,25 +69,11 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
-current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-if [[ -z "$current_branch" ]]; then
-  echo "auto-heal-start-gate: failed to detect current branch name."
-  exit 1
-fi
-if [[ "$current_branch" == "HEAD" ]]; then
-  echo "auto-heal-start-gate: detached HEAD detected; refusing stash/rebase in detached state."
-  echo "Attach this worktree first, then rerun:"
-  echo "  git switch -c codex/<thread-name>"
-  echo "  # or"
-  echo "  git switch codex/<thread-name>"
-  exit 1
-fi
-
 restore_stash_if_needed() {
   local stash_ref="$1"
-  local restore_flag="$2"
+  local run_restore="$2"
 
-  if [[ "$restore_flag" != "1" ]]; then
+  if [[ "$run_restore" != "1" ]]; then
     echo "auto-heal-start-gate: restore disabled; latest stash entry kept as ${stash_ref}."
     return
   fi
@@ -95,73 +84,79 @@ restore_stash_if_needed() {
 
   echo "auto-heal-start-gate: restoring changes from ${stash_ref}."
   if ! git stash pop --index "$stash_ref"; then
-    echo "auto-heal-start-gate: WARN: pop failed, trying apply+drop for ${stash_ref}."
+    echo "auto-heal-start-gate: WARN: failed to restore ${stash_ref}; trying direct stash apply."
     git stash apply --index "$stash_ref" && git stash drop "$stash_ref"
   fi
 }
 
 cd "$SCRIPT_DIR/.."
 
-initial_clean=0
-if [[ -z "$(git status --short --untracked-files=all)" ]]; then
-  initial_clean=1
+status_output="$(git status --short --untracked-files=all)"
+initial_clean="1"
+if [[ -n "$status_output" ]]; then
+  initial_clean="0"
 fi
 
-stash_ref=""
 if [[ "$initial_clean" == "1" ]]; then
-  echo "auto-heal-start-gate: worktree already clean."
+  echo "auto-heal-start-gate: worktree already clean. running start-gate directly."
+  stash_ref=""
 else
   stash_name="auto_heal_start_gate_$(date +%Y%m%dT%H%M%S)"
-  echo "auto-heal-start-gate: stashing local changes as ${stash_name}."
+  echo "auto-heal-start-gate: stashing local changes: ${stash_name}"
   git stash push --include-untracked --message "$stash_name" >/dev/null
-  stash_ref="stash@{0}"
+  stash_ref="$(git stash list -n 1 --format='stash@{%g}' 2>/dev/null | awk '{print $1}')"
+  if [[ -z "$stash_ref" || "$stash_ref" == "stash@{}" ]]; then
+    # Fallback for git versions without --format support.
+    stash_ref="stash@{0}"
+  fi
   echo "auto-heal-start-gate: changes stashed in ${stash_ref}."
 fi
 
 set +e
-bash -lc "$start_cmd"
+"${start_cmd[@]}"
 start_rc=$?
 set -e
+
 if [[ "$start_rc" -ne 0 ]]; then
-  restore_stash_if_needed "$stash_ref" "$run_restore"
+  restore_stash_if_needed "${stash_ref:-}" "$run_restore"
   exit "$start_rc"
 fi
 
 if [[ "$run_rebase" == "1" ]]; then
-  echo "auto-heal-start-gate: running git fetch/rebase refresh."
+  echo "auto-heal-start-gate: running required rebase refresh."
   set +e
   git fetch origin main
   git rebase origin/main
   rebase_rc=$?
   set -e
   if [[ "$rebase_rc" -ne 0 ]]; then
-    restore_stash_if_needed "$stash_ref" "$run_restore"
+    restore_stash_if_needed "${stash_ref:-}" "$run_restore"
     exit "$rebase_rc"
   fi
 fi
 
 if [[ "$run_pr_gate" == "1" ]]; then
-  echo "auto-heal-start-gate: running worktree-pr-guard (local)."
+  echo "auto-heal-start-gate: running local pr guard."
   set +e
   python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
-  pr_gate_rc=$?
+  pr_rc=$?
   set -e
-  if [[ "$pr_gate_rc" -ne 0 ]]; then
-    restore_stash_if_needed "$stash_ref" "$run_restore"
-    exit "$pr_gate_rc"
+  if [[ "$pr_rc" -ne 0 ]]; then
+    restore_stash_if_needed "${stash_ref:-}" "$run_restore"
+    exit "$pr_rc"
   fi
 fi
 
-restore_stash_if_needed "$stash_ref" "$run_restore"
+restore_stash_if_needed "${stash_ref:-}" "$run_restore"
 
+if [[ "$initial_clean" == "1" ]]; then
+  echo "auto-heal-start-gate: completed in clean state; no restore required."
+fi
 echo "auto-heal-start-gate: completed."
 echo "auto-heal-start-gate: command used -> ${start_cmd_label}"
 if [[ "$run_rebase" == "1" ]]; then
-  echo "auto-heal-start-gate: git fetch/rebase executed."
+  echo "auto-heal-start-gate: rebase refresh executed."
 fi
 if [[ "$run_pr_gate" == "1" ]]; then
-  echo "auto-heal-start-gate: local worktree gate executed."
-fi
-if [[ "$initial_clean" == "1" ]]; then
-  echo "auto-heal-start-gate: no changes to restore."
+  echo "auto-heal-start-gate: local worktree guard executed."
 fi
