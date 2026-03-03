@@ -330,6 +330,20 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
     summaries: list[EndpointRuntimeSummary] = []
     for endpoint, events in grouped.items():
         methods = sorted({e.method.upper() for e in events})
+        runtimes = [max(0.0, float(e.runtime_ms)) for e in events]
+        runtimes.sort()
+
+        def _pct(vals: list[float], p: float) -> float:
+            if not vals:
+                return 0.0
+            if len(vals) == 1:
+                return float(vals[0])
+            # Nearest-rank, 0..1 percentile.
+            p = max(0.0, min(float(p), 1.0))
+            idx = int(round((len(vals) - 1) * p))
+            idx = max(0, min(idx, len(vals) - 1))
+            return float(vals[idx])
+
         by_source: dict[str, int] = {}
         status_counts: dict[str, int] = {}
         idea_counts: dict[str, int] = {}
@@ -351,6 +365,9 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
                 event_count=len(events),
                 total_runtime_ms=total_runtime,
                 average_runtime_ms=round(total_runtime / len(events), 4),
+                p50_runtime_ms=round(_pct(runtimes, 0.50), 4),
+                p95_runtime_ms=round(_pct(runtimes, 0.95), 4),
+                max_runtime_ms=round(runtimes[-1] if runtimes else 0.0, 4),
                 runtime_cost_estimate=total_cost,
                 by_source=by_source,
                 status_counts=status_counts,
@@ -358,6 +375,66 @@ def summarize_by_endpoint(seconds: int = 3600) -> list[EndpointRuntimeSummary]:
         )
     summaries.sort(key=lambda x: (x.runtime_cost_estimate, x.endpoint), reverse=True)
     return summaries
+
+
+def slow_threshold_ms() -> int:
+    raw = os.getenv("RUNTIME_SLOW_REQUEST_MS", "2000").strip()
+    try:
+        val = int(float(raw))
+    except Exception:
+        val = 2000
+    return max(1, min(val, 300000))
+
+
+def list_events_filtered(
+    *,
+    limit: int = 100,
+    endpoint: str | None = None,
+    method: str | None = None,
+    min_runtime_ms: float | None = None,
+    status_code: int | None = None,
+) -> list[RuntimeEvent]:
+    rows = list_events(limit=max(1, min(int(limit), 2000)))
+    out: list[RuntimeEvent] = []
+    normalized_endpoint = None
+    if endpoint and str(endpoint).strip():
+        normalized_endpoint = normalize_endpoint(str(endpoint).strip(), method=str(method or "").strip() or None)
+    normalized_method = (str(method).strip().upper() if method and str(method).strip() else None)
+    min_rt = None
+    if min_runtime_ms is not None:
+        try:
+            min_rt = float(min_runtime_ms)
+        except Exception:
+            min_rt = None
+    st = None
+    if status_code is not None:
+        try:
+            st = int(status_code)
+        except Exception:
+            st = None
+    for row in rows:
+        if normalized_endpoint and row.endpoint != normalized_endpoint:
+            continue
+        if normalized_method and row.method.upper() != normalized_method:
+            continue
+        if st is not None and int(row.status_code) != st:
+            continue
+        if min_rt is not None and float(row.runtime_ms) < float(min_rt):
+            continue
+        out.append(row)
+    return out[: max(1, min(int(limit), 2000))]
+
+
+def slow_endpoints_report(*, seconds: int, threshold_ms: int, limit: int) -> list[EndpointRuntimeSummary]:
+    rows = summarize_by_endpoint(seconds=seconds)
+    thr = max(1, min(int(threshold_ms), 300000))
+    flagged = [
+        row
+        for row in rows
+        if float(row.p95_runtime_ms) >= float(thr) or float(row.max_runtime_ms) >= float(thr)
+    ]
+    flagged.sort(key=lambda r: (float(r.p95_runtime_ms), float(r.max_runtime_ms), r.endpoint), reverse=True)
+    return flagged[: max(1, min(int(limit), 500))]
 
 
 def verify_internal_vs_public_usage(

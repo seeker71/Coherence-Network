@@ -16,7 +16,21 @@ async def create_runtime_event(payload: RuntimeEventCreate) -> RuntimeEvent:
 
 
 @router.get("/runtime/events", response_model=list[RuntimeEvent])
-async def list_runtime_events(limit: int = Query(100, ge=1, le=2000)) -> list[RuntimeEvent]:
+async def list_runtime_events(
+    limit: int = Query(100, ge=1, le=2000),
+    endpoint: str | None = Query(None, description="Canonical endpoint template (e.g. /api/spec-registry/{spec_id})"),
+    method: str | None = Query(None, description="HTTP method filter (e.g. GET)"),
+    min_runtime_ms: float | None = Query(None, ge=0.0, description="Minimum runtime_ms filter"),
+    status_code: int | None = Query(None, ge=100, le=599, description="HTTP status filter"),
+) -> list[RuntimeEvent]:
+    if endpoint or method or min_runtime_ms is not None or status_code is not None:
+        return runtime_service.list_events_filtered(
+            limit=limit,
+            endpoint=endpoint,
+            method=method,
+            min_runtime_ms=min_runtime_ms,
+            status_code=status_code,
+        )
     return runtime_service.list_events(limit=limit)
 
 
@@ -34,6 +48,21 @@ async def runtime_summary_by_endpoint(seconds: int = Query(3600, ge=60, le=25920
     rows = runtime_service.summarize_by_endpoint(seconds=seconds)
     return {
         "window_seconds": seconds,
+        "endpoints": [row.model_dump(mode="json") for row in rows],
+    }
+
+
+@router.get("/runtime/endpoints/slow")
+async def runtime_slow_endpoints(
+    seconds: int = Query(3600, ge=60, le=2592000),
+    threshold_ms: int | None = Query(None, ge=1, le=300000),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict:
+    threshold = int(threshold_ms) if threshold_ms is not None else runtime_service.slow_threshold_ms()
+    rows = runtime_service.slow_endpoints_report(seconds=seconds, threshold_ms=threshold, limit=limit)
+    return {
+        "window_seconds": seconds,
+        "threshold_ms": threshold,
         "endpoints": [row.model_dump(mode="json") for row in rows],
     }
 
