@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -9,6 +10,7 @@ _RETRY_MAX_DEFAULT = 1
 _RETRY_MAX_CAP = 5
 _FAILURE_OUTPUT_MAX = 1200
 _RETRY_HINT_MAX = 900
+_OPENAI_RETRY_MODEL_DEFAULT = "gpt-5-codex"
 
 
 def _non_negative_int(value: Any, default: int = 0) -> int:
@@ -78,6 +80,47 @@ def _retry_fix_hint(failure_output: str, retry_number: int) -> str:
     )[:_RETRY_HINT_MAX]
 
 
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return float(value) != 0.0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_paid_provider_retry_candidate(*, failure_output: str, result_error: str) -> bool:
+    lower_output = failure_output.lower()
+    lower_error = result_error.lower()
+    markers = (
+        "paid provider",
+        "paid-provider",
+        "paid_provider",
+    )
+    if any(marker in lower_output for marker in markers):
+        return True
+    return lower_error in {"paid_provider_blocked"}
+
+
+def _auto_retry_openai_override_enabled(context: dict[str, Any]) -> bool:
+    if "auto_retry_openai_override" in context:
+        return _truthy(context.get("auto_retry_openai_override"))
+    return _truthy(os.environ.get("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "0"))
+
+
+def _resolve_retry_model_override(context: dict[str, Any]) -> str:
+    for key in ("openai_retry_model_override", "retry_model_override"):
+        value = str(context.get(key) or "").strip()
+        if value:
+            return value
+    env_override = str(os.environ.get("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "")).strip()
+    if env_override:
+        return env_override
+    context_model_override = str(context.get("model_override") or "").strip()
+    if context_model_override:
+        return context_model_override
+    return _OPENAI_RETRY_MODEL_DEFAULT
+
+
 def record_failure_hits_and_retry(
     *,
     task_id: str,
@@ -108,6 +151,7 @@ def record_failure_hits_and_retry(
         or str(result.get("error") or "").strip()
         or "task_failed"
     )
+    result_error = str(result.get("error") or "").strip()
     now_iso = datetime.now(timezone.utc).isoformat()
     context_patch: dict[str, Any] = {
         "failure_hits": failure_hits,
@@ -134,6 +178,22 @@ def record_failure_hits_and_retry(
             "last_retry_source": "auto_failure_recovery",
         }
     )
+    retry_force_paid_providers = force_paid_providers
+    if _auto_retry_openai_override_enabled(context) and _is_paid_provider_retry_candidate(
+        failure_output=failure_output,
+        result_error=result_error,
+    ):
+        retry_force_paid_providers = True
+        context_patch.update(
+            {
+                "force_paid_providers": True,
+                "force_paid_override_source": "auto_retry_openai_override",
+                "retry_paid_override_applied": True,
+                "model_override": _resolve_retry_model_override(context),
+                "executor": "openclaw",
+            }
+        )
+
     update_task(
         task_id,
         status=pending_status,
@@ -144,7 +204,7 @@ def record_failure_hits_and_retry(
     return execute_again(
         task_id,
         worker_id=worker_id,
-        force_paid_providers=force_paid_providers,
+        force_paid_providers=retry_force_paid_providers,
         max_cost_usd=max_cost_usd,
         estimated_cost_usd=estimated_cost_usd,
         cost_slack_ratio=cost_slack_ratio,

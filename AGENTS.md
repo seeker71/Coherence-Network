@@ -39,6 +39,7 @@ Spec → Test → Implement → CI → Review → Merge
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
+- `AGENT.md` — Agent self-unblock playbook for failed gates
 - `docs/WORKTREE-QUICKSTART.md` — Mandatory worktree-only startup flow and failure recovery
 - `docs/STATUS.md` — Current implementation status, sprint progress
 - `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
