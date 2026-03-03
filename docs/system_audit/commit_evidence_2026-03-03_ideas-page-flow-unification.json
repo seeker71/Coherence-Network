@@ -1,0 +1,78 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/stash-ideas-followup-20260303",
+  "commit_scope": "Unify /ideas page around flow-stage coverage with clearer filtering, sorting, and pagination for first-time navigation without overwhelming detail.",
+  "files_owned": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-page-flow-unification.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Will verify public endpoints after merge."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Ideas page shows a cleaner stage-driven view (spec/implementation/validation/measurement) with concise controls and clearer progression context.",
+    "public_endpoints": [
+      "/ideas"
+    ],
+    "test_flows": [
+      "ideas-stage-filters-and-pagination"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy checks pending."
+  },
+  "idea_ids": [
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task_ideas_page_flow_unification_2026_03_03"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-page-flow-unification.json"
+  ],
+  "change_files": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-03_ideas-page-flow-unification.json"
+  ],
+  "change_intent": "runtime_feature"
+}
