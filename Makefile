@@ -27,13 +27,4 @@ install-pre-push-hook:
 	./scripts/setup_pre_push_hook.sh
 
 start-gate:
-	@if [ ! -f .git ]; then \
-	  echo "start-gate: missing .git marker" && exit 1; \
-	fi
-	@if [ "$$(cat .git | awk '{print $$1}')" != "gitdir:" ]; then \
-	  echo "start-gate: expected linked worktree (.git file). Refuse to run in primary workspace." && exit 1; \
-	fi
-	@if [ -n "$$(git status --short)" ]; then \
-	  echo "start-gate: current worktree has local changes. Clean it before starting a task." && exit 1; \
-	fi
 	@python3 scripts/start_gate.py

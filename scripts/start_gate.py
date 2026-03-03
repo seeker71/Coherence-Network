@@ -46,6 +46,15 @@ def main() -> None:
     gitdir_line = Path(".git").read_text(encoding="utf-8").strip()
     if not gitdir_line.startswith("gitdir:"):
         raise SystemExit("start-gate: expected .git to be a gitdir pointer file")
+
+    proc = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        raise SystemExit("start-gate: failed to check current worktree state")
+    if proc.stdout.strip():
+        raise SystemExit(
+            "start-gate: current worktree has local changes. Clean it before starting a task."
+        )
+
     gitdir = gitdir_line.split(":", 1)[1].strip()
     primary = Path(gitdir).resolve().parent.parent.parent
 
