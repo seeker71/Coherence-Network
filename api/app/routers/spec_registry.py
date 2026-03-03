@@ -20,6 +20,40 @@ async def list_specs(
     return spec_registry_service.list_specs(limit=limit, offset=offset)
 
 
+@router.get("/spec-registry/cards")
+async def list_spec_cards(
+    q: str = Query("", description="Free-text search across spec title/summary/ids/contributors."),
+    state: str = Query(
+        "all",
+        description="One of: all, unlinked, linked, in_progress, implemented, measured.",
+    ),
+    attention: str = Query(
+        "all",
+        description="One of: all, none, low, medium, high.",
+    ),
+    sort: str = Query(
+        "attention_desc",
+        description="One of: attention_desc, roi_desc, gap_desc, state_desc, updated_desc, name_asc.",
+    ),
+    cursor: str | None = Query(default=None, description="Offset cursor returned by previous page."),
+    limit: int = Query(50, ge=1, le=200),
+    linked: str = Query("all", description="One of: all, linked, unlinked."),
+    min_roi: float | None = Query(default=None),
+    min_value_gap: float | None = Query(default=None),
+) -> dict:
+    return spec_registry_service.build_spec_cards_feed(
+        q=q,
+        state=state,
+        attention=attention,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+        linked=linked,
+        min_roi=min_roi,
+        min_value_gap=min_value_gap,
+    )
+
+
 @router.get("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)
 async def get_spec(spec_id: str) -> SpecRegistryEntry:
     found = spec_registry_service.get_spec(spec_id)
