@@ -23,20 +23,12 @@ import subprocess
 import sys
 import threading
 import time
-import tempfile
 from datetime import datetime, timedelta, timezone
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
-from contextlib import contextmanager
-from pathlib import Path
-from typing import Any, Callable, Optional
-from urllib.parse import quote
-try:
-    import fcntl
-except ImportError:  # pragma: no cover - non-posix fallback
-    fcntl = None
+from typing import Any, Optional
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -59,15 +51,9 @@ HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
 MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
 RETRY_BACKOFF = 2  # seconds between retries
 REPO_PATH = os.path.abspath(os.environ.get("AGENT_WORKTREE_PATH", os.path.dirname(_api_dir)))
+REPO_GIT_URL = os.environ.get("AGENT_REPO_GIT_URL", "").strip()
 DEFAULT_GITHUB_REPO = os.environ.get("AGENT_GITHUB_REPO", "seeker71/Coherence-Network")
 DEFAULT_PR_BASE_BRANCH = os.environ.get("AGENT_PR_BASE_BRANCH", "main")
-DEFAULT_REPO_GIT_URL = f"https://github.com/{DEFAULT_GITHUB_REPO}.git"
-REPO_GIT_URL = str(os.environ.get("AGENT_REPO_GIT_URL", DEFAULT_REPO_GIT_URL)).strip() or DEFAULT_REPO_GIT_URL
-DEFAULT_REPO_FALLBACK_PATH = os.path.join("/tmp", DEFAULT_GITHUB_REPO.split("/")[-1] or "Coherence-Network")
-REPO_FALLBACK_PATH = os.path.abspath(
-    str(os.environ.get("AGENT_REPO_FALLBACK_PATH", DEFAULT_REPO_FALLBACK_PATH)).strip()
-    or DEFAULT_REPO_FALLBACK_PATH
-)
 DEFAULT_PR_LOCAL_CHECK_CMD = os.environ.get(
     "AGENT_PR_LOCAL_VALIDATION_CMD",
     "bash ./scripts/verify_worktree_local_web.sh",
@@ -88,213 +74,6 @@ TASK_LOG_TAIL_CHARS = max(200, int(os.environ.get("AGENT_TASK_LOG_TAIL_CHARS", "
 MAX_RUN_RECORDS = max(50, int(os.environ.get("AGENT_RUN_RECORDS_MAX", "5000")))
 RUN_RECORDS_FILE = os.path.join(LOG_DIR, "agent_runner_runs.json")
 RUN_RECORDS_LOCK = threading.Lock()
-try:
-    PENDING_TASK_FETCH_LIMIT = int(os.environ.get("AGENT_PENDING_TASK_FETCH_LIMIT", "20"))
-except ValueError:
-    PENDING_TASK_FETCH_LIMIT = 20
-PENDING_TASK_FETCH_LIMIT = max(1, PENDING_TASK_FETCH_LIMIT)
-try:
-    MEASURED_VALUE_TARGET_SHARE = float(os.environ.get("AGENT_MEASURED_VALUE_TARGET_SHARE", "0.5"))
-except ValueError:
-    MEASURED_VALUE_TARGET_SHARE = 0.5
-MEASURED_VALUE_TARGET_SHARE = max(0.0, min(1.0, MEASURED_VALUE_TARGET_SHARE))
-try:
-    IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = int(
-        os.environ.get("AGENT_IDEA_MEASURED_CACHE_TTL_SECONDS", "300")
-    )
-except ValueError:
-    IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = 300
-IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = max(30, IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS)
-SCHEDULER_STATS_LOCK = threading.Lock()
-SCHEDULER_EXECUTED_TOTAL = 0
-SCHEDULER_EXECUTED_MEASURED = 0
-IDEA_MEASURED_VALUE_CACHE_LOCK = threading.Lock()
-IDEA_MEASURED_VALUE_CACHE: dict[str, tuple[float, bool]] = {}
-SELF_UPDATE_ENABLED = str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_ENABLED", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
-SELF_UPDATE_REPO = (
-    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
-)
-SELF_UPDATE_BRANCH = (
-    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip()
-    or DEFAULT_PR_BASE_BRANCH
-)
-try:
-    SELF_UPDATE_MIN_INTERVAL_SECONDS = int(
-        os.environ.get("AGENT_RUNNER_SELF_UPDATE_MIN_INTERVAL_SECONDS", "60")
-    )
-except ValueError:
-    SELF_UPDATE_MIN_INTERVAL_SECONDS = 60
-SELF_UPDATE_MIN_INTERVAL_SECONDS = max(5, SELF_UPDATE_MIN_INTERVAL_SECONDS)
-SELF_UPDATE_LOCK = threading.Lock()
-SELF_UPDATE_LAST_CHECK_AT = 0.0
-SELF_UPDATE_LAST_TRIGGER_SHA = ""
-ROLLBACK_ON_TASK_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_TASK_FAILURE", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
-ROLLBACK_ON_START_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_START_FAILURE", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
-try:
-    ROLLBACK_MIN_INTERVAL_SECONDS = int(os.environ.get("AGENT_RUNNER_ROLLBACK_MIN_INTERVAL_SECONDS", "180"))
-except ValueError:
-    ROLLBACK_MIN_INTERVAL_SECONDS = 180
-ROLLBACK_MIN_INTERVAL_SECONDS = max(10, ROLLBACK_MIN_INTERVAL_SECONDS)
-ROLLBACK_LOCK = threading.Lock()
-ROLLBACK_LAST_AT = 0.0
-AGENT_MANIFESTS_DIR = os.path.abspath(
-    os.environ.get("AGENT_MANIFESTS_DIR", os.path.join(LOG_DIR, "agent_manifests"))
-)
-AGENT_WEB_BASE_URL = str(os.environ.get("AGENT_WEB_BASE_URL", "")).strip().rstrip("/")
-try:
-    AGENT_MANIFEST_MAX_BLOCKS = int(os.environ.get("AGENT_MANIFEST_MAX_BLOCKS", "80"))
-except ValueError:
-    AGENT_MANIFEST_MAX_BLOCKS = 80
-AGENT_MANIFEST_MAX_BLOCKS = max(1, AGENT_MANIFEST_MAX_BLOCKS)
-try:
-    AGENT_MANIFEST_CONTEXT_BLOCKS = int(os.environ.get("AGENT_MANIFEST_CONTEXT_BLOCKS", "20"))
-except ValueError:
-    AGENT_MANIFEST_CONTEXT_BLOCKS = 20
-AGENT_MANIFEST_CONTEXT_BLOCKS = max(1, AGENT_MANIFEST_CONTEXT_BLOCKS)
-AGENT_MANIFEST_ENABLED = str(os.environ.get("AGENT_MANIFEST_ENABLED", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
-AGENT_MANIFEST_WRITE_LOCK = threading.Lock()
-DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
-try:
-    DEFAULT_OBSERVATION_WINDOW_SEC = int(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900"))
-except ValueError:
-    DEFAULT_OBSERVATION_WINDOW_SEC = 900
-DEFAULT_OBSERVATION_WINDOW_SEC = max(30, min(DEFAULT_OBSERVATION_WINDOW_SEC, 7 * 24 * 60 * 60))
-try:
-    HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = float(
-        os.environ.get("AGENT_HOLD_PATTERN_SCORE_THRESHOLD", "0.8")
-    )
-except ValueError:
-    HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = 0.8
-HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = max(0.0, HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT)
-try:
-    HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = int(
-        os.environ.get("AGENT_HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS", "120")
-    )
-except ValueError:
-    HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = 120
-HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = max(10, min(HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS, 24 * 60 * 60))
-HOLD_PATTERN_DIAGNOSTIC_COMMAND = str(
-    os.environ.get(
-        "AGENT_HOLD_PATTERN_DIAGNOSTIC_COMMAND",
-        "git status --porcelain --branch && git log --oneline -n 5",
-    )
-).strip()
-try:
-    MIN_RETRY_DELAY_SECONDS = int(os.environ.get("AGENT_MIN_RETRY_DELAY_SECONDS", "15"))
-except ValueError:
-    MIN_RETRY_DELAY_SECONDS = 15
-MIN_RETRY_DELAY_SECONDS = max(1, min(MIN_RETRY_DELAY_SECONDS, 3600))
-try:
-    DIAGNOSTIC_COOLDOWN_SECONDS = int(os.environ.get("AGENT_DIAGNOSTIC_COOLDOWN_SECONDS", "30"))
-except ValueError:
-    DIAGNOSTIC_COOLDOWN_SECONDS = 30
-DIAGNOSTIC_COOLDOWN_SECONDS = max(0, min(DIAGNOSTIC_COOLDOWN_SECONDS, 3600))
-try:
-    MAX_INTERVENTIONS_PER_WINDOW = int(os.environ.get("AGENT_MAX_INTERVENTIONS_PER_WINDOW", "5"))
-except ValueError:
-    MAX_INTERVENTIONS_PER_WINDOW = 5
-MAX_INTERVENTIONS_PER_WINDOW = max(1, min(MAX_INTERVENTIONS_PER_WINDOW, 100))
-try:
-    INTERVENTION_WINDOW_SECONDS = int(os.environ.get("AGENT_INTERVENTION_WINDOW_SECONDS", "900"))
-except ValueError:
-    INTERVENTION_WINDOW_SECONDS = 900
-INTERVENTION_WINDOW_SECONDS = max(30, min(INTERVENTION_WINDOW_SECONDS, 24 * 60 * 60))
-try:
-    PAID_CALL_COST_UNITS = float(os.environ.get("AGENT_PAID_CALL_COST_UNITS", "1.0"))
-except ValueError:
-    PAID_CALL_COST_UNITS = 1.0
-PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
-AUTO_GENERATE_IDLE_TASKS = str(
-    os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASKS", "1")
-).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
-try:
-    AUTO_GENERATE_IDLE_TASK_LIMIT = int(os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_LIMIT", "50"))
-except ValueError:
-    AUTO_GENERATE_IDLE_TASK_LIMIT = 50
-AUTO_GENERATE_IDLE_TASK_LIMIT = max(1, min(AUTO_GENERATE_IDLE_TASK_LIMIT, 500))
-try:
-    AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = int(
-        os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", "30")
-    )
-except ValueError:
-    AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = 30
-AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = max(0, AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS)
-_last_idle_task_generation_ts = 0.0
-
-RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
-try:
-    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = int(
-        os.environ.get("AGENT_RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS", "120")
-    )
-except ValueError:
-    RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = 120
-RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = max(15, min(RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS, 1800))
-
-CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
-    "free": (10, 70),
-    "pro": (50, 500),
-    "pro_plus": (100, 1000),
-}
-
-CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
-    "free": (10, 70),
-    "pro": (45, 315),
-    "max": (120, 840),
-    "team": (120, 840),
-}
-
-TaskRunItem = tuple[str, str, str, str, dict[str, Any], str, bool]
-DEFAULT_CODEX_MODEL_ALIAS_MAP = (
-    "gpt-5.3-codex:gpt-5-codex,"
-    "gpt-5.3-codex-spark:gpt-5-codex,"
-    "gtp-5.3-codex:gpt-5-codex,"
-    "gtp-5.3-codex-spark:gpt-5-codex"
-)
-MANDATORY_CODEX_MODEL_ALIAS_MAP = {
-    "gpt-5.3-codex": "gpt-5-codex",
-    "gpt-5.3-codex-spark": "gpt-5-codex",
-    "gtp-5.3-codex": "gpt-5-codex",
-    "gtp-5.3-codex-spark": "gpt-5-codex",
-}
-DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
-    "gpt-5.3-codex:gpt-5-codex,"
-    "gpt-5.3-codex-spark:gpt-5-codex,"
-    "gtp-5.3-codex:gpt-5-codex,"
-    "gtp-5.3-codex-spark:gpt-5-codex"
-)
-CODEX_MODEL_ARG_RE = re.compile(r"(?P<prefix>--model\s+)(?P<model>[^\s]+)")
-CODEX_AUTH_MODE_VALUES = {"oauth"}
-CURSOR_AUTH_MODE_VALUES = {"oauth"}
-CLAUDE_AUTH_MODE_VALUES = {"oauth"}
-GEMINI_AUTH_MODE_VALUES = {"oauth"}
 
 
 def _tool_token(command: str) -> str:
@@ -354,1010 +133,12 @@ def _as_bool(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
 
 
-def _safe_float(value: object) -> float | None:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        return float(str(value).strip())
-    except Exception:
-        return None
-
-
-def _coerce_nonnegative_int(value: object, *, default: int = 0) -> int:
-    parsed = _safe_float(value)
-    if parsed is None:
-        return default
-    return max(0, int(parsed))
-
-
-def _cli_output(command: list[str], *, timeout: int = 8) -> tuple[bool, str]:
-    try:
-        completed = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            text=True,
-            timeout=timeout,
-        )
-    except Exception as exc:
-        return False, str(exc)
-    output = (completed.stdout or completed.stderr or "").strip()
-    return completed.returncode == 0, output
-
-
-def _normalize_subscription_tier(value: str) -> str:
-    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
-    if normalized in {"free", "pro", "pro_plus", "max", "team"}:
-        return normalized
-    if normalized in {"proplus", "plus"}:
-        return "pro_plus"
-    return normalized
-
-
-def _runner_claude_auth_context() -> dict[str, Any]:
-    if shutil.which("claude") is None:
-        return {"configured": False, "tier": "", "auth_source": ""}
-    try:
-        result = subprocess.run(
-            ["claude", "auth", "status", "--json"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            text=True,
-            timeout=8,
-            env={**os.environ, "CLAUDECODE": ""},
-        )
-    except Exception:
-        return {"configured": False, "tier": "", "auth_source": ""}
-    if result.returncode != 0:
-        return {"configured": False, "tier": "", "auth_source": ""}
-    try:
-        payload = json.loads(result.stdout.strip())
-    except ValueError:
-        payload = {}
-    if not isinstance(payload, dict):
-        payload = {}
-    logged_in = bool(payload.get("loggedIn"))
-    auth_method = str(payload.get("authMethod") or "").strip()
-    subscription_type = _normalize_subscription_tier(str(payload.get("subscriptionType") or ""))
-    return {
-        "configured": logged_in,
-        "tier": subscription_type,
-        "auth_source": f"claude_cli_auth_status:{auth_method}" if auth_method else "claude_cli_auth_status",
-        "details": {
-            "auth_method": auth_method,
-            "api_provider": str(payload.get("apiProvider") or "").strip(),
-        },
-    }
-
-
-def _runner_cursor_about_context() -> dict[str, Any]:
-    if shutil.which("agent") is None:
-        return {"configured": False, "tier": "", "auth_source": ""}
-    status_ok, status_detail = _cli_output(["agent", "status"])
-    about_ok, about_detail = _cli_output(["agent", "about"])
-    output = f"{status_detail}\n{about_detail}".strip()
-    normalized = output.lower()
-    configured = bool(status_ok and ("logged in" in normalized or "authenticated" in normalized))
-
-    tier = ""
-    for line in output.splitlines():
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        key_clean = key.strip().lower()
-        value_clean = value.strip().lower()
-        if key_clean in {"plan", "subscription", "subscription type"} and value_clean:
-            tier = _normalize_subscription_tier(value_clean)
-            break
-    if not tier:
-        for candidate in ("pro_plus", "pro plus", "pro", "free"):
-            if candidate in normalized:
-                tier = _normalize_subscription_tier(candidate)
-                break
-
-    email = ""
-    for line in output.splitlines():
-        if "@" not in line:
-            continue
-        token = line.split()[-1].strip()
-        if "@" in token:
-            email = token
-            break
-    return {
-        "configured": configured,
-        "tier": tier,
-        "auth_source": "cursor_cli_status",
-        "details": {"email": email},
-    }
-
-
-def _runner_codex_oauth_access_context(env: dict[str, str]) -> tuple[str | None, str | None, str]:
-    for candidate in _codex_oauth_session_candidates(env):
-        payload = _read_json_object_file(candidate)
-        if not payload:
-            continue
-        tokens = payload.get("tokens") if isinstance(payload.get("tokens"), dict) else {}
-        access_token = str(
-            tokens.get("access_token")
-            or payload.get("access_token")
-            or tokens.get("id_token")
-            or payload.get("id_token")
-            or ""
-        ).strip()
-        if not access_token:
-            continue
-        if access_token.lower().startswith("bearer "):
-            access_token = access_token[7:].strip()
-        account_id = str(
-            tokens.get("account_id")
-            or payload.get("account_id")
-            or payload.get("chatgpt_account_id")
-            or ""
-        ).strip()
-        return access_token, (account_id or None), f"session_file:{candidate}"
-    return None, None, ""
-
-
-def _runner_codex_window_label(limit_window_seconds: int, fallback: str) -> str:
-    seconds = max(0, int(limit_window_seconds))
-    if seconds <= 0:
-        return str(fallback or "window").strip() or "window"
-    if seconds % (7 * 24 * 3600) == 0:
-        weeks = max(1, int(seconds / (7 * 24 * 3600)))
-        return "7d" if weeks == 1 else f"{weeks}w"
-    if seconds % (24 * 3600) == 0:
-        days = max(1, int(seconds / (24 * 3600)))
-        return "24h" if days == 1 else f"{days}d"
-    if seconds % 3600 == 0:
-        return f"{max(1, int(seconds / 3600))}h"
-    if seconds % 60 == 0:
-        return f"{max(1, int(seconds / 60))}m"
-    return f"{seconds}s"
-
-
-def _runner_parse_codex_usage_windows(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    rate_limit = payload.get("rate_limit")
-    if not isinstance(rate_limit, dict):
-        return []
-    out: list[dict[str, Any]] = []
-    for key in ("primary_window", "secondary_window"):
-        row = rate_limit.get(key)
-        if not isinstance(row, dict):
-            continue
-        used_percent = _safe_float(row.get("used_percent"))
-        if used_percent is None:
-            used_percent = _safe_float(row.get("utilization"))
-        if used_percent is None:
-            remaining_percent = _safe_float(row.get("remaining_percent") or row.get("percent_remaining"))
-            if remaining_percent is not None:
-                used_percent = 100.0 - remaining_percent
-        if used_percent is None:
-            continue
-        used_percent = max(0.0, min(float(used_percent), 100.0))
-        limit_seconds = _coerce_nonnegative_int(row.get("limit_window_seconds"), default=0)
-        reset_at_unix = _coerce_nonnegative_int(row.get("reset_at"), default=0)
-        reset_at_iso: str | None = None
-        if reset_at_unix > 0:
-            try:
-                reset_at_iso = (
-                    datetime.fromtimestamp(reset_at_unix, timezone.utc)
-                    .replace(microsecond=0)
-                    .isoformat()
-                    .replace("+00:00", "Z")
-                )
-            except Exception:
-                reset_at_iso = None
-        label = _runner_codex_window_label(limit_seconds, key)
-        out.append(
-            {
-                "metric_id": f"codex_provider_window_{'primary' if key == 'primary_window' else 'secondary'}",
-                "source_key": key,
-                "label": label,
-                "window": label,
-                "used_percent": used_percent,
-                "remaining_percent": max(0.0, 100.0 - used_percent),
-                "limit_window_seconds": limit_seconds,
-                "reset_at_unix": reset_at_unix or None,
-                "reset_at_iso": reset_at_iso,
-            }
-        )
-    return out
-
-
-def _runner_codex_usage_telemetry() -> dict[str, Any]:
-    env = dict(os.environ)
-    oauth_ok, oauth_source = _codex_oauth_session_status(env)
-    payload: dict[str, Any] = {
-        "configured": bool(oauth_ok),
-        "auth_source": oauth_source,
-        "usage_windows": [],
-        "plan": "",
-        "usage_url": str(os.getenv("CODEX_USAGE_URL", "https://chatgpt.com/backend-api/wham/usage")).strip(),
-        "limits": {},
-        "limits_source": "",
-    }
-    if not oauth_ok:
-        return payload
-    token, account_id, access_source = _runner_codex_oauth_access_context(env)
-    if access_source:
-        payload["auth_source"] = access_source
-    if not token:
-        return payload
-    headers: dict[str, str] = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "User-Agent": "coherence-network-agent-runner/1.0",
-    }
-    if account_id:
-        headers["ChatGPT-Account-Id"] = account_id
-    try:
-        with httpx.Client(timeout=10.0, headers=headers) as client:
-            response = client.get(payload["usage_url"])
-            response.raise_for_status()
-            body = response.json()
-    except Exception:
-        return payload
-    body_dict = body if isinstance(body, dict) else {}
-    payload["usage_windows"] = _runner_parse_codex_usage_windows(body_dict)
-    payload["limits_source"] = "codex_usage_api"
-    plan = str(body_dict.get("plan_type") or "").strip()
-    credits = body_dict.get("credits")
-    if isinstance(credits, dict) and credits.get("balance") is not None:
-        balance = _safe_float(credits.get("balance"))
-        if balance is not None:
-            plan = f"{plan} (${balance:.2f})" if plan else f"${balance:.2f}"
-    payload["plan"] = plan
-    return payload
-
-
-def _runner_provider_telemetry_payload(*, force_refresh: bool = False) -> dict[str, Any]:
-    now = time.time()
-    cached = RUNNER_PROVIDER_TELEMETRY_CACHE.get("payload")
-    if (
-        not force_refresh
-        and isinstance(cached, dict)
-        and float(RUNNER_PROVIDER_TELEMETRY_CACHE.get("expires_at") or 0.0) > now
-    ):
-        return dict(cached)
-
-    cursor = _runner_cursor_about_context()
-    cursor_tier = _normalize_subscription_tier(str(cursor.get("tier") or ""))
-    cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER.get(cursor_tier) if cursor_tier else None
-    if cursor_limits is None:
-        cursor_tier = "pro"
-        cursor_limits = CURSOR_SUBSCRIPTION_LIMITS_BY_TIER[cursor_tier]
-
-    claude = _runner_claude_auth_context()
-    claude_tier = _normalize_subscription_tier(str(claude.get("tier") or ""))
-    claude_limits = CLAUDE_SUBSCRIPTION_LIMITS_BY_TIER.get(claude_tier) if claude_tier else None
-
-    openai = _runner_codex_usage_telemetry()
-    payload: dict[str, Any] = {
-        "openai": {
-            "configured": bool(openai.get("configured")),
-            "auth_source": str(openai.get("auth_source") or ""),
-            "usage_windows": list(openai.get("usage_windows") or []),
-            "plan": str(openai.get("plan") or ""),
-            "usage_url": str(openai.get("usage_url") or ""),
-            "limits_source": str(openai.get("limits_source") or ""),
-        },
-        "claude": {
-            "configured": bool(claude.get("configured")),
-            "auth_source": str(claude.get("auth_source") or ""),
-            "tier": claude_tier,
-            "limits_source": "cli_subscription_baseline" if claude_limits else "",
-            "limits": {
-                "subscription_8h": int(claude_limits[0]) if claude_limits else 0,
-                "subscription_week": int(claude_limits[1]) if claude_limits else 0,
-            },
-            "details": claude.get("details") if isinstance(claude.get("details"), dict) else {},
-        },
-        "cursor": {
-            "configured": bool(cursor.get("configured")),
-            "auth_source": str(cursor.get("auth_source") or ""),
-            "tier": cursor_tier,
-            "limits_source": "cli_subscription_baseline",
-            "limits": {
-                "subscription_8h": int(cursor_limits[0]),
-                "subscription_week": int(cursor_limits[1]),
-            },
-            "details": cursor.get("details") if isinstance(cursor.get("details"), dict) else {},
-        },
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    RUNNER_PROVIDER_TELEMETRY_CACHE["payload"] = dict(payload)
-    RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = now + RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS
-    return payload
-
-
-def _context_first_float(context: dict[str, Any], keys: tuple[str, ...]) -> float | None:
-    for key in keys:
-        value = _safe_float(context.get(key))
-        if value is not None:
-            return value
-    return None
-
-
-def _estimated_roi_value(context: dict[str, Any]) -> float:
-    value = _context_first_float(
-        context,
-        (
-            "estimated_roi",
-            "estimated_value",
-            "potential_roi",
-            "potential_value",
-            "value_to_whole",
-        ),
-    )
-    if value is None:
-        value = _safe_float(context.get("awareness_estimated_roi_total"))
-    return max(0.0, float(value or 0.0))
-
-
-def _measured_roi_value(context: dict[str, Any]) -> float:
-    value = _context_first_float(
-        context,
-        (
-            "measured_roi",
-            "actual_value",
-            "measured_value",
-            "measured_value_total",
-            "measured_delta",
-        ),
-    )
-    if value is None:
-        value = _safe_float(context.get("awareness_measured_roi_total"))
-    return max(0.0, float(value or 0.0))
-
-
-def _estimated_transition_cost(duration_seconds: float, *, paid_call: bool) -> float:
-    wall_time_cost = max(0.0, float(duration_seconds)) * _time_cost_per_second()
-    paid_call_cost = PAID_CALL_COST_UNITS if paid_call else 0.0
-    return round(max(0.0, wall_time_cost + paid_call_cost), 6)
-
-
-def _normalize_evidence_terms(raw: object) -> list[str]:
-    values = raw if isinstance(raw, list) else ([raw] if raw is not None else [])
-    out: list[str] = []
-    seen: set[str] = set()
-    for item in values:
-        if not isinstance(item, str):
-            continue
-        cleaned = item.strip()
-        if not cleaned:
-            continue
-        key = cleaned.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(cleaned[:240])
-    return out
-
-
-def _normalize_task_target_contract(
-    task_ctx: dict[str, Any],
-    *,
-    task_type: str,
-    task_direction: str,
-) -> dict[str, Any]:
-    target_state = str(task_ctx.get("target_state") or "").strip()
-    if not target_state:
-        direction_hint = " ".join(str(task_direction or "").split())[:200]
-        base = f"{task_type} task reaches intended target state"
-        target_state = f"{base}: {direction_hint}" if direction_hint else base
-
-    success_evidence = _normalize_evidence_terms(task_ctx.get("success_evidence"))
-    abort_evidence = _normalize_evidence_terms(task_ctx.get("abort_evidence"))
-
-    raw_window = task_ctx.get("observation_window_sec")
-    try:
-        observation_window_sec = int(raw_window) if raw_window is not None else DEFAULT_OBSERVATION_WINDOW_SEC
-    except Exception:
-        observation_window_sec = DEFAULT_OBSERVATION_WINDOW_SEC
-    observation_window_sec = max(30, min(observation_window_sec, 7 * 24 * 60 * 60))
-
-    return {
-        "target_state": target_state[:600],
-        "success_evidence": success_evidence,
-        "abort_evidence": abort_evidence,
-        "observation_window_sec": observation_window_sec,
-    }
-
-
-def _observe_target_contract(
-    *,
-    contract: dict[str, Any],
-    output: str,
-    duration_seconds: float,
-    attempt_status: str,
-) -> dict[str, Any]:
-    haystack = (output or "").lower()
-    success_terms = _normalize_evidence_terms(contract.get("success_evidence"))
-    abort_terms = _normalize_evidence_terms(contract.get("abort_evidence"))
-    success_hits = [term for term in success_terms if term.lower() in haystack]
-    abort_hits = [term for term in abort_terms if term.lower() in haystack]
-    observation_window_sec = max(30, _to_int(contract.get("observation_window_sec"), DEFAULT_OBSERVATION_WINDOW_SEC))
-    exceeded = float(duration_seconds) > float(observation_window_sec)
-    return {
-        "target_state": str(contract.get("target_state") or ""),
-        "success_evidence": success_terms,
-        "success_evidence_hits": success_hits,
-        "success_evidence_met": bool(success_terms) and bool(success_hits),
-        "abort_evidence": abort_terms,
-        "abort_evidence_hits": abort_hits,
-        "abort_evidence_met": bool(abort_hits),
-        "observation_window_sec": observation_window_sec,
-        "observation_window_exceeded": exceeded,
-        "attempt_status": attempt_status,
-        "observed_at": _utc_now_iso(),
-    }
-
-
-def _evaluate_hold_pattern_policy(task_ctx: dict[str, Any], *, attempt: int) -> dict[str, Any]:
-    score = _safe_float(task_ctx.get("hold_pattern_score"))
-    threshold = _safe_float(task_ctx.get("hold_pattern_score_threshold"))
-    if threshold is None:
-        threshold = HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT
-    threshold = max(0.0, threshold)
-    high_hold = score is not None and score >= threshold
-    return {
-        "triggered": bool(high_hold),
-        "score": score,
-        "threshold": threshold,
-        "attempt": max(1, int(attempt)),
-        "action_rate": "reduced" if high_hold else "normal",
-        "request_steering": bool(high_hold),
-        "suppress_blind_retry": bool(high_hold),
-    }
-
-
-def _hold_pattern_diagnostic_command(task_ctx: dict[str, Any]) -> str:
-    for key in (
-        "hold_pattern_diagnostic_command",
-        "high_signal_diagnostic_command",
-        "runner_high_signal_diagnostic_command",
-    ):
-        value = str(task_ctx.get(key) or "").strip()
-        if value:
-            return value
-    return HOLD_PATTERN_DIAGNOSTIC_COMMAND
-
-
-def _apply_hold_pattern_policy(
-    client: httpx.Client,
-    *,
-    task_id: str,
-    task_ctx: dict[str, Any],
-    attempt: int,
-    failure_class: str,
-    output: str,
-    repo_path: str,
-    env: dict[str, str],
-    run_id: str,
-    worker_id: str,
-) -> tuple[bool, str]:
-    policy = _evaluate_hold_pattern_policy(task_ctx, attempt=attempt)
-    if not _as_bool(policy.get("triggered")):
-        return False, ""
-
-    intervention_allowed, cadence_patch, cadence_limits, window_load = _allow_intervention_frequency(
-        task_ctx,
-        kind="steering",
-        hold_pattern_inc=1,
-    )
-    diagnostic_command = _hold_pattern_diagnostic_command(task_ctx)
-    diagnostic_timeout = max(
-        5,
-        min(
-            DIAGNOSTIC_TIMEOUT_SECONDS,
-            _to_int(task_ctx.get("hold_pattern_diagnostic_timeout_seconds"), DIAGNOSTIC_TIMEOUT_SECONDS),
-        ),
-    )
-    diagnostic_request_id = f"hold-pattern-{task_id[:24]}-attempt-{attempt}"
-    diagnostic_result: dict[str, Any] | None = None
-    if intervention_allowed and diagnostic_command:
-        diagnostic_result = _run_diagnostic_request(
-            {
-                "id": diagnostic_request_id,
-                "command": diagnostic_command,
-                "timeout_seconds": diagnostic_timeout,
-            },
-            cwd=repo_path,
-            env=env,
-        )
-
-    retry_not_before = (
-        datetime.now(timezone.utc) + timedelta(seconds=HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS)
-    ).isoformat()
-    score = policy.get("score")
-    threshold = policy.get("threshold")
-    if intervention_allowed:
-        steering_message = (
-            "[policy] High hold_pattern_score detected "
-            f"(score={score if score is not None else 'n/a'}, threshold={threshold}); "
-            "reduced action rate, ran one high-signal diagnostic, requested steering, and suppressed blind retries."
-        )
-    else:
-        steering_message = (
-            "[policy] High hold_pattern_score detected; steering requested. "
-            f"Additional intervention suppressed by cadence limit "
-            f"({window_load}/{cadence_limits.get('max_interventions_per_window')} in "
-            f"{cadence_limits.get('intervention_window_sec')}s)."
-        )
-    context_patch: dict[str, Any] = dict(cadence_patch)
-    context_patch.update(
-        {
-        "runner_state": "steering_required",
-        "runner_action_rate": "reduced",
-        "retry_not_before": retry_not_before,
-        "next_action": "steering_required",
-        "steering_requested": True,
-        "hold_pattern_policy": {
-            "triggered": True,
-            "score": score,
-            "threshold": threshold,
-            "attempt": policy.get("attempt"),
-            "action_rate": "reduced",
-            "blind_retry_suppressed": True,
-            "diagnostic_request_id": diagnostic_request_id,
-            "diagnostic_command": _scrub_command(diagnostic_command),
-            "intervention_allowed": intervention_allowed,
-            "intervention_window_load": window_load,
-            "intervention_window_limit": cadence_limits.get("max_interventions_per_window"),
-            "triggered_at": _utc_now_iso(),
-            "failure_class": failure_class,
-        },
-        "cadence_limits": cadence_limits,
-    }
-    )
-    if not intervention_allowed:
-        context_patch["runner_intervention_blocked"] = True
-        context_patch["runner_intervention_block_reason"] = "max_interventions_per_window"
-    if diagnostic_result is not None:
-        context_patch["diagnostic_last_completed_id"] = diagnostic_request_id
-        context_patch["diagnostic_last_result"] = diagnostic_result
-
-    final_output = f"{output[-3200:]}\n\n{steering_message}"[-4000:]
-    try:
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={
-                "status": "needs_decision",
-                "current_step": "awaiting steering",
-                "output": final_output,
-                "context": context_patch,
-            },
-        )
-    except Exception:
-        return False, ""
-
-    _sync_run_state(
-        client,
-        task_id=task_id,
-        run_id=run_id,
-        worker_id=worker_id,
-        patch={
-            "status": "needs_decision",
-            "failure_class": failure_class,
-            "next_action": "steering_required",
-            "completed_at": _utc_now_iso(),
-        },
-        lease_seconds=RUN_LEASE_SECONDS,
-        require_owner=True,
-    )
-    return True, steering_message
-
-
-def _task_idea_id(context: dict[str, Any]) -> str:
-    idea_id = str(context.get("idea_id") or "").strip()
-    if idea_id:
-        return idea_id
-    idea_ids = context.get("idea_ids")
-    if isinstance(idea_ids, list):
-        for raw in idea_ids:
-            candidate = str(raw or "").strip()
-            if candidate:
-                return candidate
-    return ""
-
-
-def _task_has_inline_measured_value(context: dict[str, Any]) -> bool:
-    for key in ("measured_value_total", "measured_value", "actual_value", "measured_delta"):
-        value = _safe_float(context.get(key))
-        if value is not None and value > 0:
-            return True
-    return False
-
-
-def _idea_has_measured_value(client: httpx.Client, *, idea_id: str, log: logging.Logger) -> bool:
-    now = time.monotonic()
-    with IDEA_MEASURED_VALUE_CACHE_LOCK:
-        cached = IDEA_MEASURED_VALUE_CACHE.get(idea_id)
-        if cached and cached[0] > now:
-            return cached[1]
-
-    has_measured = False
-    ttl_seconds = IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS
-    response = _http_with_retry(
-        client,
-        "GET",
-        f"{BASE}/api/ideas/{quote(idea_id, safe='')}",
-        log,
-    )
-    if response is not None and response.status_code == 200:
-        try:
-            payload = response.json()
-        except Exception:
-            payload = {}
-        if isinstance(payload, dict):
-            actual_value = _safe_float(payload.get("actual_value"))
-            measured_total = _safe_float(payload.get("measured_value_total"))
-            has_measured = (actual_value is not None and actual_value > 0) or (
-                measured_total is not None and measured_total > 0
-            )
-    else:
-        ttl_seconds = min(60, IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS)
-
-    with IDEA_MEASURED_VALUE_CACHE_LOCK:
-        IDEA_MEASURED_VALUE_CACHE[idea_id] = (now + ttl_seconds, has_measured)
-    return has_measured
-
-
-def _task_has_measured_value_signal(
-    client: httpx.Client,
-    *,
-    context: dict[str, Any],
-    log: logging.Logger,
-) -> bool:
-    if _task_has_inline_measured_value(context):
-        return True
-    idea_id = _task_idea_id(context)
-    if not idea_id:
-        return False
-    return _idea_has_measured_value(client, idea_id=idea_id, log=log)
-
-
-def _scheduler_stats_snapshot() -> tuple[int, int]:
-    with SCHEDULER_STATS_LOCK:
-        return SCHEDULER_EXECUTED_TOTAL, SCHEDULER_EXECUTED_MEASURED
-
-
-def _record_scheduler_execution(has_measured_value: bool) -> None:
-    global SCHEDULER_EXECUTED_TOTAL
-    global SCHEDULER_EXECUTED_MEASURED
-    with SCHEDULER_STATS_LOCK:
-        SCHEDULER_EXECUTED_TOTAL += 1
-        if has_measured_value:
-            SCHEDULER_EXECUTED_MEASURED += 1
-
-
-def _select_tasks_for_execution(
-    candidates: list[TaskRunItem],
-    *,
-    max_tasks: int,
-    log: logging.Logger,
-) -> list[TaskRunItem]:
-    if max_tasks <= 0 or not candidates:
-        return []
-
-    measured_pool = [item for item in candidates if item[6]]
-    other_pool = [item for item in candidates if not item[6]]
-    base_total, base_measured = _scheduler_stats_snapshot()
-
-    selected: list[TaskRunItem] = []
-    selected_measured = 0
-    slots = min(max_tasks, len(candidates))
-    for _ in range(slots):
-        projected_total = base_total + len(selected) + 1
-        required_measured = math.ceil(MEASURED_VALUE_TARGET_SHARE * projected_total)
-        current_measured = base_measured + selected_measured
-        must_pick_measured = current_measured < required_measured
-
-        chosen: TaskRunItem | None = None
-        if must_pick_measured and measured_pool:
-            chosen = measured_pool.pop(0)
-        elif other_pool:
-            chosen = other_pool.pop(0)
-        elif measured_pool:
-            chosen = measured_pool.pop(0)
-
-        if chosen is None:
-            break
-        selected.append(chosen)
-        if chosen[6]:
-            selected_measured += 1
-
-    selected_count = len(selected)
-    if selected_count > 0:
-        selected_share = selected_measured / selected_count
-        available_measured = len([item for item in candidates if item[6]])
-        log.info(
-            "scheduler selection measured=%s/%s (%.2f) available_measured=%s target=%.2f history=%s/%s",
-            selected_measured,
-            selected_count,
-            selected_share,
-            available_measured,
-            MEASURED_VALUE_TARGET_SHARE,
-            base_measured,
-            base_total,
-        )
-    return selected
-
-
 def _safe_get_task_context(task: object) -> dict[str, Any]:
     if isinstance(task, dict):
         context = task.get("context")
         if isinstance(context, dict):
             return context
     return {}
-
-
-def _safe_agent_slug(value: str, default: str = "unknown-agent") -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "-", (value or "").strip().lower())
-    cleaned = cleaned.strip("-.")
-    return cleaned or default
-
-
-def _web_base_url() -> str:
-    if AGENT_WEB_BASE_URL:
-        return AGENT_WEB_BASE_URL
-    base = BASE.rstrip("/")
-    if base.endswith("/api"):
-        return base[:-4]
-    return base
-
-
-def _task_source_references(context: dict[str, Any]) -> list[str]:
-    refs: list[str] = []
-
-    def _append_ref(raw: object) -> None:
-        if not isinstance(raw, str):
-            return
-        text = raw.strip()
-        if not text:
-            return
-        refs.append(text)
-
-    for key in (
-        "spec_ref",
-        "spec_path",
-        "doc_ref",
-        "source_doc",
-        "source_reference",
-        "reference_doc",
-    ):
-        _append_ref(context.get(key))
-    for key in ("doc_refs", "source_docs", "source_references", "reference_docs", "references"):
-        values = context.get(key)
-        if isinstance(values, list):
-            for item in values:
-                _append_ref(item)
-
-    spec_id = str(context.get("spec_id") or "").strip()
-    if spec_id:
-        refs.append(f"/specs/{quote(spec_id, safe='')}")
-
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for ref in refs:
-        if ref in seen:
-            continue
-        seen.add(ref)
-        deduped.append(ref)
-    return deduped
-
-
-def _task_code_references(context: dict[str, Any]) -> list[dict[str, str]]:
-    raw = context.get("code_references")
-    if not isinstance(raw, list):
-        return []
-
-    references: list[dict[str, str]] = []
-    seen: set[tuple[str, str, str]] = set()
-    for item in raw:
-        url = ""
-        license_name = ""
-        note = ""
-        if isinstance(item, str):
-            url = item.strip()
-        elif isinstance(item, dict):
-            url = str(item.get("url") or item.get("source") or "").strip()
-            license_name = str(item.get("license") or item.get("license_id") or "").strip()
-            note = str(item.get("note") or item.get("repository") or item.get("match_reason") or "").strip()
-        if not url:
-            continue
-        key = (url, license_name, note)
-        if key in seen:
-            continue
-        seen.add(key)
-        references.append({"url": url, "license": license_name, "note": note})
-    return references
-
-
-def _idea_links(idea_id: str) -> tuple[str, str]:
-    if not idea_id:
-        return "", ""
-    encoded = quote(idea_id, safe="")
-    web_base = _web_base_url().rstrip("/")
-    api_base = BASE.rstrip("/")
-    return f"{web_base}/ideas/{encoded}", f"{api_base}/api/ideas/{encoded}"
-
-
-def _parse_diff_manifestation_blocks(
-    diff_text: str,
-    *,
-    max_blocks: int,
-) -> list[dict[str, Any]]:
-    blocks: list[dict[str, Any]] = []
-    if not diff_text:
-        return blocks
-
-    current_file = ""
-    for line in diff_text.splitlines():
-        if line.startswith("+++ "):
-            target = line[4:].strip()
-            if target == "/dev/null":
-                current_file = ""
-                continue
-            if target.startswith("b/"):
-                target = target[2:]
-            current_file = target
-            continue
-
-        match = DIFF_HUNK_RE.match(line)
-        if not match or not current_file:
-            continue
-
-        start = int(match.group(1))
-        count_raw = match.group(2)
-        count = int(count_raw) if count_raw is not None else 1
-        count = max(1, count)
-        end = start + count - 1
-        read_range = f"{start}-{end}"
-        blocks.append(
-            {
-                "file": current_file,
-                "line": start,
-                "file_line_ref": f"{current_file}:{start}",
-                "read_range": read_range,
-                "manifestation_range": f"L{start}-L{end}",
-            }
-        )
-        if len(blocks) >= max_blocks:
-            break
-
-    return blocks
-
-
-def _collect_manifestation_blocks(repo_path: str, *, max_blocks: int) -> list[dict[str, Any]]:
-    git_dir = os.path.join(repo_path, ".git")
-    if not os.path.isdir(git_dir):
-        return []
-    diff = _run_git("diff", "--unified=0", "--no-color", "--", cwd=repo_path, timeout=120)
-    if diff.returncode != 0:
-        return []
-    return _parse_diff_manifestation_blocks(diff.stdout, max_blocks=max_blocks)
-
-
-def _append_agent_manifest_entry(
-    *,
-    task_id: str,
-    task_type: str,
-    task_direction: str,
-    task_ctx: dict[str, Any],
-    repo_path: str,
-    executor: str,
-) -> dict[str, Any]:
-    if not AGENT_MANIFEST_ENABLED:
-        return {}
-    try:
-        blocks = _collect_manifestation_blocks(repo_path, max_blocks=AGENT_MANIFEST_MAX_BLOCKS)
-        if not blocks:
-            return {}
-
-        agent_name = str(
-            task_ctx.get("task_agent")
-            or task_ctx.get("agent")
-            or task_ctx.get("executor")
-            or executor
-            or task_type
-            or "unknown-agent"
-        ).strip()
-        if not agent_name:
-            agent_name = "unknown-agent"
-
-        idea_id = _task_idea_id(task_ctx)
-        idea_url, idea_api_url = _idea_links(idea_id)
-        source_refs = _task_source_references(task_ctx)
-        code_refs = _task_code_references(task_ctx)
-        primary_source_ref = source_refs[0] if source_refs else ""
-        primary_code_ref = code_refs[0]["url"] if code_refs else ""
-
-        manifest_dir = os.path.join(AGENT_MANIFESTS_DIR, _safe_agent_slug(agent_name))
-        manifest_path = os.path.join(manifest_dir, "AGENT.md")
-        os.makedirs(manifest_dir, exist_ok=True)
-
-        now_iso = _utc_now_iso()
-        direction_preview = " ".join(str(task_direction or "").split())[:400]
-        with AGENT_MANIFEST_WRITE_LOCK:
-            exists = os.path.exists(manifest_path)
-            with open(manifest_path, "a", encoding="utf-8") as handle:
-                if not exists:
-                    handle.write(f"# AGENT.md - {agent_name}\n\n")
-                    handle.write("Append-only manifestation provenance written by `api/scripts/agent_runner.py`.\n\n")
-                handle.write(f"## Task `{task_id}` ({now_iso})\n\n")
-                handle.write(f"- Agent: `{agent_name}`\n")
-                handle.write(f"- Task type: `{task_type}`\n")
-                if direction_preview:
-                    handle.write(f"- Decision prompt: `{direction_preview}`\n")
-                if idea_id and idea_url:
-                    handle.write(f"- Idea link: [{idea_id}]({idea_url})\n")
-                if idea_id and idea_api_url:
-                    handle.write(f"- Idea API: [{idea_api_url}]({idea_api_url})\n")
-                if source_refs:
-                    handle.write("- Source references:\n")
-                    for ref in source_refs:
-                        handle.write(f"  - [{ref}]({ref})\n")
-                else:
-                    handle.write("- Source references: none\n")
-                if code_refs:
-                    handle.write("- Code references:\n")
-                    for ref in code_refs:
-                        detail_parts: list[str] = []
-                        if ref["license"]:
-                            detail_parts.append(f"license `{ref['license']}`")
-                        if ref["note"]:
-                            detail_parts.append(ref["note"])
-                        detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
-                        handle.write(f"  - [{ref['url']}]({ref['url']}){detail}\n")
-                else:
-                    handle.write("- Code references: none\n")
-                handle.write("- Manifestation blocks:\n")
-                for block in blocks:
-                    file_line_ref = str(block.get("file_line_ref") or "")
-                    read_range = str(block.get("read_range") or "")
-                    manifestation_range = str(block.get("manifestation_range") or "")
-                    line = (
-                        f"  - `{file_line_ref}` | read_range `{read_range}` | manifestation_range `{manifestation_range}`"
-                    )
-                    if idea_id and idea_url:
-                        line += f" | idea [{idea_id}]({idea_url})"
-                    if primary_source_ref:
-                        line += f" | source [{primary_source_ref}]({primary_source_ref})"
-                    if primary_code_ref:
-                        line += f" | code_ref [{primary_code_ref}]({primary_code_ref})"
-                    handle.write(line + "\n")
-                handle.write("\n")
-
-        context_blocks: list[dict[str, Any]] = []
-        for block in blocks[:AGENT_MANIFEST_CONTEXT_BLOCKS]:
-            payload = dict(block)
-            if idea_id:
-                payload["idea_id"] = idea_id
-            if idea_url:
-                payload["idea_url"] = idea_url
-            if primary_source_ref:
-                payload["source_ref"] = primary_source_ref
-            context_blocks.append(payload)
-
-        return {
-            "agent_manifest": {
-                "doc_path": manifest_path,
-                "agent_name": agent_name,
-                "updated_at": now_iso,
-                "idea_id": idea_id or None,
-                "idea_url": idea_url or None,
-                "idea_api_url": idea_api_url or None,
-                "source_refs": source_refs,
-                "code_refs": code_refs,
-                "manifestation_blocks": context_blocks,
-                "manifestation_block_count": len(blocks),
-            }
-        }
-    except Exception:
-        return {}
 
 
 def _tail_text(value: str, max_chars: int) -> str:
@@ -1581,397 +362,6 @@ def _append_failure_history(existing: object, entry: dict[str, Any], limit: int 
     return items[-limit:]
 
 
-def _count_observer_context_snapshots(context: dict[str, Any]) -> int:
-    raw = context.get("observer_context_snapshots")
-    if not isinstance(raw, list):
-        return 0
-    count = 0
-    for item in raw:
-        if isinstance(item, dict):
-            count += 1
-    return count
-
-
-def _awareness_quality_summary(
-    *,
-    events_total: int,
-    interventions_total: int,
-    blocks_total: int,
-    snapshot_count: int,
-    transition_total: int,
-    successful_transition_total: int,
-    hold_pattern_total: int,
-    estimated_roi_total: float,
-    measured_roi_total: float,
-    transition_cost_total: float,
-) -> dict[str, Any]:
-    events_total = max(0, int(events_total))
-    interventions_total = max(0, int(interventions_total))
-    blocks_total = max(0, int(blocks_total))
-    snapshot_count = max(0, int(snapshot_count))
-    transition_total = max(0, int(transition_total))
-    successful_transition_total = max(0, int(successful_transition_total))
-    hold_pattern_total = max(0, int(hold_pattern_total))
-    estimated_roi_total = max(0.0, float(estimated_roi_total))
-    measured_roi_total = max(0.0, float(measured_roi_total))
-    transition_cost_total = max(0.0, float(transition_cost_total))
-    policy_discipline = max(0.0, 1.0 - (float(blocks_total) / float(max(1, events_total))))
-    context_coverage = min(1.0, float(snapshot_count) / 5.0)
-    state_transition_quality = (
-        float(successful_transition_total) / float(max(1, transition_total))
-        if transition_total > 0
-        else 0.0
-    )
-    hold_pattern_rate = (
-        float(hold_pattern_total) / float(max(1, transition_total))
-        if transition_total > 0
-        else 0.0
-    )
-    estimated_to_measured_roi_conversion = (
-        float(measured_roi_total) / float(estimated_roi_total)
-        if estimated_roi_total > 0
-        else None
-    )
-    cost_per_successful_transition = (
-        float(transition_cost_total) / float(max(1, successful_transition_total))
-    )
-    roi_component = (
-        min(1.0, max(0.0, float(estimated_to_measured_roi_conversion)))
-        if estimated_to_measured_roi_conversion is not None
-        else 0.0
-    )
-    hold_component = max(0.0, 1.0 - min(1.0, hold_pattern_rate))
-    cost_component = 1.0 / (1.0 + max(0.0, cost_per_successful_transition))
-    score = round(
-        max(
-            0.0,
-            min(
-                1.0,
-                (
-                    (0.25 * policy_discipline)
-                    + (0.15 * context_coverage)
-                    + (0.20 * state_transition_quality)
-                    + (0.15 * hold_component)
-                    + (0.15 * roi_component)
-                    + (0.10 * cost_component)
-                ),
-            ),
-        ),
-        4,
-    )
-    return {
-        "score": score,
-        "policy_discipline": round(policy_discipline, 4),
-        "context_coverage": round(context_coverage, 4),
-        "state_transition_quality": round(state_transition_quality, 4),
-        "hold_pattern_rate": round(hold_pattern_rate, 4),
-        "estimated_to_measured_roi_conversion": (
-            round(float(estimated_to_measured_roi_conversion), 4)
-            if estimated_to_measured_roi_conversion is not None
-            else None
-        ),
-        "cost_per_successful_transition": round(cost_per_successful_transition, 6),
-        "events_total": events_total,
-        "interventions_total": interventions_total,
-        "blocks_total": blocks_total,
-        "snapshot_count": snapshot_count,
-        "transition_total": transition_total,
-        "successful_transition_total": successful_transition_total,
-        "hold_pattern_total": hold_pattern_total,
-        "estimated_roi_total": round(estimated_roi_total, 6),
-        "measured_roi_total": round(measured_roi_total, 6),
-        "transition_cost_total": round(transition_cost_total, 6),
-        "updated_at": _utc_now_iso(),
-    }
-
-
-def _awareness_patch_from_context(
-    context: dict[str, Any],
-    *,
-    event_inc: int = 0,
-    intervention_inc: int = 0,
-    block_inc: int = 0,
-    transition_inc: int = 0,
-    successful_transition_inc: int = 0,
-    hold_pattern_inc: int = 0,
-    transition_cost_inc: float = 0.0,
-    snapshot_count_override: int | None = None,
-) -> dict[str, Any]:
-    events_total = max(0, _to_int(context.get("awareness_events_total"), 0)) + max(0, int(event_inc))
-    interventions_total = max(0, _to_int(context.get("awareness_interventions_total"), 0)) + max(
-        0,
-        int(intervention_inc),
-    )
-    blocks_total = max(0, _to_int(context.get("awareness_blocks_total"), 0)) + max(0, int(block_inc))
-    transition_total = max(0, _to_int(context.get("awareness_transition_total"), 0)) + max(0, int(transition_inc))
-    successful_transition_total = max(0, _to_int(context.get("awareness_successful_transition_total"), 0)) + max(
-        0,
-        int(successful_transition_inc),
-    )
-    hold_pattern_total = max(0, _to_int(context.get("awareness_hold_pattern_total"), 0)) + max(0, int(hold_pattern_inc))
-    transition_cost_total = max(0.0, float(_safe_float(context.get("awareness_transition_cost_total")) or 0.0)) + max(
-        0.0,
-        float(transition_cost_inc),
-    )
-    transition_cost_total = round(transition_cost_total, 6)
-    snapshot_count = (
-        max(0, int(snapshot_count_override))
-        if snapshot_count_override is not None
-        else _count_observer_context_snapshots(context)
-    )
-    estimated_roi_total = _estimated_roi_value(context)
-    measured_roi_total = _measured_roi_value(context)
-    quality = _awareness_quality_summary(
-        events_total=events_total,
-        interventions_total=interventions_total,
-        blocks_total=blocks_total,
-        snapshot_count=snapshot_count,
-        transition_total=transition_total,
-        successful_transition_total=successful_transition_total,
-        hold_pattern_total=hold_pattern_total,
-        estimated_roi_total=estimated_roi_total,
-        measured_roi_total=measured_roi_total,
-        transition_cost_total=transition_cost_total,
-    )
-    return {
-        "awareness_events_total": events_total,
-        "awareness_interventions_total": interventions_total,
-        "awareness_blocks_total": blocks_total,
-        "awareness_transition_total": transition_total,
-        "awareness_successful_transition_total": successful_transition_total,
-        "awareness_hold_pattern_total": hold_pattern_total,
-        "awareness_transition_cost_total": transition_cost_total,
-        "awareness_estimated_roi_total": round(estimated_roi_total, 6),
-        "awareness_measured_roi_total": round(measured_roi_total, 6),
-        "awareness_state_transition_quality": quality.get("state_transition_quality"),
-        "awareness_hold_pattern_rate": quality.get("hold_pattern_rate"),
-        "awareness_estimated_to_measured_roi_conversion": quality.get("estimated_to_measured_roi_conversion"),
-        "awareness_cost_per_successful_transition": quality.get("cost_per_successful_transition"),
-        "awareness_quality": quality,
-    }
-
-
-def _cadence_limits(context: dict[str, Any]) -> dict[str, int]:
-    min_retry_delay_seconds = _to_int(
-        context.get("runner_min_retry_delay_seconds"),
-        _to_int(context.get("min_retry_delay_seconds"), MIN_RETRY_DELAY_SECONDS),
-    )
-    min_retry_delay_seconds = max(1, min(min_retry_delay_seconds, 3600))
-    diagnostic_cooldown_seconds = _to_int(
-        context.get("diagnostic_cooldown_seconds"),
-        DIAGNOSTIC_COOLDOWN_SECONDS,
-    )
-    diagnostic_cooldown_seconds = max(0, min(diagnostic_cooldown_seconds, 3600))
-    max_interventions_per_window = _to_int(
-        context.get("max_interventions_per_window"),
-        MAX_INTERVENTIONS_PER_WINDOW,
-    )
-    max_interventions_per_window = max(1, min(max_interventions_per_window, 100))
-    intervention_window_sec = _to_int(
-        context.get("intervention_window_sec"),
-        INTERVENTION_WINDOW_SECONDS,
-    )
-    intervention_window_sec = max(30, min(intervention_window_sec, 24 * 60 * 60))
-    return {
-        "min_retry_delay_seconds": min_retry_delay_seconds,
-        "diagnostic_cooldown_seconds": diagnostic_cooldown_seconds,
-        "max_interventions_per_window": max_interventions_per_window,
-        "intervention_window_sec": intervention_window_sec,
-    }
-
-
-def _recent_intervention_events(
-    context: dict[str, Any],
-    *,
-    now: datetime,
-    window_seconds: int,
-) -> list[dict[str, Any]]:
-    raw = context.get("runner_intervention_events")
-    if not isinstance(raw, list):
-        return []
-    cutoff = now - timedelta(seconds=max(1, int(window_seconds)))
-    events: list[dict[str, Any]] = []
-    for item in raw:
-        if not isinstance(item, dict):
-            continue
-        ts = _parse_iso_utc(item.get("at"))
-        if ts is None or ts < cutoff:
-            continue
-        kind = str(item.get("kind") or "").strip()[:80]
-        if not kind:
-            continue
-        events.append({"kind": kind, "at": ts.isoformat()})
-    return events[-200:]
-
-
-def _allow_intervention_frequency(
-    context: dict[str, Any],
-    *,
-    kind: str,
-    hold_pattern_inc: int = 0,
-    now: datetime | None = None,
-) -> tuple[bool, dict[str, Any], dict[str, int], int]:
-    now_utc = now or datetime.now(timezone.utc)
-    limits = _cadence_limits(context)
-    recent = _recent_intervention_events(
-        context,
-        now=now_utc,
-        window_seconds=limits["intervention_window_sec"],
-    )
-    window_load = len(recent)
-    allowed = window_load < limits["max_interventions_per_window"]
-    awareness_patch = _awareness_patch_from_context(
-        context,
-        event_inc=1,
-        intervention_inc=1 if allowed else 0,
-        block_inc=0 if allowed else 1,
-        hold_pattern_inc=hold_pattern_inc,
-    )
-    patch = dict(awareness_patch)
-    patch["cadence_limits"] = limits
-    event = {"kind": str(kind or "unknown")[:80], "at": now_utc.isoformat()}
-    if allowed:
-        recent.append(event)
-        patch["runner_intervention_events"] = recent[-100:]
-        patch["cadence_last_intervention"] = {
-            "kind": event["kind"],
-            "at": event["at"],
-            "window_load": window_load + 1,
-            "window_limit": limits["max_interventions_per_window"],
-            "window_seconds": limits["intervention_window_sec"],
-        }
-    else:
-        patch["runner_intervention_events"] = recent[-100:]
-        patch["cadence_last_block"] = {
-            "kind": event["kind"],
-            "at": event["at"],
-            "reason": "max_interventions_per_window",
-            "window_load": window_load,
-            "window_limit": limits["max_interventions_per_window"],
-            "window_seconds": limits["intervention_window_sec"],
-        }
-    return allowed, patch, limits, window_load
-
-
-def _observer_context_compact_view(context: dict[str, Any]) -> dict[str, Any]:
-    keys = (
-        "active_run_id",
-        "active_worker_id",
-        "active_branch",
-        "last_attempt",
-        "runner_state",
-        "runner_retry_count",
-        "runner_retry_remaining",
-        "retry_not_before",
-        "next_action",
-        "last_failure_class",
-        "resume_branch",
-        "resume_checkpoint_sha",
-        "resume_ready",
-        "target_state",
-        "observation_window_sec",
-        "hold_pattern_score",
-        "hold_pattern_score_threshold",
-        "steering_requested",
-        "abort_requested",
-        "abort_reason",
-    )
-    compact: dict[str, Any] = {}
-    for key in keys:
-        if key in context:
-            compact[key] = context.get(key)
-    control = context.get("control")
-    if isinstance(control, dict):
-        control_view: dict[str, Any] = {}
-        for key in ("action", "state", "abort", "reason"):
-            if key in control:
-                control_view[key] = control.get(key)
-        if control_view:
-            compact["control"] = control_view
-    return compact
-
-
-def _observer_context_delta(previous_state: object, current_state: dict[str, Any]) -> dict[str, Any]:
-    prev = previous_state if isinstance(previous_state, dict) else {}
-    sentinel = object()
-    delta: dict[str, Any] = {}
-    keys = set(prev.keys()) | set(current_state.keys())
-    for key in sorted(keys):
-        prev_value = prev.get(key, sentinel)
-        curr_value = current_state.get(key, sentinel)
-        if prev_value != curr_value:
-            delta[key] = None if curr_value is sentinel else curr_value
-    return delta
-
-
-def _record_observer_context_snapshot(
-    client: httpx.Client,
-    *,
-    task_id: str,
-    transition: str,
-    run_id: str,
-    worker_id: str,
-    status: str,
-    current_step: str,
-    failure_class: str = "",
-    context_hint: dict[str, Any] | None = None,
-    details: dict[str, Any] | None = None,
-) -> None:
-    snapshot = _safe_get_task_snapshot(client, task_id)
-    context = _safe_get_task_context(snapshot)
-    effective_context = dict(context)
-    if isinstance(context_hint, dict):
-        effective_context.update(context_hint)
-
-    existing = context.get("observer_context_snapshots")
-    history: list[dict[str, Any]] = []
-    if isinstance(existing, list):
-        for row in existing:
-            if isinstance(row, dict):
-                history.append(row)
-    previous_entry = history[-1] if history else {}
-    previous_state = previous_entry.get("state") if isinstance(previous_entry, dict) else {}
-    state = _observer_context_compact_view(effective_context)
-    state_delta = _observer_context_delta(previous_state, state)
-    entry: dict[str, Any] = {
-        "transition": str(transition or "unknown")[:80],
-        "status": str(status or "")[:80],
-        "current_step": str(current_step or "")[:200],
-        "at": _utc_now_iso(),
-        "run_id": str(run_id or "")[:120],
-        "worker_id": str(worker_id or "")[:160],
-        "failure_class": str(failure_class or "")[:120],
-        "state": state,
-        "delta": state_delta,
-    }
-    if isinstance(details, dict) and details:
-        entry["details"] = details
-    history.append(entry)
-    history = history[-40:]
-    transition_name = str(entry.get("transition") or "").strip().lower()
-    transition_status = str(entry.get("status") or "").strip().lower()
-    successful_transition = bool(state_delta) and transition_name != "abort" and (
-        transition_status in {"claimed", "running", "pending", "completed", "needs_decision"}
-    )
-    awareness_patch = _awareness_patch_from_context(
-        context,
-        event_inc=1,
-        transition_inc=1,
-        successful_transition_inc=1 if successful_transition else 0,
-        snapshot_count_override=len(history),
-    )
-    context_patch = {
-        "observer_context_last_snapshot": entry,
-        "observer_context_snapshots": history,
-    }
-    context_patch.update(awareness_patch)
-    _patch_task_context(
-        client,
-        task_id=task_id,
-        context_patch=context_patch,
-    )
-
-
 def _update_task_run_metrics(
     client: httpx.Client,
     *,
@@ -2013,17 +403,6 @@ def _update_task_run_metrics(
     avg_runtime_seconds = round(total_runtime_seconds / max(1, runs_total), 3)
     success_rate = round(runs_success / max(1, runs_total), 4)
     paid_success_rate = round(paid_calls_success / max(1, paid_calls_total), 4) if paid_calls_total > 0 else 1.0
-    transition_cost_inc = _estimated_transition_cost(duration_seconds, paid_call=paid_call)
-    awareness_patch = _awareness_patch_from_context(
-        context,
-        transition_cost_inc=transition_cost_inc,
-    )
-    awareness = awareness_patch.get("awareness_quality")
-    awareness_score = _safe_float(awareness.get("score")) if isinstance(awareness, dict) else None
-    if awareness_score is None:
-        awareness_score = _safe_float(context.get("awareness_quality_score"))
-    if awareness_score is None:
-        awareness_score = 0.0
 
     updated = {
         "runs_total": runs_total,
@@ -2043,31 +422,12 @@ def _update_task_run_metrics(
         "last_failure_class": failure_class if attempt_status != "completed" else "",
         "last_model": model,
         "last_tool": _tool_token(command),
-        "awareness_quality_score": round(max(0.0, min(1.0, float(awareness_score))), 4),
-        "state_transition_quality": _safe_float(awareness_patch.get("awareness_state_transition_quality")) or 0.0,
-        "hold_pattern_rate": _safe_float(awareness_patch.get("awareness_hold_pattern_rate")) or 0.0,
-        "estimated_to_measured_roi_conversion": awareness_patch.get("awareness_estimated_to_measured_roi_conversion"),
-        "cost_per_successful_transition": (
-            _safe_float(awareness_patch.get("awareness_cost_per_successful_transition")) or 0.0
-        ),
-        "awareness_events_total": max(0, _to_int(awareness_patch.get("awareness_events_total"), 0)),
-        "awareness_interventions_total": max(0, _to_int(awareness_patch.get("awareness_interventions_total"), 0)),
-        "awareness_blocks_total": max(0, _to_int(awareness_patch.get("awareness_blocks_total"), 0)),
-        "awareness_transition_total": max(0, _to_int(awareness_patch.get("awareness_transition_total"), 0)),
-        "awareness_successful_transition_total": max(
-            0,
-            _to_int(awareness_patch.get("awareness_successful_transition_total"), 0),
-        ),
-        "awareness_hold_pattern_total": max(0, _to_int(awareness_patch.get("awareness_hold_pattern_total"), 0)),
-        "awareness_transition_cost_total": round(
-            max(0.0, float(_safe_float(awareness_patch.get("awareness_transition_cost_total")) or 0.0)),
-            6,
-        ),
         "updated_at": _utc_now_iso(),
     }
-    context_patch = dict(awareness_patch)
-    context_patch.update(
-        {
+    _patch_task_context(
+        client,
+        task_id=task_id,
+        context_patch={
             "runner_metrics": updated,
             "runner_last_result": {
                 "attempt": attempt,
@@ -2080,12 +440,7 @@ def _update_task_run_metrics(
                 "command_tool": _tool_token(command),
                 "at": _utc_now_iso(),
             },
-        }
-    )
-    _patch_task_context(
-        client,
-        task_id=task_id,
-        context_patch=context_patch,
+        },
     )
     return updated
 
@@ -2099,10 +454,9 @@ def _schedule_retry_if_configured(
     failure_class: str,
     attempt: int,
     duration_seconds: float,
-    extra_context_patch: dict[str, Any] | None = None,
 ) -> tuple[bool, str]:
     max_retries = max(0, _to_int(task_ctx.get("runner_retry_max"), 0))
-    requested_retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
+    retry_delay_seconds = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
     retries_used = max(0, attempt - 1)
     retries_remaining = max_retries - retries_used
     if retries_remaining <= 0:
@@ -2112,43 +466,6 @@ def _schedule_retry_if_configured(
     live_ctx = _safe_get_task_context(live_snapshot)
     merged_ctx = dict(task_ctx)
     merged_ctx.update(live_ctx)
-    cadence_limits = _cadence_limits(merged_ctx)
-    retry_delay_seconds = max(cadence_limits["min_retry_delay_seconds"], requested_retry_delay_seconds)
-    min_delay_enforced = retry_delay_seconds > requested_retry_delay_seconds
-    intervention_allowed, cadence_patch, _, window_load = _allow_intervention_frequency(
-        merged_ctx,
-        kind="retry",
-    )
-    if not intervention_allowed:
-        message = (
-            "[cadence-steering] retry suppressed: intervention frequency limit reached "
-            f"({window_load}/{cadence_limits['max_interventions_per_window']} in "
-            f"{cadence_limits['intervention_window_sec']}s)."
-        )
-        context_patch: dict[str, Any] = dict(cadence_patch)
-        context_patch.update(
-            {
-                "runner_state": "steering_required",
-                "next_action": "steering_required",
-                "steering_requested": True,
-                "runner_retry_suppressed": "intervention_frequency_limit",
-                "runner_retry_remaining": retries_remaining,
-                "last_failure_class": failure_class,
-            }
-        )
-        try:
-            client.patch(
-                f"{BASE}/api/agent/tasks/{task_id}",
-                json={
-                    "status": "needs_decision",
-                    "current_step": "awaiting steering",
-                    "output": f"{output[-3200:]}\n\n{message}"[-4000:],
-                    "context": context_patch,
-                },
-            )
-        except Exception:
-            return False, ""
-        return False, message
     retry_not_before = (datetime.now(timezone.utc) + timedelta(seconds=retry_delay_seconds)).isoformat()
     failure_entry = {
         "attempt": attempt,
@@ -2158,26 +475,16 @@ def _schedule_retry_if_configured(
         "output_tail": _tail_text(output, 600),
     }
     failure_history = _append_failure_history(merged_ctx.get("runner_failure_history"), failure_entry)
-    context_patch = dict(cadence_patch)
-    context_patch.update(
-        {
+    context_patch = {
         "runner_retry_max": max_retries,
         "runner_retry_delay_seconds": retry_delay_seconds,
-        "runner_retry_delay_requested_seconds": requested_retry_delay_seconds,
-        "runner_retry_delay_effective_seconds": retry_delay_seconds,
-        "runner_min_retry_delay_seconds": cadence_limits["min_retry_delay_seconds"],
-        "runner_retry_delay_enforced": min_delay_enforced,
         "runner_retry_count": retries_used + 1,
         "runner_retry_remaining": retries_remaining - 1,
         "runner_state": "retry_pending",
         "retry_not_before": retry_not_before,
         "runner_last_failure": failure_entry,
         "runner_failure_history": failure_history,
-        "cadence_limits": cadence_limits,
     }
-    )
-    if extra_context_patch:
-        context_patch.update(dict(extra_context_patch))
     message = (
         f"[runner-retry] attempt {attempt} failed ({failure_class}); "
         f"scheduled retry in {retry_delay_seconds}s ({retries_remaining - 1} retries remaining)."
@@ -2195,19 +502,6 @@ def _schedule_retry_if_configured(
     except Exception:
         return False, ""
     return True, message
-
-
-def _retry_explicitly_disabled(task_ctx: dict[str, Any]) -> bool:
-    for key in ("runner_retry_max", "retry_max", "max_retries"):
-        if key not in task_ctx:
-            continue
-        raw_value = task_ctx.get(key)
-        if raw_value is None:
-            continue
-        if isinstance(raw_value, str) and not raw_value.strip():
-            continue
-        return _to_int(raw_value, 0) <= 0
-    return False
 
 
 def _sanitize_branch_name(raw: str, fallback: str) -> str:
@@ -2310,31 +604,6 @@ def _to_int(value: object, default: int) -> int:
         return default
 
 
-_TASK_RUNTIME_DEFAULTS = {
-    "spec": 1200,
-    "impl": 2400,
-    "test": 1800,
-    "review": 1200,
-    "heal": 1200,
-}
-_TASK_RUNTIME_ENV_BY_TYPE = {
-    "spec": "AGENT_TASK_TIMEOUT_SPEC",
-    "impl": "AGENT_TASK_TIMEOUT_IMPL",
-    "test": "AGENT_TASK_TIMEOUT_TEST",
-    "review": "AGENT_TASK_TIMEOUT_REVIEW",
-    "heal": "AGENT_TASK_TIMEOUT_HEAL",
-}
-
-
-def _default_runtime_seconds_for_task_type(task_type: str) -> int:
-    task_type_normalized = str(task_type or "").strip().lower()
-    baseline = _TASK_RUNTIME_DEFAULTS.get(task_type_normalized, TASK_TIMEOUT)
-    env_name = _TASK_RUNTIME_ENV_BY_TYPE.get(task_type_normalized)
-    if env_name:
-        baseline = _to_int(os.environ.get(env_name), baseline)
-    return max(30, min(TASK_TIMEOUT, baseline))
-
-
 def _read_run_records() -> dict[str, Any]:
     if not os.path.exists(RUN_RECORDS_FILE):
         return {"runs": []}
@@ -2353,65 +622,34 @@ def _read_run_records() -> dict[str, Any]:
 
 def _write_run_records(payload: dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
-    fd, tmp = tempfile.mkstemp(
-        prefix=f"{os.path.basename(RUN_RECORDS_FILE)}.",
-        suffix=".tmp",
-        dir=os.path.dirname(RUN_RECORDS_FILE),
-    )
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-            f.flush()
-            try:
-                os.fsync(f.fileno())
-            except OSError:
-                pass
-        os.replace(tmp, RUN_RECORDS_FILE)
-    finally:
-        try:
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-        except OSError:
-            pass
-
-
-@contextmanager
-def _run_records_file_lock():
-    os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
-    lock_path = f"{RUN_RECORDS_FILE}.lock"
-    with open(lock_path, "a+", encoding="utf-8") as lock_file:
-        if fcntl is not None:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            if fcntl is not None:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    tmp = f"{RUN_RECORDS_FILE}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    os.replace(tmp, RUN_RECORDS_FILE)
 
 
 def _record_run_update(run_id: str, patch: dict[str, Any]) -> None:
     if not run_id:
         return
     with RUN_RECORDS_LOCK:
-        with _run_records_file_lock():
-            payload = _read_run_records()
-            runs = payload.get("runs")
-            if not isinstance(runs, list):
-                runs = []
-            target: dict[str, Any] | None = None
-            for rec in runs:
-                if isinstance(rec, dict) and str(rec.get("run_id") or "") == run_id:
-                    target = rec
-                    break
-            if target is None:
-                target = {"run_id": run_id, "created_at": _utc_now_iso()}
-                runs.append(target)
-            target.update(patch)
-            target["updated_at"] = _utc_now_iso()
-            if len(runs) > MAX_RUN_RECORDS:
-                runs = runs[-MAX_RUN_RECORDS:]
-            payload["runs"] = runs
-            _write_run_records(payload)
+        payload = _read_run_records()
+        runs = payload.get("runs")
+        if not isinstance(runs, list):
+            runs = []
+        target: dict[str, Any] | None = None
+        for rec in runs:
+            if isinstance(rec, dict) and str(rec.get("run_id") or "") == run_id:
+                target = rec
+                break
+        if target is None:
+            target = {"run_id": run_id, "created_at": _utc_now_iso()}
+            runs.append(target)
+        target.update(patch)
+        target["updated_at"] = _utc_now_iso()
+        if len(runs) > MAX_RUN_RECORDS:
+            runs = runs[-MAX_RUN_RECORDS:]
+        payload["runs"] = runs
+        _write_run_records(payload)
 
 
 def _claim_run_lease(
@@ -2497,12 +735,6 @@ def _runner_heartbeat(
     metadata: dict[str, Any] | None = None,
 ) -> None:
     lease_seconds = max(20, min(3600, RUN_HEARTBEAT_SECONDS * 3))
-    merged_metadata: dict[str, Any] = {}
-    if isinstance(metadata, dict):
-        merged_metadata.update(metadata)
-    telemetry = _runner_provider_telemetry_payload(force_refresh=False)
-    if telemetry:
-        merged_metadata["provider_telemetry"] = telemetry
     payload = {
         "runner_id": runner_id,
         "status": str(status or "idle"),
@@ -2513,7 +745,7 @@ def _runner_heartbeat(
         "active_task_id": active_task_id[:200],
         "active_run_id": active_run_id[:200],
         "last_error": last_error[:2000],
-        "metadata": merged_metadata,
+        "metadata": metadata or {},
     }
     try:
         client.post(f"{BASE}/api/agent/runners/heartbeat", json=payload, timeout=HTTP_TIMEOUT)
@@ -2525,8 +757,7 @@ def _next_task_attempt(task_id: str) -> int:
     if not task_id:
         return 1
     with RUN_RECORDS_LOCK:
-        with _run_records_file_lock():
-            payload = _read_run_records()
+        payload = _read_run_records()
     runs = payload.get("runs")
     if not isinstance(runs, list):
         return 1
@@ -2545,311 +776,6 @@ def _current_head_sha(repo_path: str) -> str:
     if head.returncode != 0:
         return ""
     return (head.stdout or "").strip()[:80]
-
-
-def _normalize_sha(value: object) -> str:
-    text = str(value or "").strip().lower()
-    if re.fullmatch(r"[0-9a-f]{7,64}", text):
-        return text[:40]
-    return ""
-
-
-def _github_head_sha(client: httpx.Client, repo: str, branch: str, log: logging.Logger) -> str:
-    repository = str(repo or "").strip()
-    ref = str(branch or "").strip()
-    if not repository or "/" not in repository:
-        return ""
-    if not ref:
-        ref = "main"
-    token = str(os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "coherence-agent-runner",
-    }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    url = f"https://api.github.com/repos/{repository}/commits/{ref}"
-    response = _http_with_retry(client, "GET", url, log, headers=headers)
-    if response is None:
-        return ""
-    if response.status_code != 200:
-        log.warning(
-            "runner self-update: GitHub head lookup failed repo=%s ref=%s status=%s",
-            repository,
-            ref,
-            response.status_code,
-        )
-        return ""
-    try:
-        payload = response.json()
-    except Exception:
-        return ""
-    if not isinstance(payload, dict):
-        return ""
-    return _normalize_sha(payload.get("sha"))
-
-
-def _railway_runner_commit_sha(client: httpx.Client, log: logging.Logger) -> tuple[str, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
-    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
-    if not token or not env_id or not service_id:
-        env_commit = _normalize_sha(
-            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
-            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
-            or os.environ.get("GIT_COMMIT_SHA")
-        )
-        return env_commit, ""
-    try:
-        uuid.UUID(env_id)
-        uuid.UUID(service_id)
-    except Exception:
-        log.warning(
-            "runner self-update: Railway IDs must be UUIDs (env=%r service=%r); skipping auto-redeploy check",
-            env_id,
-            service_id,
-        )
-        return "", ""
-
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    query = {
-        "query": (
-            "query RunnerDeployment($environmentId:String!, $serviceId:String!) { "
-            "serviceInstance(environmentId:$environmentId, serviceId:$serviceId) { "
-            "latestDeployment { id meta } } }"
-        ),
-        "variables": {"environmentId": env_id, "serviceId": service_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=query, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        log.warning("runner self-update: Railway deployment lookup failed: %s", exc)
-        return "", ""
-    if response.status_code != 200:
-        log.warning(
-            "runner self-update: Railway deployment lookup status=%s",
-            response.status_code,
-        )
-        return "", ""
-    try:
-        payload = response.json()
-    except Exception:
-        return "", ""
-    if not isinstance(payload, dict):
-        return "", ""
-    if payload.get("errors"):
-        log.warning("runner self-update: Railway deployment lookup errors=%s", str(payload.get("errors"))[:600])
-        return "", ""
-    service_instance = ((payload.get("data") or {}).get("serviceInstance") or {})
-    latest_deployment = (service_instance.get("latestDeployment") or {})
-    deployment_id = str(latest_deployment.get("id") or "").strip()
-    meta = latest_deployment.get("meta")
-    commit_sha = ""
-    if isinstance(meta, dict):
-        commit_sha = _normalize_sha(meta.get("commitHash"))
-    if not commit_sha:
-        commit_sha = _normalize_sha(
-            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
-            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
-            or os.environ.get("GIT_COMMIT_SHA")
-        )
-    return commit_sha, deployment_id
-
-
-def _trigger_railway_runner_redeploy(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
-    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
-    if not token or not env_id or not service_id:
-        return False, "missing_railway_context"
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    mutation = {
-        "query": (
-            "mutation RunnerRedeploy($environmentId:String!, $serviceId:String!) { "
-            "serviceInstanceRedeploy(environmentId:$environmentId, serviceId:$serviceId) }"
-        ),
-        "variables": {"environmentId": env_id, "serviceId": service_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        return False, f"railway_request_failed:{exc}"
-    if response.status_code != 200:
-        return False, f"railway_status_{response.status_code}"
-    try:
-        payload = response.json()
-    except Exception:
-        return False, "railway_non_json_response"
-    if not isinstance(payload, dict):
-        return False, "railway_invalid_response"
-    if payload.get("errors"):
-        log.warning("runner self-update: Railway redeploy errors=%s", str(payload.get("errors"))[:800])
-        return False, "railway_graphql_errors"
-    data = payload.get("data") or {}
-    if not bool(data.get("serviceInstanceRedeploy")):
-        return False, "railway_redeploy_not_triggered"
-    return True, "redeploy_triggered"
-
-
-def _trigger_railway_runner_rollback(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    if not token:
-        return False, "missing_railway_token"
-
-    _, deployment_id = _railway_runner_commit_sha(client, log)
-    if not deployment_id:
-        return False, "missing_current_deployment_id"
-
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    mutation = {
-        "query": "mutation Rollback($id:String!) { deploymentRollback(id:$id) }",
-        "variables": {"id": deployment_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        return False, f"railway_request_failed:{exc}"
-    if response.status_code != 200:
-        return False, f"railway_status_{response.status_code}"
-    try:
-        payload = response.json()
-    except Exception:
-        return False, "railway_non_json_response"
-    if not isinstance(payload, dict):
-        return False, "railway_invalid_response"
-    if payload.get("errors"):
-        log.warning("runner rollback: Railway rollback errors=%s", str(payload.get("errors"))[:800])
-        return False, "railway_graphql_errors"
-    data = payload.get("data") or {}
-    if not bool(data.get("deploymentRollback")):
-        return False, "railway_rollback_not_triggered"
-    return True, deployment_id
-
-
-def _maybe_trigger_runner_rollback(
-    client: httpx.Client,
-    log: logging.Logger,
-    *,
-    reason: str,
-    task_id: str = "",
-    failure_class: str = "",
-) -> None:
-    now = time.monotonic()
-    with ROLLBACK_LOCK:
-        global ROLLBACK_LAST_AT
-        if (now - ROLLBACK_LAST_AT) < float(ROLLBACK_MIN_INTERVAL_SECONDS):
-            return
-        ROLLBACK_LAST_AT = now
-
-    ok, detail = _trigger_railway_runner_rollback(client, log)
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
-    if not ok:
-        log.warning(
-            "runner rollback: failed reason=%s task=%s failure_class=%s detail=%s",
-            reason,
-            task_id or "-",
-            failure_class or "-",
-            detail,
-        )
-        return
-    _runner_heartbeat(
-        client,
-        runner_id=worker_id,
-        status="degraded",
-        active_task_id="",
-        active_run_id="",
-        metadata={
-            "rollback_triggered": True,
-            "rollback_reason": reason,
-            "rollback_task_id": task_id,
-            "rollback_failure_class": failure_class,
-            "rollback_source_deployment_id": detail,
-        },
-    )
-    log.warning(
-        "runner rollback: triggered reason=%s task=%s failure_class=%s source_deployment=%s",
-        reason,
-        task_id or "-",
-        failure_class or "-",
-        detail,
-    )
-
-
-def _maybe_trigger_runner_self_update(
-    client: httpx.Client,
-    log: logging.Logger,
-    *,
-    last_task_id: str = "",
-) -> None:
-    if not SELF_UPDATE_ENABLED:
-        return
-    now = time.monotonic()
-    with SELF_UPDATE_LOCK:
-        global SELF_UPDATE_LAST_CHECK_AT, SELF_UPDATE_LAST_TRIGGER_SHA
-        if (now - SELF_UPDATE_LAST_CHECK_AT) < float(SELF_UPDATE_MIN_INTERVAL_SECONDS):
-            return
-        SELF_UPDATE_LAST_CHECK_AT = now
-
-    latest_main_sha = _github_head_sha(client, SELF_UPDATE_REPO, SELF_UPDATE_BRANCH, log)
-    if not latest_main_sha:
-        return
-
-    current_sha, deployment_id = _railway_runner_commit_sha(client, log)
-    if not current_sha:
-        log.info(
-            "runner self-update: current deployment commit unavailable; "
-            "set Railway context vars for commit-aware redeploy checks"
-        )
-        return
-
-    if latest_main_sha.startswith(current_sha) or current_sha.startswith(latest_main_sha):
-        return
-
-    with SELF_UPDATE_LOCK:
-        if SELF_UPDATE_LAST_TRIGGER_SHA == latest_main_sha:
-            return
-
-    ok, reason = _trigger_railway_runner_redeploy(client, log)
-    if not ok:
-        log.warning(
-            "runner self-update: redeploy failed task=%s current=%s latest=%s reason=%s",
-            last_task_id or "-",
-            current_sha[:12],
-            latest_main_sha[:12],
-            reason,
-        )
-        return
-
-    with SELF_UPDATE_LOCK:
-        SELF_UPDATE_LAST_TRIGGER_SHA = latest_main_sha
-
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
-    _runner_heartbeat(
-        client,
-        runner_id=worker_id,
-        status="updating",
-        active_task_id="",
-        active_run_id="",
-        metadata={
-            "self_update_triggered": True,
-            "self_update_task_id": last_task_id,
-            "runner_commit": current_sha,
-            "target_commit": latest_main_sha,
-            "deployment_id": deployment_id,
-            "reason": reason,
-        },
-    )
-    log.warning(
-        "runner self-update: triggered Railway redeploy task=%s current=%s latest=%s deployment=%s",
-        last_task_id or "-",
-        current_sha[:12],
-        latest_main_sha[:12],
-        deployment_id or "unknown",
-    )
 
 
 def _checkpoint_partial_progress(
@@ -2884,31 +810,14 @@ def _checkpoint_partial_progress(
     return {"ok": True, "changed": changed, "checkpoint_sha": head_sha, "branch": branch}
 
 
-_USAGE_LIMIT_HARD_MARKERS = (
-    "insufficient_quota",
-    "quota exceeded",
-    "billing hard limit",
-    "provider blocked",
-)
-
-_USAGE_LIMIT_SOFT_MARKERS = (
+_USAGE_LIMIT_MARKERS = (
     "usage limit",
     "rate limit",
-    "too many requests",
-)
-
-_USAGE_LIMIT_ERROR_TOKENS = (
-    "http 429",
-    "status 429",
-    " 429",
-    "insufficient_quota",
     "quota exceeded",
+    "insufficient_quota",
     "billing hard limit",
     "too many requests",
-    "rate limit reached",
     "provider blocked",
-    "retry-after",
-    "retry after",
 )
 
 
@@ -2916,14 +825,7 @@ def _detect_usage_limit(text: str) -> bool:
     lowered = (text or "").lower()
     if not lowered:
         return False
-    if any(marker in lowered for marker in _USAGE_LIMIT_HARD_MARKERS):
-        return True
-    for line in lowered.splitlines():
-        if any(marker in line for marker in _USAGE_LIMIT_SOFT_MARKERS) and any(
-            token in line for token in _USAGE_LIMIT_ERROR_TOKENS
-        ):
-            return True
-    return False
+    return any(marker in lowered for marker in _USAGE_LIMIT_MARKERS)
 
 
 def _classify_failure(
@@ -2938,8 +840,6 @@ def _classify_failure(
         return "aborted_by_user"
     if stopped_for_usage or _detect_usage_limit(output):
         return "usage_limit"
-    if _codex_model_not_found_or_access_error(output):
-        return "model_not_found"
     if timed_out:
         return "timeout"
     if returncode in {-9, 137, 143}:
@@ -5237,30 +3137,10 @@ def _repo_path_for_task(task_ctx: dict[str, Any]) -> str:
     return os.path.abspath(repo_path)
 
 
-def _path_has_git_marker(repo_path: str) -> bool:
-    git_marker = os.path.join(repo_path, ".git")
-    return os.path.exists(git_marker)
-
-
-def _directory_has_entries(path: str) -> bool:
-    try:
-        with os.scandir(path) as entries:
-            for _ in entries:
-                return True
-    except OSError:
-        return False
-    return False
-
-
 def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
-    if _path_has_git_marker(repo_path):
+    git_dir = os.path.join(repo_path, ".git")
+    if os.path.isdir(git_dir):
         return True
-    if os.path.isdir(repo_path) and _directory_has_entries(repo_path):
-        log.warning(
-            "repo checkout missing git metadata at %s; directory is non-empty and cannot be cloned in-place",
-            repo_path,
-        )
-        return False
     clone_url = REPO_GIT_URL
     if not clone_url:
         log.warning("repo checkout missing at %s and AGENT_REPO_GIT_URL is not set", repo_path)
@@ -5271,32 +3151,7 @@ def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
     if clone.returncode != 0:
         log.warning("git clone failed repo_path=%s err=%s", repo_path, clone.stderr.strip())
         return False
-    return _path_has_git_marker(repo_path)
-
-
-def _resolve_repo_path_for_execution(repo_path: str, *, log: logging.Logger) -> str:
-    candidate = os.path.abspath(repo_path)
-    if _path_has_git_marker(candidate):
-        return candidate
-
-    if os.path.isdir(candidate) and _directory_has_entries(candidate):
-        fallback = os.path.abspath(REPO_FALLBACK_PATH)
-        if fallback != candidate:
-            log.warning(
-                "repo path %s missing git metadata; switching execution checkout to %s",
-                candidate,
-                fallback,
-            )
-            candidate = fallback
-
-    if os.path.abspath(candidate) == os.path.abspath(REPO_FALLBACK_PATH):
-        if os.path.isdir(candidate) and _directory_has_entries(candidate) and not _path_has_git_marker(candidate):
-            # The fallback directory is runner-managed scratch space. Reset it when stale.
-            shutil.rmtree(candidate, ignore_errors=True)
-
-    if not _path_has_git_marker(candidate):
-        _ensure_repo_checkout(candidate, log=log)
-    return candidate
+    return os.path.isdir(git_dir)
 
 
 def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: logging.Logger) -> bool:
@@ -5701,118 +3556,7 @@ def _handle_pr_failure_handoff(
         lease_seconds=RUN_LEASE_SECONDS,
         require_owner=False,
     )
-    if should_requeue:
-        _record_observer_context_snapshot(
-            client,
-            task_id=task_id,
-            transition="retry",
-            run_id=run_id,
-            worker_id=worker_id,
-            status="pending",
-            current_step="resume checkpoint scheduled",
-            failure_class=failure_class,
-            context_hint={
-                "runner_state": "retry_pending",
-                "next_action": "requeue_for_resume",
-                "resume_branch": branch,
-                "resume_checkpoint_sha": checkpoint_sha,
-                "last_failure_class": failure_class,
-            },
-            details={
-                "checkpoint_ok": checkpoint_ok,
-                "checkpoint_sha": checkpoint_sha,
-                "resume_attempts": resume_attempts + 1,
-                "max_resume_attempts": max_resume_attempts,
-            },
-        )
     return next_status, summary
-
-
-def _dispatch_openrouter_server_executor(
-    *,
-    client: httpx.Client,
-    task_id: str,
-    task_ctx: dict[str, Any],
-    task_type: str,
-    worker_id: str,
-    log: logging.Logger,
-) -> bool:
-    headers: dict[str, str] = {}
-    execute_token = str(os.environ.get("AGENT_EXECUTE_TOKEN", "")).strip()
-    if execute_token:
-        headers["X-Agent-Execute-Token"] = execute_token
-
-    force_paid = _as_bool(task_ctx.get("force_paid_providers"))
-    params: dict[str, str] = {}
-    if force_paid:
-        headers["X-Force-Paid-Providers"] = "true"
-        params["force_paid_providers"] = "true"
-
-    execute_url = f"{BASE}/api/agent/tasks/{quote(task_id)}/execute"
-    response = _http_with_retry(
-        client,
-        "post",
-        execute_url,
-        log,
-        headers=headers or None,
-        params=params or None,
-    )
-    if response is None:
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={"status": "failed", "output": "Execution failed: openrouter executor dispatch failed (no API response)."},
-        )
-        return True
-
-    if int(response.status_code) >= 400:
-        detail = (response.text or "").strip()
-        message = f"Execution failed: openrouter executor dispatch denied ({response.status_code})"
-        if detail:
-            message = f"{message}: {detail[:500]}"
-        client.patch(
-            f"{BASE}/api/agent/tasks/{task_id}",
-            json={"status": "failed", "output": message[:4000]},
-        )
-        return True
-
-    default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
-    requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
-    max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
-    deadline = time.monotonic() + float(max_runtime_seconds)
-    while time.monotonic() < deadline:
-        snapshot = _safe_get_task_snapshot(client, task_id)
-        if snapshot:
-            status = str(snapshot.get("status") or "").strip().lower()
-            if status in {"completed", "failed", "needs_decision"}:
-                _runner_heartbeat(
-                    client,
-                    runner_id=worker_id,
-                    status="idle",
-                    active_task_id="",
-                    active_run_id="",
-                    metadata={"last_task_id": task_id, "executor": "openrouter"},
-                )
-                return status != "needs_decision"
-        _runner_heartbeat(
-            client,
-            runner_id=worker_id,
-            status="running",
-            active_task_id=task_id,
-            active_run_id="",
-            metadata={"executor": "openrouter", "task_type": task_type},
-        )
-        time.sleep(2)
-
-    log.warning("task=%s openrouter executor dispatch timed out waiting for terminal status", task_id)
-    _runner_heartbeat(
-        client,
-        runner_id=worker_id,
-        status="running",
-        active_task_id=task_id,
-        active_run_id="",
-        metadata={"executor": "openrouter", "detail": "server_execution_timeout"},
-    )
-    return True
 
 
 def run_one_task(
@@ -5936,6 +3680,116 @@ def run_one_task(
     executor = _infer_executor(command, model)
     is_openai_codex = _is_openai_codex_worker(worker_id) or _uses_codex_cli(command)
 
+    task_ctx = task_context or {}
+    task_snapshot = {"task_type": task_type, "context": task_ctx}
+    pr_mode = _should_run_pr_flow(task_snapshot)
+    repo_path = _repo_path_for_task(task_ctx) if pr_mode else os.path.dirname(_api_dir)
+    branch_name = _extract_pr_branch(task_id=task_id, task_ctx=task_ctx, direction=task_direction) if pr_mode else ""
+    run_id = f"run_{uuid.uuid4().hex[:12]}"
+    attempt = _next_task_attempt(task_id)
+    if attempt > 1:
+        retry_override_command = str(task_ctx.get("retry_override_command") or "").strip()
+        if retry_override_command:
+            log.info("task=%s applying retry_override_command for attempt=%s", task_id, attempt)
+            command = retry_override_command
+    _runner_heartbeat(
+        client,
+        runner_id=worker_id,
+        status="running",
+        active_task_id=task_id,
+        active_run_id=run_id,
+        metadata={"executor": executor, "task_type": task_type},
+    )
+    # Ensure the task runs from the target worktree in PR mode so file edits stay on a dedicated branch.
+    if pr_mode:
+        if not _prepare_pr_branch(task_id, repo_path, branch_name, log=log):
+            _sync_run_state(
+                client,
+                task_id=task_id,
+                run_id=run_id,
+                worker_id=worker_id,
+                patch={
+                    "task_id": task_id,
+                    "attempt": attempt,
+                    "status": "failed",
+                    "worker_id": worker_id,
+                    "task_type": task_type,
+                    "direction": task_direction,
+                    "branch": branch_name,
+                    "repo_path": repo_path,
+                    "failure_class": "branch_setup_failed",
+                    "next_action": "needs_attention",
+                    "completed_at": _utc_now_iso(),
+                },
+                lease_seconds=RUN_LEASE_SECONDS,
+                require_owner=False,
+            )
+            if verbose:
+                print(f"  -> pre-run branch setup failed for {task_id}")
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={"status": "failed", "output": f"[pr-flow] branch setup failed: {branch_name}"},
+            )
+            _runner_heartbeat(
+                client,
+                runner_id=worker_id,
+                status="degraded",
+                active_task_id="",
+                active_run_id="",
+                last_error="branch setup failed",
+                metadata={"task_id": task_id, "task_type": task_type},
+            )
+            return True
+
+    lease_ok = _claim_run_lease(
+        client,
+        task_id=task_id,
+        run_id=run_id,
+        worker_id=worker_id,
+        attempt=attempt,
+        branch=branch_name,
+        repo_path=repo_path,
+        task_type=task_type,
+        direction=task_direction,
+    )
+    if not lease_ok:
+        log.info("task=%s lease claim rejected by run-state owner", task_id)
+        try:
+            client.patch(
+                f"{BASE}/api/agent/tasks/{task_id}",
+                json={
+                    "current_step": "waiting for lease",
+                    "context": {
+                        "retry_not_before": (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(),
+                    },
+                },
+            )
+        except Exception:
+            pass
+        _sync_run_state(
+            client,
+            task_id=task_id,
+            run_id=run_id,
+            worker_id=worker_id,
+            patch={
+                "status": "skipped",
+                "failure_class": "lease_claim_rejected",
+                "next_action": "skip",
+                "completed_at": _utc_now_iso(),
+            },
+            lease_seconds=RUN_LEASE_SECONDS,
+            require_owner=False,
+        )
+        _runner_heartbeat(
+            client,
+            runner_id=worker_id,
+            status="idle",
+            active_task_id="",
+            active_run_id="",
+            metadata={"last_task_id": task_id, "detail": "lease_claim_rejected"},
+        )
+        return True
+
     # PATCH to running
     running_context: dict[str, Any] = {
         "active_run_id": run_id,
@@ -5971,7 +3825,12 @@ def run_one_task(
         json={
             "status": "running",
             "worker_id": worker_id,
-            "context": running_context,
+            "context": {
+                "active_run_id": run_id,
+                "active_worker_id": worker_id,
+                "active_branch": branch_name if pr_mode else "",
+                "last_attempt": attempt,
+            },
         },
     )
     if r.status_code != 200:
@@ -6031,34 +3890,6 @@ def run_one_task(
         },
         lease_seconds=RUN_LEASE_SECONDS,
         require_owner=True,
-    )
-    _patch_task_context(
-        client,
-        task_id=task_id,
-        context_patch={
-            "target_state": target_contract.get("target_state"),
-            "success_evidence": target_contract.get("success_evidence"),
-            "abort_evidence": target_contract.get("abort_evidence"),
-            "observation_window_sec": target_contract.get("observation_window_sec"),
-            "target_state_contract": target_contract,
-        },
-    )
-    _record_observer_context_snapshot(
-        client,
-        task_id=task_id,
-        transition="start",
-        run_id=run_id,
-        worker_id=worker_id,
-        status="running",
-        current_step="command started",
-        context_hint={
-            "active_run_id": run_id,
-            "active_worker_id": worker_id,
-            "active_branch": branch_name if pr_mode else "",
-            "last_attempt": attempt,
-            "runner_state": "running",
-            "next_action": "execute_command",
-        },
     )
 
     start_time = time.monotonic()
@@ -6163,7 +3994,6 @@ def run_one_task(
             shell=popen_shell,
             env=env,
             cwd=repo_path,
-            preexec_fn=popen_preexec_fn,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -6172,8 +4002,7 @@ def run_one_task(
         reader = threading.Thread(target=_stream_reader, args=(process,), daemon=False)
         reader.start()
 
-        default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
-        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
+        requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), TASK_TIMEOUT)
         max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
         timed_out = False
         stopped_for_usage = False
@@ -6237,126 +4066,32 @@ def run_one_task(
                     next_heartbeat = now + RUN_HEARTBEAT_SECONDS
                 if now >= next_control_poll:
                     task_snapshot_live = _safe_get_task_snapshot(client, task_id)
-                    task_ctx_live = _safe_get_task_context(task_snapshot_live)
                     abort_requested, requested_abort_reason, diagnostic_request = _extract_control_signals(task_snapshot_live)
                     if diagnostic_request:
                         request_id = _diagnostic_request_id(diagnostic_request)
                         if request_id and request_id != diagnostic_completed_id:
-                            cadence_limits = _cadence_limits(task_ctx_live)
-                            cooldown_seconds = cadence_limits["diagnostic_cooldown_seconds"]
-                            diag_now_utc = datetime.now(timezone.utc)
-                            last_diag_at = _parse_iso_utc(task_ctx_live.get("diagnostic_last_ran_at"))
-                            cooldown_remaining = 0
-                            if last_diag_at is not None and cooldown_seconds > 0:
-                                elapsed = (diag_now_utc - last_diag_at).total_seconds()
-                                if elapsed < float(cooldown_seconds):
-                                    cooldown_remaining = max(1, int(cooldown_seconds - elapsed))
-                            if cooldown_remaining > 0:
-                                diagnostic_completed_id = request_id
-                                awareness_patch = _awareness_patch_from_context(
-                                    task_ctx_live,
-                                    event_inc=1,
-                                    block_inc=1,
-                                )
-                                deferred_result = {
-                                    "id": request_id,
-                                    "status": "deferred_cooldown",
-                                    "exit_code": None,
-                                    "cooldown_seconds": cooldown_seconds,
-                                    "retry_after_seconds": cooldown_remaining,
-                                    "ran_at": _utc_now_iso(),
-                                }
-                                context_patch = dict(awareness_patch)
-                                context_patch.update(
-                                    {
-                                        "diagnostic_last_completed_id": request_id,
-                                        "diagnostic_last_result": deferred_result,
-                                        "diagnostic_cooldown_seconds": cooldown_seconds,
-                                        "runner_last_seen_at": _utc_now_iso(),
-                                        "cadence_limits": cadence_limits,
-                                    }
-                                )
-                                _patch_task_progress(
-                                    client,
-                                    task_id=task_id,
-                                    progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
-                                    current_step="diagnostic cooldown active",
-                                    context_patch=context_patch,
-                                )
-                                output_lines.append(
-                                    "\n[Diagnostic] "
-                                    f"id={request_id} status=deferred_cooldown retry_after={cooldown_remaining}s\n"
-                                )
-                            else:
-                                intervention_allowed, cadence_patch, _, window_load = _allow_intervention_frequency(
-                                    task_ctx_live,
-                                    kind="diagnostic",
-                                    now=diag_now_utc,
-                                )
-                                if not intervention_allowed:
-                                    diagnostic_completed_id = request_id
-                                    deferred_result = {
-                                        "id": request_id,
-                                        "status": "deferred_intervention_limit",
-                                        "exit_code": None,
-                                        "window_load": window_load,
-                                        "window_limit": cadence_limits["max_interventions_per_window"],
-                                        "window_seconds": cadence_limits["intervention_window_sec"],
-                                        "ran_at": _utc_now_iso(),
-                                    }
-                                    context_patch = dict(cadence_patch)
-                                    context_patch.update(
-                                        {
-                                            "diagnostic_last_completed_id": request_id,
-                                            "diagnostic_last_result": deferred_result,
-                                            "diagnostic_cooldown_seconds": cooldown_seconds,
-                                            "runner_last_seen_at": _utc_now_iso(),
-                                            "steering_requested": True,
-                                            "next_action": "steering_required",
-                                        }
-                                    )
-                                    _patch_task_progress(
-                                        client,
-                                        task_id=task_id,
-                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
-                                        current_step="diagnostic limited by cadence",
-                                        context_patch=context_patch,
-                                    )
-                                    output_lines.append(
-                                        "\n[Diagnostic] "
-                                        f"id={request_id} status=deferred_intervention_limit "
-                                        f"load={window_load}/{cadence_limits['max_interventions_per_window']}\n"
-                                    )
-                                else:
-                                    diagnostic_result = _run_diagnostic_request(
-                                        diagnostic_request,
-                                        cwd=repo_path,
-                                        env=env,
-                                    )
-                                    diagnostic_completed_id = request_id
-                                    context_patch = dict(cadence_patch)
-                                    context_patch.update(
-                                        {
-                                            "diagnostic_last_completed_id": request_id,
-                                            "diagnostic_last_result": diagnostic_result,
-                                            "diagnostic_last_ran_at": _utc_now_iso(),
-                                            "diagnostic_cooldown_seconds": cooldown_seconds,
-                                            "runner_last_seen_at": _utc_now_iso(),
-                                            "cadence_limits": cadence_limits,
-                                        }
-                                    )
-                                    _patch_task_progress(
-                                        client,
-                                        task_id=task_id,
-                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
-                                        current_step="running diagnostic",
-                                        context_patch=context_patch,
-                                    )
-                                    output_lines.append(
-                                        "\n[Diagnostic] "
-                                        f"id={request_id} status={diagnostic_result.get('status')} "
-                                        f"exit={diagnostic_result.get('exit_code')}\n"
-                                    )
+                            diagnostic_result = _run_diagnostic_request(
+                                diagnostic_request,
+                                cwd=repo_path,
+                                env=env,
+                            )
+                            diagnostic_completed_id = request_id
+                            _patch_task_progress(
+                                client,
+                                task_id=task_id,
+                                progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                current_step="running diagnostic",
+                                context_patch={
+                                    "diagnostic_last_completed_id": request_id,
+                                    "diagnostic_last_result": diagnostic_result,
+                                    "runner_last_seen_at": _utc_now_iso(),
+                                },
+                            )
+                            output_lines.append(
+                                "\n[Diagnostic] "
+                                f"id={request_id} status={diagnostic_result.get('status')} "
+                                f"exit={diagnostic_result.get('exit_code')}\n"
+                            )
                     if abort_requested:
                         stopped_for_abort = True
                         abort_reason = requested_abort_reason or "abort requested from API"
@@ -6374,22 +4109,6 @@ def run_one_task(
                             },
                             lease_seconds=RUN_LEASE_SECONDS,
                             require_owner=True,
-                        )
-                        _record_observer_context_snapshot(
-                            client,
-                            task_id=task_id,
-                            transition="abort",
-                            run_id=run_id,
-                            worker_id=worker_id,
-                            status="running",
-                            current_step="abort requested",
-                            failure_class="aborted_by_user",
-                            context_hint={
-                                "runner_state": "abort_requested",
-                                "abort_requested": True,
-                                "abort_reason": abort_reason,
-                                "next_action": "abort_requested",
-                            },
                         )
                         break
                     next_control_poll = now + CONTROL_POLL_SECONDS
@@ -6484,37 +4203,12 @@ def run_one_task(
         if stopped_for_abort:
             status = "failed"
             output = f"{output}\n[Runner] Task aborted by request: {abort_reason or 'abort requested'}"
-        contract_observation = _observe_target_contract(
-            contract=target_contract,
-            output=output,
-            duration_seconds=duration_sec,
-            attempt_status=status,
-        )
-        if _as_bool(contract_observation.get("abort_evidence_met")):
-            status = "failed"
-            hits = contract_observation.get("abort_evidence_hits") or []
-            hit_preview = ", ".join(str(hit) for hit in hits[:3]) if isinstance(hits, list) else ""
-            output = (
-                f"{output}\n[Target Contract] Abort evidence observed; "
-                f"marking task failed. hits={hit_preview or 'configured abort evidence matched'}"
-            )
         failure_class = _classify_failure(
             output=output,
             timed_out=timed_out,
             stopped_for_usage=stopped_for_usage,
             stopped_for_abort=stopped_for_abort,
             returncode=returncode,
-        )
-        if _as_bool(contract_observation.get("abort_evidence_met")):
-            failure_class = "abort_evidence_triggered"
-        _patch_task_context(
-            client,
-            task_id=task_id,
-            context_patch={
-                "target_state_contract": target_contract,
-                "target_state_observation": contract_observation,
-                "target_state_last_observed_at": _utc_now_iso(),
-            },
         )
 
         with open(out_file, "a", encoding="utf-8") as f:
@@ -6559,23 +4253,11 @@ def run_one_task(
             attempt_status=status,
             failure_class=failure_class,
         )
-        if pr_mode:
-            manifest_context_patch = _append_agent_manifest_entry(
-                task_id=task_id,
-                task_type=task_type,
-                task_direction=task_direction,
-                task_ctx=task_ctx,
-                repo_path=repo_path,
-                executor=executor,
-            )
-            if manifest_context_patch:
-                _patch_task_context(client, task_id=task_id, context_patch=manifest_context_patch)
 
-        if status == "completed" and not pr_mode:
-            client.patch(
-                f"{BASE}/api/agent/tasks/{task_id}",
-                json={"status": status, "output": output[:4000]},
-            )
+        client.patch(
+            f"{BASE}/api/agent/tasks/{task_id}",
+            json={"status": status, "output": output[:4000]},
+        )
         _sync_run_state(
             client,
             task_id=task_id,
@@ -6594,27 +4276,8 @@ def run_one_task(
             require_owner=True,
         )
 
-        hold_policy_applied = False
-        hold_policy_message = ""
-        if status != "completed":
-            hold_policy_applied, hold_policy_message = _apply_hold_pattern_policy(
-                client,
-                task_id=task_id,
-                task_ctx=task_ctx,
-                attempt=attempt,
-                failure_class=failure_class,
-                output=output,
-                repo_path=repo_path,
-                env=env,
-                run_id=run_id,
-                worker_id=worker_id,
-            )
-            if hold_policy_applied:
-                status = "needs_decision"
-                output = f"{output}\n\n{hold_policy_message}" if hold_policy_message else output
-
         final_status = status
-        if (not hold_policy_applied) and pr_mode and status == "completed":
+        if pr_mode and status == "completed":
             final_status, pr_output = _run_pr_delivery_flow(
                 task_id=task_id,
                 task=task_snapshot,
@@ -6644,7 +4307,7 @@ def run_one_task(
                 lease_seconds=RUN_LEASE_SECONDS,
                 require_owner=True,
             )
-        elif (not hold_policy_applied) and pr_mode and status != "completed":
+        elif pr_mode and status != "completed":
             final_status, handoff_summary = _handle_pr_failure_handoff(
                 client=client,
                 task_id=task_id,
@@ -6660,390 +4323,15 @@ def run_one_task(
             )
             status = final_status
             output = f"{output}\n\n{handoff_summary}" if handoff_summary else output
-        elif (not hold_policy_applied) and (not pr_mode) and status != "completed":
-            retry_task_ctx = task_ctx
-            retry_context_patch: dict[str, Any] | None = None
-            if _uses_codex_cli(command):
-                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_codex_oauth_refresh_retry_attempted"))
-                oauth_relogin_attempted = _as_bool(task_ctx.get("runner_codex_oauth_relogin_attempted"))
-                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_codex_oauth_session_refresh_attempted"))
-                auth_mode = str((codex_auth_state or {}).get("effective_mode") or "").strip().lower()
-                oauth_refresh_retry_eligible = bool(
-                    codex_auth_state
-                    and auth_mode == "oauth"
-                )
-                if oauth_refresh_retry_eligible and _codex_oauth_refresh_token_reused_error(output):
-                    if not oauth_refresh_retry_attempted:
-                        session_refresh_ok = False
-                        session_refresh_detail = "oauth_session_refresh_skipped"
-                        session_refresh_was_attempted = False
-                        if not oauth_session_refresh_attempted:
-                            session_refresh_was_attempted = True
-                            session_refresh_ok, session_refresh_detail = _attempt_codex_oauth_session_refresh_from_env(
-                                env=env,
-                                task_id=task_id,
-                                log=log,
-                                task_ctx=task_ctx,
-                            )
-                        else:
-                            session_refresh_detail = "oauth_session_refresh_already_attempted"
-
-                        relogin_ok = False
-                        relogin_detail = "oauth_relogin_skipped"
-                        relogin_was_attempted = False
-                        if session_refresh_ok:
-                            relogin_detail = "oauth_relogin_not_needed_session_refreshed"
-                        elif not oauth_relogin_attempted:
-                            relogin_was_attempted = True
-                            relogin_ok, relogin_detail = _attempt_codex_oauth_relogin(
-                                env=env,
-                                task_id=task_id,
-                                log=log,
-                            )
-                        else:
-                            relogin_detail = "oauth_relogin_already_attempted"
-                        retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["runner_codex_auth_mode"] = "oauth"
-                        retry_task_ctx["runner_codex_oauth_refresh_retry_attempted"] = True
-                        retry_task_ctx["runner_codex_oauth_session_refresh_attempted"] = bool(
-                            oauth_session_refresh_attempted or session_refresh_was_attempted
-                        )
-                        retry_task_ctx["runner_codex_oauth_session_refresh"] = {
-                            "ok": bool(session_refresh_ok),
-                            "detail": session_refresh_detail,
-                            "at": _utc_now_iso(),
-                        }
-                        retry_task_ctx["runner_codex_oauth_relogin_attempted"] = bool(
-                            oauth_relogin_attempted or relogin_was_attempted
-                        )
-                        retry_task_ctx["runner_codex_oauth_relogin"] = {
-                            "ok": bool(relogin_ok),
-                            "detail": relogin_detail,
-                            "at": _utc_now_iso(),
-                        }
-                        retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
-                            retry_task_ctx["runner_retry_max"] = 0
-                        else:
-                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                        retry_context_patch = (retry_context_patch or {}) | {
-                            "runner_codex_auth_mode": "oauth",
-                            "runner_codex_oauth_refresh_retry_attempted": True,
-                            "runner_codex_oauth_session_refresh_attempted": bool(
-                                oauth_session_refresh_attempted or session_refresh_was_attempted
-                            ),
-                            "runner_codex_oauth_session_refresh": {
-                                "ok": bool(session_refresh_ok),
-                                "detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                            "runner_codex_oauth_relogin_attempted": bool(
-                                oauth_relogin_attempted or relogin_was_attempted
-                            ),
-                            "runner_codex_oauth_relogin": {
-                                "ok": bool(relogin_ok),
-                                "detail": relogin_detail,
-                                "at": _utc_now_iso(),
-                            },
-                            "runner_codex_oauth_refresh_retry": {
-                                "trigger": "oauth_refresh_token_reused",
-                                "mode": "oauth",
-                                "oauth_session_refresh_ok": bool(session_refresh_ok),
-                                "oauth_session_refresh_detail": session_refresh_detail,
-                                "oauth_relogin_ok": bool(relogin_ok),
-                                "oauth_relogin_detail": relogin_detail,
-                                "at": _utc_now_iso(),
-                            },
-                        }
-                        session_refresh_message = ""
-                        if session_refresh_was_attempted:
-                            session_refresh_status = "ok" if session_refresh_ok else "failed"
-                            session_refresh_message = (
-                                f" oauth session refresh {session_refresh_status} ({session_refresh_detail});"
-                            )
-                        relogin_message = ""
-                        if relogin_was_attempted:
-                            relogin_status = "ok" if relogin_ok else "failed"
-                            relogin_message = (
-                                f" oauth relogin {relogin_status} ({relogin_detail});"
-                            )
-                        retry_suffix = (
-                            "retry disabled by explicit retry_max=0."
-                            if retry_disabled
-                            else "retrying with oauth auth mode."
-                        )
-                        output = (
-                            f"{output}\n[runner-codex-auth-retry] oauth refresh token reuse detected; "
-                            f"{session_refresh_message}{relogin_message} {retry_suffix}"
-                        )
-                    else:
-                        output = (
-                            f"{output}\n[runner-codex-auth-retry] "
-                            "oauth refresh-token retry already attempted; not retrying auth retry."
-                        )
-                if _codex_model_not_found_or_access_error(output):
-                    fallback_already_attempted = _as_bool(task_ctx.get("runner_model_not_found_fallback_attempted"))
-                    fallback_command, fallback_alias = _codex_model_not_found_fallback(command, output)
-                    if fallback_alias and not fallback_already_attempted:
-                        retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["retry_override_command"] = fallback_command
-                        retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
-                            retry_task_ctx["runner_retry_max"] = 0
-                        else:
-                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                        retry_context_patch = (retry_context_patch or {}) | {
-                            "retry_override_command": fallback_command,
-                            "runner_model_not_found_fallback_attempted": True,
-                            "runner_model_not_found_fallback": {
-                                **fallback_alias,
-                                "at": _utc_now_iso(),
-                            },
-                        }
-                        if retry_disabled:
-                            output = (
-                                f"{output}\n[runner-model-fallback] model unavailable; "
-                                "fallback planned but retry disabled by explicit retry_max=0."
-                            )
-                        else:
-                            output = (
-                                f"{output}\n[runner-model-fallback] model unavailable; "
-                                f"retrying with --model {fallback_alias['effective_model']}."
-                            )
-                    elif fallback_already_attempted:
-                        output = (
-                            f"{output}\n[runner-model-fallback] "
-                            "model unavailable after fallback attempt; not retrying fallback."
-                        )
-            elif _uses_cursor_cli(command):
-                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_refresh_retry_attempted"))
-                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_cursor_oauth_session_refresh_attempted"))
-                auth_mode = str((cursor_auth_state or {}).get("effective_mode") or "").strip().lower()
-                oauth_refresh_retry_eligible = bool(cursor_auth_state and auth_mode == "oauth")
-                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
-                    if not oauth_refresh_retry_attempted:
-                        session_refresh_ok = False
-                        session_refresh_detail = "oauth_session_refresh_skipped"
-                        session_refresh_was_attempted = False
-                        if not oauth_session_refresh_attempted:
-                            session_refresh_was_attempted = True
-                            session_refresh_ok, session_refresh_detail = _attempt_cursor_oauth_session_refresh_from_env(
-                                env=env,
-                                task_id=task_id,
-                                log=log,
-                                task_ctx=task_ctx,
-                            )
-                        else:
-                            session_refresh_detail = "oauth_session_refresh_already_attempted"
-                        retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["runner_cursor_auth_mode"] = "oauth"
-                        retry_task_ctx["runner_cursor_oauth_refresh_retry_attempted"] = True
-                        retry_task_ctx["runner_cursor_oauth_session_refresh_attempted"] = bool(
-                            oauth_session_refresh_attempted or session_refresh_was_attempted
-                        )
-                        retry_task_ctx["runner_cursor_oauth_session_refresh"] = {
-                            "ok": bool(session_refresh_ok),
-                            "detail": session_refresh_detail,
-                            "at": _utc_now_iso(),
-                        }
-                        retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
-                            retry_task_ctx["runner_retry_max"] = 0
-                        else:
-                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                        retry_context_patch = (retry_context_patch or {}) | {
-                            "runner_cursor_auth_mode": "oauth",
-                            "runner_cursor_oauth_refresh_retry_attempted": True,
-                            "runner_cursor_oauth_session_refresh_attempted": bool(
-                                oauth_session_refresh_attempted or session_refresh_was_attempted
-                            ),
-                            "runner_cursor_oauth_session_refresh": {
-                                "ok": bool(session_refresh_ok),
-                                "detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                            "runner_cursor_oauth_refresh_retry": {
-                                "trigger": "oauth_refresh_or_auth_error",
-                                "mode": "oauth",
-                                "oauth_session_refresh_ok": bool(session_refresh_ok),
-                                "oauth_session_refresh_detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                        }
-                        retry_suffix = (
-                            "retry disabled by explicit retry_max=0."
-                            if retry_disabled
-                            else "retrying with oauth auth mode."
-                        )
-                        output = (
-                            f"{output}\n[runner-cursor-auth-retry] oauth auth failure detected; "
-                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
-                            f"{retry_suffix}"
-                        )
-                    else:
-                        output = (
-                            f"{output}\n[runner-cursor-auth-retry] "
-                            "oauth refresh retry already attempted; not retrying auth retry."
-                        )
-            elif _uses_gemini_cli(command):
-                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_refresh_retry_attempted"))
-                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_gemini_oauth_session_refresh_attempted"))
-                auth_mode = str((gemini_auth_state or {}).get("effective_mode") or "").strip().lower()
-                oauth_refresh_retry_eligible = bool(gemini_auth_state and auth_mode == "oauth")
-                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
-                    if not oauth_refresh_retry_attempted:
-                        session_refresh_ok = False
-                        session_refresh_detail = "oauth_session_refresh_skipped"
-                        session_refresh_was_attempted = False
-                        if not oauth_session_refresh_attempted:
-                            session_refresh_was_attempted = True
-                            session_refresh_ok, session_refresh_detail = _attempt_gemini_oauth_session_refresh_from_env(
-                                env=env,
-                                task_id=task_id,
-                                log=log,
-                                task_ctx=task_ctx,
-                            )
-                        else:
-                            session_refresh_detail = "oauth_session_refresh_already_attempted"
-                        retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["runner_gemini_auth_mode"] = "oauth"
-                        retry_task_ctx["runner_gemini_oauth_refresh_retry_attempted"] = True
-                        retry_task_ctx["runner_gemini_oauth_session_refresh_attempted"] = bool(
-                            oauth_session_refresh_attempted or session_refresh_was_attempted
-                        )
-                        retry_task_ctx["runner_gemini_oauth_session_refresh"] = {
-                            "ok": bool(session_refresh_ok),
-                            "detail": session_refresh_detail,
-                            "at": _utc_now_iso(),
-                        }
-                        retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
-                            retry_task_ctx["runner_retry_max"] = 0
-                        else:
-                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                        retry_context_patch = (retry_context_patch or {}) | {
-                            "runner_gemini_auth_mode": "oauth",
-                            "runner_gemini_oauth_refresh_retry_attempted": True,
-                            "runner_gemini_oauth_session_refresh_attempted": bool(
-                                oauth_session_refresh_attempted or session_refresh_was_attempted
-                            ),
-                            "runner_gemini_oauth_session_refresh": {
-                                "ok": bool(session_refresh_ok),
-                                "detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                            "runner_gemini_oauth_refresh_retry": {
-                                "trigger": "oauth_refresh_or_auth_error",
-                                "mode": "oauth",
-                                "oauth_session_refresh_ok": bool(session_refresh_ok),
-                                "oauth_session_refresh_detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                        }
-                        retry_suffix = (
-                            "retry disabled by explicit retry_max=0."
-                            if retry_disabled
-                            else "retrying with oauth auth mode."
-                        )
-                        output = (
-                            f"{output}\n[runner-gemini-auth-retry] oauth auth failure detected; "
-                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
-                            f"{retry_suffix}"
-                        )
-                    else:
-                        output = (
-                            f"{output}\n[runner-gemini-auth-retry] "
-                            "oauth refresh retry already attempted; not retrying auth retry."
-                        )
-            elif _uses_claude_cli(command):
-                oauth_refresh_retry_attempted = _as_bool(task_ctx.get("runner_claude_oauth_refresh_retry_attempted"))
-                oauth_session_refresh_attempted = _as_bool(task_ctx.get("runner_claude_oauth_session_refresh_attempted"))
-                auth_mode = str((claude_auth_state or {}).get("effective_mode") or "").strip().lower()
-                oauth_refresh_retry_eligible = bool(claude_auth_state and auth_mode == "oauth")
-                if oauth_refresh_retry_eligible and _oauth_session_refresh_or_auth_error(output):
-                    if not oauth_refresh_retry_attempted:
-                        session_refresh_ok = False
-                        session_refresh_detail = "oauth_session_refresh_skipped"
-                        session_refresh_was_attempted = False
-                        if not oauth_session_refresh_attempted:
-                            session_refresh_was_attempted = True
-                            session_refresh_ok, session_refresh_detail = _attempt_claude_oauth_session_refresh_from_env(
-                                env=env,
-                                task_id=task_id,
-                                log=log,
-                                task_ctx=task_ctx,
-                            )
-                        else:
-                            session_refresh_detail = "oauth_session_refresh_already_attempted"
-                        retry_task_ctx = dict(retry_task_ctx)
-                        retry_task_ctx["runner_claude_auth_mode"] = "oauth"
-                        retry_task_ctx["runner_claude_oauth_refresh_retry_attempted"] = True
-                        retry_task_ctx["runner_claude_oauth_session_refresh_attempted"] = bool(
-                            oauth_session_refresh_attempted or session_refresh_was_attempted
-                        )
-                        retry_task_ctx["runner_claude_oauth_session_refresh"] = {
-                            "ok": bool(session_refresh_ok),
-                            "detail": session_refresh_detail,
-                            "at": _utc_now_iso(),
-                        }
-                        retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
-                            retry_task_ctx["runner_retry_max"] = 0
-                        else:
-                            retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
-                            requested_delay = max(0, min(3600, _to_int(task_ctx.get("runner_retry_delay_seconds"), 8)))
-                            retry_task_ctx["runner_retry_delay_seconds"] = min(3600, max(2, requested_delay))
-                        retry_context_patch = (retry_context_patch or {}) | {
-                            "runner_claude_auth_mode": "oauth",
-                            "runner_claude_oauth_refresh_retry_attempted": True,
-                            "runner_claude_oauth_session_refresh_attempted": bool(
-                                oauth_session_refresh_attempted or session_refresh_was_attempted
-                            ),
-                            "runner_claude_oauth_session_refresh": {
-                                "ok": bool(session_refresh_ok),
-                                "detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                            "runner_claude_oauth_refresh_retry": {
-                                "trigger": "oauth_refresh_or_auth_error",
-                                "mode": "oauth",
-                                "oauth_session_refresh_ok": bool(session_refresh_ok),
-                                "oauth_session_refresh_detail": session_refresh_detail,
-                                "at": _utc_now_iso(),
-                            },
-                        }
-                        retry_suffix = (
-                            "retry disabled by explicit retry_max=0."
-                            if retry_disabled
-                            else "retrying with oauth auth mode."
-                        )
-                        output = (
-                            f"{output}\n[runner-claude-auth-retry] oauth auth failure detected; "
-                            f"oauth session refresh {'ok' if session_refresh_ok else 'failed'} ({session_refresh_detail}); "
-                            f"{retry_suffix}"
-                        )
-                    else:
-                        output = (
-                            f"{output}\n[runner-claude-auth-retry] "
-                            "oauth refresh retry already attempted; not retrying auth retry."
-                        )
+        elif (not pr_mode) and status != "completed":
             retry_scheduled, retry_message = _schedule_retry_if_configured(
                 client,
                 task_id=task_id,
-                task_ctx=retry_task_ctx,
+                task_ctx=task_ctx,
                 output=output,
                 failure_class=failure_class,
                 attempt=attempt,
                 duration_seconds=duration_sec,
-                extra_context_patch=retry_context_patch,
             )
             if retry_scheduled:
                 status = "pending"
@@ -7062,43 +4350,7 @@ def run_one_task(
                     lease_seconds=RUN_LEASE_SECONDS,
                     require_owner=True,
                 )
-                _record_observer_context_snapshot(
-                    client,
-                    task_id=task_id,
-                    transition="retry",
-                    run_id=run_id,
-                    worker_id=worker_id,
-                    status="pending",
-                    current_step="retry scheduled",
-                    failure_class=failure_class,
-                    context_hint={
-                        "runner_state": "retry_pending",
-                        "next_action": "retry_scheduled",
-                        "last_failure_class": failure_class,
-                    },
-                )
-            elif retry_message.startswith("[cadence-steering]"):
-                status = "needs_decision"
-                output = f"{output}\n\n{retry_message}"
-                _sync_run_state(
-                    client,
-                    task_id=task_id,
-                    run_id=run_id,
-                    worker_id=worker_id,
-                    patch={
-                        "status": "needs_decision",
-                        "failure_class": failure_class,
-                        "next_action": "steering_required",
-                        "completed_at": _utc_now_iso(),
-                    },
-                    lease_seconds=RUN_LEASE_SECONDS,
-                    require_owner=True,
-                )
             else:
-                client.patch(
-                    f"{BASE}/api/agent/tasks/{task_id}",
-                    json={"status": status, "output": output[:4000]},
-                )
                 _sync_run_state(
                     client,
                     task_id=task_id,
@@ -7112,7 +4364,7 @@ def run_one_task(
                     lease_seconds=RUN_LEASE_SECONDS,
                     require_owner=True,
                 )
-        elif not hold_policy_applied:
+        else:
             _sync_run_state(
                 client,
                 task_id=task_id,
@@ -7126,37 +4378,6 @@ def run_one_task(
                 lease_seconds=RUN_LEASE_SECONDS,
                 require_owner=True,
             )
-        _record_observer_context_snapshot(
-            client,
-            task_id=task_id,
-            transition="complete",
-            run_id=run_id,
-            worker_id=worker_id,
-            status=status,
-            current_step="finalized",
-            failure_class=failure_class if status != "completed" else "",
-            context_hint={
-                "runner_state": (
-                    "idle"
-                    if status == "completed"
-                    else (
-                        "retry_pending"
-                        if status == "pending"
-                        else ("steering_required" if status == "needs_decision" else "finished")
-                    )
-                ),
-                "next_action": (
-                    "done"
-                    if status == "completed"
-                    else (
-                        "retry_scheduled"
-                        if status == "pending"
-                        else ("steering_required" if status == "needs_decision" else "needs_attention")
-                    )
-                ),
-                "last_failure_class": failure_class if status != "completed" else "",
-            },
-        )
         log.info("task=%s %s exit=%s duration=%.1fs output_len=%d out_file=%s", task_id, status, returncode, duration_sec, len(output), out_file)
         if verbose:
             print(f"  -> {status} (exit {returncode})")
@@ -7240,14 +4461,6 @@ def run_one_task(
             last_error=str(e),
             metadata={"last_task_id": task_id, "task_type": task_type},
         )
-        if ROLLBACK_ON_TASK_FAILURE:
-            _maybe_trigger_runner_rollback(
-                client,
-                log,
-                reason="runner_exception",
-                task_id=task_id,
-                failure_class="runner_exception",
-            )
         log.exception("task=%s error: %s", task_id, e)
         return True
 
@@ -7403,7 +4616,6 @@ def poll_and_run(
             active_run_id="",
             metadata={"mode": "polling"},
         )
-        fetch_limit = max(workers, PENDING_TASK_FETCH_LIMIT)
         r = _http_with_retry(
             client,
             "GET",
@@ -7438,7 +4650,7 @@ def poll_and_run(
             continue
 
         # Fetch full task (including command) for each
-        to_run: list[TaskRunItem] = []
+        to_run: list[tuple[str, str, str, str, dict[str, Any], str]] = []
         for task in tasks:
             task_id = task["id"]
             r2 = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{task_id}", log)
@@ -7460,12 +4672,7 @@ def poll_and_run(
             if retry_not_before is not None and retry_not_before > datetime.now(timezone.utc):
                 continue
             direction = str(full.get("direction", "") or "")
-            has_measured_value = _task_has_measured_value_signal(
-                client,
-                context=context,
-                log=log,
-            )
-            to_run.append((task_id, command, task_type, model, context, direction, has_measured_value))
+            to_run.append((task_id, command, task_type, model, context, direction))
 
         if not to_run:
             if once:
@@ -7473,29 +4680,18 @@ def poll_and_run(
             time.sleep(interval)
             continue
 
-        scheduled_tasks = _select_tasks_for_execution(
-            to_run,
-            max_tasks=max(1, workers),
-            log=log,
-        )
-        if not scheduled_tasks:
-            if once:
-                break
-            time.sleep(interval)
-            continue
-
         # PR-flow tasks should stay serial to avoid shared worktree race conditions.
-        pr_tasks: list[TaskRunItem] = []
-        direct_tasks: list[TaskRunItem] = []
-        for item in scheduled_tasks:
-            _, _, task_type, _, ctx, _, _ = item
+        pr_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
+        direct_tasks: list[tuple[str, str, str, str, dict[str, Any], str]] = []
+        for item in to_run:
+            _, _, task_type, _, ctx, _ = item
             if _should_run_pr_flow({"task_type": task_type, "context": ctx}):
                 pr_tasks.append(item)
             else:
                 direct_tasks.append(item)
 
         if pr_tasks:
-            for tid, cmd, tt, m, ctx, direction, has_measured_value in pr_tasks:
+            for tid, cmd, tt, m, ctx, direction in pr_tasks:
                 run_one_task(
                     client,
                     tid,
@@ -7507,8 +4703,6 @@ def poll_and_run(
                     task_context=ctx,
                     task_direction=direction,
                 )
-                _record_scheduler_execution(has_measured_value)
-                _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
 
         if not direct_tasks:
             if once:
@@ -7517,7 +4711,7 @@ def poll_and_run(
             continue
 
         if workers == 1:
-            tid, cmd, tt, m, ctx, direction, has_measured_value = direct_tasks[0]
+            tid, cmd, tt, m, ctx, direction = direct_tasks[0]
             run_one_task(
                 client,
                 tid,
@@ -7529,8 +4723,6 @@ def poll_and_run(
                 task_context=ctx,
                 task_direction=direction,
             )
-            _record_scheduler_execution(has_measured_value)
-            _maybe_trigger_runner_self_update(client, log, last_task_id=tid)
         else:
             with ThreadPoolExecutor(max_workers=max(1, len(direct_tasks))) as ex:
                 futures = {
@@ -7545,8 +4737,8 @@ def poll_and_run(
                         m,
                         ctx,
                         direction,
-                    ): (tid, cmd, has_measured_value)
-                    for tid, cmd, tt, m, ctx, direction, has_measured_value in direct_tasks
+                    ): (tid, cmd)
+                    for tid, cmd, tt, m, ctx, direction in direct_tasks
                 }
                 for future in as_completed(futures):
                     tid, _, has_measured_value = futures[future]

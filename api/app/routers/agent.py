@@ -33,13 +33,7 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import (
-    agent_execution_hooks,
-    agent_run_state_service,
-    agent_runner_registry_service,
-    agent_service,
-    runner_orphan_recovery_service,
-)
+from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -269,8 +263,8 @@ async def get_run_state(task_id: str) -> dict:
 
 
 @router.post("/agent/runners/heartbeat", response_model=AgentRunnerSnapshot)
-async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: BackgroundTasks) -> dict:
-    snapshot = agent_runner_registry_service.heartbeat_runner(
+async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
+    return agent_runner_registry_service.heartbeat_runner(
         runner_id=data.runner_id,
         status=data.status,
         lease_seconds=data.lease_seconds,
@@ -283,12 +277,6 @@ async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: Backgro
         capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
         metadata=data.metadata if isinstance(data.metadata, dict) else None,
     )
-    await runner_orphan_recovery_service.maybe_recover_on_idle_heartbeat(
-        snapshot=snapshot,
-        background_tasks=background_tasks,
-        alert_builder=lambda task: format_task_alert(task, runner_update=False),
-    )
-    return snapshot
 
 
 @router.get("/agent/runners", response_model=AgentRunnerList)
@@ -300,21 +288,6 @@ async def list_runners(
     return AgentRunnerList(
         runners=[AgentRunnerSnapshot(**row) for row in rows],
         total=len(rows),
-    )
-
-
-@router.get("/agent/lifecycle/summary")
-async def agent_lifecycle_summary(
-    seconds: int = Query(3600, ge=60, le=2592000),
-    limit: int = Query(500, ge=1, le=5000),
-    task_id: str | None = Query(None),
-    source: str = Query("auto"),
-) -> dict:
-    return agent_execution_hooks.summarize_lifecycle_events(
-        seconds=seconds,
-        limit=limit,
-        task_id=task_id,
-        source=source,
     )
 
 
