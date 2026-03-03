@@ -14,24 +14,71 @@ from app.services import agent_execution_service as execution_service
 from app.services import agent_task_continuation_service as continuation_service
 
 
-def _emit_lifecycle_event(
-    event: str,
-    *,
+def _capture_provider_usage_guard_snapshot(
     task_id: str,
     task: dict[str, Any],
-    **extra: Any,
-) -> None:
+    *,
+    stage: str,
+) -> dict[str, Any] | None:
+    if not execution_service._task_route_is_paid(task):
+        return None
+    provider = execution_service._task_route_provider(task)
+    if not provider:
+        return None
+
     try:
-        hooks_service.dispatch_lifecycle_event(
-            event,
+        decision = execution_service.automation_usage_service.provider_limit_guard_decision(
+            provider,
+            force_refresh=True,
+        )
+    except Exception as exc:
+        execution_service._write_task_log(
+            task_id,
+            [
+                f"[provider_usage_guard] stage={stage} provider={provider} decision_failed: "
+                f"{str(exc)}"
+            ]
+        )
+        return None
+
+    checkpoint = {
+        "stage": stage,
+        "provider": provider,
+        "allowed": bool(decision.get("allowed", False)),
+        "reason": str(decision.get("reason") or ""),
+        "status": str(decision.get("status") or ""),
+    }
+
+    context = dict(task.get("context") or {})
+    guard_checks = context.get("provider_usage_guard_decisions")
+    if isinstance(guard_checks, list):
+        checkpoint_history = list(guard_checks)
+    else:
+        checkpoint_history = []
+    checkpoint_history.append(checkpoint)
+    context["provider_usage_guard_decisions"] = checkpoint_history
+    context["provider_usage_guard_last"] = checkpoint
+    try:
+        execution_service.agent_service.update_task(task_id, context=context)
+    except Exception:
+        pass
+
+    if not checkpoint["allowed"] and stage == "post_execution":
+        execution_service._record_friction_event(
             task_id=task_id,
             task=task,
-            **extra,
+            stage="agent_execution",
+            block_type="provider_usage_blocked_after_execution",
+            endpoint="tool:agent-task-execution-summary",
+            severity="high",
+            notes=(
+                f"Provider usage guard blocked after execution for provider={provider}; "
+                f"reason={checkpoint['reason']}"
+            ),
+            energy_loss_estimate=0.0,
         )
-    except Exception:
-        # Lifecycle hooks are observability helpers and must not break execution.
-        return
 
+    return checkpoint
 
 def _apply_value_attribution(
     task: dict[str, Any],
@@ -134,6 +181,8 @@ def _handle_paid_route_guard(
     if not route_is_paid:
         return None
 
+    _capture_provider_usage_guard_snapshot(task_id=task_id, task=task, stage="pre_execution")
+
     if not (
         execution_service._paid_providers_allowed()
         or force_paid_providers
@@ -163,12 +212,56 @@ def _handle_paid_route_guard(
         return {"ok": False, "status": "failed", "error": "paid_provider_blocked"}
 
     if route_is_paid and not force_paid_providers:
+        is_openai_codex = execution_service._route_is_openai_codex(task)
         allowed, budget_msg = execution_service._check_paid_provider_window_budget(
             route_is_paid=True,
             task=task,
             task_id=task_id,
+            emit_friction_event=not is_openai_codex,
         )
         if not allowed:
+            current_model = str(task.get("model") or "")
+            budget_block_type = "usage_window_budget_exceeded"
+            if budget_msg and budget_msg.startswith(
+                "Paid-provider usage blocked by provider quota policy"
+            ):
+                budget_block_type = "provider_usage_limit_exceeded"
+            if (
+                is_openai_codex
+                and budget_msg
+                and budget_msg.startswith("Paid-provider usage blocked by window policy")
+                and execution_service._apply_openai_codex_budget_fallback(
+                    task_id=task_id,
+                    task=task,
+                    current_model=current_model,
+                    fallback_model=execution_service._openai_codex_fallback_model(),
+                    reason="paid_window_budget_pressure",
+                )
+            ):
+                execution_service._write_task_log(
+                    task_id,
+                    [
+                        f"Window budget pressure detected; model downgraded from {current_model!r} to {task.get('model')!r}"
+                    ],
+                )
+                execution_service.agent_service.update_task(
+                    task_id,
+                    context=dict(task.get("context") or {}),
+                )
+                return None
+
+            if is_openai_codex:
+                execution_service._record_friction_event(
+                    task_id=task_id,
+                    task=task,
+                    stage="agent_execution",
+                    block_type=budget_block_type,
+                    endpoint="tool:agent-task-execution-summary",
+                    severity="high",
+                    notes=budget_msg,
+                    energy_loss_estimate=0.0,
+                )
+
             execution_service._write_task_log(task_id, [budget_msg or "Paid-provider window budget blocked"])
             execution_service._finish_task(
                 task_id=task_id,
@@ -320,6 +413,11 @@ def _run_execution(
             cost_budget=cost_budget,
         )
         elapsed_ms = int(result.get("elapsed_ms") or 1)
+        _capture_provider_usage_guard_snapshot(
+            task_id=task_id,
+            task=task,
+            stage="post_execution",
+        )
         if result.get("ok") is True:
             return _handle_openrouter_success(
                 task_id=task_id,

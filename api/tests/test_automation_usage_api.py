@@ -124,6 +124,115 @@ def test_evaluate_usage_alerts_suppresses_openai_permission_only_degraded(
     )
 
 
+def test_evaluate_usage_alerts_flags_remaining_tracking_gap_for_required_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openrouter_test",
+                provider="openrouter",
+                kind="custom",
+                status="ok",
+                data_source="provider_api",
+                metrics=[],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "provider_readiness_report",
+        lambda force_refresh=False: ProviderReadinessReport(
+            required_providers=["openrouter"],
+            all_required_ready=True,
+            blocking_issues=[],
+            recommendations=[],
+            providers=[
+                ProviderReadinessRow(
+                    provider="openrouter",
+                    kind="custom",
+                    status="ok",
+                    required=True,
+                    configured=True,
+                    severity="info",
+                    missing_env=[],
+                    notes=[],
+                )
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_required_providers_from_env",
+        lambda: ["coherence-internal", "openrouter"],
+    )
+    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
+
+    report = automation_usage_service.evaluate_usage_alerts(threshold_ratio=0.2)
+    assert any(
+        alert.provider == "openrouter" and alert.metric_id == "remaining_tracking_gap"
+        for alert in report.alerts
+    )
+
+
+def test_provider_limit_guard_decision_blocks_low_monthly_remaining(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    overview = ProviderUsageOverview(
+        providers=[
+            ProviderUsageSnapshot(
+                id="provider_openai_guard_test",
+                provider="openai",
+                kind="openai",
+                status="ok",
+                data_source="provider_api",
+                metrics=[
+                    UsageMetric(
+                        id="credits",
+                        label="OpenAI monthly credits",
+                        unit="usd",
+                        used=96.0,
+                        remaining=4.0,
+                        limit=100.0,
+                        window="monthly",
+                    )
+                ],
+            )
+        ],
+        unavailable_providers=[],
+        tracked_providers=1,
+        limit_coverage={},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: overview,
+    )
+    monkeypatch.setenv("AUTOMATION_PROVIDER_WINDOW_GUARD_ENABLED", "1")
+    monkeypatch.setenv("AUTOMATION_PROVIDER_MIN_REMAINING_RATIO_MONTHLY", "0.1")
+
+    decision = automation_usage_service.provider_limit_guard_decision("openai")
+    assert decision["allowed"] is False
+    assert decision["provider"] == "openai"
+    assert decision["blocked_metrics"][0]["window"] == "monthly"
+    assert decision["blocked_metrics"][0]["remaining_ratio"] == pytest.approx(0.04, rel=1e-6)
+
+
+def test_provider_limit_guard_defaults_to_one_third_ratio() -> None:
+    defaults = automation_usage_service._provider_window_guard_ratio_defaults()
+    assert defaults["hourly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+    assert defaults["weekly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+    assert defaults["monthly"] == pytest.approx(1.0 / 3.0, rel=1e-9)
+
+
 @pytest.mark.asyncio
 async def test_automation_usage_endpoint_returns_normalized_providers(
     tmp_path,
