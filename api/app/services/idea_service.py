@@ -8,6 +8,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
+
 from app.models.idea import (
     Idea,
     PaginationInfo,
@@ -294,7 +297,8 @@ def _ideas_cache_key() -> str:
         f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
         f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
-        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
+        f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
     )
 
 
@@ -400,6 +404,70 @@ def _discover_registry_domain_idea_ids() -> list[str]:
         if idea_id and idea_id != "unmapped":
             discovered.add(idea_id)
 
+    discovered.update(_contribution_metadata_idea_ids())
+
+    return sorted(discovered)
+
+
+def _contribution_metadata_idea_ids() -> list[str]:
+    database_url = str(os.getenv("DATABASE_URL", "")).strip()
+    if not database_url:
+        return []
+
+    try:
+        contribution_limit_raw = int(str(os.getenv("IDEA_SYNC_CONTRIBUTION_LIMIT", "3000")).strip() or "3000")
+    except ValueError:
+        contribution_limit_raw = 3000
+    contribution_limit = max(1, min(contribution_limit_raw, 20000))
+
+    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
+    if database_url.startswith("sqlite"):
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+        engine_kwargs["poolclass"] = NullPool
+
+    rows: list[Any] = []
+    try:
+        engine = create_engine(database_url, **engine_kwargs)
+        with engine.connect() as conn:
+            rows = list(
+                conn.execute(
+                    text("SELECT meta FROM contributions ORDER BY timestamp DESC LIMIT :limit"),
+                    {"limit": contribution_limit},
+                )
+            )
+    except Exception:
+        return []
+    finally:
+        try:
+            engine.dispose()
+        except Exception:
+            pass
+
+    discovered: set[str] = set()
+    for row in rows:
+        metadata: Any = None
+        try:
+            metadata = row[0] if isinstance(row, tuple) else row.meta  # type: ignore[attr-defined]
+        except Exception:
+            try:
+                metadata = row[0]
+            except Exception:
+                metadata = None
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except ValueError:
+                metadata = None
+        if not isinstance(metadata, dict):
+            continue
+        raw_single = metadata.get("idea_id")
+        if isinstance(raw_single, str) and raw_single.strip():
+            discovered.add(raw_single.strip())
+        raw_multi = metadata.get("idea_ids")
+        if isinstance(raw_multi, list):
+            for item in raw_multi:
+                if isinstance(item, str) and item.strip():
+                    discovered.add(item.strip())
     return sorted(discovered)
 
 
