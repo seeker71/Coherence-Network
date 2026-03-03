@@ -1,0 +1,1347 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "OFF"
+      - text: "| path"
+      - code [ref=e34]: /ideas
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /ideas
+      - text: "| idea"
+      - code [ref=e41]: portfolio-governance
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e45] [cursor=pointer]:
+        - /url: /flow
+      - link "Contribute" [ref=e46] [cursor=pointer]:
+        - /url: /contribute
+      - link "Specs" [ref=e47] [cursor=pointer]:
+        - /url: /specs
+      - link "Usage" [ref=e48] [cursor=pointer]:
+        - /url: /usage
+      - link "Automation" [ref=e49] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e50] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e51] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e52] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e53] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e54] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e55] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e56] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e57] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e58] [cursor=pointer]:
+        - /url: /api-health
+      - link "Gates" [ref=e59] [cursor=pointer]:
+        - /url: /gates
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/portfolio-governance
+      - link "Ideas API" [ref=e61] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/ideas
+      - link "System lineage" [ref=e62] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/inventory/system-lineage
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - heading "Ideas In Motion" [level=1] [ref=e66]
+        - paragraph [ref=e67]: A global community bringing ideas to life with care, coherence, and measurable impact.
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - paragraph [ref=e71]: Ideas in the field
+          - paragraph [ref=e72]: "171"
+        - generic [ref=e73]:
+          - paragraph [ref=e74]: Validated
+          - paragraph [ref=e75]: "14"
+        - generic [ref=e76]:
+          - paragraph [ref=e77]: Actively measured
+          - paragraph [ref=e78]: "14"
+        - generic [ref=e79]:
+          - paragraph [ref=e80]: Ready for attention
+          - paragraph [ref=e81]: "171"
+        - generic [ref=e82]:
+          - paragraph [ref=e83]: Collective focus this cycle
+          - paragraph [ref=e84]: Lift Tool failure cost ledger from none → measured
+      - generic [ref=e85]:
+        - textbox "Search ideas, specs, places, owners, or questions..." [ref=e87]
+        - link "Filters" [ref=e88] [cursor=pointer]:
+          - /url: /ideas?state=spec
+        - link "Sort" [ref=e89] [cursor=pointer]:
+          - /url: /ideas?sort=roi_desc
+        - link "Views" [ref=e90] [cursor=pointer]:
+          - /url: /ideas?view=focus
+      - generic [ref=e92]:
+        - link "All" [ref=e93] [cursor=pointer]:
+          - /url: /ideas?state=all&attention=all
+        - link "Spec" [ref=e94] [cursor=pointer]:
+          - /url: /ideas?state=spec
+        - link "Implemented" [ref=e95] [cursor=pointer]:
+          - /url: /ideas?state=implemented
+        - link "Validated" [ref=e96] [cursor=pointer]:
+          - /url: /ideas?state=validated
+        - link "Measured" [ref=e97] [cursor=pointer]:
+          - /url: /ideas?state=measured
+        - link "Needs Attention" [ref=e98] [cursor=pointer]:
+          - /url: /ideas?attention=high
+        - link "ROI > 10" [ref=e99] [cursor=pointer]:
+          - /url: /ideas?min_roi=10
+        - generic [ref=e100]: 1-50 of 171
+      - generic [ref=e101]:
+        - article [ref=e102]:
+          - generic [ref=e103]:
+            - heading "Active Ideas" [level=2] [ref=e104]
+            - generic [ref=e105]:
+              - generic [ref=e106]: ∞ links
+              - generic [ref=e107]: ⚡ gap
+              - generic [ref=e108]: ↗ roi
+              - generic [ref=e109]: • attention
+          - list [ref=e110]:
+            - listitem [ref=e111]:
+              - generic [ref=e112]:
+                - generic [ref=e113]: ◌
+                - generic [ref=e114]:
+                  - heading "Tool failure cost ledger" [level=3] [ref=e115]
+                  - paragraph [ref=e116]: Track every tool call failure with elapsed time and resource spend so expensive no-gain runs are quantified and prioritized for mitigation.
+              - generic [ref=e117]:
+                - generic [ref=e118]:
+                  - paragraph [ref=e119]: links
+                  - paragraph [ref=e120]: "0"
+                - generic [ref=e121]:
+                  - paragraph [ref=e122]: gap
+                  - paragraph [ref=e123]: "124.0"
+                - generic [ref=e124]:
+                  - paragraph [ref=e125]: roi
+                  - paragraph [ref=e126]: "0.0"
+                - generic [ref=e127]:
+                  - paragraph [ref=e128]: attention
+                  - generic [ref=e131]: high
+              - generic [ref=e132]:
+                - generic [ref=e133]: none
+                - link "Open →" [ref=e134] [cursor=pointer]:
+                  - /url: /ideas/tool-failure-cost-ledger
+            - listitem [ref=e135]:
+              - generic [ref=e136]:
+                - generic [ref=e137]: ◌
+                - generic [ref=e138]:
+                  - heading "Contributor self-serve governance flow" [level=3] [ref=e139]
+                  - paragraph [ref=e140]: Implement complete self-serve flows for contributor registration, idea/spec submission, review voting, and attribution so growth is not blocked by manual intervention.
+              - generic [ref=e141]:
+                - generic [ref=e142]:
+                  - paragraph [ref=e143]: links
+                  - paragraph [ref=e144]: "0"
+                - generic [ref=e145]:
+                  - paragraph [ref=e146]: gap
+                  - paragraph [ref=e147]: "130.0"
+                - generic [ref=e148]:
+                  - paragraph [ref=e149]: roi
+                  - paragraph [ref=e150]: "0.0"
+                - generic [ref=e151]:
+                  - paragraph [ref=e152]: attention
+                  - generic [ref=e155]: high
+              - generic [ref=e156]:
+                - generic [ref=e157]: none
+                - link "Open →" [ref=e158] [cursor=pointer]:
+                  - /url: /ideas/contributor-self-serve-governance-flow
+            - listitem [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]: ◌
+                - generic [ref=e162]:
+                  - heading "Federated instance aggregation for contributor-owned deployments" [level=3] [ref=e163]
+                  - paragraph [ref=e164]: Allow contributors to run full or partial forks and publish verifiable telemetry back to the shared system. This increases contributor throughput without central infrastructure bottlenecks and raises collective value.
+              - generic [ref=e165]:
+                - generic [ref=e166]:
+                  - paragraph [ref=e167]: links
+                  - paragraph [ref=e168]: "0"
+                - generic [ref=e169]:
+                  - paragraph [ref=e170]: gap
+                  - paragraph [ref=e171]: "128.0"
+                - generic [ref=e172]:
+                  - paragraph [ref=e173]: roi
+                  - paragraph [ref=e174]: "0.0"
+                - generic [ref=e175]:
+                  - paragraph [ref=e176]: attention
+                  - generic [ref=e179]: high
+              - generic [ref=e180]:
+                - generic [ref=e181]: none
+                - link "Open →" [ref=e182] [cursor=pointer]:
+                  - /url: /ideas/federated-instance-aggregation
+            - listitem [ref=e183]:
+              - generic [ref=e184]:
+                - generic [ref=e185]: ◌
+                - generic [ref=e186]:
+                  - heading "Spec to process to implementation guard" [level=3] [ref=e187]
+                  - paragraph [ref=e188]: Block merges when implementation lacks linked spec, process/pseudocode, or validation evidence so the change graph remains complete and auditable.
+              - generic [ref=e189]:
+                - generic [ref=e190]:
+                  - paragraph [ref=e191]: links
+                  - paragraph [ref=e192]: "0"
+                - generic [ref=e193]:
+                  - paragraph [ref=e194]: gap
+                  - paragraph [ref=e195]: "122.0"
+                - generic [ref=e196]:
+                  - paragraph [ref=e197]: roi
+                  - paragraph [ref=e198]: "0.0"
+                - generic [ref=e199]:
+                  - paragraph [ref=e200]: attention
+                  - generic [ref=e203]: high
+              - generic [ref=e204]:
+                - generic [ref=e205]: none
+                - link "Open →" [ref=e206] [cursor=pointer]:
+                  - /url: /ideas/spec-process-implementation-guard
+            - listitem [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]: ◌
+                - generic [ref=e210]:
+                  - heading "Real-data-only test contract" [level=3] [ref=e211]
+                  - paragraph [ref=e212]: Detect mock, placeholder, and fake test paths automatically and require safe real-data validation for critical flows before release.
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - paragraph [ref=e215]: links
+                  - paragraph [ref=e216]: "0"
+                - generic [ref=e217]:
+                  - paragraph [ref=e218]: gap
+                  - paragraph [ref=e219]: "121.0"
+                - generic [ref=e220]:
+                  - paragraph [ref=e221]: roi
+                  - paragraph [ref=e222]: "0.0"
+                - generic [ref=e223]:
+                  - paragraph [ref=e224]: attention
+                  - generic [ref=e227]: high
+              - generic [ref=e228]:
+                - generic [ref=e229]: none
+                - link "Open →" [ref=e230] [cursor=pointer]:
+                  - /url: /ideas/real-data-only-test-contract
+            - listitem [ref=e231]:
+              - generic [ref=e232]:
+                - generic [ref=e233]: ◌
+                - generic [ref=e234]:
+                  - heading "Scheduled pipeline effectiveness watchdog" [level=3] [ref=e235]
+                  - paragraph [ref=e236]: Run scheduled audits that measure schedule execution success, stale automations, and unattended failures, then auto-create prioritized tasks from findings.
+              - generic [ref=e237]:
+                - generic [ref=e238]:
+                  - paragraph [ref=e239]: links
+                  - paragraph [ref=e240]: "0"
+                - generic [ref=e241]:
+                  - paragraph [ref=e242]: gap
+                  - paragraph [ref=e243]: "114.0"
+                - generic [ref=e244]:
+                  - paragraph [ref=e245]: roi
+                  - paragraph [ref=e246]: "0.0"
+                - generic [ref=e247]:
+                  - paragraph [ref=e248]: attention
+                  - generic [ref=e251]: high
+              - generic [ref=e252]:
+                - generic [ref=e253]: none
+                - link "Open →" [ref=e254] [cursor=pointer]:
+                  - /url: /ideas/scheduled-pipeline-effectiveness-watchdog
+            - listitem [ref=e255]:
+              - generic [ref=e256]:
+                - generic [ref=e257]: ◌
+                - generic [ref=e258]:
+                  - heading "Public validation gates API" [level=3] [ref=e259]
+                  - paragraph [ref=e260]: Track release and deploy gate endpoints as a dedicated validation and reliability domain.
+              - generic [ref=e261]:
+                - generic [ref=e262]:
+                  - paragraph [ref=e263]: links
+                  - paragraph [ref=e264]: "0"
+                - generic [ref=e265]:
+                  - paragraph [ref=e266]: gap
+                  - paragraph [ref=e267]: "96.0"
+                - generic [ref=e268]:
+                  - paragraph [ref=e269]: roi
+                  - paragraph [ref=e270]: "0.0"
+                - generic [ref=e271]:
+                  - paragraph [ref=e272]: attention
+                  - generic [ref=e275]: high
+              - generic [ref=e276]:
+                - generic [ref=e277]: none
+                - link "Open →" [ref=e278] [cursor=pointer]:
+                  - /url: /ideas/public-validation-gates-api
+            - listitem [ref=e279]:
+              - generic [ref=e280]:
+                - generic [ref=e281]: ◌
+                - generic [ref=e282]:
+                  - heading "Value lineage API" [level=3] [ref=e283]
+                  - paragraph [ref=e284]: Track lineage creation, usage events, valuation, and payout attribution as a dedicated value surface.
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - paragraph [ref=e287]: links
+                  - paragraph [ref=e288]: "0"
+                - generic [ref=e289]:
+                  - paragraph [ref=e290]: gap
+                  - paragraph [ref=e291]: "94.0"
+                - generic [ref=e292]:
+                  - paragraph [ref=e293]: roi
+                  - paragraph [ref=e294]: "0.0"
+                - generic [ref=e295]:
+                  - paragraph [ref=e296]: attention
+                  - generic [ref=e299]: high
+              - generic [ref=e300]:
+                - generic [ref=e301]: none
+                - link "Open →" [ref=e302] [cursor=pointer]:
+                  - /url: /ideas/value-lineage-api
+            - listitem [ref=e303]:
+              - generic [ref=e304]:
+                - generic [ref=e305]: ◌
+                - generic [ref=e306]:
+                  - heading "Inventory governance automation" [level=3] [ref=e307]
+                  - paragraph [ref=e308]: Manage inventory sync, gap closure, and ROI task generation endpoints as a cohesive automation surface.
+              - generic [ref=e309]:
+                - generic [ref=e310]:
+                  - paragraph [ref=e311]: links
+                  - paragraph [ref=e312]: "0"
+                - generic [ref=e313]:
+                  - paragraph [ref=e314]: gap
+                  - paragraph [ref=e315]: "92.0"
+                - generic [ref=e316]:
+                  - paragraph [ref=e317]: roi
+                  - paragraph [ref=e318]: "0.0"
+                - generic [ref=e319]:
+                  - paragraph [ref=e320]: attention
+                  - generic [ref=e323]: high
+              - generic [ref=e324]:
+                - generic [ref=e325]: none
+                - link "Open →" [ref=e326] [cursor=pointer]:
+                  - /url: /ideas/inventory-governance-automation
+            - listitem [ref=e327]:
+              - generic [ref=e328]:
+                - generic [ref=e329]: ◌
+                - generic [ref=e330]:
+                  - heading "Automation provider usage API" [level=3] [ref=e331]
+                  - paragraph [ref=e332]: Track automation usage, alerts, and provider readiness endpoints as a unified automation domain.
+              - generic [ref=e333]:
+                - generic [ref=e334]:
+                  - paragraph [ref=e335]: links
+                  - paragraph [ref=e336]: "0"
+                - generic [ref=e337]:
+                  - paragraph [ref=e338]: gap
+                  - paragraph [ref=e339]: "91.0"
+                - generic [ref=e340]:
+                  - paragraph [ref=e341]: roi
+                  - paragraph [ref=e342]: "0.0"
+                - generic [ref=e343]:
+                  - paragraph [ref=e344]: attention
+                  - generic [ref=e347]: high
+              - generic [ref=e348]:
+                - generic [ref=e349]: none
+                - link "Open →" [ref=e350] [cursor=pointer]:
+                  - /url: /ideas/automation-provider-usage-api
+            - listitem [ref=e351]:
+              - generic [ref=e352]:
+                - generic [ref=e353]: ◌
+                - generic [ref=e354]:
+                  - heading "Contribution ledger API" [level=3] [ref=e355]
+                  - paragraph [ref=e356]: Track contributions and distributions with explicit cost/value accounting and payout readiness.
+              - generic [ref=e357]:
+                - generic [ref=e358]:
+                  - paragraph [ref=e359]: links
+                  - paragraph [ref=e360]: "0"
+                - generic [ref=e361]:
+                  - paragraph [ref=e362]: gap
+                  - paragraph [ref=e363]: "90.0"
+                - generic [ref=e364]:
+                  - paragraph [ref=e365]: roi
+                  - paragraph [ref=e366]: "0.0"
+                - generic [ref=e367]:
+                  - paragraph [ref=e368]: attention
+                  - generic [ref=e371]: high
+              - generic [ref=e372]:
+                - generic [ref=e373]: none
+                - link "Open →" [ref=e374] [cursor=pointer]:
+                  - /url: /ideas/contribution-ledger-api
+            - listitem [ref=e375]:
+              - generic [ref=e376]:
+                - generic [ref=e377]: ◌
+                - generic [ref=e378]:
+                  - heading "Runtime telemetry API" [level=3] [ref=e379]
+                  - paragraph [ref=e380]: Own runtime event, endpoint summary, and usage signal collection endpoints as a dedicated telemetry domain.
+              - generic [ref=e381]:
+                - generic [ref=e382]:
+                  - paragraph [ref=e383]: links
+                  - paragraph [ref=e384]: "0"
+                - generic [ref=e385]:
+                  - paragraph [ref=e386]: gap
+                  - paragraph [ref=e387]: "89.0"
+                - generic [ref=e388]:
+                  - paragraph [ref=e389]: roi
+                  - paragraph [ref=e390]: "0.0"
+                - generic [ref=e391]:
+                  - paragraph [ref=e392]: attention
+                  - generic [ref=e395]: high
+              - generic [ref=e396]:
+                - generic [ref=e397]: none
+                - link "Open →" [ref=e398] [cursor=pointer]:
+                  - /url: /ideas/runtime-telemetry-api
+            - listitem [ref=e399]:
+              - generic [ref=e400]:
+                - generic [ref=e401]: ◌
+                - generic [ref=e402]:
+                  - heading "Agent endpoint observability" [level=3] [ref=e403]
+                  - paragraph [ref=e404]: Track and evolve agent task and routing endpoints as a dedicated concept with measurable operational value.
+              - generic [ref=e405]:
+                - generic [ref=e406]:
+                  - paragraph [ref=e407]: links
+                  - paragraph [ref=e408]: "0"
+                - generic [ref=e409]:
+                  - paragraph [ref=e410]: gap
+                  - paragraph [ref=e411]: "88.0"
+                - generic [ref=e412]:
+                  - paragraph [ref=e413]: roi
+                  - paragraph [ref=e414]: "0.0"
+                - generic [ref=e415]:
+                  - paragraph [ref=e416]: attention
+                  - generic [ref=e419]: high
+              - generic [ref=e420]:
+                - generic [ref=e421]: none
+                - link "Open →" [ref=e422] [cursor=pointer]:
+                  - /url: /ideas/agent-endpoint-observability
+            - listitem [ref=e423]:
+              - generic [ref=e424]:
+                - generic [ref=e425]: ◌
+                - generic [ref=e426]:
+                  - heading "Coherence network value attribution" [level=3] [ref=e427]
+                  - paragraph [ref=e428]: Track value lineage from idea to payout with measurable contribution attribution.
+              - generic [ref=e429]:
+                - generic [ref=e430]:
+                  - paragraph [ref=e431]: links
+                  - paragraph [ref=e432]: "0"
+                - generic [ref=e433]:
+                  - paragraph [ref=e434]: gap
+                  - paragraph [ref=e435]: "92.0"
+                - generic [ref=e436]:
+                  - paragraph [ref=e437]: roi
+                  - paragraph [ref=e438]: "0.0"
+                - generic [ref=e439]:
+                  - paragraph [ref=e440]: attention
+                  - generic [ref=e443]: high
+              - generic [ref=e444]:
+                - generic [ref=e445]: none
+                - link "Open →" [ref=e446] [cursor=pointer]:
+                  - /url: /ideas/coherence-network-value-attribution
+            - listitem [ref=e447]:
+              - generic [ref=e448]:
+                - generic [ref=e449]: ◌
+                - generic [ref=e450]:
+                  - heading "Governance change request API" [level=3] [ref=e451]
+                  - paragraph [ref=e452]: Manage change request and voting endpoints as a dedicated governance domain.
+              - generic [ref=e453]:
+                - generic [ref=e454]:
+                  - paragraph [ref=e455]: links
+                  - paragraph [ref=e456]: "0"
+                - generic [ref=e457]:
+                  - paragraph [ref=e458]: gap
+                  - paragraph [ref=e459]: "87.0"
+                - generic [ref=e460]:
+                  - paragraph [ref=e461]: roi
+                  - paragraph [ref=e462]: "0.0"
+                - generic [ref=e463]:
+                  - paragraph [ref=e464]: attention
+                  - generic [ref=e467]: high
+              - generic [ref=e468]:
+                - generic [ref=e469]: none
+                - link "Open →" [ref=e470] [cursor=pointer]:
+                  - /url: /ideas/governance-change-request-api
+            - listitem [ref=e471]:
+              - generic [ref=e472]:
+                - generic [ref=e473]: ◌
+                - generic [ref=e474]:
+                  - heading "Contributor registry API" [level=3] [ref=e475]
+                  - paragraph [ref=e476]: Manage contributor identities, attribution metadata, and onboarding readiness via dedicated endpoints.
+              - generic [ref=e477]:
+                - generic [ref=e478]:
+                  - paragraph [ref=e479]: links
+                  - paragraph [ref=e480]: "0"
+                - generic [ref=e481]:
+                  - paragraph [ref=e482]: gap
+                  - paragraph [ref=e483]: "86.0"
+                - generic [ref=e484]:
+                  - paragraph [ref=e485]: roi
+                  - paragraph [ref=e486]: "0.0"
+                - generic [ref=e487]:
+                  - paragraph [ref=e488]: attention
+                  - generic [ref=e491]: high
+              - generic [ref=e492]:
+                - generic [ref=e493]: none
+                - link "Open →" [ref=e494] [cursor=pointer]:
+                  - /url: /ideas/contributor-registry-api
+            - listitem [ref=e495]:
+              - generic [ref=e496]:
+                - generic [ref=e497]: ◌
+                - generic [ref=e498]:
+                  - heading "Idea lifecycle API" [level=3] [ref=e499]
+                  - paragraph [ref=e500]: Own creation, update, and question-answer lifecycle of ideas as a dedicated API capability.
+              - generic [ref=e501]:
+                - generic [ref=e502]:
+                  - paragraph [ref=e503]: links
+                  - paragraph [ref=e504]: "0"
+                - generic [ref=e505]:
+                  - paragraph [ref=e506]: gap
+                  - paragraph [ref=e507]: "84.0"
+                - generic [ref=e508]:
+                  - paragraph [ref=e509]: roi
+                  - paragraph [ref=e510]: "0.0"
+                - generic [ref=e511]:
+                  - paragraph [ref=e512]: attention
+                  - generic [ref=e515]: high
+              - generic [ref=e516]:
+                - generic [ref=e517]: none
+                - link "Open →" [ref=e518] [cursor=pointer]:
+                  - /url: /ideas/idea-lifecycle-api
+            - listitem [ref=e519]:
+              - generic [ref=e520]:
+                - generic [ref=e521]: ◌
+                - generic [ref=e522]:
+                  - heading "Friction observability API" [level=3] [ref=e523]
+                  - paragraph [ref=e524]: Own friction event/report endpoints to continuously measure and reduce workflow drag.
+              - generic [ref=e525]:
+                - generic [ref=e526]:
+                  - paragraph [ref=e527]: links
+                  - paragraph [ref=e528]: "0"
+                - generic [ref=e529]:
+                  - paragraph [ref=e530]: gap
+                  - paragraph [ref=e531]: "83.0"
+                - generic [ref=e532]:
+                  - paragraph [ref=e533]: roi
+                  - paragraph [ref=e534]: "0.0"
+                - generic [ref=e535]:
+                  - paragraph [ref=e536]: attention
+                  - generic [ref=e539]: high
+              - generic [ref=e540]:
+                - generic [ref=e541]: none
+                - link "Open →" [ref=e542] [cursor=pointer]:
+                  - /url: /ideas/friction-observability-api
+            - listitem [ref=e543]:
+              - generic [ref=e544]:
+                - generic [ref=e545]: ◌
+                - generic [ref=e546]:
+                  - heading "Asset registry API" [level=3] [ref=e547]
+                  - paragraph [ref=e548]: Manage assets and their tracked value contributions through dedicated endpoints and governance links.
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - paragraph [ref=e551]: links
+                  - paragraph [ref=e552]: "0"
+                - generic [ref=e553]:
+                  - paragraph [ref=e554]: gap
+                  - paragraph [ref=e555]: "82.0"
+                - generic [ref=e556]:
+                  - paragraph [ref=e557]: roi
+                  - paragraph [ref=e558]: "0.0"
+                - generic [ref=e559]:
+                  - paragraph [ref=e560]: attention
+                  - generic [ref=e563]: high
+              - generic [ref=e564]:
+                - generic [ref=e565]: none
+                - link "Open →" [ref=e566] [cursor=pointer]:
+                  - /url: /ideas/asset-registry-api
+            - listitem [ref=e567]:
+              - generic [ref=e568]:
+                - generic [ref=e569]: ◌
+                - generic [ref=e570]:
+                  - heading "Spec registry API domain" [level=3] [ref=e571]
+                  - paragraph [ref=e572]: Track spec registry read/update flows as a first-class concept with explicit lifecycle metrics.
+              - generic [ref=e573]:
+                - generic [ref=e574]:
+                  - paragraph [ref=e575]: links
+                  - paragraph [ref=e576]: "0"
+                - generic [ref=e577]:
+                  - paragraph [ref=e578]: gap
+                  - paragraph [ref=e579]: "80.0"
+                - generic [ref=e580]:
+                  - paragraph [ref=e581]: roi
+                  - paragraph [ref=e582]: "0.0"
+                - generic [ref=e583]:
+                  - paragraph [ref=e584]: attention
+                  - generic [ref=e587]: high
+              - generic [ref=e588]:
+                - generic [ref=e589]: none
+                - link "Open →" [ref=e590] [cursor=pointer]:
+                  - /url: /ideas/spec-registry-api-domain
+            - listitem [ref=e591]:
+              - generic [ref=e592]:
+                - generic [ref=e593]: ◌
+                - generic [ref=e594]:
+                  - heading "Deployment gate reliability" [level=3] [ref=e595]
+                  - paragraph [ref=e596]: Harden deploy and validation gates so failures are detected quickly and recovered automatically.
+              - generic [ref=e597]:
+                - generic [ref=e598]:
+                  - paragraph [ref=e599]: links
+                  - paragraph [ref=e600]: "0"
+                - generic [ref=e601]:
+                  - paragraph [ref=e602]: gap
+                  - paragraph [ref=e603]: "86.0"
+                - generic [ref=e604]:
+                  - paragraph [ref=e605]: roi
+                  - paragraph [ref=e606]: "0.0"
+                - generic [ref=e607]:
+                  - paragraph [ref=e608]: attention
+                  - generic [ref=e611]: high
+              - generic [ref=e612]:
+                - generic [ref=e613]: none
+                - link "Open →" [ref=e614] [cursor=pointer]:
+                  - /url: /ideas/deployment-gate-reliability
+            - listitem [ref=e615]:
+              - generic [ref=e616]:
+                - generic [ref=e617]: ◌
+                - generic [ref=e618]:
+                  - heading "Coherence network web interface parity" [level=3] [ref=e619]
+                  - paragraph [ref=e620]: Keep human-facing navigation and detail views aligned with machine-facing inventory.
+              - generic [ref=e621]:
+                - generic [ref=e622]:
+                  - paragraph [ref=e623]: links
+                  - paragraph [ref=e624]: "0"
+                - generic [ref=e625]:
+                  - paragraph [ref=e626]: gap
+                  - paragraph [ref=e627]: "84.0"
+                - generic [ref=e628]:
+                  - paragraph [ref=e629]: roi
+                  - paragraph [ref=e630]: "0.0"
+                - generic [ref=e631]:
+                  - paragraph [ref=e632]: attention
+                  - generic [ref=e635]: high
+              - generic [ref=e636]:
+                - generic [ref=e637]: none
+                - link "Open →" [ref=e638] [cursor=pointer]:
+                  - /url: /ideas/coherence-network-web-interface
+            - listitem [ref=e639]:
+              - generic [ref=e640]:
+                - generic [ref=e641]: ◌
+                - generic [ref=e642]:
+                  - heading "Service health contract" [level=3] [ref=e643]
+                  - paragraph [ref=e644]: Own health, readiness, and version endpoint contract for deploy safety and uptime verification.
+              - generic [ref=e645]:
+                - generic [ref=e646]:
+                  - paragraph [ref=e647]: links
+                  - paragraph [ref=e648]: "0"
+                - generic [ref=e649]:
+                  - paragraph [ref=e650]: gap
+                  - paragraph [ref=e651]: "78.0"
+                - generic [ref=e652]:
+                  - paragraph [ref=e653]: roi
+                  - paragraph [ref=e654]: "0.0"
+                - generic [ref=e655]:
+                  - paragraph [ref=e656]: attention
+                  - generic [ref=e659]: high
+              - generic [ref=e660]:
+                - generic [ref=e661]: none
+                - link "Open →" [ref=e662] [cursor=pointer]:
+                  - /url: /ideas/service-health-contract
+            - listitem [ref=e663]:
+              - generic [ref=e664]:
+                - generic [ref=e665]: ◒
+                - generic [ref=e666]:
+                  - heading "Workflow spam circuit breaker" [level=3] [ref=e667]
+                  - paragraph [ref=e668]: Automatically detect and halt runaway scheduled or self-triggering workflows to prevent noisy logs, wasted CI minutes, and hidden real failures.
+              - generic [ref=e669]:
+                - generic [ref=e670]:
+                  - paragraph [ref=e671]: links
+                  - paragraph [ref=e672]: "0"
+                - generic [ref=e673]:
+                  - paragraph [ref=e674]: gap
+                  - paragraph [ref=e675]: "85.5"
+                - generic [ref=e676]:
+                  - paragraph [ref=e677]: roi
+                  - paragraph [ref=e678]: "3.8"
+                - generic [ref=e679]:
+                  - paragraph [ref=e680]: attention
+                  - generic [ref=e683]: high
+              - generic [ref=e684]:
+                - generic [ref=e685]: measured
+                - link "Open →" [ref=e686] [cursor=pointer]:
+                  - /url: /ideas/workflow-spam-circuit-breaker
+            - listitem [ref=e687]:
+              - generic [ref=e688]:
+                - generic [ref=e689]: ◌
+                - generic [ref=e690]:
+                  - heading "Coherence network API runtime parity" [level=3] [ref=e691]
+                  - paragraph [ref=e692]: Ensure public API behavior, runtime telemetry, and deployment state stay in sync.
+              - generic [ref=e693]:
+                - generic [ref=e694]:
+                  - paragraph [ref=e695]: links
+                  - paragraph [ref=e696]: "0"
+                - generic [ref=e697]:
+                  - paragraph [ref=e698]: gap
+                  - paragraph [ref=e699]: "80.0"
+                - generic [ref=e700]:
+                  - paragraph [ref=e701]: roi
+                  - paragraph [ref=e702]: "0.0"
+                - generic [ref=e703]:
+                  - paragraph [ref=e704]: attention
+                  - generic [ref=e707]: high
+              - generic [ref=e708]:
+                - generic [ref=e709]: none
+                - link "Open →" [ref=e710] [cursor=pointer]:
+                  - /url: /ideas/coherence-network-api-runtime
+            - listitem [ref=e711]:
+              - generic [ref=e712]:
+                - generic [ref=e713]: ◒
+                - generic [ref=e714]:
+                  - heading "API and web parity enforcement" [level=3] [ref=e715]
+                  - paragraph [ref=e716]: Continuously enforce that every public API concept has a human web view and every web flow has machine API parity with bidirectional interlinks.
+              - generic [ref=e717]:
+                - generic [ref=e718]:
+                  - paragraph [ref=e719]: links
+                  - paragraph [ref=e720]: "0"
+                - generic [ref=e721]:
+                  - paragraph [ref=e722]: gap
+                  - paragraph [ref=e723]: "81.5"
+                - generic [ref=e724]:
+                  - paragraph [ref=e725]: roi
+                  - paragraph [ref=e726]: "3.5"
+                - generic [ref=e727]:
+                  - paragraph [ref=e728]: attention
+                  - generic [ref=e731]: high
+              - generic [ref=e732]:
+                - generic [ref=e733]: measured
+                - link "Open →" [ref=e734] [cursor=pointer]:
+                  - /url: /ideas/api-web-parity-enforcement
+            - listitem [ref=e735]:
+              - generic [ref=e736]:
+                - generic [ref=e737]: ◒
+                - generic [ref=e738]:
+                  - heading "Coherence network agent pipeline" [level=3] [ref=e739]
+                  - paragraph [ref=e740]: Evolve autonomous task orchestration, validation gates, and failure recovery signals.
+              - generic [ref=e741]:
+                - generic [ref=e742]:
+                  - paragraph [ref=e743]: links
+                  - paragraph [ref=e744]: "0"
+                - generic [ref=e745]:
+                  - paragraph [ref=e746]: gap
+                  - paragraph [ref=e747]: "88.0"
+                - generic [ref=e748]:
+                  - paragraph [ref=e749]: roi
+                  - paragraph [ref=e750]: "0.0"
+                - generic [ref=e751]:
+                  - paragraph [ref=e752]: attention
+                  - generic [ref=e755]: high
+              - generic [ref=e756]:
+                - generic [ref=e757]: measured
+                - link "Open →" [ref=e758] [cursor=pointer]:
+                  - /url: /ideas/coherence-network-agent-pipeline
+            - listitem [ref=e759]:
+              - generic [ref=e760]:
+                - generic [ref=e761]: ◌
+                - generic [ref=e762]:
+                  - heading "Derived runtime observability" [level=3] [ref=e763]
+                  - paragraph [ref=e764]: Automatically derived from commit-evidence tracking for idea id 'derived-runtime-observability'.
+              - generic [ref=e765]:
+                - generic [ref=e766]:
+                  - paragraph [ref=e767]: links
+                  - paragraph [ref=e768]: "0"
+                - generic [ref=e769]:
+                  - paragraph [ref=e770]: gap
+                  - paragraph [ref=e771]: "70.0"
+                - generic [ref=e772]:
+                  - paragraph [ref=e773]: roi
+                  - paragraph [ref=e774]: "0.0"
+                - generic [ref=e775]:
+                  - paragraph [ref=e776]: attention
+                  - generic [ref=e779]: high
+              - generic [ref=e780]:
+                - generic [ref=e781]: none
+                - link "Open →" [ref=e782] [cursor=pointer]:
+                  - /url: /ideas/derived-runtime-observability
+            - listitem [ref=e783]:
+              - generic [ref=e784]:
+                - generic [ref=e785]: ◌
+                - generic [ref=e786]:
+                  - heading "Idea mainline gate stability with strict pr enforcement" [level=3] [ref=e787]
+                  - paragraph [ref=e788]: Automatically derived from commit-evidence tracking for idea id 'idea-mainline-gate-stability-with-strict-pr-enforcement'.
+              - generic [ref=e789]:
+                - generic [ref=e790]:
+                  - paragraph [ref=e791]: links
+                  - paragraph [ref=e792]: "0"
+                - generic [ref=e793]:
+                  - paragraph [ref=e794]: gap
+                  - paragraph [ref=e795]: "70.0"
+                - generic [ref=e796]:
+                  - paragraph [ref=e797]: roi
+                  - paragraph [ref=e798]: "0.0"
+                - generic [ref=e799]:
+                  - paragraph [ref=e800]: attention
+                  - generic [ref=e803]: high
+              - generic [ref=e804]:
+                - generic [ref=e805]: none
+                - link "Open →" [ref=e806] [cursor=pointer]:
+                  - /url: /ideas/idea-mainline-gate-stability-with-strict-pr-enforcement
+            - listitem [ref=e807]:
+              - generic [ref=e808]:
+                - generic [ref=e809]: ◌
+                - generic [ref=e810]:
+                  - heading "Idea provider key readiness for active usage" [level=3] [ref=e811]
+                  - paragraph [ref=e812]: Automatically derived from commit-evidence tracking for idea id 'idea-provider-key-readiness-for-active-usage'.
+              - generic [ref=e813]:
+                - generic [ref=e814]:
+                  - paragraph [ref=e815]: links
+                  - paragraph [ref=e816]: "0"
+                - generic [ref=e817]:
+                  - paragraph [ref=e818]: gap
+                  - paragraph [ref=e819]: "70.0"
+                - generic [ref=e820]:
+                  - paragraph [ref=e821]: roi
+                  - paragraph [ref=e822]: "0.0"
+                - generic [ref=e823]:
+                  - paragraph [ref=e824]: attention
+                  - generic [ref=e827]: high
+              - generic [ref=e828]:
+                - generic [ref=e829]: none
+                - link "Open →" [ref=e830] [cursor=pointer]:
+                  - /url: /ideas/idea-provider-key-readiness-for-active-usage
+            - listitem [ref=e831]:
+              - generic [ref=e832]:
+                - generic [ref=e833]: ◌
+                - generic [ref=e834]:
+                  - heading "Idea worktree pr failure prevention automation" [level=3] [ref=e835]
+                  - paragraph [ref=e836]: Automatically derived from commit-evidence tracking for idea id 'idea-worktree-pr-failure-prevention-automation'.
+              - generic [ref=e837]:
+                - generic [ref=e838]:
+                  - paragraph [ref=e839]: links
+                  - paragraph [ref=e840]: "0"
+                - generic [ref=e841]:
+                  - paragraph [ref=e842]: gap
+                  - paragraph [ref=e843]: "70.0"
+                - generic [ref=e844]:
+                  - paragraph [ref=e845]: roi
+                  - paragraph [ref=e846]: "0.0"
+                - generic [ref=e847]:
+                  - paragraph [ref=e848]: attention
+                  - generic [ref=e851]: high
+              - generic [ref=e852]:
+                - generic [ref=e853]: none
+                - link "Open →" [ref=e854] [cursor=pointer]:
+                  - /url: /ideas/idea-worktree-pr-failure-prevention-automation
+            - listitem [ref=e855]:
+              - generic [ref=e856]:
+                - generic [ref=e857]: ◌
+                - generic [ref=e858]:
+                  - heading "Local ci parity" [level=3] [ref=e859]
+                  - paragraph [ref=e860]: Automatically derived from commit-evidence tracking for idea id 'local-ci-parity'.
+              - generic [ref=e861]:
+                - generic [ref=e862]:
+                  - paragraph [ref=e863]: links
+                  - paragraph [ref=e864]: "0"
+                - generic [ref=e865]:
+                  - paragraph [ref=e866]: gap
+                  - paragraph [ref=e867]: "70.0"
+                - generic [ref=e868]:
+                  - paragraph [ref=e869]: roi
+                  - paragraph [ref=e870]: "0.0"
+                - generic [ref=e871]:
+                  - paragraph [ref=e872]: attention
+                  - generic [ref=e875]: high
+              - generic [ref=e876]:
+                - generic [ref=e877]: none
+                - link "Open →" [ref=e878] [cursor=pointer]:
+                  - /url: /ideas/local-ci-parity
+            - listitem [ref=e879]:
+              - generic [ref=e880]:
+                - generic [ref=e881]: ◌
+                - generic [ref=e882]:
+                  - heading "Public e2e 04ec1ed7" [level=3] [ref=e883]
+                  - paragraph [ref=e884]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-04ec1ed7'.
+              - generic [ref=e885]:
+                - generic [ref=e886]:
+                  - paragraph [ref=e887]: links
+                  - paragraph [ref=e888]: "0"
+                - generic [ref=e889]:
+                  - paragraph [ref=e890]: gap
+                  - paragraph [ref=e891]: "70.0"
+                - generic [ref=e892]:
+                  - paragraph [ref=e893]: roi
+                  - paragraph [ref=e894]: "0.0"
+                - generic [ref=e895]:
+                  - paragraph [ref=e896]: attention
+                  - generic [ref=e899]: high
+              - generic [ref=e900]:
+                - generic [ref=e901]: none
+                - link "Open →" [ref=e902] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-04ec1ed7
+            - listitem [ref=e903]:
+              - generic [ref=e904]:
+                - generic [ref=e905]: ◌
+                - generic [ref=e906]:
+                  - heading "Public e2e 06e5a975" [level=3] [ref=e907]
+                  - paragraph [ref=e908]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-06e5a975'.
+              - generic [ref=e909]:
+                - generic [ref=e910]:
+                  - paragraph [ref=e911]: links
+                  - paragraph [ref=e912]: "0"
+                - generic [ref=e913]:
+                  - paragraph [ref=e914]: gap
+                  - paragraph [ref=e915]: "70.0"
+                - generic [ref=e916]:
+                  - paragraph [ref=e917]: roi
+                  - paragraph [ref=e918]: "0.0"
+                - generic [ref=e919]:
+                  - paragraph [ref=e920]: attention
+                  - generic [ref=e923]: high
+              - generic [ref=e924]:
+                - generic [ref=e925]: none
+                - link "Open →" [ref=e926] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-06e5a975
+            - listitem [ref=e927]:
+              - generic [ref=e928]:
+                - generic [ref=e929]: ◌
+                - generic [ref=e930]:
+                  - heading "Public e2e 081801a7" [level=3] [ref=e931]
+                  - paragraph [ref=e932]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-081801a7'.
+              - generic [ref=e933]:
+                - generic [ref=e934]:
+                  - paragraph [ref=e935]: links
+                  - paragraph [ref=e936]: "0"
+                - generic [ref=e937]:
+                  - paragraph [ref=e938]: gap
+                  - paragraph [ref=e939]: "70.0"
+                - generic [ref=e940]:
+                  - paragraph [ref=e941]: roi
+                  - paragraph [ref=e942]: "0.0"
+                - generic [ref=e943]:
+                  - paragraph [ref=e944]: attention
+                  - generic [ref=e947]: high
+              - generic [ref=e948]:
+                - generic [ref=e949]: none
+                - link "Open →" [ref=e950] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-081801a7
+            - listitem [ref=e951]:
+              - generic [ref=e952]:
+                - generic [ref=e953]: ◌
+                - generic [ref=e954]:
+                  - heading "Public e2e 097a9962" [level=3] [ref=e955]
+                  - paragraph [ref=e956]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-097a9962'.
+              - generic [ref=e957]:
+                - generic [ref=e958]:
+                  - paragraph [ref=e959]: links
+                  - paragraph [ref=e960]: "0"
+                - generic [ref=e961]:
+                  - paragraph [ref=e962]: gap
+                  - paragraph [ref=e963]: "70.0"
+                - generic [ref=e964]:
+                  - paragraph [ref=e965]: roi
+                  - paragraph [ref=e966]: "0.0"
+                - generic [ref=e967]:
+                  - paragraph [ref=e968]: attention
+                  - generic [ref=e971]: high
+              - generic [ref=e972]:
+                - generic [ref=e973]: none
+                - link "Open →" [ref=e974] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-097a9962
+            - listitem [ref=e975]:
+              - generic [ref=e976]:
+                - generic [ref=e977]: ◌
+                - generic [ref=e978]:
+                  - heading "Public e2e 11ff86ce" [level=3] [ref=e979]
+                  - paragraph [ref=e980]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-11ff86ce'.
+              - generic [ref=e981]:
+                - generic [ref=e982]:
+                  - paragraph [ref=e983]: links
+                  - paragraph [ref=e984]: "0"
+                - generic [ref=e985]:
+                  - paragraph [ref=e986]: gap
+                  - paragraph [ref=e987]: "70.0"
+                - generic [ref=e988]:
+                  - paragraph [ref=e989]: roi
+                  - paragraph [ref=e990]: "0.0"
+                - generic [ref=e991]:
+                  - paragraph [ref=e992]: attention
+                  - generic [ref=e995]: high
+              - generic [ref=e996]:
+                - generic [ref=e997]: none
+                - link "Open →" [ref=e998] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-11ff86ce
+            - listitem [ref=e999]:
+              - generic [ref=e1000]:
+                - generic [ref=e1001]: ◌
+                - generic [ref=e1002]:
+                  - heading "Public e2e 1540262c" [level=3] [ref=e1003]
+                  - paragraph [ref=e1004]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-1540262c'.
+              - generic [ref=e1005]:
+                - generic [ref=e1006]:
+                  - paragraph [ref=e1007]: links
+                  - paragraph [ref=e1008]: "0"
+                - generic [ref=e1009]:
+                  - paragraph [ref=e1010]: gap
+                  - paragraph [ref=e1011]: "70.0"
+                - generic [ref=e1012]:
+                  - paragraph [ref=e1013]: roi
+                  - paragraph [ref=e1014]: "0.0"
+                - generic [ref=e1015]:
+                  - paragraph [ref=e1016]: attention
+                  - generic [ref=e1019]: high
+              - generic [ref=e1020]:
+                - generic [ref=e1021]: none
+                - link "Open →" [ref=e1022] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-1540262c
+            - listitem [ref=e1023]:
+              - generic [ref=e1024]:
+                - generic [ref=e1025]: ◌
+                - generic [ref=e1026]:
+                  - heading "Public e2e 17e2ff7e" [level=3] [ref=e1027]
+                  - paragraph [ref=e1028]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-17e2ff7e'.
+              - generic [ref=e1029]:
+                - generic [ref=e1030]:
+                  - paragraph [ref=e1031]: links
+                  - paragraph [ref=e1032]: "0"
+                - generic [ref=e1033]:
+                  - paragraph [ref=e1034]: gap
+                  - paragraph [ref=e1035]: "70.0"
+                - generic [ref=e1036]:
+                  - paragraph [ref=e1037]: roi
+                  - paragraph [ref=e1038]: "0.0"
+                - generic [ref=e1039]:
+                  - paragraph [ref=e1040]: attention
+                  - generic [ref=e1043]: high
+              - generic [ref=e1044]:
+                - generic [ref=e1045]: none
+                - link "Open →" [ref=e1046] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-17e2ff7e
+            - listitem [ref=e1047]:
+              - generic [ref=e1048]:
+                - generic [ref=e1049]: ◌
+                - generic [ref=e1050]:
+                  - heading "Public e2e 1c327212" [level=3] [ref=e1051]
+                  - paragraph [ref=e1052]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-1c327212'.
+              - generic [ref=e1053]:
+                - generic [ref=e1054]:
+                  - paragraph [ref=e1055]: links
+                  - paragraph [ref=e1056]: "0"
+                - generic [ref=e1057]:
+                  - paragraph [ref=e1058]: gap
+                  - paragraph [ref=e1059]: "70.0"
+                - generic [ref=e1060]:
+                  - paragraph [ref=e1061]: roi
+                  - paragraph [ref=e1062]: "0.0"
+                - generic [ref=e1063]:
+                  - paragraph [ref=e1064]: attention
+                  - generic [ref=e1067]: high
+              - generic [ref=e1068]:
+                - generic [ref=e1069]: none
+                - link "Open →" [ref=e1070] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-1c327212
+            - listitem [ref=e1071]:
+              - generic [ref=e1072]:
+                - generic [ref=e1073]: ◌
+                - generic [ref=e1074]:
+                  - heading "Public e2e 1f2204a9" [level=3] [ref=e1075]
+                  - paragraph [ref=e1076]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-1f2204a9'.
+              - generic [ref=e1077]:
+                - generic [ref=e1078]:
+                  - paragraph [ref=e1079]: links
+                  - paragraph [ref=e1080]: "0"
+                - generic [ref=e1081]:
+                  - paragraph [ref=e1082]: gap
+                  - paragraph [ref=e1083]: "70.0"
+                - generic [ref=e1084]:
+                  - paragraph [ref=e1085]: roi
+                  - paragraph [ref=e1086]: "0.0"
+                - generic [ref=e1087]:
+                  - paragraph [ref=e1088]: attention
+                  - generic [ref=e1091]: high
+              - generic [ref=e1092]:
+                - generic [ref=e1093]: none
+                - link "Open →" [ref=e1094] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-1f2204a9
+            - listitem [ref=e1095]:
+              - generic [ref=e1096]:
+                - generic [ref=e1097]: ◌
+                - generic [ref=e1098]:
+                  - heading "Public e2e 204a8cb1" [level=3] [ref=e1099]
+                  - paragraph [ref=e1100]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-204a8cb1'.
+              - generic [ref=e1101]:
+                - generic [ref=e1102]:
+                  - paragraph [ref=e1103]: links
+                  - paragraph [ref=e1104]: "0"
+                - generic [ref=e1105]:
+                  - paragraph [ref=e1106]: gap
+                  - paragraph [ref=e1107]: "70.0"
+                - generic [ref=e1108]:
+                  - paragraph [ref=e1109]: roi
+                  - paragraph [ref=e1110]: "0.0"
+                - generic [ref=e1111]:
+                  - paragraph [ref=e1112]: attention
+                  - generic [ref=e1115]: high
+              - generic [ref=e1116]:
+                - generic [ref=e1117]: none
+                - link "Open →" [ref=e1118] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-204a8cb1
+            - listitem [ref=e1119]:
+              - generic [ref=e1120]:
+                - generic [ref=e1121]: ◌
+                - generic [ref=e1122]:
+                  - heading "Public e2e 20c5e2fb" [level=3] [ref=e1123]
+                  - paragraph [ref=e1124]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-20c5e2fb'.
+              - generic [ref=e1125]:
+                - generic [ref=e1126]:
+                  - paragraph [ref=e1127]: links
+                  - paragraph [ref=e1128]: "0"
+                - generic [ref=e1129]:
+                  - paragraph [ref=e1130]: gap
+                  - paragraph [ref=e1131]: "70.0"
+                - generic [ref=e1132]:
+                  - paragraph [ref=e1133]: roi
+                  - paragraph [ref=e1134]: "0.0"
+                - generic [ref=e1135]:
+                  - paragraph [ref=e1136]: attention
+                  - generic [ref=e1139]: high
+              - generic [ref=e1140]:
+                - generic [ref=e1141]: none
+                - link "Open →" [ref=e1142] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-20c5e2fb
+            - listitem [ref=e1143]:
+              - generic [ref=e1144]:
+                - generic [ref=e1145]: ◌
+                - generic [ref=e1146]:
+                  - heading "Public e2e 21cd0dde" [level=3] [ref=e1147]
+                  - paragraph [ref=e1148]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-21cd0dde'.
+              - generic [ref=e1149]:
+                - generic [ref=e1150]:
+                  - paragraph [ref=e1151]: links
+                  - paragraph [ref=e1152]: "0"
+                - generic [ref=e1153]:
+                  - paragraph [ref=e1154]: gap
+                  - paragraph [ref=e1155]: "70.0"
+                - generic [ref=e1156]:
+                  - paragraph [ref=e1157]: roi
+                  - paragraph [ref=e1158]: "0.0"
+                - generic [ref=e1159]:
+                  - paragraph [ref=e1160]: attention
+                  - generic [ref=e1163]: high
+              - generic [ref=e1164]:
+                - generic [ref=e1165]: none
+                - link "Open →" [ref=e1166] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-21cd0dde
+            - listitem [ref=e1167]:
+              - generic [ref=e1168]:
+                - generic [ref=e1169]: ◌
+                - generic [ref=e1170]:
+                  - heading "Public e2e 296d8119" [level=3] [ref=e1171]
+                  - paragraph [ref=e1172]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-296d8119'.
+              - generic [ref=e1173]:
+                - generic [ref=e1174]:
+                  - paragraph [ref=e1175]: links
+                  - paragraph [ref=e1176]: "0"
+                - generic [ref=e1177]:
+                  - paragraph [ref=e1178]: gap
+                  - paragraph [ref=e1179]: "70.0"
+                - generic [ref=e1180]:
+                  - paragraph [ref=e1181]: roi
+                  - paragraph [ref=e1182]: "0.0"
+                - generic [ref=e1183]:
+                  - paragraph [ref=e1184]: attention
+                  - generic [ref=e1187]: high
+              - generic [ref=e1188]:
+                - generic [ref=e1189]: none
+                - link "Open →" [ref=e1190] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-296d8119
+            - listitem [ref=e1191]:
+              - generic [ref=e1192]:
+                - generic [ref=e1193]: ◌
+                - generic [ref=e1194]:
+                  - heading "Public e2e 2abb18c6" [level=3] [ref=e1195]
+                  - paragraph [ref=e1196]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-2abb18c6'.
+              - generic [ref=e1197]:
+                - generic [ref=e1198]:
+                  - paragraph [ref=e1199]: links
+                  - paragraph [ref=e1200]: "0"
+                - generic [ref=e1201]:
+                  - paragraph [ref=e1202]: gap
+                  - paragraph [ref=e1203]: "70.0"
+                - generic [ref=e1204]:
+                  - paragraph [ref=e1205]: roi
+                  - paragraph [ref=e1206]: "0.0"
+                - generic [ref=e1207]:
+                  - paragraph [ref=e1208]: attention
+                  - generic [ref=e1211]: high
+              - generic [ref=e1212]:
+                - generic [ref=e1213]: none
+                - link "Open →" [ref=e1214] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-2abb18c6
+            - listitem [ref=e1215]:
+              - generic [ref=e1216]:
+                - generic [ref=e1217]: ◌
+                - generic [ref=e1218]:
+                  - heading "Public e2e 2c23f595" [level=3] [ref=e1219]
+                  - paragraph [ref=e1220]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-2c23f595'.
+              - generic [ref=e1221]:
+                - generic [ref=e1222]:
+                  - paragraph [ref=e1223]: links
+                  - paragraph [ref=e1224]: "0"
+                - generic [ref=e1225]:
+                  - paragraph [ref=e1226]: gap
+                  - paragraph [ref=e1227]: "70.0"
+                - generic [ref=e1228]:
+                  - paragraph [ref=e1229]: roi
+                  - paragraph [ref=e1230]: "0.0"
+                - generic [ref=e1231]:
+                  - paragraph [ref=e1232]: attention
+                  - generic [ref=e1235]: high
+              - generic [ref=e1236]:
+                - generic [ref=e1237]: none
+                - link "Open →" [ref=e1238] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-2c23f595
+            - listitem [ref=e1239]:
+              - generic [ref=e1240]:
+                - generic [ref=e1241]: ◌
+                - generic [ref=e1242]:
+                  - heading "Public e2e 2c6d2c64" [level=3] [ref=e1243]
+                  - paragraph [ref=e1244]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-2c6d2c64'.
+              - generic [ref=e1245]:
+                - generic [ref=e1246]:
+                  - paragraph [ref=e1247]: links
+                  - paragraph [ref=e1248]: "0"
+                - generic [ref=e1249]:
+                  - paragraph [ref=e1250]: gap
+                  - paragraph [ref=e1251]: "70.0"
+                - generic [ref=e1252]:
+                  - paragraph [ref=e1253]: roi
+                  - paragraph [ref=e1254]: "0.0"
+                - generic [ref=e1255]:
+                  - paragraph [ref=e1256]: attention
+                  - generic [ref=e1259]: high
+              - generic [ref=e1260]:
+                - generic [ref=e1261]: none
+                - link "Open →" [ref=e1262] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-2c6d2c64
+            - listitem [ref=e1263]:
+              - generic [ref=e1264]:
+                - generic [ref=e1265]: ◌
+                - generic [ref=e1266]:
+                  - heading "Public e2e 2f8674bb" [level=3] [ref=e1267]
+                  - paragraph [ref=e1268]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-2f8674bb'.
+              - generic [ref=e1269]:
+                - generic [ref=e1270]:
+                  - paragraph [ref=e1271]: links
+                  - paragraph [ref=e1272]: "0"
+                - generic [ref=e1273]:
+                  - paragraph [ref=e1274]: gap
+                  - paragraph [ref=e1275]: "70.0"
+                - generic [ref=e1276]:
+                  - paragraph [ref=e1277]: roi
+                  - paragraph [ref=e1278]: "0.0"
+                - generic [ref=e1279]:
+                  - paragraph [ref=e1280]: attention
+                  - generic [ref=e1283]: high
+              - generic [ref=e1284]:
+                - generic [ref=e1285]: none
+                - link "Open →" [ref=e1286] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-2f8674bb
+            - listitem [ref=e1287]:
+              - generic [ref=e1288]:
+                - generic [ref=e1289]: ◌
+                - generic [ref=e1290]:
+                  - heading "Public e2e 3312317c" [level=3] [ref=e1291]
+                  - paragraph [ref=e1292]: Automatically derived from commit-evidence tracking for idea id 'public-e2e-3312317c'.
+              - generic [ref=e1293]:
+                - generic [ref=e1294]:
+                  - paragraph [ref=e1295]: links
+                  - paragraph [ref=e1296]: "0"
+                - generic [ref=e1297]:
+                  - paragraph [ref=e1298]: gap
+                  - paragraph [ref=e1299]: "70.0"
+                - generic [ref=e1300]:
+                  - paragraph [ref=e1301]: roi
+                  - paragraph [ref=e1302]: "0.0"
+                - generic [ref=e1303]:
+                  - paragraph [ref=e1304]: attention
+                  - generic [ref=e1307]: high
+              - generic [ref=e1308]:
+                - generic [ref=e1309]: none
+                - link "Open →" [ref=e1310] [cursor=pointer]:
+                  - /url: /ideas/public-e2e-3312317c
+          - generic [ref=e1311]:
+            - link "Previous":
+              - /url: /ideas?cursor=0
+            - link "Next" [ref=e1312] [cursor=pointer]:
+              - /url: /ideas?cursor=50
+        - complementary [ref=e1313]:
+          - generic [ref=e1314]:
+            - heading "Where Attention Helps Most" [level=2] [ref=e1315]
+            - generic [ref=e1316]:
+              - generic [ref=e1317]:
+                - paragraph [ref=e1318]: Tool failure cost ledger
+                - paragraph [ref=e1319]: Track every tool call failure with elapsed time and resource spend so expensive no-gain runs are quantified and prioritized for mitigation.
+                - generic [ref=e1320]:
+                  - paragraph [ref=e1321]: +124.0 lift
+                  - link "Focus →" [ref=e1322] [cursor=pointer]:
+                    - /url: /ideas/tool-failure-cost-ledger
+              - generic [ref=e1323]:
+                - paragraph [ref=e1324]: Contributor self-serve governance flow
+                - paragraph [ref=e1325]: Implement complete self-serve flows for contributor registration, idea/spec submission, review voting, and attribution so growth is not blocked by manual intervention.
+                - generic [ref=e1326]:
+                  - paragraph [ref=e1327]: +130.0 lift
+                  - link "Focus →" [ref=e1328] [cursor=pointer]:
+                    - /url: /ideas/contributor-self-serve-governance-flow
+              - generic [ref=e1329]:
+                - paragraph [ref=e1330]: Federated instance aggregation for contributor-owned deployments
+                - paragraph [ref=e1331]: Allow contributors to run full or partial forks and publish verifiable telemetry back to the shared system. This increases contributor throughput without central infrastructure bottlenecks and raises collective value.
+                - generic [ref=e1332]:
+                  - paragraph [ref=e1333]: +128.0 lift
+                  - link "Focus →" [ref=e1334] [cursor=pointer]:
+                    - /url: /ideas/federated-instance-aggregation
+          - generic [ref=e1335]:
+            - heading "Community Pulse" [level=2] [ref=e1336]
+            - paragraph [ref=e1337]: Activity across regions (last 7 days)
+            - generic [ref=e1338]:
+              - img [ref=e1339]
+              - paragraph [ref=e1341]: 171 regions active • 14 validated ideas • 14 measured now
+      - generic [ref=e1342]: "State icons: ◧ spec ◈ implemented ◍ validated ◒ measured"
+  - alert [ref=e1343]
