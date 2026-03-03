@@ -17,6 +17,7 @@ from app.routers.agent_telegram import (
     is_runner_task_update,
     router as telegram_router,
 )
+from app.routers.assistant_telegram import router as assistant_telegram_router
 
 from app.models.agent import (
     AgentRunnerHeartbeat,
@@ -47,6 +48,7 @@ from app.services import (
 
 router = APIRouter()
 router.include_router(telegram_router)
+router.include_router(assistant_telegram_router)
 
 _ISSUE_PRIORITY = {"high": 0, "medium": 1, "low": 2}
 
