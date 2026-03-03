@@ -15,6 +15,19 @@ Purpose: when a gate fails, the agent should self-unblock with concrete remediat
 This commonly happens mid-task after edits are already in progress.
 
 - Treat it as a continuation task, not a new thread bootstrap.
+- Re-run start-gate in continuation mode (now default in `auto` mode when dirty):
+
+```bash
+make start-gate
+```
+
+- If you need stash/rebase healing, use:
+
+```bash
+./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate
+```
+
+- `auto_heal_start_gate.sh` now auto-attaches detached `HEAD` to a `codex/...` branch before stash/rebase.
 - Continue with targeted validation for changed files.
 - Before commit, run required pre-commit guards:
 

@@ -23,7 +23,12 @@ Spec → Test → Implement → CI → Review → Merge
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
 2. Start gate (required before any edits)
    - Run: `make start-gate`
-   - If it fails, stop and fix blockers first.
+   - `make start-gate` now runs in auto mode:
+     - clean tree => bootstrap,
+     - dirty tree => continuation (for follow-up prompts on same thread),
+     - detached `HEAD` => auto-attach to `codex/...` branch in linked worktrees.
+   - If it fails, fix blockers first.
+   - If stash/rebase healing is needed: `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
    - Main-workflow failure policy:
      - Temporary waivers must be declared in `config/start_gate_main_workflow_waivers.json`.
      - Each waiver must include `workflow`, `owner`, `reason`, `expires_at`, and should scope by `run_url_contains` when possible.
@@ -165,6 +170,8 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 
 # Start gate (required before starting a new task)
 make start-gate
+# For detached/stash/rebase recovery:
+./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate
 
 # PR check failure prevention + tracking (default before commit/push)
 # Optional for n8n-backed automation flows:
@@ -270,13 +277,12 @@ Use these as design guidance for web changes. They are intended to keep the expe
 ### Worktree Stability Guidance
 
 - Before running stash/rebase helper flows, confirm the worktree is on a named branch (`git rev-parse --abbrev-ref HEAD` should not be `HEAD`).
-- If detached, create or switch to a `codex/...` branch first. This avoids ambiguous stash restoration and preserves in-progress UI decisions.
+- If detached, `make start-gate` and `./scripts/auto_heal_start_gate.sh` now auto-attach to a `codex/...` branch in linked worktrees.
 - During long UI iterations, capture screenshots in `.playwright-cli/` and keep a short decision summary in the task thread so visual intent can be restored quickly if recovery tooling resets files.
-- Observed failure mode: repeated use of stash+rebase helper scripts while detached can make state recovery noisy and confusing. The helper does not detach by itself; it assumes branch state is already valid.
+- Observed failure mode: repeated stash+rebase while detached can make state recovery noisy and confusing; use the updated helper so branch attach is deterministic.
 - Suggested preflight before any auto-heal command:
   - run `git rev-parse --abbrev-ref HEAD`
-  - if output is `HEAD`, attach first: `git switch -c codex/<topic>-<date>` (or `git switch codex/<existing-branch>`)
-  - only then run `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
+  - if output is `HEAD`, either attach manually (`git switch -c codex/<topic>-<date>`) or let `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate` auto-attach
 - If `make start-gate` fails only because the worktree is dirty from active task work, prefer continuing the same task and running local validation gates directly rather than repeatedly stashing/restoring mid-task.
 - Suggested Codex thread start check (quick, lightweight): confirm branch name, run `git status --short`, and record if the worktree is intentionally dirty before running any recovery helpers.
 - For deploy-focused threads, prefer a clean dedicated branch/worktree for release scope. Keep unrelated in-progress edits in another branch/worktree so deploy evidence and PR diffs stay easy to verify.
