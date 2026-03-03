@@ -378,8 +378,7 @@ async def test_clawwork_alias_openrouter_override_tracks_openrouter_provider(
         assert task.status_code == 201
         body = task.json()
         task_id = body["id"]
-        assert body["model"] == "openrouter/free"
-        assert body["context"]["executor"] == "openrouter"
+        assert body["model"] == "openclaw/openrouter/free"
         assert "--model openrouter/free" in str(body["command"])
 
         running = await client.patch(
@@ -404,7 +403,7 @@ async def test_clawwork_alias_openrouter_override_tracks_openrouter_provider(
         ]
         assert len(completion_events) == 1
         metadata = completion_events[0]["metadata"]
-        assert metadata["executor"] == "openrouter"
+        assert metadata["executor"] == "openclaw"
         assert metadata["provider"] == "openrouter"
         assert metadata["billing_provider"] == "openrouter"
         assert metadata["is_paid_provider"] is False

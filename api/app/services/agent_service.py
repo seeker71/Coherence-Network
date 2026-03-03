@@ -64,21 +64,6 @@ _COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
 _OPENCLAW_MODEL_BY_TYPE = routing_service.OPENCLAW_MODEL_BY_TYPE
 
-_OPENCLAW_MODEL_BY_TYPE: dict[TaskType, str] = {
-    TaskType.SPEC: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.TEST: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.IMPL: _OPENCLAW_MODEL_DEFAULT,
-    TaskType.REVIEW: _OPENCLAW_MODEL_REVIEW,
-    TaskType.HEAL: _OPENCLAW_MODEL_REVIEW,
-}
-
-_EXECUTOR_VALUES = ("claude", "cursor", "openclaw")
-try:
-    _TARGET_STATE_DEFAULT_WINDOW_SEC = int(str(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900")).strip())
-except ValueError:
-    _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
-_TARGET_STATE_DEFAULT_WINDOW_SEC = max(30, min(_TARGET_STATE_DEFAULT_WINDOW_SEC, 7 * 24 * 60 * 60))
-_TARGET_STATE_MAX_TEXT = 600
 # Heuristics to detect prompts that require repository-local context.
 _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -886,19 +871,13 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
-    if model.startswith("gemini/") or command.startswith("gemini "):
-        return "gemini"
-    if model.startswith("openrouter/") or command.startswith("openrouter-exec "):
-        return "openrouter"
-    if model.startswith("codex/") or command.startswith("codex "):
-        return "codex"
     if (
         model.startswith("openclaw/")
         or model.startswith("clawwork/")
         or command.startswith("openclaw ")
         or command.startswith("clawwork ")
     ):
-        return "codex"
+        return "openclaw"
     if command.startswith("aider "):
         return "aider"
     if command.startswith("claude "):
@@ -1265,7 +1244,7 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default), 'cursor', 'codex', 'gemini', or 'openrouter'."""
+    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw' (clawwork alias)."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
     elif executor == "codex":
@@ -1837,7 +1816,7 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|codex|gemini|openrouter|openclaw|clawwork."""
+    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|openclaw|clawwork."""
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()
