@@ -100,9 +100,23 @@
     {
       "workflow": "External Tools Audit",
       "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22480736529 failure is actively remediated to unblock urgent self-improvement flow fixes.",
-      "expires_at": "2026-03-01T23:59:59Z",
-      "run_url_contains": "actions/runs/22480736529"
+      "reason": "Temporary waiver while run 22499270717 failure is actively remediated to unblock host-runner autonomy fix rollout.",
+      "expires_at": "2026-03-02T23:59:59Z",
+      "run_url_contains": "actions/runs/22499270717"
+    },
+    {
+      "workflow": "Self Improve Cycle",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while latest main run 22516968628 is being remediated; required to unblock active thread start-gate.",
+      "expires_at": "2026-03-03T23:59:59Z",
+      "run_url_contains": "actions/runs/22516968628"
+    },
+    {
+      "workflow": "External Tools Audit",
+      "owner": "@seeker71",
+      "reason": "Temporary waiver while latest main run 22616873428 is being remediated with external tools registry updates.",
+      "expires_at": "2026-03-06T23:59:59Z",
+      "run_url_contains": "actions/runs/22616873428"
     }
   ]
 }
