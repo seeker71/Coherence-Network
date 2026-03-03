@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import datetime, timezone
+import json
 from typing import Any
 from urllib.parse import quote
 
@@ -10,6 +10,7 @@ from fastapi import APIRouter, Body
 
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_service
+from app.services import telegram_report_formatter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,6 +44,13 @@ _WEB_BASE_ENV_KEYS = (
     "NEXT_PUBLIC_WEB_URL",
 )
 _DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
+_API_BASE_ENV_KEYS = (
+    "PUBLIC_API_URL",
+    "NEXT_PUBLIC_API_URL",
+    "RAILWAY_API_URL",
+    "API_URL",
+)
+_DEFAULT_API_BASE_URL = "https://coherence-network-production.up.railway.app"
 
 
 def _escape_markdown(text: str) -> str:
@@ -176,6 +184,65 @@ def _tasks_web_url(context: dict[str, Any]) -> str:
     return f"{_base_web_url(context).rstrip('/')}/tasks"
 
 
+def _base_api_url() -> str:
+    for env_key in _API_BASE_ENV_KEYS:
+        value = _normalize_base_url(os.getenv(env_key))
+        if value:
+            return value
+    return _DEFAULT_API_BASE_URL
+
+
+def _join_url(base: str, path: str) -> str:
+    return f"{(base or '').rstrip('/')}{path}"
+
+
+def _logs_dir() -> str:
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+
+
+def _load_monitor_issues() -> dict[str, Any]:
+    path = os.path.join(_logs_dir(), "monitor_issues.json")
+    if not os.path.isfile(path):
+        return {"issues": [], "last_check": None}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+    return {"issues": [], "last_check": None}
+
+
+def _load_status_report() -> dict[str, Any]:
+    path = os.path.join(_logs_dir(), "pipeline_status_report.json")
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+    return {}
+
+
+def _orphan_threshold_seconds() -> int:
+    try:
+        return max(
+            60,
+            int(
+                os.environ.get(
+                    "PIPELINE_ORPHAN_RUNNING_SECONDS",
+                    os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        return 1800
+
+
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     task_path = f"/tasks?task_id={quote(task_id, safe='')}"
     base = _base_web_url(context)
@@ -263,60 +330,33 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
 
 
 def _now_utc_label() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return telegram_report_formatter.now_utc_label()
 
 
 def _help_reply() -> str:
-    return (
-        "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, "
-        "/attention, /usage, /direction \"...\", /railway ..., or just type your direction"
-    )
+    return telegram_report_formatter.format_help_reply()
 
 
-def _format_agent_status_reply(summary: dict[str, Any]) -> str:
-    by_status = summary.get("by_status") if isinstance(summary.get("by_status"), dict) else {}
-    needs = summary.get("needs_attention") if isinstance(summary.get("needs_attention"), list) else []
-    reply = (
-        "*Agent status*\n"
-        f"Checked: `{_now_utc_label()}`\n"
-        f"Total tasks: `{int(summary.get('total') or 0)}`"
+def _format_agent_status_reply(
+    summary: dict[str, Any],
+    pipeline_status: dict[str, Any],
+    monitor_issues: dict[str, Any],
+    status_report: dict[str, Any],
+) -> str:
+    return telegram_report_formatter.format_agent_status_reply(
+        summary,
+        pipeline_status,
+        monitor_issues,
+        status_report,
+        tasks_url=_tasks_web_url({}),
+        web_base_url=_base_web_url({}),
+        api_base_url=_base_api_url(),
+        orphan_threshold_seconds=_orphan_threshold_seconds(),
     )
-    if by_status:
-        for key in sorted(by_status):
-            reply += f"\n`{key}`: `{int(by_status.get(key) or 0)}`"
-    if needs:
-        reply += f"\nAttention: `{len(needs)}` (use `/attention`)"
-    else:
-        reply += "\nAttention: `0`"
-    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
-    return reply
 
 
 def _format_usage_reply(usage: dict[str, Any]) -> str:
-    reply = f"*Usage by model*\nChecked: `{_now_utc_label()}`"
-    by_model = usage.get("by_model") if isinstance(usage.get("by_model"), dict) else {}
-    if not by_model:
-        reply += "\nNo usage data yet."
-    for model, data in by_model.items():
-        if not isinstance(data, dict):
-            continue
-        count = int(data.get("count") or 0)
-        line = f"\n`{model}`: `{count}` tasks"
-        by_status = data.get("by_status") if isinstance(data.get("by_status"), dict) else {}
-        if by_status:
-            status_pairs = ", ".join(f"{k}:{int(by_status.get(k) or 0)}" for k in sorted(by_status))
-            line += f" ({status_pairs})"
-        reply += line
-    routing = usage.get("routing") if isinstance(usage.get("routing"), dict) else {}
-    if routing:
-        pairs = []
-        for task_type, route in routing.items():
-            if not isinstance(route, dict):
-                continue
-            pairs.append(f"{task_type}={route.get('model')}")
-        if pairs:
-            reply += "\n\n*Routing*: " + ", ".join(sorted(pairs))
-    return reply
+    return telegram_report_formatter.format_usage_reply(usage)
 
 
 def _format_tasks_reply(
@@ -325,84 +365,44 @@ def _format_tasks_reply(
     *,
     status_filter: str | None,
 ) -> str:
-    reply = (
-        f"*Tasks* ({total} total)\n"
-        f"Checked: `{_now_utc_label()}`"
+    return telegram_report_formatter.format_tasks_reply(
+        items,
+        total,
+        status_filter=status_filter,
+        tasks_url_builder=_tasks_web_url,
+        task_url_builder=_task_web_url,
     )
-    if status_filter:
-        reply += f"\nFilter: `{status_filter}`"
-    if not items:
-        return reply + f"\nNo matching tasks.\nWeb UI: [open tasks]({_tasks_web_url({})})"
-    for task in items:
-        task_id = str(task.get("id") or "").strip()
-        status_obj = task.get("status")
-        status = (
-            str(status_obj.value).strip()
-            if hasattr(status_obj, "value")
-            else str(status_obj or "unknown").strip()
-        )
-        direction = _escape_markdown(str(task.get("direction") or "").strip())
-        if len(direction) > 70:
-            direction = f"{direction[:67]}..."
-        task_url = _task_web_url(task_id, _task_context(task))
-        reply += f"\n`{task_id}` `{status}` {direction} [open]({task_url})"
-    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
-    return reply
 
 
 def _format_task_snapshot_reply(task: dict[str, Any]) -> str:
-    task_id = str(task.get("id") or "").strip()
-    context = _task_context(task)
-    task_url = _task_web_url(task_id, context)
-    tasks_url = _tasks_web_url(context)
-    status = task.get("status", "unknown")
-    status_str = status.value if hasattr(status, "value") else str(status)
-    direction = _escape_markdown(str(task.get("direction") or "").strip())
-    updated = task.get("updated_at") or task.get("created_at")
-    if hasattr(updated, "isoformat"):
-        updated_at = str(updated.isoformat()).strip()
-    else:
-        updated_at = str(updated or "").strip()
-    reply = (
-        f"*Task* `{task_id}`\n"
-        f"Status: `{status_str}`"
+    return telegram_report_formatter.format_task_snapshot_reply(
+        task,
+        tasks_url_builder=_tasks_web_url,
+        task_url_builder=_task_web_url,
     )
-    if updated_at:
-        reply += f"\nUpdated: `{updated_at}`"
-    if direction:
-        reply += f"\nDirection: {direction[:220]}"
-    reply += f"\nWeb UI: [open task]({task_url}) | [all tasks]({tasks_url})"
-    reply += f"\nNext: `/task {task_id}`"
-    return reply
 
 
-def _format_attention_reply(items: list[dict[str, Any]], total: int) -> str:
-    reply = (
-        f"*Attention* ({total} need action)\n"
-        f"Checked: `{_now_utc_label()}`"
+def _format_attention_reply(
+    items: list[dict[str, Any]],
+    total: int,
+    *,
+    monitor_issues: dict[str, Any],
+    pipeline_status: dict[str, Any],
+) -> str:
+    return telegram_report_formatter.format_attention_reply(
+        items,
+        total,
+        monitor_issues=monitor_issues,
+        pipeline_status=pipeline_status,
+        tasks_url=_tasks_web_url({}),
+        web_base_url=_base_web_url({}),
+        orphan_threshold_seconds=_orphan_threshold_seconds(),
+        task_url_builder=_task_web_url,
     )
-    if not items:
-        return reply + f"\nNo attention tasks right now.\nWeb UI: [open tasks]({_tasks_web_url({})})"
-    for task in items:
-        task_id = str(task.get("id") or "").strip()
-        status = str(task.get("status") or "unknown").strip()
-        direction = _escape_markdown(str(task.get("direction") or "").strip())
-        if len(direction) > 60:
-            direction = f"{direction[:57]}..."
-        task_url = _task_web_url(task_id, _task_context(task))
-        reply += f"\n`{task_id}` `{status}` {direction} [open]({task_url})"
-        if task.get("decision_prompt"):
-            prompt = _escape_markdown(str(task.get("decision_prompt") or "").strip())
-            reply += f"\nPrompt: _{prompt[:100]}_"
-    reply += f"\nWeb UI: [open tasks]({_tasks_web_url({})})"
-    return reply
 
 
 def _extract_status_filter(arg: str) -> str | None:
-    candidate = str(arg or "").strip().lower()
-    if candidate in ("pending", "running", "completed", "failed", "needs_decision"):
-        return candidate
-    return None
+    return telegram_report_formatter.extract_status_filter(arg)
 
 
 @router.post("/agent/telegram/webhook")
@@ -448,7 +448,15 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
 
     if cmd == "status":
         summary = agent_service.get_review_summary()
-        reply = _format_agent_status_reply(summary if isinstance(summary, dict) else {})
+        pipeline_status = agent_service.get_pipeline_status()
+        monitor_issues = _load_monitor_issues()
+        status_report = _load_status_report()
+        reply = _format_agent_status_reply(
+            summary if isinstance(summary, dict) else {},
+            pipeline_status if isinstance(pipeline_status, dict) else {},
+            monitor_issues if isinstance(monitor_issues, dict) else {"issues": [], "last_check": None},
+            status_report if isinstance(status_report, dict) else {},
+        )
     elif cmd == "usage":
         usage = agent_service.get_usage_summary()
         reply = _format_usage_reply(usage if isinstance(usage, dict) else {})
@@ -485,7 +493,14 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
                 reply = f"Decision recorded for `{task_id}`"
     elif cmd == "attention":
         items, total = agent_service.get_attention_tasks(limit=10)
-        reply = _format_attention_reply(items, total)
+        monitor_issues = _load_monitor_issues()
+        pipeline_status = agent_service.get_pipeline_status()
+        reply = _format_attention_reply(
+            items,
+            total,
+            monitor_issues=monitor_issues if isinstance(monitor_issues, dict) else {"issues": [], "last_check": None},
+            pipeline_status=pipeline_status if isinstance(pipeline_status, dict) else {},
+        )
     elif cmd in {"railway", "deploy"}:
         from app.services import telegram_railway_service
 
