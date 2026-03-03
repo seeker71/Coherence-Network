@@ -6,16 +6,7 @@
     "External Tools Audit": "@seeker71",
     "Maintainability Architecture Audit": "@seeker71",
     "Public Deploy Contract": "@seeker71",
-    "Auto Heal Deploy Gates": "@seeker71",
-    "Claude Code Host Runner Task": "@seeker71",
-    "Thread Gates": "@seeker71",
-    "Test": "@seeker71",
     "CI": "@seeker71",
-    "Change Contract": "@seeker71",
-    "PR Check Failure Triage": "@seeker71",
-    "Asset Modularity Drift Audit": "@seeker71",
-    "Update External Asset Values": "@seeker71",
-    "Provider Readiness Contract": "@seeker71",
-    "Auto-Track Contributions": "@seeker71"
+    "Change Contract": "@seeker71"
   }
 }

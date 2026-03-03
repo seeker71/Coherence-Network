@@ -1,0 +1,576 @@
+{
+  "generated_at": "2026-02-23T08:49:44.699852+00:00",
+  "window_hours": 24,
+  "host_failure_observability_backfill": {
+    "window_hours": 24,
+    "host_failed_tasks": 16,
+    "completion_events_backfilled": 0,
+    "friction_events_backfilled": 0,
+    "affected_task_ids": []
+  },
+  "host_runner": {
+    "window_hours": 24,
+    "generated_at": "2026-02-23T08:49:44.462227+00:00",
+    "total_runs": 69,
+    "failed_runs": 16,
+    "completed_runs": 53,
+    "running_runs": 0,
+    "pending_runs": 0,
+    "status_counts": {
+      "failed": 16,
+      "completed": 53
+    },
+    "by_task_type": {
+      "impl": {
+        "total": 5,
+        "failed": 3,
+        "completed": 2
+      },
+      "spec": {
+        "total": 64,
+        "completed": 51,
+        "failed": 13
+      }
+    }
+  },
+  "execution": {
+    "tracked_runs": 16,
+    "failed_runs": 16,
+    "success_runs": 0,
+    "coverage": {
+      "completed_or_failed_tasks": 263,
+      "tracked_task_runs": 16,
+      "coverage_rate": 0.0608,
+      "untracked_task_ids": [
+        "task_0022f6fa6d2d5a37",
+        "task_00e1beca1e8e4797",
+        "task_031dc02a66931022",
+        "task_034efcd86fae8945",
+        "task_03581333cae0c266",
+        "task_0372e779917fb6d8",
+        "task_059c66a3e5056866",
+        "task_059f58545ff10457",
+        "task_05b055d0332f65d0",
+        "task_05d626a8c16a1d47",
+        "task_06ff93a6da0e40ff",
+        "task_073c03fbc5232ccd",
+        "task_07ba8436e3c4290d",
+        "task_0828a97167e6dbf9",
+        "task_08ddee1921c1a9fd",
+        "task_08e05afaa93c89e6",
+        "task_09694a12f3e51168",
+        "task_0a467386309d53c3",
+        "task_0a814c000bc817e6",
+        "task_0b3b26af4ddbb452",
+        "task_0b71a9d8aafa64a3",
+        "task_0fb9c65e54a6a087",
+        "task_104f5c2f49e7b887",
+        "task_1093bfef2780fab3",
+        "task_11064006aab5dbf2",
+        "task_11eb448e26149206",
+        "task_11f920229020e20e",
+        "task_14ca7953227e9b5e",
+        "task_15e09d4ddef6b866",
+        "task_165b580ce4baac1b",
+        "task_1749318808cd5a81",
+        "task_19769e1a97562f4b",
+        "task_19bb4f8a82a809d3",
+        "task_1c7193a922ee8211",
+        "task_21b725a9a1ee1984",
+        "task_235a3610d6e62cca",
+        "task_239baaf83e52e52b",
+        "task_24340aaa12c02b37",
+        "task_2696dc22b2a4b0a7",
+        "task_27447f8a8a9019d3",
+        "task_2786a54494dc1090",
+        "task_28423f01fe3bccc6",
+        "task_28917ba93d25de34",
+        "task_2a2063c1f7e8d25c",
+        "task_2a2fda1392be29ac",
+        "task_2ce5a2c007413aaa",
+        "task_2db148eab41b4c1f",
+        "task_2e7dc038dab9a3a9",
+        "task_2f11950b158c9075",
+        "task_2f8ebc8ad1564000",
+        "task_30b95071174ef9bb",
+        "task_316ec2d0078e879b",
+        "task_320a74163cc1f642",
+        "task_32ee189230a9dc6e",
+        "task_33b8b23bc264a4b8",
+        "task_359c8a4a0f4a648c",
+        "task_35ff9402d5a62bf8",
+        "task_36a19e39d5f3b6d2",
+        "task_36e21be584bea3c0",
+        "task_39f9d860524285d3",
+        "task_3af8ade50df7e2ea",
+        "task_3b769b9c9e7da9ed",
+        "task_3c4d23de5f8ba9aa",
+        "task_3d1fb345425be6c0",
+        "task_3e651c2920137777",
+        "task_3fc816565759b4fe",
+        "task_40315a491310140b",
+        "task_40d312b2bfb054ec",
+        "task_41ad96e5e5b9c920",
+        "task_4740d8512018645e",
+        "task_47f5b20cf8722658",
+        "task_47f7c33bb0296b39",
+        "task_48779fd48f1bb460",
+        "task_4985c2c3967e36dc",
+        "task_4b3ee51e0ce8a694",
+        "task_4cd4f158c05d7b3a",
+        "task_5202716e21bcf290",
+        "task_53111a59c7b4015c",
+        "task_575a05551652a2f1",
+        "task_57c80a9f7f23205b",
+        "task_58829b43b79b780a",
+        "task_590c8c18ccbdbb15",
+        "task_5aafefb7c722370a",
+        "task_5ae60e7390e24182",
+        "task_5b41a38dcbbd679d",
+        "task_5bf765978f547728",
+        "task_5cbf97650390fb6c",
+        "task_5d1c44a4376f3889",
+        "task_5d62440cf6f97bd5",
+        "task_5dbf2e0f8c896f1c",
+        "task_5e56216192173c3b",
+        "task_5f03381abde100e1",
+        "task_5f3fa9399348d1d8",
+        "task_5f8dbf49b2ea9f2e",
+        "task_60f426f95f2e5766",
+        "task_6136f0c93faa0b1e",
+        "task_6428a11e0656a995",
+        "task_643aabddb30cc283",
+        "task_64fda47091fcf552",
+        "task_653f454a407ce381",
+        "task_66c78b91a90a8e1e",
+        "task_6716b4a8b338c2d3",
+        "task_67235ef7ac5c285a",
+        "task_672ce63ea931935d",
+        "task_68a31737e2db4369",
+        "task_68e7eb1a555be31b",
+        "task_68f376cb8c8a3a1d",
+        "task_69ee93875827494b",
+        "task_6bd3127f968a5de4",
+        "task_6c307824638e4c2f",
+        "task_6f63bd4a8d4b61da",
+        "task_6fa0517be19478ba",
+        "task_711a98f5b4e43d63",
+        "task_74d913ee386af6e7",
+        "task_7597e5c2be051351",
+        "task_76ffd09ae15337a0",
+        "task_79e6d0e9d9c141ab",
+        "task_7a7b4403c6bb5c2f",
+        "task_7a8826453d39d42e",
+        "task_7b52c5d24855f120",
+        "task_7ba66c104d1a529e",
+        "task_7bc1a1793ca27e14",
+        "task_7ccc8845f0bcff70",
+        "task_7da0b449c6ea8876",
+        "task_7da3ca8b3da55f10",
+        "task_7dd651b0755fc75e",
+        "task_7e98dce126fc405f",
+        "task_7eb7c4e4e92498b0",
+        "task_7ecb0628b3483d8e",
+        "task_7eea921695de8b74",
+        "task_80112263ea23cf20",
+        "task_80f57ced78d344fe",
+        "task_812f46dcd52f1a96",
+        "task_8438b634bf9ea1ef",
+        "task_84bc9c7238318b02",
+        "task_85832dbd9dfb239d",
+        "task_85ac555c17bc0f22",
+        "task_85ba29439f436d68",
+        "task_86a03d92a225dec6",
+        "task_86e76472c326f3d9",
+        "task_88328ed09840a531",
+        "task_888b49d75b307c10",
+        "task_8a6f3ca6601057fd",
+        "task_8d234c5f53d9f40c",
+        "task_8d57a6d2cef904bf",
+        "task_906faef73e031cb2",
+        "task_9423f09b4071db7e",
+        "task_942e6741c3af7482",
+        "task_9447a941cedc0595",
+        "task_94b0fcb08a3c38f9",
+        "task_9534213643a9ac5c",
+        "task_9581db0edd7e5671",
+        "task_97a3cd86aaf76177",
+        "task_9a45765c9378600c",
+        "task_9a4d637994f78885",
+        "task_9b7250ae3007ae67",
+        "task_9e0ee9a10c74f494",
+        "task_9f1657bb1d89803b",
+        "task_9f782d69484ef31f",
+        "task_9fd36c195d94649a",
+        "task_a0d1dc82707561de",
+        "task_a17c57f27857507f",
+        "task_a325680fcd625c73",
+        "task_a3272029c2351bbe",
+        "task_a43e693593b64f9d",
+        "task_a61ecc837000a0ef",
+        "task_a89fd7409879453c",
+        "task_a8a8148047a9dc0f",
+        "task_a8d0d391d40ec2db",
+        "task_a8f3d766902d7683",
+        "task_a9502fefea8de90c",
+        "task_aaa992a8adacd5da",
+        "task_ab4a082392d5261e",
+        "task_abe8192cfa915431",
+        "task_ac1b198eb1ee6198",
+        "task_ad5e3cd2feb2fb8c",
+        "task_ae7e401ad4a6ca0c",
+        "task_b103d3e25f23437a",
+        "task_b230d2107efea98b",
+        "task_b2608a685ad0669d",
+        "task_b2d6ba7d3c96dbba",
+        "task_b38702df9eb2366d",
+        "task_b3cc895c60cc0298",
+        "task_b4c49be570ad0e28",
+        "task_b54b966ceb94f6a7",
+        "task_b64fe29a5799c348",
+        "task_b81274d6e698e6a6",
+        "task_baa8e84faa749b1c",
+        "task_bbcd5aa24c532c79",
+        "task_bc95e91205261492",
+        "task_bd5570e5e327660a",
+        "task_bdbdb4521f4d5f18",
+        "task_be620c1831b88ad7",
+        "task_be90cb8d82a6dd48",
+        "task_c2563f54cb207bb8",
+        "task_c25759f67d257f5f",
+        "task_c275235f168d8dae",
+        "task_c324ad0b682c5635",
+        "task_c372338a34b3a148",
+        "task_c39c3afb77a91e39",
+        "task_c5571a2dae262b30",
+        "task_c5dd36c58c1cb602",
+        "task_c61bd6e3b4e7d736",
+        "task_c7f05fd0a719c01a",
+        "task_c945ead6a74162d8",
+        "task_cae9d444cb3f7315",
+        "task_cb2107d46d879577",
+        "task_cb98687d6d890e2a",
+        "task_ce481fa3b82b961f",
+        "task_cf0da0ac1fc4bccd",
+        "task_d1c1491dc93394fa",
+        "task_d278d56c2a1a7173",
+        "task_d35811e406283d7b",
+        "task_d5e16d762a45e42c",
+        "task_d613217f6faea000",
+        "task_d8f788fd33b0d4bd",
+        "task_dae71f0e75c698cb",
+        "task_dcc0fbfd5f654e53",
+        "task_dd26e73b122c04a5",
+        "task_ddad4919a772cc04",
+        "task_ddb2c8c9bd3ad3a3",
+        "task_dfb2a0be53a60a9b",
+        "task_e0316ae2d9027f62",
+        "task_e05658720a846978",
+        "task_e27d1b5ea86ce5b6",
+        "task_e2a1150eb0b78ff3",
+        "task_e3c9942061be3756",
+        "task_e3f289e320ba49f3",
+        "task_e59acf163a97289c",
+        "task_e6bd60c518091ce0",
+        "task_e79cbb8cb6e27eca",
+        "task_e9f33c9bc7b24fd4",
+        "task_eb85e9f7bfa97ad7",
+        "task_eb95286a3da1d575",
+        "task_ee9f3c48386ddf2d",
+        "task_eee9ab13d3ddf3a8",
+        "task_eef86d1b9896e246",
+        "task_ef6e8369e3d84b4e",
+        "task_efc2d6010dd9b743",
+        "task_f03d0e7293937bcd",
+        "task_f0deefef52cfca9a",
+        "task_f3bd48ed1a131036",
+        "task_f45f2515530b8b3d",
+        "task_f4b6f2e540d85073",
+        "task_f51fa160c52b9b46",
+        "task_fe14875de963fc8b",
+        "task_fe31655c4f614bc4"
+      ]
+    }
+  },
+  "tool_usage": {
+    "worker_events": 16,
+    "worker_failed_events": 16,
+    "top_tools": [
+      {
+        "tool": "/tool:agent-task-completion",
+        "events": 16,
+        "failed": 16
+      }
+    ]
+  },
+  "friction": {
+    "total_events": 16,
+    "open_events": 16,
+    "top_block_types": [
+      {
+        "key": "task_failure",
+        "count": 16,
+        "energy_loss": 0.0,
+        "cost_of_delay": 0.0
+      }
+    ],
+    "top_stages": [
+      {
+        "key": "agent_runner",
+        "count": 16,
+        "energy_loss": 0.0
+      }
+    ],
+    "entry_points": [
+      {
+        "key": "friction:task_failure",
+        "title": "Friction block: task_failure",
+        "severity": "high",
+        "status": "open",
+        "event_count": 16,
+        "energy_loss": 0.0,
+        "cost_of_delay": 0.0,
+        "wasted_minutes": 0.0,
+        "recommended_action": "Investigate failed task output, then rerun or close with a documented resolution.",
+        "evidence_links": [
+          "/api/friction/events?status=open",
+          "/friction"
+        ],
+        "sources": [
+          "friction_events"
+        ]
+      },
+      {
+        "key": "failed-tasks:impl",
+        "title": "Failed task executions: impl",
+        "severity": "high",
+        "status": "open",
+        "event_count": 6,
+        "energy_loss": 0.0,
+        "cost_of_delay": 0.0,
+        "wasted_minutes": 0.0,
+        "recommended_action": "Reduce repeated failures for this task type before running more CI-heavy iterations.",
+        "evidence_links": [
+          "/api/agent/metrics",
+          "/usage"
+        ],
+        "sources": [
+          "metrics"
+        ]
+      }
+    ]
+  },
+  "providers": [
+    {
+      "provider": "github",
+      "status": "ok",
+      "data_source": "provider_api",
+      "usage": {
+        "label": "GitHub REST core requests",
+        "used": 185.0,
+        "unit": "requests",
+        "remaining": 4815.0,
+        "limit": 5000.0,
+        "window": "hourly"
+      },
+      "notes": [
+        "GitHub billing data unavailable: Client error '404 Not Found' for url 'https://api.github.com/users/seeker71/settings/billing/actions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+      ]
+    },
+    {
+      "provider": "openai-codex",
+      "status": "ok",
+      "data_source": "provider_api",
+      "usage": {
+        "label": "Codex task runs (5h)",
+        "used": 16.0,
+        "unit": "requests",
+        "remaining": 484.0,
+        "limit": 500.0,
+        "window": "hourly"
+      },
+      "notes": [
+        "OpenAI models probe succeeded, but no request/token remaining headers were returned.",
+        "OpenAI responses quota probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+      ]
+    },
+    {
+      "provider": "openrouter",
+      "status": "ok",
+      "data_source": "provider_api",
+      "usage": {
+        "label": "OpenRouter visible models",
+        "used": 337.0,
+        "unit": "requests",
+        "remaining": null,
+        "limit": null,
+        "window": "probe"
+      },
+      "notes": [
+        "OpenRouter models probe succeeded, but no request/token remaining headers were returned."
+      ]
+    },
+    {
+      "provider": "railway",
+      "status": "ok",
+      "data_source": "provider_api",
+      "usage": {
+        "label": "Railway API probe",
+        "used": 1.0,
+        "unit": "requests",
+        "remaining": null,
+        "limit": null,
+        "window": "probe"
+      },
+      "notes": [
+        "Railway probe succeeded, but no request remaining headers were returned."
+      ]
+    },
+    {
+      "provider": "coherence-internal",
+      "status": "ok",
+      "data_source": "runtime_events",
+      "usage": {
+        "label": "Tracked task runs",
+        "used": 0.0,
+        "unit": "tasks",
+        "remaining": null,
+        "limit": null,
+        "window": "rolling"
+      },
+      "notes": [
+        "Execution success rate 100.0%"
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "status": "ok",
+      "data_source": "configuration_only",
+      "usage": null,
+      "notes": [
+        "configuration keys detected"
+      ]
+    },
+    {
+      "provider": "claude",
+      "status": "ok",
+      "data_source": "provider_api",
+      "usage": {
+        "label": "Claude visible models",
+        "used": 9.0,
+        "unit": "requests",
+        "remaining": null,
+        "limit": null,
+        "window": "probe"
+      },
+      "notes": [
+        "Claude models probe succeeded, but no request/token remaining headers were returned.",
+        "Anthropic messages quota probe failed: Client error '404 Not Found' for url 'https://api.anthropic.com/v1/messages'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+      ]
+    },
+    {
+      "provider": "cursor",
+      "status": "unavailable",
+      "data_source": "configuration_only",
+      "usage": null,
+      "notes": [
+        "missing_env=one_of(CURSOR_API_KEY,CURSOR_CLI_MODEL)",
+        "cursor_cli_missing: install Cursor CLI (`agent`) for runtime execution."
+      ]
+    },
+    {
+      "provider": "openai",
+      "status": "degraded",
+      "data_source": "provider_api",
+      "usage": null,
+      "notes": [
+        "OpenAI usage/cost fetch failed: usage=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/usage/completions?start_time=1769240137&end_time=1771832137'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403; costs=Client error '403 Forbidden' for url 'https://api.openai.com/v1/organization/costs?start_time=1769240137&end_time=1771832137'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+        "OpenAI responses fallback probe failed: Client error '400 Bad Request' for url 'https://api.openai.com/v1/responses'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400"
+      ]
+    },
+    {
+      "provider": "openclaw",
+      "status": "ok",
+      "data_source": "configuration_only",
+      "usage": {
+        "label": "Runtime task runs",
+        "used": 89.0,
+        "unit": "tasks",
+        "remaining": null,
+        "limit": null,
+        "window": "rolling"
+      },
+      "notes": [
+        "configuration keys detected"
+      ]
+    },
+    {
+      "provider": "supabase",
+      "status": "unavailable",
+      "data_source": "configuration_only",
+      "usage": null,
+      "notes": [
+        "Set SUPABASE_ACCESS_TOKEN (or SUPABASE_TOKEN) and SUPABASE_PROJECT_REF."
+      ]
+    }
+  ],
+  "top_attention_areas": [
+    {
+      "endpoint": "/tool:agent-task-completion",
+      "events": 16,
+      "attention_score": 177.0,
+      "runtime_cost_estimate": 103.17326899,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/health-proxy",
+      "events": 43,
+      "attention_score": 87.915,
+      "runtime_cost_estimate": 0.66235636,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/automation/usage/subscription-estimator",
+      "events": 21,
+      "attention_score": 49.0,
+      "runtime_cost_estimate": 0.91108888,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/friction/report",
+      "events": 23,
+      "attention_score": 40.002,
+      "runtime_cost_estimate": 0.32203714,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/automation/usage",
+      "events": 2,
+      "attention_score": 40.0,
+      "runtime_cost_estimate": 0.07796078,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/health",
+      "events": 45,
+      "attention_score": 33.457,
+      "runtime_cost_estimate": 0.33556548,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/runtime/ideas/summary",
+      "events": 22,
+      "attention_score": 33.325,
+      "runtime_cost_estimate": 0.20515818,
+      "friction_event_count": 0
+    },
+    {
+      "endpoint": "/api/runtime/events",
+      "events": 46,
+      "attention_score": 28.171,
+      "runtime_cost_estimate": 0.09986162,
+      "friction_event_count": 0
+    }
+  ],
+  "contract_gaps": []
+}

@@ -39,77 +39,14 @@
       "workflow": "Public Deploy Contract",
       "owner": "@seeker71",
       "reason": "Temporary waiver for cancelled deploy-contract runs during concurrent workflow dispatch.",
-      "expires_at": "2026-02-25T23:59:59Z"
+      "expires_at": "2026-02-23T23:59:59Z"
     },
     {
       "workflow": "Change Contract",
       "owner": "@seeker71",
       "reason": "Temporary waiver while Change Contract main run is being repaired.",
-      "expires_at": "2026-02-25T23:59:59Z",
+      "expires_at": "2026-02-23T23:59:59Z",
       "run_url_contains": "actions/runs/22282530504"
-    },
-    {
-      "workflow": "Auto Heal Deploy Gates",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while hosted self-improve execution reliability fix is being rolled out and validated.",
-      "expires_at": "2026-02-25T23:59:59Z",
-      "run_url_contains": "actions/runs/22300432845"
-    },
-    {
-      "workflow": "Thread Gates",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
-      "expires_at": "2026-02-25T23:59:59Z",
-      "run_url_contains": "actions/runs/22340170322"
-    },
-    {
-      "workflow": "Test",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
-      "expires_at": "2026-02-25T23:59:59Z",
-      "run_url_contains": "actions/runs/22340170339"
-    },
-    {
-      "workflow": "Self Improve Cycle",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while latest main workflow failures are being repaired; required to unblock urgent DB egress mitigation.",
-      "expires_at": "2026-02-25T23:59:59Z",
-      "run_url_contains": "actions/runs/22339901527"
-    },
-    {
-      "workflow": "External Tools Audit",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22480243146 failure is actively remediated to unblock urgent self-improvement flow fixes.",
-      "expires_at": "2026-03-01T23:59:59Z",
-      "run_url_contains": "actions/runs/22480243146"
-    },
-    {
-      "workflow": "Change Contract",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22480243174 failure is actively remediated to unblock urgent self-improvement flow fixes.",
-      "expires_at": "2026-03-01T23:59:59Z",
-      "run_url_contains": "actions/runs/22480243174"
-    },
-    {
-      "workflow": "External Tools Audit",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22480736529 failure is actively remediated to unblock urgent self-improvement flow gap-closure work.",
-      "expires_at": "2026-03-01T23:59:59Z",
-      "run_url_contains": "actions/runs/22480736529"
-    },
-    {
-      "workflow": "Change Contract",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22482283831 failure is actively remediated to unblock requested findings implementation in this thread.",
-      "expires_at": "2026-03-02T23:59:59Z",
-      "run_url_contains": "actions/runs/22482283831"
-    },
-    {
-      "workflow": "Claude Code Host Runner Task",
-      "owner": "@seeker71",
-      "reason": "Temporary waiver while run 22482077227 failure is actively remediated to unblock requested findings implementation in this thread.",
-      "expires_at": "2026-03-02T23:59:59Z",
-      "run_url_contains": "actions/runs/22482077227"
     }
   ]
 }

@@ -1,0 +1,102 @@
+- generic [active] [ref=e1]:
+  - heading "Coherence Live Snapshot (24h)" [level=1] [ref=e2]
+  - generic [ref=e3]:
+    - text: Generated at
+    - code [ref=e4]: 2026-02-22T20:40:12.388078Z
+    - text: from production API.
+  - generic [ref=e5]:
+    - heading "24h Friction Totals" [level=2] [ref=e6]
+    - table [ref=e7]:
+      - rowgroup [ref=e8]:
+        - row "Total events Open Energy loss Cost of delay" [ref=e9]:
+          - columnheader "Total events" [ref=e10]
+          - columnheader "Open" [ref=e11]
+          - columnheader "Energy loss" [ref=e12]
+          - columnheader "Cost of delay" [ref=e13]
+        - row "8 0 15.491 15.491" [ref=e14]:
+          - cell "8" [ref=e15]
+          - cell "0" [ref=e16]
+          - cell "15.491" [ref=e17]
+          - cell "15.491" [ref=e18]
+  - generic [ref=e19]:
+    - heading "Provider Usage + Limits" [level=2] [ref=e20]
+    - table [ref=e21]:
+      - rowgroup [ref=e22]:
+        - row "Provider Used Limit Remaining Notes" [ref=e23]:
+          - columnheader "Provider" [ref=e24]
+          - columnheader "Used" [ref=e25]
+          - columnheader "Limit" [ref=e26]
+          - columnheader "Remaining" [ref=e27]
+          - columnheader "Notes" [ref=e28]
+        - row "github 76.0 requests 5000.0 4924.0 hourly REST core limit" [ref=e29]:
+          - cell "github" [ref=e30]
+          - cell "76.0 requests" [ref=e31]
+          - cell "5000.0" [ref=e32]
+          - cell "4924.0" [ref=e33]
+          - cell "hourly REST core limit" [ref=e34]
+        - row "cursor no runtime usage events 8h=0, 7d=0 n/a provider unavailable; configured limits currently 0" [ref=e35]:
+          - cell "cursor" [ref=e36]
+          - cell "no runtime usage events" [ref=e37]
+          - cell "8h=0, 7d=0" [ref=e38]
+          - cell "n/a" [ref=e39]
+          - cell "provider unavailable; configured limits currently 0" [ref=e40]
+        - row "openai-codex 177.0 runtime task runs not exposed not exposed rate-limit headers absent" [ref=e41]:
+          - cell "openai-codex" [ref=e42]
+          - cell "177.0 runtime task runs" [ref=e43]
+          - cell "not exposed" [ref=e44]
+          - cell "not exposed" [ref=e45]
+          - cell "rate-limit headers absent" [ref=e46]
+        - row "openrouter 337.0 visible models probe not exposed not exposed rate-limit headers absent" [ref=e47]:
+          - cell "openrouter" [ref=e48]
+          - cell "337.0 visible models probe" [ref=e49]
+          - cell "not exposed" [ref=e50]
+          - cell "not exposed" [ref=e51]
+          - cell "rate-limit headers absent" [ref=e52]
+  - generic [ref=e53]:
+    - heading "Highest Friction/Attention Areas (top 3)" [level=2] [ref=e54]
+    - table [ref=e55]:
+      - rowgroup [ref=e56]:
+        - row "Area Events Attention score Runtime cost est." [ref=e57]:
+          - columnheader "Area" [ref=e58]
+          - columnheader "Events" [ref=e59]
+          - columnheader "Attention score" [ref=e60]
+          - columnheader "Runtime cost est." [ref=e61]
+        - row "/api/automation/usage/alerts 21 152.6 1.04527377" [ref=e62]:
+          - cell "/api/automation/usage/alerts" [ref=e63]:
+            - code [ref=e64]: /api/automation/usage/alerts
+          - cell "21" [ref=e65]
+          - cell "152.6" [ref=e66]
+          - cell "1.04527377" [ref=e67]
+        - row "/api/health-proxy 154 131.519 3.94556131" [ref=e68]:
+          - cell "/api/health-proxy" [ref=e69]:
+            - code [ref=e70]: /api/health-proxy
+          - cell "154" [ref=e71]
+          - cell "131.519" [ref=e72]
+          - cell "3.94556131" [ref=e73]
+        - row "/api/automation/usage/subscription-estimator 26 52.6 1.17104959" [ref=e74]:
+          - cell "/api/automation/usage/subscription-estimator" [ref=e75]:
+            - code [ref=e76]: /api/automation/usage/subscription-estimator
+          - cell "26" [ref=e77]
+          - cell "52.6" [ref=e78]
+          - cell "1.17104959" [ref=e79]
+  - generic [ref=e80]:
+    - heading "Task-level Friction Entry Points" [level=2] [ref=e81]
+    - table [ref=e82]:
+      - rowgroup [ref=e83]:
+        - row "Entry point Status Count Energy loss" [ref=e84]:
+          - columnheader "Entry point" [ref=e85]
+          - columnheader "Status" [ref=e86]
+          - columnheader "Count" [ref=e87]
+          - columnheader "Energy loss" [ref=e88]
+        - row "failed-tasks:spec open 8 309.9333" [ref=e89]:
+          - cell "failed-tasks:spec" [ref=e90]:
+            - code [ref=e91]: failed-tasks:spec
+          - cell "open" [ref=e92]
+          - cell "8" [ref=e93]
+          - cell "309.9333" [ref=e94]
+        - row "friction:tool_failure resolved 8 15.491" [ref=e95]:
+          - cell "friction:tool_failure" [ref=e96]:
+            - code [ref=e97]: friction:tool_failure
+          - cell "resolved" [ref=e98]
+          - cell "8" [ref=e99]
+          - cell "15.491" [ref=e100]

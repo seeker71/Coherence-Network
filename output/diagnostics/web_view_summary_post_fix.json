@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-02-23T08:11:45.336126Z",
+  "window_seconds": 21600,
+  "route_prefix": null,
+  "total_routes": 1,
+  "rows": [
+    {
+      "route": "/usage",
+      "views": 2,
+      "p50_render_ms": 1937.45,
+      "p95_render_ms": 2703.125,
+      "average_render_ms": 1937.45,
+      "average_api_call_count": 0.0,
+      "average_api_endpoint_count": 0.0,
+      "average_api_runtime_ms": 0.0,
+      "average_api_runtime_cost_estimate": 0.0,
+      "last_render_ms": 1086.7,
+      "last_api_runtime_ms": 0.0,
+      "last_api_runtime_cost_estimate": 0.0,
+      "last_view_at": "2026-02-23T08:07:00.385092Z"
+    }
+  ]
+}

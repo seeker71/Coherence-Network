@@ -6,7 +6,6 @@ import os
 import re
 import secrets
 import shutil
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
@@ -1765,6 +1764,9 @@ def update_task(
         task["context"] = next_context
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
+    current_status_value = _status_value(task.get("status"))
+    if current_status_value == "failed" and previous_status_value != "failed":
+        _record_task_failure_friction(task)
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))
     else:
@@ -2040,6 +2042,173 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
     }
 
 
+def _task_activity_time(task: dict[str, Any]) -> datetime | None:
+    for key in ("updated_at", "created_at", "started_at"):
+        value = task.get(key)
+        if isinstance(value, datetime):
+            return value
+        parsed = _parse_dt(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _is_host_runner_claimant(claimed_by: str) -> bool:
+    cleaned = claimed_by.strip().lower()
+    if not cleaned:
+        return False
+    return "railway-runner" in cleaned or cleaned.startswith("openai-codex:")
+
+
+def _host_runner_usage_summary(tasks: list[dict[str, Any]], *, window_hours: int = 24) -> dict[str, Any]:
+    now = _now()
+    cutoff = now - timedelta(hours=max(1, min(int(window_hours), 24 * 30)))
+    host_tasks: list[dict[str, Any]] = []
+    for task in tasks:
+        claimed_by = str(task.get("claimed_by") or "")
+        if not _is_host_runner_claimant(claimed_by):
+            continue
+        task_time = _task_activity_time(task)
+        if task_time is None or task_time < cutoff:
+            continue
+        host_tasks.append(task)
+
+    status_counts: dict[str, int] = {}
+    task_type_counts: dict[str, dict[str, int]] = {}
+    for task in host_tasks:
+        status = _status_value(task.get("status")) or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+        task_type_value = _status_value(task.get("task_type")) or "unknown"
+        row = task_type_counts.setdefault(task_type_value, {"total": 0})
+        row["total"] += 1
+        row[status] = row.get(status, 0) + 1
+
+    return {
+        "window_hours": max(1, min(int(window_hours), 24 * 30)),
+        "generated_at": now.isoformat(),
+        "total_runs": len(host_tasks),
+        "failed_runs": status_counts.get("failed", 0),
+        "completed_runs": status_counts.get("completed", 0),
+        "running_runs": status_counts.get("running", 0),
+        "pending_runs": status_counts.get("pending", 0) + status_counts.get("needs_decision", 0),
+        "status_counts": status_counts,
+        "by_task_type": task_type_counts,
+    }
+
+
+def _linked_task_ids_from_friction_events() -> set[str]:
+    try:
+        from app.services import friction_service
+
+        events, _ignored = friction_service.load_events()
+    except Exception:
+        return set()
+    linked_ids: set[str] = set()
+    for event in events:
+        linked_task_id = str(getattr(event, "task_id", "") or "").strip()
+        if linked_task_id:
+            linked_ids.add(linked_task_id)
+    return linked_ids
+
+
+def _record_task_failure_friction(task: dict[str, Any], *, linked_task_ids: set[str] | None = None) -> bool:
+    task_id = str(task.get("id") or "").strip()
+    if not task_id:
+        return False
+    if linked_task_ids is None:
+        linked_task_ids = _linked_task_ids_from_friction_events()
+    if task_id in linked_task_ids:
+        return False
+
+    notes_parts = [
+        f"task_id={task_id}",
+        f"task_type={_status_value(task.get('task_type')) or 'unknown'}",
+        f"claimed_by={_normalize_worker_id(task.get('claimed_by'))}",
+        "failure_reason=task transitioned to failed without linked friction event",
+    ]
+    output = str(task.get("output") or "").strip()
+    if output:
+        notes_parts.append(f"output_preview={output[:400]}")
+
+    try:
+        from uuid import uuid4
+
+        from app.models.friction import FrictionEvent
+        from app.services import friction_service
+    except Exception:
+        return False
+
+    event = FrictionEvent(
+        id=f"fric_{uuid4().hex[:12]}",
+        timestamp=_now(),
+        task_id=task_id,
+        endpoint="tool:agent-task-completion",
+        stage="agent_runner",
+        block_type="task_failure",
+        severity="high",
+        owner="agent_pipeline",
+        unblock_condition="Investigate failed task output, then rerun or close with a documented resolution.",
+        energy_loss_estimate=0.0,
+        cost_of_delay=0.0,
+        status="open",
+        notes=" | ".join(notes_parts)[:1200],
+        resolved_at=None,
+        time_open_hours=None,
+        resolution_action=None,
+    )
+    try:
+        friction_service.append_event(event)
+    except Exception:
+        return False
+    linked_task_ids.add(task_id)
+    return True
+
+
+def backfill_host_runner_failure_observability(*, window_hours: int = 24) -> dict[str, Any]:
+    """Ensure host-runner failed tasks are linked to completion + friction telemetry."""
+    _ensure_store_loaded()
+    bounded_window = max(1, min(int(window_hours), 24 * 30))
+    now = _now()
+    cutoff = now - timedelta(hours=bounded_window)
+
+    host_failed_tasks: list[dict[str, Any]] = []
+    for task in _store.values():
+        if _status_value(task.get("status")) != "failed":
+            continue
+        if not _is_host_runner_claimant(str(task.get("claimed_by") or "")):
+            continue
+        task_time = _task_activity_time(task)
+        if task_time is None or task_time < cutoff:
+            continue
+        host_failed_tasks.append(task)
+
+    completion_backfilled = 0
+    friction_backfilled = 0
+    affected_task_ids: list[str] = []
+    linked_task_ids = _linked_task_ids_from_friction_events()
+    for task in host_failed_tasks:
+        task_id = str(task.get("id") or "").strip()
+        if not task_id:
+            continue
+        had_completion = _has_completion_tracking_event(task_id, "failed")
+        if not had_completion:
+            _record_completion_tracking_event(task)
+            completion_backfilled += 1
+            affected_task_ids.append(task_id)
+        if _record_task_failure_friction(task, linked_task_ids=linked_task_ids):
+            friction_backfilled += 1
+            if task_id not in affected_task_ids:
+                affected_task_ids.append(task_id)
+
+    return {
+        "window_hours": bounded_window,
+        "host_failed_tasks": len(host_failed_tasks),
+        "completion_events_backfilled": completion_backfilled,
+        "friction_events_backfilled": friction_backfilled,
+        "affected_task_ids": affected_task_ids[:50],
+    }
+
+
 def _pipeline_task_status_item(
     task: dict[str, Any], now: datetime
 ) -> tuple[str, dict[str, Any]]:
@@ -2233,190 +2402,6 @@ def get_usage_summary() -> dict[str, Any]:
         "routing": {t.value: {"model": ROUTING[t][0], "tier": ROUTING[t][1]} for t in TaskType},
         "execution": _execution_usage_summary(completed_or_failed_task_ids),
         "host_runner": _host_runner_usage_summary(tasks, window_hours=24),
-    }
-
-
-def _friction_note_value(notes: str, key: str) -> str:
-    pattern = rf"(?:^|\s){re.escape(key)}=([^\s]+)"
-    match = re.search(pattern, notes or "")
-    if not match:
-        return ""
-    return str(match.group(1) or "").strip()
-
-
-def _friction_rate(numerator: int, denominator: int) -> float:
-    if denominator <= 0:
-        return 1.0
-    return round(float(numerator) / float(denominator), 4)
-
-
-def _event_has_task_model_tool_trace(event: Any) -> bool:
-    notes = str(getattr(event, "notes", "") or "")
-    task_id = str(getattr(event, "task_id", "") or "").strip() or _friction_note_value(notes, "task_id")
-    model = str(getattr(event, "model", "") or "").strip() or _friction_note_value(notes, "model")
-    tool = str(getattr(event, "tool", "") or "").strip() or _friction_note_value(notes, "tool")
-    return bool(task_id and model and tool)
-
-
-def _partition_events_by_recent(
-    events: list[Any],
-    *,
-    cutoff: datetime,
-    timestamp_field: str = "timestamp",
-) -> tuple[list[Any], list[Any]]:
-    recent: list[Any] = []
-    prior: list[Any] = []
-    for event in events:
-        ts = getattr(event, timestamp_field, None)
-        if not isinstance(ts, datetime):
-            prior.append(event)
-            continue
-        ts_norm = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
-        if ts_norm >= cutoff:
-            recent.append(event)
-        else:
-            prior.append(event)
-    return recent, prior
-
-
-def _resolved_with_action(event: Any) -> bool:
-    return (
-        str(getattr(event, "status", "")).strip() == "resolved"
-        and bool(str(getattr(event, "resolution_action", "") or "").strip())
-    )
-
-
-def _count_runs_with_provider_trace(recent_runs: list[dict[str, Any]]) -> int:
-    traced = 0
-    for run in recent_runs:
-        if not isinstance(run, dict):
-            continue
-        if (
-            str(run.get("task_id") or "").strip()
-            and str(run.get("tool") or "").strip()
-            and str(run.get("provider") or "").strip()
-        ):
-            traced += 1
-    return traced
-
-
-def _visibility_area_rows(
-    *,
-    hosted_events: list[Any],
-    hosted_recent: list[Any],
-    hosted_prior: list[Any],
-    hosted_with_trace: int,
-    hosted_recent_with_trace: int,
-    hosted_prior_with_trace: int,
-    recent_runs: list[dict[str, Any]],
-    recent_with_provider: int,
-    recoverable_events: list[Any],
-    recoverable_recent: list[Any],
-    recoverable_prior: list[Any],
-    recovered_or_learned: int,
-    recovered_recent: int,
-    recovered_prior: int,
-    threshold: float,
-) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": "hosted_failure_reporting",
-            "label": "Hosted Worker Failure Reporting",
-            "numerator": hosted_with_trace,
-            "denominator": len(hosted_events),
-            "rate": _friction_rate(hosted_with_trace, len(hosted_events)),
-            "recent_rate": _friction_rate(hosted_recent_with_trace, len(hosted_recent)),
-            "prior_rate": _friction_rate(hosted_prior_with_trace, len(hosted_prior)),
-            "threshold": threshold,
-        },
-        {
-            "id": "provider_task_visibility",
-            "label": "Task-Provider Visibility",
-            "numerator": recent_with_provider,
-            "denominator": len(recent_runs),
-            "rate": _friction_rate(recent_with_provider, len(recent_runs)),
-            "recent_rate": _friction_rate(recent_with_provider, len(recent_runs)),
-            "prior_rate": None,
-            "threshold": threshold,
-        },
-        {
-            "id": "recovery_learning_capture",
-            "label": "Recovery/Learning Capture",
-            "numerator": recovered_or_learned,
-            "denominator": len(recoverable_events),
-            "rate": _friction_rate(recovered_or_learned, len(recoverable_events)),
-            "recent_rate": _friction_rate(recovered_recent, len(recoverable_recent)),
-            "prior_rate": _friction_rate(recovered_prior, len(recoverable_prior)),
-            "threshold": threshold,
-        },
-    ]
-
-
-def _visibility_proof_summary(usage: dict[str, Any]) -> dict[str, Any]:
-    from app.services import friction_service
-
-    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
-    recent_runs = execution.get("recent_runs") if isinstance(execution.get("recent_runs"), list) else []
-    events, _ignored = friction_service.load_events()
-    now = datetime.now(timezone.utc)
-    recent_cutoff = now - timedelta(days=3)
-
-    hosted_events = [
-        event for event in events if str(getattr(event, "stage", "")).strip() == "agent_runner"
-    ]
-    hosted_recent, hosted_prior = _partition_events_by_recent(hosted_events, cutoff=recent_cutoff)
-    hosted_with_trace = sum(1 for event in hosted_events if _event_has_task_model_tool_trace(event))
-    hosted_recent_with_trace = sum(1 for event in hosted_recent if _event_has_task_model_tool_trace(event))
-    hosted_prior_with_trace = sum(1 for event in hosted_prior if _event_has_task_model_tool_trace(event))
-    recent_with_provider = _count_runs_with_provider_trace(recent_runs)
-
-    recoverable_events = [
-        event for event in hosted_events if str(getattr(event, "block_type", "")).strip() == "tool_failure"
-    ]
-    recoverable_recent, recoverable_prior = _partition_events_by_recent(
-        recoverable_events,
-        cutoff=recent_cutoff,
-    )
-    recovered_or_learned = sum(1 for event in recoverable_events if _resolved_with_action(event))
-    recovered_recent = sum(1 for event in recoverable_recent if _resolved_with_action(event))
-    recovered_prior = sum(1 for event in recoverable_prior if _resolved_with_action(event))
-
-    threshold = 0.75
-    areas = _visibility_area_rows(
-        hosted_events=hosted_events,
-        hosted_recent=hosted_recent,
-        hosted_prior=hosted_prior,
-        hosted_with_trace=hosted_with_trace,
-        hosted_recent_with_trace=hosted_recent_with_trace,
-        hosted_prior_with_trace=hosted_prior_with_trace,
-        recent_runs=recent_runs,
-        recent_with_provider=recent_with_provider,
-        recoverable_events=recoverable_events,
-        recoverable_recent=recoverable_recent,
-        recoverable_prior=recoverable_prior,
-        recovered_or_learned=recovered_or_learned,
-        recovered_recent=recovered_recent,
-        recovered_prior=recovered_prior,
-        threshold=threshold,
-    )
-    for row in areas:
-        row["pass"] = bool(row["rate"] >= row["threshold"])
-        row["guidance_status"] = "on_track" if row["pass"] else "below_target"
-        row["progress_to_target"] = round(min(1.0, float(row["rate"]) / float(row["threshold"])), 4)
-        row["gap_to_target"] = round(max(0.0, float(row["threshold"]) - float(row["rate"])), 4)
-        prior_rate = row.get("prior_rate")
-        if isinstance(prior_rate, (int, float)):
-            row["trend_delta"] = round(float(row["recent_rate"]) - float(prior_rate), 4)
-        else:
-            row["trend_delta"] = None
-
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "threshold": threshold,
-        "all_pass": all(bool(row["pass"]) for row in areas),
-        "mode": "guidance",
-        "note": "Guidance target only: these metrics are for awareness and prioritization, not automatic blocking.",
-        "areas": areas,
     }
 
 

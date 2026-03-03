@@ -35,12 +35,7 @@ from app.models.automation_usage import (
     UsageAlertReport,
     UsageMetric,
 )
-from app.services import (
-    agent_runner_registry_service,
-    agent_service,
-    quality_awareness_service,
-    telemetry_persistence_service,
-)
+from app.services import agent_service, quality_awareness_service, telemetry_persistence_service
 
 _CACHE: dict[str, Any] = {"expires_at": 0.0, "overview": None}
 _CACHE_TTL_SECONDS = 1800.0
@@ -1104,16 +1099,13 @@ def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
     limited = [metric for metric in metrics if metric.limit is not None and float(metric.limit or 0.0) > 0.0]
     if limited:
         priority = {
-            "codex_provider_window_primary": 0,
-            "codex_provider_window_secondary": 1,
-            "codex_subscription_5h": 2,
-            "db_host_egress_monthly_estimated": 3,
-            "db_host_window_5h": 4,
-            "cursor_subscription_8h": 5,
-            "rest_requests": 6,
-            "codex_subscription_week": 7,
-            "db_host_window_week": 8,
-            "cursor_subscription_week": 9,
+            "codex_subscription_5h": 0,
+            "db_host_window_5h": 1,
+            "cursor_subscription_8h": 2,
+            "rest_requests": 3,
+            "codex_subscription_week": 4,
+            "db_host_window_week": 5,
+            "cursor_subscription_week": 6,
         }
         validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
         ordered = sorted(
@@ -1125,126 +1117,6 @@ def _summary_metric(metrics: list[UsageMetric]) -> UsageMetric | None:
         )
         return ordered[0] if ordered else limited[0]
     return _primary_metric(metrics)
-
-
-def _metric_quality_rank(metric: UsageMetric) -> tuple[int, int, int, int]:
-    validation_priority = {"validated": 0, "derived": 1, "inferred": 1, "unknown": 2}
-    validation_state = str(metric.validation_state or "unknown").strip().lower()
-    has_remaining = 0 if metric.remaining is not None else 1
-    has_limit = 0 if (metric.limit is not None and float(metric.limit or 0.0) > 0.0) else 1
-    return (
-        validation_priority.get(validation_state, 2),
-        has_remaining,
-        has_limit,
-        -int(float(metric.used or 0.0) > 0.0),
-    )
-
-
-def _merge_metric_rows(base: list[UsageMetric], incoming: list[UsageMetric]) -> list[UsageMetric]:
-    merged: dict[tuple[str, str, str], UsageMetric] = {}
-    order: list[tuple[str, str, str]] = []
-    for metric in [*base, *incoming]:
-        key = (metric.id, metric.unit, str(metric.window or ""))
-        existing = merged.get(key)
-        if existing is None:
-            merged[key] = metric
-            order.append(key)
-            continue
-        if _metric_quality_rank(metric) < _metric_quality_rank(existing):
-            merged[key] = metric
-    return [merged[key] for key in order]
-
-
-def _data_source_rank(source: str) -> int:
-    priority = {
-        "provider_api": 0,
-        "provider_cli": 1,
-        "runtime_events": 2,
-        "configuration_only": 3,
-        "unknown": 4,
-    }
-    return priority.get(str(source or "").strip().lower(), 4)
-
-
-def _status_rank(status: str) -> int:
-    priority = {"ok": 0, "degraded": 1, "unavailable": 2}
-    return priority.get(str(status or "").strip().lower(), 2)
-
-
-def _normalize_usage_row_status(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
-    if snapshot.status != "degraded":
-        return snapshot
-    has_signal = any(
-        (
-            float(metric.used or 0.0) > 0.0
-            or metric.remaining is not None
-            or (metric.limit is not None and float(metric.limit or 0.0) > 0.0)
-        )
-        for metric in snapshot.metrics
-    )
-    if has_signal:
-        snapshot.status = "ok"
-        snapshot.notes = list(dict.fromkeys([*snapshot.notes, "status_normalized_from_degraded:usage_signal_present"]))
-    else:
-        snapshot.status = "unavailable"
-        snapshot.notes = list(dict.fromkeys([*snapshot.notes, "status_normalized_from_degraded:no_usage_signal"]))
-    return snapshot
-
-
-def _merge_provider_snapshot_family(
-    base: ProviderUsageSnapshot,
-    incoming: ProviderUsageSnapshot,
-    *,
-    family: str,
-) -> ProviderUsageSnapshot:
-    base.provider = family
-    base.metrics = _merge_metric_rows(base.metrics, incoming.metrics)
-    base.notes = list(dict.fromkeys([*base.notes, *incoming.notes]))
-    base.official_records = list(dict.fromkeys([*base.official_records, *incoming.official_records]))
-    if _status_rank(incoming.status) < _status_rank(base.status):
-        base.status = incoming.status
-    if _data_source_rank(incoming.data_source) < _data_source_rank(base.data_source):
-        base.data_source = incoming.data_source
-    if incoming.cost_usd is not None:
-        base.cost_usd = max(float(base.cost_usd or 0.0), float(incoming.cost_usd))
-    if incoming.capacity_tasks_per_day is not None:
-        base.capacity_tasks_per_day = max(
-            float(base.capacity_tasks_per_day or 0.0),
-            float(incoming.capacity_tasks_per_day),
-        )
-    if incoming.collected_at > base.collected_at:
-        base.collected_at = incoming.collected_at
-    for key, value in incoming.raw.items():
-        if key not in base.raw:
-            base.raw[key] = value
-    return _normalize_usage_row_status(_finalize_snapshot(base))
-
-
-def coalesce_usage_overview_families(overview: ProviderUsageOverview) -> ProviderUsageOverview:
-    grouped: dict[str, ProviderUsageSnapshot] = {}
-    order: list[str] = []
-    for row in overview.providers:
-        family = _provider_family_name(row.provider)
-        if not family:
-            continue
-        candidate = ProviderUsageSnapshot(**row.model_dump(mode="json"))
-        candidate.provider = family
-        existing = grouped.get(family)
-        if existing is None:
-            grouped[family] = _normalize_usage_row_status(_finalize_snapshot(candidate))
-            order.append(family)
-            continue
-        grouped[family] = _merge_provider_snapshot_family(existing, candidate, family=family)
-
-    merged = [grouped[name] for name in order]
-    unavailable = sorted({row.provider for row in merged if row.status != "ok"})
-    return ProviderUsageOverview(
-        generated_at=overview.generated_at,
-        providers=merged,
-        unavailable_providers=unavailable,
-        tracked_providers=len(merged),
-        limit_coverage=dict(overview.limit_coverage),
-    )
 
 
 def _finalize_snapshot(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot:
@@ -2321,44 +2193,27 @@ def _int_env(name: str, default: int = 0) -> int:
         return default
 
 
-def _coerce_nonnegative_int(value: Any, *, default: int = 0) -> int:
-    try:
-        return max(0, int(float(value)))
-    except (TypeError, ValueError):
-        return default
-
-
 def _runtime_events_within_window(
     *,
     window_seconds: int,
     source: str | None = None,
-    limit: int = 1500,
+    limit: int = 5000,
 ) -> list[Any]:
-    normalized_window = max(60, int(window_seconds))
-    normalized_limit = max(1, min(int(limit), _runtime_event_scan_limit()))
-    normalized_source = source if isinstance(source, str) and source.strip() else None
-    cache_ttl = _runtime_events_cache_ttl_seconds()
-    cache_key = (normalized_window, normalized_source, normalized_limit)
-    now = time.time()
-
-    if cache_ttl > 0:
-        cached = _RUNTIME_EVENTS_WINDOW_CACHE.get(cache_key)
-        if cached and float(cached.get("expires_at") or 0.0) > now:
-            events = cached.get("events")
-            if isinstance(events, list):
-                return events
-
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=normalized_window)
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=max(60, int(window_seconds)))
     try:
         from app.services import runtime_service
 
-        events = runtime_service.list_events(
-            limit=normalized_limit,
+        return runtime_service.list_events(
+            limit=max(1, min(int(limit), 5000)),
             since=cutoff,
-            source=normalized_source,
+            source=source,
         )
     except Exception:
-        events = []
+        return []
+
+
+def _cursor_events_within_window(window_seconds: int) -> int:
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
 
     if cache_ttl > 0:
         _RUNTIME_EVENTS_WINDOW_CACHE[cache_key] = {
@@ -2400,62 +2255,10 @@ def _cursor_events_within_window(window_seconds: int) -> int:
     return count
 
 
-def _claude_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-
-    count = 0
-    for event in events:
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            continue
-        executor = str(metadata.get("executor") or "").strip().lower()
-        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
-        model = str(metadata.get("model") or "").strip().lower()
-        agent_id = str(metadata.get("agent_id") or "").strip().lower()
-        if (
-            executor == "claude"
-            or provider in {"claude", "claude-code"}
-            or "claude" in model
-            or agent_id.startswith("claude")
-        ):
-            count += 1
-    return count
-
-
 def _codex_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
     count = 0
     for event in events:
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            continue
-        executor = str(metadata.get("executor") or "").strip().lower()
-        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
-        model = str(metadata.get("model") or "").strip().lower()
-        agent_id = str(metadata.get("agent_id") or "").strip().lower()
-        if (
-            executor == "claude"
-            or provider in {"claude", "claude-code"}
-            or "claude" in model
-            or agent_id.startswith("claude")
-        ):
-            count += 1
-    return count
-
-
-def _codex_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-    count = 0
-    for event in events:
-        endpoint = str(getattr(event, "endpoint", "") or "").strip().lower()
-        # Avoid double-counting task wrappers; only track execution-like events.
-        if endpoint in {
-            "/tool:agent-task-completion",
-            "tool:agent-task-completion",
-            "/tool:agent-task-execution-summary",
-            "tool:agent-task-execution-summary",
-        }:
-            continue
         metadata = getattr(event, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             continue
@@ -2463,75 +2266,17 @@ def _codex_events_within_window(window_seconds: int) -> int:
         provider = _normalize_provider_name(str(metadata.get("provider") or ""))
         executor = str(metadata.get("executor") or "").strip().lower()
         agent_id = str(metadata.get("agent_id") or "").strip().lower()
-        repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
         is_codex = bool(metadata.get("is_openai_codex"))
         if is_codex:
             count += 1
             continue
-        if provider == "openai" and (
-            "codex" in model
-            or "openai-codex" in agent_id
-            or repeatable_tool_call.startswith("codex ")
-        ):
+        if provider == "openai-codex":
             count += 1
             continue
         if "codex" in model and (executor in {"openclaw", "codex"} or "openai-codex" in agent_id):
             count += 1
             continue
     return count
-
-
-def _cursor_subscription_window_metrics(
-    *,
-    limit_8h: int,
-    limit_week: int,
-    limit_source: str,
-) -> list[UsageMetric]:
-    validation_state = "validated" if limit_source == "runner_provider_telemetry" else "derived"
-    validation_detail = (
-        "Derived from runtime worker-event usage and host-runner Cursor subscription telemetry."
-        if limit_source == "runner_provider_telemetry"
-        else "Derived from runtime worker-event usage and Cursor CLI subscription-tier baseline."
-    )
-    evidence_source = (
-        "runner_provider_telemetry"
-        if limit_source == "runner_provider_telemetry"
-        else "runtime_events+cli_subscription_baseline"
-    )
-    metrics: list[UsageMetric] = []
-    if limit_8h > 0:
-        used_8h = _cursor_events_within_window(8 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="cursor_subscription_8h",
-                label="Cursor subscription runs (8h)",
-                unit="requests",
-                used=float(min(used_8h, limit_8h)),
-                remaining=float(max(0, limit_8h - used_8h)),
-                limit=float(limit_8h),
-                window="hourly",
-                validation_state=validation_state,
-                validation_detail=validation_detail,
-                evidence_source=evidence_source,
-            )
-        )
-    if limit_week > 0:
-        used_week = _cursor_events_within_window(7 * 24 * 60 * 60)
-        metrics.append(
-            _metric(
-                id="cursor_subscription_week",
-                label="Cursor subscription runs (7d)",
-                unit="requests",
-                used=float(min(used_week, limit_week)),
-                remaining=float(max(0, limit_week - used_week)),
-                limit=float(limit_week),
-                window="weekly",
-                validation_state=validation_state,
-                validation_detail=validation_detail,
-                evidence_source=evidence_source,
-            )
-        )
-    return metrics
 
 
 def _build_cursor_snapshot() -> ProviderUsageSnapshot:
@@ -2707,67 +2452,52 @@ def _cursor_subscription_window_metrics(
 
 
 def _append_codex_subscription_metrics(snapshot: ProviderUsageSnapshot) -> None:
-    if _normalize_provider_name(snapshot.provider) != "openai":
+    if snapshot.provider != "openai-codex":
         return
-    if any(metric.id == "openai_subscription_8h" for metric in snapshot.metrics):
-        return
-    has_provider_windows = _append_codex_provider_window_metrics(snapshot)
     existing = {metric.id for metric in snapshot.metrics}
-    used_5h = _codex_events_within_window(5 * 60 * 60)
-    used_week = _codex_events_within_window(7 * 24 * 60 * 60)
-    fallback_limit_5h, fallback_limit_week, fallback_source = _codex_subscription_fallback_limits()
-    has_fallback_limits = fallback_limit_5h > 0 and fallback_limit_week > 0
-    fallback_validation_state = (
-        "validated"
-        if fallback_source.startswith("runner_provider_telemetry")
-        else "derived"
-    )
-    fallback_evidence_source = (
-        "runner_provider_telemetry"
-        if fallback_source.startswith("runner_provider_telemetry")
-        else "runtime_events+env_limits"
-    )
-    if "codex_subscription_5h" not in existing:
+    limit_5h = max(0, _int_env("CODEX_SUBSCRIPTION_5H_LIMIT", 0))
+    if limit_5h > 0 and "codex_subscription_5h" not in existing:
+        used_5h = _codex_events_within_window(5 * 60 * 60)
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_5h",
                 label="Codex task runs (5h)",
                 unit="requests",
-                used=float(used_5h),
-                remaining=None,
-                limit=None,
-                window="rolling_5h",
-                validation_state=(fallback_validation_state if fallback_limit is not None else "derived"),
+                used=float(min(used_5h, limit_5h)),
+                remaining=float(max(0, limit_5h - used_5h)),
+                limit=float(limit_5h),
+                window="hourly",
+                validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts for execution volume tracking."
-                    if has_provider_windows
-                    else "Derived from runtime worker-event counts. No validated Codex 5h quota window telemetry was available."
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
+                    "not from provider quota headers/API."
                 ),
-                evidence_source="runtime_events",
+                evidence_source="runtime_events+env_limits",
             )
         )
-    if "codex_subscription_week" not in existing:
+    limit_week = max(0, _int_env("CODEX_SUBSCRIPTION_WEEK_LIMIT", 0))
+    if limit_week > 0 and "codex_subscription_week" not in existing:
+        used_week = _codex_events_within_window(7 * 24 * 60 * 60)
         snapshot.metrics.append(
             _metric(
                 id="codex_subscription_week",
                 label="Codex task runs (7d)",
                 unit="requests",
-                used=float(used_week),
-                remaining=None,
-                limit=None,
-                window="rolling_7d",
-                validation_state=(fallback_validation_state if fallback_limit is not None else "derived"),
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+                validation_state="derived",
                 validation_detail=(
-                    "Derived from runtime worker-event counts for execution volume tracking."
-                    if has_provider_windows
-                    else "Derived from runtime worker-event counts. No validated Codex weekly quota window telemetry was available."
+                    "Derived from runtime worker-event counts plus local CODEX_SUBSCRIPTION_* limit configuration; "
+                    "not from provider quota headers/API."
                 ),
-                evidence_source="runtime_events",
+                evidence_source="runtime_events+env_limits",
             )
         )
-    if not has_provider_windows:
+    if limit_5h <= 0 and limit_week <= 0:
         snapshot.notes.append(
-            "Codex subscription windows were unavailable from provider API/runner telemetry; tracking execution volume only."
+            "Set CODEX_SUBSCRIPTION_5H_LIMIT and CODEX_SUBSCRIPTION_WEEK_LIMIT to enforce hard Codex window limits."
         )
     snapshot.notes = list(dict.fromkeys(snapshot.notes))
 
@@ -3359,6 +3089,100 @@ def _build_openrouter_snapshot() -> ProviderUsageSnapshot:
     return snapshot
 
 
+def _build_db_host_snapshot() -> ProviderUsageSnapshot:
+    db_url = (
+        str(os.getenv("RUNTIME_DATABASE_URL", "")).strip()
+        or str(os.getenv("DATABASE_URL", "")).strip()
+    )
+    if not db_url:
+        return ProviderUsageSnapshot(
+            id=f"provider_db_host_{int(time.time())}",
+            provider="db-host",
+            kind="custom",
+            status="unavailable",
+            data_source="configuration_only",
+            notes=["Set DATABASE_URL or RUNTIME_DATABASE_URL to track DB-host usage windows."],
+        )
+
+    parsed = urlparse(db_url)
+    db_host = str(parsed.hostname or "").strip()
+    db_engine = str(parsed.scheme or "").strip()
+    if db_engine.endswith("+psycopg"):
+        db_engine = db_engine.split("+", 1)[0]
+
+    metrics: list[UsageMetric] = []
+    api_events_24h = len(_runtime_events_within_window(window_seconds=24 * 60 * 60, source="api", limit=5000))
+    metrics.append(
+        _metric(
+            id="api_events_24h",
+            label="API events touching DB host (24h)",
+            unit="requests",
+            used=float(api_events_24h),
+            window="daily",
+            validation_state="derived",
+            validation_detail="Derived from API runtime-event counts as an egress-safe proxy for DB load.",
+            evidence_source="runtime_events",
+        )
+    )
+
+    limit_5h = max(0, _int_env("DB_HOST_5H_LIMIT", 0))
+    if limit_5h > 0:
+        used_5h = len(_runtime_events_within_window(window_seconds=5 * 60 * 60, source="api", limit=5000))
+        metrics.append(
+            _metric(
+                id="db_host_window_5h",
+                label="DB host request window (5h)",
+                unit="requests",
+                used=float(min(used_5h, limit_5h)),
+                remaining=float(max(0, limit_5h - used_5h)),
+                limit=float(limit_5h),
+                window="hourly",
+                validation_state="derived",
+                validation_detail="Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
+                evidence_source="runtime_events+env_limits",
+            )
+        )
+
+    limit_week = max(0, _int_env("DB_HOST_WEEK_LIMIT", 0))
+    if limit_week > 0:
+        used_week = len(_runtime_events_within_window(window_seconds=7 * 24 * 60 * 60, source="api", limit=5000))
+        metrics.append(
+            _metric(
+                id="db_host_window_week",
+                label="DB host request window (7d)",
+                unit="requests",
+                used=float(min(used_week, limit_week)),
+                remaining=float(max(0, limit_week - used_week)),
+                limit=float(limit_week),
+                window="weekly",
+                validation_state="derived",
+                validation_detail="Derived from API runtime-event counts and DB_HOST_* local limit configuration.",
+                evidence_source="runtime_events+env_limits",
+            )
+        )
+
+    notes = [
+        "DB-host usage uses runtime API event counts as an egress-safe proxy for DB load.",
+    ]
+    if limit_5h <= 0 and limit_week <= 0:
+        notes.append("Set DB_HOST_5H_LIMIT and DB_HOST_WEEK_LIMIT for hard host-window tracking.")
+
+    return ProviderUsageSnapshot(
+        id=f"provider_db_host_{int(time.time())}",
+        provider="db-host",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=metrics,
+        notes=notes,
+        raw={
+            "database_host": db_host,
+            "database_engine": db_engine,
+            "database_present": True,
+        },
+    )
+
+
 def _build_railway_snapshot() -> ProviderUsageSnapshot:
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
@@ -3611,14 +3435,15 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_openrouter_snapshot(),
         _build_config_only_snapshot("anthropic"),
         _build_config_only_snapshot("openclaw"),
-        _build_config_only_snapshot("cursor"),
-        _build_config_only_snapshot("openclaw"),
-        _build_config_only_snapshot("railway"),
-        _build_config_only_snapshot("vercel"),
+        _build_cursor_snapshot(),
+        _build_db_host_snapshot(),
+        _build_supabase_snapshot(),
+        _build_railway_snapshot(),
     ]
     if _supabase_tracking_enabled():
         providers.append(_build_supabase_snapshot())
     for snapshot in providers:
+        _append_codex_subscription_metrics(snapshot)
         active_count = int(active_usage.get(snapshot.provider, 0))
         if active_count > 0:
             has_metric = any(metric.id == "runtime_task_runs" for metric in snapshot.metrics)
@@ -3630,6 +3455,9 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                         unit="tasks",
                         used=float(active_count),
                         window="rolling",
+                        validation_state="derived",
+                        validation_detail="Derived from runtime telemetry events; not a provider-reported quota value.",
+                        evidence_source="runtime_events",
                     )
                 )
             snapshot.raw["runtime_task_runs"] = active_count
@@ -3988,18 +3816,234 @@ def evaluate_usage_alerts(threshold_ratio: float = 0.2) -> UsageAlertReport:
     return UsageAlertReport(threshold_ratio=ratio, alerts=alerts)
 
 
-def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
-    required = [
-        _normalize_provider_name(item)
-        for item in (required_providers or _required_providers_from_env())
-        if str(item).strip()
-    ]
-    if _env_truthy("AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS", default=True):
-        active_counts = _active_provider_usage_counts()
-        for provider_name, count in active_counts.items():
-            if count > 0:
-                required.append(provider_name)
-    required_set = set(required)
+def _latest_provider_snapshots(limit: int = 800) -> dict[str, ProviderUsageSnapshot]:
+    rows = list_usage_snapshots(limit=max(10, min(int(limit), 2000)))
+    by_provider: dict[str, ProviderUsageSnapshot] = {}
+    for row in rows:
+        provider = _normalize_provider_name(row.provider)
+        if not provider or provider in by_provider:
+            continue
+        by_provider[provider] = row
+    return by_provider
+
+
+def daily_system_summary(
+    *,
+    window_hours: int = 24,
+    top_n: int = 3,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    window_seconds = max(3600, min(int(window_hours) * 3600, 30 * 24 * 3600))
+    top_count = max(1, min(int(top_n), 20))
+    try:
+        host_observability_backfill = agent_service.backfill_host_runner_failure_observability(
+            window_hours=max(1, int(window_seconds / 3600))
+        )
+    except Exception:
+        host_observability_backfill = {
+            "window_hours": max(1, int(window_seconds / 3600)),
+            "host_failed_tasks": 0,
+            "completion_events_backfilled": 0,
+            "friction_events_backfilled": 0,
+            "affected_task_ids": [],
+            "error": "backfill_failed",
+        }
+    usage = agent_service.get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    host_runner = usage.get("host_runner") if isinstance(usage.get("host_runner"), dict) else {}
+
+    try:
+        from app.services import friction_service
+
+        friction_events, _ignored = friction_service.load_events()
+        friction_summary = friction_service.summarize(
+            friction_events,
+            window_days=max(1, int(round(window_seconds / 86400))),
+        )
+        friction_entry_points = friction_service.friction_entry_points(
+            window_days=max(1, int(round(window_seconds / 86400))),
+            limit=20,
+        )
+    except Exception:
+        friction_summary = {
+            "total_events": 0,
+            "open_events": 0,
+            "total_energy_loss": 0.0,
+            "total_cost_of_delay": 0.0,
+            "top_block_types": [],
+            "top_stages": [],
+        }
+        friction_entry_points = {"entry_points": []}
+
+    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker", limit=5000)
+    worker_total = len(worker_events)
+    worker_failed = sum(1 for event in worker_events if int(getattr(event, "status_code", 0) or 0) >= 400)
+    tool_counts: dict[str, dict[str, int]] = {}
+    for event in worker_events:
+        endpoint = str(getattr(event, "endpoint", "") or "").strip() or "unknown"
+        row = tool_counts.setdefault(endpoint, {"count": 0, "failed": 0})
+        row["count"] += 1
+        if int(getattr(event, "status_code", 0) or 0) >= 400:
+            row["failed"] += 1
+    top_tools = sorted(
+        (
+            {"tool": tool, "events": values["count"], "failed": values["failed"]}
+            for tool, values in tool_counts.items()
+        ),
+        key=lambda row: (row["events"], row["failed"]),
+        reverse=True,
+    )[: max(5, top_count)]
+
+    try:
+        from app.services import runtime_service
+
+        attention = runtime_service.summarize_endpoint_attention(
+            seconds=window_seconds,
+            min_event_count=1,
+            limit=max(20, top_count),
+        )
+        top_attention = [
+            {
+                "endpoint": row.endpoint,
+                "events": row.event_count,
+                "attention_score": row.attention_score,
+                "runtime_cost_estimate": row.runtime_cost_estimate,
+                "friction_event_count": row.friction_event_count,
+            }
+            for row in attention.endpoints[:top_count]
+        ]
+    except Exception:
+        top_attention = []
+
+    latest_provider_rows = _latest_provider_snapshots(limit=1000)
+    if not latest_provider_rows:
+        overview = collect_usage_overview(force_refresh=force_refresh)
+        latest_provider_rows = {
+            _normalize_provider_name(row.provider): row
+            for row in overview.providers
+            if _normalize_provider_name(row.provider)
+        }
+
+    provider_priority = ["github", "openai-codex", "openrouter", "railway", "db-host", "coherence-internal"]
+    ordered_provider_keys = sorted(
+        latest_provider_rows.keys(),
+        key=lambda name: (provider_priority.index(name) if name in provider_priority else 999, name),
+    )
+    providers: list[dict[str, Any]] = []
+    for provider_name in ordered_provider_keys:
+        row = latest_provider_rows[provider_name]
+        if row.provider == "openai-codex":
+            _append_codex_subscription_metrics(row)
+        metric = _summary_metric(row.metrics)
+        providers.append(
+            {
+                "provider": row.provider,
+                "status": row.status,
+                "data_source": row.data_source,
+                "usage": (
+                    {
+                        "label": metric.label,
+                        "used": metric.used,
+                        "unit": metric.unit,
+                        "remaining": metric.remaining,
+                        "limit": metric.limit,
+                        "window": metric.window,
+                        "validation_state": metric.validation_state,
+                        "validation_detail": metric.validation_detail,
+                        "evidence_source": metric.evidence_source,
+                    }
+                    if metric is not None
+                    else None
+                ),
+                "notes": row.notes[:2],
+            }
+        )
+
+    host_failed = int(host_runner.get("failed_runs") or 0)
+    friction_total = int(friction_summary.get("total_events") or 0)
+    contract_gaps: list[str] = []
+    if host_failed > friction_total:
+        contract_gaps.append(
+            f"failed host-runner tasks ({host_failed}) exceed friction events ({friction_total})"
+        )
+    if host_failed > worker_failed:
+        contract_gaps.append(
+            f"failed host-runner tasks ({host_failed}) exceed failed worker tool events ({worker_failed})"
+        )
+    if int(execution.get("tracked_runs") or 0) == 0 and int(host_runner.get("total_runs") or 0) > 0:
+        contract_gaps.append("execution tracked_runs is zero while host-runner task runs exist")
+    codex_row = next((row for row in providers if row.get("provider") == "openai-codex"), None)
+    codex_usage = codex_row.get("usage") if isinstance(codex_row, dict) else None
+    codex_validation = (
+        str(codex_usage.get("validation_state") or "").strip().lower()
+        if isinstance(codex_usage, dict)
+        else ""
+    )
+    if codex_usage and codex_validation and codex_validation != "validated":
+        contract_gaps.append(
+            "openai-codex usage is derived from runtime telemetry/local limits; provider hard quota headers/API not available."
+        )
+    quality_awareness = quality_awareness_service.build_quality_awareness_summary(
+        top_n=top_count,
+        force_refresh=force_refresh,
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "window_hours": int(window_seconds / 3600),
+        "host_failure_observability_backfill": host_observability_backfill,
+        "host_runner": host_runner,
+        "execution": {
+            "tracked_runs": int(execution.get("tracked_runs") or 0),
+            "failed_runs": int(execution.get("failed_runs") or 0),
+            "success_runs": int(execution.get("success_runs") or 0),
+            "coverage": execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {},
+        },
+        "tool_usage": {
+            "worker_events": worker_total,
+            "worker_failed_events": worker_failed,
+            "top_tools": top_tools,
+        },
+        "friction": {
+            "total_events": friction_total,
+            "open_events": int(friction_summary.get("open_events") or 0),
+            "top_block_types": list(friction_summary.get("top_block_types") or [])[:top_count],
+            "top_stages": list(friction_summary.get("top_stages") or [])[:top_count],
+            "entry_points": list(friction_entry_points.get("entry_points") or [])[:top_count],
+        },
+        "providers": providers,
+        "top_attention_areas": top_attention,
+        "contract_gaps": contract_gaps,
+        "quality_awareness": quality_awareness,
+    }
+
+
+def _provider_limit_guard_result(
+    *,
+    allowed: bool,
+    provider: str,
+    reason: str,
+    blocked_metrics: list[dict[str, Any]] | None = None,
+    evaluated_metrics: list[dict[str, Any]] | None = None,
+    status: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "allowed": bool(allowed),
+        "provider": provider,
+        "reason": reason,
+        "blocked_metrics": list(blocked_metrics or []),
+        "evaluated_metrics": list(evaluated_metrics or []),
+    }
+    if status is not None:
+        payload["status"] = status
+    return payload
+
+
+def _provider_snapshot_for_guard(
+    provider: str,
+    *,
+    force_refresh: bool,
+) -> ProviderUsageSnapshot | None:
     overview = collect_usage_overview(force_refresh=force_refresh)
     return next(
         (
