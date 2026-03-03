@@ -15,6 +15,7 @@ from app.models.runtime import RuntimeEventCreate
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_routing_service as routing_service
 from app.services import agent_task_store_service
+from app.services import failure_taxonomy_service
 
 # Routing decisions and provider classification live in agent_routing_service.
 ROUTING = routing_service.ROUTING
@@ -37,8 +38,8 @@ GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
 # --allowedTools + --dangerously-skip-permissions required for headless (-p) so Edit runs without prompts
 # _COMMAND_LOCAL_AGENT = f'claude -p "{{{{direction}}}}" --agent {{{{agent}}}} --model {_OLLAMA_MODEL} --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions'
 # _COMMAND_HEAL = f'claude -p "{{{{direction}}}}" --model {_CLAUDE_MODEL} --allowedTools Read,Edit,Bash --dangerously-skip-permissions'
-_COMMAND_LOCAL_AGENT = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
-_COMMAND_HEAL = 'aider --model ollama/glm-4.7-flash:q8_0 --map-tokens 8192 --reasoning-effort high --yes "{{direction}}"'
+_COMMAND_LOCAL_AGENT = 'claude -p "{{direction}}" --dangerously-skip-permissions'
+_COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 
 # Cursor CLI: agent "direction" --model X (headless, uses Cursor auth)
 _CURSOR_MODEL_BY_TYPE = routing_service.CURSOR_MODEL_BY_TYPE
@@ -72,6 +73,13 @@ _REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bweb/[A-Za-z0-9_.\-\/]+\b", re.IGNORECASE),
     re.compile(r"`[^`]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)`", re.IGNORECASE),
     re.compile(r"\b[A-Za-z0-9_.\-]+\.(?:py|ts|tsx|js|jsx|md|json|toml|yaml|yml)\b", re.IGNORECASE),
+)
+_TASK_CARD_REQUIRED_FIELDS: tuple[str, ...] = (
+    "goal",
+    "files_allowed",
+    "done_when",
+    "commands",
+    "constraints",
 )
 
 
@@ -108,23 +116,28 @@ def _escalation_executor_default() -> str:
     if configured:
         return _normalize_executor(configured, default="claude")
     cheap = _cheap_executor_default()
-    return "claude" if cheap != "claude" else "openclaw"
+    if cheap == "gemini":
+        return "gemini"
+    return "claude" if cheap != "claude" else "codex"
 
 
 def _executor_binary_name(executor: str) -> str:
     if executor == "cursor":
         return "agent"
-    if executor == "openclaw":
-        for candidate in ("openclaw", "codex"):
-            if shutil.which(candidate):
-                return candidate
-        configured = os.environ.get("OPENCLAW_EXECUTABLE")
-        return configured.strip() if configured else "openclaw"
-    return "aider"
+    if executor in {"codex", "openrouter", "gemini"}:
+        return routing_service.executor_binary_name(executor)
+    return "claude"
 
 
 def _executor_available(executor: str) -> bool:
+    if executor == "openrouter":
+        return True
     return shutil.which(_executor_binary_name(executor)) is not None
+
+
+def _allow_unavailable_explicit_executor() -> bool:
+    raw = os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
 
 
 def _first_available_executor(preferred: list[str]) -> str:
@@ -132,132 +145,53 @@ def _first_available_executor(preferred: list[str]) -> str:
         candidate = _normalize_executor(executor, default="")
         if candidate and _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+    configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
+    if configured_default and _executor_available(configured_default):
+        return configured_default
+    # Final deterministic safety net: prefer codex when available.
+    for candidate in ("codex", "gemini", "cursor", "claude"):
+        if _executor_available(candidate):
+            return candidate
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
 
 
-def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
-    scope_hint = str(context.get("question_scope") or context.get("scope") or "").strip().lower()
-    if scope_hint in {"repo", "repository", "codebase"}:
-        return True
-    if scope_hint in {"open", "general"}:
-        return False
-
-    text = direction.strip()
-    if not text:
-        return False
-    return any(pattern.search(text) for pattern in _REPO_SCOPE_PATTERNS)
-
-
-def _repo_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT")
-    if configured:
-        return _normalize_executor(configured, default="cursor")
-    return "cursor"
-
-
-def _open_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
-    if configured:
-        return _normalize_executor(configured, default="openclaw")
-    return "openclaw"
-
-
-def _task_fingerprint(task_type: TaskType, direction: str) -> str:
-    basis = f"{task_type.value}:{direction.strip().lower()}"
-    return hashlib.sha256(basis.encode("utf-8")).hexdigest()
-
-
-def _task_retry_hint(context: dict[str, Any]) -> int:
-    for key in ("retry_count", "retry_index", "attempt", "attempt_count"):
-        raw = context.get(key)
-        if isinstance(raw, bool):
-            continue
-        if isinstance(raw, (int, float)):
-            return max(0, int(raw))
-        if isinstance(raw, str):
-            value = raw.strip()
-            if value.isdigit():
-                return max(0, int(value))
-    return 0
-
-
-def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
-    attempts = 0
-    failed = 0
-    for task in _store.values():
-        context = task.get("context")
-        if not isinstance(context, dict):
-            continue
-        if str(context.get("task_fingerprint") or "").strip() != task_fingerprint:
-            continue
-        attempts += 1
-        status = task.get("status")
-        status_value = status.value if hasattr(status, "value") else str(status or "")
-        if status_value == "failed":
-            failed += 1
-    return {"attempts": attempts, "failed": failed}
-
-
-def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    explicit = _normalize_executor(context.get("executor"), default="")
-    if explicit:
-        return explicit, {"policy_applied": False, "reason": "explicit_executor"}
-
-    if not _executor_policy_enabled():
-        default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
-        return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
-
-    task_fingerprint = str(context.get("task_fingerprint") or "").strip()
-    if not task_fingerprint:
-        task_fingerprint = _task_fingerprint(task_type, direction)
-        context["task_fingerprint"] = task_fingerprint
-
-    if _is_repo_scoped_question(direction, context):
-        selected = _first_available_executor([
-            _repo_question_executor_default(),
-            "cursor",
-            "claude",
-            "openclaw",
-        ])
-        return selected, {
-            "policy_applied": True,
-            "reason": "repo_scoped_question",
-            "task_fingerprint": task_fingerprint,
-            "repo_executor_preference": _repo_question_executor_default(),
-        }
-
-    selected_open = _first_available_executor([
-        _open_question_executor_default(),
-        "openclaw",
+def _executor_fallback_candidates() -> list[str]:
+    return [
+        _cheap_executor_default(),
+        _escalation_executor_default(),
+        "codex",
+        "gemini",
+        "openrouter",
         "cursor",
         "claude",
-    ])
-    if selected_open == "openclaw":
-        return selected_open, {
-            "policy_applied": True,
-            "reason": "open_question_default",
-            "task_fingerprint": task_fingerprint,
-            "open_question_executor": selected_open,
-        }
+    ]
 
+
+def _select_executor_with_retry_policy(
+    *,
+    task_fingerprint: str,
+    context: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
     retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
     failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
     cheap = _cheap_executor_default()
     escalate_to = _escalation_executor_default()
     if escalate_to == cheap:
-        escalate_to = "claude" if cheap != "claude" else "openclaw"
+        if cheap == "gemini":
+            escalate_to = "gemini"
+        else:
+            escalate_to = "claude" if cheap != "claude" else "codex"
 
     stats = _prior_attempt_stats(task_fingerprint)
     retry_hint = _task_retry_hint(context)
     effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
-
     should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
     selected = escalate_to if should_escalate else cheap
-    reason = "cheap_default"
-    if should_escalate:
-        reason = "retry_threshold" if effective_retry_count >= retry_threshold else "failure_threshold"
+    reason = "retry_threshold" if should_escalate and effective_retry_count >= retry_threshold else (
+        "failure_threshold" if should_escalate else "cheap_default"
+    )
     if not _executor_available(selected):
-        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "openclaw"])
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "codex", "gemini", "openrouter"])
         return fallback, {
             "policy_applied": True,
             "reason": "selected_executor_unavailable",
@@ -289,6 +223,180 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
     }
 
 
+def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
+    scope_hint = str(context.get("question_scope") or context.get("scope") or "").strip().lower()
+    if scope_hint in {"repo", "repository", "codebase"}:
+        return True
+    if scope_hint in {"open", "general"}:
+        return False
+
+    text = direction.strip()
+    if not text:
+        return False
+    return any(pattern.search(text) for pattern in _REPO_SCOPE_PATTERNS)
+
+
+def _repo_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="cursor")
+    return "cursor"
+
+
+def _open_question_executor_default() -> str:
+    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
+    if configured:
+        return _normalize_executor(configured, default="codex")
+    return "codex"
+
+
+def _task_fingerprint(task_type: TaskType, direction: str) -> str:
+    basis = f"{task_type.value}:{direction.strip().lower()}"
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+
+
+def _task_retry_hint(context: dict[str, Any]) -> int:
+    for key in ("retry_count", "retry_index", "attempt", "attempt_count"):
+        raw = context.get(key)
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, (int, float)):
+            return max(0, int(raw))
+        if isinstance(raw, str):
+            value = raw.strip()
+            if value.isdigit():
+                return max(0, int(value))
+    return 0
+
+
+def _task_card_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set)):
+        return any(bool(str(item).strip()) for item in value)
+    if isinstance(value, dict):
+        return len(value) > 0
+    return True
+
+
+def _task_card_validation(context: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(context, dict) or "task_card" not in context:
+        return None
+    raw = context.get("task_card")
+    if not isinstance(raw, dict):
+        return {
+            "present": False,
+            "score": 0.0,
+            "missing": list(_TASK_CARD_REQUIRED_FIELDS),
+            "required_fields": list(_TASK_CARD_REQUIRED_FIELDS),
+        }
+
+    missing = [
+        field
+        for field in _TASK_CARD_REQUIRED_FIELDS
+        if not _task_card_value_present(raw.get(field))
+    ]
+    complete = len(_TASK_CARD_REQUIRED_FIELDS) - len(missing)
+    score = round(complete / float(len(_TASK_CARD_REQUIRED_FIELDS)), 4)
+    return {
+        "present": True,
+        "score": score,
+        "missing": missing,
+        "required_fields": list(_TASK_CARD_REQUIRED_FIELDS),
+    }
+
+
+def _prior_attempt_stats(task_fingerprint: str) -> dict[str, int]:
+    attempts = 0
+    failed = 0
+    for task in _store.values():
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        if str(context.get("task_fingerprint") or "").strip() != task_fingerprint:
+            continue
+        attempts += 1
+        status = task.get("status")
+        status_value = status.value if hasattr(status, "value") else str(status or "")
+        if status_value == "failed":
+            failed += 1
+    return {"attempts": attempts, "failed": failed}
+
+
+def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    explicit = _normalize_executor(context.get("executor"), default="")
+    if explicit:
+        if _executor_available(explicit):
+            return explicit, {"policy_applied": False, "reason": "explicit_executor"}
+        if _allow_unavailable_explicit_executor():
+            return explicit, {
+                "policy_applied": True,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": explicit,
+                "availability": "unavailable_on_api_node",
+            }
+        fallback = _first_available_executor(_executor_fallback_candidates())
+        return fallback, {
+            "policy_applied": True,
+            "reason": "explicit_executor_unavailable",
+            "explicit_executor": explicit,
+            "fallback_executor": fallback,
+        }
+
+    if not _executor_policy_enabled():
+        default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+        if _executor_available(default_executor):
+            return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
+        fallback = _first_available_executor(_executor_fallback_candidates())
+        return fallback, {
+            "policy_applied": True,
+            "reason": "policy_disabled_default_unavailable",
+            "default_executor": default_executor,
+            "fallback_executor": fallback,
+        }
+
+    task_fingerprint = str(context.get("task_fingerprint") or "").strip()
+    if not task_fingerprint:
+        task_fingerprint = _task_fingerprint(task_type, direction)
+        context["task_fingerprint"] = task_fingerprint
+
+    if _is_repo_scoped_question(direction, context):
+        selected = _first_available_executor([
+            _repo_question_executor_default(),
+            "cursor",
+            "claude",
+            "codex",
+            "gemini",
+        ])
+        return selected, {
+            "policy_applied": True,
+            "reason": "repo_scoped_question",
+            "task_fingerprint": task_fingerprint,
+            "repo_executor_preference": _repo_question_executor_default(),
+        }
+
+    selected_open = _first_available_executor([
+        _open_question_executor_default(),
+        "codex",
+        "gemini",
+        "cursor",
+        "claude",
+    ])
+    if selected_open == "codex":
+        return selected_open, {
+            "policy_applied": True,
+            "reason": "open_question_default",
+            "task_fingerprint": task_fingerprint,
+            "open_question_executor": selected_open,
+        }
+    return _select_executor_with_retry_policy(
+        task_fingerprint=task_fingerprint,
+        context=context,
+    )
+
+
 def _command_template(task_type: TaskType) -> str:
     agent = AGENT_BY_TASK_TYPE.get(task_type)
     if agent:
@@ -302,8 +410,13 @@ def _cursor_command_template(task_type: TaskType) -> str:
 
 
 def _openclaw_command_template(task_type: TaskType) -> str:
-    """OpenClaw CLI template configurable via env; must include {{direction}}."""
-    return routing_service.openclaw_command_template(task_type)
+    """Codex CLI template configurable via env; must include {{direction}}."""
+    return routing_service.codex_command_template(task_type)
+
+
+def _openrouter_command_template(task_type: TaskType) -> str:
+    """Server-side OpenRouter executor marker template."""
+    return routing_service.openrouter_command_template(task_type)
 
 
 def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]) -> str:
@@ -353,9 +466,11 @@ def _integration_gaps() -> dict[str, Any]:
     )
 
     binary_checks = {
-        "aider": _executor_available("claude"),
+        "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
-        "openclaw": _executor_available("openclaw"),
+        "codex": _executor_available("codex"),
+        "gemini": _executor_available("gemini"),
+        "openrouter": _executor_available("openrouter"),
     }
 
     gaps: list[dict[str, str]] = []
@@ -678,13 +793,19 @@ def _derive_task_executor(task: dict[str, Any]) -> str:
     command = str(task.get("command") or "").strip()
     if model.startswith("cursor/") or command.startswith("agent "):
         return "cursor"
+    if model.startswith("gemini/") or command.startswith("gemini "):
+        return "gemini"
+    if model.startswith("openrouter/") or command.startswith("openrouter-exec "):
+        return "openrouter"
+    if model.startswith("codex/") or command.startswith("codex "):
+        return "codex"
     if (
         model.startswith("openclaw/")
         or model.startswith("clawwork/")
         or command.startswith("openclaw ")
         or command.startswith("clawwork ")
     ):
-        return "openclaw"
+        return "codex"
     if command.startswith("aider "):
         return "aider"
     if command.startswith("claude "):
@@ -799,6 +920,86 @@ def _task_output_text(task: dict[str, Any]) -> str:
                     task["output"] = loaded
                     return loaded
     return str(output or "")
+
+
+def _context_failure_detail(context: dict[str, Any], key: str) -> str | None:
+    value = context.get(key)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned or None
+    if isinstance(value, dict):
+        for nested_key in ("error", "message", "detail", "reason"):
+            nested = value.get(nested_key)
+            if isinstance(nested, str) and nested.strip():
+                return nested.strip()
+        return None
+    if isinstance(value, list):
+        parts = [str(item).strip() for item in value if str(item).strip()]
+        return "; ".join(parts) if parts else None
+    return None
+
+
+def _derive_failed_task_output(task: dict[str, Any]) -> tuple[str, str]:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    if isinstance(context, dict):
+        for key in (
+            "error",
+            "last_error",
+            "failure_reason",
+            "last_failure_class",
+            "failure_class",
+            "runner_error",
+            "exception",
+            "details",
+            "message",
+            "agent_graph_state_last_error",
+        ):
+            detail = _context_failure_detail(context, key)
+            if detail:
+                return f"Failure diagnostic (context.{key}): {detail}", f"context.{key}"
+
+        graph_errors = context.get("agent_graph_state_errors")
+        if isinstance(graph_errors, list):
+            normalized = [str(item).strip() for item in graph_errors if str(item).strip()]
+            if normalized:
+                joined = "; ".join(normalized[:3])
+                return (
+                    f"Failure diagnostic (context.agent_graph_state_errors): {joined}",
+                    "context.agent_graph_state_errors",
+                )
+
+    task_type = _status_value(task.get("task_type")) or "unknown"
+    worker = _normalize_worker_id(task.get("claimed_by"))
+    step = str(task.get("current_step") or "").strip() or "unknown"
+    return (
+        (
+            "Task failed without explicit error output. "
+            f"task_type={task_type}; worker={worker}; step={step}."
+        ),
+        "fallback",
+    )
+
+
+def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
+    if _status_value(task.get("status")) != "failed":
+        return
+
+    output_text = _task_output_text(task).strip()
+    source = "output"
+    if not output_text:
+        synthesized, source = _derive_failed_task_output(task)
+        task["output"] = _sanitize_task_output(synthesized)
+        output_text = _task_output_text(task).strip()
+
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    next_context = dict(context) if isinstance(context, dict) else {}
+    classified = _failure_classification(task, output_text=output_text)
+    next_context["failure_reason_bucket"] = classified["bucket"]
+    next_context["failure_signature"] = classified["signature"]
+    next_context["failure_summary"] = classified["summary"]
+    next_context["failure_diagnostics_source"] = source
+    next_context["failure_diagnostics_present"] = bool(output_text)
+    task["context"] = next_context
 
 
 def _load_task_from_db(task_id: str, *, include_output: bool) -> dict[str, Any] | None:
@@ -970,11 +1171,17 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 def _build_command(
     direction: str, task_type: TaskType, executor: str = "claude"
 ) -> str:
-    """Build command for task. executor: 'claude' (default), 'cursor', or 'openclaw' (clawwork alias)."""
+    """Build command for task. executor: 'claude' (default), 'cursor', 'codex', 'gemini', or 'openrouter'."""
     if executor == "cursor":
         template = _cursor_command_template(task_type)
-    elif executor == "openclaw":
+    elif executor == "codex":
         template = _openclaw_command_template(task_type)
+    elif executor == "gemini":
+        template = routing_service.gemini_command_template(task_type)
+    elif executor == "openrouter":
+        template = _openrouter_command_template(task_type)
+    elif executor == "claude":
+        template = routing_service.claude_command_template(task_type)
     else:
         template = COMMAND_TEMPLATES[task_type]
     # Escape direction for shell in a double-quoted template placeholder.
@@ -1022,10 +1229,14 @@ def _resolve_task_route(
             override = str(ctx["model_override"]).strip()
             command, applied_override = routing_service.apply_model_override(command, override)
             if applied_override:
-                if executor == "openclaw":
-                    model = f"openclaw/{applied_override}"
+                if executor == "codex":
+                    model = f"codex/{applied_override}"
                 elif executor == "cursor":
                     model = f"cursor/{applied_override}"
+                elif executor == "gemini":
+                    model = f"gemini/{applied_override}"
+                elif executor == "openrouter":
+                    model = routing_service.enforce_openrouter_free_model(applied_override)
                 else:
                     model = applied_override
         if "claude -p" in command and "--dangerously-skip-permissions" not in command:
@@ -1057,11 +1268,50 @@ def _resolve_task_route(
     return model, tier, str(command), route_decision, normalized_response_call
 
 
+def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None:
+    if executor == "codex":
+        ctx["runner_codex_auth_mode"] = "oauth"
+        return
+    if executor == "cursor":
+        ctx["runner_cursor_auth_mode"] = "oauth"
+        return
+    if executor == "gemini":
+        ctx["runner_gemini_auth_mode"] = "oauth"
+        return
+    if executor == "claude":
+        ctx["runner_claude_auth_mode"] = "oauth"
+
+
+def _enforce_openrouter_executor_policy(ctx: dict[str, Any], executor: str) -> str:
+    requested_override_raw = str(ctx.get("model_override") or "").strip()
+    requested_override = routing_service.normalize_model_name(requested_override_raw)
+    requested_executor = str(executor or "").strip().lower()
+    wants_openrouter = requested_executor == "openrouter" or requested_override.startswith("openrouter/")
+    if not wants_openrouter:
+        return executor
+
+    enforced_model = routing_service.enforce_openrouter_free_model(requested_override or "openrouter/free")
+    previous_override = requested_override or ""
+    ctx["model_override"] = enforced_model
+    if previous_override != enforced_model:
+        ctx["model_override_policy"] = {
+            "kind": "openrouter_free_only",
+            "requested_model_override": requested_override_raw or previous_override,
+            "applied_model_override": enforced_model,
+        }
+    if requested_executor != "openrouter":
+        ctx["executor_override_reason"] = "openrouter_model_override_requires_openrouter_executor"
+    return "openrouter"
+
+
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict."""
     _ensure_store_loaded(include_output=False)
     task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    validation = _task_card_validation(ctx)
+    if validation is not None:
+        ctx["task_card_validation"] = validation
     target_contract = _normalize_target_state_contract(
         direction=data.direction,
         task_type=data.task_type,
@@ -1079,11 +1329,13 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     ctx.update(target_contract)
     ctx["target_state_contract"] = dict(target_contract)
     executor, policy_meta = _select_executor(data.task_type, data.direction, ctx)
+    executor = _enforce_openrouter_executor_policy(ctx, executor)
     if policy_meta.get("policy_applied"):
         ctx["executor_policy"] = policy_meta
     if "task_fingerprint" in policy_meta:
         ctx.setdefault("task_fingerprint", policy_meta["task_fingerprint"])
     ctx["executor"] = executor
+    _apply_runner_auth_mode_defaults(ctx, executor)
     primary_agent = AGENT_BY_TASK_TYPE.get(data.task_type)
     guard_agents = GUARD_AGENTS_BY_TASK_TYPE.get(data.task_type, [])
     if primary_agent:
@@ -1437,6 +1689,7 @@ def update_task(
     if isinstance(task_context.get("agent_graph_state"), dict):
         preferred_graph_state = dict(task_context.get("agent_graph_state") or {})
     _apply_agent_graph_state_contract(task, preferred_state=preferred_graph_state)
+    _ensure_failed_task_diagnostics(task)
     task["updated_at"] = _now()
     _record_completion_tracking_event(task)
     current_status_value = _status_value(task.get("status"))
@@ -1499,7 +1752,7 @@ def get_review_summary() -> dict[str, Any]:
 
 
 def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
-    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|openclaw|clawwork."""
+    """Return routing info for a task type (no persistence). executor: auto|claude|cursor|codex|gemini|openrouter|openclaw|clawwork."""
     executor = (executor or "auto").strip().lower()
     if executor == "auto":
         executor = _cheap_executor_default()
@@ -2053,6 +2306,99 @@ def _pipeline_attention_summary(
     }
 
 
+def _task_type_name(value: Any) -> str:
+    if hasattr(value, "value"):
+        return str(getattr(value, "value") or "").strip().lower()
+    return str(value or "").strip().lower()
+
+
+def _failure_reason_bucket(task: dict[str, Any]) -> str:
+    return _failure_classification(task)["bucket"]
+
+
+def _failure_classification(task: dict[str, Any], *, output_text: str | None = None) -> dict[str, str]:
+    output_value = _task_output_text(task) if output_text is None else str(output_text or "")
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    detail = ""
+    if isinstance(context, dict):
+        for key in ("last_error", "error", "failure_reason", "runner_error", "message", "details", "exception"):
+            maybe = _context_failure_detail(context, key)
+            if maybe:
+                detail = maybe
+                break
+    failure_class = str((context or {}).get("last_failure_class") or (context or {}).get("failure_class") or "")
+    return failure_taxonomy_service.classify_failure(
+        output_text=output_value,
+        result_error=detail,
+        failure_class=failure_class,
+    )
+
+
+def _pipeline_queue_diagnostics(
+    running: list[dict[str, Any]],
+    pending: list[dict[str, Any]],
+    completed: list[dict[str, Any]],
+) -> dict[str, Any]:
+    pending_by_task_type: dict[str, int] = {}
+    running_by_task_type: dict[str, int] = {}
+    for item in pending:
+        task_type = _task_type_name(item.get("task_type"))
+        key = task_type or "unknown"
+        pending_by_task_type[key] = pending_by_task_type.get(key, 0) + 1
+    for item in running:
+        task_type = _task_type_name(item.get("task_type"))
+        key = task_type or "unknown"
+        running_by_task_type[key] = running_by_task_type.get(key, 0) + 1
+
+    reason_counts: dict[str, int] = {}
+    recent_failed: list[dict[str, Any]] = []
+    for completed_item in completed[:12]:
+        task = _store.get(completed_item["id"]) or {}
+        if _status_value(task.get("status")) != "failed":
+            continue
+        reason = _failure_reason_bucket(task)
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        failure_signature = (
+            str((task.get("context") or {}).get("failure_signature") or "").strip()
+            if isinstance(task.get("context"), dict)
+            else ""
+        )
+        recent_failed.append(
+            {
+                "task_id": task.get("id"),
+                "task_type": _task_type_name(task.get("task_type")) or "unknown",
+                "reason": reason,
+                "signature": failure_signature or _failure_classification(task).get("signature", ""),
+            }
+        )
+
+    recent_failed_reasons = [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(reason_counts.items(), key=lambda row: (-row[1], row[0]))
+    ]
+
+    total_pending = sum(pending_by_task_type.values())
+    dominant_pending_type = ""
+    dominant_pending_share = 0.0
+    if total_pending > 0:
+        dominant_pending_type, dominant_count = max(
+            pending_by_task_type.items(),
+            key=lambda row: row[1],
+        )
+        dominant_pending_share = round(float(dominant_count) / float(total_pending), 4)
+    queue_mix_warning = bool(total_pending >= 5 and dominant_pending_share >= 0.8)
+
+    return {
+        "pending_by_task_type": pending_by_task_type,
+        "running_by_task_type": running_by_task_type,
+        "recent_failed_count": len(recent_failed),
+        "recent_failed_reasons": recent_failed_reasons,
+        "queue_mix_warning": queue_mix_warning,
+        "dominant_pending_task_type": dominant_pending_type,
+        "dominant_pending_share": dominant_pending_share,
+    }
+
+
 def get_usage_summary() -> dict[str, Any]:
     """Per-model usage derived from tasks (for /usage and API)."""
     _ensure_store_loaded(include_output=False)
@@ -2316,6 +2662,237 @@ def get_visibility_summary() -> dict[str, Any]:
     }
 
 
+def _route_guidance_view(route: dict[str, Any]) -> dict[str, Any]:
+    executor = str(route.get("executor") or "").strip()
+    return {
+        "executor": executor,
+        "tool": _executor_binary_name(executor) if executor else "",
+        "model": str(route.get("model") or ""),
+        "tier": str(route.get("tier") or ""),
+        "provider": str(route.get("provider") or ""),
+        "is_paid_provider": bool(route.get("is_paid_provider")),
+        "command_template": str(route.get("command_template") or ""),
+    }
+
+
+def _orchestration_route_matrix(cheap_executor: str, escalation_executor: str) -> dict[str, Any]:
+    matrix: dict[str, Any] = {}
+    for task_type in TaskType:
+        cheap_route = get_route(task_type, executor=cheap_executor)
+        escalation_route = get_route(task_type, executor=escalation_executor)
+        matrix[task_type.value] = {
+            "cheap": _route_guidance_view(cheap_route),
+            "escalation": _route_guidance_view(escalation_route),
+            "escalation_changes_route": bool(
+                cheap_route.get("executor") != escalation_route.get("executor")
+                or cheap_route.get("model") != escalation_route.get("model")
+            ),
+        }
+    return matrix
+
+
+def _top_failing_tools(execution: dict[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
+    by_tool = execution.get("by_tool") if isinstance(execution.get("by_tool"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    for tool, payload in by_tool.items():
+        if not isinstance(payload, dict):
+            continue
+        failed = int(payload.get("failed") or 0)
+        if failed <= 0:
+            continue
+        rows.append(
+            {
+                "tool": str(tool or ""),
+                "failed": failed,
+                "count": int(payload.get("count") or 0),
+                "success_rate": float(payload.get("success_rate") or 0.0),
+            }
+        )
+    rows.sort(key=lambda row: (-int(row["failed"]), float(row["success_rate"]), -int(row["count"]), str(row["tool"])))
+    return rows[:limit]
+
+
+def _guidance_item(
+    *,
+    item_id: str,
+    severity: str,
+    title: str,
+    detail: str,
+    action: str,
+) -> dict[str, str]:
+    return {
+        "id": item_id,
+        "severity": severity,
+        "title": title,
+        "detail": detail,
+        "action": action,
+    }
+
+
+def _dedupe_guidance_rows(guidance_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in guidance_rows:
+        item_id = str(row.get("id") or "").strip()
+        if item_id and item_id in seen_ids:
+            continue
+        if item_id:
+            seen_ids.add(item_id)
+        deduped.append(row)
+    return deduped
+
+
+def _lifecycle_awareness_snapshot(window_seconds: int, sample_limit: int) -> dict[str, Any]:
+    from app.services import agent_execution_hooks
+
+    lifecycle = agent_execution_hooks.summarize_lifecycle_events(
+        seconds=window_seconds,
+        limit=sample_limit,
+        source="auto",
+    )
+    by_event = lifecycle.get("by_event") if isinstance(lifecycle.get("by_event"), dict) else {}
+    by_status = lifecycle.get("by_status") if isinstance(lifecycle.get("by_status"), dict) else {}
+    finalized_events = int(by_event.get("finalized") or 0)
+    failed_finalized_events = int(by_status.get("failed") or 0)
+    lifecycle_failure_ratio = (
+        round(float(failed_finalized_events) / float(finalized_events), 4) if finalized_events > 0 else 0.0
+    )
+    return {
+        "lifecycle": lifecycle,
+        "finalized_events": finalized_events,
+        "failed_finalized_events": failed_finalized_events,
+        "lifecycle_failure_ratio": lifecycle_failure_ratio,
+    }
+
+
+def _build_orchestration_guidance_rows(
+    *,
+    execution_success_rate: float,
+    coverage_rate: float,
+    top_failing_tools: list[dict[str, Any]],
+    finalized_events: int,
+    lifecycle_failure_ratio: float,
+    lifecycle_guidance: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    guidance_rows: list[dict[str, Any]] = [dict(row) for row in lifecycle_guidance[:5] if isinstance(row, dict)]
+
+    if execution_success_rate < 0.8:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="execution_success_low",
+                severity="medium",
+                title="Execution success rate is below target",
+                detail=f"Execution success rate is {round(execution_success_rate * 100.0, 1)}% in the current window.",
+                action="Prefer cheap executor path first, narrow task scopes, and escalate once for reasoning-heavy failures.",
+            )
+        )
+    if coverage_rate < 0.95:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="coverage_gap",
+                severity="medium",
+                title="Execution tracking coverage is incomplete",
+                detail=f"Coverage rate is {round(coverage_rate * 100.0, 1)}% for completed/failed tasks.",
+                action="Ensure worker runtime events include task_id, executor, and provider metadata.",
+            )
+        )
+    if top_failing_tools:
+        top_tools = ", ".join(str(row.get("tool") or "") for row in top_failing_tools[:3] if str(row.get("tool") or ""))
+        guidance_rows.append(
+            _guidance_item(
+                item_id="tool_failure_hotspots",
+                severity="medium",
+                title="Tool failure hotspots detected",
+                detail=f"Most frequent failing tools: {top_tools or 'unknown'}.",
+                action="Run failing tools in smaller deterministic loops before broad orchestration retries.",
+            )
+        )
+    if finalized_events > 0 and lifecycle_failure_ratio >= 0.25:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="lifecycle_failures_present",
+                severity="medium",
+                title="Lifecycle failures are elevated",
+                detail=f"Lifecycle finalized failure ratio is {round(lifecycle_failure_ratio * 100.0, 1)}%.",
+                action="Inspect /api/agent/lifecycle/summary guidance and resolve repeated guard/validation causes first.",
+            )
+        )
+    if not guidance_rows:
+        guidance_rows.append(
+            _guidance_item(
+                item_id="stable_guidance_baseline",
+                severity="info",
+                title="Signals are stable",
+                detail="Current orchestration signals are stable and guidance targets are on track.",
+                action="Continue cheap-first routing with one escalation only when needed.",
+            )
+        )
+    return _dedupe_guidance_rows(guidance_rows)
+
+
+def get_orchestration_guidance_summary(*, seconds: int = 6 * 3600, limit: int = 500) -> dict[str, Any]:
+    """Guidance-first orchestration summary for model/tool routing and awareness signals."""
+    from app.services import friction_service
+
+    window_seconds = max(300, min(int(seconds), 30 * 24 * 3600))
+    sample_limit = max(1, min(int(limit), 5000))
+    window_days = max(1, min(30, int((window_seconds + 86399) // 86400)))
+
+    cheap_executor = _cheap_executor_default()
+    escalation_executor = _escalation_executor_default()
+    usage = get_usage_summary()
+    execution = usage.get("execution") if isinstance(usage.get("execution"), dict) else {}
+    coverage = execution.get("coverage") if isinstance(execution.get("coverage"), dict) else {}
+    execution_success_rate = float(execution.get("success_rate") or 0.0)
+    coverage_rate = float(coverage.get("coverage_rate") or 0.0)
+    top_failing_tools = _top_failing_tools(execution, limit=5)
+
+    lifecycle_snapshot = _lifecycle_awareness_snapshot(window_seconds, sample_limit)
+    lifecycle = lifecycle_snapshot["lifecycle"]
+    finalized_events = int(lifecycle_snapshot["finalized_events"])
+    failed_finalized_events = int(lifecycle_snapshot["failed_finalized_events"])
+    lifecycle_failure_ratio = float(lifecycle_snapshot["lifecycle_failure_ratio"])
+
+    friction_events, _ignored = friction_service.load_events()
+    friction_summary = friction_service.summarize(friction_events, window_days=window_days)
+    top_friction_blocks = list(friction_summary.get("top_block_types") or [])[:5]
+    lifecycle_guidance = lifecycle.get("guidance") if isinstance(lifecycle.get("guidance"), list) else []
+    guidance = _build_orchestration_guidance_rows(
+        execution_success_rate=execution_success_rate,
+        coverage_rate=coverage_rate,
+        top_failing_tools=top_failing_tools,
+        finalized_events=finalized_events,
+        lifecycle_failure_ratio=lifecycle_failure_ratio,
+        lifecycle_guidance=lifecycle_guidance,
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "guidance",
+        "enforcement": "advisory",
+        "window_seconds": window_seconds,
+        "defaults": {
+            "cheap_executor": cheap_executor,
+            "escalation_executor": escalation_executor,
+            "repo_question_executor": routing_service.repo_question_executor_default(),
+            "open_question_executor": routing_service.open_question_executor_default(),
+        },
+        "recommended_routes": _orchestration_route_matrix(cheap_executor, escalation_executor),
+        "awareness": {
+            "execution_success_rate": round(execution_success_rate, 4),
+            "coverage_rate": round(coverage_rate, 4),
+            "lifecycle_failure_ratio": lifecycle_failure_ratio,
+            "finalized_events": finalized_events,
+            "failed_finalized_events": failed_finalized_events,
+            "subscribers": lifecycle.get("subscribers") if isinstance(lifecycle.get("subscribers"), dict) else {},
+            "summary_source": str(lifecycle.get("summary_source") or "none"),
+            "top_failing_tools": top_failing_tools,
+            "top_friction_blocks": top_friction_blocks,
+        },
+        "guidance": guidance[:10],
+    }
+
+
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
     _ensure_store_loaded(include_output=False)
     fingerprint = (task_fingerprint or "").strip()
@@ -2404,6 +2981,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
 
     latest_request, latest_response = _pipeline_latest_activity(running, completed)
     attention = _pipeline_attention_summary(running, pending, completed)
+    diagnostics = _pipeline_queue_diagnostics(running, pending, completed)
 
     return {
         "running": running[:10],
@@ -2426,6 +3004,7 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
             "low_success_rate": attention["low_success_rate"],
             "flags": attention["flags"],
         },
+        "diagnostics": diagnostics,
     }
 
 

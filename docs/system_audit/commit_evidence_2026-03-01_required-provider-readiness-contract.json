@@ -1,0 +1,76 @@
+{
+  "date": "2026-03-01",
+  "thread_branch": "codex/open-questions-unblock-20260228",
+  "commit_scope": "Enforce readiness required-provider contract to codex/openai, claude, and cursor only, and block readiness when required providers are not ok or missing real usage+limit telemetry evidence.",
+  "files_owned": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-03-01_required-provider-readiness-contract.json"
+  ],
+  "idea_ids": [
+    "automation-provider-readiness-required-contract"
+  ],
+  "spec_ids": [
+    "spec-automation-provider-usage-readiness"
+  ],
+  "task_ids": [
+    "task-2026-03-01-required-provider-readiness-contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-03-01_required-provider-readiness-contract.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and production deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Readiness defaults to required providers openai/codex, claude, and cursor only, and all_required_ready remains false until each required provider is status=ok with usage-limit telemetry present.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Call /api/automation/usage/readiness and confirm required_providers only include openai, claude, cursor.",
+      "Confirm all_required_ready=false if any required provider is not ok or missing limit telemetry evidence.",
+      "Confirm all_required_ready=true once openai/codex, claude, and cursor each report status=ok with usage+limit telemetry."
+    ]
+  }
+}

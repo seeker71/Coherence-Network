@@ -64,6 +64,7 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 055 Runtime Intent and Public E2E Contract Gate | ✓ | ✓ | ✓ | runtime-intent classification + runtime-diff and E2E evidence requirements |
 | 056 Commit-Derived Traceability Report | ✓ | ✓ | ✓ | derives idea/spec/implementation references from commit evidence + SHA |
 | 100 Automation Provider Usage and Readiness API | ✓ | ✓ | ✓ | automation usage/snapshots/alerts/subscription-estimator/readiness endpoints |
+| 113 Public Validation Gates API | — | ✓ | — | Spec-only coverage; API + flow linkage pending implementation |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---
@@ -502,6 +503,19 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 
 ---
 
+## Spec 088: Spec→Process→Implementation→Validation Flow Visibility
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| `GET /api/inventory/flow` aggregates idea→spec→process→implementation→validation→contributors→contributions chain data | `api/app/routers/inventory.py`, `api/app/services/inventory_service.py::build_spec_process_implementation_validation_flow`, `api/app/services/commit_evidence_service.py` | `api/tests/test_inventory_api.py::test_flow_inventory_endpoint_tracks_spec_process_implementation_validation` |
+| Flow rows support `idea_id`, runtime window, and `list_item_limit` filters plus spec-registry aliases | `api/app/services/inventory_service.py`, `api/app/services/idea_service.py` | `api/tests/test_inventory_api.py::test_flow_endpoint_forwards_list_item_limit`, `api/tests/test_inventory_api.py::test_flow_inventory_counts_spec_registry_specs_for_idea` |
+| Flow response exposes interdependencies, unblock queue, and prioritizes next tasks when process gaps exist | `api/app/services/inventory_service.py`, `api/app/routers/inventory.py` | `api/tests/test_inventory_api.py::test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_queue`, `api/tests/test_inventory_api.py::test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplicate` |
+| `/flow` human page renders per-idea sections, links from global nav/context panes, and mirrors API status | `web/app/flow/page.tsx`, `web/components/site_header.tsx`, `web/components/page_context_links.tsx`, `config/page_lineage.json` | `npm run build`, `api/tests/test_inventory_discovery_sources.py::test_route_evidence_probe_uses_github_when_local_missing`, `api/tests/test_inventory_discovery_sources.py::test_route_evidence_probe_uses_github_raw_latest_when_available` |
+
+**Files:** `api/app/routers/inventory.py`, `api/app/services/inventory_service.py`, `api/app/services/commit_evidence_service.py`, `api/app/services/idea_service.py`, `web/app/flow/page.tsx`, `web/components/page_context_links.tsx`, `web/components/site_header.tsx`, `config/page_lineage.json`, `api/tests/test_inventory_api.py`, `api/tests/test_inventory_discovery_sources.py`
+
+---
+
 ## Spec 100: Automation Provider Usage and Readiness API
 
 | Requirement | Implementation | Test |
@@ -514,6 +528,33 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | Canonical endpoints include explicit spec linkage for traceability | `config/canonical_routes.json`, `services/inventory_service.py` | `test_automation_usage_endpoints_trace_back_to_spec_100` |
 
 **Files:** `api/app/routers/automation_usage.py`, `api/app/services/automation_usage_service.py`, `api/app/services/inventory_service.py`, `config/canonical_routes.json`, `api/tests/test_automation_usage_api.py`
+
+**Idea linkage:** `automation-provider-usage-api` (Automation provider usage API) inherits from the `coherence-network-agent-pipeline` parent idea. Canonical routes (`config/canonical_routes.json`) tag every `/api/automation/usage*` endpoint with spec `100`, so `/api/inventory/flow` and the spec registry can record process/implementation/validation for this idea once the acceptance checks below pass.
+
+**Acceptance checks (automation-provider-usage-api):**
+1. `cd api && pytest -q tests/test_automation_usage_api.py` — Exercises GET `/api/automation/usage`, `/snapshots`, `/alerts`, `/subscription-estimator`, and `/readiness`, ensuring normalized provider metrics, persisted history, subscription ROI math, and blocking readiness verdicts (including required-provider overrides plus active-use key enforcement).
+2. `cd api && pytest -q tests/test_automation_usage_api.py::test_automation_usage_endpoints_trace_back_to_spec_100` — Verifies canonical route metadata links each endpoint back to spec `100`/idea `automation-provider-usage-api`, which is required for `/api/inventory/flow` and downstream tooling to mark process/implementation/validation.
+3. `cd api && pytest -q tests/test_inventory_api.py::test_flow_inventory_endpoint_tracks_spec_process_implementation_validation` — Confirms `/api/inventory/flow` flips the `process`, `implementation`, and `validation` flags for `automation-provider-usage-api` after spec `100` evidence lands, unlocking dependency tracking and unblock queues.
+
+**Process linkage:** The Provider Readiness Contract described in `docs/PIPELINE-MONITORING-AUTOMATED.md` runs every six hours via `.github/workflows/provider-readiness-contract.yml`, executing `api/scripts/check_provider_readiness.py` to call `/api/automation/usage/readiness`, `/api/automation/usage/provider-validation/run`, and `/api/automation/usage/provider-validation`. Passing runs publish `provider_readiness_report.json` artifacts, update the issue tracker, and mark the `automation-provider-usage-api` idea as process-ready in `/api/inventory/flow`.
+
+**Implementation linkage:** `api/app/services/automation_usage_service.py` owns usage aggregation, readiness evaluation, validation probes, and auto-heal routines that back the `/api/automation/usage*` endpoints exposed in `api/app/routers/automation_usage.py`. `api/app/services/inventory_service.py::build_spec_process_implementation_validation_flow` consumes the canonical-route metadata to surface the idea/spec relationship on `/flow`, ensuring that implementation + validation evidence for spec `100` is discoverable by automation and contributors.
+
+---
+
+## Spec 113: Public Validation Gates API
+
+| Requirement | Implementation | Test |
+|-------------|----------------|------|
+| `GET /api/gates/public-validation` returns per-profile status, journey evidence, and history filters | `api/app/routers/gates.py`, `api/app/services/release_gate_service.py` | `test_get_public_validation_gates_returns_profiles_with_evidence` |
+| `POST /api/gates/public-validation/run` triggers journeys for a profile, persists run metadata, and returns deterministic payload | `api/app/services/release_gate_service.py`, `.github/workflows/change-contract.yml`, `scripts/validate_pr_to_public.py` | `test_post_public_validation_run_triggers_execution_and_persists_record` |
+| Persist `PublicValidationGateRun` records (>=20 per profile retained) with commit/branch metadata and expose query helpers | `api/app/services/release_gate_service.py`, `docs/PR-GATES-AND-PUBLIC-VALIDATION.md` | `test_public_validation_gate_run_persists_history_and_rolls_retention` |
+| `/api/inventory/flow` rows flip `process`, `implementation`, `validation` to tracked for idea `public-validation-gates-api` once a gate run exists | `api/app/services/inventory_service.py`, `config/spec_prefix_canonical_map.json` | `test_flow_row_for_public_validation_gates_tracks_process_and_validation` |
+| `/gates` web UI renders per-profile cards sourced from the API payload | `web/app/gates/page.tsx` | `npm run build` + manual `/gates` validation |
+
+**Process linkage:** `docs/PR-GATES-AND-PUBLIC-VALIDATION.md` documents how change-contract workflows and human reviewers call the API, while `.github/workflows/change-contract.yml` enforces the run before acknowledgments.
+
+**Implementation linkage:** `release_gate_service.py` owns profile execution/persistence, `gates.py` exposes the API, and `inventory_service.py` feeds `/flow` so downstream automation sees the process→implementation→validation chain for `public-validation-gates-api`. Validation relies on the tests above plus manual `/gates` checks.
 
 ---
 

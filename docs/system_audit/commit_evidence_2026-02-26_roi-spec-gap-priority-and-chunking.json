@@ -1,0 +1,94 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/roi-progress-4x-20260226073027",
+  "commit_scope": "Prioritize high-ROI ideas without linked specs and chunk spec-progress tasks for cheap-model execution with bounded token budgets.",
+  "files_owned": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py"
+  ],
+  "idea_ids": [
+    "idea-gap-high",
+    "idea-gap-mid",
+    "idea-covered-high",
+    "idea-covered-low"
+  ],
+  "spec_ids": [
+    "spec-covered-high",
+    "spec-covered-low",
+    "spec-extra"
+  ],
+  "task_ids": [
+    "task-2026-02-26-roi-spec-gap-priority-chunking"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180745Z_codex-roi-progress-4x-20260226073027.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180528Z_codex-roi-progress-4x-20260226073027.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T180453Z_codex-roi-progress-4x-20260226073027.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/routers/inventory.py",
+    "api/app/services/inventory_service.py",
+    "api/tests/test_inventory_api.py",
+    "docs/system_audit/commit_evidence_2026-02-26_roi-spec-gap-priority-and-chunking.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_inventory_api.py -k \"prioritizes_no_spec_ideas_and_chunks_spec_tasks_for_cheap_model\"",
+      "cd api && pytest -q tests/test_inventory_api.py -k \"sync_roi_progress_tasks\"",
+      "cd api && pytest -q tests/test_inventory_api.py",
+      "cd api && ruff check app/services/inventory_service.py tests/test_inventory_api.py app/routers/inventory.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "ROI progression now prioritizes high-ROI ideas without specs and creates chunked, cheap-model-friendly spec tasks with explicit token ceilings.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/roi/sync-progress",
+      "https://coherence-network-production.up.railway.app/api/inventory/ideas",
+      "https://coherence-network-production.up.railway.app/api/inventory/specs"
+    ],
+    "test_flows": [
+      "Run POST /api/inventory/roi/sync-progress with create_task=true and confirm idea candidates prefer no-spec gaps over covered ideas.",
+      "Confirm created spec tasks carry model_override=openai/gpt-4o-mini plus chunk metadata and token limits.",
+      "Confirm per-category counts still satisfy requested minimum progress targets."
+    ]
+  }
+}

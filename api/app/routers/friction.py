@@ -6,7 +6,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from app.models.friction import FrictionEntryPointReport, FrictionEvent, FrictionReport
+from app.models.friction import (
+    FrictionCategoryReport,
+    FrictionEntryPointReport,
+    FrictionEvent,
+    FrictionReport,
+)
 from app.services import friction_service
 
 router = APIRouter()
@@ -47,3 +52,12 @@ async def entry_points(
 ) -> FrictionEntryPointReport:
     data = friction_service.friction_entry_points(window_days=window_days, limit=limit)
     return FrictionEntryPointReport(**data)
+
+
+@router.get("/friction/categories", response_model=FrictionCategoryReport)
+async def categories(
+    window_days: int = Query(7, ge=1, le=365),
+    limit: int = Query(20, ge=1, le=200),
+) -> FrictionCategoryReport:
+    data = friction_service.friction_categories(window_days=window_days, limit=limit)
+    return FrictionCategoryReport(**data)

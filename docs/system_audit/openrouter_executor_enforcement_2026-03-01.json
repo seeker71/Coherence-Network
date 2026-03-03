@@ -1,0 +1,60 @@
+{
+  "rows": [
+    {
+      "requested_context": {
+        "executor": "openclaw",
+        "model_override": "openrouter/free"
+      },
+      "task_id": "task_00155cd39971b669",
+      "executor": "openrouter",
+      "model": "openrouter/free",
+      "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: openrouter policy proof\" --model openrouter/free",
+      "route_executor": "openrouter",
+      "route_provider": "openrouter",
+      "route_is_paid_provider": false,
+      "model_override": "openrouter/free",
+      "model_override_policy": null,
+      "executor_override_reason": "openrouter_model_override_requires_openrouter_executor"
+    },
+    {
+      "requested_context": {
+        "executor": "openclaw",
+        "model_override": "openrouter/anthropic/claude-sonnet-4"
+      },
+      "task_id": "task_f72dbe104e6e6373",
+      "executor": "openrouter",
+      "model": "openrouter/free",
+      "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: openrouter policy proof\" --model openrouter/free",
+      "route_executor": "openrouter",
+      "route_provider": "openrouter",
+      "route_is_paid_provider": false,
+      "model_override": "openrouter/free",
+      "model_override_policy": {
+        "kind": "openrouter_free_only",
+        "requested_model_override": "openrouter/anthropic/claude-sonnet-4",
+        "applied_model_override": "openrouter/free"
+      },
+      "executor_override_reason": "openrouter_model_override_requires_openrouter_executor"
+    },
+    {
+      "requested_context": {
+        "executor": "openrouter",
+        "model_override": "openrouter/openai/gpt-4o"
+      },
+      "task_id": "task_f35f8f0d7112d0ba",
+      "executor": "openrouter",
+      "model": "openrouter/free",
+      "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: openrouter policy proof\" --model openrouter/free",
+      "route_executor": "openrouter",
+      "route_provider": "openrouter",
+      "route_is_paid_provider": false,
+      "model_override": "openrouter/free",
+      "model_override_policy": {
+        "kind": "openrouter_free_only",
+        "requested_model_override": "openrouter/openai/gpt-4o",
+        "applied_model_override": "openrouter/free"
+      },
+      "executor_override_reason": null
+    }
+  ]
+}

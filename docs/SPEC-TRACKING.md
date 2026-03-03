@@ -95,6 +95,7 @@ The duplicate numeric prefixes are now managed by explicit canonical mapping:
 | 052 | `052-assets-api.md` | `052-portfolio-cockpit-ui.md` |
 | 053 | `053-ideas-prioritization.md` | `053-standing-questions-roi-and-next-task-generation.md` |
 | 054 | `054-commit-provenance-contract-gate.md` | `054-postgresql-migration.md` |
+| 111 | `111-greenfield-autonomous-intelligence-system.md` | `111-agent-execution-lifecycle-hooks.md` |
 
 ## Queued ROI Specs (Not Implemented Yet)
 

@@ -159,6 +159,19 @@ def backend_info() -> dict[str, Any]:
     }
 
 
+def checkpoint() -> dict[str, Any]:
+    ensure_schema()
+    with _session() as session:
+        count, max_updated_at = session.query(
+            func.count(CommitEvidenceRecord.id),
+            func.max(CommitEvidenceRecord.updated_at),
+        ).one()
+    return {
+        "record_count": int(count or 0),
+        "max_updated_at": max_updated_at.isoformat() if max_updated_at is not None else None,
+    }
+
+
 def _fingerprint_from_payload(payload: dict[str, Any], source_file: str) -> str:
     digest_source = {
         "source_file": source_file,

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import io
+import json
 import os
 from dataclasses import dataclass
 import importlib.util
@@ -112,6 +114,10 @@ def test_agent_runner_posts_runtime_and_friction_events(monkeypatch, tmp_path, r
         assert f["block_type"] == "tool_failure"
         assert f["status"] == "resolved"
         assert f["energy_loss_estimate"] >= 0
+        assert any(
+            url.endswith("/api/agent/tasks/task_test") and patch.get("status") == "failed"
+            for url, patch in client.patches
+        )
     else:
         assert friction_posts == []
 
@@ -193,11 +199,634 @@ def test_agent_runner_runtime_event_includes_codex_execution_metadata(monkeypatc
 
 
 def test_infer_executor_detects_openclaw():
-    assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "openclaw"
+    assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "codex"
 
 
 def test_infer_executor_detects_clawwork_alias():
-    assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "openclaw"
+    assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "codex"
+
+
+def test_infer_executor_detects_openrouter_model():
+    assert agent_runner._infer_executor('echo "task"', "openrouter/free") == "openrouter"
+
+
+def test_infer_executor_detects_gemini():
+    assert agent_runner._infer_executor('gemini -p "task"', "gemini/gemini-2.5-pro") == "gemini"
+
+
+def test_run_one_task_dispatches_openrouter_server_executor(monkeypatch, tmp_path):
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_WORKER_ID", "runner:test")
+
+    called: dict[str, object] = {}
+
+    def _fake_dispatch(*, client, task_id, task_ctx, task_type, worker_id, log):
+        called["task_id"] = task_id
+        called["task_type"] = task_type
+        called["worker_id"] = worker_id
+        called["executor"] = str(task_ctx.get("executor") or "")
+        return True
+
+    monkeypatch.setattr(agent_runner, "_dispatch_openrouter_server_executor", _fake_dispatch)
+    monkeypatch.setattr(
+        agent_runner.subprocess,
+        "Popen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("subprocess should not run for openrouter executor")),
+    )
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_openrouter_dispatch",
+        command='openrouter-exec "run" --model openrouter/free',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openrouter/free",
+        task_context={"executor": "openrouter"},
+    )
+    assert done is True
+    assert called == {
+        "task_id": "task_openrouter_dispatch",
+        "task_type": "impl",
+        "worker_id": "runner:test",
+        "executor": "openrouter",
+    }
+
+
+def test_run_one_task_cursor_oauth_mode_strips_api_key_env(monkeypatch, tmp_path):
+    t = [1200.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    captured_env: dict[str, str] = {}
+
+    def _popen(*args, **kwargs):
+        env = kwargs.get("env") or {}
+        captured_env.clear()
+        captured_env.update({str(k): str(v) for k, v in env.items()})
+        return _Proc(returncode=0, stdout_text='{"result":"ok"}\n')
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("CURSOR_API_KEY", "cursor-key-should-not-be-used")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key-should-not-be-used")
+    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "openai-admin-key-should-not-be-used")
+    monkeypatch.setenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_cursor_oauth_mode",
+        command='agent "Return ok" --model auto',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/auto",
+        task_context={"runner_cursor_auth_mode": "oauth"},
+    )
+    assert done is True
+    assert captured_env.get("CURSOR_API_KEY", "") == ""
+    assert captured_env.get("OPENAI_API_KEY", "") == ""
+    assert captured_env.get("OPENAI_ADMIN_API_KEY", "") == ""
+    assert captured_env.get("OPENAI_API_BASE", "") == ""
+    assert captured_env.get("OPENAI_BASE_URL", "") == ""
+
+
+def test_run_one_task_gemini_forces_oauth_mode_and_strips_api_key_env(monkeypatch, tmp_path):
+    t = [1300.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    captured_env: dict[str, str] = {}
+
+    def _popen(*args, **kwargs):
+        env = kwargs.get("env") or {}
+        captured_env.clear()
+        captured_env.update({str(k): str(v) for k, v in env.items()})
+        return _Proc(returncode=0, stdout_text='{"result":"ok"}\n')
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key-should-not-be-used")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key-should-not-be-used")
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_gemini_oauth_mode",
+        command='gemini -p "Return ok" --model gemini-2.5-pro',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="gemini/gemini-2.5-pro",
+        task_context={"runner_gemini_auth_mode": "api_key"},
+    )
+    assert done is True
+    assert captured_env.get("GEMINI_API_KEY", "") == ""
+    assert captured_env.get("GOOGLE_API_KEY", "") == ""
+
+
+def test_run_one_task_claude_oauth_mode_strips_api_key_env(monkeypatch, tmp_path):
+    t = [1400.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    captured_env: dict[str, str] = {}
+
+    def _popen(*args, **kwargs):
+        env = kwargs.get("env") or {}
+        captured_env.clear()
+        captured_env.update({str(k): str(v) for k, v in env.items()})
+        return _Proc(returncode=0, stdout_text='{"result":"ok"}\n')
+
+    session_payload = {
+        "accessToken": "access-token-value",
+        "refreshToken": "refresh-token-value",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key-should-not-be-used")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "anthropic-auth-should-not-be-used")
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token-should-not-be-used")
+    monkeypatch.setenv("AGENT_CLAUDE_OAUTH_SESSION_B64", encoded)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_claude_oauth_mode",
+        command='claude -p "ok" --dangerously-skip-permissions',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="claude/sonnet",
+        task_context={"runner_claude_auth_mode": "oauth", "runner_claude_oauth_session_b64": encoded},
+    )
+    assert done is True
+    assert captured_env.get("ANTHROPIC_API_KEY", "") == ""
+    assert captured_env.get("ANTHROPIC_AUTH_TOKEN", "") == ""
+    assert captured_env.get("CLAUDE_CODE_OAUTH_TOKEN", "") == ""
+    assert captured_env.get("CLAUDE_CONFIG_DIR", "") != ""
+
+
+def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("runner", 1001, 1001, "/home/runner"),
+    )
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is True
+    assert detail == "runner_non_root_exec_user:runner:1001:1001"
+    assert callable(preexec)
+    assert env["HOME"] == "/home/runner"
+    assert env["USER"] == "runner"
+    assert env["LOGNAME"] == "runner"
+    assert env["PATH"].startswith("/home/runner/.local/bin:")
+
+
+def test_prepare_non_root_execution_for_command_filters_root_paths(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("runner", 1001, 1001, "/home/runner"),
+    )
+    env = {"PATH": "/root/.local/bin:/usr/local/bin:/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is True
+    assert detail == "runner_non_root_exec_user:runner:1001:1001"
+    assert callable(preexec)
+    assert "/root/.local/bin" not in env["PATH"]
+
+
+def test_prepare_non_root_execution_for_command_noop_when_not_root(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 1000)
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is True
+    assert detail == ""
+    assert preexec is None
+
+
+def test_prepare_non_root_execution_for_command_fails_when_no_user(monkeypatch):
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        agent_runner,
+        "_resolve_non_root_exec_user",
+        lambda preferred: ("", -1, -1, ""),
+    )
+    env = {"PATH": "/usr/bin"}
+    ok, detail, preexec = agent_runner._prepare_non_root_execution_for_command(
+        command='claude -p "smoke" --dangerously-skip-permissions',
+        env=env,
+    )
+    assert ok is False
+    assert detail == "runner_non_root_user_unavailable"
+    assert preexec is None
+
+
+def test_resolve_non_root_exec_user_skips_low_uid_candidates(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+            self.pw_shell = shell
+
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "runner,app")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "0")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path in {"/home/runner", "/home/app"})
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+
+    def _getpwnam(name: str):
+        if name == "runner":
+            return _PwdRow("runner", 500, 500, "/home/runner", "/bin/bash")
+        if name == "app":
+            return _PwdRow("app", 1001, 1001, "/home/app", "/bin/bash")
+        raise KeyError(name)
+
+    monkeypatch.setattr(fake_accounts, "getpwnam", _getpwnam, raising=False)
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "app"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/app"
+
+
+def test_resolve_non_root_exec_user_auto_discover_skips_system_users(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+            self.pw_shell = shell
+
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "1")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path in {"/bin", "/home/app"})
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+    monkeypatch.setattr(fake_accounts, "getpwnam", lambda name: (_ for _ in ()).throw(KeyError(name)), raising=False)
+    monkeypatch.setattr(
+        fake_accounts,
+        "getpwall",
+        lambda: [
+            _PwdRow("sync", 4, 65534, "/bin", "/bin/sync"),
+            _PwdRow("app", 1001, 1001, "/home/app", "/bin/bash"),
+        ],
+        raising=False,
+    )
+
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "app"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/app"
+
+
+def test_auto_create_non_root_exec_user_creates_account_when_missing(monkeypatch):
+    class _PwdRow:
+        def __init__(self, name: str, uid: int, gid: int, home: str):
+            self.pw_name = name
+            self.pw_uid = uid
+            self.pw_gid = gid
+            self.pw_dir = home
+
+    state = {"created": False}
+    fake_accounts = type("FakeAccounts", (), {})()
+    monkeypatch.setattr(agent_runner, "pwd", fake_accounts)
+
+    def _getpwnam(name: str):
+        if name == "runner" and state["created"]:
+            return _PwdRow("runner", 1001, 1001, "/home/runner")
+        raise KeyError(name)
+
+    monkeypatch.setattr(fake_accounts, "getpwnam", _getpwnam, raising=False)
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE", "1")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE_USER", "runner")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_CREATE_UID", "1001")
+    monkeypatch.setattr(agent_runner.os.path, "isdir", lambda path: path == "/home/runner")
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary: "/usr/sbin/useradd" if binary == "useradd" else None,
+    )
+
+    class _RunResult:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def _run(argv, **kwargs):
+        assert argv[0] == "useradd"
+        state["created"] = True
+        return _RunResult()
+
+    monkeypatch.setattr(agent_runner.subprocess, "run", _run)
+
+    user, uid, gid, home = agent_runner._auto_create_non_root_exec_user(min_uid=1000)
+    assert user == "runner"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/runner"
+
+
+def test_resolve_non_root_exec_user_uses_auto_create_when_discovery_off(monkeypatch):
+    monkeypatch.setenv("AGENT_RUN_AS_USER_FALLBACKS", "")
+    monkeypatch.setenv("AGENT_RUN_AS_AUTO_DISCOVER", "0")
+    monkeypatch.setattr(
+        agent_runner,
+        "_auto_create_non_root_exec_user",
+        lambda *, min_uid, preferred_user="": ("runner", 1001, 1001, "/home/runner"),
+    )
+    user, uid, gid, home = agent_runner._resolve_non_root_exec_user("")
+    assert user == "runner"
+    assert uid == 1001
+    assert gid == 1001
+    assert home == "/home/runner"
+
+
+def test_cli_install_provider_for_command_detects_supported_providers():
+    assert agent_runner._cli_install_provider_for_command('agent "run" --model auto') == "cursor"
+    assert agent_runner._cli_install_provider_for_command('claude -p "run"') == "claude"
+    assert agent_runner._cli_install_provider_for_command('codex exec "run" --json') == "codex"
+    assert agent_runner._cli_install_provider_for_command('gemini -p "run" --model gemini-2.5-pro') == "gemini"
+    assert agent_runner._cli_install_provider_for_command("pytest -q") == ""
+
+
+def test_ensure_cli_for_command_installs_cursor_when_missing(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setenv("AGENT_RUNNER_CURSOR_INSTALL_COMMANDS", "echo install-cursor")
+    monkeypatch.setattr(
+        agent_runner,
+        "_ensure_cursor_node_shim",
+        lambda *, env, cursor_binary="": (True, "cursor_node_shim_created:/usr/local/bin/node->/usr/bin/node"),
+    )
+
+    install_state = {"installed": False}
+
+    agent_bin = tmp_path / "bin" / "agent"
+    runtime_node = tmp_path / "bin" / "node"
+    runtime_index = tmp_path / "bin" / "index.js"
+
+    def _which(binary: str, path: str | None = None):
+        if binary == "agent" and install_state["installed"]:
+            return str(agent_bin)
+        return None
+
+    def _run_install(command: str, *, env: dict[str, str], timeout_seconds: int):
+        assert "install-cursor" in command
+        install_state["installed"] = True
+        agent_bin.parent.mkdir(parents=True, exist_ok=True)
+        agent_bin.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        runtime_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        runtime_index.write_text("console.log('ok')\n", encoding="utf-8")
+        agent_bin.chmod(0o755)
+        runtime_node.chmod(0o755)
+        return True, "installed"
+
+    monkeypatch.setattr(agent_runner.shutil, "which", _which)
+    monkeypatch.setattr(agent_runner, "_run_cli_install_command", _run_install)
+
+    env = {"PATH": "/usr/bin", "HOME": str(tmp_path)}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='agent "smoke" --model auto',
+        env=env,
+        task_id="task_cursor_install",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+    assert ok is True
+    assert detail.startswith("runner_cli_install_ok:cursor:agent:")
+    assert str(tmp_path / "bin") in env["PATH"]
+
+
+def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/usr/local/bin/claude" if binary == "claude" else None,
+    )
+    install_called = {"value": False}
+
+    def _run_install(command: str, *, env: dict[str, str], timeout_seconds: int):
+        install_called["value"] = True
+        return True, "unexpected"
+
+    monkeypatch.setattr(agent_runner, "_run_cli_install_command", _run_install)
+
+    env = {"PATH": "/usr/bin:/usr/local/bin"}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='claude -p "smoke"',
+        env=env,
+        task_id="task_claude_present",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+    assert ok is True
+    assert detail.startswith("runner_cli_present:claude:claude:")
+    assert install_called["value"] is False
+
+
+def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
+    monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
+    monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
+    cursor_home = tmp_path / "cursor-home"
+    runtime_dir = cursor_home / ".local" / "bin"
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    agent_bin = runtime_dir / "agent"
+    runtime_node = runtime_dir / "node"
+    runtime_index = runtime_dir / "index.js"
+    agent_bin.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    runtime_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    runtime_index.write_text("console.log('ok')\n", encoding="utf-8")
+    agent_bin.chmod(0o755)
+    runtime_node.chmod(0o755)
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: str(agent_bin) if binary == "agent" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner,
+        "_ensure_cursor_node_shim",
+        lambda *, env, cursor_binary="": (True, "cursor_node_shim_present:/root/.local/bin/node"),
+    )
+    promote_called = {"value": False}
+
+    def _promote(binary: str, source_path: str):
+        promote_called["value"] = True
+        return "/usr/local/bin/agent"
+
+    monkeypatch.setattr(agent_runner, "_promote_binary_to_shared_path", _promote)
+
+    env = {"PATH": f"/usr/bin:{runtime_dir}", "HOME": str(cursor_home)}
+    ok, detail = agent_runner._ensure_cli_for_command(
+        command='agent "smoke" --model auto',
+        env=env,
+        task_id="task_cursor_no_promote",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert ok is True
+    assert promote_called["value"] is False
+    assert str(agent_bin) in detail
+    assert "/usr/local/bin/agent" not in detail
+
+
+def test_resolve_node_binary_prefers_non_shim_candidate(monkeypatch):
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/mise/shims/node" if binary == "node" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "isfile",
+        lambda path: path in {"/usr/local/bin/node", "/bin/node", "/mise/shims/node"},
+    )
+    monkeypatch.setattr(
+        agent_runner.os,
+        "access",
+        lambda path, mode: path in {"/usr/local/bin/node", "/bin/node", "/mise/shims/node"},
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "realpath",
+        lambda path: "/mise/shims/node" if path in {"/usr/local/bin/node", "/mise/shims/node"} else path,
+    )
+
+    resolved = agent_runner._resolve_node_binary({"PATH": "/mise/shims:/usr/local/bin:/bin"})
+    assert resolved == "/bin/node"
+
+
+def test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary(monkeypatch):
+    monkeypatch.setattr(
+        agent_runner.shutil,
+        "which",
+        lambda binary, path=None: "/mise/shims/node" if binary == "node" else None,
+    )
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "isfile",
+        lambda path: path == "/mise/shims/node",
+    )
+    monkeypatch.setattr(
+        agent_runner.os,
+        "access",
+        lambda path, mode: path == "/mise/shims/node",
+    )
+    monkeypatch.setattr(agent_runner.os.path, "realpath", lambda path: path)
+
+    resolved = agent_runner._resolve_node_binary({"PATH": "/mise/shims"})
+    assert resolved == "/mise/shims/node"
+
+
+def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca(monkeypatch, tmp_path):
+    shim_path = tmp_path / "node"
+    monkeypatch.setenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", str(shim_path))
+    monkeypatch.setattr(agent_runner, "_resolve_node_binary", lambda env: "/usr/bin/node")
+    monkeypatch.setattr(
+        agent_runner,
+        "_node_binary_accepts_use_system_ca",
+        lambda binary, *, env: binary == str(shim_path),
+    )
+
+    ok, detail = agent_runner._ensure_cursor_node_shim(env={"PATH": "/usr/bin"}, cursor_binary="")
+
+    assert ok is True
+    assert detail.startswith("cursor_node_shim_created_compat:")
+    assert shim_path.exists()
+    content = shim_path.read_text(encoding="utf-8")
+    assert "--use-system-ca" in content
+    assert "exec /usr/bin/node \"$@\"" in content
+    assert os.access(shim_path, os.X_OK)
+
+
+def test_cursor_node_shim_path_uses_realpath_target(monkeypatch):
+    monkeypatch.delenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", raising=False)
+    monkeypatch.setattr(
+        agent_runner.os.path,
+        "realpath",
+        lambda path: "/usr/local/bin/agent" if path == "/usr/bin/agent" else path,
+    )
+    shim_path = agent_runner._cursor_node_shim_path(cursor_binary="/usr/bin/agent")
+    assert shim_path == "/usr/local/bin/node"
+
+
+def test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout(monkeypatch, tmp_path):
+    bad_dir = tmp_path / "bad"
+    good_dir = tmp_path / "good"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    good_dir.mkdir(parents=True, exist_ok=True)
+
+    bad_agent = bad_dir / "agent"
+    good_agent = good_dir / "agent"
+    good_node = good_dir / "node"
+    good_index = good_dir / "index.js"
+
+    bad_agent.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_agent.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_node.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    good_index.write_text("console.log('ok')\n", encoding="utf-8")
+    bad_agent.chmod(0o755)
+    good_agent.chmod(0o755)
+    good_node.chmod(0o755)
+
+    monkeypatch.setattr(agent_runner, "_candidate_cli_paths", lambda binary, env: [str(bad_agent), str(good_agent)])
+    monkeypatch.setattr(agent_runner.shutil, "which", lambda binary, path=None: str(bad_agent))
+
+    resolved, layout_ok, layout_detail = agent_runner._resolve_cursor_cli_binary("agent", {"PATH": str(bad_dir)})
+    assert resolved == str(good_agent)
+    assert layout_ok is True
+    assert layout_detail.startswith("cursor_runtime_layout_ok:")
+
+
+def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monkeypatch):
+    monkeypatch.delenv("AGENT_TASK_TIMEOUT_SPEC", raising=False)
+    monkeypatch.setattr(agent_runner, "TASK_TIMEOUT", 3600)
+    assert agent_runner._default_runtime_seconds_for_task_type("spec") == 1200
+
+    monkeypatch.setenv("AGENT_TASK_TIMEOUT_SPEC", "90")
+    assert agent_runner._default_runtime_seconds_for_task_type("spec") == 90
+
+    monkeypatch.setenv("AGENT_TASK_TIMEOUT_SPEC", "99999")
+    assert agent_runner._default_runtime_seconds_for_task_type("spec") == 3600
 
 
 def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
@@ -238,16 +867,12 @@ def test_apply_codex_model_alias_supports_gtp_typo_default_map():
     assert "--model gtp-5.3-codex" not in remapped
 
 
-def test_apply_codex_model_alias_remaps_openrouter_free_default_map():
+def test_apply_codex_model_alias_does_not_remap_openrouter_free_by_default():
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model openrouter/free "Output exactly MODEL_OK."'
     )
-    assert alias == {
-        "requested_model": "openrouter/free",
-        "effective_model": "gpt-5-codex",
-    }
-    assert "--model gpt-5-codex" in remapped
-    assert "--model openrouter/free" not in remapped
+    assert alias is None
+    assert "--model openrouter/free" in remapped
 
 
 def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatch):
@@ -261,6 +886,25 @@ def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatc
     }
     assert "--model gpt-5-codex" in remapped
     assert "--model gtp-5.3-codex" not in remapped
+
+
+def test_apply_claude_model_alias_strips_provider_prefix():
+    remapped, alias = agent_runner._apply_claude_model_alias(
+        'claude -p "smoke" --model claude/claude-sonnet-4-5-20250929 --output-format json'
+    )
+    assert alias == {
+        "requested_model": "claude/claude-sonnet-4-5-20250929",
+        "effective_model": "claude-sonnet-4-5-20250929",
+    }
+    assert "--model claude-sonnet-4-5-20250929" in remapped
+    assert "--model claude/claude-sonnet-4-5-20250929" not in remapped
+
+
+def test_apply_claude_model_alias_noop_for_already_normalized_model():
+    command = 'claude -p "smoke" --model claude-sonnet-4-5-20250929 --output-format json'
+    remapped, alias = agent_runner._apply_claude_model_alias(command)
+    assert alias is None
+    assert remapped == command
 
 
 def test_codex_model_not_found_fallback_only_applies_after_not_found_signal():
@@ -330,6 +974,12 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "pending"
     )
+    failed_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "failed"
+    ]
+    assert failed_patches == []
     context = pending_patch.get("context") or {}
     assert "retry_override_command" in context
     assert "--model gpt-5-codex" in context["retry_override_command"]
@@ -339,6 +989,217 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
     assert fallback.get("effective_model") == "gpt-5-codex"
     assert fallback.get("trigger") == "model_not_found_or_access"
     assert "runner-model-fallback" in str(pending_patch.get("output") or "")
+
+
+def test_run_one_task_skips_codex_auth_retry_when_retry_explicitly_disabled(monkeypatch, tmp_path):
+    t = [5200.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:test-runner")
+
+    def _popen(*args, **kwargs):
+        return _Proc(
+            returncode=1,
+            stdout_text=(
+                "ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized\\n"
+                "refresh_token_reused\\n"
+            ),
+        )
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setattr(
+        agent_runner,
+        "_configure_codex_cli_environment",
+        lambda **kwargs: {
+            "requested_mode": "oauth",
+            "effective_mode": "oauth",
+            "oauth_session": True,
+            "oauth_source": "session_file:/tmp/codex-auth.json",
+            "api_key_present": False,
+            "oauth_missing": False,
+        },
+    )
+    monkeypatch.setattr(agent_runner, "_attempt_codex_oauth_relogin", lambda **kwargs: (False, "mock_relogin_failed"))
+    monkeypatch.setattr(
+        agent_runner,
+        "_attempt_codex_oauth_session_refresh_from_env",
+        lambda **kwargs: (False, "mock_session_refresh_failed"),
+    )
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_auth_retry_disabled",
+        command='codex exec --model gpt-5-codex "Output exactly AUTH_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5-codex",
+        task_context={"retry_max": 0},
+    )
+    assert done is True
+
+    pending_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_auth_retry_disabled") and patch.get("status") == "pending"
+    ]
+    assert pending_patches == []
+    failed_patches = [
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_auth_retry_disabled") and patch.get("status") == "failed"
+    ]
+    assert failed_patches
+    output = str(failed_patches[-1].get("output") or "")
+    assert "retry disabled by explicit retry_max=0" in output
+
+
+def test_retry_explicitly_disabled_ignores_null_values():
+    assert agent_runner._retry_explicitly_disabled({"retry_max": None}) is False
+    assert agent_runner._retry_explicitly_disabled({"runner_retry_max": ""}) is False
+    assert agent_runner._retry_explicitly_disabled({"max_retries": "  "}) is False
+    assert agent_runner._retry_explicitly_disabled({"retry_max": 0}) is True
+
+
+def test_configure_cursor_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "accessToken": "cursor-access-token",
+        "refreshToken": "cursor-refresh-token",
+        "apiKey": "should-be-removed",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CURSOR_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CURSOR_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CURSOR_OAUTH_SESSION_FILE", raising=False)
+
+    env = {
+        "HOME": str(tmp_path),
+        "CURSOR_API_KEY": "cursor-key",
+        "OPENAI_API_KEY": "openai-key",
+        "OPENAI_ADMIN_API_KEY": "openai-admin-key",
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+    auth = agent_runner._configure_cursor_cli_environment(
+        env=env,
+        task_id="task_cursor_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    assert auth["oauth_session"] is True
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
+    assert "CURSOR_API_KEY" not in env
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
+    target = env.get("AGENT_CURSOR_OAUTH_SESSION_FILE") or ""
+    assert target.endswith("/.config/cagent/auth.json")
+    assert env.get("CURSOR_CONFIG_DIR") == str(Path(target).parent)
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "cursor-refresh-token"
+    assert loaded.get("accessToken") == "cursor-access-token"
+    assert "apiKey" not in loaded
+
+
+def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "accessToken": "claude-access-token",
+        "refreshToken": "claude-refresh-token",
+        "apiKey": "should-be-removed",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CLAUDE_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CLAUDE_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CLAUDE_OAUTH_SESSION_FILE", raising=False)
+
+    env = {
+        "HOME": str(tmp_path),
+        "ANTHROPIC_API_KEY": "anthropic-key",
+        "ANTHROPIC_AUTH_TOKEN": "anthropic-auth",
+        "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+        "CLAUDE_CODE_OAUTH_TOKEN": "short-lived-token",
+    }
+    auth = agent_runner._configure_claude_cli_environment(
+        env=env,
+        task_id="task_claude_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    assert auth["oauth_session"] is True
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
+    assert "ANTHROPIC_API_KEY" not in env
+    assert "ANTHROPIC_AUTH_TOKEN" not in env
+    assert "ANTHROPIC_BASE_URL" not in env
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
+    target = env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE") or ""
+    assert target.endswith("/.claude/.credentials.json")
+    assert env.get("CLAUDE_CONFIG_DIR") == str(Path(target).parent)
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "claude-refresh-token"
+    assert loaded.get("accessToken") == "claude-access-token"
+    assert "apiKey" not in loaded
+
+
+def test_configure_gemini_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "access_token": "gemini-access-token",
+        "refresh_token": "gemini-refresh-token",
+        "apiKey": "should-be-removed",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_GEMINI_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_GEMINI_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_GEMINI_OAUTH_CREDS_FILE", raising=False)
+    monkeypatch.delenv("AGENT_GEMINI_SETTINGS_FILE", raising=False)
+
+    env = {
+        "HOME": str(tmp_path),
+        "GEMINI_API_KEY": "gemini-key",
+        "GOOGLE_API_KEY": "google-key",
+    }
+    auth = agent_runner._configure_gemini_cli_environment(
+        env=env,
+        task_id="task_gemini_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    assert auth["oauth_session"] is True
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_bootstrapped:")
+    assert str(auth.get("oauth_settings_config_detail") or "").startswith(
+        ("oauth_settings_bootstrapped:", "oauth_settings_preserved_existing:")
+    )
+    assert "GEMINI_API_KEY" not in env
+    assert "GOOGLE_API_KEY" not in env
+    target = env.get("AGENT_GEMINI_OAUTH_CREDS_FILE") or ""
+    assert target.endswith("/.gemini/oauth_creds.json")
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "gemini-refresh-token"
+    assert loaded.get("access_token") == "gemini-access-token"
+    assert "apiKey" not in loaded
+    settings_target = env.get("AGENT_GEMINI_SETTINGS_FILE") or ""
+    assert settings_target.endswith("/.gemini/settings.json")
+    settings = json.loads(Path(settings_target).read_text(encoding="utf-8"))
+    security = settings.get("security") if isinstance(settings, dict) else {}
+    auth_settings = security.get("auth") if isinstance(security, dict) else {}
+    assert auth_settings.get("selectedType") == "oauth-personal"
+    assert auth_settings.get("enforcedType") == "oauth-personal"
 
 
 def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monkeypatch, tmp_path):
@@ -372,7 +1233,137 @@ def test_configure_codex_cli_environment_uses_oauth_mode_and_strips_api_env(monk
     assert "OPENAI_BASE_URL" not in env
 
 
-def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch, tmp_path):
+def test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64(monkeypatch, tmp_path):
+    session_payload = {
+        "access_token": "access-token-value",
+        "refresh_token": "refresh-token-value",
+        "account_id": "acct-test",
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_bootstrap_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    bootstrap_detail = str(auth.get("oauth_session_bootstrap_detail") or "")
+    assert bootstrap_detail.startswith("oauth_session_bootstrapped:")
+    target = env.get("AGENT_CODEX_OAUTH_SESSION_FILE") or ""
+    assert target.endswith("/.codex/auth.json")
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "refresh-token-value"
+    assert loaded.get("access_token") == "access-token-value"
+
+
+def test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens(monkeypatch, tmp_path):
+    session_payload = {
+        "auth_mode": "oauth",
+        "last_refresh": {"at": "2026-02-28T10:00:00Z"},
+        "tokens": {
+            "chatgpt": {
+                "access_token": "nested-access-token",
+                "refresh_token": "nested-refresh-token",
+            }
+        },
+    }
+    encoded = base64.b64encode(json.dumps(session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_bootstrap_nested_b64",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session_bootstrapped"] is True
+    target = env.get("AGENT_CODEX_OAUTH_SESSION_FILE") or ""
+    loaded = json.loads(Path(target).read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "nested-refresh-token"
+    assert loaded.get("access_token") == "nested-access-token"
+
+
+def test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present(monkeypatch, tmp_path):
+    existing_payload = {
+        "access_token": "existing-access-token",
+        "refresh_token": "existing-refresh-token",
+        "auth_mode": "oauth",
+    }
+    target = tmp_path / ".codex" / "auth.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(existing_payload), encoding="utf-8")
+
+    incoming_payload = {
+        "access_token": "incoming-access-token",
+        "refresh_token": "incoming-refresh-token",
+        "auth_mode": "oauth",
+    }
+    encoded = base64.b64encode(json.dumps(incoming_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
+
+    env = {"HOME": str(tmp_path)}
+    auth = agent_runner._configure_codex_cli_environment(
+        env=env,
+        task_id="task_auth_preserve_existing_session",
+        log=agent_runner._setup_logging(verbose=False),
+    )
+
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_session"] is True
+    assert auth["oauth_session_bootstrapped"] is False
+    assert str(auth.get("oauth_session_bootstrap_detail") or "").startswith("oauth_session_preserved_existing:")
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "existing-refresh-token"
+    assert loaded.get("access_token") == "existing-access-token"
+
+
+def test_bootstrap_codex_oauth_session_overwrites_existing_when_requested(monkeypatch, tmp_path):
+    existing_payload = {
+        "access_token": "existing-access-token",
+        "refresh_token": "existing-refresh-token",
+        "auth_mode": "oauth",
+    }
+    incoming_payload = {
+        "access_token": "incoming-access-token",
+        "refresh_token": "incoming-refresh-token",
+        "auth_mode": "oauth",
+    }
+    target = tmp_path / ".codex" / "auth.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(existing_payload), encoding="utf-8")
+    encoded = base64.b64encode(json.dumps(incoming_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_B64", encoded)
+
+    env = {"HOME": str(tmp_path), "AGENT_CODEX_OAUTH_SESSION_FILE": str(target)}
+    refreshed, detail = agent_runner._bootstrap_codex_oauth_session_from_env(
+        env=env,
+        task_id="task_auth_overwrite_existing_session",
+        log=agent_runner._setup_logging(verbose=False),
+        overwrite_existing=True,
+    )
+
+    assert refreshed is True
+    assert detail.startswith("oauth_session_overwritten:")
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "incoming-refresh-token"
+    assert loaded.get("access_token") == "incoming-access-token"
+
+
+def test_configure_codex_cli_environment_defaults_oauth_fallback_off(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.delenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", raising=False)
@@ -393,143 +1384,46 @@ def test_configure_codex_cli_environment_defaults_oauth_fallback_on(monkeypatch,
 
     assert auth["requested_mode"] == "oauth"
     assert auth["effective_mode"] == "oauth"
-    assert auth["oauth_fallback_allowed"] is True
-    assert env.get("OPENAI_API_KEY") == "sk-test"
-    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
+    assert auth["oauth_fallback_allowed"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
 
 
-def test_configure_codex_cli_environment_api_key_mode_isolates_home(monkeypatch, tmp_path):
-    class _Completed:
-        returncode = 1
-        stdout = ""
-        stderr = ""
-
-    real_home = tmp_path / "real-home"
-    auth_dir = real_home / ".codex"
-    auth_dir.mkdir(parents=True, exist_ok=True)
-    (auth_dir / "auth.json").write_text('{"token":"oauth"}', encoding="utf-8")
-
-    monkeypatch.setenv("HOME", str(real_home))
-    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
-    monkeypatch.setattr(
-        agent_runner.shutil,
-        "which",
-        lambda name: "/usr/local/bin/codex" if name == "codex" else None,
-    )
-    monkeypatch.setattr(agent_runner.subprocess, "run", lambda *args, **kwargs: _Completed())
-
-    env = {"HOME": str(real_home)}
-    auth = agent_runner._configure_codex_cli_environment(
-        env=env,
-        task_id="task_api_key_home",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["requested_mode"] == "api_key"
-    assert auth["effective_mode"] == "api_key"
-    assert auth["oauth_session"] is False
-    assert auth["oauth_fallback_allowed"] is True
-    assert env.get("AGENT_CODEX_OAUTH_SESSION_FILE") == ""
-    assert "agent-runner-codex-api-key" in str(env.get("HOME") or "")
-    assert "agent-runner-codex-api-key" in str(env.get("CODEX_HOME") or "")
-    assert str(env.get("HOME") or "").startswith(str(real_home))
-
-
-def test_configure_codex_cli_environment_bootstraps_api_key_login(monkeypatch, tmp_path):
-    class _Completed:
-        def __init__(self, returncode: int, stdout: str = "", stderr: str = ""):
-            self.returncode = returncode
-            self.stdout = stdout
-            self.stderr = stderr
-
-    real_home = tmp_path / "real-home"
-    real_home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HOME", str(real_home))
-    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.delenv("AGENT_CODEX_OAUTH_SESSION_FILE", raising=False)
-
-    calls: list[list[str]] = []
-    state = {"logged_in": False}
-
-    def _run(argv, *args, **kwargs):
-        cmd = [str(part) for part in (argv or [])]
-        calls.append(cmd)
-        if cmd[:3] == ["codex", "login", "--with-api-key"]:
-            state["logged_in"] = True
-            return _Completed(0, stdout="Successfully logged in\n")
-        if cmd[:3] == ["codex", "login", "status"]:
-            if state["logged_in"]:
-                return _Completed(0, stdout="Logged in using an API key\n")
-            return _Completed(1, stderr="Not logged in\n")
-        if cmd[:3] == ["codex", "auth", "status"]:
-            return _Completed(1, stderr="unknown command\n")
-        return _Completed(1, stderr="unexpected command\n")
-
-    monkeypatch.setattr(agent_runner.subprocess, "run", _run)
-
-    env = {"HOME": str(real_home)}
-    auth = agent_runner._configure_codex_cli_environment(
-        env=env,
-        task_id="task_api_key_bootstrap",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["effective_mode"] == "api_key"
-    assert auth["api_key_present"] is True
-    assert auth["api_key_login_bootstrapped"] is True
-    assert auth["api_key_login_source"] == "codex_login_with_api_key"
-    assert auth["oauth_session"] is True
-    assert env.get("OPENAI_API_KEY") == "sk-test"
-    assert ["codex", "login", "--with-api-key"] in calls
-
-
-def test_configure_codex_cli_environment_uses_admin_key_when_primary_missing(monkeypatch):
-    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
+def test_configure_codex_cli_environment_oauth_without_api_key_strips_openai_env(monkeypatch, tmp_path):
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.delenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", raising=False)
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-only-key")
-
-    env: dict[str, str] = {}
-    auth = agent_runner._configure_codex_cli_environment(
-        env=env,
-        task_id="task_admin_key_fallback",
-        log=agent_runner._setup_logging(verbose=False),
-    )
-
-    assert auth["effective_mode"] == "api_key"
-    assert auth["api_key_present"] is True
-    assert env.get("OPENAI_API_KEY") == "admin-only-key"
-
-
-def test_configure_codex_cli_environment_overrides_blank_api_key_env(monkeypatch):
-    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-non-empty")
+    monkeypatch.delenv("OPENAI_ADMIN_API_KEY", raising=False)
 
     env = {
-        "OPENAI_API_KEY": "",
-        "OPENAI_API_BASE": "",
-        "OPENAI_BASE_URL": "",
+        "OPENAI_API_BASE": "https://api.openai.com/v1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
     }
     auth = agent_runner._configure_codex_cli_environment(
         env=env,
-        task_id="task_blank_api_key_env",
+        task_id="task_auth_oauth_no_api_key",
         log=agent_runner._setup_logging(verbose=False),
     )
 
-    assert auth["effective_mode"] == "api_key"
-    assert auth["api_key_present"] is True
-    assert env.get("OPENAI_API_KEY") == "sk-non-empty"
-    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
-    assert env.get("OPENAI_BASE_URL") == "https://api.openai.com/v1"
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["oauth_fallback_allowed"] is False
+    assert auth["api_key_present"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
 
 
-def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch, tmp_path):
+def test_configure_codex_cli_environment_ignores_non_oauth_task_auth_override(monkeypatch, tmp_path):
     session_file = tmp_path / "codex-auth.json"
     session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
-    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
     monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("OPENAI_ADMIN_API_KEY", "admin-test")
@@ -547,14 +1441,16 @@ def test_configure_codex_cli_environment_respects_task_auth_override(monkeypatch
         task_ctx={"runner_codex_auth_mode": "api_key"},
     )
 
-    assert auth["requested_mode"] == "api_key"
-    assert auth["effective_mode"] == "api_key"
-    assert auth["api_key_present"] is True
-    assert env.get("OPENAI_API_KEY") == "sk-test"
-    assert env.get("OPENAI_API_BASE") == "https://api.openai.com/v1"
+    assert auth["requested_mode"] == "oauth"
+    assert auth["effective_mode"] == "oauth"
+    assert auth["api_key_present"] is False
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_ADMIN_API_KEY" not in env
+    assert "OPENAI_API_BASE" not in env
+    assert "OPENAI_BASE_URL" not in env
 
 
-def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeypatch, tmp_path):
+def test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback(monkeypatch, tmp_path):
     t = [5200.0]
 
     def _mono():
@@ -601,12 +1497,340 @@ def test_run_one_task_schedules_codex_oauth_refresh_token_fallback_retry(monkeyp
         if url.endswith("/api/agent/tasks/task_oauth_refresh_reused") and patch.get("status") == "pending"
     )
     context = pending_patch.get("context") or {}
-    assert context.get("runner_codex_auth_mode") == "api_key"
-    assert context.get("runner_codex_auth_fallback_attempted") is True
-    auth_fallback = context.get("runner_codex_auth_fallback") or {}
-    assert auth_fallback.get("trigger") == "oauth_refresh_token_reused"
-    assert auth_fallback.get("to_mode") == "api_key"
-    assert "runner-codex-auth-fallback" in str(pending_patch.get("output") or "")
+    assert context.get("runner_codex_auth_mode") == "oauth"
+    assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
+    retry_meta = context.get("runner_codex_oauth_refresh_retry") or {}
+    assert retry_meta.get("trigger") == "oauth_refresh_token_reused"
+    assert retry_meta.get("mode") == "oauth"
+    assert context.get("runner_codex_auth_fallback_attempted") is not True
+    assert (context.get("runner_codex_auth_fallback") or {}) == {}
+    assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
+
+
+def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, tmp_path):
+    t = [5220.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_ALLOW_API_KEY_FALLBACK", "0")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-null-retry-runner")
+
+    failure_output = (
+        'ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {"error":{"code":"refresh_token_reused"}}\n'
+        "Your refresh token has already been used to generate a new access token.\n"
+    )
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_oauth_retry_null_retry_max",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+        task_context={"retry_max": None},
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_retry_null_retry_max") and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    assert context.get("runner_codex_oauth_refresh_retry_attempted") is True
+    assert int(context.get("runner_retry_max") or 0) >= 1
+    assert "retrying with oauth auth mode" in str(pending_patch.get("output") or "")
+
+
+def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5300.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".codex" / "auth.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"access_token": "stale-access", "refresh_token": "stale-refresh", "auth_mode": "oauth"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "access_token": "fresh-access",
+        "refresh_token": "fresh-refresh",
+        "auth_mode": "oauth",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:oauth-refresh-runner")
+
+    relogin_calls = {"count": 0}
+
+    def _relogin(*, env, task_id, log):
+        relogin_calls["count"] += 1
+        return True, "oauth_relogin_called"
+
+    monkeypatch.setattr(agent_runner, "_attempt_codex_oauth_relogin", _relogin)
+
+    failure_output = (
+        'ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {"error":{"code":"refresh_token_reused"}}\n'
+        "Your refresh token has already been used to generate a new access token.\n"
+    )
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_oauth_refresh_reused_with_b64",
+        command='codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="openclaw/gpt-5.3-codex",
+        task_context={"runner_codex_oauth_session_b64": encoded},
+    )
+    assert done is True
+    assert relogin_calls["count"] == 0
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_oauth_refresh_reused_with_b64") and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_codex_oauth_session_refresh") or {}
+    assert context.get("runner_codex_auth_mode") == "oauth"
+    assert context.get("runner_codex_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "fresh-refresh"
+    assert loaded.get("access_token") == "fresh-access"
+
+
+def test_run_one_task_cursor_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5400.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".cursor" / "auth.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"accessToken": "stale-access", "refreshToken": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "accessToken": "fresh-access",
+        "refreshToken": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CURSOR_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CURSOR_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "cursor:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_cursor_oauth_refresh_from_context",
+        command='agent "Return ok" --model auto',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/auto",
+        task_context={
+            "runner_cursor_auth_mode": "oauth",
+            "runner_cursor_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_cursor_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_cursor_oauth_session_refresh") or {}
+    assert context.get("runner_cursor_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_cursor_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "fresh-refresh"
+    assert loaded.get("accessToken") == "fresh-access"
+
+
+def test_run_one_task_gemini_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5420.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".gemini" / "oauth_creds.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"access_token": "stale-access", "refresh_token": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "access_token": "fresh-access",
+        "refresh_token": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_GEMINI_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_GEMINI_OAUTH_CREDS_FILE", str(session_file))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_WORKER_ID", "gemini:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_gemini_oauth_refresh_from_context",
+        command='gemini -p "Return ok" --model gemini-2.5-pro',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="gemini/gemini-2.5-pro",
+        task_context={
+            "runner_gemini_auth_mode": "oauth",
+            "runner_gemini_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_gemini_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_gemini_oauth_session_refresh") or {}
+    assert context.get("runner_gemini_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_gemini_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refresh_token") == "fresh-refresh"
+    assert loaded.get("access_token") == "fresh-access"
+
+
+def test_run_one_task_claude_auth_failure_refreshes_oauth_session_from_task_context_b64(monkeypatch, tmp_path):
+    t = [5440.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / ".claude" / ".credentials.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"accessToken": "stale-access", "refreshToken": "stale-refresh"}),
+        encoding="utf-8",
+    )
+    new_session_payload = {
+        "accessToken": "fresh-access",
+        "refreshToken": "fresh-refresh",
+    }
+    encoded = base64.b64encode(json.dumps(new_session_payload).encode("utf-8")).decode("utf-8")
+    monkeypatch.setenv("AGENT_CLAUDE_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CLAUDE_OAUTH_SESSION_FILE", str(session_file))
+    monkeypatch.setenv("AGENT_WORKER_ID", "claude:oauth-refresh-runner")
+
+    failure_output = "OAuth token refresh failed: 401 Unauthorized: invalid_grant\n"
+
+    def _popen(*args, **kwargs):
+        return _Proc(returncode=1, stdout_text=failure_output)
+
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_claude_oauth_refresh_from_context",
+        command='claude -p "ok" --dangerously-skip-permissions',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="claude/sonnet",
+        task_context={
+            "runner_claude_auth_mode": "oauth",
+            "runner_claude_oauth_session_b64": encoded,
+        },
+    )
+    assert done is True
+
+    pending_patch = next(
+        patch
+        for url, patch in client.patches
+        if url.endswith("/api/agent/tasks/task_claude_oauth_refresh_from_context")
+        and patch.get("status") == "pending"
+    )
+    context = pending_patch.get("context") or {}
+    refresh_meta = context.get("runner_claude_oauth_session_refresh") or {}
+    assert context.get("runner_claude_oauth_refresh_retry_attempted") is True
+    assert context.get("runner_claude_oauth_session_refresh_attempted") is True
+    assert refresh_meta.get("ok") is True
+    assert str(refresh_meta.get("detail") or "").startswith("oauth_session_overwritten:")
+    loaded = json.loads(session_file.read_text(encoding="utf-8"))
+    assert loaded.get("refreshToken") == "fresh-refresh"
+    assert loaded.get("accessToken") == "fresh-access"
 
 
 def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):
@@ -628,9 +1852,11 @@ def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypat
 
     monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    session_file = tmp_path / "codex-auth.json"
+    session_file.write_text('{"token":"test"}', encoding="utf-8")
     monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
-    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "api_key")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("AGENT_CODEX_AUTH_MODE", "oauth")
+    monkeypatch.setenv("AGENT_CODEX_OAUTH_SESSION_FILE", str(session_file))
 
     client = _Client()
     log = agent_runner._setup_logging(verbose=False)
@@ -649,6 +1875,52 @@ def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypat
     codex_call = next(call for call in popen_calls if isinstance(call.get("command"), list))
     assert not bool(codex_call.get("shell"))
     assert isinstance(codex_call["command"], list)
+
+
+def test_run_one_task_executes_cursor_via_argv_to_avoid_shell_expansion(monkeypatch, tmp_path):
+    t = [6100.0]
+    popen_calls: list[dict[str, object]] = []
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    def _popen(*args, **kwargs):
+        popen_calls.append(
+            {
+                "command": args[0],
+                "shell": kwargs.get("shell"),
+            }
+        )
+        return _Proc(returncode=0, stdout_text="OK\n")
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(agent_runner.subprocess, "Popen", _popen)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_cursor_argv",
+        command='agent "RUN `echo risky` literal text" --model auto',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/auto",
+    )
+    assert done is True
+    assert popen_calls
+    cursor_call = next(
+        call
+        for call in popen_calls
+        if isinstance(call.get("command"), list) and "risky" in " ".join(str(part) for part in call["command"])
+    )
+    assert not bool(cursor_call.get("shell"))
+    assert isinstance(cursor_call["command"], list)
+    assert "RUN `echo risky` literal text" in str(cursor_call["command"])
 
 
 def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, tmp_path):
