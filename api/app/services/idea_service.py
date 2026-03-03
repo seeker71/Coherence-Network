@@ -261,7 +261,11 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
 def _should_include_default_tracked_ideas() -> bool:
     # When callers isolate ideas into a custom portfolio path (common in tests),
     # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
-    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR") or os.getenv("COMMIT_EVIDENCE_DATABASE_URL"):
+    if (
+        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+    ):
         return True
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
 
@@ -285,7 +289,9 @@ def _ideas_cache_key() -> str:
         f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
         f"{os.getenv('DATABASE_URL','')}|"
         f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}"
     )
 
 
@@ -308,6 +314,7 @@ def _tracked_idea_ids() -> list[str]:
     now = time.time()
     cache_key = (
         f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
+        f"|{os.getenv('DATABASE_URL','')}"
         f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
         f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
         f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
