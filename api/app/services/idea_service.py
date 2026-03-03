@@ -344,9 +344,11 @@ def _should_discover_registry_domain_ideas() -> bool:
         return True
     if explicit in {"0", "false", "no", "off"}:
         return False
-    # In isolated test runs, IDEA_PORTFOLIO_PATH is often pointed at tmp files.
-    # Default to off there unless explicitly enabled.
-    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+    # Keep isolated pytest runs deterministic unless explicitly enabled.
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    # In runtime/deploy environments, always discover registry-domain ideas.
+    return True
 
 
 def _discover_registry_domain_idea_ids() -> list[str]:
