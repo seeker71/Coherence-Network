@@ -15,26 +15,27 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Task Start Protocol (Required)
 
-Before any code changes in a new worktree/thread:
-
-1. Run bootstrap:
-   - `./scripts/setup_worktree_context.sh`
-   - `./scripts/run_local_ci_context.sh`
-2. Read required context:
-   - `CLAUDE.md`
-   - `docs/SPEC-TRACKING.md`
-   - `docs/SPEC-QUALITY-GATE.md`
-3. Confirm scope:
-   - Only modify files listed in the active spec/issue.
-4. Follow process order:
-   - Spec → Test → Implement → CI → Review → Merge
-5. Post-change gate:
-   - Re-run local CI-equivalent checks before handoff.
-
-Failure policy:
-
-- If bootstrap or CI gates fail, stop implementation and report the exact failing command and output.
-- Do not continue in a dirty worktree; create or switch to a clean worktree first.
+1. Worktree-only execution
+   - Never edit or run implementation commands in the primary workspace.
+   - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
+2. Start gate (required before any edits)
+   - Run: `python3 scripts/ensure_worktree_start_clean.py --json`
+   - If it fails, stop and fix blockers first.
+3. Pre-commit local gate (required)
+   - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
+   - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
+   - If either fails, do not commit.
+4. Evidence contract (required per commit)
+   - Add/update `docs/system_audit/commit_evidence_<date>_<topic>.json`.
+   - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
+5. PR + CI contract
+   - Open PR immediately after push.
+   - Before push, run `git fetch origin main && git rebase origin/main`.
+   - Before push, run `python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence`.
+   - Monitor checks until green, or report blocker with failing check links and remediation command.
+6. Finish contract
+   - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
+   - Do not start a new task while previous task has unresolved blocking checks.
 
 ## Key Files
 
