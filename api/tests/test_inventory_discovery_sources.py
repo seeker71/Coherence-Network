@@ -140,6 +140,34 @@ def test_idea_service_domain_discovery_default_on_outside_pytest(
     assert "derived-prod-default" in idea_ids
 
 
+def test_idea_service_derives_missing_ideas_from_contribution_metadata_domain(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    monkeypatch.setattr(spec_registry_service, "list_specs", lambda limit=200, offset=0: [])
+    monkeypatch.setattr(value_lineage_service, "list_links", lambda limit=200: [])
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_idea",
+        lambda seconds=3600, event_limit=2000, summary_limit=500, summary_offset=0, event_rows=None: [],
+    )
+    monkeypatch.setattr(
+        idea_service,
+        "_contribution_metadata_idea_ids",
+        lambda: ["derived-from-contribution-meta"],
+    )
+
+    listed = idea_service.list_ideas(include_internal=True)
+    idea_ids = {item.id for item in listed.ideas}
+
+    assert "derived-from-contribution-meta" in idea_ids
+
+
 def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
     monkeypatch, tmp_path: Path
 ) -> None:

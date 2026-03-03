@@ -1,7 +1,7 @@
 {
   "date": "2026-03-03",
   "thread_branch": "codex/ideas-registry-backfill-20260303",
-  "commit_scope": "Keep idea domain discovery enabled in production and force inventory commit-evidence reads to the same DB source when DATABASE_URL is configured, eliminating mixed DB/file idea-source drift.",
+  "commit_scope": "Keep idea domain discovery enabled in production, force inventory commit-evidence reads to the same DB source when DATABASE_URL is configured, and include contribution-metadata idea IDs from the DB to close ideas vs flow parity gaps.",
   "files_owned": [
     "api/app/services/idea_service.py",
     "api/app/services/inventory_service.py",
@@ -12,7 +12,7 @@
     "status": "pass",
     "commands": [
       "make start-gate",
-      "cd api && pytest -q tests/test_inventory_discovery_sources.py -k \"reads_commit_evidence_from_store_when_database_url_configured or database_source_does_not_fallback_to_files or inventory_reads_commit_evidence_from_store or inventory_commit_evidence_returns_empty_when_store_has_no_rows or database_url_is_configured or derives_missing_ideas_from_other_registry_domains or domain_discovery_default_on_outside_pytest or db_is_configured\"",
+      "cd api && pytest -q tests/test_inventory_discovery_sources.py -k \"derives_missing_ideas_from_contribution_metadata_domain or reads_commit_evidence_from_store_when_database_url_configured or database_source_does_not_fallback_to_files or inventory_reads_commit_evidence_from_store or inventory_commit_evidence_returns_empty_when_store_has_no_rows or database_url_is_configured or derives_missing_ideas_from_other_registry_domains or domain_discovery_default_on_outside_pytest or db_is_configured\"",
       "cd api && pytest -q tests/test_inventory_api.py::test_standing_question_exists_for_every_idea -q",
       "cd api && ruff check app/services/idea_service.py app/services/inventory_service.py tests/test_inventory_discovery_sources.py"
     ]
