@@ -1,5 +1,8 @@
 """Health check endpoint (spec 001)."""
 
+import os
+import time
+import logging
 from datetime import datetime, timezone
 import os
 from typing import Annotated
@@ -10,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.services import persistence_contract_service
 
 router = APIRouter()
+_log = logging.getLogger("coherence.api.perf")
 
 HEALTH_VERSION = "1.0.0"
 SERVICE_STARTED_AT = datetime.now(timezone.utc)
@@ -137,10 +141,17 @@ async def persistence_contract(request: Request):
 @router.get("/health", response_model=HealthResponse)
 async def health():
     """Return API health status."""
+    debug = "/api/health" in {
+        part.strip()
+        for part in (os.getenv("PERF_DEBUG_ENDPOINTS", "") or "").split(",")
+        if part.strip()
+    }
+    t0 = time.perf_counter()
     now = datetime.now(timezone.utc)
+    t1 = time.perf_counter()
     up = _uptime_seconds(now)
-    deployed_sha, deployed_sha_source = _deployed_sha()
-    return HealthResponse(
+    t2 = time.perf_counter()
+    resp = HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
         timestamp=_iso_utc(now),
@@ -150,3 +161,13 @@ async def health():
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
     )
+    t3 = time.perf_counter()
+    if debug:
+        _log.info(
+            "perf_health steps_ms now=%.3f uptime=%.3f construct=%.3f total=%.3f",
+            (t1 - t0) * 1000.0,
+            (t2 - t1) * 1000.0,
+            (t3 - t2) * 1000.0,
+            (t3 - t0) * 1000.0,
+        )
+    return resp

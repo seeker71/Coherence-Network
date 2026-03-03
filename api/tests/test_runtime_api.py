@@ -373,31 +373,141 @@ async def test_runtime_events_persist_to_database_when_runtime_database_url_is_s
 
 
 @pytest.mark.asyncio
-async def test_runtime_database_summary_handles_sqlite_naive_timestamps(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("RUNTIME_EVENTS_PATH", raising=False)
-    monkeypatch.setenv("RUNTIME_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'runtime.db'}")
+async def test_runtime_endpoint_summary_includes_percentiles(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post(
-            "/api/runtime/events",
-            json={
-                "source": "api",
-                "endpoint": "/api/health",
-                "method": "GET",
-                "status_code": 200,
-                "runtime_ms": 9.5,
-            },
-        )
-        assert created.status_code == 201
+        for runtime_ms in (10.0, 20.0, 30.0, 2000.0):
+            created = await client.post(
+                "/api/runtime/events",
+                json={
+                    "source": "api",
+                    "endpoint": "/api/health",
+                    "method": "GET",
+                    "status_code": 200,
+                    "runtime_ms": runtime_ms,
+                },
+            )
+            assert created.status_code == 201
 
         summary = await client.get("/api/runtime/endpoints/summary", params={"seconds": 3600})
         assert summary.status_code == 200
-        endpoints = summary.json().get("endpoints", [])
-        assert any(row.get("endpoint") == "/api/health" for row in endpoints)
+        payload = summary.json()
+        row = next(entry for entry in payload["endpoints"] if entry["endpoint"] == "/api/health")
+
+        assert row["event_count"] == 4
+        assert row["max_runtime_ms"] >= 2000.0
+        assert row["p50_runtime_ms"] >= 10.0
+        assert row["p95_runtime_ms"] >= row["p50_runtime_ms"]
+
+
+@pytest.mark.asyncio
+async def test_runtime_events_filtering_by_endpoint_and_min_runtime(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for runtime_ms in (25.0, 2500.0):
+            created = await client.post(
+                "/api/runtime/events",
+                json={
+                    "source": "api",
+                    "endpoint": "/api/health",
+                    "method": "GET",
+                    "status_code": 200,
+                    "runtime_ms": runtime_ms,
+                },
+            )
+            assert created.status_code == 201
+
+        filtered = await client.get(
+            "/api/runtime/events",
+            params={"limit": 200, "endpoint": "/api/health", "min_runtime_ms": 1000},
+        )
+        assert filtered.status_code == 200
+        rows = filtered.json()
+        assert rows
+        assert all(row["endpoint"] == "/api/health" for row in rows)
+        assert all(float(row["runtime_ms"]) >= 1000.0 for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_runtime_slow_endpoints_report(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("RUNTIME_SLOW_REQUEST_MS", "1000")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for runtime_ms in (5.0, 10.0, 1500.0):
+            created = await client.post(
+                "/api/runtime/events",
+                json={
+                    "source": "api",
+                    "endpoint": "/api/health",
+                    "method": "GET",
+                    "status_code": 200,
+                    "runtime_ms": runtime_ms,
+                },
+            )
+            assert created.status_code == 201
+
+        slow = await client.get("/api/runtime/endpoints/slow", params={"seconds": 3600, "limit": 50})
+        assert slow.status_code == 200
+        payload = slow.json()
+        assert payload["threshold_ms"] >= 1000
+        assert any(entry["endpoint"] == "/api/health" for entry in payload["endpoints"])
+
+
+@pytest.mark.asyncio
+async def test_request_log_disable_does_not_break_requests(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REQUEST_LOG_ENABLED", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/health")
+        assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_health_perf_debug_flag_does_not_break_health(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PERF_DEBUG_ENDPOINTS", "/api/health")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/health")
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_async_runtime_telemetry_does_not_block_request(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import time as _time
+
+    monkeypatch.setenv("RUNTIME_TELEMETRY_ASYNC", "1")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    called: list[float] = []
+
+    def _slow_record_event(*args, **kwargs):  # noqa: ANN001
+        _time.sleep(0.6)
+        called.append(_time.time())
+        return None
+
+    monkeypatch.setattr(runtime_service, "record_event", _slow_record_event)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        t0 = _time.perf_counter()
+        resp = await client.get("/api/health")
+        dt = _time.perf_counter() - t0
+
+        assert resp.status_code == 200
+        # If telemetry were synchronous, this would be >= 0.6s.
+        assert dt < 0.3
 
 
 def test_verify_internal_vs_public_usage_contract_detects_missing_public_records(

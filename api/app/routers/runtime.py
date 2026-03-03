@@ -23,15 +23,20 @@ async def create_runtime_event(payload: RuntimeEventCreate) -> RuntimeEvent:
 @router.get("/runtime/events", response_model=list[RuntimeEvent])
 async def list_runtime_events(
     limit: int = Query(100, ge=1, le=2000),
-    source: str | None = Query(default=None, max_length=64),
-    force_refresh: bool = Query(False),
+    endpoint: str | None = Query(None, description="Canonical endpoint template (e.g. /api/spec-registry/{spec_id})"),
+    method: str | None = Query(None, description="HTTP method filter (e.g. GET)"),
+    min_runtime_ms: float | None = Query(None, ge=0.0, description="Minimum runtime_ms filter"),
+    status_code: int | None = Query(None, ge=100, le=599, description="HTTP status filter"),
 ) -> list[RuntimeEvent]:
-    return runtime_service.cached_runtime_events(limit=limit, source=source, force_refresh=force_refresh)
-
-
-@router.get("/runtime/change-token")
-async def runtime_change_token(force_refresh: bool = Query(False)) -> dict:
-    return runtime_service.live_change_token(force_refresh=force_refresh)
+    if endpoint or method or min_runtime_ms is not None or status_code is not None:
+        return runtime_service.list_events_filtered(
+            limit=limit,
+            endpoint=endpoint,
+            method=method,
+            min_runtime_ms=min_runtime_ms,
+            status_code=status_code,
+        )
+    return runtime_service.list_events(limit=limit)
 
 
 @router.get("/runtime/ideas/summary")
@@ -65,37 +70,19 @@ async def runtime_summary_by_endpoint(
     }
 
 
-@router.get("/runtime/web/views/summary", response_model=WebViewPerformanceReport)
-async def runtime_web_view_summary(
-    seconds: int = Query(21600, ge=60, le=2592000),
-    limit: int = Query(100, ge=1, le=500),
-    route_prefix: str | None = Query(default=None, max_length=200),
-    force_refresh: bool = Query(False),
-) -> WebViewPerformanceReport:
-    event_limit = max(300, min(1500, int(limit) * 30))
-    payload = runtime_service.cached_web_view_performance_payload(
-        seconds=seconds,
-        limit=limit,
-        route_prefix=route_prefix,
-        event_limit=event_limit,
-        force_refresh=force_refresh,
-    )
-    return WebViewPerformanceReport.model_validate(payload)
-
-
-@router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport)
-async def runtime_endpoint_attention(
+@router.get("/runtime/endpoints/slow")
+async def runtime_slow_endpoints(
     seconds: int = Query(3600, ge=60, le=2592000),
-    min_event_count: int = Query(1, ge=1, le=5000),
-    attention_threshold: float = Query(40.0, ge=0.0, le=1000.0),
-    limit: int = Query(200, ge=1, le=2000),
-) -> EndpointAttentionReport:
-    return runtime_service.summarize_endpoint_attention(
-        seconds=seconds,
-        min_event_count=min_event_count,
-        attention_threshold=attention_threshold,
-        limit=limit,
-    )
+    threshold_ms: int | None = Query(None, ge=1, le=300000),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict:
+    threshold = int(threshold_ms) if threshold_ms is not None else runtime_service.slow_threshold_ms()
+    rows = runtime_service.slow_endpoints_report(seconds=seconds, threshold_ms=threshold, limit=limit)
+    return {
+        "window_seconds": seconds,
+        "threshold_ms": threshold,
+        "endpoints": [row.model_dump(mode="json") for row in rows],
+    }
 
 
 @router.post("/runtime/exerciser/run")
