@@ -84,6 +84,8 @@ def _extract_underlying_model(task_model: str) -> str:
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):
         return cleaned.split("/", 1)[1].strip()
+    if cleaned.startswith("gemini/"):
+        return cleaned.split("/", 1)[1].strip()
     return cleaned
 
 
@@ -133,6 +135,8 @@ def _task_route_provider(task: dict[str, Any]) -> str:
         return "openai-codex"
     if "claude" in model:
         return "claude"
+    if "gemini" in model:
+        return "gemini"
     if model.startswith(("gpt", "o1", "o3", "o4", "openai/")):
         return "openai"
     return "unknown"

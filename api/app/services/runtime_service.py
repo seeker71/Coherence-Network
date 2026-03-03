@@ -7,7 +7,10 @@ import os
 import re
 import time
 import hashlib
-from typing import Any
+import logging
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Any, Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -34,6 +37,8 @@ from app.services import (
     value_lineage_service,
 )
 
+logger = logging.getLogger(__name__)
+
 
 _RUNTIME_EVENTS_CACHE: dict[str, Any] = {
     "expires_at": 0.0,
@@ -47,6 +52,17 @@ _LIVE_CHANGE_CACHE: dict[str, Any] = {
     "payload": {},
 }
 _LIVE_CHANGE_CACHE_TTL_SECONDS = 5.0
+
+_RUNTIME_ENDPOINT_CACHE_NAMESPACE = "runtime_endpoint_cache_v1"
+_RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 120.0
+_RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
+_RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
+_RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
+_RUNTIME_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
+    max_workers=max(2, min(int(os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    thread_name_prefix="runtime-endpoint-cache-refresh",
+)
+_RUNTIME_ENDPOINT_CACHE_BUSTER = 0
 
 
 def _default_events_path() -> Path:
@@ -124,6 +140,169 @@ def _runtime_events_cache_key(limit: int, since: datetime | None, source: str | 
         cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
     source_value = str(source or "").strip().lower() or "all"
     return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}|source={source_value}"
+
+
+def _runtime_endpoint_cache_ttl_seconds(cache_name: str, default: float = _RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
+    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
+    env_key = f"RUNTIME_ENDPOINT_CACHE_TTL_{env_suffix}"
+    raw = str(os.getenv(env_key) or "").strip()
+    if not raw:
+        return max(1.0, min(float(default), 86400.0))
+    try:
+        parsed = float(raw)
+    except (TypeError, ValueError):
+        return max(1.0, min(float(default), 86400.0))
+    return max(1.0, min(float(parsed), 86400.0))
+
+
+def _runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
+    scope_parts = [
+        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
+        str(os.getenv("RUNTIME_DATABASE_URL") or ""),
+        str(os.getenv("DATABASE_URL") or ""),
+        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
+        str(_runtime_events_store_cache_key()),
+        str(_RUNTIME_ENDPOINT_CACHE_BUSTER),
+    ]
+    scope_digest = hashlib.sha1("||".join(scope_parts).encode("utf-8")).hexdigest()[:12]
+    canonical = json.dumps(params or {}, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha1(f"{endpoint}|{canonical}".encode("utf-8")).hexdigest()
+    return f"{_RUNTIME_ENDPOINT_CACHE_NAMESPACE}::{scope_digest}::{endpoint}::{digest}"
+
+
+def _parse_runtime_cache_timestamp(raw: Any) -> datetime | None:
+    value = str(raw or "").strip()
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _runtime_endpoint_cache_read(
+    endpoint: str,
+    params: dict[str, Any] | None = None,
+) -> tuple[Any | None, float | None]:
+    key = _runtime_endpoint_cache_meta_key(endpoint, params)
+    raw = telemetry_persistence_service.get_meta_value(key)
+    if not raw:
+        return None, None
+    try:
+        envelope = json.loads(raw)
+    except (TypeError, ValueError):
+        return None, None
+    if not isinstance(envelope, dict) or "payload" not in envelope:
+        return None, None
+    payload = envelope.get("payload")
+    stored_at = _parse_runtime_cache_timestamp(envelope.get("stored_at"))
+    if stored_at is None:
+        return payload, None
+    age_seconds = max(0.0, (datetime.now(timezone.utc) - stored_at).total_seconds())
+    if age_seconds > float(_RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS):
+        return None, None
+    return payload, age_seconds
+
+
+def _runtime_endpoint_cache_write(endpoint: str, payload: Any, params: dict[str, Any] | None = None) -> None:
+    key = _runtime_endpoint_cache_meta_key(endpoint, params)
+    envelope = {
+        "stored_at": datetime.now(timezone.utc).isoformat(),
+        "payload": payload,
+    }
+    telemetry_persistence_service.set_meta_value(
+        key,
+        json.dumps(envelope, separators=(",", ":"), default=str),
+    )
+
+
+def _runtime_endpoint_cache_schedule_refresh(
+    endpoint: str,
+    *,
+    producer: Callable[[], Any],
+    params: dict[str, Any] | None = None,
+) -> bool:
+    key = _runtime_endpoint_cache_meta_key(endpoint, params)
+    with _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK:
+        active = _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
+        if active is not None and not active.done():
+            return False
+
+        def _run_refresh() -> Any:
+            payload = producer()
+            _runtime_endpoint_cache_write(endpoint, payload, params=params)
+            return payload
+
+        future = _RUNTIME_ENDPOINT_CACHE_REFRESH_POOL.submit(_run_refresh)
+        _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES[key] = future
+
+        def _cleanup(done_future: Future[Any]) -> None:
+            with _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK:
+                current = _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.get(key)
+                if current is done_future:
+                    _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES.pop(key, None)
+            try:
+                done_future.result()
+            except Exception:
+                logger.exception("runtime endpoint cache refresh failed", extra={"endpoint": endpoint})
+
+        future.add_done_callback(_cleanup)
+        return True
+
+
+def _runtime_endpoint_cached_value(
+    endpoint: str,
+    *,
+    fresh_ttl_seconds: float,
+    refresh_producer: Callable[[], Any],
+    fallback_producer: Callable[[], Any] | None = None,
+    params: dict[str, Any] | None = None,
+    force_refresh: bool = False,
+) -> Any:
+    if force_refresh:
+        payload = refresh_producer()
+        _runtime_endpoint_cache_write(endpoint, payload, params=params)
+        return payload
+
+    ttl = _runtime_endpoint_cache_ttl_seconds(endpoint, default=fresh_ttl_seconds)
+    cached_payload, cached_age = _runtime_endpoint_cache_read(endpoint, params=params)
+    if cached_payload is not None and cached_age is not None and cached_age <= ttl:
+        return cached_payload
+    if cached_payload is not None:
+        _runtime_endpoint_cache_schedule_refresh(
+            endpoint,
+            producer=refresh_producer,
+            params=params,
+        )
+        return cached_payload
+    try:
+        payload = refresh_producer()
+        _runtime_endpoint_cache_write(endpoint, payload, params=params)
+        return payload
+    except Exception:
+        if fallback_producer is not None:
+            fallback_payload = fallback_producer()
+            _runtime_endpoint_cache_write(endpoint, fallback_payload, params=params)
+            return fallback_payload
+        raise
+
+
+def _coerce_runtime_event_rows(payload: Any, *, limit: int) -> list[RuntimeEvent]:
+    if not isinstance(payload, list):
+        return []
+    rows: list[RuntimeEvent] = []
+    for raw in payload:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            rows.append(RuntimeEvent(**raw))
+        except Exception:
+            continue
+    rows.sort(key=lambda row: row.recorded_at, reverse=True)
+    return rows[: max(1, min(int(limit), 5000))]
 
 
 def _invalidate_runtime_events_cache() -> None:
@@ -412,6 +591,34 @@ def list_events(
     return out
 
 
+def cached_runtime_events(
+    *,
+    limit: int = 100,
+    source: str | None = None,
+    force_refresh: bool = False,
+) -> list[RuntimeEvent]:
+    requested_limit = max(1, min(int(limit), 5000))
+    source_value = str(source or "").strip().lower() or None
+    params = {
+        "limit": requested_limit,
+        "source": source_value or "",
+    }
+    payload = _runtime_endpoint_cached_value(
+        "runtime_events_list",
+        fresh_ttl_seconds=45.0,
+        refresh_producer=lambda: [
+            row.model_dump(mode="json")
+            for row in list_events(limit=requested_limit, source=source_value)
+        ],
+        params=params,
+        force_refresh=force_refresh,
+    )
+    rows = _coerce_runtime_event_rows(payload, limit=requested_limit)
+    if rows:
+        return rows
+    return list_events(limit=requested_limit, source=source_value)
+
+
 def live_change_token(force_refresh: bool = False) -> dict[str, Any]:
     now = time.time()
     if (
@@ -520,6 +727,50 @@ def summarize_by_idea(
     return summaries[safe_offset:safe_offset + safe_limit]
 
 
+def cached_runtime_ideas_summary_payload(
+    *,
+    seconds: int = 3600,
+    limit: int = 200,
+    offset: int = 0,
+    event_limit: int | None = None,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    window_seconds = max(60, min(int(seconds), 60 * 60 * 24 * 30))
+    requested_limit = max(1, min(int(limit), 2000))
+    requested_offset = max(0, int(offset))
+    scan_limit = (
+        max(1, min(int(event_limit), 5000))
+        if event_limit is not None
+        else max(300, min(1500, requested_limit * 20))
+    )
+    params = {
+        "seconds": window_seconds,
+        "limit": requested_limit,
+        "offset": requested_offset,
+        "event_limit": scan_limit,
+    }
+    return _runtime_endpoint_cached_value(
+        "runtime_ideas_summary",
+        fresh_ttl_seconds=90.0,
+        refresh_producer=lambda: {
+            "window_seconds": window_seconds,
+            "offset": requested_offset,
+            "limit": requested_limit,
+            "ideas": [
+                row.model_dump(mode="json")
+                for row in summarize_by_idea(
+                    seconds=window_seconds,
+                    event_limit=scan_limit,
+                    summary_limit=requested_limit,
+                    summary_offset=requested_offset,
+                )
+            ],
+        },
+        params=params,
+        force_refresh=force_refresh,
+    )
+
+
 def summarize_by_endpoint(seconds: int = 3600, summary_limit: int = 500) -> list[EndpointRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
@@ -608,6 +859,56 @@ def summarize_web_view_performance(
         window_seconds=window_seconds,
         requested_limit=requested_limit,
         route_prefix=(route_prefix or "").strip() or None,
+    )
+
+
+def cached_web_view_performance_payload(
+    *,
+    seconds: int = 21600,
+    limit: int = 100,
+    route_prefix: str | None = None,
+    event_limit: int | None = None,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    window_seconds = max(60, min(int(seconds), 60 * 60 * 24 * 30))
+    requested_limit = max(1, min(int(limit), 500))
+    normalized_route_prefix = (route_prefix or "").strip() or None
+    scan_limit = (
+        max(1, min(int(event_limit), 5000))
+        if event_limit is not None
+        else max(300, min(1500, requested_limit * 30))
+    )
+    params = {
+        "seconds": window_seconds,
+        "limit": requested_limit,
+        "route_prefix": normalized_route_prefix or "",
+        "event_limit": scan_limit,
+    }
+
+    def _refresh() -> dict[str, Any]:
+        report = summarize_web_view_performance(
+            seconds=window_seconds,
+            limit=requested_limit,
+            route_prefix=normalized_route_prefix,
+            event_limit=scan_limit,
+        )
+        return report.model_dump(mode="json")
+
+    def _fallback() -> dict[str, Any]:
+        return WebViewPerformanceReport(
+            window_seconds=window_seconds,
+            route_prefix=normalized_route_prefix,
+            total_routes=0,
+            rows=[],
+        ).model_dump(mode="json")
+
+    return _runtime_endpoint_cached_value(
+        "runtime_web_view_summary",
+        fresh_ttl_seconds=120.0,
+        refresh_producer=_refresh,
+        fallback_producer=_fallback,
+        params=params,
+        force_refresh=force_refresh,
     )
 
 

@@ -19,22 +19,20 @@ async def get_automation_usage(
 ) -> dict:
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
     try:
-        overview = await asyncio.wait_for(
+        return await asyncio.wait_for(
             asyncio.to_thread(
-                automation_usage_service.collect_usage_overview,
+                automation_usage_service.cached_usage_overview_payload,
                 force_refresh=force_refresh,
+                compact=compact,
+                include_raw=include_raw,
             ),
             timeout=timeout_seconds,
         )
     except TimeoutError:
-        overview = automation_usage_service.usage_overview_from_snapshots()
-    overview = automation_usage_service.coalesce_usage_overview_families(overview)
-    if compact:
-        return automation_usage_service.compact_usage_overview_payload(
-            overview,
+        return automation_usage_service.usage_overview_payload_from_snapshots(
+            compact=compact,
             include_raw=include_raw,
         )
-    return overview.model_dump(mode="json")
 
 
 @router.get("/automation/usage/snapshots")
@@ -65,11 +63,21 @@ async def get_automation_usage_alerts(
     threshold_ratio: float = Query(0.2, ge=0.0, le=1.0),
     force_refresh: bool = Query(False),
 ) -> dict:
-    report = automation_usage_service.evaluate_usage_alerts(
-        threshold_ratio=threshold_ratio,
-        force_refresh=force_refresh,
-    )
-    return report.model_dump(mode="json")
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_usage_alerts_payload,
+                threshold_ratio=threshold_ratio,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.evaluate_usage_alerts(
+            threshold_ratio=threshold_ratio,
+            force_refresh=False,
+        ).model_dump(mode="json")
 
 
 @router.get("/automation/usage/subscription-estimator")
@@ -86,19 +94,18 @@ async def get_provider_readiness(
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
     try:
-        report = await asyncio.wait_for(
+        return await asyncio.wait_for(
             asyncio.to_thread(
-                automation_usage_service.provider_readiness_report,
+                automation_usage_service.cached_provider_readiness_payload,
                 required_providers=requested or None,
                 force_refresh=force_refresh,
             ),
             timeout=timeout_seconds,
         )
     except TimeoutError:
-        report = automation_usage_service.provider_readiness_report_from_snapshots(
+        return automation_usage_service.provider_readiness_report_from_snapshots(
             required_providers=requested or None,
-        )
-    return report.model_dump(mode="json")
+        ).model_dump(mode="json")
 
 
 @router.get("/automation/usage/daily-summary")
@@ -107,11 +114,23 @@ async def get_automation_usage_daily_summary(
     top_n: int = Query(3, ge=1, le=20),
     force_refresh: bool = Query(False),
 ) -> dict:
-    return automation_usage_service.daily_system_summary(
-        window_hours=window_hours,
-        top_n=top_n,
-        force_refresh=force_refresh,
-    )
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_daily_system_summary_payload,
+                window_hours=window_hours,
+                top_n=top_n,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.cached_daily_system_summary_payload(
+            window_hours=window_hours,
+            top_n=top_n,
+            force_refresh=False,
+        )
 
 
 @router.post("/automation/usage/provider-validation/run")
@@ -152,10 +171,22 @@ async def get_provider_validation_report(
     force_refresh: bool = Query(False),
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
-    report = automation_usage_service.provider_validation_report(
-        required_providers=requested or None,
-        runtime_window_seconds=runtime_window_seconds,
-        min_execution_events=min_execution_events,
-        force_refresh=force_refresh,
-    )
-    return report.model_dump(mode="json")
+    timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                automation_usage_service.cached_provider_validation_payload,
+                required_providers=requested or None,
+                runtime_window_seconds=runtime_window_seconds,
+                min_execution_events=min_execution_events,
+                force_refresh=force_refresh,
+            ),
+            timeout=timeout_seconds,
+        )
+    except TimeoutError:
+        return automation_usage_service.cached_provider_validation_payload(
+            required_providers=requested or None,
+            runtime_window_seconds=runtime_window_seconds,
+            min_execution_events=min_execution_events,
+            force_refresh=False,
+        )

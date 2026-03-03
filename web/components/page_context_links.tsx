@@ -18,22 +18,14 @@ type ContextDef = {
 
 const SHARED_RELATED: LinkItem[] = [
   { href: "/search", label: "Search" },
-  { href: "/portfolio", label: "Portfolio" },
+  { href: "/ideas", label: "Ideas" },
   { href: "/flow", label: "Flow" },
   { href: "/contribute", label: "Contribute" },
-  { href: "/ideas", label: "Ideas" },
+  { href: "/tasks", label: "Tasks" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
   { href: "/automation", label: "Automation" },
-  { href: "/agent", label: "Agent" },
-  { href: "/friction", label: "Friction" },
-  { href: "/contributors", label: "Contributors" },
-  { href: "/contributions", label: "Contributions" },
-  { href: "/assets", label: "Assets" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/remote-ops", label: "Remote Ops" },
-  { href: "/import", label: "Import" },
-  { href: "/api-health", label: "API Health" },
   { href: "/gates", label: "Gates" },
 ];
 
@@ -253,6 +245,16 @@ function dedupe(items: LinkItem[]): LinkItem[] {
   return out;
 }
 
+function toBreadcrumb(pathname: string): string {
+  if (pathname === "/") return "Home";
+  return pathname
+    .split("/")
+    .filter(Boolean)
+    .map((part) => decodeURIComponent(part).replace(/[-_]/g, " "))
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" / ");
+}
+
 export default function PageContextLinks() {
   const pathname = usePathname() || "/";
   const apiBase = getApiBase();
@@ -302,34 +304,48 @@ export default function PageContextLinks() {
   }
 
   const machineLinks = dedupe(machine);
+  const focusLabel = ideaId.replace(/[-_]/g, " ");
 
   return (
-    <section className="border-b bg-muted/30">
-      <div className="mx-auto max-w-6xl px-4 md:px-8 py-2 space-y-1">
-        <p className="text-xs text-muted-foreground">
-          Context path <code>{pathname}</code> | idea <code>{ideaId}</code>
-        </p>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {related.map((item) => (
-            <Link
-              key={`rel-${item.href}`}
-              href={item.href}
-              className="rounded border px-2 py-1 hover:bg-accent"
-            >
-              {item.label}
-            </Link>
-          ))}
-          {machineLinks.map((item) => (
-            <a
-              key={`api-${item.href}`}
-              href={`${apiBase}${item.href}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded border px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent"
-            >
-              {item.label}
-            </a>
-          ))}
+    <section className="border-b border-border/70 bg-background/55">
+      <div className="mx-auto max-w-6xl px-4 md:px-8 py-1.5">
+        <div className="flex items-center gap-2 text-xs">
+          <p className="truncate text-muted-foreground">
+            <span className="hidden sm:inline">You are here </span>
+            <span className="font-medium text-foreground">{toBreadcrumb(pathname)}</span>
+          </p>
+          <span className="hidden lg:inline text-muted-foreground/90">Focus {focusLabel}</span>
+          <div className="flex-1" />
+          <details className="relative">
+            <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
+              Navigate
+            </summary>
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
+              {related.map((item) => (
+                <Link key={`rel-${item.href}`} href={item.href} className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
+          <details className="relative">
+            <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
+              Data links
+            </summary>
+            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
+              {machineLinks.map((item) => (
+                <a
+                  key={`api-${item.href}`}
+                  href={`${apiBase}${item.href}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </details>
         </div>
       </div>
     </section>

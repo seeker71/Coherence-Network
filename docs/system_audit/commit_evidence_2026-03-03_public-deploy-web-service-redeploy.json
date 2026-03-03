@@ -1,0 +1,84 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "codex/unify-native-provider-telemetry",
+  "commit_scope": "Update public deploy contract workflow to redeploy both Railway API and Railway web services (with backward-compatible API fallback), then revalidate contract checks and attach multi-service redeploy artifacts.",
+  "files_owned": [
+    ".github/workflows/public-deploy-contract.yml",
+    "docs/DEPLOY.md",
+    "docs/system_audit/commit_evidence_2026-03-03_public-deploy-web-service-redeploy.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-03-03-public-deploy-contract-web-service-redeploy"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_workflow_references.py",
+    "python3 - <<'PY' (yaml.safe_load) parse check for .github/workflows/public-deploy-contract.yml",
+    "./scripts/verify_web_api_deploy.sh (production contract verification before/after merge)"
+  ],
+  "change_files": [
+    ".github/workflows/public-deploy-contract.yml",
+    "docs/DEPLOY.md"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py",
+      "python3 - <<'PY'\\nimport yaml\\nfrom pathlib import Path\\nyaml.safe_load(Path('.github/workflows/public-deploy-contract.yml').read_text())\\nprint('OK yaml parse')\\nPY"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting merge and rerun of Public Deploy Contract with RAILWAY_WEB_SERVICE configured."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public Deploy Contract auto-remediation can redeploy both API and web services so web SHA parity can self-heal when API and web drift.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "Trigger public deploy contract on main and confirm Railway redeploy artifacts include api and web service outputs.",
+      "Verify /api/health and /api/health-proxy report matching deployed_sha for main."
+    ]
+  }
+}
