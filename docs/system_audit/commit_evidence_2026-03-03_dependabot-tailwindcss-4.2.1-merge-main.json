@@ -48,7 +48,7 @@
     "web/package.json",
     "web/package-lock.json"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -70,7 +70,9 @@
   "e2e_validation": {
     "status": "pending",
     "expected_behavior_delta": "Dependabot PR #318 becomes mergeable against current main while preserving tailwindcss 4.2.1 intent.",
-    "public_endpoints": [],
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/pull/318"
+    ],
     "test_flows": [
       "GitHub PR checks for #318 complete successfully after conflict resolution push."
     ]
