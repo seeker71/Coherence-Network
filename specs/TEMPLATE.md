@@ -10,6 +10,29 @@
 - [ ] Requirement 2 (specific and testable)
 - [ ] Requirement 3 (specific and testable)
 
+## Research Inputs (Required)
+
+List the primary sources that informed this spec (docs/changelog/paper/security advisory).
+Include publication date and URL for each source.
+
+- `YYYY-MM-DD` - [Source name](https://example.com) - [why it matters for this change]
+
+## Task Card (Required)
+
+```yaml
+goal: one sentence goal
+files_allowed:
+  - exact/path/file.py
+done_when:
+  - measurable check 1
+commands:
+  - exact command 1
+constraints:
+  - hard constraint 1
+```
+
+If task card scope is intentionally open-ended, explicitly justify why and list review owner.
+
 ## API Contract (if applicable)
 
 ### `GET /api/resource/{id}`
@@ -80,6 +103,14 @@ If manual validation is required, include explicit steps and expected results.
 
 - None at spec time.
 - If a gap exists, add explicit task/issue references (example: `Follow-up task: task_spec_gap_123`).
+
+## Failure/Retry Reflection
+
+For expected failure modes, document the likely blind spot and next-action guidance.
+
+- Failure mode: [example timeout]
+- Blind spot: [what was underestimated]
+- Next action: [smallest corrective step]
 
 ## Decision Gates (if any)
 

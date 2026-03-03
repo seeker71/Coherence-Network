@@ -1,0 +1,96 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/30b2-opencode-integration",
+  "commit_scope": "Stabilize agent lifecycle-hook integration and reduce codex executor friction by fixing unsupported command flags and OAuth runner environment behavior.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_completion.py",
+    "api/app/services/agent_execution_hooks.py",
+    "api/app/services/agent_execution_preflight.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "specs/111-agent-execution-lifecycle-hooks.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "111-agent-execution-lifecycle-hooks"
+  ],
+  "task_ids": [
+    "task-2026-02-26-agent-lifecycle-codex-flow"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_failure_triage_20260226T012433Z_codex.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_completion.py",
+    "api/app/services/agent_execution_hooks.py",
+    "api/app/services/agent_execution_preflight.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "specs/111-agent-execution-lifecycle-hooks.md",
+    "docs/system_audit/commit_evidence_2026-02-26_agent-lifecycle-codex-flow.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py -k \"configure_codex_cli_environment\"",
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"lifecycle or hook_error or lifecycle_summary or lifecycle_jsonl or lifecycle_source_override or lifecycle_jsonl_retention or lifecycle_guidance\"",
+      "cd api && ruff check app/services/agent_execution_completion.py app/services/agent_execution_hooks.py app/services/agent_execution_preflight.py app/services/agent_execution_task_flow.py app/services/agent_routing_service.py app/routers/agent.py scripts/agent_runner.py tests/test_agent_execute_endpoint.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_openclaw_executor_integration.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Agent execution lifecycle events are emitted and queryable, while codex executor routing/runner behavior avoids unsupported flag and OAuth env failures to improve execution flow.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/lifecycle/summary",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Execute lifecycle-summary endpoint with runtime/jsonl source override and verify guidance payload behavior.",
+      "Run codex-routed task execution and confirm no unsupported flag errors and no oauth-refresh-token-reused failures from runner env wiring.",
+      "Verify openclaw/codex default route template uses only supported codex flags."
+    ]
+  }
+}

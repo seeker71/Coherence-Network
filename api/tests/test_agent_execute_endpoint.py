@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from uuid import uuid4
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -154,6 +155,14 @@ async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
         assert int(context.get("failure_hits", 0)) == 1
         assert int(context.get("retry_count", 0)) == 1
         assert "Retry attempt 1" in str(context.get("retry_hint") or "")
+        reflections = context.get("retry_reflections") if isinstance(context.get("retry_reflections"), list) else []
+        assert len(reflections) == 1
+        reflection = reflections[0]
+        assert reflection.get("retry_number") == 1
+        assert reflection.get("failure_excerpt")
+        assert reflection.get("failure_category")
+        assert reflection.get("blind_spot")
+        assert reflection.get("next_action")
         assert call_count["value"] == 2
         assert len(prompt_history) == 2
         assert "Retry guidance" in prompt_history[1]
@@ -214,6 +223,7 @@ async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_o
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
     monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
     monkeypatch.setenv("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "1")
     monkeypatch.setenv("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "gpt-5-codex")
@@ -270,6 +280,7 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
@@ -340,6 +351,100 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
 
 
 @pytest.mark.asyncio
+async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disabled(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.delenv("AGENT_ALLOW_PAID_PROVIDERS", raising=False)
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok-default-allow",
+            {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
+            {"elapsed_ms": 6, "provider_request_id": "req_paid_default", "response_id": "resp_paid_default"},
+        ),
+    )
+
+    paid_task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route default paid policy",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{paid_task['id']}/execute")
+        completed = await client.get(f"/api/agent/tasks/{paid_task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        assert payload["status"] == "completed"
+        assert payload["output"] == "ok-default-allow"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_for_codex_model(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (_ for _ in ()).throw(
+            agent_execution_service.OpenRouterError("OPENROUTER_API_KEY is not configured")
+        ),
+    )
+
+    monkeypatch.setattr(
+        agent_execution_service.agent_execution_codex_service,
+        "run_codex_exec",
+        lambda **_: {
+            "ok": True,
+            "elapsed_ms": 9,
+            "content": "spark-ok",
+            "usage_json": '{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}',
+            "provider_request_id": "",
+            "actual_cost_usd": 0.0009,
+            "max_cost_usd": None,
+            "cost_slack_ratio": None,
+        },
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{task['id']}/execute?force_paid_providers=true")
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        assert payload["status"] == "completed"
+        assert payload["output"] == "spark-ok"
+
+
+@pytest.mark.asyncio
 async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
@@ -393,6 +498,64 @@ async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_k
         alt_completed_payload = alt_completed.json()
         assert alt_completed_payload["status"] == "completed"
         assert alt_completed_payload["output"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_requeues_failed_task_for_manual_rerun(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    state = {"mode": "fail", "calls": 0}
+
+    def _fail_then_pass(**_):
+        state["calls"] += 1
+        if state["mode"] == "fail":
+            raise agent_execution_service.OpenRouterError("first run failure")
+        return (
+            "second-pass",
+            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
+            {"elapsed_ms": 7, "provider_request_id": "req_second", "response_id": "resp_second"},
+        )
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _fail_then_pass)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Rerun failed task",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first_execute = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert first_execute.status_code == 200
+
+        first_task = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert first_task.status_code == 200
+        first_payload = first_task.json()
+        assert first_payload["status"] == "failed"
+        assert "first run failure" in str(first_payload["output"] or "")
+
+        state["mode"] = "pass"
+        second_execute = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert second_execute.status_code == 200
+
+        second_task = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert second_task.status_code == 200
+        second_payload = second_task.json()
+        assert second_payload["status"] == "completed"
+        assert second_payload["output"] == "second-pass"
+        assert state["calls"] >= 2
 
 
 @pytest.mark.asyncio
@@ -637,7 +800,71 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_blocks(
+async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_is_soft_threshold_only(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "1")
+    monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
+    monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_BLOCK_ON_SOFT_PROVIDER_QUOTA_THRESHOLD", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    monkeypatch.setattr(
+        agent_execution_service.automation_usage_service,
+        "provider_limit_guard_decision",
+        lambda provider, force_refresh=False: {
+            "allowed": False,
+            "provider": provider,
+            "reason": "monthly::credits remaining=4.0/100.0 ratio=0.04<=threshold=0.1",
+            "blocked_metrics": [
+                {
+                    "metric_id": "credits",
+                    "window": "monthly",
+                    "remaining_ratio": 0.04,
+                    "threshold_ratio": 0.1,
+                }
+            ],
+            "evaluated_metrics": [],
+        },
+    )
+
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "quota-soft-threshold-allowed",
+            {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3},
+            {"elapsed_ms": 7, "provider_request_id": "req_quota_soft", "response_id": "resp_quota_soft"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Assess codex route with soft provider quota threshold",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        assert payload["status"] == "completed"
+        assert payload["output"] == "quota-soft-threshold-allowed"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_reports_exhausted(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -659,12 +886,13 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_b
         lambda provider, force_refresh=False: {
             "allowed": False,
             "provider": provider,
-            "reason": "monthly::credits remaining=4.0/100.0 ratio=0.04<=threshold=0.1",
+            "reason": "monthly::credits remaining=0.0/100.0 ratio=0.0<=threshold=0.1",
             "blocked_metrics": [
                 {
                     "metric_id": "credits",
                     "window": "monthly",
-                    "remaining_ratio": 0.04,
+                    "remaining": 0.0,
+                    "remaining_ratio": 0.0,
                     "threshold_ratio": 0.1,
                 }
             ],
@@ -1043,3 +1271,473 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
 
     assert seed_called["count"] == 0
     assert scheduled == []
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_emits_lifecycle_runtime_events(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 5, "provider_request_id": "req_lifecycle", "response_id": "resp_lifecycle"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Emit lifecycle events",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert res.status_code == 200
+
+        fetched = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert fetched.status_code == 200
+        assert fetched.json()["status"] == "completed"
+
+        events = await client.get("/api/runtime/events?limit=200")
+        assert events.status_code == 200
+        rows = events.json()
+        lifecycle_rows = [
+            row
+            for row in rows
+            if str(row.get("metadata", {}).get("tracking_kind")) == "agent_task_lifecycle"
+            and str(row.get("metadata", {}).get("task_id")) == task["id"]
+        ]
+        lifecycle_events = {str(row.get("metadata", {}).get("lifecycle_event") or "") for row in lifecycle_rows}
+        assert "claimed" in lifecycle_events
+        assert "execution_started" in lifecycle_events
+        assert "finalized" in lifecycle_events
+        finalized = [
+            row
+            for row in lifecycle_rows
+            if str(row.get("metadata", {}).get("lifecycle_event") or "") == "finalized"
+        ]
+        assert finalized
+        assert str(finalized[0].get("metadata", {}).get("task_status") or "") == "completed"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_hook_error_listener_does_not_fail_execution(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    hook_calls = {"count": 0}
+
+    def _failing_hook(_payload: dict[str, object]) -> None:
+        hook_calls["count"] += 1
+        raise RuntimeError("synthetic hook failure")
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    agent_execution_hooks.register_lifecycle_hook(_failing_hook)
+    try:
+        monkeypatch.setattr(
+            agent_execution_service,
+            "chat_completion",
+            lambda **_: (
+                "ok",
+                {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                {"elapsed_ms": 4, "provider_request_id": "req_hook_err", "response_id": "resp_hook_err"},
+            ),
+        )
+
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction="Run even when lifecycle listener fails",
+                task_type=TaskType.IMPL,
+                context={"executor": "openclaw", "model_override": "openrouter/free"},
+            )
+        )
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            res = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+            assert res.status_code == 200
+
+            fetched = await client.get(f"/api/agent/tasks/{task['id']}")
+            assert fetched.status_code == 200
+            payload = fetched.json()
+            assert payload["status"] == "completed"
+            assert payload["output"] == "ok"
+
+        assert hook_calls["count"] >= 2
+    finally:
+        agent_execution_hooks.clear_lifecycle_hooks()
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_summary_endpoint_reports_recent_events(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "runtime")
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_summary", "response_id": "resp_summary"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Emit lifecycle summary test",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert executed.status_code == 200
+
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert summary.status_code == 200
+        payload = summary.json()
+        assert payload.get("window_seconds") == 3600
+        assert payload.get("subscribers", {}).get("runtime") is True
+        assert int(payload.get("total_events") or 0) >= 3
+        by_event = payload.get("by_event") or {}
+        assert int(by_event.get("claimed") or 0) >= 1
+        assert int(by_event.get("execution_started") or 0) >= 1
+        assert int(by_event.get("finalized") or 0) >= 1
+        recent = payload.get("recent") or []
+        assert recent
+        assert any(str(row.get("task_id") or "") == task["id"] for row in recent)
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_summary_respects_disabled_runtime_subscriber(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "none")
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_no_runtime", "response_id": "resp_no_runtime"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Disable runtime lifecycle subscriber",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert executed.status_code == 200
+
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert summary.status_code == 200
+        payload = summary.json()
+        assert payload.get("subscribers", {}).get("runtime") is False
+        assert int(payload.get("total_events") or 0) == 0
+
+        events = await client.get("/api/runtime/events?limit=200")
+        assert events.status_code == 200
+        lifecycle_rows = [
+            row
+            for row in events.json()
+            if str(row.get("metadata", {}).get("tracking_kind")) == "agent_task_lifecycle"
+            and str(row.get("metadata", {}).get("task_id")) == task["id"]
+        ]
+        assert lifecycle_rows == []
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_jsonl_subscriber_writes_audit_lines_and_summary(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "jsonl")
+    audit_path = tmp_path / "agent_lifecycle_events.jsonl"
+    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_jsonl", "response_id": "resp_jsonl"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Write lifecycle jsonl audit lines",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert executed.status_code == 200
+
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert summary.status_code == 200
+        payload = summary.json()
+        assert payload.get("subscribers", {}).get("runtime") is False
+        assert payload.get("subscribers", {}).get("jsonl") is True
+        assert str(payload.get("summary_source") or "") == "jsonl"
+        assert int(payload.get("total_events") or 0) >= 3
+        by_event = payload.get("by_event") or {}
+        assert int(by_event.get("claimed") or 0) >= 1
+        assert int(by_event.get("execution_started") or 0) >= 1
+        assert int(by_event.get("finalized") or 0) >= 1
+
+        events = await client.get("/api/runtime/events?limit=200")
+        assert events.status_code == 200
+        lifecycle_rows = [
+            row
+            for row in events.json()
+            if str(row.get("metadata", {}).get("tracking_kind")) == "agent_task_lifecycle"
+            and str(row.get("metadata", {}).get("task_id")) == task["id"]
+        ]
+        assert lifecycle_rows == []
+
+    assert Path(audit_path).exists()
+    lines = [line for line in Path(audit_path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(lines) >= 3
+    parsed = [json.loads(line) for line in lines]
+    task_rows = [row for row in parsed if str(row.get("task_id") or "") == task["id"]]
+    assert task_rows
+    lifecycle_events = {str(row.get("event") or "") for row in task_rows}
+    assert "claimed" in lifecycle_events
+    assert "execution_started" in lifecycle_events
+    assert "finalized" in lifecycle_events
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_source_override_uses_jsonl_when_requested(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "all")
+    audit_path = tmp_path / "agent_lifecycle_events.jsonl"
+    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_source", "response_id": "resp_source"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Force summary source override",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "openrouter/free"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert executed.status_code == 200
+
+        auto_summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert auto_summary.status_code == 200
+        auto_payload = auto_summary.json()
+        assert str(auto_payload.get("summary_source") or "") == "runtime"
+        assert auto_payload.get("subscribers", {}).get("runtime") is True
+        assert auto_payload.get("subscribers", {}).get("jsonl") is True
+
+        forced_summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200&source=jsonl")
+        assert forced_summary.status_code == 200
+        forced_payload = forced_summary.json()
+        assert str(forced_payload.get("summary_source") or "") == "jsonl"
+        assert int(forced_payload.get("total_events") or 0) >= 3
+        assert int((forced_payload.get("by_event") or {}).get("finalized") or 0) >= 1
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_jsonl_retention_caps_audit_file(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "jsonl")
+    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_MAX_LINES", "5")
+    audit_path = tmp_path / "agent_lifecycle_events.jsonl"
+    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_retain", "response_id": "resp_retain"},
+        ),
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for idx in range(2):
+            task = agent_service.create_task(
+                AgentTaskCreate(
+                    direction=f"Retention test task {idx}",
+                    task_type=TaskType.IMPL,
+                    context={"executor": "openclaw", "model_override": "openrouter/free"},
+                )
+            )
+            executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+            assert executed.status_code == 200
+
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200&source=jsonl")
+        assert summary.status_code == 200
+        payload = summary.json()
+        assert str(payload.get("summary_source") or "") == "jsonl"
+        assert int(payload.get("total_events") or 0) <= 5
+
+    assert Path(audit_path).exists()
+    lines = [line for line in Path(audit_path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(lines) <= 5
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_guidance_warns_when_no_subscribers_enabled(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "none")
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert summary.status_code == 200
+        payload = summary.json()
+        guidance = payload.get("guidance") or []
+        assert guidance
+        ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
+        assert "no_subscribers_enabled" in ids
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_lifecycle_guidance_flags_paid_guard_blocks(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "runtime")
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_hooks, agent_execution_service
+
+    agent_execution_hooks.clear_lifecycle_hooks()
+    monkeypatch.setattr(
+        agent_execution_service,
+        "chat_completion",
+        lambda **_: (
+            "ok",
+            {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            {"elapsed_ms": 3, "provider_request_id": "req_guard", "response_id": "resp_guard"},
+        ),
+    )
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Trigger paid guard guidance",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
+        assert executed.status_code == 200
+
+        summary = await client.get("/api/agent/lifecycle/summary?seconds=3600&limit=200")
+        assert summary.status_code == 200
+        payload = summary.json()
+        guidance = payload.get("guidance") or []
+        assert guidance
+        ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
+        assert "paid_guard_blocks" in ids

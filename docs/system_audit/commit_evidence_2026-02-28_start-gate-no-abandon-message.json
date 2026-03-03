@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/runner-oauth-default-20260228",
+  "commit_scope": "Update start-gate dirty-worktree failure guidance to require finishing merge/deploy work instead of abandoning in-flight changes.",
+  "files_owned": [
+    "scripts/start_gate.py"
+  ],
+  "idea_ids": [
+    "idea-start-gate-no-abandon-work"
+  ],
+  "spec_ids": [
+    "spec-start-gate-worktree-cleanliness-guidance"
+  ],
+  "task_ids": [
+    "task-2026-02-28-start-gate-no-abandon-message"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260228T091400Z_codex-runner-oauth-default-20260228.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/start_gate.py",
+    "docs/system_audit/commit_evidence_2026-02-28_start-gate-no-abandon-message.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "START_GATE_MAIN_FAILURE_WAIVERS_FILE=/tmp/start_gate_waivers_22516968628.json ./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 -m py_compile scripts/start_gate.py",
+      "make start-gate"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "start-gate local-change failures now instruct contributors to complete merge/deploy work (or record explicit blocker) before rerunning from a clean workspace.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "Run make start-gate in a dirty worktree and verify the failure text includes the no-abandon merge/deploy instruction."
+    ]
+  }
+}

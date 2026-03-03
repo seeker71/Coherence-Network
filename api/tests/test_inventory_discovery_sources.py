@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
+from types import SimpleNamespace
 
-from app.services import commit_evidence_service, idea_service, inventory_service
+from app.services import (
+    commit_evidence_service,
+    idea_service,
+    inventory_service,
+    runtime_service,
+    spec_registry_service,
+    value_lineage_service,
+)
 
 
 def test_idea_service_derives_missing_ideas_from_commit_evidence(
@@ -39,6 +46,21 @@ def test_idea_service_includes_store_tracked_ids_when_db_is_configured(
     assert idea_service.list_tracked_idea_ids() == ["unexpected-local"]
 
 
+def test_idea_service_includes_store_tracked_ids_when_database_url_is_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {"idea_ids": ["database-url-tracked"], "thread_branch": "codex/test"},
+        "memory:test",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    assert idea_service.list_tracked_idea_ids() == ["database-url-tracked"]
+
+
 def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -49,6 +71,101 @@ def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(tmp_path / "system_audit"))
     tracked = idea_service.list_tracked_idea_ids()
     assert tracked == ["tracked-alt", "tracked-main"]
+
+
+def test_idea_service_derives_missing_ideas_from_other_registry_domains(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    monkeypatch.setattr(
+        spec_registry_service,
+        "list_specs",
+        lambda limit=200, offset=0: [SimpleNamespace(idea_id="derived-from-spec-registry")],
+    )
+    monkeypatch.setattr(
+        value_lineage_service,
+        "list_links",
+        lambda limit=200: [SimpleNamespace(idea_id="derived-from-lineage")],
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_idea",
+        lambda seconds=3600, event_limit=2000, summary_limit=500, summary_offset=0, event_rows=None: [
+            SimpleNamespace(idea_id="derived-from-runtime")
+        ],
+    )
+
+    listed = idea_service.list_ideas(include_internal=True)
+    idea_ids = {item.id for item in listed.ideas}
+
+    assert "derived-from-spec-registry" in idea_ids
+    assert "derived-from-lineage" in idea_ids
+    assert "derived-from-runtime" in idea_ids
+
+
+def test_idea_service_domain_discovery_default_on_outside_pytest(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.delenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", raising=False)
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    monkeypatch.setattr(
+        spec_registry_service,
+        "list_specs",
+        lambda limit=200, offset=0: [SimpleNamespace(idea_id="derived-prod-default")],
+    )
+    monkeypatch.setattr(
+        value_lineage_service,
+        "list_links",
+        lambda limit=200: [],
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_idea",
+        lambda seconds=3600, event_limit=2000, summary_limit=500, summary_offset=0, event_rows=None: [],
+    )
+
+    listed = idea_service.list_ideas(include_internal=True)
+    idea_ids = {item.id for item in listed.ideas}
+
+    assert "derived-prod-default" in idea_ids
+
+
+def test_idea_service_derives_missing_ideas_from_contribution_metadata_domain(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
+    monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+
+    monkeypatch.setattr(spec_registry_service, "list_specs", lambda limit=200, offset=0: [])
+    monkeypatch.setattr(value_lineage_service, "list_links", lambda limit=200: [])
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_by_idea",
+        lambda seconds=3600, event_limit=2000, summary_limit=500, summary_offset=0, event_rows=None: [],
+    )
+    monkeypatch.setattr(
+        idea_service,
+        "_contribution_metadata_idea_ids",
+        lambda: ["derived-from-contribution-meta"],
+    )
+
+    listed = idea_service.list_ideas(include_internal=True)
+    idea_ids = {item.id for item in listed.ideas}
+
+    assert "derived-from-contribution-meta" in idea_ids
 
 
 def test_inventory_uses_github_spec_discovery_when_local_specs_missing(
@@ -124,10 +241,49 @@ def test_inventory_reads_commit_evidence_from_store(
     assert str(records[0]["_evidence_file"]) == "memory:remote"
 
 
+def test_inventory_reads_commit_evidence_from_store_when_database_url_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    commit_evidence_service.upsert_record(
+        {
+            "idea_ids": ["database-url-evidence"],
+            "spec_ids": ["091"],
+        },
+        "memory:database-url",
+    )
+
+    records = inventory_service._read_commit_evidence_records(limit=20)
+
+    assert len(records) == 1
+    assert records[0]["idea_ids"] == ["database-url-evidence"]
+    assert records[0]["spec_ids"] == ["091"]
+    assert str(records[0]["_evidence_file"]) == "memory:database-url"
+
+
 def test_inventory_commit_evidence_returns_empty_when_store_has_no_rows(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+
+    records = inventory_service._read_commit_evidence_records(limit=1000)
+
+    assert records == []
+
+
+def test_inventory_commit_evidence_database_source_does_not_fallback_to_files(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+    evidence_dir = tmp_path / "system_audit"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "commit_evidence_2026-03-03_fake.json").write_text(
+        '{"idea_ids": ["legacy-file-only"], "spec_ids": ["999"]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
     records = inventory_service._read_commit_evidence_records(limit=1000)
 

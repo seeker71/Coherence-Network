@@ -1,0 +1,2627 @@
+{
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "generated_at": "2026-03-01T09:32:11.313195Z",
+  "runs": [
+    {
+      "create_payload": {
+        "abort_evidence": [],
+        "claimed_at": null,
+        "claimed_by": null,
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK\" --model gpt-4o-mini --skip-git-repo-check --json",
+        "context": {
+          "abort_evidence": [],
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+            "model": "openclaw/gpt-4o-mini",
+            "phase": "queued",
+            "provider": "openai",
+            "route_decision": {
+              "billing_provider": "openai",
+              "executor": "openclaw",
+              "is_paid_provider": true,
+              "model": "openclaw/gpt-4o-mini",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "openclaw",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "openai",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "openclaw"
+            },
+            "task_id": "task_2622cd16be86d998",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "executor": "openclaw",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "openclaw",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "force_paid_providers": true,
+          "model_override": "openai/gpt-4o-mini",
+          "normalized_response_call": {
+            "executor": "openclaw",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "gpt-4o-mini",
+            "provider": "openai",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_2622cd16be86d998"
+          },
+          "observation_window_sec": 900,
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "openai",
+            "executor": "openclaw",
+            "is_paid_provider": true,
+            "model": "openclaw/gpt-4o-mini",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "openclaw",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "openai",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "openclaw"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:32:11.537965Z",
+        "current_step": null,
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+        "id": "task_2622cd16be86d998",
+        "model": "openclaw/gpt-4o-mini",
+        "observation_window_sec": 900,
+        "output": null,
+        "progress_pct": null,
+        "status": "pending",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+        "task_type": "impl",
+        "updated_at": null
+      },
+      "create_status": 201,
+      "final": {
+        "abort_evidence": [],
+        "claimed_at": "2026-03-01T09:32:19.561030Z",
+        "claimed_by": "openai-codex:railway-runner-1",
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK\" --model gpt-4o-mini --skip-git-repo-check --json",
+        "context": {
+          "abort_evidence": [],
+          "active_branch": "",
+          "active_run_id": "run_e924c2bdd8a2",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+            "model": "openclaw/gpt-4o-mini",
+            "phase": "queued",
+            "provider": "openai",
+            "route_decision": {
+              "billing_provider": "openai",
+              "executor": "openclaw",
+              "is_paid_provider": true,
+              "model": "openclaw/gpt-4o-mini",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "openclaw",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "openai",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "openclaw"
+            },
+            "task_id": "task_2622cd16be86d998",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "awareness_blocks_total": 0,
+          "awareness_cost_per_successful_transition": 0.408,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_events_total": 8,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 1,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_quality": {
+            "blocks_total": 0,
+            "context_coverage": 1.0,
+            "cost_per_successful_transition": 0.408,
+            "estimated_roi_total": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "events_total": 8,
+            "hold_pattern_rate": 0.0,
+            "hold_pattern_total": 0,
+            "interventions_total": 1,
+            "measured_roi_total": 0.0,
+            "policy_discipline": 1.0,
+            "score": 0.7639,
+            "snapshot_count": 7,
+            "state_transition_quality": 0.7143,
+            "successful_transition_total": 5,
+            "transition_cost_total": 2.04,
+            "transition_total": 7,
+            "updated_at": "2026-03-01T09:32:54.296809+00:00"
+          },
+          "awareness_state_transition_quality": 0.7143,
+          "awareness_successful_transition_total": 5,
+          "awareness_transition_cost_total": 2.04,
+          "awareness_transition_total": 7,
+          "cadence_last_intervention": {
+            "at": "2026-03-01T09:32:24.643799+00:00",
+            "kind": "retry",
+            "window_limit": 5,
+            "window_load": 1,
+            "window_seconds": 900
+          },
+          "cadence_limits": {
+            "diagnostic_cooldown_seconds": 30,
+            "intervention_window_sec": 900,
+            "max_interventions_per_window": 5,
+            "min_retry_delay_seconds": 15
+          },
+          "executor": "openclaw",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "openclaw",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "failure_diagnostics_present": true,
+          "failure_diagnostics_source": "output",
+          "failure_reason_bucket": "auth",
+          "force_paid_providers": true,
+          "last_attempt": 2,
+          "model_override": "openai/gpt-4o-mini",
+          "normalized_response_call": {
+            "executor": "openclaw",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "gpt-4o-mini",
+            "provider": "openai",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_2622cd16be86d998"
+          },
+          "observation_window_sec": 900,
+          "observer_context_last_snapshot": {
+            "at": "2026-03-01T09:32:54.296738+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "runner_state": "finished"
+            },
+            "failure_class": "command_failed",
+            "run_id": "run_e924c2bdd8a2",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_e924c2bdd8a2",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 2,
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "observation_window_sec": 900,
+              "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+              "runner_retry_count": 1,
+              "runner_retry_remaining": 0,
+              "runner_state": "finished",
+              "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+            },
+            "status": "failed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          "observer_context_snapshots": [
+            {
+              "at": "2026-03-01T09:32:19.334415+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_095454012121",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "details": {
+                "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_095454012121",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_095454012121",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:20.098834+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_095454012121",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_095454012121",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:25.113302+00:00",
+              "current_step": "retry scheduled",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_095454012121",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_095454012121",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "pending",
+              "transition": "retry",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:25.421681+00:00",
+              "current_step": "finalized",
+              "delta": {},
+              "failure_class": "command_failed",
+              "run_id": "run_095454012121",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_095454012121",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "pending",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:49.596347+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_run_id": "run_e924c2bdd8a2",
+                "last_attempt": 2,
+                "last_failure_class": null,
+                "next_action": null,
+                "runner_state": "claimed"
+              },
+              "details": {
+                "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_e924c2bdd8a2",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e924c2bdd8a2",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:50.372628+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_e924c2bdd8a2",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e924c2bdd8a2",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:32:54.296738+00:00",
+              "current_step": "finalized",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "runner_state": "finished"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_e924c2bdd8a2",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e924c2bdd8a2",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "finished",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+              },
+              "status": "failed",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            }
+          ],
+          "retry_max": 0,
+          "retry_not_before": "2026-03-01T09:32:39.643863+00:00",
+          "route_decision": {
+            "billing_provider": "openai",
+            "executor": "openclaw",
+            "is_paid_provider": true,
+            "model": "openclaw/gpt-4o-mini",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "openclaw",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "openai",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "openclaw"
+          },
+          "runner_cli_bootstrap": {
+            "at": "2026-03-01T09:32:49.756292+00:00",
+            "detail": "runner_cli_present:codex:codex:/usr/local/bin/codex",
+            "ok": true
+          },
+          "runner_codex_auth": {
+            "api_key_login_bootstrapped": false,
+            "api_key_login_source": "",
+            "api_key_present": true,
+            "at": "2026-03-01T09:32:49.756313+00:00",
+            "effective_mode": "oauth",
+            "oauth_fallback_allowed": false,
+            "oauth_missing": false,
+            "oauth_session": true,
+            "oauth_session_bootstrap_detail": "oauth_session_preserved_existing:/root/.codex/auth.json",
+            "oauth_session_bootstrapped": false,
+            "oauth_source": "session_file:/root/.codex/auth.json",
+            "requested_mode": "oauth"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "runner_codex_oauth_refresh_retry": {
+            "at": "2026-03-01T09:32:24.493874+00:00",
+            "mode": "oauth",
+            "trigger": "oauth_refresh_token_reused"
+          },
+          "runner_codex_oauth_refresh_retry_attempted": true,
+          "runner_codex_oauth_relogin": {
+            "at": "2026-03-01T09:32:24.493872+00:00",
+            "detail": "codex_auth_login_device_auth_rc1:Error logging in with device code: device code request failed with status 429 Too Many Requests",
+            "ok": false
+          },
+          "runner_codex_oauth_relogin_attempted": true,
+          "runner_failure_history": [
+            {
+              "at": "2026-03-01T09:32:24.643868+00:00",
+              "attempt": 1,
+              "duration_seconds": 3.0,
+              "failure_class": "command_failed",
+              "output_tail": "  \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh token reuse detected;  oauth relogin failed (codex_auth_login_device_auth_rc1:Error logging in with device code: device code request failed with status 429 Too Many Requests); retrying with oauth auth mode."
+            }
+          ],
+          "runner_intervention_events": [
+            {
+              "at": "2026-03-01T09:32:24.643799+00:00",
+              "kind": "retry"
+            }
+          ],
+          "runner_last_failure": {
+            "at": "2026-03-01T09:32:24.643868+00:00",
+            "attempt": 1,
+            "duration_seconds": 3.0,
+            "failure_class": "command_failed",
+            "output_tail": "  \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh token reuse detected;  oauth relogin failed (codex_auth_login_device_auth_rc1:Error logging in with device code: device code request failed with status 429 Too Many Requests); retrying with oauth auth mode."
+          },
+          "runner_last_result": {
+            "at": "2026-03-01T09:32:52.404854+00:00",
+            "attempt": 2,
+            "command_tool": "codex",
+            "duration_seconds": 1.0,
+            "failure_class": "command_failed",
+            "model": "openclaw/gpt-4o-mini",
+            "paid_call": true,
+            "status": "failed",
+            "task_type": "impl"
+          },
+          "runner_metrics": {
+            "avg_runtime_seconds": 2.0,
+            "awareness_blocks_total": 0,
+            "awareness_events_total": 7,
+            "awareness_hold_pattern_total": 0,
+            "awareness_interventions_total": 1,
+            "awareness_quality_score": 0.7877,
+            "awareness_successful_transition_total": 5,
+            "awareness_transition_cost_total": 2.04,
+            "awareness_transition_total": 6,
+            "cost_per_successful_transition": 0.408,
+            "estimated_to_measured_roi_conversion": null,
+            "hold_pattern_rate": 0.0,
+            "last_attempt": 2,
+            "last_failure_class": "command_failed",
+            "last_model": "openclaw/gpt-4o-mini",
+            "last_status": "failed",
+            "last_tool": "codex",
+            "paid_calls_failed": 2,
+            "paid_calls_success": 0,
+            "paid_calls_total": 2,
+            "paid_retry_calls": 1,
+            "paid_success_rate": 0.0,
+            "retries_total": 1,
+            "runs_failed": 2,
+            "runs_success": 0,
+            "runs_total": 2,
+            "state_transition_quality": 0.8333,
+            "success_rate": 0.0,
+            "total_runtime_seconds": 4.0,
+            "updated_at": "2026-03-01T09:32:52.404847+00:00"
+          },
+          "runner_min_retry_delay_seconds": 15,
+          "runner_retry_count": 1,
+          "runner_retry_delay_effective_seconds": 15,
+          "runner_retry_delay_enforced": true,
+          "runner_retry_delay_requested_seconds": 8,
+          "runner_retry_delay_seconds": 15,
+          "runner_retry_max": 1,
+          "runner_retry_remaining": 0,
+          "runner_state": "retry_pending",
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+          },
+          "target_state_last_observed_at": "2026-03-01T09:32:51.648086+00:00",
+          "target_state_observation": {
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "attempt_status": "failed",
+            "observation_window_exceeded": false,
+            "observation_window_sec": 900,
+            "observed_at": "2026-03-01T09:32:51.648014+00:00",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:32:11.537965Z",
+        "current_step": "retry scheduled",
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+        "id": "task_2622cd16be86d998",
+        "model": "openclaw/gpt-4o-mini",
+        "observation_window_sec": 900,
+        "output": "[runner-codex-auth] requested_mode=oauth effective_mode=oauth oauth_session=true oauth_source=session_file:/root/.codex/auth.json api_key_present=true oauth_missing=false\n[runner-command-exec] mode=argv\n2026-03-01T09:32:50.965834Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:32:50.965920Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:32:51.008306Z ERROR codex_core::models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Provided authentication token is expired. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.106.0, cf-ray: 9d572822ad0b80fd-SJC, request id: e1a30887-1cb0-4fef-8e05-7eb95e57718b\n2026-03-01T09:32:51.113244Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:32:51.113298Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n{\"type\":\"thread.started\",\"thread_id\":\"019ca8be-51c0-7573-8a33-5cdf71ad6690\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"error\",\"message\":\"Model metadata for `gpt-4o-mini` not found. Defaulting to fallback metadata; this can degrade performance and cause issues.\"}}\n{\"type\":\"turn.started\"}\n2026-03-01T09:32:51.229671Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:32:51.229716Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:32:51.432555Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:32:51.432600Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:32:51.622241Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh-token retry already attempted; not retrying auth retry.",
+        "progress_pct": null,
+        "status": "failed",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid codex). Do minimal safe work and return exactly: PROVIDER_PAID_CODEX_OK",
+        "task_type": "impl",
+        "updated_at": "2026-03-01T09:32:54.377473Z"
+      },
+      "friction_open": [],
+      "label": "paid_codex",
+      "poll": [
+        {
+          "at": "2026-03-01T09:32:11.691168Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:32:19.846929Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:32:28.004925Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:32:36.221277Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:32:44.434665Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:32:52.599014Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:33:00.762950Z",
+          "status": "failed"
+        }
+      ],
+      "runtime_events": [
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:agent-task-completion",
+          "executor": "openclaw",
+          "fallback_to_codex": null,
+          "id": "rt_f3e79bdb31ac",
+          "model": "openclaw/gpt-4o-mini",
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:32:53.511281Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": "agent_task_completion"
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:codex",
+          "executor": "openai-codex",
+          "fallback_to_codex": null,
+          "id": "rt_cd34e2f0a3bd",
+          "model": "openclaw/gpt-4o-mini",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:32:51.992265Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": null
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:codex",
+          "executor": "openai-codex",
+          "fallback_to_codex": null,
+          "id": "rt_4a36408f19cf",
+          "model": "openclaw/gpt-4o-mini",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:32:23.595975Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": null
+        }
+      ],
+      "task_id": "task_2622cd16be86d998"
+    },
+    {
+      "create_payload": {
+        "abort_evidence": [],
+        "claimed_at": null,
+        "claimed_by": null,
+        "command": "claude -p \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+        "context": {
+          "abort_evidence": [],
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "phase": "queued",
+            "provider": "claude",
+            "route_decision": {
+              "billing_provider": "claude",
+              "executor": "claude",
+              "is_paid_provider": true,
+              "model": "claude/claude-sonnet-4-5-20250929",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "claude",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "claude",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "claude"
+            },
+            "task_id": "task_c00330ba61a4833d",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "executor": "claude",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "force_paid_providers": true,
+          "normalized_response_call": {
+            "executor": "claude",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_c00330ba61a4833d"
+          },
+          "observation_window_sec": 900,
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "claude"
+          },
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:33:01.396564Z",
+        "current_step": null,
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+        "id": "task_c00330ba61a4833d",
+        "model": "claude/claude-sonnet-4-5-20250929",
+        "observation_window_sec": 900,
+        "output": null,
+        "progress_pct": null,
+        "status": "pending",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+        "task_type": "impl",
+        "updated_at": null
+      },
+      "create_status": 201,
+      "final": {
+        "abort_evidence": [],
+        "claimed_at": "2026-03-01T09:33:21.317743Z",
+        "claimed_by": "openai-codex:railway-runner-1",
+        "command": "claude -p \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK\" --model claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+        "context": {
+          "abort_evidence": [],
+          "active_branch": "",
+          "active_run_id": "run_b2e2d6f4a16f",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "phase": "queued",
+            "provider": "claude",
+            "route_decision": {
+              "billing_provider": "claude",
+              "executor": "claude",
+              "is_paid_provider": true,
+              "model": "claude/claude-sonnet-4-5-20250929",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "claude",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "claude",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "claude"
+            },
+            "task_id": "task_c00330ba61a4833d",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "awareness_blocks_total": 0,
+          "awareness_cost_per_successful_transition": 0.372333,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_events_total": 3,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 0,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_quality": {
+            "blocks_total": 0,
+            "context_coverage": 0.6,
+            "cost_per_successful_transition": 0.372333,
+            "estimated_roi_total": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "events_total": 3,
+            "hold_pattern_rate": 0.0,
+            "hold_pattern_total": 0,
+            "interventions_total": 0,
+            "measured_roi_total": 0.0,
+            "policy_discipline": 1.0,
+            "score": 0.7629,
+            "snapshot_count": 3,
+            "state_transition_quality": 1.0,
+            "successful_transition_total": 3,
+            "transition_cost_total": 1.117,
+            "transition_total": 3,
+            "updated_at": "2026-03-01T09:33:36.002190+00:00"
+          },
+          "awareness_state_transition_quality": 1.0,
+          "awareness_successful_transition_total": 3,
+          "awareness_transition_cost_total": 1.117,
+          "awareness_transition_total": 3,
+          "executor": "claude",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "claude",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "force_paid_providers": true,
+          "last_attempt": 1,
+          "normalized_response_call": {
+            "executor": "claude",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_c00330ba61a4833d"
+          },
+          "observation_window_sec": 900,
+          "observer_context_last_snapshot": {
+            "at": "2026-03-01T09:33:36.002128+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "",
+              "next_action": "done",
+              "runner_state": "idle"
+            },
+            "failure_class": "",
+            "run_id": "run_b2e2d6f4a16f",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_b2e2d6f4a16f",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "last_failure_class": "",
+              "next_action": "done",
+              "observation_window_sec": 900,
+              "runner_state": "idle",
+              "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+            },
+            "status": "completed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          "observer_context_snapshots": [
+            {
+              "at": "2026-03-01T09:33:21.083635+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_b2e2d6f4a16f",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+              },
+              "details": {
+                "direction": "Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_b2e2d6f4a16f",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_b2e2d6f4a16f",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:33:21.850520+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_b2e2d6f4a16f",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_b2e2d6f4a16f",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:33:36.002128+00:00",
+              "current_step": "finalized",
+              "delta": {
+                "last_failure_class": "",
+                "next_action": "done",
+                "runner_state": "idle"
+              },
+              "failure_class": "",
+              "run_id": "run_b2e2d6f4a16f",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_b2e2d6f4a16f",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "",
+                "next_action": "done",
+                "observation_window_sec": 900,
+                "runner_state": "idle",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+              },
+              "status": "completed",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            }
+          ],
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "claude",
+            "executor": "claude",
+            "is_paid_provider": true,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "claude",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "claude",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "claude"
+          },
+          "runner_cli_bootstrap": {
+            "at": "2026-03-01T09:33:21.246592+00:00",
+            "detail": "runner_cli_install_ok:claude:claude:/usr/local/bin/claude",
+            "ok": true
+          },
+          "runner_exec_user": {
+            "at": "2026-03-01T09:33:21.246611+00:00",
+            "detail": "runner_non_root_exec_user:runner:1000:1000",
+            "ok": true
+          },
+          "runner_id": "openai-codex:railway-runner-1",
+          "runner_last_result": {
+            "at": "2026-03-01T09:33:34.243978+00:00",
+            "attempt": 1,
+            "command_tool": "claude",
+            "duration_seconds": 11.7,
+            "failure_class": "",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "paid_call": true,
+            "status": "completed",
+            "task_type": "impl"
+          },
+          "runner_last_seen_at": "2026-03-01T09:33:32.579146+00:00",
+          "runner_log_tail": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":9503,\"duration_api_ms\":9402,\"num_turns\":2,\"result\":\"PROVIDER_PAID_CLAUDE_OK\",\"stop_reason\":null,\"session_id\":\"acea1188-6279-4a87-9bfa-11b42beb86ce\",\"total_cost_usd\":0.15091300000000002,\"usage\":{\"input_tokens\":20,\"cache_creation_input_tokens\":21174,\"cache_read_input_tokens\":20851,\"output_tokens\":322,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":21174},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":20,\"outputTokens\":322,\"cacheReadInputTokens\":20851,\"cacheCreationInputTokens\":21174,\"webSearchRequests\":0,\"costUSD\":0.15091300000000002,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"1d49e41f-180e-4e74-99b0-533179c61d33\"}",
+          "runner_metrics": {
+            "avg_runtime_seconds": 11.7,
+            "awareness_blocks_total": 0,
+            "awareness_events_total": 2,
+            "awareness_hold_pattern_total": 0,
+            "awareness_interventions_total": 0,
+            "awareness_quality_score": 0.7242,
+            "awareness_successful_transition_total": 2,
+            "awareness_transition_cost_total": 1.117,
+            "awareness_transition_total": 2,
+            "cost_per_successful_transition": 0.5585,
+            "estimated_to_measured_roi_conversion": null,
+            "hold_pattern_rate": 0.0,
+            "last_attempt": 1,
+            "last_failure_class": "",
+            "last_model": "claude/claude-sonnet-4-5-20250929",
+            "last_status": "completed",
+            "last_tool": "claude",
+            "paid_calls_failed": 0,
+            "paid_calls_success": 1,
+            "paid_calls_total": 1,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 1.0,
+            "retries_total": 0,
+            "runs_failed": 0,
+            "runs_success": 1,
+            "runs_total": 1,
+            "state_transition_quality": 1.0,
+            "success_rate": 1.0,
+            "total_runtime_seconds": 11.7,
+            "updated_at": "2026-03-01T09:33:34.243969+00:00"
+          },
+          "runner_run_id": "run_b2e2d6f4a16f",
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+          },
+          "target_state_last_observed_at": "2026-03-01T09:33:33.735334+00:00",
+          "target_state_observation": {
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "attempt_status": "completed",
+            "observation_window_exceeded": false,
+            "observation_window_sec": 900,
+            "observed_at": "2026-03-01T09:33:33.735275+00:00",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:33:01.396564Z",
+        "current_step": "running command",
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+        "id": "task_c00330ba61a4833d",
+        "model": "claude/claude-sonnet-4-5-20250929",
+        "observation_window_sec": 900,
+        "output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":9503,\"duration_api_ms\":9402,\"num_turns\":2,\"result\":\"PROVIDER_PAID_CLAUDE_OK\",\"stop_reason\":null,\"session_id\":\"acea1188-6279-4a87-9bfa-11b42beb86ce\",\"total_cost_usd\":0.15091300000000002,\"usage\":{\"input_tokens\":20,\"cache_creation_input_tokens\":21174,\"cache_read_input_tokens\":20851,\"output_tokens\":322,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":21174},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":20,\"outputTokens\":322,\"cacheReadInputTokens\":20851,\"cacheCreationInputTokens\":21174,\"webSearchRequests\":0,\"costUSD\":0.15091300000000002,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"1d49e41f-180e-4e74-99b0-533179c61d33\"}\n",
+        "progress_pct": 1,
+        "status": "completed",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid claude). Do minimal safe work and return exactly: PROVIDER_PAID_CLAUDE_OK",
+        "task_type": "impl",
+        "updated_at": "2026-03-01T09:33:36.073784Z"
+      },
+      "friction_open": [],
+      "label": "paid_claude",
+      "poll": [
+        {
+          "at": "2026-03-01T09:33:01.549714Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:33:09.741045Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:33:17.897128Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:33:26.049465Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:33:34.215419Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:33:42.373957Z",
+          "status": "completed"
+        }
+      ],
+      "runtime_events": [
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:agent-task-completion",
+          "executor": "claude",
+          "fallback_to_codex": null,
+          "id": "rt_05aaff60db83",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:33:35.132011Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 200,
+          "tracking_kind": "agent_task_completion"
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:claude",
+          "executor": "claude",
+          "fallback_to_codex": null,
+          "id": "rt_36f6db6bfffa",
+          "model": "claude/claude-sonnet-4-5-20250929",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:33:34.012534Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 200,
+          "tracking_kind": null
+        }
+      ],
+      "task_id": "task_c00330ba61a4833d"
+    },
+    {
+      "create_payload": {
+        "abort_evidence": [],
+        "claimed_at": null,
+        "claimed_by": null,
+        "command": "agent \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK\" --model auto",
+        "context": {
+          "abort_evidence": [],
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+            "model": "cursor/auto",
+            "phase": "queued",
+            "provider": "cursor",
+            "route_decision": {
+              "billing_provider": "cursor",
+              "executor": "cursor",
+              "is_paid_provider": true,
+              "model": "cursor/auto",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "cursor",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "cursor",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "cursor"
+            },
+            "task_id": "task_4829a91682e1572f",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "executor": "cursor",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "cursor",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "force_paid_providers": true,
+          "normalized_response_call": {
+            "executor": "cursor",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "auto",
+            "provider": "cursor",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_4829a91682e1572f"
+          },
+          "observation_window_sec": 900,
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "cursor",
+            "executor": "cursor",
+            "is_paid_provider": true,
+            "model": "cursor/auto",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "cursor",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "cursor",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "cursor"
+          },
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:33:43.113166Z",
+        "current_step": null,
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+        "id": "task_4829a91682e1572f",
+        "model": "cursor/auto",
+        "observation_window_sec": 900,
+        "output": null,
+        "progress_pct": null,
+        "status": "pending",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+        "task_type": "impl",
+        "updated_at": null
+      },
+      "create_status": 201,
+      "final": {
+        "abort_evidence": [],
+        "claimed_at": "2026-03-01T09:33:53.741435Z",
+        "claimed_by": "openai-codex:railway-runner-1",
+        "command": "agent \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK\" --model auto",
+        "context": {
+          "abort_evidence": [],
+          "active_branch": "",
+          "active_run_id": "run_5c2bb609fc59",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+            "model": "cursor/auto",
+            "phase": "queued",
+            "provider": "cursor",
+            "route_decision": {
+              "billing_provider": "cursor",
+              "executor": "cursor",
+              "is_paid_provider": true,
+              "model": "cursor/auto",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "cursor",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "cursor",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "cursor"
+            },
+            "task_id": "task_4829a91682e1572f",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "awareness_blocks_total": 0,
+          "awareness_cost_per_successful_transition": 0.51,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_events_total": 3,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 0,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_quality": {
+            "blocks_total": 0,
+            "context_coverage": 0.6,
+            "cost_per_successful_transition": 0.51,
+            "estimated_roi_total": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "events_total": 3,
+            "hold_pattern_rate": 0.0,
+            "hold_pattern_total": 0,
+            "interventions_total": 0,
+            "measured_roi_total": 0.0,
+            "policy_discipline": 1.0,
+            "score": 0.6896,
+            "snapshot_count": 3,
+            "state_transition_quality": 0.6667,
+            "successful_transition_total": 2,
+            "transition_cost_total": 1.02,
+            "transition_total": 3,
+            "updated_at": "2026-03-01T09:33:59.287719+00:00"
+          },
+          "awareness_state_transition_quality": 0.6667,
+          "awareness_successful_transition_total": 2,
+          "awareness_transition_cost_total": 1.02,
+          "awareness_transition_total": 3,
+          "executor": "cursor",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "cursor",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "failure_diagnostics_present": true,
+          "failure_diagnostics_source": "output",
+          "failure_reason_bucket": "other",
+          "force_paid_providers": true,
+          "last_attempt": 1,
+          "normalized_response_call": {
+            "executor": "cursor",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "auto",
+            "provider": "cursor",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_4829a91682e1572f"
+          },
+          "observation_window_sec": 900,
+          "observer_context_last_snapshot": {
+            "at": "2026-03-01T09:33:59.287670+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "runner_state": "finished"
+            },
+            "failure_class": "command_failed",
+            "run_id": "run_5c2bb609fc59",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_5c2bb609fc59",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 1,
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "observation_window_sec": 900,
+              "runner_state": "finished",
+              "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+            },
+            "status": "failed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          "observer_context_snapshots": [
+            {
+              "at": "2026-03-01T09:33:53.455079+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_5c2bb609fc59",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+              },
+              "details": {
+                "direction": "Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_5c2bb609fc59",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_5c2bb609fc59",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:33:54.344279+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_5c2bb609fc59",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_5c2bb609fc59",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:33:59.287670+00:00",
+              "current_step": "finalized",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "runner_state": "finished"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_5c2bb609fc59",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_5c2bb609fc59",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "observation_window_sec": 900,
+                "runner_state": "finished",
+                "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+              },
+              "status": "failed",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            }
+          ],
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "cursor",
+            "executor": "cursor",
+            "is_paid_provider": true,
+            "model": "cursor/auto",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "cursor",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "cursor",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "cursor"
+          },
+          "runner_cli_bootstrap": {
+            "at": "2026-03-01T09:33:53.609121+00:00",
+            "detail": "runner_cli_install_ok:cursor:agent:/root/.local/bin/agent:cursor_node_shim_present:/root/.local/share/cursor-agent/versions/2026.02.27-e7d2ef6/node:cursor_runtime_layout_ok:/root/.local/share/cursor-agent/versions/2026.02.27-e7d2ef6",
+            "ok": true
+          },
+          "runner_last_result": {
+            "at": "2026-03-01T09:33:57.347136+00:00",
+            "attempt": 1,
+            "command_tool": "agent",
+            "duration_seconds": 2.0,
+            "failure_class": "command_failed",
+            "model": "cursor/auto",
+            "paid_call": true,
+            "status": "failed",
+            "task_type": "impl"
+          },
+          "runner_metrics": {
+            "avg_runtime_seconds": 2.0,
+            "awareness_blocks_total": 0,
+            "awareness_events_total": 2,
+            "awareness_hold_pattern_total": 0,
+            "awareness_interventions_total": 0,
+            "awareness_quality_score": 0.7262,
+            "awareness_successful_transition_total": 2,
+            "awareness_transition_cost_total": 1.02,
+            "awareness_transition_total": 2,
+            "cost_per_successful_transition": 0.51,
+            "estimated_to_measured_roi_conversion": null,
+            "hold_pattern_rate": 0.0,
+            "last_attempt": 1,
+            "last_failure_class": "command_failed",
+            "last_model": "cursor/auto",
+            "last_status": "failed",
+            "last_tool": "agent",
+            "paid_calls_failed": 1,
+            "paid_calls_success": 0,
+            "paid_calls_total": 1,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 0.0,
+            "retries_total": 0,
+            "runs_failed": 1,
+            "runs_success": 0,
+            "runs_total": 1,
+            "state_transition_quality": 1.0,
+            "success_rate": 0.0,
+            "total_runtime_seconds": 2.0,
+            "updated_at": "2026-03-01T09:33:57.347130+00:00"
+          },
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+          },
+          "target_state_last_observed_at": "2026-03-01T09:33:56.497186+00:00",
+          "target_state_observation": {
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "attempt_status": "failed",
+            "observation_window_exceeded": false,
+            "observation_window_sec": 900,
+            "observed_at": "2026-03-01T09:33:56.497149+00:00",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:33:43.113166Z",
+        "current_step": null,
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+        "id": "task_4829a91682e1572f",
+        "model": "cursor/auto",
+        "observation_window_sec": 900,
+        "output": "Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY environment variable.\n",
+        "progress_pct": null,
+        "status": "failed",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (paid cursor). Do minimal safe work and return exactly: PROVIDER_PAID_CURSOR_OK",
+        "task_type": "impl",
+        "updated_at": "2026-03-01T09:33:59.370865Z"
+      },
+      "friction_open": [],
+      "label": "paid_cursor",
+      "poll": [
+        {
+          "at": "2026-03-01T09:33:43.253744Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:33:51.414086Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:00.116186Z",
+          "status": "failed"
+        }
+      ],
+      "runtime_events": [
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:agent-task-completion",
+          "executor": "cursor",
+          "fallback_to_codex": null,
+          "id": "rt_7b5edcb6706a",
+          "model": "cursor/auto",
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:33:58.402942Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": "agent_task_completion"
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:agent",
+          "executor": "cursor",
+          "fallback_to_codex": null,
+          "id": "rt_ab1eac5e1638",
+          "model": "cursor/auto",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:33:56.961622Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": null
+        }
+      ],
+      "task_id": "task_4829a91682e1572f"
+    },
+    {
+      "create_payload": {
+        "abort_evidence": [],
+        "claimed_at": null,
+        "claimed_by": null,
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK\" --model openrouter/free --skip-git-repo-check --json",
+        "context": {
+          "abort_evidence": [],
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+            "model": "openclaw/openrouter/free",
+            "phase": "queued",
+            "provider": "openrouter",
+            "route_decision": {
+              "billing_provider": "openrouter",
+              "executor": "openclaw",
+              "is_paid_provider": false,
+              "model": "openclaw/openrouter/free",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "openclaw",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "openrouter",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "openclaw"
+            },
+            "task_id": "task_f724ddbddd9cbfcd",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "executor": "openclaw",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "openclaw",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "force_paid_providers": false,
+          "model_override": "openrouter/free",
+          "normalized_response_call": {
+            "executor": "openclaw",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_f724ddbddd9cbfcd"
+          },
+          "observation_window_sec": 900,
+          "retry_max": 0,
+          "route_decision": {
+            "billing_provider": "openrouter",
+            "executor": "openclaw",
+            "is_paid_provider": false,
+            "model": "openclaw/openrouter/free",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "openclaw",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "openrouter",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "openclaw"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:34:00.799842Z",
+        "current_step": null,
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+        "id": "task_f724ddbddd9cbfcd",
+        "model": "openclaw/openrouter/free",
+        "observation_window_sec": 900,
+        "output": null,
+        "progress_pct": null,
+        "status": "pending",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+        "task_type": "impl",
+        "updated_at": null
+      },
+      "create_status": 201,
+      "final": {
+        "abort_evidence": [],
+        "claimed_at": "2026-03-01T09:34:15.271150Z",
+        "claimed_by": "openai-codex:railway-runner-1",
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK\" --model openrouter/free --skip-git-repo-check --json",
+        "context": {
+          "abort_evidence": [],
+          "active_branch": "",
+          "active_run_id": "run_69ffa2f1c36e",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "agent_graph_state": {
+            "attempt": 0,
+            "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+            "model": "openclaw/openrouter/free",
+            "phase": "queued",
+            "provider": "openrouter",
+            "route_decision": {
+              "billing_provider": "openrouter",
+              "executor": "openclaw",
+              "is_paid_provider": false,
+              "model": "openclaw/openrouter/free",
+              "policy": {
+                "availability": "unavailable_on_api_node",
+                "explicit_executor": "openclaw",
+                "policy_applied": true,
+                "reason": "explicit_executor_forced"
+              },
+              "provider": "openrouter",
+              "request_schema": "open_responses_v1",
+              "task_type": "impl",
+              "tier": "openclaw"
+            },
+            "task_id": "task_f724ddbddd9cbfcd",
+            "task_type": "impl"
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_schema": {
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ],
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "schema_id": "coherence_agent_graph_state_v1"
+          },
+          "agent_graph_state_status": "valid",
+          "auto_retry_openai_override": false,
+          "awareness_blocks_total": 0,
+          "awareness_cost_per_successful_transition": 0.00625,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_events_total": 13,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_hold_pattern_total": 0,
+          "awareness_interventions_total": 2,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_quality": {
+            "blocks_total": 0,
+            "context_coverage": 1.0,
+            "cost_per_successful_transition": 0.00625,
+            "estimated_roi_total": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "events_total": 13,
+            "hold_pattern_rate": 0.0,
+            "hold_pattern_total": 0,
+            "interventions_total": 2,
+            "measured_roi_total": 0.0,
+            "policy_discipline": 1.0,
+            "score": 0.7948,
+            "snapshot_count": 11,
+            "state_transition_quality": 0.7273,
+            "successful_transition_total": 8,
+            "transition_cost_total": 0.05,
+            "transition_total": 11,
+            "updated_at": "2026-03-01T09:35:10.729330+00:00"
+          },
+          "awareness_state_transition_quality": 0.7273,
+          "awareness_successful_transition_total": 8,
+          "awareness_transition_cost_total": 0.05,
+          "awareness_transition_total": 11,
+          "cadence_last_intervention": {
+            "at": "2026-03-01T09:34:42.577542+00:00",
+            "kind": "retry",
+            "window_limit": 5,
+            "window_load": 2,
+            "window_seconds": 900
+          },
+          "cadence_limits": {
+            "diagnostic_cooldown_seconds": 30,
+            "intervention_window_sec": 900,
+            "max_interventions_per_window": 5,
+            "min_retry_delay_seconds": 15
+          },
+          "executor": "openclaw",
+          "executor_policy": {
+            "availability": "unavailable_on_api_node",
+            "explicit_executor": "openclaw",
+            "policy_applied": true,
+            "reason": "explicit_executor_forced"
+          },
+          "failure_diagnostics_present": true,
+          "failure_diagnostics_source": "output",
+          "failure_reason_bucket": "auth",
+          "force_paid_providers": false,
+          "last_attempt": 2,
+          "model_override": "openrouter/free",
+          "normalized_response_call": {
+            "executor": "openclaw",
+            "input": [
+              {
+                "content": [
+                  {
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+                    "type": "input_text"
+                  }
+                ],
+                "role": "user"
+              }
+            ],
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "request_schema": "open_responses_v1",
+            "task_id": "task_f724ddbddd9cbfcd"
+          },
+          "observation_window_sec": 900,
+          "observer_context_last_snapshot": {
+            "at": "2026-03-01T09:35:10.729274+00:00",
+            "current_step": "finalized",
+            "delta": {
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "runner_state": "finished"
+            },
+            "failure_class": "command_failed",
+            "run_id": "run_69ffa2f1c36e",
+            "state": {
+              "active_branch": "",
+              "active_run_id": "run_69ffa2f1c36e",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "last_attempt": 2,
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "observation_window_sec": 900,
+              "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+              "runner_retry_count": 1,
+              "runner_retry_remaining": 0,
+              "runner_state": "finished",
+              "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+            },
+            "status": "failed",
+            "transition": "complete",
+            "worker_id": "openai-codex:railway-runner-1"
+          },
+          "observer_context_snapshots": [
+            {
+              "at": "2026-03-01T09:34:14.986530+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_a2e2baed0ebb",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "details": {
+                "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_a2e2baed0ebb",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_a2e2baed0ebb",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:15.847167+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_a2e2baed0ebb",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_a2e2baed0ebb",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:18.772352+00:00",
+              "current_step": "retry scheduled",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "retry_not_before": "2026-03-01T09:34:33.301695+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_a2e2baed0ebb",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_a2e2baed0ebb",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:33.301695+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "pending",
+              "transition": "retry",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:19.072140+00:00",
+              "current_step": "finalized",
+              "delta": {},
+              "failure_class": "command_failed",
+              "run_id": "run_a2e2baed0ebb",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_a2e2baed0ebb",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:33.301695+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "pending",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:38.211627+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_run_id": "run_e5c18e7946b8",
+                "last_failure_class": null,
+                "next_action": null,
+                "runner_state": "claimed"
+              },
+              "details": {
+                "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_e5c18e7946b8",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e5c18e7946b8",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:33.301695+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:39.088600+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_e5c18e7946b8",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e5c18e7946b8",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:33.301695+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:43.060276+00:00",
+              "current_step": "retry scheduled",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_state": "retry_pending"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_e5c18e7946b8",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e5c18e7946b8",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "pending",
+              "transition": "retry",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:34:43.378948+00:00",
+              "current_step": "finalized",
+              "delta": {},
+              "failure_class": "command_failed",
+              "run_id": "run_e5c18e7946b8",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_e5c18e7946b8",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "last_failure_class": "command_failed",
+                "next_action": "retry_scheduled",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "retry_pending",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "pending",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:35:05.158034+00:00",
+              "current_step": "lease claimed",
+              "delta": {
+                "active_run_id": "run_69ffa2f1c36e",
+                "last_attempt": 2,
+                "last_failure_class": null,
+                "next_action": null,
+                "runner_state": "claimed"
+              },
+              "details": {
+                "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+                "repo_path": "",
+                "task_type": "impl"
+              },
+              "failure_class": "",
+              "run_id": "run_69ffa2f1c36e",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_69ffa2f1c36e",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "claimed",
+              "transition": "claim",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:35:06.039498+00:00",
+              "current_step": "command started",
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              },
+              "failure_class": "",
+              "run_id": "run_69ffa2f1c36e",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_69ffa2f1c36e",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "next_action": "execute_command",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "running",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "running",
+              "transition": "start",
+              "worker_id": "openai-codex:railway-runner-1"
+            },
+            {
+              "at": "2026-03-01T09:35:10.729274+00:00",
+              "current_step": "finalized",
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "runner_state": "finished"
+              },
+              "failure_class": "command_failed",
+              "run_id": "run_69ffa2f1c36e",
+              "state": {
+                "active_branch": "",
+                "active_run_id": "run_69ffa2f1c36e",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 2,
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "observation_window_sec": 900,
+                "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+                "runner_retry_count": 1,
+                "runner_retry_remaining": 0,
+                "runner_state": "finished",
+                "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+              },
+              "status": "failed",
+              "transition": "complete",
+              "worker_id": "openai-codex:railway-runner-1"
+            }
+          ],
+          "retry_max": 0,
+          "retry_not_before": "2026-03-01T09:34:57.577617+00:00",
+          "route_decision": {
+            "billing_provider": "openrouter",
+            "executor": "openclaw",
+            "is_paid_provider": false,
+            "model": "openclaw/openrouter/free",
+            "policy": {
+              "availability": "unavailable_on_api_node",
+              "explicit_executor": "openclaw",
+              "policy_applied": true,
+              "reason": "explicit_executor_forced"
+            },
+            "provider": "openrouter",
+            "request_schema": "open_responses_v1",
+            "task_type": "impl",
+            "tier": "openclaw"
+          },
+          "runner_cli_bootstrap": {
+            "at": "2026-03-01T09:35:05.432183+00:00",
+            "detail": "runner_cli_present:codex:codex:/usr/local/bin/codex",
+            "ok": true
+          },
+          "runner_codex_auth": {
+            "api_key_login_bootstrapped": false,
+            "api_key_login_source": "",
+            "api_key_present": true,
+            "at": "2026-03-01T09:35:05.432201+00:00",
+            "effective_mode": "oauth",
+            "oauth_fallback_allowed": false,
+            "oauth_missing": false,
+            "oauth_session": true,
+            "oauth_session_bootstrap_detail": "oauth_session_preserved_existing:/root/.codex/auth.json",
+            "oauth_session_bootstrapped": false,
+            "oauth_source": "session_file:/root/.codex/auth.json",
+            "requested_mode": "oauth"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "runner_codex_oauth_refresh_retry": {
+            "at": "2026-03-01T09:34:18.160001+00:00",
+            "mode": "oauth",
+            "trigger": "oauth_refresh_token_reused"
+          },
+          "runner_codex_oauth_refresh_retry_attempted": true,
+          "runner_codex_oauth_relogin": {
+            "at": "2026-03-01T09:34:18.159998+00:00",
+            "detail": "codex_auth_login_device_auth_rc1:Error logging in with device code: device code request failed with status 429 Too Many Requests",
+            "ok": false
+          },
+          "runner_codex_oauth_relogin_attempted": true,
+          "runner_failure_history": [
+            {
+              "at": "2026-03-01T09:34:18.301701+00:00",
+              "attempt": 1,
+              "duration_seconds": 1.0,
+              "failure_class": "command_failed",
+              "output_tail": "  \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh token reuse detected;  oauth relogin failed (codex_auth_login_device_auth_rc1:Error logging in with device code: device code request failed with status 429 Too Many Requests); retrying with oauth auth mode."
+            },
+            {
+              "at": "2026-03-01T09:34:42.577620+00:00",
+              "attempt": 1,
+              "duration_seconds": 2.0,
+              "failure_class": "command_failed",
+              "output_tail": "h token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh-token retry already attempted; not retrying auth retry."
+            }
+          ],
+          "runner_intervention_events": [
+            {
+              "at": "2026-03-01T09:34:18.301587+00:00",
+              "kind": "retry"
+            },
+            {
+              "at": "2026-03-01T09:34:42.577542+00:00",
+              "kind": "retry"
+            }
+          ],
+          "runner_last_failure": {
+            "at": "2026-03-01T09:34:42.577620+00:00",
+            "attempt": 1,
+            "duration_seconds": 2.0,
+            "failure_class": "command_failed",
+            "output_tail": "h token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh-token retry already attempted; not retrying auth retry."
+          },
+          "runner_last_result": {
+            "at": "2026-03-01T09:35:08.925676+00:00",
+            "attempt": 2,
+            "command_tool": "codex",
+            "duration_seconds": 2.0,
+            "failure_class": "command_failed",
+            "model": "openclaw/openrouter/free",
+            "paid_call": false,
+            "status": "failed",
+            "task_type": "impl"
+          },
+          "runner_metrics": {
+            "avg_runtime_seconds": 1.667,
+            "awareness_blocks_total": 0,
+            "awareness_events_total": 12,
+            "awareness_hold_pattern_total": 0,
+            "awareness_interventions_total": 2,
+            "awareness_quality_score": 0.8094,
+            "awareness_successful_transition_total": 8,
+            "awareness_transition_cost_total": 0.05,
+            "awareness_transition_total": 10,
+            "cost_per_successful_transition": 0.00625,
+            "estimated_to_measured_roi_conversion": null,
+            "hold_pattern_rate": 0.0,
+            "last_attempt": 2,
+            "last_failure_class": "command_failed",
+            "last_model": "openclaw/openrouter/free",
+            "last_status": "failed",
+            "last_tool": "codex",
+            "paid_calls_failed": 0,
+            "paid_calls_success": 0,
+            "paid_calls_total": 0,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 1.0,
+            "retries_total": 1,
+            "runs_failed": 3,
+            "runs_success": 0,
+            "runs_total": 3,
+            "state_transition_quality": 0.8,
+            "success_rate": 0.0,
+            "total_runtime_seconds": 5.0,
+            "updated_at": "2026-03-01T09:35:08.925670+00:00"
+          },
+          "runner_min_retry_delay_seconds": 15,
+          "runner_model_alias": {
+            "at": "2026-03-01T09:35:05.432204+00:00",
+            "effective_model": "gpt-5-codex",
+            "requested_model": "openrouter/free"
+          },
+          "runner_retry_count": 1,
+          "runner_retry_delay_effective_seconds": 15,
+          "runner_retry_delay_enforced": false,
+          "runner_retry_delay_requested_seconds": 15,
+          "runner_retry_delay_seconds": 15,
+          "runner_retry_max": 1,
+          "runner_retry_remaining": 0,
+          "runner_state": "retry_pending",
+          "success_evidence": [],
+          "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+          "target_state_contract": {
+            "abort_evidence": [],
+            "observation_window_sec": 900,
+            "success_evidence": [],
+            "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+          },
+          "target_state_last_observed_at": "2026-03-01T09:35:08.195405+00:00",
+          "target_state_observation": {
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "attempt_status": "failed",
+            "observation_window_exceeded": false,
+            "observation_window_sec": 900,
+            "observed_at": "2026-03-01T09:35:08.195318+00:00",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK"
+          },
+          "task_agent": "dev-engineer"
+        },
+        "created_at": "2026-03-01T09:34:00.799842Z",
+        "current_step": "retry scheduled",
+        "decision": null,
+        "decision_prompt": null,
+        "direction": "Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+        "id": "task_f724ddbddd9cbfcd",
+        "model": "openclaw/openrouter/free",
+        "observation_window_sec": 900,
+        "output": "[runner-codex-auth] requested_mode=oauth effective_mode=oauth oauth_session=true oauth_source=session_file:/root/.codex/auth.json api_key_present=true oauth_missing=false\n[runner-model-alias] requested_model=openrouter/free effective_model=gpt-5-codex\n[runner-command-exec] mode=argv\n2026-03-01T09:35:06.665263Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:35:06.665333Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:35:06.738071Z ERROR codex_core::models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Provided authentication token is expired. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.106.0, cf-ray: 9d572b72be7e15dd-SJC, request id: 7d2f7718-af6c-4ae1-a4e7-4b93a486eb0d\n2026-03-01T09:35:06.840767Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:35:06.840834Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n{\"type\":\"thread.started\",\"thread_id\":\"019ca8c0-63f2-7953-8810-10e2c45cd139\"}\n{\"type\":\"turn.started\"}\n2026-03-01T09:35:06.954991Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:35:06.955029Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:35:07.145583Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T09:35:07.145623Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T09:35:07.371032Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh-token retry already attempted; not retrying auth retry.",
+        "progress_pct": null,
+        "status": "failed",
+        "success_evidence": [],
+        "target_state": "impl task reaches intended target state: Provider verification run (free route). Do minimal safe work and return exactly: PROVIDER_FREE_ROUTE_OK",
+        "task_type": "impl",
+        "updated_at": "2026-03-01T09:35:10.871183Z"
+      },
+      "friction_open": [],
+      "label": "free_route",
+      "poll": [
+        {
+          "at": "2026-03-01T09:34:00.946900Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:09.611827Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:17.763536Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:34:25.928065Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:34.094764Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:42.301654Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:34:50.486596Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:34:58.711588Z",
+          "status": "pending"
+        },
+        {
+          "at": "2026-03-01T09:35:06.875004Z",
+          "status": "running"
+        },
+        {
+          "at": "2026-03-01T09:35:15.040458Z",
+          "status": "failed"
+        }
+      ],
+      "runtime_events": [
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:agent-task-completion",
+          "executor": "openclaw",
+          "fallback_to_codex": null,
+          "id": "rt_c9d5f0454528",
+          "model": "openclaw/openrouter/free",
+          "provider": "openai-codex",
+          "recorded_at": "2026-03-01T09:35:09.976909Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": "agent_task_completion"
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:codex",
+          "executor": "openai-codex",
+          "fallback_to_codex": null,
+          "id": "rt_bf3b258ebf3b",
+          "model": "openclaw/openrouter/free",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:35:08.534022Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": null
+        },
+        {
+          "agent_id": "openai-codex",
+          "endpoint": "/tool:codex",
+          "executor": "openai-codex",
+          "fallback_to_codex": null,
+          "id": "rt_c1f6c89c346e",
+          "model": "openclaw/openrouter/free",
+          "provider": null,
+          "recorded_at": "2026-03-01T09:34:41.582374Z",
+          "retry_count": null,
+          "retry_paid_override_applied": null,
+          "spark_fallback_retry_applied": null,
+          "status_code": 500,
+          "tracking_kind": null
+        }
+      ],
+      "task_id": "task_f724ddbddd9cbfcd"
+    }
+  ]
+}

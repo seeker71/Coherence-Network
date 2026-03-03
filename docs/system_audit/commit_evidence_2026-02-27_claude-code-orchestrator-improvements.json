@@ -1,0 +1,112 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "main",
+  "commit_scope": "Claude Code model-tier routing (sonnet/opus), real rate-limit headers via messages POST probe, strong-cheap-strong workflow with per-phase costUSD tracking.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/automation_usage_service.py",
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_claude-code-orchestrator-improvements.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/automation_usage_service.py",
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_claude-code-orchestrator-improvements.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-code",
+      "contributor_type": "machine",
+      "roles": ["implementation", "analysis"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["decision", "review"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "2.1.42"
+  },
+  "evidence_refs": [
+    "515 tests pass: api/tests/ -x -q",
+    "Live API discovery: messages POST returns anthropic-ratelimit-* headers; models GET does not",
+    "Confirmed claude-haiku-4-5 is valid probe model; claude-3-5-haiku-latest returns 404",
+    "CLAUDE_CODE_MODEL_BY_TYPE defaults verified: sonnet for SPEC/TEST/IMPL, opus for REVIEW/HEAL",
+    "claude_command_template generates --output-format json --max-budget-usd 2.00",
+    "oh-my-opencode analysis confirms strong-cheap-strong as best-practice multi-model pattern"
+  ],
+  "idea_ids": [
+    "claude-code-executor-provider",
+    "orchestrator-model-tier-routing",
+    "claude-usage-limit-observability"
+  ],
+  "spec_ids": [
+    "claude-code-executor-provider"
+  ],
+  "task_ids": ["claude-code-model-tier-routing", "claude-usage-quota-observability", "strong-cheap-strong-workflow"],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "ci_validation and deploy_validation pending"
+  },
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Claude executor routes SPEC/TEST/IMPL to claude-sonnet-4-5-20250929 and REVIEW/HEAL to claude-opus-4-5. Rate-limit headers (limit/remaining) now visible in /api/automation/usage via messages POST probe. claude_command_template emits --output-format json --max-budget-usd for cost observability. strong-cheap-strong workflow runs Opus/Sonnet/Opus phases with per-phase modelUsage cost summary.",
+    "public_endpoints": [
+      "/api/automation/usage",
+      "/api/automation/providers/readiness"
+    ],
+    "test_flows": [
+      "tests/test_agent_executor_policy.py: executor policy routes claude tasks to claude-sonnet-4-5 model",
+      "tests/test_automation_usage_api.py: provider snapshot includes Claude with quota metrics from messages probe",
+      "Dispatch claude-code-host-runner-task workflow with strong-cheap-strong strategy; per-phase usage summary shows Opus and Sonnet modelUsage"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest api/tests/ -x -q --tb=short  →  515 passed",
+      "python3 api/scripts/run_maintainability_audit.py  →  regression: no, risk_score: 183"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "provider-readiness-contract.yml: claude probe ok",
+      "api-tests.yml: 515+ pass",
+      "claude-code-host-runner-task.yml: strong-cheap-strong 3-phase run completes with usage summary"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "expected": [
+      "GET /api/automation/usage shows Claude provider with rate-limit headers (limit/remaining)",
+      "Claude executor tasks route to claude-sonnet-4-5-20250929 for IMPL, claude-opus-4-5 for REVIEW"
+    ]
+  },
+  "motivation": [
+    "Claude executor was routing to openrouter/free — now routes to named claude-4 models per task type",
+    "Quota probe used claude-3-5-haiku-latest (404); fixed to claude-haiku-4-5",
+    "Rate-limit headers only come from messages endpoint POST; models GET returns none",
+    "_probe_claude now uses messages POST for consistency with _build_claude_snapshot",
+    "claude_command_template adds --output-format json so modelUsage (costUSD/tokens) is parseable",
+    "--max-budget-usd $2.00 is the primary guard against subscription limit overrun",
+    "oh-my-opencode analysis: strong-cheap-strong (Opus/Sonnet/Opus) is the proven multi-model pattern"
+  ],
+  "risks_and_assumptions": [
+    "claude-haiku-4-5 availability confirmed via live API test with Railway ANTHROPIC_API_KEY",
+    "Messages probe costs ~$0.001/call for max_tokens=1 — acceptable for readiness checks",
+    "Subscription 5h/weekly limits remain server-side only; --max-budget-usd is the local guard",
+    "Changing default from openrouter/free to claude-sonnet increases cost per claude-executor task",
+    "CLAUDE_CODE_MAX_BUDGET_USD=2.00 is conservative; increase for complex multi-file tasks"
+  ],
+  "known_gaps_and_follow_up_tasks": [
+    "modelUsage JSON from --output-format json not yet parsed by agent_runner.py into task metadata",
+    "Daily/weekly cost rollup not yet accumulated across runs in automation_usage_service",
+    "Strong-cheap-strong phase results not yet persisted to Neo4j for cross-run analytics",
+    "Orchestrator best-tool routing (claude vs codex) not yet data-driven from provider readiness"
+  ]
+}

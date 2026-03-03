@@ -302,3 +302,125 @@ def test_db_update_task_hydrates_single_task_without_full_table_reload(
     assert updated is not None
     assert updated["id"] == task_id
     assert updated["status"] == TaskStatus.RUNNING
+
+
+def test_update_task_backfills_failed_output_from_context_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Fail with context error",
+            task_type=TaskType.IMPL,
+        )
+    )
+    task_id = created["id"]
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.FAILED,
+        context={"error": "Execution timed out while waiting for provider response"},
+    )
+
+    assert updated is not None
+    output = str(updated.get("output") or "")
+    assert output.startswith("Failure diagnostic (context.error):")
+    assert "timed out" in output.lower()
+    context = updated.get("context") if isinstance(updated.get("context"), dict) else {}
+    assert context.get("failure_diagnostics_present") is True
+    assert context.get("failure_diagnostics_source") == "context.error"
+    assert context.get("failure_reason_bucket") == "timeout"
+    assert context.get("failure_signature") == "timeout_runtime_or_dependency"
+    assert "timed out" in str(context.get("failure_summary") or "").lower()
+
+
+def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Fail without explicit output",
+            task_type=TaskType.REVIEW,
+        )
+    )
+    task_id = created["id"]
+    updated = agent_service.update_task(
+        task_id=task_id,
+        status=TaskStatus.FAILED,
+    )
+
+    assert updated is not None
+    output = str(updated.get("output") or "")
+    assert output.startswith("Task failed without explicit error output.")
+    context = updated.get("context") if isinstance(updated.get("context"), dict) else {}
+    assert context.get("failure_diagnostics_present") is True
+    assert context.get("failure_diagnostics_source") == "fallback"
+    assert context.get("failure_reason_bucket") in {"other", "empty_output"}
+    assert str(context.get("failure_signature") or "").strip()
+    assert str(context.get("failure_summary") or "").strip()
+
+
+def test_create_task_records_task_card_validation_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Implement task-card scoring metadata",
+            task_type=TaskType.IMPL,
+            context={
+                "task_card": {
+                    "goal": "Add scoring metadata to task context",
+                    "files_allowed": ["api/app/services/agent_service.py"],
+                    "done_when": ["context.task_card_validation.score is present"],
+                    "commands": ["cd api && pytest -q tests/test_agent_task_persistence.py -k task_card"],
+                    "constraints": ["no placeholder fields"],
+                }
+            },
+        )
+    )
+    context = created.get("context") if isinstance(created.get("context"), dict) else {}
+    validation = context.get("task_card_validation") if isinstance(context.get("task_card_validation"), dict) else {}
+    assert validation.get("present") is True
+    assert validation.get("missing") == []
+    assert validation.get("score") == pytest.approx(1.0, rel=1e-6)
+
+    partial = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Create a task with an incomplete task card",
+            task_type=TaskType.IMPL,
+            context={"task_card": {"goal": "Only goal is set"}},
+        )
+    )
+    partial_context = partial.get("context") if isinstance(partial.get("context"), dict) else {}
+    partial_validation = (
+        partial_context.get("task_card_validation")
+        if isinstance(partial_context.get("task_card_validation"), dict)
+        else {}
+    )
+    assert partial_validation.get("present") is True
+    assert partial_validation.get("score", 1.0) < 1.0
+    assert set(partial_validation.get("missing") or []) == {
+        "files_allowed",
+        "done_when",
+        "commands",
+        "constraints",
+    }

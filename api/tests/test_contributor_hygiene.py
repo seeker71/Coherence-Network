@@ -12,7 +12,13 @@ from app.main import app
 from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor, ContributorType
-from app.services.contributor_hygiene import is_test_contributor_email
+from app.services.contributor_hygiene import (
+    is_internal_contributor_email,
+    is_real_human_name,
+    is_test_contributor_email,
+    normalize_contributor_email,
+    validate_real_human_registration,
+)
 
 
 def test_is_test_contributor_email_recognizes_reserved_domains() -> None:
@@ -20,6 +26,38 @@ def test_is_test_contributor_email_recognizes_reserved_domains() -> None:
     assert is_test_contributor_email("alice@example.org") is True
     assert is_test_contributor_email("dev@example.net") is True
     assert is_test_contributor_email("alice@coherence.network") is False
+
+
+def test_normalize_contributor_email_collapses_plus_alias_by_default() -> None:
+    assert normalize_contributor_email("Urs-Muff+abc123@coherence.network") == "urs-muff@coherence.network"
+    assert normalize_contributor_email("alice@example.com") == "alice@example.com"
+
+
+def test_is_internal_contributor_email_detects_system_prefixes() -> None:
+    assert is_internal_contributor_email("deploy-test@coherence.network") is True
+    assert is_internal_contributor_email("machine-reviewer-1@coherence.network") is True
+    assert is_internal_contributor_email("system@coherence.network") is True
+    assert is_internal_contributor_email("urs-muff@coherence.network") is False
+
+
+def test_real_human_name_requires_first_and_last_name() -> None:
+    assert is_real_human_name("Alice Smith") is True
+    assert is_real_human_name("Jean-Luc Picard") is True
+    assert is_real_human_name("Alice") is False
+    assert is_real_human_name("Automation Bot") is False
+
+
+def test_validate_real_human_registration_rejects_internal_or_test_emails() -> None:
+    ok, _ = validate_real_human_registration("Alice Smith", "alice@proton.me")
+    assert ok is True
+
+    bad_internal, reason_internal = validate_real_human_registration("Alice Smith", "deploy-test@coherence.network")
+    assert bad_internal is False
+    assert "Internal/system" in reason_internal
+
+    bad_test, reason_test = validate_real_human_registration("Alice Smith", "alice@example.com")
+    assert bad_test is False
+    assert "email domains are not allowed" in reason_test
 
 
 @pytest.mark.asyncio

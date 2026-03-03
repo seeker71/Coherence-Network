@@ -114,6 +114,7 @@ class ProviderReadinessReport(BaseModel):
     blocking_issues: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     providers: list[ProviderReadinessRow] = Field(default_factory=list)
+    limit_telemetry: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProviderValidationRow(BaseModel):

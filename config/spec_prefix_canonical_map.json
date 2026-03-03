@@ -49,6 +49,10 @@
     "054": {
       "canonical": "054-commit-provenance-contract-gate.md",
       "aliases": ["054-postgresql-migration.md"]
+    },
+    "111": {
+      "canonical": "111-greenfield-autonomous-intelligence-system.md",
+      "aliases": ["111-agent-execution-lifecycle-hooks.md"]
     }
   }
 }
