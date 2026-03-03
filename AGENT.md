@@ -7,6 +7,16 @@ Purpose: when a gate fails, the agent should self-unblock with concrete remediat
 - Do not stop at "gate blocked" as the final answer.
 - Fix the blocker first, rerun the gate, then continue commit/deploy flow.
 - Report exact failing command/output only after attempting remediation.
+- Start each prompt with:
+
+```bash
+make prompt-gate
+```
+
+- `make prompt-gate` is follow-up safe:
+  - clean worktree -> full `start-gate` + rebase + local guard,
+  - dirty worktree -> continuation mode (no re-bootstrap),
+  - detached `HEAD` -> fail fast with explicit `git switch` remediation.
 
 ## Gate-Specific Unblock Steps
 
@@ -15,19 +25,7 @@ Purpose: when a gate fails, the agent should self-unblock with concrete remediat
 This commonly happens mid-task after edits are already in progress.
 
 - Treat it as a continuation task, not a new thread bootstrap.
-- Re-run start-gate in continuation mode (now default in `auto` mode when dirty):
-
-```bash
-make start-gate
-```
-
-- If you need stash/rebase healing, use:
-
-```bash
-./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate
-```
-
-- `auto_heal_start_gate.sh` now auto-attaches detached `HEAD` to a `codex/...` branch before stash/rebase.
+- Prefer `make prompt-gate` for follow-up prompts instead of rerunning `make start-gate` directly.
 - Continue with targeted validation for changed files.
 - Before commit, run required pre-commit guards:
 

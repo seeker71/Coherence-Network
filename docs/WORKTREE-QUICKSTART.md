@@ -28,31 +28,15 @@ git pull --ff-only origin main
 ## Mandatory Preflight (before edits)
 
 ```bash
-make start-gate
+make prompt-gate
 ```
 
-Default. `start-gate` now runs in `auto` mode:
-- clean worktree => bootstrap checks,
-- dirty worktree => continuation checks (no clean-start failure loop),
-- detached `HEAD` => auto-attach to a `codex/...` branch in linked worktrees.
+Mandatory for every prompt (new or follow-up). This command is continuation-safe:
+- clean worktree: runs full preflight (`start-gate`, rebase refresh, local guard),
+- dirty worktree: skips start-gate/rebase and treats the prompt as in-flight continuation,
+- detached HEAD: fails fast with exact branch attach commands.
 
-Use recovery flow only when you need stash/rebase healing:
-
-```bash
-./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
-```
-
-`auto_heal_start_gate.sh` now auto-attaches detached `HEAD` before stash/rebase and forces continuation-safe start-gate when stashing active work.
-
-## Follow-Up Prompt (same thread)
-
-When a later prompt continues the same branch and local edits already exist:
-
-```bash
-make start-gate
-```
-
-Do not treat this as a new-thread bootstrap. Continue task execution and close the same PR/deploy flow unless you explicitly record a blocker.
+Equivalent legacy flow (manual/clean tree): `make start-gate`.
 
 ## Mandatory Local Guard (before commit/push)
 
