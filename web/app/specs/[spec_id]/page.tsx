@@ -1,9 +1,15 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import {
+  buildFlowSearchParams,
+  buildSystemLineageSearchParams,
+  UI_RUNTIME_WINDOW,
+} from "@/lib/egress";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
+export const revalidate = 90;
 
 type SpecItem = {
   spec_id: string;
@@ -83,10 +89,12 @@ async function loadSpecContext(specId: string): Promise<{
   relatedFlow: FlowItem[];
 }> {
   const API = getApiBase();
+  const lineageParams = buildSystemLineageSearchParams();
+  const flowParams = buildFlowSearchParams();
   const [inventoryRes, registryRes, flowRes] = await Promise.all([
-    fetch(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, { cache: "no-store" }),
-    fetch(`${API}/api/spec-registry`, { cache: "no-store" }),
-    fetch(`${API}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
+    fetch(`${API}/api/inventory/system-lineage?${lineageParams.toString()}`),
+    fetch(`${API}/api/spec-registry`),
+    fetch(`${API}/api/inventory/flow?${flowParams.toString()}`),
   ]);
   if (!inventoryRes.ok || !registryRes.ok || !flowRes.ok) {
     throw new Error(`HTTP ${inventoryRes.status}/${registryRes.status}/${flowRes.status}`);
@@ -407,12 +415,22 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
             </a>
           </li>
           <li>
-            <a href="/api/inventory/flow?runtime_window_seconds=86400" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a
+              href={`/api/inventory/flow?runtime_window_seconds=${UI_RUNTIME_WINDOW}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
               /api/inventory/flow
             </a>
           </li>
           <li>
-            <a href="/api/inventory/system-lineage?runtime_window_seconds=86400" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+            <a
+              href={`/api/inventory/system-lineage?runtime_window_seconds=${UI_RUNTIME_WINDOW}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
               /api/inventory/system-lineage
             </a>
           </li>

@@ -1,6 +1,11 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import {
+  buildFlowSearchParams,
+  UI_CONTRIBUTION_LIMIT,
+  UI_CONTRIBUTOR_LIMIT,
+} from "@/lib/egress";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
@@ -130,6 +135,8 @@ type FlowSearchParams = Promise<{
   contributor_id?: string | string[];
 }>;
 
+export const revalidate = 90;
+
 function normalizeFilter(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return (value[0] || "").trim();
   return (value || "").trim();
@@ -158,12 +165,11 @@ async function loadDataForIdea(ideaId: string): Promise<{
   contributions: Contribution[];
 }> {
   const API = getApiBase();
-  const flowParams = new URLSearchParams({ runtime_window_seconds: "86400" });
-  if (ideaId) flowParams.set("idea_id", ideaId);
+  const flowParams = buildFlowSearchParams({ ideaId });
   const [flowData, contributorData, contributionData] = await Promise.all([
-    fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, undefined, 5000),
+    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`, undefined, 5000),
+    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`, undefined, 5000),
   ]);
 
   return {
@@ -182,8 +188,8 @@ async function loadDataForIdea(ideaId: string): Promise<{
       unblock_queue: [],
       items: [],
     },
-    contributors: Array.isArray(contributorData) ? contributorData.slice(0, 500) : [],
-    contributions: Array.isArray(contributionData) ? contributionData.slice(0, 2000) : [],
+    contributors: Array.isArray(contributorData) ? contributorData.slice(0, UI_CONTRIBUTOR_LIMIT) : [],
+    contributions: Array.isArray(contributionData) ? contributionData.slice(0, UI_CONTRIBUTION_LIMIT) : [],
   };
 }
 

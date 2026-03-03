@@ -21,8 +21,14 @@ router = APIRouter()
 @router.get("/ideas", response_model=IdeaPortfolioResponse)
 async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> IdeaPortfolioResponse:
-    return idea_service.list_ideas(only_unvalidated=only_unvalidated)
+    return idea_service.list_ideas(
+        only_unvalidated=only_unvalidated,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/ideas/storage", response_model=IdeaStorageInfo)
