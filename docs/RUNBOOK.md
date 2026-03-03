@@ -67,6 +67,73 @@ When the pipeline is stuck or the agent runner died:
 - Telegram: `/reply {task_id} yes` (or your decision)
 - API: `curl -X PATCH http://localhost:8000/api/agent/tasks/{id} -H "Content-Type: application/json" -d '{"decision":"yes"}'`
 
+## n8n Security and HITL Operations
+
+Use this when workflow runs involve n8n-powered automation.
+
+Security floor:
+- v1 deployments must be `>=1.123.17`
+- v2 deployments must be `>=2.5.2`
+
+Deploy gate check (from `api/`):
+
+```bash
+.venv/bin/python scripts/validate_pr_to_public.py --branch codex/<thread-name> --wait-public --n8n-version "${N8N_VERSION}"
+```
+
+Expected behavior:
+1. If n8n is below minimum, result is `blocked_n8n_version` and deploy should not proceed.
+2. If n8n is at/above minimum, gate result depends on normal PR/public checks.
+
+HITL contract:
+1. Mark destructive or external-impacting actions as approval-required.
+2. Verify a blocked action remains blocked until explicit approval event is recorded.
+3. If approvals fail to trigger, treat as a deploy blocker and roll back workflow changes enabling direct execution.
+
+## Self-Improvement Thinking Loop
+
+When running plan/implement/verify cycles, enforce this thinking contract before coding:
+
+1. **Intent first**: state what is being optimized (trust, clarity, reuse), not only "finish task".
+2. **System-level lens**: describe behavior change in runtime/API/user flow, not only file edits.
+3. **Option thinking**: evaluate 2-3 approaches, select one, and record tradeoff rationale.
+4. **Failure anticipation**: write "how this degrades in 2 weeks" and define guardrails/alerts.
+5. **Proof of meaning**: show operator/user impact, not only passing tests/commands.
+
+Execution hook:
+
+```bash
+cd api && .venv/bin/python scripts/run_self_improve_cycle.py --base-url http://127.0.0.1:8000
+```
+
+Required cycle evidence:
+
+- plan output contains intent/system/options/failure/meaning sections.
+- execution result references concrete production-facing deltas (API/UI/runtime), not just patch lists.
+- review stage rejects outputs missing user/operator impact proof.
+
+## Code Quality Drift Guidance (Non-Blocking)
+
+Use this as directional guidance so the system improves over time while features continue shipping.
+
+Daily check:
+
+```bash
+curl -s http://localhost:8000/api/automation/usage/daily-summary?window_hours=24\&top_n=5 | jq '.quality_awareness'
+```
+
+What to look for:
+
+1. `summary.severity`, `risk_score`, and `regression` trend.
+2. Hotspots (`very_large_module`, `long_function`, `layer_violation`, `runtime_placeholder`) that keep growing.
+3. Guidance + recommended tasks that improve trust/clarity/reuse without freezing delivery.
+
+Expected operating behavior:
+
+- Treat quality-awareness output as planning input and routing guidance, not as a strict blocker.
+- Prefer extracting logic into focused modules before adding more branches into oversized files.
+- Capture one proof-of-meaning statement in each self-improvement cycle showing user/operator benefit.
+
 ## Connection stalled / API unreachable
 
 If scripts or tests fail with **Connection stalled**, **ReadTimeout**, or **ConnectError** (e.g. when API is not running):
@@ -148,6 +215,28 @@ cd api && .venv/bin/python scripts/analyze_pipeline_failures.py
 ```
 
 Save artifacts under `docs/system_audit/` and update `docs/SYSTEM-QUESTION-LEDGER.md` each cycle.
+
+## Awareness Questions (Cost + Improvement)
+
+Ask these once per daily operations review. Treat any "no" as a priority improvement signal: record owner, next command, and target date, then track trend each cycle.
+
+### Hosted worker failure reporting
+
+1. Were at least 75% of hosted worker failures recorded with `task_id`, `tool`, `model`, and provider fields in friction events?
+2. Is every open hosted worker failure linked to an explicit `unblock_condition` and owner?
+3. Did we reduce failure recurrence cost (energy loss + cost of delay) versus the prior check window?
+
+### Task-provider visibility
+
+1. Are at least 75% of recent tracked runs showing both `provider` and `billing_provider` alongside `task_id`?
+2. Can an operator answer "which task used which provider" from `/agent` or `/tasks` without querying raw logs?
+3. Are untracked completed/failed tasks trending down week-over-week?
+
+### Recovery and learning capture
+
+1. Are at least 75% of recoverable tool failures either `resolved` or mapped to a concrete `resolution_action`?
+2. For each unresolved failure cluster, is there a documented next command and owner?
+3. Did we add at least one prevention action (prompt guard, route policy, or monitor) for each repeated failure pattern?
 
 ## Check Pipeline Status
 

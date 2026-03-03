@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/roi-progress-4x-20260226073027",
+  "commit_scope": "Unblock stale Codex PR followthrough by merging the stale PR and adding safe auto-merge support for merge-ready stale PRs in the followthrough guard.",
+  "files_owned": [
+    "scripts/check_pr_followthrough.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "docs/CODEX-THREAD-PROCESS.md"
+  ],
+  "idea_ids": [
+    "pipeline-followthrough-unblock"
+  ],
+  "spec_ids": [
+    "thread-process-followthrough-gate"
+  ],
+  "task_ids": [
+    "task-2026-02-26-followthrough-auto-merge-heal"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260227T000318Z_codex-roi-progress-4x-20260226073027.json",
+    "https://github.com/seeker71/Coherence-Network/pull/334",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/check_pr_followthrough.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/system_audit/commit_evidence_2026-02-26_pr-followthrough-auto-merge-heal.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict --auto-merge-ready-stale --auto-merge-dry-run",
+      "ruff check scripts/check_pr_followthrough.py",
+      "python3 -m py_compile scripts/check_pr_followthrough.py",
+      "cd api && pytest -q tests/test_check_pr_followthrough.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  }
+}

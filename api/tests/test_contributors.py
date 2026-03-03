@@ -14,7 +14,7 @@ async def test_create_get_list_contributors() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
             "/api/contributors",
-            json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"},
         )
         assert resp.status_code == 201
         created = resp.json()
@@ -46,3 +46,93 @@ async def test_create_contributor_422() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post("/api/contributors", json={"type": "HUMAN", "name": "NoEmail"})
         assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_contributor_conflict_when_email_already_exists_after_normalization() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Owner Name", "email": "urs-muff@coherence.network"},
+        )
+        assert first.status_code == 201
+
+        second = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alias Name", "email": "urs-muff+run1@coherence.network"},
+        )
+        assert second.status_code == 409
+        assert second.json()["detail"] == "Contributor email already exists"
+
+
+@pytest.mark.asyncio
+async def test_list_contributors_can_exclude_system_rows() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        human = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Human Person", "email": "human@proton.me"},
+        )
+        assert human.status_code == 201
+        system = await client.post(
+            "/api/contributors",
+            json={"type": "SYSTEM", "name": "Coherence System", "email": "system@coherence.network"},
+        )
+        assert system.status_code == 201
+
+        all_rows = await client.get("/api/contributors?limit=10")
+        assert all_rows.status_code == 200
+        assert len(all_rows.json()) == 2
+
+        human_only = await client.get("/api/contributors?limit=10&include_system=false")
+        assert human_only.status_code == 200
+        payload = human_only.json()
+        assert len(payload) == 1
+        assert payload[0]["type"] == "HUMAN"
+
+
+@pytest.mark.asyncio
+async def test_create_contributor_rejects_non_real_human_name() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice", "email": "alice@proton.me"},
+        )
+        assert resp.status_code == 422
+        assert "real full name" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_create_contributor_rejects_internal_human_email() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Alice Smith", "email": "deploy-test@coherence.network"},
+        )
+        assert resp.status_code == 422
+        assert "Internal/system emails" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_only_one_system_contributor_is_allowed() -> None:
+    app.state.graph_store = InMemoryGraphStore()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        first = await client.post(
+            "/api/contributors",
+            json={"type": "SYSTEM", "name": "Coherence System", "email": "system@coherence.network"},
+        )
+        assert first.status_code == 201
+        second = await client.post(
+            "/api/contributors",
+            json={"type": "SYSTEM", "name": "Backup System", "email": "system-2@coherence.network"},
+        )
+        assert second.status_code == 409
+        assert second.json()["detail"] == "System contributor already exists"

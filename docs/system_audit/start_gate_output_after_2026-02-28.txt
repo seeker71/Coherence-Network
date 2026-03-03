@@ -1,0 +1,1 @@
+start-gate: current worktree has local changes. Do not abandon in-flight work: finish merge/deploy (or record an explicit blocker), then rerun start-gate from a clean worktree. If you must run gates without abandoning changes, use ./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate.

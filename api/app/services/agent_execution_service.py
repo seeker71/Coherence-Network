@@ -1,7 +1,7 @@
 """Server-side execution for agent tasks.
 
-This is intentionally conservative:
-- default-deny for paid providers (can be overridden via env for emergencies)
+Execution policy:
+- paid providers are allowed by default unless explicitly disabled by env
 - records runtime events for diagnostics and usage visibility
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -18,6 +19,7 @@ from app.models.agent import TaskStatus
 from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
 from app.services import (
+    agent_execution_codex_service,
     agent_service,
     automation_usage_service,
     friction_service,
@@ -25,6 +27,7 @@ from app.services import (
     metrics_service,
     spec_registry_service,
     runtime_service,
+    agent_routing_service,
 )
 from app.services.agent_execution_task_flow import execute_task
 from app.services.openrouter_client import OpenRouterError, chat_completion
@@ -54,8 +57,8 @@ def _truthy_any(value: object) -> bool:
 
 
 def _paid_providers_allowed() -> bool:
-    # Default: paid providers NOT allowed.
-    return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "0"))
+    # Default: paid providers allowed. Set AGENT_ALLOW_PAID_PROVIDERS=0 to hard-block.
+    return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "1"))
 
 
 def _paid_route_override_requested(task: dict[str, Any]) -> bool:
@@ -75,9 +78,13 @@ def _paid_route_override_requested(task: dict[str, Any]) -> bool:
 
 def _extract_underlying_model(task_model: str) -> str:
     cleaned = (task_model or "").strip()
+    if cleaned.startswith("codex/"):
+        return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("openclaw/") or cleaned.startswith("clawwork/"):
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):
+        return cleaned.split("/", 1)[1].strip()
+    if cleaned.startswith("gemini/"):
         return cleaned.split("/", 1)[1].strip()
     return cleaned
 
@@ -128,9 +135,45 @@ def _task_route_provider(task: dict[str, Any]) -> str:
         return "openai-codex"
     if "claude" in model:
         return "claude"
+    if "gemini" in model:
+        return "gemini"
     if model.startswith(("gpt", "o1", "o3", "o4", "openai/")):
         return "openai"
     return "unknown"
+
+
+def _friction_metadata_from_task(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route_decision = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+
+    provider = str(
+        route_decision.get("provider")
+        or route_decision.get("billing_provider")
+        or _task_route_provider(task)
+    ).strip()
+    billing_provider = str(
+        route_decision.get("billing_provider")
+        or route_decision.get("provider")
+        or provider
+    ).strip()
+
+    task_model = str(task.get("model") or "").strip()
+    normalized_tool = "agent-task-execution-summary"
+    run_id = str(
+        context.get("active_run_id")
+        or context.get("run_id")
+        or context.get("last_run_id")
+        or ""
+    ).strip()
+
+    return {
+        "task_id": (task_id or "").strip() or None,
+        "run_id": run_id or None,
+        "provider": provider or None,
+        "billing_provider": billing_provider or None,
+        "tool": normalized_tool,
+        "model": task_model or None,
+    }
 
 
 def _finish_task(
@@ -248,6 +291,19 @@ def _run_openrouter(
             "cost_slack_ratio": cost_budget.get("cost_slack_ratio"),
         }
     except OpenRouterError as exc:
+        fallback_error = str(exc)
+        if agent_execution_codex_service.should_fallback_to_codex_exec(model, fallback_error):
+            fallback_result = agent_execution_codex_service.run_codex_exec(
+                task_id=task_id,
+                model=model,
+                prompt=prompt,
+                route_is_paid=route_is_paid,
+                started_perf=started_perf,
+                cost_budget=cost_budget,
+            )
+            if fallback_result.get("ok") is True:
+                return fallback_result
+
         elapsed_ms = max(1, int(round((time.perf_counter() - started_perf) * 1000)))
         _record_openrouter_tool_event(
             task_id=task_id,
@@ -256,14 +312,20 @@ def _run_openrouter(
             elapsed_ms=elapsed_ms,
             ok=False,
             actual_cost_usd=_runtime_cost_usd(elapsed_ms),
-            error=str(exc),
+            error=fallback_error,
         )
-        return {"ok": False, "elapsed_ms": elapsed_ms, "error": f"Execution failed (OpenRouter): {exc}"}
+        return {"ok": False, "elapsed_ms": elapsed_ms, "error": f"Execution failed (OpenRouter): {fallback_error}"}
 
 
 def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     model = _extract_underlying_model(str(task.get("model") or ""))
-    return model or default
+    resolved = model or default
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+    executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
+    if executor == "openrouter" or str(resolved).strip().lower().startswith("openrouter/"):
+        return agent_routing_service.enforce_openrouter_free_model(resolved)
+    return resolved
 
 
 def _resolve_prompt(task: dict[str, Any]) -> str:
@@ -309,6 +371,45 @@ def _normalize_int(value: Any, default: int | None = None) -> int | None:
     if parsed <= 0:
         return default
     return parsed
+
+
+def _to_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _paid_provider_block_on_soft_quota_threshold() -> bool:
+    return _truthy(os.getenv("AGENT_BLOCK_ON_SOFT_PROVIDER_QUOTA_THRESHOLD", "0"))
+
+
+def _quota_guard_indicates_exhausted(quota_guard: dict[str, Any]) -> bool:
+    blocked_metrics = quota_guard.get("blocked_metrics")
+    if isinstance(blocked_metrics, list):
+        observed_signal = False
+        for item in blocked_metrics:
+            if not isinstance(item, dict):
+                continue
+            remaining = _to_float(item.get("remaining"))
+            remaining_ratio = _to_float(item.get("remaining_ratio"))
+            if remaining is not None:
+                observed_signal = True
+                if remaining <= 0.0:
+                    return True
+            if remaining_ratio is not None:
+                observed_signal = True
+                if remaining_ratio <= 0.0:
+                    return True
+        if observed_signal:
+            return False
+
+    reason = str(quota_guard.get("reason") or "").strip().lower()
+    if not reason:
+        return False
+    if "exhaust" in reason or "deplet" in reason:
+        return True
+    return bool(re.search(r"(remaining|ratio)\s*[:=]\s*0+(?:\.0+)?\b", reason))
 
 
 def _resolve_window_paid_tool_limit(env_name: str) -> int | None:
@@ -368,6 +469,8 @@ def _check_paid_provider_window_budget(
         quota_guard = {"allowed": True}
 
     if not bool(quota_guard.get("allowed", True)):
+        if not _paid_provider_block_on_soft_quota_threshold() and not _quota_guard_indicates_exhausted(quota_guard):
+            return True, None
         detail = str(quota_guard.get("reason") or "provider quota threshold reached").strip()
         msg = (
             "Paid-provider usage blocked by provider quota policy: "
@@ -444,10 +547,17 @@ def _record_friction_event(
     severity: str = "high",
     energy_loss_estimate: float = 0.0,
 ) -> None:
+    metadata = _friction_metadata_from_task(task_id, task)
     event = FrictionEvent(
         id=f"fric_{uuid4().hex[:12]}",
         timestamp=datetime.now(timezone.utc),
+        task_id=task_id,
         endpoint=endpoint,
+        run_id=metadata.get("run_id"),
+        provider=metadata.get("provider"),
+        billing_provider=metadata.get("billing_provider"),
+        tool=metadata.get("tool"),
+        model=metadata.get("model"),
         stage=stage,
         block_type=block_type,
         severity=severity,
@@ -461,7 +571,6 @@ def _record_friction_event(
         time_open_hours=None,
         resolution_action=None,
     )
-    _ = task
     try:
         friction_service.append_event(event)
     except Exception:

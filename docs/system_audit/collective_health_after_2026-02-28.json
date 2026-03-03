@@ -1,0 +1,116 @@
+{
+  "captured_at": "2026-02-28T09:20:00Z",
+  "endpoint": "/api/agent/collective-health",
+  "status_code": 200,
+  "body": {
+    "generated_at": "2026-02-28T09:27:18.222248Z",
+    "window_days": 7,
+    "scores": {
+      "coherence": 0.0,
+      "resonance": 0.35,
+      "flow": 0.6267,
+      "friction": 0.5,
+      "collective_value": 0.0
+    },
+    "coherence": {
+      "score": 0.0,
+      "task_count": 10,
+      "target_state_coverage": 0.0,
+      "task_card_coverage": 0.0,
+      "task_card_quality": 0.0,
+      "evidence_coverage": 0.0
+    },
+    "resonance": {
+      "score": 0.35,
+      "task_count": 10,
+      "tracked_reference_total": 0,
+      "reused_reference_count": 0,
+      "reference_reuse_ratio": 0.0,
+      "completion_event_count": 12,
+      "traceable_completion_ratio": 1.0,
+      "learning_capture_ratio": 0.0
+    },
+    "flow": {
+      "score": 0.6267,
+      "task_count": 10,
+      "completion_ratio": 0.3,
+      "active_flow_ratio": 0.5,
+      "throughput_factor": 1.0,
+      "latency_factor": 0.9778,
+      "status_counts": {
+        "pending": 0,
+        "running": 0,
+        "completed": 3,
+        "failed": 7,
+        "needs_decision": 0
+      }
+    },
+    "friction": {
+      "score": 0.5,
+      "event_count": 22,
+      "open_events": 22,
+      "ignored_events": 0,
+      "open_density": 1.0,
+      "energy_loss": 0.0,
+      "issue_count": 0,
+      "monitor_issue_preview": []
+    },
+    "top_friction_queue": [
+      {
+        "key": "friction:public_deploy_verification_failed",
+        "title": "Friction block: public_deploy_verification_failed",
+        "severity": "critical",
+        "signal": 0.5,
+        "recommended_action": "Fix deployment blockers and rerun /api/gates/public-deploy-verification-jobs/{job_id}/tick"
+      },
+      {
+        "key": "failed-tasks:TaskType.IMPL",
+        "title": "Failed task executions: TaskType.IMPL",
+        "severity": "high",
+        "signal": 10.0005,
+        "recommended_action": "Reduce repeated failures for this task type before running more CI-heavy iterations."
+      },
+      {
+        "key": "friction:tool_failure",
+        "title": "Friction block: tool_failure",
+        "severity": "high",
+        "signal": 4.5,
+        "recommended_action": "Re-run with valid inputs or explicit override, and keep failures in task context."
+      },
+      {
+        "key": "friction:task_failure",
+        "title": "Friction block: task_failure",
+        "severity": "high",
+        "signal": 3.5,
+        "recommended_action": "Investigate failed task output, then rerun or close with a documented resolution."
+      },
+      {
+        "key": "friction:paid_provider_blocked",
+        "title": "Friction block: paid_provider_blocked",
+        "severity": "high",
+        "signal": 2.5,
+        "recommended_action": "Re-run with valid inputs or explicit override, and keep failures in task context."
+      }
+    ],
+    "top_opportunities": [
+      {
+        "pillar": "coherence",
+        "signal": "task_card_coverage",
+        "action": "Increase task-card completeness on new tasks.",
+        "impact_estimate": 1.0
+      },
+      {
+        "pillar": "resonance",
+        "signal": "reference_reuse_ratio",
+        "action": "Link tasks to shared spec_id/idea_id to amplify reusable outcomes.",
+        "impact_estimate": 0.5
+      },
+      {
+        "pillar": "friction",
+        "signal": "friction_score",
+        "action": "Work the top friction queue to remove highest-energy blockers first.",
+        "impact_estimate": 0.5
+      }
+    ]
+  }
+}

@@ -33,7 +33,7 @@ git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
-make start-gate
+make prompt-gate
 ```
 
 ### Phase 0: Start Gate (required before new task work)
@@ -41,27 +41,32 @@ make start-gate
 Run from the target worktree:
 
 ```bash
-make start-gate
+make prompt-gate
 ```
 
 Gate status:
-- PASS only when running from a linked worktree (`.git` points to a worktree gitdir, not the primary `.git` directory).
-- PASS only when current worktree has no local changes before starting the next task.
-- PASS only when primary workspace is clean (prevents abandoned local changes in main workspace).
-- PASS only when current start-command checks succeed, including remote `main` workflow health and open `codex/*` PR checks.
+- PASS only when not detached (`HEAD` is attached to a named branch).
+- PASS only when not working directly on `main`/`master`.
+- PASS only when thread context is valid: linked worktree OR `codex/*` branch.
 
 Start command:
-- `make start-gate` enforces worktree-only execution, current+primary clean checks, and remote guard checks via GitHub (`gh`).
+- `make prompt-gate` is the required prompt-entry command (clean tree runs start-gate + rebase + local guard; dirty tree enters continuation mode).
+- `make start-gate` is intentionally minimal and only validates branch/worktree safety.
 
 ### Phase A: Local Validation (required before commit)
 
 Run and record:
 
 ```bash
+# Optional for n8n-backed flows: export N8N_VERSION=<deployed-version>
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/pr_check_failure_triage.py --repo seeker71/Coherence-Network --base main --head-prefix codex/ --fail-on-detected
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ./scripts/thread-runtime.sh check
+
+# Optional auto-heal (only for merge-ready stale codex PRs):
+# python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict \
+#   --auto-merge-ready-stale --auto-merge-method merge
 ```
 
 Gate status:
@@ -86,6 +91,7 @@ Worktree notes:
 - It writes machine-readable artifacts under `docs/system_audit/pr_check_failures/`.
 - `thread-runtime.sh run-e2e` does runtime API smoke against the active local API and is cache-aware.
 - Remote/all mode also checks latest `Public Deploy Contract` health on `main` and blocks progression when deployment validation is failed or stale.
+- If `N8N_VERSION` is set (or `--n8n-version` is passed), the local guard enforces n8n security floor (`v1>=1.123.17`, `v2>=2.5.2`) and blocks push when below floor.
 - If running `./scripts/verify_worktree_local_web.sh` directly, npm cache defaults to per-worktree `<worktree>/.cache/npm` (override via `NPM_CACHE=...`).
 
 ### Phase B: CI Validation (required before merge)

@@ -21,6 +21,11 @@ def main() -> int:
     parser.add_argument("--min-execution-events", type=int, default=1, help="Minimum successful execution events per required provider")
     parser.add_argument("--run-probes", action="store_true", help="Run live provider execution probes before validation")
     parser.add_argument("--run-auto-heal", action="store_true", help="Run provider auto-heal attempts before validation")
+    parser.add_argument(
+        "--enable-cli-installs",
+        action="store_true",
+        help="Allow auto-heal to run provider CLI installers (cursor/claude-code) when binaries are missing",
+    )
     parser.add_argument("--heal-rounds", type=int, default=2, help="Auto-heal rounds per provider (max 6)")
     parser.add_argument("--json", action="store_true", help="Output JSON report")
     parser.add_argument("--fail-on-blocking", action="store_true", help="Exit non-zero when blocking issues exist")
@@ -34,6 +39,7 @@ def main() -> int:
             max_rounds=args.heal_rounds,
             runtime_window_seconds=args.runtime_window_seconds,
             min_execution_events=args.min_execution_events,
+            enable_cli_installs=args.enable_cli_installs,
         )
     readiness_report = automation_usage_service.provider_readiness_report(
         required_providers=required or None,

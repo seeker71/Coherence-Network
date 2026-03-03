@@ -1,0 +1,1 @@
+- generic [ref=e2]: "{ \"run\": \"post_fix_run_22309242010\", \"sha\": \"619419e\", \"status\": \"failed\", \"failed_stage\": \"plan\", \"stages\": [ { \"stage\": \"plan\", \"task_id\": \"task_020687a2e4e8a6fb\", \"status\": \"failed\", \"task_status\": \"failed\", \"model\": \"openclaw/gpt-5.3-codex\", \"claimed_by\": \"openai-codex:railway-runner-1\" } ] }"

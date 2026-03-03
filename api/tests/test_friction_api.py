@@ -163,6 +163,91 @@ async def test_friction_entry_points_include_monitor_and_failed_cost_sources(
 
 
 @pytest.mark.asyncio
+async def test_friction_categories_roll_up_entry_point_groups(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    events_file = tmp_path / "friction_events.jsonl"
+    monitor_file = tmp_path / "monitor_issues.json"
+    gha_file = tmp_path / "github_actions_health.json"
+    metrics_file = tmp_path / "metrics.jsonl"
+    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(events_file))
+    monkeypatch.setenv("MONITOR_ISSUES_PATH", str(monitor_file))
+    monkeypatch.setenv("GITHUB_ACTIONS_HEALTH_PATH", str(gha_file))
+    monkeypatch.setattr(metrics_service, "METRICS_FILE", str(metrics_file))
+
+    events_file.write_text(
+        json.dumps(
+            {
+                "id": "fric-rollup-1",
+                "timestamp": "2026-02-16T01:00:00Z",
+                "stage": "execution",
+                "block_type": "auth_failure",
+                "severity": "high",
+                "owner": "runner",
+                "unblock_condition": "refresh token",
+                "energy_loss_estimate": 4.0,
+                "cost_of_delay": 3.0,
+                "status": "open",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monitor_file.write_text(
+        json.dumps(
+            {
+                "issues": [
+                    {
+                        "condition": "pipeline_backlog_stalled",
+                        "severity": "high",
+                        "suggested_action": "Drain blocked backlog queue",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    gha_file.write_text(
+        json.dumps(
+            {
+                "available": True,
+                "completed_runs": 10,
+                "failed_runs": 3,
+                "failure_rate": 0.3,
+                "wasted_minutes_failed": 18.0,
+                "official_records": [],
+                "sample_failed_run_links": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    metrics_file.write_text(
+        json.dumps(
+            {
+                "task_id": "task-rollup",
+                "task_type": "impl",
+                "duration_seconds": 360.0,
+                "status": "failed",
+                "created_at": "2026-02-16T01:30:00Z",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        report = await client.get("/api/friction/categories?window_days=365&limit=20")
+
+    assert report.status_code == 200
+    body = report.json()
+    categories = {row["key"] for row in body["categories"]}
+    assert "friction" in categories
+    assert "monitor" in categories
+    assert "github-actions" in categories
+    assert "failed-tasks" in categories
+
+
+@pytest.mark.asyncio
 async def test_friction_events_bootstrap_into_db_backend(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

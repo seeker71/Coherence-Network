@@ -53,3 +53,26 @@ def test_blocking_failures_detection() -> None:
         )
         is True
     )
+
+
+def test_matches_branch_filter_prefers_exact_ref() -> None:
+    mod = _load_module()
+
+    assert (
+        mod._matches_branch_filter(
+            "codex/task-a",
+            head_prefix="codex/",
+            head_ref="codex/task-a",
+        )
+        is True
+    )
+    assert (
+        mod._matches_branch_filter(
+            "codex/task-b",
+            head_prefix="codex/",
+            head_ref="codex/task-a",
+        )
+        is False
+    )
+    assert mod._matches_branch_filter("codex/task-b", head_prefix="codex/", head_ref="") is True
+    assert mod._matches_branch_filter("feature/task-b", head_prefix="codex/", head_ref="") is False

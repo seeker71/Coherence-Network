@@ -1,0 +1,107 @@
+{
+  "base": "main",
+  "branch": "codex/self-improve-e2e-proof",
+  "deployment_health": {
+    "status": "skipped"
+  },
+  "generated_at": "2026-02-23T09:12:50Z",
+  "local_preflight": {
+    "auto_healed_artifacts": [],
+    "status": "pass",
+    "steps": [
+      {
+        "command": "git fetch origin main && git rebase origin/main",
+        "duration_seconds": 0.61,
+        "exit_code": 0,
+        "hint": "Branch freshness check passed.",
+        "name": "rebase-freshness-guard",
+        "ok": true,
+        "output_tail": "Branch `codex/self-improve-e2e-proof` is rebased on `origin/main`."
+      },
+      {
+        "command": "python3 scripts/validate_workflow_references.py",
+        "duration_seconds": 0.03,
+        "exit_code": 0,
+        "hint": "Fix missing/broken workflow file references in docs/specs before push.",
+        "name": "workflow-reference-guard",
+        "ok": true,
+        "output_tail": "{\n  \"checked_references\": 21,\n  \"missing_count\": 0,\n  \"missing\": []\n}"
+      },
+      {
+        "command": "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+        "duration_seconds": 0.04,
+        "exit_code": 0,
+        "hint": "Update changed specs to satisfy quality contract sections (acceptance, gaps, references).",
+        "name": "spec-quality-guard",
+        "ok": true,
+        "output_tail": "OK: no changed feature spec files detected in git range"
+      },
+      {
+        "command": "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+        "duration_seconds": 0.05,
+        "exit_code": 0,
+        "hint": "Commit evidence contract passed for CI-parity and worktree coverage validation.",
+        "name": "commit-evidence-guard",
+        "ok": true,
+        "output_tail": "$ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-23_self-improve-hosted-stage-unblock.json\nOK: evidence validation passed for docs/system_audit/commit_evidence_2026-02-23_self-improve-hosted-stage-unblock.json"
+      },
+      {
+        "command": "python3 scripts/check_runtime_drift.py",
+        "duration_seconds": 0.03,
+        "exit_code": 0,
+        "hint": "Review command output tail, fix root cause, and re-run this guard before push.",
+        "name": "runtime-drift-guard",
+        "ok": true,
+        "output_tail": "OK: runtime drift within allowlist baseline"
+      },
+      {
+        "command": "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+        "duration_seconds": 0.32,
+        "exit_code": 0,
+        "hint": "Address maintainability regressions or update baseline with explicit review evidence.",
+        "name": "maintainability-regression-guard",
+        "ok": true,
+        "output_tail": "Maintainability Audit\n====================\nseverity: high\nrisk_score: 173\ncounts: layer_violations=0, large_modules=7, very_large_modules=5, long_functions=16, placeholders=1\nregression: no\nrecommended_tasks:\n  - runtime-placeholder-elimination: roi=14.2857 cost_h=1.4 value=20.0\n  - architecture-modularization-review: roi=6.8493 cost_h=14.6 value=100.0"
+      },
+      {
+        "command": "cd api && pytest -q",
+        "duration_seconds": 149.73,
+        "exit_code": 0,
+        "hint": "Reproduce locally with failing test subset, fix implementation, re-run full api pytest.",
+        "name": "api-tests",
+        "ok": true,
+        "output_tail": "........................................................................ [ 17%]\n...................................................sssssssss..s......... [ 34%]\n........................................................................ [ 51%]\n........................................................................ [ 68%]\n........................................................................ [ 85%]\n.............................................................            [100%]\n=============================== warnings summary ===============================\napp/main.py:389\n  /Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof/api/app/main.py:389: DeprecationWarning: \n          on_event is deprecated, use lifespan event handlers instead.\n  \n          Read more about it in the\n          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n          \n    @app.on_event(\"startup\")\n\n../../../../../../opt/homebrew/lib/python3.11/site-packages/fastapi/applications.py:4573\n  /opt/homebrew/lib/python3.11/site-packages/fastapi/applications.py:4573: DeprecationWarning: \n          on_event is deprecated, use lifespan event handlers instead.\n  \n          Read more about it in the\n          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n          \n    return self.router.on_event(event_type)\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n411 passed, 10 skipped, 2 warnings in 149.28s (0:02:29)"
+      },
+      {
+        "command": "cd web && npm ci --allow-git=none && npm run build",
+        "duration_seconds": 16.67,
+        "exit_code": 0,
+        "hint": "Fix web build/type/runtime issues and re-run npm ci --allow-git=none && npm run build in web/.",
+        "name": "web-build",
+        "ok": true,
+        "output_tail": "> next build\n\n   \u25b2 Next.js 15.5.12\n\n   Creating an optimized production build ...\n \u2713 Compiled successfully in 3.9s\n   Linting and checking validity of types ...\n   Collecting page data ...\n   Generating static pages (0/26) ...\n   Generating static pages (6/26) \n   Generating static pages (12/26) \n   Generating static pages (19/26) \n \u2713 Generating static pages (26/26)\n   Finalizing page optimization ...\n   Collecting build traces ...\n\nRoute (app)                                 Size  First Load JS\n\u250c \u0192 /                                      183 B         106 kB\n\u251c \u25cb /_not-found                            999 B         103 kB\n\u251c \u0192 /agent                                 183 B         106 kB\n\u251c \u25cb /api-coverage                        4.04 kB         119 kB\n\u251c \u25cb /api-health                          1.35 kB         107 kB\n\u251c \u0192 /api/[...path]                         131 B         102 kB\n\u251c \u0192 /api/health-proxy                      131 B         102 kB\n\u251c \u0192 /api/runtime-beacon                    131 B         102 kB\n\u251c \u25cb /assets                              1.73 kB         107 kB\n\u251c \u0192 /automation                            183 B         106 kB\n\u251c \u25cb /contribute                          4.53 kB         110 kB\n\u251c \u25cb /contributions                       2.37 kB         108 kB\n\u251c \u25cb /contributors                        2.33 kB         108 kB\n\u251c \u0192 /flow                                  183 B         106 kB\n\u251c \u25cb /friction                            2.11 kB         108 kB\n\u251c \u25cb /gates                               2.72 kB         118 kB\n\u251c \u0192 /ideas                                 183 B         106 kB\n\u251c \u0192 /ideas/[idea_id]                       183 B         106 kB\n\u251c \u25cb /import                              2.42 kB         117 kB\n\u251c \u25cb /portfolio                           3.22 kB         118 kB\n\u251c \u0192 /project/[ecosystem]/[name]          1.72 kB         107 kB\n\u251c \u25cb /remote-ops                          4.66 kB         120 kB\n\u251c \u25cb /runtime                               131 B         102 kB\n\u251c \u25cb /search                               2.3 kB         117 kB\n\u251c \u0192 /specs                                 183 B         106 kB\n\u251c \u0192 /specs/[spec_id]                       183 B         106 kB\n\u251c \u25cb /tasks                               3.17 kB         109 kB\n\u2514 \u0192 /usage                                 183 B         106 kB\n+ First Load JS shared by all             102 kB\n  \u251c chunks/255-ebd51be49873d76c.js         46 kB\n  \u251c chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB\n  \u2514 other shared chunks (total)          1.92 kB\n\n\n\u25cb  (Static)   prerendered as static content\n\u0192  (Dynamic)  server-rendered on demand\n\n\nnpm warn Unknown cli config \"--allow-git\". This will stop working in the next major version of npm.\n(node:23325) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof/web/tailwind.config.ts?id=1771838132803 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+      },
+      {
+        "command": "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+        "duration_seconds": 12.12,
+        "exit_code": 0,
+        "hint": "Inspect API/web runtime logs emitted by verify_worktree_local_web.sh and fix failing route/runtime errors.",
+        "name": "worktree-runtime-web-guard",
+        "ok": true,
+        "output_tail": "==> API tasks: http://127.0.0.1:18039/api/agent/tasks\nHTTP status: 200\nPASS\n==> API system lineage: http://127.0.0.1:18039/api/inventory/system-lineage\nHTTP status: 200\nPASS\n==> API endpoint runtime summary: http://127.0.0.1:18039/api/runtime/endpoints/summary\nHTTP status: 200\nPASS\n==> Web root: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web root nav flow: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web root nav specs: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web root nav tasks: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web root nav contribute: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web root nav gates: http://127.0.0.1:3139/\nHTTP status: 200\nPASS\n==> Web ideas: http://127.0.0.1:3139/ideas\nHTTP status: 200\nPASS\n==> Web specs: http://127.0.0.1:3139/specs\nHTTP status: 200\nPASS\n==> Web flow: http://127.0.0.1:3139/flow\nHTTP status: 200\nPASS\n==> Web tasks: http://127.0.0.1:3139/tasks\nHTTP status: 200\nPASS\n==> Web gates: http://127.0.0.1:3139/gates\nHTTP status: 200\nPASS\n==> Web contribute: http://127.0.0.1:3139/contribute\nHTTP status: 200\nPASS\n==> Web API health page: http://127.0.0.1:3139/api-health\nHTTP status: 200\nPASS\n\nLocal worktree web validation passed.\n\n(node:27815) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof/web/tailwind.config.ts?id=1771838143481 is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof/web/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\nnpm notice\nnpm notice New minor version of npm available! 11.6.2 -> 11.10.1\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v11.10.1\nnpm notice To update run: npm install -g npm@11.10.1\nnpm notice"
+      }
+    ]
+  },
+  "mode": "local",
+  "optional_status_contexts": [
+    "vercel"
+  ],
+  "ready_for_push": true,
+  "remote_pr_checks": {
+    "status": "skipped"
+  },
+  "repo": "seeker71/Coherence-Network",
+  "repo_root": "/Users/ursmuff/.claude-worktrees/Coherence-Network/self-improve-e2e-proof",
+  "summary": "All selected checks passed.",
+  "tool": "scripts/worktree_pr_guard.py"
+}

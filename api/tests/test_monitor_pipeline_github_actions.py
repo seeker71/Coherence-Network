@@ -315,3 +315,132 @@ def test_run_check_adds_issue_for_unowned_failed_workflows(tmp_path, monkeypatch
 
     payload = monitor_pipeline._run_check(_Client(), logging.getLogger("test"), auto_fix=False, auto_recover=False)
     assert "github_actions_unowned_workflow_failures" in {row["condition"] for row in payload["issues"]}
+
+
+def test_run_check_flags_stale_ai_agent_intelligence_digest(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(tmp_path / "monitor_issues.json"))
+    monkeypatch.setattr(monitor_pipeline, "GITHUB_ACTIONS_HEALTH_FILE", str(tmp_path / "github_actions_health.json"))
+    monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE",
+        str(tmp_path / "public_deploy_contract_block_state.json"),
+    )
+    monkeypatch.setattr(monitor_pipeline, "_get_current_git_sha", lambda: "")
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_collect_github_actions_health",
+        lambda _log: {
+            "available": True,
+            "repo": "seeker71/Coherence-Network",
+            "completed_runs": 12,
+            "failed_runs": 0,
+            "failure_rate": 0.0,
+            "wasted_minutes_failed": 0.0,
+            "sample_failed_run_links": [],
+            "official_records": [],
+            "unowned_failed_workflows": [],
+            "active_waivers": [],
+        },
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_get_pipeline_process_args",
+        lambda: {"runner_workers": 5, "pm_parallel": True, "runner_seen": True, "pm_seen": True},
+    )
+    monkeypatch.setattr(monitor_pipeline, "_runner_log_has_recent_errors", lambda: (False, ""))
+    monkeypatch.setattr(monitor_pipeline, "_load_recent_failed_task_durations", lambda _now: [])
+    monkeypatch.setattr(monitor_pipeline, "_run_maintainability_audit_if_due", lambda _log: None)
+    monkeypatch.setattr(monitor_pipeline, "_run_meta_questions_if_due", lambda _log: None)
+    monkeypatch.setenv("AI_AGENT_INTELLIGENCE_MAX_AGE_DAYS", "14")
+
+    stale_generated = (datetime.now(timezone.utc) - timedelta(days=20)).isoformat()
+    digest_path = tmp_path / "ai_agent_biweekly_sources.json"
+    digest_path.write_text(
+        json.dumps({"generated_at": stale_generated, "sources": [{"url": "https://example.com"}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "AI_AGENT_INTELLIGENCE_DIGEST_FILE",
+        str(digest_path),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "AI_AGENT_SECURITY_WATCH_FILE",
+        str(tmp_path / "ai_agent_security_watch.json"),
+        raising=False,
+    )
+
+    payload = monitor_pipeline._run_check(_Client(), logging.getLogger("test"), auto_fix=False, auto_recover=False)
+    assert "ai_agent_intelligence_stale" in {row["condition"] for row in payload["issues"]}
+
+
+def test_run_check_flags_open_high_ai_agent_security_advisory(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(monitor_pipeline, "ISSUES_FILE", str(tmp_path / "monitor_issues.json"))
+    monkeypatch.setattr(monitor_pipeline, "GITHUB_ACTIONS_HEALTH_FILE", str(tmp_path / "github_actions_health.json"))
+    monkeypatch.setattr(monitor_pipeline, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "PUBLIC_DEPLOY_CONTRACT_BLOCK_STATE_FILE",
+        str(tmp_path / "public_deploy_contract_block_state.json"),
+    )
+    monkeypatch.setattr(monitor_pipeline, "_get_current_git_sha", lambda: "")
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_collect_github_actions_health",
+        lambda _log: {
+            "available": True,
+            "repo": "seeker71/Coherence-Network",
+            "completed_runs": 12,
+            "failed_runs": 0,
+            "failure_rate": 0.0,
+            "wasted_minutes_failed": 0.0,
+            "sample_failed_run_links": [],
+            "official_records": [],
+            "unowned_failed_workflows": [],
+            "active_waivers": [],
+        },
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "_get_pipeline_process_args",
+        lambda: {"runner_workers": 5, "pm_parallel": True, "runner_seen": True, "pm_seen": True},
+    )
+    monkeypatch.setattr(monitor_pipeline, "_runner_log_has_recent_errors", lambda: (False, ""))
+    monkeypatch.setattr(monitor_pipeline, "_load_recent_failed_task_durations", lambda _now: [])
+    monkeypatch.setattr(monitor_pipeline, "_run_maintainability_audit_if_due", lambda _log: None)
+    monkeypatch.setattr(monitor_pipeline, "_run_meta_questions_if_due", lambda _log: None)
+
+    digest_path = tmp_path / "ai_agent_biweekly_sources.json"
+    digest_path.write_text(
+        json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "sources": [{"url": "https://example.com"}]}),
+        encoding="utf-8",
+    )
+    security_path = tmp_path / "ai_agent_security_watch.json"
+    security_path.write_text(
+        json.dumps(
+            {
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "open_high_severity": [{"id": "CVE-2026-27794", "source": "NVD"}],
+                "open_critical_severity": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "AI_AGENT_INTELLIGENCE_DIGEST_FILE",
+        str(digest_path),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        monitor_pipeline,
+        "AI_AGENT_SECURITY_WATCH_FILE",
+        str(security_path),
+        raising=False,
+    )
+
+    payload = monitor_pipeline._run_check(_Client(), logging.getLogger("test"), auto_fix=False, auto_recover=False)
+    assert "ai_agent_security_advisory_open" in {row["condition"] for row in payload["issues"]}

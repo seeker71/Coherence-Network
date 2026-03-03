@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 
-const HEALTH_POLL_INTERVAL_MS = 15000;
+const HEALTH_POLL_INTERVAL_MS = 60000;
 const HEALTH_REQUEST_TIMEOUT_MS = 10000;
 
 export default function ApiHealthPage() {
@@ -84,7 +84,7 @@ export default function ApiHealthPage() {
       </div>
       <h1 className="text-2xl font-bold mb-4">API Health</h1>
       <p className="mb-3 text-sm text-gray-600">
-        Auto-refresh every 15s. {lastUpdated ? `Last updated: ${lastUpdated}` : "Waiting for first response..."}
+        Auto-refresh every 60s. {lastUpdated ? `Last updated: ${lastUpdated}` : "Waiting for first response..."}
       </p>
       {status === "loading" && <p>Checking API health via {proxyUrl} (upstream: {apiUrl}/api/health)...</p>}
       {status === "ok" && data && (

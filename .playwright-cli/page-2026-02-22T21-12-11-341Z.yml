@@ -1,0 +1,150 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "Coherence Network" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e6]:
+        - link "Search" [ref=e7] [cursor=pointer]:
+          - /url: /search
+        - link "Portfolio" [ref=e8] [cursor=pointer]:
+          - /url: /portfolio
+        - link "Flow" [ref=e9] [cursor=pointer]:
+          - /url: /flow
+        - link "Ideas" [ref=e10] [cursor=pointer]:
+          - /url: /ideas
+        - link "Specs" [ref=e11] [cursor=pointer]:
+          - /url: /specs
+        - link "Usage" [ref=e12] [cursor=pointer]:
+          - /url: /usage
+        - link "Automation" [ref=e13] [cursor=pointer]:
+          - /url: /automation
+        - link "Agent" [ref=e14] [cursor=pointer]:
+          - /url: /agent
+        - link "Friction" [ref=e15] [cursor=pointer]:
+          - /url: /friction
+        - link "Gates" [ref=e16] [cursor=pointer]:
+          - /url: /gates
+        - link "Remote Ops" [ref=e17] [cursor=pointer]:
+          - /url: /remote-ops
+      - navigation [ref=e18]:
+        - link "Contribute" [ref=e19] [cursor=pointer]:
+          - /url: /contribute
+        - link "Contributors" [ref=e20] [cursor=pointer]:
+          - /url: /contributors
+        - link "Contributions" [ref=e21] [cursor=pointer]:
+          - /url: /contributions
+        - link "Assets" [ref=e22] [cursor=pointer]:
+          - /url: /assets
+        - link "Tasks" [ref=e23] [cursor=pointer]:
+          - /url: /tasks
+        - link "Import" [ref=e24] [cursor=pointer]:
+          - /url: /import
+        - link "API Health" [ref=e25] [cursor=pointer]:
+          - /url: /api-health
+      - generic [ref=e26]:
+        - 'textbox "Search packages: react, fastapi, neo4j" [ref=e27]'
+        - button "Go" [ref=e28]
+      - link "API Docs" [ref=e29] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/docs
+  - generic [ref=e31]:
+    - paragraph [ref=e32]:
+      - text: Live updates
+      - strong [ref=e33]: "ON"
+      - text: "| path"
+      - code [ref=e34]: /usage
+      - text: "| last refresh"
+      - code [ref=e35]: never
+    - button "Pause live updates" [ref=e36]
+  - generic [ref=e38]:
+    - paragraph [ref=e39]:
+      - text: Context path
+      - code [ref=e40]: /usage
+      - text: "| idea"
+      - code [ref=e41]: coherence-network-value-attribution
+    - generic [ref=e42]:
+      - link "Search" [ref=e43] [cursor=pointer]:
+        - /url: /search
+      - link "Portfolio" [ref=e44] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Flow" [ref=e45] [cursor=pointer]:
+        - /url: /flow
+      - link "Contribute" [ref=e46] [cursor=pointer]:
+        - /url: /contribute
+      - link "Ideas" [ref=e47] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e48] [cursor=pointer]:
+        - /url: /specs
+      - link "Automation" [ref=e49] [cursor=pointer]:
+        - /url: /automation
+      - link "Agent" [ref=e50] [cursor=pointer]:
+        - /url: /agent
+      - link "Friction" [ref=e51] [cursor=pointer]:
+        - /url: /friction
+      - link "Contributors" [ref=e52] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e53] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e54] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e55] [cursor=pointer]:
+        - /url: /tasks
+      - link "Remote Ops" [ref=e56] [cursor=pointer]:
+        - /url: /remote-ops
+      - link "Import" [ref=e57] [cursor=pointer]:
+        - /url: /import
+      - link "API Health" [ref=e58] [cursor=pointer]:
+        - /url: /api-health
+      - link "Gates" [ref=e59] [cursor=pointer]:
+        - /url: /gates
+      - link "Idea root" [ref=e60] [cursor=pointer]:
+        - /url: /ideas/coherence-network-value-attribution
+      - link "Runtime summary" [ref=e61] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/runtime/ideas/summary?seconds=86400
+      - link "Friction report" [ref=e62] [cursor=pointer]:
+        - /url: https://coherence-network-production.up.railway.app/api/friction/report?window_days=7
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - link "← Home" [ref=e65] [cursor=pointer]:
+        - /url: /
+      - link "Portfolio" [ref=e66] [cursor=pointer]:
+        - /url: /portfolio
+      - link "Ideas" [ref=e67] [cursor=pointer]:
+        - /url: /ideas
+      - link "Specs" [ref=e68] [cursor=pointer]:
+        - /url: /specs
+      - link "Flow" [ref=e69] [cursor=pointer]:
+        - /url: /flow
+      - link "Contributors" [ref=e70] [cursor=pointer]:
+        - /url: /contributors
+      - link "Contributions" [ref=e71] [cursor=pointer]:
+        - /url: /contributions
+      - link "Assets" [ref=e72] [cursor=pointer]:
+        - /url: /assets
+      - link "Tasks" [ref=e73] [cursor=pointer]:
+        - /url: /tasks
+      - link "Agent" [ref=e74] [cursor=pointer]:
+        - /url: /agent
+      - link "Gates" [ref=e75] [cursor=pointer]:
+        - /url: /gates
+    - heading "Usage" [level=1] [ref=e76]
+    - paragraph [ref=e77]: Runtime telemetry + friction summary (machine data rendered for humans).
+    - paragraph [ref=e78]: "Partial data mode: unavailable runtime telemetry, friction report, subscription estimator."
+    - generic [ref=e79]:
+      - heading "Friction (7d)" [level=2] [ref=e80]
+      - paragraph [ref=e81]: total_events 0 | open 0 | energy_loss 0
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - paragraph [ref=e84]: Top block types
+          - list
+        - generic [ref=e85]:
+          - paragraph [ref=e86]: Top stages
+          - list
+    - generic [ref=e87]:
+      - heading "Subscription Upgrade Estimator" [level=2] [ref=e88]
+      - paragraph [ref=e89]: detected 0 | current $0.00 | next $0.00 | delta $0.00
+      - list
+    - generic [ref=e90]:
+      - heading "Runtime Cost by Idea (24h)" [level=2] [ref=e91]
+      - paragraph [ref=e92]: window_seconds 86400
+      - list
+  - alert [ref=e93]

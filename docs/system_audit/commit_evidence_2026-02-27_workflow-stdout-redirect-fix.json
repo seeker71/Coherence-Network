@@ -1,0 +1,65 @@
+{
+  "date": "2026-02-27",
+  "thread_branch": "main",
+  "commit_scope": "Fix stdout redirect in claude-code-host-runner-task.yml: use >/tmp/phase*.json instead of 2>/tmp/phase*.json so --output-format json output is captured.",
+  "files_owned": [
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_workflow-stdout-redirect-fix.json"
+  ],
+  "change_files": [
+    ".github/workflows/claude-code-host-runner-task.yml",
+    "docs/system_audit/commit_evidence_2026-02-27_workflow-stdout-redirect-fix.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-code",
+      "contributor_type": "machine",
+      "roles": ["implementation", "bug-fix"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["decision"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "2.1.42"
+  },
+  "evidence_refs": [
+    "Run 22499270717 confirmed: claude --output-format json writes JSON to stdout; 2>/tmp/phase*.json captured stderr (empty), not the JSON",
+    "Fix: changed all three phase redirects from 2>/tmp/phase*.json to >/tmp/phase*.json",
+    "Phase 1 Opus assessment ran successfully (2m, $0.73, 15 turns) despite file redirect error"
+  ],
+  "idea_ids": [
+    "claude-code-executor-provider",
+    "strong-cheap-strong-workflow"
+  ],
+  "spec_ids": [
+    "claude-code-executor-provider"
+  ],
+  "task_ids": [
+    "strong-cheap-strong-workflow-fix"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocking_reason": "ci_validation pending — need successful strong-cheap-strong run to confirm fix"
+  },
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "grep >/tmp/phase .github/workflows/claude-code-host-runner-task.yml  →  3 lines confirmed"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "expected": [
+      "claude-code-host-runner-task.yml strong-cheap-strong run: all 3 phases complete with modelUsage in summary"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Workflow-only change; no runtime service change"
+  }
+}

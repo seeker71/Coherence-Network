@@ -171,7 +171,7 @@ For Edit/Bash tools to work:
 
 - **Local:** `glm-4.7-flash:latest` — Ollama 0.15.x+, native tool calling
 - **Cloud fallback:** `glm-5:cloud` — use `model_override: "glm-5:cloud"` in context; requires `ollama signin`
-- **Claude fallback:** `claude-3-5-haiku-20241022` — use `model_override`; requires `ANTHROPIC_API_KEY`
+- **Claude fallback:** `claude-3-5-haiku` — use `model_override`; requires `ANTHROPIC_API_KEY`
 
 ```bash
 ollama pull glm-4.7-flash:latest

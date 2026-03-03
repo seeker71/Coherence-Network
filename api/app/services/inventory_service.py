@@ -91,11 +91,33 @@ _ASSET_MODULARITY_LIMITS: dict[str, int] = {
     "implementation_file_lines": 450,
 }
 
+_ROI_SPEC_CHEAP_MODEL = "openai/gpt-4o-mini"
+_ROI_SPEC_TASK_INPUT_MAX_TOKENS = 1200
+_ROI_SPEC_TASK_OUTPUT_MAX_TOKENS = 300
+_ROI_SPEC_CHUNK_PLAN: tuple[tuple[str, str, str], ...] = (
+    (
+        "scope_roi",
+        "Scope and ROI frame",
+        "Constrain to a small deliverable and restate explicit ROI signal assumptions.",
+    ),
+    (
+        "process_pseudocode",
+        "Process and pseudocode",
+        "Write process+pseudocode for the narrowed scope only; avoid broad refactors.",
+    ),
+    (
+        "validation_rollout",
+        "Validation and rollout",
+        "Define measurable validation plus rollout guardrails tied to ROI updates.",
+    ),
+)
+
 logger = logging.getLogger("coherence.inventory")
 
 _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
     "system_lineage": {"expires_at": 0.0, "items": {}},
     "flow": {"expires_at": 0.0, "items": {}},
+    "idea_cards": {"expires_at": 0.0, "items": {}},
 }
 
 
@@ -1113,6 +1135,942 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
     return report
 
 
+def _numeric(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _roi_from_fields(potential_value: float, estimated_cost: float) -> float:
+    if estimated_cost <= 0:
+        return 0.0
+    return round(float(potential_value) / float(estimated_cost), 4)
+
+
+def _normalize_roi_fields(
+    *,
+    potential_value: float,
+    estimated_cost: float,
+    actual_value: float,
+    actual_cost: float,
+    normalize_missing_roi: bool,
+) -> tuple[float, float, dict[str, float]]:
+    if not normalize_missing_roi:
+        return potential_value, estimated_cost, {}
+    update_data: dict[str, float] = {}
+    if potential_value <= 0:
+        update_data["potential_value"] = round(max(actual_value, 1.0), 4)
+    if estimated_cost <= 0:
+        update_data["estimated_cost"] = round(max(actual_cost, 1.0), 4)
+    if actual_value > max(potential_value, update_data.get("potential_value", 0.0)):
+        update_data["potential_value"] = round(max(actual_value, 1.0), 4)
+    return (
+        float(update_data.get("potential_value", potential_value)),
+        float(update_data.get("estimated_cost", estimated_cost)),
+        update_data,
+    )
+
+
+def _calibrate_estimated_cost_toward_actual(
+    *,
+    potential_value: float,
+    estimated_cost: float,
+    estimated_roi: float,
+    actual_value: float,
+    actual_cost: float,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> dict[str, float] | None:
+    actual_roi = _roi_from_fields(actual_value, actual_cost)
+    if not (
+        calibrate_estimators
+        and potential_value > 0
+        and estimated_cost > 0
+        and actual_value > 0
+        and actual_cost > 0
+        and actual_roi > 0
+    ):
+        return None
+    target_estimated_cost = potential_value / actual_roi
+    blended_cost = round(
+        max(0.1, estimated_cost + (target_estimated_cost - estimated_cost) * max(0.0, min(calibration_alpha, 1.0))),
+        4,
+    )
+    before_gap = abs(estimated_roi - actual_roi)
+    after_roi = _roi_from_fields(potential_value, blended_cost)
+    after_gap = abs(after_roi - actual_roi)
+    if blended_cost == estimated_cost or after_gap >= before_gap:
+        return None
+    return {
+        "estimated_cost_after": blended_cost,
+        "estimated_roi_after": after_roi,
+        "actual_roi": actual_roi,
+        "error_before": round(before_gap, 4),
+        "error_after": round(after_gap, 4),
+    }
+
+
+def _idea_row_metrics(row: Any) -> dict[str, Any] | None:
+    idea_id = str(getattr(row, "id", "") or "").strip()
+    if not idea_id:
+        return None
+    return {
+        "idea_id": idea_id,
+        "name": str(getattr(row, "name", "") or "").strip() or idea_id,
+        "potential_value": _numeric(getattr(row, "potential_value", 0.0)),
+        "estimated_cost": _numeric(getattr(row, "estimated_cost", 0.0)),
+        "actual_value": _numeric(getattr(row, "actual_value", 0.0)),
+        "actual_cost": _numeric(getattr(row, "actual_cost", 0.0)),
+        "free_energy_score": _numeric(getattr(row, "free_energy_score", 0.0)),
+    }
+
+
+def _spec_row_metrics(row: Any) -> dict[str, Any] | None:
+    spec_id = str(getattr(row, "spec_id", "") or "").strip()
+    if not spec_id:
+        return None
+    source_path = str(getattr(row, "source_path", "") or "").strip() or _spec_source_path_for_id(spec_id) or ""
+    return {
+        "spec_id": spec_id,
+        "title": str(getattr(row, "title", "") or "").strip() or spec_id,
+        "idea_id": str(getattr(row, "idea_id", "") or "").strip(),
+        "source_path": source_path,
+        "potential_value": _numeric(getattr(row, "potential_value", 0.0)),
+        "estimated_cost": _numeric(getattr(row, "estimated_cost", 0.0)),
+        "actual_value": _numeric(getattr(row, "actual_value", 0.0)),
+        "actual_cost": _numeric(getattr(row, "actual_cost", 0.0)),
+    }
+
+
+def _build_idea_roi_candidate(
+    row: Any,
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    metrics = _idea_row_metrics(row)
+    if metrics is None:
+        return None, None, None
+    idea_id = str(metrics["idea_id"])
+    potential_value, estimated_cost, update_data = _normalize_roi_fields(
+        potential_value=float(metrics["potential_value"]),
+        estimated_cost=float(metrics["estimated_cost"]),
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        normalize_missing_roi=normalize_missing_roi,
+    )
+    normalized_update: dict[str, Any] | None = None
+    if update_data:
+        idea_service.update_idea(
+            idea_id,
+            potential_value=update_data.get("potential_value"),
+            estimated_cost=update_data.get("estimated_cost"),
+        )
+        normalized_update = {"idea_id": idea_id, **update_data}
+
+    estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+    calibration_data = _calibrate_estimated_cost_toward_actual(
+        potential_value=potential_value,
+        estimated_cost=estimated_cost,
+        estimated_roi=estimated_roi,
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=calibration_alpha,
+    )
+    calibration_update: dict[str, Any] | None = None
+    if calibration_data is not None:
+        idea_service.update_idea(idea_id, estimated_cost=calibration_data["estimated_cost_after"])
+        calibration_update = {
+            "idea_id": idea_id,
+            "estimated_cost_before": round(estimated_cost, 4),
+            "estimated_cost_after": calibration_data["estimated_cost_after"],
+            "estimated_roi_before": estimated_roi,
+            "estimated_roi_after": calibration_data["estimated_roi_after"],
+            "actual_roi": calibration_data["actual_roi"],
+            "error_before": calibration_data["error_before"],
+            "error_after": calibration_data["error_after"],
+        }
+        estimated_cost = float(calibration_data["estimated_cost_after"])
+        estimated_roi = float(calibration_data["estimated_roi_after"])
+
+    candidate = {
+        "idea_id": idea_id,
+        "name": metrics["name"],
+        "potential_value": round(potential_value, 4),
+        "estimated_cost": round(estimated_cost, 4),
+        "actual_value": round(float(metrics["actual_value"]), 4),
+        "actual_cost": round(float(metrics["actual_cost"]), 4),
+        "estimated_roi": estimated_roi,
+        "actual_roi": _roi_from_fields(float(metrics["actual_value"]), float(metrics["actual_cost"])),
+        "free_energy_score": round(float(metrics["free_energy_score"]), 4),
+        "task_fingerprint": f"roi_idea_progress::{idea_id}",
+    }
+    return candidate, normalized_update, calibration_update
+
+
+def _build_spec_roi_candidate(
+    row: Any,
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    metrics = _spec_row_metrics(row)
+    if metrics is None:
+        return None, None, None
+    spec_id = str(metrics["spec_id"])
+    potential_value, estimated_cost, update_data = _normalize_roi_fields(
+        potential_value=float(metrics["potential_value"]),
+        estimated_cost=float(metrics["estimated_cost"]),
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        normalize_missing_roi=normalize_missing_roi,
+    )
+    normalized_update: dict[str, Any] | None = None
+    if update_data:
+        spec_registry_service.update_spec(spec_id, SpecRegistryUpdate(**update_data))
+        normalized_update = {"spec_id": spec_id, **update_data}
+
+    estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+    calibration_data = _calibrate_estimated_cost_toward_actual(
+        potential_value=potential_value,
+        estimated_cost=estimated_cost,
+        estimated_roi=estimated_roi,
+        actual_value=float(metrics["actual_value"]),
+        actual_cost=float(metrics["actual_cost"]),
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=calibration_alpha,
+    )
+    calibration_update: dict[str, Any] | None = None
+    if calibration_data is not None:
+        spec_registry_service.update_spec(spec_id, SpecRegistryUpdate(estimated_cost=calibration_data["estimated_cost_after"]))
+        calibration_update = {
+            "spec_id": spec_id,
+            "estimated_cost_before": round(estimated_cost, 4),
+            "estimated_cost_after": calibration_data["estimated_cost_after"],
+            "estimated_roi_before": estimated_roi,
+            "estimated_roi_after": calibration_data["estimated_roi_after"],
+            "actual_roi": calibration_data["actual_roi"],
+            "error_before": calibration_data["error_before"],
+            "error_after": calibration_data["error_after"],
+        }
+        estimated_cost = float(calibration_data["estimated_cost_after"])
+        estimated_roi = float(calibration_data["estimated_roi_after"])
+
+    candidate = {
+        "spec_id": spec_id,
+        "title": metrics["title"],
+        "idea_id": metrics["idea_id"],
+        "source_path": metrics["source_path"],
+        "potential_value": round(potential_value, 4),
+        "estimated_cost": round(estimated_cost, 4),
+        "actual_value": round(float(metrics["actual_value"]), 4),
+        "actual_cost": round(float(metrics["actual_cost"]), 4),
+        "estimated_roi": estimated_roi,
+        "actual_roi": _roi_from_fields(float(metrics["actual_value"]), float(metrics["actual_cost"])),
+        "task_fingerprint": f"roi_spec_progress::{spec_id}",
+    }
+    return candidate, normalized_update, calibration_update
+
+
+def _apply_idea_roi_normalization_and_calibration(
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+    limit: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, float]]:
+    response = idea_service.list_ideas(limit=max(1, min(limit, 500)), offset=0)
+    rows = list(getattr(response, "ideas", []) or [])
+    normalized_updates: list[dict[str, Any]] = []
+    calibration_updates: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    roi_map: dict[str, float] = {}
+    ideas_with_potential_roi = 0
+
+    for row in rows:
+        candidate, normalized_update, calibration_update = _build_idea_roi_candidate(
+            row,
+            normalize_missing_roi=normalize_missing_roi,
+            calibrate_estimators=calibrate_estimators,
+            calibration_alpha=calibration_alpha,
+        )
+        if candidate is None:
+            continue
+        if normalized_update is not None:
+            normalized_updates.append(normalized_update)
+        if calibration_update is not None:
+            calibration_updates.append(calibration_update)
+        if float(candidate["potential_value"]) > 0 and float(candidate["estimated_cost"]) > 0:
+            ideas_with_potential_roi += 1
+        roi_map[str(candidate["idea_id"])] = float(candidate["estimated_roi"])
+        candidates.append(candidate)
+
+    candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            -float(item.get("free_energy_score") or 0.0),
+            str(item.get("idea_id") or ""),
+        )
+    )
+
+    normalization = {
+        "normalized_count": len(normalized_updates),
+        "updates": normalized_updates,
+    }
+    calibration = {
+        "evaluated_count": sum(
+            1 for row in candidates if float(row.get("actual_value") or 0.0) > 0 and float(row.get("actual_cost") or 0.0) > 0
+        ),
+        "updated_count": len(calibration_updates),
+        "updates": calibration_updates,
+    }
+    coverage = {
+        "total": len(candidates),
+        "with_potential_roi": ideas_with_potential_roi,
+    }
+    return candidates, normalization, calibration, coverage
+
+
+def _apply_spec_roi_normalization_and_calibration(
+    *,
+    normalize_missing_roi: bool,
+    calibrate_estimators: bool,
+    calibration_alpha: float,
+    limit: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, float], dict[str, float]]:
+    rows = spec_registry_service.list_specs(limit=max(1, min(limit, 5000)), offset=0)
+    normalized_updates: list[dict[str, Any]] = []
+    calibration_updates: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    roi_map: dict[str, float] = {}
+    specs_with_potential_roi = 0
+
+    for row in rows:
+        candidate, normalized_update, calibration_update = _build_spec_roi_candidate(
+            row,
+            normalize_missing_roi=normalize_missing_roi,
+            calibrate_estimators=calibrate_estimators,
+            calibration_alpha=calibration_alpha,
+        )
+        if candidate is None:
+            continue
+        if normalized_update is not None:
+            normalized_updates.append(normalized_update)
+        if calibration_update is not None:
+            calibration_updates.append(calibration_update)
+        if float(candidate["potential_value"]) > 0 and float(candidate["estimated_cost"]) > 0:
+            specs_with_potential_roi += 1
+        roi_map[str(candidate["spec_id"])] = float(candidate["estimated_roi"])
+        candidates.append(candidate)
+
+    candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+
+    normalization = {
+        "normalized_count": len(normalized_updates),
+        "updates": normalized_updates,
+    }
+    calibration = {
+        "evaluated_count": sum(
+            1 for row in candidates if float(row.get("actual_value") or 0.0) > 0 and float(row.get("actual_cost") or 0.0) > 0
+        ),
+        "updated_count": len(calibration_updates),
+        "updates": calibration_updates,
+    }
+    coverage = {
+        "total": len(candidates),
+        "with_potential_roi": specs_with_potential_roi,
+    }
+    return candidates, normalization, calibration, coverage, roi_map
+
+
+def _build_implementation_roi_candidates(
+    *,
+    limit: int,
+    fallback_roi_by_spec: dict[str, float],
+) -> list[dict[str, Any]]:
+    candidates = _spec_implementation_gap_candidates(limit=max(1, min(limit, 1000)))
+    rows: list[dict[str, Any]] = []
+    for row in candidates:
+        spec_id = str(row.get("spec_id") or "").strip()
+        if not spec_id:
+            continue
+        estimated_roi = _numeric(row.get("estimated_roi"), default=0.0)
+        if estimated_roi <= 0:
+            estimated_roi = _numeric(fallback_roi_by_spec.get(spec_id), default=0.0)
+        title = str(row.get("title") or "").strip() or spec_id
+        source_path = str(row.get("source_path") or "").strip()
+        rows.append(
+            {
+                "spec_id": spec_id,
+                "title": title,
+                "source_path": source_path,
+                "estimated_roi": round(estimated_roi, 4),
+                "task_fingerprint": f"roi_impl_progress::{spec_id}",
+            }
+        )
+    rows.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+    return rows
+
+
+def _supplement_spec_candidates_from_discovery(
+    *,
+    needed: int,
+    existing_spec_ids: set[str],
+    seed_registry: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if needed <= 0:
+        return [], []
+    discovered, _ = _discover_specs(limit=max(needed * 12, 120))
+    supplemental: list[dict[str, Any]] = []
+    seeded_updates: list[dict[str, Any]] = []
+
+    for row in discovered:
+        raw_spec_id = str(row.get("spec_id") or "").strip()
+        if not raw_spec_id or raw_spec_id in existing_spec_ids:
+            continue
+        match = re.match(r"^(\d{3})", raw_spec_id)
+        if not match:
+            continue
+        spec_id = match.group(1)
+        if spec_id in existing_spec_ids:
+            continue
+
+        title = str(row.get("title") or "").strip() or spec_id
+        source_path = str(row.get("source_path") or row.get("path") or "").strip()
+        skip_check_text = f"{source_path} {title}".lower()
+        if any(hint in skip_check_text for hint in _SPEC_COVERAGE_SKIP_HINTS):
+            continue
+
+        potential_value = 24.0
+        estimated_cost = 4.0
+        estimated_roi = _roi_from_fields(potential_value, estimated_cost)
+
+        if seed_registry:
+            try:
+                created = spec_registry_service.create_spec(
+                    SpecRegistryCreate(
+                        spec_id=spec_id,
+                        title=title,
+                        summary=(
+                            "Auto-seeded ROI baseline from spec discovery so prioritized ROI planning can "
+                            "include this spec in queue generation."
+                        ),
+                        potential_value=potential_value,
+                        estimated_cost=estimated_cost,
+                        actual_value=0.0,
+                        actual_cost=0.0,
+                        idea_id=_TRACEABILITY_GAP_DEFAULT_IDEA_ID,
+                        process_summary="Auto-seeded process summary for ROI queueing.",
+                        pseudocode_summary="Auto-seeded pseudocode summary for ROI queueing.",
+                        implementation_summary="Auto-seeded implementation summary for ROI queueing.",
+                    )
+                )
+                if created is not None:
+                    seeded_updates.append(
+                        {
+                            "spec_id": spec_id,
+                            "source": "discovered_spec_seed",
+                            "potential_value": potential_value,
+                            "estimated_cost": estimated_cost,
+                        }
+                    )
+            except Exception:
+                pass
+
+        supplemental.append(
+            {
+                "spec_id": spec_id,
+                "title": title,
+                "idea_id": "",
+                "potential_value": potential_value,
+                "estimated_cost": estimated_cost,
+                "actual_value": 0.0,
+                "actual_cost": 0.0,
+                "estimated_roi": estimated_roi,
+                "actual_roi": 0.0,
+                "source_path": source_path,
+                "task_fingerprint": f"roi_spec_progress::{spec_id}",
+                "roi_source": "spec_discovery_default",
+            }
+        )
+        existing_spec_ids.add(spec_id)
+        if len(supplemental) >= needed:
+            break
+
+    return supplemental, seeded_updates
+
+
+def _create_progress_tasks(
+    *,
+    rows: list[dict[str, Any]],
+    per_category: int,
+    task_type: TaskType,
+    source: str,
+    direction_builder: Any,
+    context_builder: Any,
+) -> tuple[list[dict[str, Any]], int]:
+    created: list[dict[str, Any]] = []
+    skipped_existing = 0
+    for row in rows[:per_category]:
+        fingerprint = str(row.get("task_fingerprint") or "").strip()
+        if fingerprint and agent_service.find_active_task_by_fingerprint(fingerprint) is not None:
+            skipped_existing += 1
+            continue
+        direction = str(direction_builder(row)).strip()
+        context = context_builder(row)
+        context = dict(context) if isinstance(context, dict) else {}
+        context["source"] = source
+        context["task_fingerprint"] = fingerprint
+        task = agent_service.create_task(
+            AgentTaskCreate(
+                direction=direction,
+                task_type=task_type,
+                context=context,
+            )
+        )
+        created.append(
+            {
+                "task_id": task["id"],
+                "task_type": task_type.value,
+                "fingerprint": fingerprint,
+                "estimated_roi": float(row.get("estimated_roi") or 0.0),
+            }
+        )
+    return created, skipped_existing
+
+
+def _merge_supplemental_spec_candidates(
+    *,
+    spec_candidates: list[dict[str, Any]],
+    spec_normalization: dict[str, Any],
+    spec_coverage: dict[str, Any],
+    spec_roi_map: dict[str, float],
+    supplemental_specs: list[dict[str, Any]],
+    seeded_spec_updates: list[dict[str, Any]],
+) -> None:
+    if not supplemental_specs:
+        return
+    spec_candidates.extend(supplemental_specs)
+    spec_candidates.sort(key=lambda item: (-float(item.get("estimated_roi") or 0.0), str(item.get("spec_id") or "")))
+    spec_coverage["total"] = int(spec_coverage.get("total", 0)) + len(supplemental_specs)
+    spec_coverage["with_potential_roi"] = int(spec_coverage.get("with_potential_roi", 0)) + len(supplemental_specs)
+    spec_normalization["normalized_count"] = int(spec_normalization.get("normalized_count", 0)) + len(seeded_spec_updates)
+    spec_normalization.setdefault("updates", [])
+    if isinstance(spec_normalization["updates"], list):
+        spec_normalization["updates"].extend(seeded_spec_updates)
+    for row in supplemental_specs:
+        spec_id = str(row.get("spec_id") or "").strip()
+        if spec_id and spec_id not in spec_roi_map:
+            spec_roi_map[spec_id] = float(row.get("estimated_roi") or 0.0)
+
+
+def _ensure_implementation_candidate_floor(
+    *,
+    implementation_candidates: list[dict[str, Any]],
+    spec_candidates: list[dict[str, Any]],
+    requested: int,
+) -> None:
+    if len(implementation_candidates) >= requested:
+        return
+    existing_impl_specs = {
+        str(row.get("spec_id") or "").strip() for row in implementation_candidates if str(row.get("spec_id") or "").strip()
+    }
+    for spec_row in spec_candidates:
+        spec_id = str(spec_row.get("spec_id") or "").strip()
+        if not spec_id or spec_id in existing_impl_specs:
+            continue
+        implementation_candidates.append(
+            {
+                "spec_id": spec_id,
+                "title": str(spec_row.get("title") or spec_id),
+                "source_path": str(spec_row.get("source_path") or _spec_source_path_for_id(spec_id) or ""),
+                "estimated_roi": round(float(spec_row.get("estimated_roi") or 0.0), 4),
+                "task_fingerprint": f"roi_impl_progress::{spec_id}",
+            }
+        )
+        existing_impl_specs.add(spec_id)
+        if len(implementation_candidates) >= requested:
+            break
+    implementation_candidates.sort(
+        key=lambda item: (
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+
+
+def _idea_ids_with_linked_specs(spec_candidates: list[dict[str, Any]]) -> set[str]:
+    out: set[str] = set()
+    for row in spec_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        if idea_id:
+            out.add(idea_id)
+    return out
+
+
+def _prioritize_idea_candidates_for_spec_gaps(
+    idea_candidates: list[dict[str, Any]],
+    spec_candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    idea_ids_with_specs = _idea_ids_with_linked_specs(spec_candidates)
+    prioritized: list[dict[str, Any]] = []
+    for row in idea_candidates:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        has_linked_spec = bool(idea_id and idea_id in idea_ids_with_specs)
+        enriched = dict(row)
+        enriched["has_linked_spec"] = has_linked_spec
+        enriched["spec_gap_priority"] = bool(not has_linked_spec and float(enriched.get("estimated_roi") or 0.0) > 0.0)
+        prioritized.append(enriched)
+    prioritized.sort(
+        key=lambda item: (
+            not bool(item.get("spec_gap_priority")),
+            -float(item.get("estimated_roi") or 0.0),
+            -float(item.get("free_energy_score") or 0.0),
+            str(item.get("idea_id") or ""),
+        )
+    )
+    return prioritized
+
+
+def _spec_chunk_rows_for_cheap_execution(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    chunk_total = len(_ROI_SPEC_CHUNK_PLAN)
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        spec_id = str(row.get("spec_id") or "").strip()
+        if not spec_id:
+            continue
+        for chunk_index, (chunk_key, chunk_label, chunk_goal) in enumerate(_ROI_SPEC_CHUNK_PLAN, start=1):
+            chunk_row = dict(row)
+            chunk_row["task_fingerprint"] = f"roi_spec_progress::{spec_id}::{chunk_key}"
+            chunk_row["spec_chunk"] = {
+                "chunk_key": chunk_key,
+                "chunk_label": chunk_label,
+                "chunk_goal": chunk_goal,
+                "chunk_index": chunk_index,
+                "chunk_total": chunk_total,
+            }
+            out.append(chunk_row)
+    out.sort(
+        key=lambda item: (
+            int((item.get("spec_chunk") or {}).get("chunk_index") or 99),
+            -float(item.get("estimated_roi") or 0.0),
+            str(item.get("spec_id") or ""),
+        )
+    )
+    return out
+
+
+def _build_idea_progress_direction(row: dict[str, Any]) -> str:
+    gap_hint = ""
+    if not bool(row.get("has_linked_spec")):
+        gap_hint = " No linked spec exists yet; seed a focused spec with explicit ROI estimates first."
+    return (
+        f"Advance high-ROI idea '{row['idea_id']}' ({row['name']})."
+        f"{gap_hint} "
+        "Define the next measurable spec checkpoint, acceptance tests, and expected ROI signal updates."
+    )
+
+
+def _build_spec_progress_direction(row: dict[str, Any]) -> str:
+    chunk = row.get("spec_chunk") if isinstance(row.get("spec_chunk"), dict) else {}
+    chunk_index = int(chunk.get("chunk_index") or 1)
+    chunk_total = int(chunk.get("chunk_total") or len(_ROI_SPEC_CHUNK_PLAN))
+    chunk_label = str(chunk.get("chunk_label") or "Spec slice").strip()
+    chunk_goal = str(chunk.get("chunk_goal") or "").strip()
+    return (
+        f"Advance high-ROI spec '{row['spec_id']}' ({row['title']}) part {chunk_index}/{chunk_total}: {chunk_label}. "
+        f"{chunk_goal} Keep this chunk small enough for cheap-model execution with concrete ROI evidence updates."
+    )
+
+
+def _create_idea_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    return _create_progress_tasks(
+        rows=rows,
+        per_category=requested,
+        task_type=TaskType.SPEC,
+        source="roi_progress_idea",
+        direction_builder=_build_idea_progress_direction,
+        context_builder=lambda row: {
+            "idea_id": row["idea_id"],
+            "idea_name": row["name"],
+            "estimated_roi": row["estimated_roi"],
+            "actual_roi": row["actual_roi"],
+            "has_linked_spec": bool(row.get("has_linked_spec")),
+            "spec_gap_priority": bool(row.get("spec_gap_priority")),
+            "category": "idea",
+        },
+    )
+
+
+def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    chunk_rows = _spec_chunk_rows_for_cheap_execution(rows)
+    return _create_progress_tasks(
+        rows=chunk_rows,
+        per_category=requested,
+        task_type=TaskType.SPEC,
+        source="roi_progress_spec",
+        direction_builder=_build_spec_progress_direction,
+        context_builder=lambda row: {
+            "spec_id": row["spec_id"],
+            "spec_title": row["title"],
+            "estimated_roi": row["estimated_roi"],
+            "actual_roi": row["actual_roi"],
+            "model_override": _ROI_SPEC_CHEAP_MODEL,
+            "max_input_tokens": _ROI_SPEC_TASK_INPUT_MAX_TOKENS,
+            "max_output_tokens": _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS,
+            "spec_chunk": row.get("spec_chunk"),
+            "category": "spec",
+        },
+    )
+
+
+def _create_implementation_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
+    return _create_progress_tasks(
+        rows=rows,
+        per_category=requested,
+        task_type=TaskType.IMPL,
+        source="roi_progress_implementation",
+        direction_builder=lambda row: (
+            f"Implement highest-ROI pending spec gap '{row['spec_id']}' ({row['title']}) "
+            f"from {row.get('source_path') or 'tracked spec source'}. "
+            "Run focused validation and record measurable ROI evidence."
+        ),
+        context_builder=lambda row: {
+            "spec_id": row["spec_id"],
+            "spec_title": row["title"],
+            "spec_path": row.get("source_path") or "",
+            "estimated_roi": row["estimated_roi"],
+            "category": "implementation",
+        },
+    )
+
+
+def _progress_count(
+    *,
+    create_task: bool,
+    selected_rows: list[dict[str, Any]],
+    created_rows: list[dict[str, Any]],
+    skipped_existing: int,
+) -> int:
+    if not create_task:
+        return len(selected_rows)
+    return len(created_rows) + skipped_existing
+
+
+def _create_roi_progress_task_sets(
+    *,
+    create_task: bool,
+    selected_ideas: list[dict[str, Any]],
+    selected_specs: list[dict[str, Any]],
+    selected_implementations: list[dict[str, Any]],
+    requested: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int, int, int]:
+    created_idea_tasks: list[dict[str, Any]] = []
+    created_spec_tasks: list[dict[str, Any]] = []
+    created_impl_tasks: list[dict[str, Any]] = []
+    skipped_existing_ideas = 0
+    skipped_existing_specs = 0
+    skipped_existing_implementations = 0
+    if create_task:
+        created_idea_tasks, skipped_existing_ideas = _create_idea_progress_tasks(selected_ideas, requested)
+        created_spec_tasks, skipped_existing_specs = _create_spec_progress_tasks(selected_specs, requested)
+        created_impl_tasks, skipped_existing_implementations = _create_implementation_progress_tasks(
+            selected_implementations, requested
+        )
+    return (
+        created_idea_tasks,
+        created_spec_tasks,
+        created_impl_tasks,
+        skipped_existing_ideas,
+        skipped_existing_specs,
+        skipped_existing_implementations,
+    )
+
+
+def _build_roi_sync_report(
+    *,
+    requested: int,
+    create_task: bool,
+    idea_coverage: dict[str, Any],
+    spec_coverage: dict[str, Any],
+    idea_normalization: dict[str, Any],
+    spec_normalization: dict[str, Any],
+    idea_calibration: dict[str, Any],
+    spec_calibration: dict[str, Any],
+    bounded_alpha: float,
+    selected_ideas: list[dict[str, Any]],
+    selected_specs: list[dict[str, Any]],
+    selected_implementations: list[dict[str, Any]],
+    created_idea_tasks: list[dict[str, Any]],
+    created_spec_tasks: list[dict[str, Any]],
+    created_impl_tasks: list[dict[str, Any]],
+    skipped_existing_ideas: int,
+    skipped_existing_specs: int,
+    skipped_existing_implementations: int,
+) -> dict[str, Any]:
+    idea_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_ideas,
+        created_rows=created_idea_tasks,
+        skipped_existing=skipped_existing_ideas,
+    )
+    spec_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_specs,
+        created_rows=created_spec_tasks,
+        skipped_existing=skipped_existing_specs,
+    )
+    impl_progress_count = _progress_count(
+        create_task=create_task,
+        selected_rows=selected_implementations,
+        created_rows=created_impl_tasks,
+        skipped_existing=skipped_existing_implementations,
+    )
+    total_created = len(created_idea_tasks) + len(created_spec_tasks) + len(created_impl_tasks)
+    return {
+        "result": "roi_progress_tasks_synced",
+        "requested_per_category": requested,
+        "create_task": bool(create_task),
+        "roi_coverage": {
+            "ideas_total": int(idea_coverage["total"]),
+            "ideas_with_potential_roi": int(idea_coverage["with_potential_roi"]),
+            "specs_total": int(spec_coverage["total"]),
+            "specs_with_potential_roi": int(spec_coverage["with_potential_roi"]),
+        },
+        "normalization": {"ideas": idea_normalization, "specs": spec_normalization},
+        "calibration": {"ideas": idea_calibration, "specs": spec_calibration, "alpha": bounded_alpha},
+        "candidates": {
+            "ideas": selected_ideas,
+            "specs": selected_specs,
+            "implementations": selected_implementations,
+        },
+        "created": {
+            "ideas_count": len(created_idea_tasks),
+            "specs_count": len(created_spec_tasks),
+            "implementations_count": len(created_impl_tasks),
+            "total_count": total_created,
+            "skipped_existing_ideas": skipped_existing_ideas,
+            "skipped_existing_specs": skipped_existing_specs,
+            "skipped_existing_implementations": skipped_existing_implementations,
+            "per_category_met": (
+                idea_progress_count >= requested
+                and spec_progress_count >= requested
+                and impl_progress_count >= requested
+            ),
+        },
+        "created_tasks": {
+            "ideas": created_idea_tasks,
+            "specs": created_spec_tasks,
+            "implementations": created_impl_tasks,
+        },
+    }
+
+
+def sync_roi_progress_tasks(
+    *,
+    create_task: bool = False,
+    per_category: int = 4,
+    normalize_missing_roi: bool = True,
+    calibrate_estimators: bool = True,
+    calibration_alpha: float = 0.35,
+) -> dict[str, Any]:
+    requested = max(1, min(int(per_category), 20))
+    bounded_alpha = max(0.0, min(float(calibration_alpha), 1.0))
+    idea_candidates, idea_normalization, idea_calibration, idea_coverage = _apply_idea_roi_normalization_and_calibration(
+        normalize_missing_roi=normalize_missing_roi,
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=bounded_alpha,
+        limit=500,
+    )
+    spec_candidates, spec_normalization, spec_calibration, spec_coverage, spec_roi_map = _apply_spec_roi_normalization_and_calibration(
+        normalize_missing_roi=normalize_missing_roi,
+        calibrate_estimators=calibrate_estimators,
+        calibration_alpha=bounded_alpha,
+        limit=5000,
+    )
+    spec_ids = {str(row.get("spec_id") or "").strip() for row in spec_candidates if str(row.get("spec_id") or "").strip()}
+    supplemental_specs, seeded_spec_updates = _supplement_spec_candidates_from_discovery(
+        needed=max(0, requested - len(spec_candidates)),
+        existing_spec_ids=spec_ids,
+        seed_registry=normalize_missing_roi,
+    )
+    _merge_supplemental_spec_candidates(
+        spec_candidates=spec_candidates,
+        spec_normalization=spec_normalization,
+        spec_coverage=spec_coverage,
+        spec_roi_map=spec_roi_map,
+        supplemental_specs=supplemental_specs,
+        seeded_spec_updates=seeded_spec_updates,
+    )
+    implementation_candidates = _build_implementation_roi_candidates(
+        limit=max(requested * 5, 200),
+        fallback_roi_by_spec=spec_roi_map,
+    )
+    _ensure_implementation_candidate_floor(
+        implementation_candidates=implementation_candidates,
+        spec_candidates=spec_candidates,
+        requested=requested,
+    )
+    prioritized_idea_candidates = _prioritize_idea_candidates_for_spec_gaps(idea_candidates, spec_candidates)
+    selected_ideas = prioritized_idea_candidates[:requested]
+    selected_specs = spec_candidates[:requested]
+    selected_implementations = implementation_candidates[:requested]
+    (
+        created_idea_tasks,
+        created_spec_tasks,
+        created_impl_tasks,
+        skipped_existing_ideas,
+        skipped_existing_specs,
+        skipped_existing_implementations,
+    ) = _create_roi_progress_task_sets(
+        create_task=create_task,
+        selected_ideas=selected_ideas,
+        selected_specs=selected_specs,
+        selected_implementations=selected_implementations,
+        requested=requested,
+    )
+    return _build_roi_sync_report(
+        requested=requested,
+        create_task=create_task,
+        idea_coverage=idea_coverage,
+        spec_coverage=spec_coverage,
+        idea_normalization=idea_normalization,
+        spec_normalization=spec_normalization,
+        idea_calibration=idea_calibration,
+        spec_calibration=spec_calibration,
+        bounded_alpha=bounded_alpha,
+        selected_ideas=selected_ideas,
+        selected_specs=selected_specs,
+        selected_implementations=selected_implementations,
+        created_idea_tasks=created_idea_tasks,
+        created_spec_tasks=created_spec_tasks,
+        created_impl_tasks=created_impl_tasks,
+        skipped_existing_ideas=skipped_existing_ideas,
+        skipped_existing_specs=skipped_existing_specs,
+        skipped_existing_implementations=skipped_existing_implementations,
+    )
+
+
 def _commit_evidence_dir() -> Path:
     custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
     if custom:
@@ -1198,7 +2156,9 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
-    db_url_configured = bool(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "").strip())
+    commit_evidence_db_url = str(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "")).strip()
+    shared_database_url = str(os.getenv("DATABASE_URL", "")).strip()
+    db_url_configured = bool(commit_evidence_db_url or shared_database_url)
     use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
     use_db = use_db_raw in {"1", "true", "yes", "on"}
     if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
@@ -1214,7 +2174,7 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
             backend_url = os.getenv("DATABASE_URL", "").strip().lower()
             use_db = required and ("postgresql" in backend_url)
     if use_db:
-        source_key = f"db:{os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '').strip()}|{os.getenv('DATABASE_URL', '').strip()}"
+        source_key = f"db:{commit_evidence_db_url}|{shared_database_url}"
         now = time.time()
         cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
         if (
@@ -1736,7 +2696,11 @@ def _scope_bonus(scope: str) -> float:
     return bonus
 
 
-def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) -> list[str]:
+def _normalize_idea_ids_for_record(
+    record: dict[str, Any],
+    known_ids: set[str],
+    actionable_ids: set[str],
+) -> list[str]:
     raw = record.get("idea_ids")
     out: list[str] = []
     if isinstance(raw, list):
@@ -1747,12 +2711,20 @@ def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) 
             if not idea_id:
                 continue
             out.append(idea_id)
-    if not out:
-        out.append("portfolio-governance")
+    fallback_id = "portfolio-governance" if "portfolio-governance" in actionable_ids else ""
+    if not fallback_id and actionable_ids:
+        fallback_id = sorted(actionable_ids)[0]
+    if not out and fallback_id:
+        out.append(fallback_id)
 
     normalized: list[str] = []
     for idea_id in out:
-        normalized.append(idea_id if idea_id in known_ids else "portfolio-governance")
+        candidate = idea_id if idea_id in known_ids else fallback_id
+        if not candidate:
+            continue
+        if candidate not in actionable_ids:
+            continue
+        normalized.append(candidate)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -1764,16 +2736,36 @@ def _normalize_idea_ids_for_record(record: dict[str, Any], known_ids: set[str]) 
     return deduped
 
 
-def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 20) -> dict[str, Any]:
+def derive_proactive_questions_from_recent_changes(
+    limit: int = 20,
+    top: int = 20,
+    include_internal_ideas: bool = False,
+) -> dict[str, Any]:
     records = _latest_commit_evidence_records(limit=limit)
     top_n = max(1, min(top, 200))
-    known_idea_ids = {item.id for item in idea_service.list_ideas().ideas}
-
+    all_ideas = idea_service.list_ideas(include_internal=True).ideas
+    known_idea_ids = {item.id for item in all_ideas}
+    if include_internal_ideas:
+        actionable_idea_ids = set(known_idea_ids)
+    else:
+        actionable_idea_ids = {
+            item.id
+            for item in all_ideas
+            if not idea_service.is_internal_idea_id(item.id, item.interfaces)
+        }
     intent_breakdown: dict[str, int] = {}
     candidates: list[dict[str, Any]] = []
     seen_keys: set[str] = set()
-
     for record in records:
+        contributors = record.get("contributors")
+        if isinstance(contributors, list) and contributors:
+            contributor_types = [
+                str(item.get("contributor_type") or "").strip().lower()
+                for item in contributors
+                if isinstance(item, dict) and str(item.get("contributor_type") or "").strip()
+            ]
+            if contributor_types and all(value == "machine" for value in contributor_types):
+                continue
         change_intent = str(record.get("change_intent") or "unknown").strip().lower() or "unknown"
         intent_breakdown[change_intent] = intent_breakdown.get(change_intent, 0) + 1
         scope = str(record.get("commit_scope") or "").strip() or "recent feature/fix"
@@ -1784,7 +2776,7 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
         source_file = str(record.get("_evidence_file") or "")
         source_date = str(record.get("date") or "")
 
-        for idea_id in _normalize_idea_ids_for_record(record, known_idea_ids):
+        for idea_id in _normalize_idea_ids_for_record(record, known_idea_ids, actionable_idea_ids):
             dedupe_key = f"{idea_id.lower()}::{question_text.strip().lower()}"
             if dedupe_key in seen_keys:
                 continue
@@ -1802,7 +2794,6 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
                     "source_file": source_file,
                 }
             )
-
     ranked = sorted(
         candidates,
         key=lambda row: (
@@ -1811,7 +2802,6 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
             str(row.get("idea_id") or ""),
         ),
     )[:top_n]
-
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -1834,8 +2824,16 @@ def derive_proactive_questions_from_recent_changes(limit: int = 20, top: int = 2
     }
 
 
-def sync_proactive_questions_from_recent_changes(limit: int = 20, max_add: int = 20) -> dict[str, Any]:
-    report = derive_proactive_questions_from_recent_changes(limit=limit, top=max_add * 3)
+def sync_proactive_questions_from_recent_changes(
+    limit: int = 20,
+    max_add: int = 20,
+    include_internal_ideas: bool = False,
+) -> dict[str, Any]:
+    report = derive_proactive_questions_from_recent_changes(
+        limit=limit,
+        top=max_add * 3,
+        include_internal_ideas=include_internal_ideas,
+    )
     questions = report.get("questions")
     ranked = [row for row in questions if isinstance(row, dict)] if isinstance(questions, list) else []
     max_allowed = max(1, min(max_add, 200))
@@ -3605,19 +4603,30 @@ def _direct_idea_ids_from_contribution_metadata(metadata: Any) -> list[str]:
     return sorted(out)
 
 
+def _sorted_limited(values: set[str], *, limit: int) -> tuple[list[str], int, bool]:
+    rows = sorted(values)
+    total = len(rows)
+    if total <= limit:
+        return rows, total, False
+    return rows[:limit], total, True
+
+
 def build_spec_process_implementation_validation_flow(
     idea_id: str | None = None,
+    include_internal_ideas: bool = False,
     runtime_window_seconds: int = 86400,
     contributor_rows: list[dict[str, Any]] | None = None,
     contribution_rows: list[dict[str, Any]] | None = None,
     asset_rows: list[dict[str, Any]] | None = None,
-    spec_registry_limit: int = 500,
-    lineage_link_limit: int = 300,
-    usage_event_limit: int = 1200,
-    commit_evidence_limit: int = 500,
-    runtime_event_limit: int = 2000,
+    spec_registry_limit: int = 200,
+    lineage_link_limit: int = 180,
+    usage_event_limit: int = 350,
+    commit_evidence_limit: int = 200,
+    runtime_event_limit: int = 600,
+    list_item_limit: int = 12,
 ) -> dict[str, Any]:
     start_ms = time.perf_counter()
+    bounded_list_item_limit = max(1, min(int(list_item_limit), 200))
     cache_key = _cache_key(
         "flow",
         idea_id or "",
@@ -3627,6 +4636,8 @@ def build_spec_process_implementation_validation_flow(
         usage_event_limit,
         commit_evidence_limit,
         runtime_event_limit,
+        bounded_list_item_limit,
+        include_internal_ideas,
         _inventory_environment_cache_key(),
         _row_signature(contributor_rows),
         _row_signature(contribution_rows),
@@ -3640,10 +4651,11 @@ def build_spec_process_implementation_validation_flow(
 
     stage_timings: dict[str, float] = {}
     stage_start = time.perf_counter()
-    portfolio = idea_service.list_ideas()
+    portfolio = idea_service.list_ideas(include_internal=True)
     stage_timings["ideas"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
     idea_name_map = {item.id: item.name for item in portfolio.ideas}
+    idea_interfaces_map = {item.id: list(item.interfaces) for item in portfolio.ideas}
     idea_signal_map = {
         item.id: {
             "value_gap": float(item.value_gap),
@@ -3741,6 +4753,12 @@ def build_spec_process_implementation_validation_flow(
     filtered_ids = sorted(discovered_ids)
     if idea_id:
         filtered_ids = [item for item in filtered_ids if item == idea_id]
+    elif not include_internal_ideas:
+        filtered_ids = [
+            item
+            for item in filtered_ids
+            if not idea_service.is_internal_idea_id(item, idea_interfaces_map.get(item, []))
+        ]
     stage_timings["discovered_ids"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
@@ -4005,10 +5023,63 @@ def build_spec_process_implementation_validation_flow(
             )
             unblock_queue.append(queue_candidate)
 
+        task_ids, task_ids_total, task_ids_truncated = _sorted_limited(
+            flow["_task_ids"], limit=bounded_list_item_limit
+        )
+        thread_branches, thread_branches_total, thread_branches_truncated = _sorted_limited(
+            flow["_thread_branches"], limit=bounded_list_item_limit
+        )
+        change_intents, change_intents_total, change_intents_truncated = _sorted_limited(
+            flow["_change_intents"], limit=bounded_list_item_limit
+        )
+        evidence_refs, evidence_refs_total, evidence_refs_truncated = _sorted_limited(
+            flow["_evidence_refs"], limit=bounded_list_item_limit
+        )
+        source_files, source_files_total, source_files_truncated = _sorted_limited(
+            flow["_source_files"], limit=bounded_list_item_limit
+        )
+        lineage_ids, lineage_ids_total, lineage_ids_truncated = _sorted_limited(
+            flow["_lineage_ids"], limit=bounded_list_item_limit
+        )
+        implementation_refs, implementation_refs_total, implementation_refs_truncated = _sorted_limited(
+            flow["_implementation_refs"], limit=bounded_list_item_limit
+        )
+        public_endpoints, public_endpoints_total, public_endpoints_truncated = _sorted_limited(
+            flow["_public_endpoints"], limit=bounded_list_item_limit
+        )
+        contributor_registry_ids, contributor_registry_ids_total, contributor_registry_ids_truncated = _sorted_limited(
+            flow["_contributor_registry_ids"], limit=bounded_list_item_limit
+        )
+        contribution_ids, contribution_ids_total, contribution_ids_truncated = _sorted_limited(
+            flow["_contribution_ids"], limit=bounded_list_item_limit
+        )
+        asset_ids, asset_ids_total, asset_ids_truncated = _sorted_limited(
+            flow["_asset_ids"], limit=bounded_list_item_limit
+        )
+        contributor_roles: dict[str, list[str]] = {}
+        contributor_roles_meta: dict[str, dict[str, Any]] = {}
+        for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0]):
+            role_ids, role_total, role_truncated = _sorted_limited(ids, limit=bounded_list_item_limit)
+            contributor_roles[role] = role_ids
+            contributor_roles_meta[role] = {
+                "total": role_total,
+                "truncated": role_truncated,
+            }
+
         items.append(
             {
                 "idea_id": current_idea_id,
                 "idea_name": flow["idea_name"],
+                "idea_classification": {
+                    "internal": idea_service.is_internal_idea_id(
+                        current_idea_id,
+                        idea_interfaces_map.get(current_idea_id, []),
+                    ),
+                    "actionable": not idea_service.is_internal_idea_id(
+                        current_idea_id,
+                        idea_interfaces_map.get(current_idea_id, []),
+                    ),
+                },
                 "spec": {
                     "count": spec_count,
                     "spec_ids": spec_ids,
@@ -4017,17 +5088,31 @@ def build_spec_process_implementation_validation_flow(
                 "process": {
                     "tracked": process_tracked,
                     "evidence_count": flow["process_evidence_count"],
-                    "task_ids": sorted(flow["_task_ids"]),
-                    "thread_branches": sorted(flow["_thread_branches"]),
-                    "change_intents": sorted(flow["_change_intents"]),
-                    "evidence_refs": sorted(flow["_evidence_refs"]),
-                    "source_files": sorted(flow["_source_files"]),
+                    "task_ids": task_ids,
+                    "task_ids_total": task_ids_total,
+                    "task_ids_truncated": task_ids_truncated,
+                    "thread_branches": thread_branches,
+                    "thread_branches_total": thread_branches_total,
+                    "thread_branches_truncated": thread_branches_truncated,
+                    "change_intents": change_intents,
+                    "change_intents_total": change_intents_total,
+                    "change_intents_truncated": change_intents_truncated,
+                    "evidence_refs": evidence_refs,
+                    "evidence_refs_total": evidence_refs_total,
+                    "evidence_refs_truncated": evidence_refs_truncated,
+                    "source_files": source_files,
+                    "source_files_total": source_files_total,
+                    "source_files_truncated": source_files_truncated,
                 },
                 "implementation": {
                     "tracked": implementation_tracked,
                     "lineage_link_count": len(flow["_lineage_ids"]),
-                    "lineage_ids": sorted(flow["_lineage_ids"]),
-                    "implementation_refs": sorted(flow["_implementation_refs"]),
+                    "lineage_ids": lineage_ids,
+                    "lineage_ids_total": lineage_ids_total,
+                    "lineage_ids_truncated": lineage_ids_truncated,
+                    "implementation_refs": implementation_refs,
+                    "implementation_refs_total": implementation_refs_total,
+                    "implementation_refs_truncated": implementation_refs_truncated,
                     "runtime_events_count": flow["runtime_events_count"],
                     "runtime_total_ms": round(float(flow["runtime_total_ms"]), 4),
                     "runtime_cost_estimate": round(float(flow["runtime_cost_estimate"]), 8),
@@ -4039,17 +5124,19 @@ def build_spec_process_implementation_validation_flow(
                     "deploy": flow["validation_counts"]["deploy"],
                     "e2e": flow["validation_counts"]["e2e"],
                     "phase_gate": flow["phase_gate"],
-                    "public_endpoints": sorted(flow["_public_endpoints"]),
+                    "public_endpoints": public_endpoints,
+                    "public_endpoints_total": public_endpoints_total,
+                    "public_endpoints_truncated": public_endpoints_truncated,
                 },
                 "contributors": {
                     "tracked": contributors_tracked,
                     "total_unique": len(flow["_contributors_all"]),
                     "all": sorted(flow["_contributors_all"]),
-                    "registry_ids": sorted(flow["_contributor_registry_ids"]),
-                    "by_role": {
-                        role: sorted(ids)
-                        for role, ids in sorted(flow["_contributors_by_role"].items(), key=lambda item: item[0])
-                    },
+                    "registry_ids": contributor_registry_ids,
+                    "registry_ids_total": contributor_registry_ids_total,
+                    "registry_ids_truncated": contributor_registry_ids_truncated,
+                    "by_role": contributor_roles,
+                    "by_role_meta": contributor_roles_meta,
                 },
                 "contributions": {
                     "tracked": contributions_tracked,
@@ -4057,12 +5144,16 @@ def build_spec_process_implementation_validation_flow(
                     "measured_value_total": round(float(flow["measured_value_total"]), 4),
                     "registry_contribution_count": registry_contribution_count,
                     "registry_total_cost": registry_cost_total,
-                    "contribution_ids": sorted(flow["_contribution_ids"]),
+                    "contribution_ids": contribution_ids,
+                    "contribution_ids_total": contribution_ids_total,
+                    "contribution_ids_truncated": contribution_ids_truncated,
                 },
                 "assets": {
                     "tracked": len(flow["_asset_ids"]) > 0,
                     "count": len(flow["_asset_ids"]),
-                    "asset_ids": sorted(flow["_asset_ids"]),
+                    "asset_ids": asset_ids,
+                    "asset_ids_total": asset_ids_total,
+                    "asset_ids_truncated": asset_ids_truncated,
                 },
                 "chain": {
                     "spec": "tracked" if spec_count > 0 else "missing",
@@ -4097,6 +5188,8 @@ def build_spec_process_implementation_validation_flow(
 
     summary = {
         "ideas": len(items),
+        "actionable_ideas": sum(1 for row in items if row["idea_classification"]["actionable"]),
+        "internal_ideas": sum(1 for row in items if row["idea_classification"]["internal"]),
         "with_spec": sum(1 for row in items if row["spec"]["tracked"]),
         "with_process": sum(1 for row in items if row["process"]["tracked"]),
         "with_implementation": sum(1 for row in items if row["implementation"]["tracked"]),
@@ -4105,6 +5198,11 @@ def build_spec_process_implementation_validation_flow(
         "with_contributions": sum(1 for row in items if row["contributions"]["tracked"]),
         "with_assets": sum(1 for row in items if row["assets"]["tracked"]),
         "blocked_ideas": sum(1 for row in items if row["interdependencies"]["blocked"]),
+        "blocked_actionable_ideas": sum(
+            1
+            for row in items
+            if row["interdependencies"]["blocked"] and row["idea_classification"]["actionable"]
+        ),
         "queue_items": len(unblock_queue),
     }
     stage_timings["summary_build"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
@@ -4113,7 +5211,7 @@ def build_spec_process_implementation_validation_flow(
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "runtime_window_seconds": runtime_window_seconds,
-        "filter": {"idea_id": idea_id},
+        "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         "summary": summary,
         "unblock_queue": unblock_queue,
         "items": items,
@@ -4136,10 +5234,12 @@ def build_spec_process_implementation_validation_flow(
 def next_unblock_task_from_flow(
     create_task: bool = False,
     idea_id: str | None = None,
+    include_internal_ideas: bool = False,
     runtime_window_seconds: int = 86400,
 ) -> dict[str, Any]:
     flow = build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
+        include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
     )
     queue = flow.get("unblock_queue")
@@ -4147,7 +5247,7 @@ def next_unblock_task_from_flow(
         return {
             "result": "no_blocking_items",
             "flow_summary": flow.get("summary", {}),
-            "filter": {"idea_id": idea_id},
+            "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         }
 
     top = queue[0] if isinstance(queue[0], dict) else None
@@ -4155,7 +5255,7 @@ def next_unblock_task_from_flow(
         return {
             "result": "no_blocking_items",
             "flow_summary": flow.get("summary", {}),
-            "filter": {"idea_id": idea_id},
+            "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
         }
 
     task_fingerprint = str(top.get("task_fingerprint") or "").strip()
@@ -4179,7 +5279,7 @@ def next_unblock_task_from_flow(
         "direction": str(top.get("direction") or ""),
         "task_fingerprint": task_fingerprint,
         "flow_summary": flow.get("summary", {}),
-        "filter": {"idea_id": idea_id},
+        "filter": {"idea_id": idea_id, "include_internal_ideas": include_internal_ideas},
     }
 
     if isinstance(existing_active, dict):
@@ -4229,3 +5329,518 @@ def next_unblock_task_from_flow(
         ),
     }
     return report
+
+
+_IDEA_CARD_STATE_ORDER: dict[str, int] = {
+    "none": 0,
+    "spec": 1,
+    "implemented": 2,
+    "validated": 3,
+    "measured": 4,
+}
+_IDEA_CARD_STATE_ICON: dict[str, str] = {
+    "none": "sparkle",
+    "spec": "file-text",
+    "implemented": "box",
+    "validated": "shield-check",
+    "measured": "chart-line",
+}
+_IDEA_CARD_ATTENTION_ORDER: dict[str, int] = {
+    "none": 0,
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+}
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _normalize_card_enum(value: str | None, allowed: set[str], default: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return default
+    return normalized if normalized in allowed else default
+
+
+def _friendly_card_title(name: str, fallback_idea_id: str) -> str:
+    raw = str(name or "").strip() or str(fallback_idea_id or "").strip()
+    if not raw:
+        return "Idea"
+    if "_" not in raw and raw.lower() != str(fallback_idea_id or "").strip().lower():
+        return raw
+    words = [part for part in re.split(r"[_\\-]+", raw) if part]
+    if not words:
+        return raw
+    return " ".join(word.capitalize() for word in words)
+
+
+def _idea_card_state(flow_row: dict[str, Any]) -> str:
+    spec = bool((flow_row.get("spec") or {}).get("tracked"))
+    implementation = bool((flow_row.get("implementation") or {}).get("tracked"))
+    validation = bool((flow_row.get("validation") or {}).get("tracked"))
+    contributions = flow_row.get("contributions") or {}
+    measured = (
+        bool(contributions.get("tracked"))
+        or _safe_float(contributions.get("measured_value_total")) > 0.0
+        or _safe_int((flow_row.get("implementation") or {}).get("runtime_events_count")) > 0
+    )
+    if measured:
+        return "measured"
+    if validation:
+        return "validated"
+    if implementation:
+        return "implemented"
+    if spec:
+        return "spec"
+    return "none"
+
+
+def _idea_card_state_from_manifestation(status: str | None) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "validated":
+        return "validated"
+    if normalized == "partial":
+        return "implemented"
+    return "none"
+
+
+def _idea_card_attention(flow_row: dict[str, Any], state: str, value_gap: float) -> tuple[str, float, str]:
+    interdependencies = flow_row.get("interdependencies") or {}
+    blocked = bool(interdependencies.get("blocked"))
+    blocking_stage = str(interdependencies.get("blocking_stage") or "").strip()
+    unblock_priority = _safe_float(interdependencies.get("unblock_priority_score"))
+    score = round(
+        unblock_priority
+        + (12.0 if blocked else 0.0)
+        + (_IDEA_CARD_STATE_ORDER.get("measured", 4) - _IDEA_CARD_STATE_ORDER.get(state, 0)) * 2.0
+        + min(max(value_gap, 0.0) * 0.15, 20.0),
+        4,
+    )
+
+    if blocked and (unblock_priority >= 25.0 or state in {"none", "spec"}):
+        return "high", score, f"blocked:{blocking_stage or 'unknown'}"
+    if blocked or unblock_priority >= 12.0 or (state in {"none", "spec"} and value_gap >= 20.0):
+        return "medium", score, (f"blocked:{blocking_stage}" if blocked else "focus-upstream")
+    if value_gap > 0.0:
+        return "low", score, "improvement-opportunity"
+    return "none", score, "healthy"
+
+
+def _idea_cards_flow_index(include_internal_ideas: bool, runtime_window_seconds: int) -> dict[str, dict[str, Any]]:
+    flow = build_spec_process_implementation_validation_flow(
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+        contributor_rows=[],
+        contribution_rows=[],
+        asset_rows=[],
+        spec_registry_limit=500,
+        lineage_link_limit=800,
+        usage_event_limit=3000,
+        commit_evidence_limit=2000,
+        runtime_event_limit=3000,
+        list_item_limit=8,
+    )
+    flow_items = flow.get("items") if isinstance(flow.get("items"), list) else []
+    flow_by_idea: dict[str, dict[str, Any]] = {}
+    for row in flow_items:
+        if not isinstance(row, dict):
+            continue
+        idea_id = str(row.get("idea_id") or "").strip()
+        if idea_id and idea_id not in flow_by_idea:
+            flow_by_idea[idea_id] = row
+    return flow_by_idea
+
+
+def _idea_card_metrics(idea_model: Any, flow_row: dict[str, Any]) -> dict[str, Any]:
+    manifestation_raw = getattr(idea_model, "manifestation_status", "none")
+    manifestation_value = manifestation_raw.value if hasattr(manifestation_raw, "value") else str(manifestation_raw)
+    flow_state = _idea_card_state(flow_row) if flow_row else "none"
+    manifestation_state = _idea_card_state_from_manifestation(manifestation_value)
+    state_value = manifestation_state if _IDEA_CARD_STATE_ORDER.get(manifestation_state, 0) > _IDEA_CARD_STATE_ORDER.get(flow_state, 0) else flow_state
+
+    idea_signals = flow_row.get("idea_signals") if isinstance(flow_row, dict) else {}
+    potential_value = _safe_float(getattr(idea_model, "potential_value", None), _safe_float(idea_signals.get("potential_value")))
+    actual_value = _safe_float(getattr(idea_model, "actual_value", None), _safe_float(idea_signals.get("actual_value")))
+    value_gap = round(max(_safe_float(idea_signals.get("value_gap")), max(potential_value - actual_value, 0.0)), 4)
+    measured_contribution = _safe_float((flow_row.get("contributions") or {}).get("measured_value_total"))
+    measured_value = round(max(measured_contribution, actual_value), 4)
+    estimated_cost = max(_safe_float(getattr(idea_model, "estimated_cost", None), _safe_float(idea_signals.get("estimated_cost"))), 0.0)
+    measured_roi = round((measured_value / estimated_cost), 4) if estimated_cost > 0 else round(measured_value, 4)
+    if state_value != "measured" and measured_value > 0.0:
+        state_value = "measured"
+
+    attention_level, attention_score, attention_reason = _idea_card_attention(flow_row, state_value, value_gap)
+    return {
+        "manifestation_status": manifestation_value,
+        "state": state_value,
+        "state_icon": _IDEA_CARD_STATE_ICON.get(state_value, "sparkle"),
+        "value_gap": value_gap,
+        "measured_value": measured_value,
+        "measured_roi": measured_roi,
+        "attention_level": attention_level,
+        "attention_score": attention_score,
+        "attention_reason": attention_reason,
+    }
+
+
+def _idea_card_row_from_sources(
+    idea_model: Any,
+    flow_row: dict[str, Any],
+    *,
+    include_internal_ideas: bool,
+    only_actionable: bool,
+) -> dict[str, Any] | None:
+    idea_id = str(getattr(idea_model, "id", "")).strip()
+    if not idea_id:
+        return None
+
+    classification = flow_row.get("idea_classification") if isinstance(flow_row, dict) else {}
+    if not isinstance(classification, dict):
+        classification = {}
+    interfaces = [item for item in getattr(idea_model, "interfaces", []) if isinstance(item, str)]
+    inferred_internal = idea_service.is_internal_idea_id(idea_id, interfaces)
+    internal = bool(classification.get("internal", inferred_internal))
+    actionable = bool(classification.get("actionable", not internal))
+    if (not include_internal_ideas and internal) or (only_actionable and not actionable):
+        return None
+
+    title = _friendly_card_title(
+        str(getattr(idea_model, "name", "") or flow_row.get("idea_name") or idea_id),
+        fallback_idea_id=idea_id,
+    )
+    spec_ids = [str(item).strip() for item in ((flow_row.get("spec") or {}).get("spec_ids") or []) if str(item).strip()]
+    top_spec_id = spec_ids[0] if spec_ids else ""
+    metrics = _idea_card_metrics(idea_model, flow_row)
+    return {
+        "idea_id": idea_id,
+        "title": title,
+        "subtitle": str(getattr(idea_model, "description", "") or "").strip(),
+        "interfaces": interfaces,
+        "manifestation_status": metrics["manifestation_status"],
+        "spec_ids": spec_ids,
+        "spec_count": _safe_int((flow_row.get("spec") or {}).get("count")),
+        "implementation_ref_count": _safe_int((flow_row.get("implementation") or {}).get("lineage_link_count")),
+        "state": metrics["state"],
+        "state_icon": metrics["state_icon"],
+        "attention_level": metrics["attention_level"],
+        "attention_score": metrics["attention_score"],
+        "attention_reason": metrics["attention_reason"],
+        "blocked": bool((flow_row.get("interdependencies") or {}).get("blocked")),
+        "blocking_stage": str((flow_row.get("interdependencies") or {}).get("blocking_stage") or "") or None,
+        "value_gap": metrics["value_gap"],
+        "measured_roi": metrics["measured_roi"],
+        "measured_value": metrics["measured_value"],
+        "actionable": actionable,
+        "internal": internal,
+        "links": {
+            "web_detail_path": f"/ideas/{quote(idea_id, safe='')}",
+            "api_detail_path": f"/api/ideas/{quote(idea_id, safe='')}",
+            "web_usage_path": f"/usage?idea_id={quote(idea_id, safe='')}",
+            "web_spec_path": f"/specs/{quote(top_spec_id, safe='')}" if top_spec_id else None,
+        },
+    }
+
+
+def _idea_card_matches_filters(
+    row: dict[str, Any],
+    *,
+    normalized_query: str,
+    normalized_state: str,
+    normalized_attention: str,
+    min_roi_value: float | None,
+    min_gap_value: float | None,
+) -> bool:
+    if normalized_query:
+        haystack = " ".join(
+            [
+                str(row.get("idea_id") or ""),
+                str(row.get("title") or ""),
+                str(row.get("subtitle") or ""),
+                str(row.get("manifestation_status") or ""),
+                " ".join(str(item) for item in row.get("spec_ids", []) if isinstance(item, str)),
+                " ".join(str(item) for item in row.get("interfaces", []) if isinstance(item, str)),
+                str(row.get("attention_reason") or ""),
+            ]
+        ).lower()
+        if normalized_query not in haystack:
+            return False
+
+    if normalized_state != "all" and str(row.get("state") or "") != normalized_state:
+        return False
+    if normalized_attention != "all" and str(row.get("attention_level") or "") != normalized_attention:
+        return False
+    if min_roi_value is not None and _safe_float(row.get("measured_roi")) < min_roi_value:
+        return False
+    if min_gap_value is not None and _safe_float(row.get("value_gap")) < min_gap_value:
+        return False
+    return True
+
+
+def _sort_idea_card_rows(candidates: list[dict[str, Any]], normalized_sort: str) -> None:
+    if normalized_sort == "name_asc":
+        candidates.sort(key=lambda row: (str(row.get("title") or "").lower(), str(row.get("idea_id") or "")))
+        return
+    if normalized_sort == "roi_desc":
+        candidates.sort(key=lambda row: (-_safe_float(row.get("measured_roi")), -_safe_float(row.get("value_gap")), str(row.get("title") or "").lower()))
+        return
+    if normalized_sort == "gap_desc":
+        candidates.sort(key=lambda row: (-_safe_float(row.get("value_gap")), -_safe_float(row.get("measured_roi")), str(row.get("title") or "").lower()))
+        return
+    if normalized_sort == "state_desc":
+        candidates.sort(key=lambda row: (-_IDEA_CARD_STATE_ORDER.get(str(row.get("state") or "none"), 0), -_safe_float(row.get("value_gap")), str(row.get("title") or "").lower()))
+        return
+    candidates.sort(
+        key=lambda row: (
+            -_IDEA_CARD_ATTENTION_ORDER.get(str(row.get("attention_level") or "none"), 0),
+            -_safe_float(row.get("attention_score")),
+            -_safe_float(row.get("value_gap")),
+            -_safe_float(row.get("measured_roi")),
+            str(row.get("title") or "").lower(),
+        )
+    )
+
+
+def _idea_card_facet_counts(candidates: list[dict[str, Any]]) -> tuple[dict[str, int], dict[str, int]]:
+    state_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_STATE_ORDER}
+    attention_counts: dict[str, int] = {key: 0 for key in _IDEA_CARD_ATTENTION_ORDER}
+    for row in candidates:
+        state_key = str(row.get("state") or "none")
+        attention_key = str(row.get("attention_level") or "none")
+        state_counts[state_key] = state_counts.get(state_key, 0) + 1
+        attention_counts[attention_key] = attention_counts.get(attention_key, 0) + 1
+    return state_counts, attention_counts
+
+
+def _build_idea_cards_payload(
+    *,
+    query_text: str,
+    normalized_state: str,
+    normalized_attention: str,
+    normalized_sort: str,
+    safe_offset: int,
+    safe_limit: int,
+    include_internal_ideas: bool,
+    only_actionable: bool,
+    min_roi_value: float | None,
+    min_gap_value: float | None,
+    bounded_runtime_window: int,
+    filtered_total: int,
+    returned: int,
+    state_counts: dict[str, int],
+    attention_counts: dict[str, int],
+    next_cursor: str | None,
+    has_more: bool,
+    change_token: str | None,
+    page_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "query": {
+            "q": query_text,
+            "state": normalized_state,
+            "attention": normalized_attention,
+            "sort": normalized_sort,
+            "cursor": str(safe_offset),
+            "limit": safe_limit,
+            "include_internal_ideas": include_internal_ideas,
+            "only_actionable": only_actionable,
+            "min_roi": min_roi_value,
+            "min_value_gap": min_gap_value,
+            "runtime_window_seconds": bounded_runtime_window,
+        },
+        "summary": {
+            "total": filtered_total,
+            "returned": returned,
+            "state_counts": state_counts,
+            "attention_counts": attention_counts,
+            "needs_attention": attention_counts.get("high", 0) + attention_counts.get("medium", 0),
+        },
+        "pagination": {
+            "cursor": str(safe_offset),
+            "next_cursor": next_cursor,
+            "limit": safe_limit,
+            "returned": returned,
+            "has_more": has_more,
+        },
+        "change_token": change_token,
+        "items": page_items,
+    }
+
+
+def build_idea_cards_feed(
+    q: str = "",
+    state: str = "all",
+    attention: str = "all",
+    sort: str = "attention_desc",
+    cursor: str | None = None,
+    limit: int = 50,
+    include_internal_ideas: bool = True,
+    only_actionable: bool = False,
+    min_roi: float | None = None,
+    min_value_gap: float | None = None,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    query_text = str(q or "").strip()
+    normalized_query = query_text.lower()
+    normalized_state = _normalize_card_enum(state, {"all", "none", "spec", "implemented", "validated", "measured"}, "all")
+    normalized_attention = _normalize_card_enum(attention, {"all", "none", "low", "medium", "high"}, "all")
+    normalized_sort = _normalize_card_enum(sort, {"attention_desc", "roi_desc", "gap_desc", "name_asc", "state_desc"}, "attention_desc")
+    safe_limit = max(1, min(int(limit), 200))
+    try:
+        safe_offset = max(0, int(str(cursor or "0").strip() or "0"))
+    except ValueError:
+        safe_offset = 0
+    bounded_runtime_window = max(60, min(int(runtime_window_seconds), 60 * 60 * 24 * 30))
+    min_roi_value = None if min_roi is None else _safe_float(min_roi)
+    min_gap_value = None if min_value_gap is None else _safe_float(min_value_gap)
+
+    cache_key = _cache_key("cards", normalized_query, normalized_state, normalized_attention, normalized_sort, safe_limit, safe_offset, include_internal_ideas, only_actionable, min_roi_value, min_gap_value, bounded_runtime_window, _inventory_environment_cache_key())
+    cached = _read_inventory_cache("idea_cards", cache_key)
+    if cached is not None:
+        return cached
+
+    flow_by_idea = _idea_cards_flow_index(include_internal_ideas, bounded_runtime_window)
+    portfolio = idea_service.list_ideas(include_internal=True, limit=None, offset=0)
+
+    candidates: list[dict[str, Any]] = []
+    for idea_model in portfolio.ideas:
+        row = _idea_card_row_from_sources(
+            idea_model,
+            flow_by_idea.get(str(idea_model.id).strip(), {}),
+            include_internal_ideas=include_internal_ideas,
+            only_actionable=only_actionable,
+        )
+        if row is None:
+            continue
+        if _idea_card_matches_filters(
+            row,
+            normalized_query=normalized_query,
+            normalized_state=normalized_state,
+            normalized_attention=normalized_attention,
+            min_roi_value=min_roi_value,
+            min_gap_value=min_gap_value,
+        ):
+            candidates.append(row)
+
+    state_counts, attention_counts = _idea_card_facet_counts(candidates)
+    _sort_idea_card_rows(candidates, normalized_sort)
+
+    filtered_total = len(candidates)
+    page_items = candidates[safe_offset:safe_offset + safe_limit]
+    returned = len(page_items)
+    has_more = (safe_offset + returned) < filtered_total
+    next_cursor = str(safe_offset + returned) if has_more else None
+    change_token_payload = build_idea_cards_change_token(include_internal_ideas=include_internal_ideas, runtime_window_seconds=bounded_runtime_window)
+
+    payload = _build_idea_cards_payload(
+        query_text=query_text,
+        normalized_state=normalized_state,
+        normalized_attention=normalized_attention,
+        normalized_sort=normalized_sort,
+        safe_offset=safe_offset,
+        safe_limit=safe_limit,
+        include_internal_ideas=include_internal_ideas,
+        only_actionable=only_actionable,
+        min_roi_value=min_roi_value,
+        min_gap_value=min_gap_value,
+        bounded_runtime_window=bounded_runtime_window,
+        filtered_total=filtered_total,
+        returned=returned,
+        state_counts=state_counts,
+        attention_counts=attention_counts,
+        next_cursor=next_cursor,
+        has_more=has_more,
+        change_token=change_token_payload.get("token"),
+        page_items=page_items,
+    )
+    _write_inventory_cache("idea_cards", cache_key, payload)
+    return payload
+
+
+def build_idea_cards_change_token(
+    include_internal_ideas: bool = True,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    runtime_payload = runtime_service.live_change_token(force_refresh=False)
+    runtime_token = str(runtime_payload.get("token") or "")
+
+    ideas = idea_service.list_ideas(include_internal=True, limit=None, offset=0).ideas
+    idea_digest = hashlib.sha256()
+    idea_count = 0
+    for idea in sorted(ideas, key=lambda row: row.id):
+        if (not include_internal_ideas) and idea_service.is_internal_idea_id(idea.id, idea.interfaces):
+            continue
+        idea_count += 1
+        idea_digest.update(
+            (
+                f"{idea.id}|{idea.manifestation_status.value}|"
+                f"{float(idea.actual_value):.4f}|{float(idea.potential_value):.4f}|"
+                f"{float(idea.estimated_cost):.4f}|{float(idea.confidence):.4f}|"
+                f"{len(idea.open_questions)};"
+            ).encode("utf-8")
+        )
+
+    spec_summary = spec_registry_service.summary()
+    latest_specs = spec_registry_service.list_specs(limit=1, offset=0)
+    latest_spec = latest_specs[0].updated_at.isoformat() if latest_specs else None
+
+    try:
+        commit_checkpoint = commit_evidence_service.checkpoint()
+    except Exception:
+        commit_checkpoint = {}
+    try:
+        lineage_checkpoint = value_lineage_service.checkpoint()
+    except Exception:
+        lineage_checkpoint = {}
+
+    components = {
+        "runtime_token": runtime_token,
+        "runtime_window_seconds": max(60, min(int(runtime_window_seconds), 60 * 60 * 24 * 30)),
+        "idea_count": idea_count,
+        "idea_digest": idea_digest.hexdigest()[:24],
+        "spec_count": int(spec_summary.get("count") or 0),
+        "spec_latest_updated_at": latest_spec,
+        "commit_evidence": commit_checkpoint,
+        "value_lineage": lineage_checkpoint,
+        "include_internal_ideas": include_internal_ideas,
+    }
+    token_basis = json.dumps(components, sort_keys=True, default=str)
+    token = hashlib.sha256(token_basis.encode("utf-8")).hexdigest()[:24]
+    return {
+        "token": token,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "components": components,
+    }
+
+
+def build_idea_cards_changes(
+    since_token: str | None = None,
+    include_internal_ideas: bool = True,
+    runtime_window_seconds: int = 86400,
+) -> dict[str, Any]:
+    current = build_idea_cards_change_token(
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+    current_token = str(current.get("token") or "")
+    previous = str(since_token or "").strip()
+    changed = (not previous) or (previous != current_token)
+    return {
+        "changed": changed,
+        "since_token": previous or None,
+        "token": current_token,
+        "generated_at": current.get("generated_at"),
+        "poll_after_ms": 5000,
+    }

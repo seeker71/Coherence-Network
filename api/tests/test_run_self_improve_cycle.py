@@ -27,21 +27,83 @@ class _FakeClient:
         tasks_payload: object | None = None,
         needs_decision_payload: object | None = None,
         friction_payload: object | None = None,
+        friction_categories_payload: object | None = None,
         runtime_payload: object | None = None,
+        unblock_payload: dict | None = None,
+        roi_payload: dict | None = None,
+        daily_summary_payload: dict | None = None,
         usage_error: Exception | None = None,
+        tasks_error: Exception | None = None,
+        runtime_error: Exception | None = None,
+        health_error: Exception | None = None,
+        gates_error: Exception | None = None,
+        deploy_active: bool = False,
+        execute_status_code: int = 200,
+        pending_polls_before_complete: int = 0,
         post_error_plan: list[Exception] | None = None,
+        task_post_status_plan: list[int] | None = None,
+        stage_output_overrides: dict[int, str] | None = None,
     ) -> None:
         self.created_payloads: list[dict] = []
+        self.submitted_payloads: list[dict] = []
         self._task_counter = 0
         self._task_order: list[str] = []
         self._task_outputs: dict[str, str] = {}
         self._post_error_plan = list(post_error_plan or [])
+        self._task_post_status_plan = list(task_post_status_plan or [])
+        self._stage_output_overrides = dict(stage_output_overrides or {})
         self.usage_payload = usage_payload
         self.tasks_payload = tasks_payload if tasks_payload is not None else []
         self.needs_decision_payload = needs_decision_payload if needs_decision_payload is not None else []
         self.friction_payload = friction_payload if friction_payload is not None else []
+        self.friction_categories_payload = friction_categories_payload if friction_categories_payload is not None else {
+            "categories": [
+                {
+                    "key": "failed-tasks",
+                    "severity": "high",
+                    "entry_point_count": 1,
+                    "open_entry_points": 1,
+                    "event_count": 2,
+                    "energy_loss": 12.0,
+                    "cost_of_delay": 8.0,
+                    "wasted_minutes": 12.0,
+                    "recommended_actions": ["Reduce repeated failed task retries."],
+                }
+            ]
+        }
         self.runtime_payload = runtime_payload if runtime_payload is not None else {}
+        self.unblock_payload = unblock_payload or {
+            "result": "task_suggested",
+            "blocking_stage": "spec",
+            "unblock_priority_score": 2.2,
+            "direction": "Create a spec-first unblock task for the top flow gap.",
+        }
+        self.roi_payload = roi_payload or {
+            "result": "task_suggested",
+            "question_roi": 2.6,
+            "answer_roi": 0.0,
+            "question": "What is the highest-ROI next implementation task?",
+        }
+        self.daily_summary_payload = daily_summary_payload or {
+            "quality_awareness": {
+                "status": "ok",
+                "summary": {"severity": "low", "risk_score": 12},
+                "hotspots": [{"kind": "long_function", "path": "api/app/services/example.py", "detail": "split helper"}],
+                "guidance": ["Use extraction-by-intent for long functions to reduce drift."],
+                "recommended_tasks": [
+                    {"task_id": "architecture-modularization-review", "title": "Architecture modularization review"}
+                ],
+            }
+        }
         self.usage_error = usage_error
+        self.tasks_error = tasks_error
+        self.runtime_error = runtime_error
+        self.health_error = health_error
+        self.gates_error = gates_error
+        self.deploy_active = deploy_active
+        self.execute_status_code = execute_status_code
+        self.pending_polls_before_complete = max(0, pending_polls_before_complete)
+        self._task_poll_counts: dict[str, int] = {}
 
     def post(
         self,
@@ -53,17 +115,27 @@ class _FakeClient:
         if self._post_error_plan:
             raise self._post_error_plan.pop(0)
 
+        if "/api/inventory/flow/next-unblock-task" in url:
+            return _FakeResponse(200, self.unblock_payload)
+
+        if "/api/inventory/questions/next-highest-roi-task" in url:
+            return _FakeResponse(200, self.roi_payload)
+
         if url.endswith("/api/agent/tasks"):
+            payload = dict(json or {})
+            self.submitted_payloads.append(payload)
+            status_code = self._task_post_status_plan.pop(0) if self._task_post_status_plan else 201
+            if status_code >= 400:
+                return _FakeResponse(status_code, {"error": f"forced status {status_code}"})
             self._task_counter += 1
             task_id = f"task-{self._task_counter}"
-            payload = dict(json or {})
             payload["_task_id"] = task_id
             self.created_payloads.append(payload)
             self._task_order.append(task_id)
             return _FakeResponse(201, {"id": task_id})
 
         if "/execute" in url:
-            return _FakeResponse(200, {"ok": True})
+            return _FakeResponse(self.execute_status_code, {"ok": self.execute_status_code < 400})
 
         raise AssertionError(f"unexpected post url: {url}")
 
@@ -78,23 +150,64 @@ class _FakeClient:
                 raise self.usage_error
             return _FakeResponse(200, self.usage_payload)
 
+        if url.endswith("/api/health"):
+            if self.health_error:
+                raise self.health_error
+            return _FakeResponse(200, {"status": "ok"})
+
+        if url.endswith("/api/gates/main-head"):
+            if self.gates_error:
+                raise self.gates_error
+            return _FakeResponse(200, {"sha": "abc123"})
+
+        if "api.github.com/repos/" in url and "/actions/workflows/public-deploy-contract.yml/runs" in url:
+            workflow_runs = (
+                [{"status": "in_progress", "html_url": "https://github.com/example/redeploy"}]
+                if self.deploy_active
+                else []
+            )
+            return _FakeResponse(200, {"workflow_runs": workflow_runs})
+
         if "/api/agent/tasks?status=needs_decision" in url:
             return _FakeResponse(200, self.needs_decision_payload)
 
         if "/api/agent/tasks?" in url and "/api/agent/tasks/" not in url:
+            if self.tasks_error:
+                raise self.tasks_error
             return _FakeResponse(200, self.tasks_payload)
 
         if "/api/friction/events" in url:
             return _FakeResponse(200, self.friction_payload)
 
+        if "/api/friction/categories" in url:
+            return _FakeResponse(200, self.friction_categories_payload)
+
         if "/api/runtime/endpoints/summary" in url:
+            if self.runtime_error:
+                raise self.runtime_error
             return _FakeResponse(200, self.runtime_payload)
+
+        if "/api/automation/usage/daily-summary" in url:
+            return _FakeResponse(200, self.daily_summary_payload)
 
         if "/api/agent/tasks/" in url:
             task_id = url.rsplit("/", 1)[-1]
             if task_id in self._task_order:
+                poll_count = self._task_poll_counts.get(task_id, 0) + 1
+                self._task_poll_counts[task_id] = poll_count
+                if poll_count <= self.pending_polls_before_complete:
+                    return _FakeResponse(
+                        200,
+                        {
+                            "id": task_id,
+                            "status": "pending",
+                            "output": "",
+                            "context": {"executor": "codex"},
+                            "model": "",
+                        },
+                    )
                 idx = int(task_id.split("-")[-1])
-                output = f"stage-{idx}-output"
+                output = self._stage_output_overrides.get(idx, f"stage-{idx}-output")
                 self._task_outputs[task_id] = output
                 payload = self.created_payloads[idx - 1]
                 context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
@@ -126,6 +239,46 @@ def test_plan_prompt_requires_proof_retry_and_unblock() -> None:
     assert "retry" in lowered
     assert "unblock" in lowered
     assert "common blocker" in lowered
+    assert "intent first" in lowered
+    assert "system-level lens" in lowered
+    assert "option thinking" in lowered
+    assert "failure anticipation" in lowered
+    assert "proof of meaning" in lowered
+    assert "maintainability guidance" in lowered
+    assert "quality-awareness" in lowered
+    assert "friction-category prioritization" in lowered
+
+
+def test_plan_prompt_includes_friction_focus_when_bundle_present() -> None:
+    prompt = run_self_improve_cycle.build_plan_direction(
+        {
+            "friction_categories": {
+                "records": [
+                    {
+                        "key": "monitor",
+                        "severity": "high",
+                        "event_count": 4,
+                        "wasted_minutes": 22.0,
+                        "recommended_actions": ["Fix monitor issue root cause first."],
+                    }
+                ]
+            },
+            "unblock_queue": {"payload": {"result": "task_suggested", "blocking_stage": "spec", "direction": "Ship spec"}},
+            "roi_next_task": {
+                "payload": {
+                    "result": "task_suggested",
+                    "question_roi": 3.1,
+                    "answer_roi": 0.0,
+                    "question": "Highest ROI item",
+                }
+            },
+        }
+    )
+
+    assert "Current friction-category signals to prioritize:" in prompt
+    assert "monitor" in prompt
+    assert "flow_unblock" in prompt
+    assert "roi_queue" in prompt
 
 
 def test_stage_payloads_pin_expected_models() -> None:
@@ -151,6 +304,9 @@ def test_stage_payloads_pin_expected_models() -> None:
     assert plan_payload["context"]["executor"] == "codex"
     assert execute_payload["context"]["executor"] == "codex"
     assert review_payload["context"]["executor"] == "codex"
+    assert plan_payload["context"]["runner_codex_auth_mode"] == "oauth"
+    assert execute_payload["context"]["runner_codex_auth_mode"] == "oauth"
+    assert review_payload["context"]["runner_codex_auth_mode"] == "oauth"
 
 
 def test_run_cycle_submits_plan_execute_review_in_order() -> None:
@@ -172,6 +328,8 @@ def test_run_cycle_submits_plan_execute_review_in_order() -> None:
     assert report["data_quality_mode"] in {"full", "degraded_partial", "degraded_usage"}
     assert report["input_bundle"]["blocking_usage_alert_count"] == 0
     assert report["input_bundle"]["usage_source"] == "live"
+    assert report["input_bundle"]["quality_hotspot_count"] == 1
+    assert report["input_bundle"]["quality_guidance_count"] == 1
 
     plan_payload, execute_payload, review_payload = client.created_payloads
     assert plan_payload["task_type"] == "spec"
@@ -209,10 +367,16 @@ def test_run_cycle_retries_plan_submit_when_transient_error_happens() -> None:
     assert len(client.created_payloads) == 3
 
 
-def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
+def test_run_cycle_retries_plan_submit_across_multiple_post_outages() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
-        post_error_plan=[RuntimeError("timeout"), RuntimeError("timeout"), RuntimeError("timeout")],
+        post_error_plan=[
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+            RuntimeError("timeout"),
+        ],
     )
 
     report = run_self_improve_cycle.run_cycle(
@@ -226,19 +390,39 @@ def test_run_cycle_fails_plan_submit_stage_on_repeated_post_errors() -> None:
         usage_cache_path="/tmp/self_improve_cache_retry_fail.json",
     )
 
-    assert report["status"] == "infra_blocked"
-    assert report["failed_stage"] == "plan_submit_or_wait"
-    assert "task submit failed" in str(report["failure_error"])
-    assert report["awareness_reflection"]["status"] == "infra_blocked"
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+
+
+def test_run_cycle_retries_plan_submit_on_http_502_then_completes() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        # First plan submit fails with 502, then plan/execute/review submits succeed.
+        task_post_status_plan=[502, 201, 201, 201],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_retry_502.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.submitted_payloads) == 4
+    assert len(client.created_payloads) == 3
 
 
 def test_run_cycle_returns_infra_blocked_on_plan_submit_timeouts() -> None:
     client = _FakeClient(
         usage_payload=_default_usage_payload(),
         post_error_plan=[
-            RuntimeError("read operation timed out"),
-            RuntimeError("read operation timed out"),
-            RuntimeError("read operation timed out"),
+            RuntimeError("read operation timed out")
+            for _ in range(20)
         ],
     )
 
@@ -396,6 +580,21 @@ def test_collect_input_bundle_parses_dict_task_payloads() -> None:
         tasks_payload={"tasks": [{"id": "t1", "status": "pending"}]},
         needs_decision_payload={"tasks": [{"id": "t2", "status": "needs_decision"}]},
         friction_payload={"events": [{"id": "f1", "block_type": "paid_provider_blocked"}]},
+        friction_categories_payload={
+            "categories": [
+                {
+                    "key": "failed-tasks",
+                    "severity": "high",
+                    "entry_point_count": 1,
+                    "open_entry_points": 1,
+                    "event_count": 2,
+                    "energy_loss": 9.0,
+                    "cost_of_delay": 3.0,
+                    "wasted_minutes": 9.0,
+                    "recommended_actions": ["Reduce failed loops."],
+                }
+            ]
+        },
         runtime_payload={"summary": [{"route": "/api/health"}]},
     )
 
@@ -409,7 +608,47 @@ def test_collect_input_bundle_parses_dict_task_payloads() -> None:
     assert bundle["summary"]["task_count"] == 1
     assert bundle["summary"]["needs_decision_count"] == 1
     assert bundle["summary"]["friction_open_count"] == 1
+    assert bundle["summary"]["friction_category_count"] == 1
+    assert bundle["summary"]["top_friction_categories"] == ["failed-tasks"]
+    assert bundle["summary"]["awareness_gap_count"] == 0
     assert bundle["summary"]["runtime_endpoint_count"] == 1
+
+
+def test_run_cycle_plan_prompt_includes_friction_category_focus() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        friction_categories_payload={
+            "categories": [
+                {
+                    "key": "monitor",
+                    "severity": "critical",
+                    "entry_point_count": 2,
+                    "open_entry_points": 2,
+                    "event_count": 7,
+                    "energy_loss": 10.0,
+                    "cost_of_delay": 12.0,
+                    "wasted_minutes": 30.0,
+                    "recommended_actions": ["Repair monitor routing first."],
+                }
+            ]
+        },
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_friction_focus.json",
+    )
+
+    assert report["status"] == "completed"
+    plan_payload = client.created_payloads[0]
+    assert "Current friction-category signals to prioritize:" in plan_payload["direction"]
+    assert "monitor" in plan_payload["direction"]
 
 
 def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
@@ -459,3 +698,163 @@ def test_run_cycle_resumes_from_checkpoint_plan_stage(tmp_path: Path) -> None:
     assert report["stages"][0]["resumed"] is True
     assert report["stages"][0]["resume_source"] == "checkpoint"
     assert len(client.created_payloads) == 2
+
+
+def test_run_cycle_reuses_inflight_plan_task_before_submitting_new_plan() -> None:
+    client = _FakeClient(usage_payload=_default_usage_payload())
+    client.created_payloads.append(
+        {
+            "task_type": "spec",
+            "direction": "existing plan direction",
+            "context": {
+                "executor": "codex",
+                "source": "self_improve_cycle",
+                "model_override": "gpt-5.3-codex",
+            },
+        }
+    )
+    client._task_order.append("task-1")
+    client._task_counter = 1
+    client.tasks_payload = {
+        "tasks": [
+            {
+                "id": "task-1",
+                "task_type": "spec",
+                "status": "running",
+                "model": "gpt-5.3-codex",
+                "context": {
+                    "executor": "codex",
+                    "source": "self_improve_cycle",
+                    "model_override": "gpt-5.3-codex",
+                },
+                "output": "",
+                "updated_at": "2099-01-01T00:00:00+00:00",
+            }
+        ]
+    }
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_inflight_resume.json",
+    )
+
+    assert report["status"] == "completed"
+    assert report["stages"][0]["stage"] == "plan"
+    assert report["stages"][0]["task_id"] == "task-1"
+    assert report["stages"][0]["resumed"] is True
+    assert report["stages"][0]["resume_source"] == "recent_tasks"
+    # Existing inflight plan is reused; only execute + review are newly submitted.
+    assert len(client.submitted_payloads) == 2
+
+
+def test_run_cycle_tolerates_execute_forbidden_when_pending() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        execute_status_code=403,
+        pending_polls_before_complete=1,
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=True,
+        execute_token="invalid",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_execute_forbidden.json",
+    )
+
+    assert report["status"] == "completed"
+    assert [row["stage"] for row in report["stages"]] == ["plan", "execute", "review"]
+
+
+def test_infra_preflight_allows_degraded_observability_when_core_is_healthy() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        tasks_error=RuntimeError("The read operation timed out"),
+        runtime_error=RuntimeError("The read operation timed out"),
+    )
+
+    preflight = run_self_improve_cycle._infra_preflight(
+        client=client,
+        base_url="https://example.test",
+        usage_threshold_ratio=0.15,
+        usage_cache_path=Path("/tmp/self_improve_preflight_usage_cache.json"),
+        attempts=1,
+        consecutive_successes=1,
+    )
+
+    assert preflight["allowed"] is True
+    assert preflight["history"][0]["tasks_ok"] is False
+    assert preflight["history"][0]["runtime_ok"] is False
+    assert preflight["history"][0]["health_ok"] is True
+    assert preflight["history"][0]["gates_ok"] is True
+
+
+def test_run_cycle_caps_review_direction_below_agent_task_limit() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        stage_output_overrides={
+            1: "PLAN-" + ("A" * 4000),
+            2: "EXEC-" + ("B" * 4000),
+        },
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_direction_cap.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+    review_payload = client.created_payloads[2]
+    assert review_payload["task_type"] == "review"
+    assert len(review_payload["direction"]) <= run_self_improve_cycle.AGENT_TASK_DIRECTION_SAFE_CHARS
+    assert "Original plan:" in review_payload["direction"]
+    assert "Execution output:" in review_payload["direction"]
+
+
+def test_run_cycle_recovers_from_422_with_compacted_direction_retry() -> None:
+    client = _FakeClient(
+        usage_payload=_default_usage_payload(),
+        stage_output_overrides={
+            1: "PLAN-" + ("A" * 4000),
+            2: "EXEC-" + ("B" * 4000),
+        },
+        # plan success, execute success, review submit 422, review submit retry success
+        task_post_status_plan=[201, 201, 422, 201],
+    )
+
+    report = run_self_improve_cycle.run_cycle(
+        client=client,
+        base_url="https://example.test",
+        poll_interval_seconds=0,
+        timeout_seconds=5,
+        execute_pending=False,
+        execute_token="",
+        usage_threshold_ratio=0.15,
+        usage_cache_path="/tmp/self_improve_cache_review_422_retry.json",
+    )
+
+    assert report["status"] == "completed"
+    assert len(client.created_payloads) == 3
+    # Four submit attempts total with one failed review submit.
+    assert len(client.submitted_payloads) == 4
+    failed_review_submit = client.submitted_payloads[2]
+    retried_review_submit = client.submitted_payloads[3]
+    assert failed_review_submit["task_type"] == "review"
+    assert retried_review_submit["task_type"] == "review"
+    assert len(retried_review_submit["direction"]) <= len(failed_review_submit["direction"])

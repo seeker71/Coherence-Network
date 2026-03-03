@@ -66,6 +66,39 @@ async def test_get_idea_returns_known_derived_runtime_idea(
 
 
 @pytest.mark.asyncio
+async def test_list_ideas_can_hide_internal_system_generated_ideas(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/ideas",
+            json={
+                "id": "spec-origin-cleanup-seed-1234abcd",
+                "name": "Internal seed",
+                "description": "System-generated idea should be hidden from actionable lists.",
+                "potential_value": 10.0,
+                "estimated_cost": 2.0,
+                "confidence": 0.5,
+                "interfaces": ["machine:commit-evidence"],
+                "open_questions": [],
+            },
+        )
+        assert created.status_code == 201
+        assert created.json()["open_questions"] == []
+
+        include_all = await client.get("/api/ideas?include_internal=true")
+        assert include_all.status_code == 200
+        assert any(row["id"] == "spec-origin-cleanup-seed-1234abcd" for row in include_all.json()["ideas"])
+
+        actionable_only = await client.get("/api/ideas?include_internal=false")
+        assert actionable_only.status_code == 200
+        assert all(row["id"] != "spec-origin-cleanup-seed-1234abcd" for row in actionable_only.json()["ideas"])
+
+
+@pytest.mark.asyncio
 async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
@@ -295,3 +328,105 @@ async def test_required_federation_idea_is_backfilled_for_existing_portfolio(
         assert federation["manifestation_status"] == "none"
         assert federation["potential_value"] >= 100.0
         assert any("federation contract" in q["question"].lower() for q in federation["open_questions"])
+
+
+@pytest.mark.asyncio
+async def test_ideas_cards_endpoint_returns_paginated_card_feed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/ideas/cards",
+            params={"limit": 10, "state": "all", "sort": "attention_desc"},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload.get("items"), list)
+    assert payload["pagination"]["limit"] == 10
+    assert payload["summary"]["total"] >= len(payload["items"])
+    assert isinstance(payload.get("change_token"), str) and payload["change_token"]
+    assert len(payload["items"]) >= 1
+    first = payload["items"][0]
+    assert "idea_id" in first
+    assert "state" in first
+    assert "state_icon" in first
+    assert "attention_level" in first
+    assert isinstance(first.get("links"), dict)
+
+
+@pytest.mark.asyncio
+async def test_ideas_cards_changes_endpoint_detects_no_change_for_same_token(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        cards = await client.get("/api/ideas/cards", params={"limit": 5})
+        assert cards.status_code == 200
+        token = cards.json().get("change_token")
+        assert isinstance(token, str) and token
+
+        unchanged = await client.get("/api/ideas/cards/changes", params={"since_token": token})
+        assert unchanged.status_code == 200
+        unchanged_payload = unchanged.json()
+        assert unchanged_payload["changed"] is False
+        assert unchanged_payload["token"] == token
+
+        initial = await client.get("/api/ideas/cards/changes")
+        assert initial.status_code == 200
+        assert initial.json()["changed"] is True
+
+
+@pytest.mark.asyncio
+async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+
+    internal_id = "spec-origin-cards-hidden-example"
+    external_id = "cards-visible-example"
+    base_payload = {
+        "name": "Cards Example",
+        "description": "Cards endpoint visibility test.",
+        "potential_value": 14.0,
+        "estimated_cost": 2.0,
+        "confidence": 0.6,
+        "interfaces": ["machine:api"],
+        "open_questions": [],
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create_internal = await client.post("/api/ideas", json={"id": internal_id, **base_payload})
+        assert create_internal.status_code == 201
+        create_external = await client.post("/api/ideas", json={"id": external_id, **base_payload})
+        assert create_external.status_code == 201
+
+        defaults = await client.get("/api/ideas/cards", params={"limit": 200})
+        assert defaults.status_code == 200
+        default_ids = {row["idea_id"] for row in defaults.json().get("items", [])}
+        assert internal_id in default_ids
+        assert external_id in default_ids
+
+        actionable_only = await client.get(
+            "/api/ideas/cards",
+            params={"limit": 200, "only_actionable": "true", "include_internal_ideas": "false"},
+        )
+        assert actionable_only.status_code == 200
+        actionable_ids = {row["idea_id"] for row in actionable_only.json().get("items", [])}
+        assert external_id in actionable_ids
+        assert internal_id not in actionable_ids
