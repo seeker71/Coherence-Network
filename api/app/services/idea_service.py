@@ -352,14 +352,13 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
     return sorted(out)
 
 
-def _tracked_idea_ids_from_github(max_files: int = 80, timeout: float = 8.0) -> list[str]:
-    now = time.time()
-    cache_key = f"{_tracking_repository()}::{_tracking_ref()}"
-    cached_ids = _TRACKED_IDEA_CACHE.get("idea_ids")
+def _should_include_default_tracked_ideas() -> bool:
+    # When callers isolate ideas into a custom portfolio path (common in tests),
+    # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
     if (
-        isinstance(cached_ids, list)
-        and _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
-        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
     ):
         return True
     return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
@@ -378,22 +377,55 @@ def _invalidate_ideas_cache() -> None:
     return result
 
 
-def _should_include_default_tracked_ideas() -> bool:
-    # When callers isolate ideas into a custom portfolio path (common in tests),
-    # do not implicitly pull tracked idea ids from repo-global evidence unless
-    # the evidence source is explicitly provided.
-    if os.getenv("IDEA_COMMIT_EVIDENCE_DIR"):
-        return True
-    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+def _ideas_cache_key() -> str:
+    return (
+        f"{_portfolio_path()}|"
+        f"{os.getenv('IDEA_REGISTRY_DATABASE_URL','')}|"
+        f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
+        f"{os.getenv('DATABASE_URL','')}|"
+        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
+        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
+        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}"
+    )
+
+
+def _read_ideas_cache() -> list[Idea] | None:
+    cache_key = _ideas_cache_key()
+    if (
+        _IDEAS_CACHE.get("cache_key") != cache_key
+        or _IDEAS_CACHE.get("expires_at", 0.0) <= time.time()
+    ):
+        return None
+    cached = _IDEAS_CACHE.get("items")
+    if not isinstance(cached, list):
+        return None
+    return [idea.model_copy(deep=True) for idea in cached]
 
 
 def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
-    local = _tracked_idea_ids_from_local()
-    if local:
-        return local
-    return _tracked_idea_ids_from_github()
+    now = time.time()
+    cache_key = (
+        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
+        f"|{os.getenv('DATABASE_URL','')}"
+        f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
+        f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
+        f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+        f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
+    )
+    if (
+        _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
+        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+    ):
+        return list(_TRACKED_IDEA_CACHE.get("idea_ids", []))
+    idea_ids = _tracked_idea_ids_from_store()
+
+    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
+    _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
+    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    return idea_ids
 
 
 def _humanize_idea_id(idea_id: str) -> str:

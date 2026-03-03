@@ -437,7 +437,7 @@ async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
 
-    internal_id = "internal-cards-hidden-example"
+    internal_id = "spec-origin-cards-hidden-example"
     external_id = "cards-visible-example"
     base_payload = {
         "name": "Cards Example",
@@ -450,14 +450,7 @@ async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        create_internal = await client.post(
-            "/api/ideas",
-            json={
-                "id": internal_id,
-                **base_payload,
-                "interfaces": ["machine:commit-evidence"],
-            },
-        )
+        create_internal = await client.post("/api/ideas", json={"id": internal_id, **base_payload})
         assert create_internal.status_code == 201
         create_external = await client.post("/api/ideas", json={"id": external_id, **base_payload})
         assert create_external.status_code == 201
