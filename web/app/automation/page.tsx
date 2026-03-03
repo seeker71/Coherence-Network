@@ -351,10 +351,7 @@ async function fetchJsonOrDefault<T>(url: string, fallback: T): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort("automation_fetch_timeout"), API_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, {
-      next: { revalidate: API_REVALIDATE_SECONDS },
-      signal: controller.signal,
-    });
+    const response = await fetch(url, { cache: "force-cache" });
     if (!response.ok) {
       return fallback;
     }
