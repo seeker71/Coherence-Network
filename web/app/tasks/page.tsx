@@ -263,56 +263,45 @@ function TasksPageContent() {
   }, [selectedTaskEvents]);
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
-          Gates
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/agent" className="text-muted-foreground hover:text-foreground">
-          Agent
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Tasks</h1>
-      <p className="text-muted-foreground">
-        Human interface for `GET /api/agent/tasks`.
-        {statusFilter ? (
-          <>
-            {" "}
-            status <code>{statusFilter}</code>.
-          </>
-        ) : null}
-        {typeFilter ? (
-          <>
-            {" "}
-            task type <code>{typeFilter}</code>.
-          </>
-        ) : null}
-        {taskIdFilter ? (
-          <>
-            {" "}
-            task id <code>{taskIdFilter}</code>.
-          </>
-        ) : null}
-      </p>
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <section className="space-y-1 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tasks In Motion</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Human interface for <code>GET /api/agent/tasks</code> with live execution proof and runtime evidence.
+          </p>
+          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+            {statusFilter || typeFilter || taskIdFilter ? "Filtered task stream." : "All active and historical tasks."}
+          </p>
+        </section>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="text-destructive">Error: {error}</p>}
+        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/portfolio", label: "Portfolio" },
+              { href: "/gates", label: "Gates" },
+              { href: "/flow", label: "Flow" },
+              { href: "/agent", label: "Agent" },
+              { href: "/contributors", label: "Contributors" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
-      {status === "ok" && (
+        {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+        {status === "error" && <p className="text-destructive">Error: {error}</p>}
+
+        {status === "ok" && (
         <>
-          <section className="rounded border p-4 space-y-3">
+          <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
             <p className="text-sm text-muted-foreground">
               Showing {pageStart}-{pageEnd} of {totalTasks} | page {page}
               {(statusFilter || typeFilter || taskIdFilter) ? (
@@ -345,7 +334,7 @@ function TasksPageContent() {
             ) : null}
             <ul className="space-y-2 text-sm">
               {filteredRows.map((t) => (
-                <li key={t.id} className="rounded border p-2 space-y-1">
+                <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
                   <div className="flex justify-between gap-3">
                     <span className="font-medium">
                       <Link href={`/tasks?task_id=${encodeURIComponent(t.id)}`} className="underline hover:text-foreground">
@@ -369,7 +358,7 @@ function TasksPageContent() {
           </section>
 
           {taskIdFilter && (
-            <section className="rounded border p-4 space-y-3 text-sm">
+            <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3 text-sm">
               <h2 className="font-semibold">Evidence Trail</h2>
               {selectedTask ? (
                 <>
@@ -478,7 +467,8 @@ function TasksPageContent() {
             </section>
           )}
         </>
-      )}
+        )}
+      </div>
     </main>
   );
 }
@@ -487,8 +477,10 @@ export default function TasksPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen p-8 max-w-5xl mx-auto">
-          <p className="text-muted-foreground">Loading tasks…</p>
+        <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl">
+            <p className="text-muted-foreground">Loading tasks…</p>
+          </div>
         </main>
       }
     >

@@ -133,28 +133,35 @@ export default function GatesPage() {
   }
 
   return (
-    <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Coherence Network
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Gate Status</h1>
-      <p className="text-muted-foreground">
-        Human interface for release/public gate inspection. Machine clients should use the
-        `/api/gates/*` endpoints directly.
-      </p>
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <section className="space-y-1 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Gate Status In Motion</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Live release/public gate inspection. Machine clients should continue using <code>/api/gates/*</code> directly.
+          </p>
+        </section>
 
-      <section className="space-y-3 border border-border rounded-md p-4">
+        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/tasks", label: "Tasks" },
+              { href: "/flow", label: "Flow" },
+              { href: "/usage", label: "Usage" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
         <h2 className="text-lg font-semibold">PR → Public Readiness</h2>
         <div className="flex gap-2">
           <Input
@@ -168,7 +175,7 @@ export default function GatesPage() {
         </div>
       </section>
 
-      <section className="space-y-3 border border-border rounded-md p-4">
+      <section className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
         <h2 className="text-lg font-semibold">Merged Change Contract</h2>
         <div className="flex gap-2">
           <Input
@@ -185,7 +192,7 @@ export default function GatesPage() {
         </div>
       </section>
 
-      <section className="space-y-3 border border-border rounded-md p-4">
+      <section className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
         <h2 className="text-lg font-semibold">Public Deploy Contract</h2>
         <Button variant="outline" onClick={runPublicDeployContract} disabled={status === "loading"}>
           Check Public Deploy Contract
@@ -195,7 +202,7 @@ export default function GatesPage() {
         </Button>
       </section>
 
-      <section className="space-y-3 border border-border rounded-md p-4">
+      <section className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
         <h2 className="text-lg font-semibold">Endpoint Traceability Coverage</h2>
         <p className="text-sm text-muted-foreground">
           Verify every endpoint is mapped to idea, spec, process, and validation signals.
@@ -210,7 +217,7 @@ export default function GatesPage() {
       )}
 
       {prReport && (
-        <section className="space-y-2">
+        <section className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
           <h3 className="font-medium">PR Gate Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(prReport, null, 2)}
@@ -219,7 +226,7 @@ export default function GatesPage() {
       )}
 
       {contractReport && (
-        <section className="space-y-2">
+        <section className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
           <h3 className="font-medium">Change Contract Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(contractReport, null, 2)}
@@ -228,7 +235,7 @@ export default function GatesPage() {
       )}
 
       {publicDeployReport && (
-        <section className="space-y-2">
+        <section className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
           <h3 className="font-medium">Public Deploy Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(publicDeployReport, null, 2)}
@@ -237,13 +244,14 @@ export default function GatesPage() {
       )}
 
       {traceabilityReport && (
-        <section className="space-y-2">
+        <section className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
           <h3 className="font-medium">Endpoint Traceability Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(traceabilityReport, null, 2)}
           </pre>
         </section>
       )}
+      </div>
     </main>
   );
 }
