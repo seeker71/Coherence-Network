@@ -110,47 +110,51 @@ function ContributorsPageContent() {
   }, [flowRows]);
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
-          Contribute
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Contributors</h1>
-      <p className="text-muted-foreground">
-        Human interface for `GET /api/contributors`.
-        {selectedContributorId ? (
-          <>
-            {" "}
-            Filtered by contributor <code>{selectedContributorId}</code>.
-          </>
-        ) : null}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        To register a new contributor and submit idea/spec/question changes, use the{" "}
-        <Link href="/contribute" className="underline hover:text-foreground">Contribution Console</Link>.
-      </p>
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <section className="space-y-1 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Contributors In Motion</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Human interface for <code>GET /api/contributors</code> with idea/spec/process relation visibility.
+          </p>
+          {selectedContributorId ? (
+            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+              Filtered by contributor <code>{selectedContributorId}</code>.
+            </p>
+          ) : null}
+        </section>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="text-destructive">Error: {error}</p>}
+        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/portfolio", label: "Portfolio" },
+              { href: "/contribute", label: "Contribute" },
+              { href: "/contributions", label: "Contributions" },
+              { href: "/assets", label: "Assets" },
+              { href: "/tasks", label: "Tasks" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
-      {status === "ok" && (
-        <section className="rounded border p-4 space-y-3">
+        <p className="px-1 text-sm text-muted-foreground">
+          To register a new contributor and submit idea/spec/question changes, use the{" "}
+          <Link href="/contribute" className="underline hover:text-foreground">Contribution Console</Link>.
+        </p>
+
+        {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+        {status === "error" && <p className="text-destructive">Error: {error}</p>}
+
+        {status === "ok" && (
+        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
           <p className="text-sm text-muted-foreground">
             Total: {filteredRows.length}
             {selectedContributorId ? (
@@ -162,7 +166,7 @@ function ContributorsPageContent() {
           </p>
           <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((c) => (
-              <li key={c.id} className="rounded border p-2 flex justify-between gap-3">
+              <li key={c.id} className="rounded-lg border border-border/70 bg-background/45 p-2 flex justify-between gap-3">
                 <span className="font-medium">
                   <Link href={`/contributors?contributor_id=${encodeURIComponent(c.id)}`} className="hover:underline">
                     {c.name}
@@ -185,7 +189,7 @@ function ContributorsPageContent() {
             {filteredRows.slice(0, 100).map((c) => {
               const rel = relationsByContributor.get(c.id);
               return (
-                <li key={`${c.id}-relations`} className="rounded border p-2 text-muted-foreground">
+                <li key={`${c.id}-relations`} className="rounded-lg border border-border/70 bg-background/45 p-2 text-muted-foreground">
                   idea{" "}
                   {rel && rel.ideaIds.length > 0
                     ? rel.ideaIds.slice(0, 6).map((ideaId, idx) => (
@@ -251,14 +255,15 @@ function ContributorsPageContent() {
             })}
           </ul>
         </section>
-      )}
+        )}
+      </div>
     </main>
   );
 }
 
 export default function ContributorsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen p-8 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributors…</p></main>}>
+    <Suspense fallback={<main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8"><div className="mx-auto w-full max-w-7xl"><p className="text-muted-foreground">Loading contributors…</p></div></main>}>
       <ContributorsPageContent />
     </Suspense>
   );
