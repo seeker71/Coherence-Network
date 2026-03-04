@@ -521,54 +521,51 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const nextHref = `/usage?page=${page + 1}&page_size=${pageSize}`;
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
-          Ideas
-        </Link>
-        <Link href="/specs" className="text-muted-foreground hover:text-foreground">
-          Specs
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-        <Link href="/agent" className="text-muted-foreground hover:text-foreground">
-          Agent
-        </Link>
-        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
-          Gates
-        </Link>
-      </div>
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <section className="space-y-1 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Usage In Motion</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Runtime telemetry + friction summary, rendered with operational context for fast triage.
+          </p>
+          {warnings.length > 0 ? (
+            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+              Partial data mode: unavailable {warnings.join(", ")}.
+            </p>
+          ) : null}
+        </section>
 
-      <h1 className="text-2xl font-bold">Usage</h1>
-      <p className="text-muted-foreground">Runtime telemetry + friction summary (machine data rendered for humans).</p>
-      {warnings.length > 0 ? (
-        <p className="text-sm text-muted-foreground">Partial data mode: unavailable {warnings.join(", ")}.</p>
-      ) : null}
+        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/portfolio", label: "Portfolio" },
+              { href: "/ideas", label: "Ideas" },
+              { href: "/specs", label: "Specs" },
+              { href: "/flow", label: "Flow" },
+              { href: "/contributors", label: "Contributors" },
+              { href: "/contributions", label: "Contributions" },
+              { href: "/assets", label: "Assets" },
+              { href: "/tasks", label: "Tasks" },
+              { href: "/agent", label: "Agent" },
+              { href: "/gates", label: "Gates" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Friction (24h)</h2>
         <p className="text-muted-foreground">total_events {friction.total_events} | open {friction.open_events}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Top block types</p>
             <ul className="space-y-1">
               {friction.top_block_types.slice(0, 8).map((row) => (
@@ -581,7 +578,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
               ))}
             </ul>
           </div>
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Top stages</p>
             <ul className="space-y-1">
               {friction.top_stages.slice(0, 8).map((row) => (
@@ -593,7 +590,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
             </ul>
           </div>
         </div>
-        <div className="rounded border p-3">
+        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
           <p className="font-medium mb-2">Top entry points</p>
           <ul className="space-y-1">
             {friction.entry_points.slice(0, 8).map((row) => (
@@ -611,7 +608,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </div>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Host Runner (24h)</h2>
         <p className="text-muted-foreground">
           runs {dailySummary.host_runner.total_runs} | failed {dailySummary.host_runner.failed_runs} | completed{" "}
@@ -620,7 +617,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </p>
         <ul className="space-y-2">
           {hostTaskTypeRows.map(([taskType, counts]) => (
-            <li key={taskType} className="rounded border p-2 flex flex-wrap justify-between gap-2">
+            <li key={taskType} className="rounded-lg border border-border/70 bg-background/45 p-2 flex flex-wrap justify-between gap-2">
               <span className="font-medium">{taskType}</span>
               <span className="text-muted-foreground">
                 total {Number(counts.total || 0)} | completed {Number(counts.completed || 0)} | failed{" "}
@@ -631,7 +628,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
           {hostTaskTypeRows.length === 0 ? <li className="text-muted-foreground">No host-runner task-type data yet.</li> : null}
         </ul>
         {dailySummary.contract_gaps.length > 0 ? (
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-1">Telemetry Contract Gaps</p>
             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
               {dailySummary.contract_gaps.map((gap) => (
@@ -642,7 +639,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         ) : null}
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Code Quality Awareness (Guidance)</h2>
         <p className="text-muted-foreground">
           intent {qualityAwareness.intent_focus.join(", ")} | severity {qualityAwareness.summary.severity} | risk score{" "}
@@ -654,7 +651,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
           {qualityAwareness.summary.very_large_modules} | long functions {qualityAwareness.summary.long_functions}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Hotspots</p>
             <ul className="space-y-1">
               {qualityAwareness.hotspots.slice(0, 6).map((row, idx) => (
@@ -675,7 +672,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
               ) : null}
             </ul>
           </div>
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Guidance</p>
             <ul className="space-y-1">
               {qualityAwareness.guidance.map((row) => (
@@ -689,7 +686,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
             </ul>
           </div>
         </div>
-        <div className="rounded border p-3">
+        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
           <p className="font-medium mb-2">Recommended self-improvement tasks</p>
           <ul className="space-y-1">
             {qualityAwareness.recommended_tasks.slice(0, 3).map((task) => (
@@ -707,11 +704,11 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </div>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Providers + Limits</h2>
         <ul className="space-y-2">
           {providerRows.map((row) => (
-            <li key={row.provider} className="rounded border p-2">
+            <li key={row.provider} className="rounded-lg border border-border/70 bg-background/45 p-2">
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="font-medium">
                   {row.provider} ({row.status})
@@ -737,10 +734,10 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Top Tool Usage + Attention (24h)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Top tools</p>
             <ul className="space-y-1">
               {topTools.map((tool) => (
@@ -754,7 +751,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
               {topTools.length === 0 ? <li className="text-muted-foreground">No worker tool events in window.</li> : null}
             </ul>
           </div>
-          <div className="rounded border p-3">
+          <div className="rounded-xl border border-border/70 bg-background/45 p-3">
             <p className="font-medium mb-2">Top attention areas</p>
             <ul className="space-y-1">
               {topAttentionRows.map((row) => (
@@ -771,7 +768,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </div>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Runtime Cost by Idea</h2>
         <p className="text-muted-foreground">window_seconds {runtime.window_seconds} | page {page}</p>
         <div className="flex gap-3 text-muted-foreground">
@@ -792,7 +789,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </div>
         <ul className="space-y-2">
           {ideas.map((row) => (
-            <li key={row.idea_id} className="flex justify-between rounded border p-2">
+            <li key={row.idea_id} className="flex justify-between rounded-lg border border-border/70 bg-background/45 p-2">
               <Link href={`/ideas/${encodeURIComponent(row.idea_id)}`} className="underline hover:text-foreground">
                 {row.idea_id}
               </Link>
@@ -805,14 +802,14 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
+      <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
         <h2 className="font-semibold">Full View Render + API Cost</h2>
         <p className="text-muted-foreground">
           Measured after data is loaded (`web_view_complete` beacon): render time and summed API runtime/cost per route.
         </p>
         <ul className="space-y-2">
           {viewRows.map((row) => (
-            <li key={row.route} className="rounded border p-2 flex flex-wrap justify-between gap-2">
+            <li key={row.route} className="rounded-lg border border-border/70 bg-background/45 p-2 flex flex-wrap justify-between gap-2">
               <Link href={row.route} className="underline hover:text-foreground">
                 {row.route}
               </Link>
@@ -826,6 +823,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
           ) : null}
         </ul>
       </section>
+      </div>
     </main>
   );
 }
