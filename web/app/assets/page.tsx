@@ -47,40 +47,45 @@ function AssetsPageContent() {
   }, [rows, selectedAssetId]);
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Assets</h1>
-      <p className="text-muted-foreground">
-        Human interface for `GET /api/assets`.
-        {selectedAssetId ? (
-          <>
-            {" "}
-            Filtered by asset <code>{selectedAssetId}</code>.
-          </>
-        ) : null}
-      </p>
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <section className="space-y-1 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Assets In Motion</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Human interface for <code>GET /api/assets</code> with linked contribution pathways.
+          </p>
+          {selectedAssetId ? (
+            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+              Filtered by asset <code>{selectedAssetId}</code>.
+            </p>
+          ) : null}
+        </section>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="text-destructive">Error: {error}</p>}
+        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/portfolio", label: "Portfolio" },
+              { href: "/contributors", label: "Contributors" },
+              { href: "/contributions", label: "Contributions" },
+              { href: "/tasks", label: "Tasks" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
-      {status === "ok" && (
-        <section className="rounded border p-4 space-y-3">
+        {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+        {status === "error" && <p className="text-destructive">Error: {error}</p>}
+
+        {status === "ok" && (
+        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
           <p className="text-sm text-muted-foreground">
             Total: {filteredRows.length}
             {selectedAssetId ? (
@@ -92,7 +97,7 @@ function AssetsPageContent() {
           </p>
           <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((a) => (
-              <li key={a.id} className="rounded border p-2 flex justify-between gap-3">
+              <li key={a.id} className="rounded-lg border border-border/70 bg-background/45 p-2 flex justify-between gap-3">
                 <span className="font-medium">
                   <Link href={`/assets?asset_id=${encodeURIComponent(a.id)}`} className="hover:underline">
                     {a.id}
@@ -112,14 +117,15 @@ function AssetsPageContent() {
             ))}
           </ul>
         </section>
-      )}
+        )}
+      </div>
     </main>
   );
 }
 
 export default function AssetsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen p-8 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading assets…</p></main>}>
+    <Suspense fallback={<main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8"><div className="mx-auto w-full max-w-7xl"><p className="text-muted-foreground">Loading assets…</p></div></main>}>
       <AssetsPageContent />
     </Suspense>
   );
