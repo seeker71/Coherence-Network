@@ -1434,6 +1434,7 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
     task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    next_context = dict(task_context) if isinstance(task_context, dict) else {}
     tracked_idea_id = "coherence-network-agent-pipeline"
     if isinstance(task_context, dict):
         explicit_idea_id = str(task_context.get("idea_id") or "").strip()
@@ -1510,7 +1511,18 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                 },
             )
         )
+        next_context["completion_tracking_event_status"] = "recorded"
+        next_context["completion_tracking_event_recorded_at"] = _now().isoformat()
+        next_context.pop("completion_tracking_event_error", None)
+        next_context.pop("completion_tracking_event_error_type", None)
+        task["context"] = next_context
     except Exception:
+        next_context["completion_tracking_event_status"] = "failed"
+        next_context["completion_tracking_event_error_type"] = "runtime_event_record_failure"
+        next_context["completion_tracking_event_error"] = (
+            "Failed to record runtime completion event. Check runtime event store health/configuration."
+        )
+        task["context"] = next_context
         # Tracking should never block task state transitions.
         return
 
