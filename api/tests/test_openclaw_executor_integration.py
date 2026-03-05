@@ -72,6 +72,26 @@ def test_create_task_supports_gemini_executor(monkeypatch: pytest.MonkeyPatch) -
     assert context.get("executor") == "gemini"
 
 
+def test_create_task_gemini_default_template_is_non_interactive(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.delenv("GEMINI_COMMAND_TEMPLATE", raising=False)
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Validate gemini oauth non-interactive defaults",
+            task_type=TaskType.IMPL,
+            context={"executor": "gemini"},
+        )
+    )
+
+    assert task["command"].startswith("gemini -p ")
+    assert "--yolo" in task["command"]
+    assert "--output-format json" in task["command"]
+
+
 def test_create_task_supports_clawwork_executor_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("OPENCLAW_MODEL", "openclaw/test-model")

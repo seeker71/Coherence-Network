@@ -85,7 +85,11 @@ _MODEL_COOLDOWN_DEFAULT_SECONDS = 2 * 60 * 60
 _MODEL_COOLDOWN_LOOKBACK_SECONDS = 12 * 60 * 60
 _MODEL_COOLDOWN_DEFAULT_MAP = (
     "codex/gpt-5.3-codex-spark:codex/gpt-5.3-codex,"
-    "gpt-5.3-codex-spark:gpt-5.3-codex"
+    "gpt-5.3-codex-spark:gpt-5.3-codex,"
+    "gemini/gemini-3.1-pro-preview:gemini/gemini-2.5-pro,"
+    "gemini-3.1-pro-preview:gemini-2.5-pro,"
+    "claude/claude-opus-4-5:claude/claude-sonnet-4-5-20250929,"
+    "claude-opus-4-5:claude-sonnet-4-5-20250929"
 )
 _MODEL_LIMIT_SIGNAL_MARKERS: tuple[str, ...] = (
     "usage limit",
@@ -97,6 +101,12 @@ _MODEL_LIMIT_SIGNAL_MARKERS: tuple[str, ...] = (
     "out of quota",
     "rate limit",
     "resource_exhausted",
+    "resource has been exhausted",
+    "quota metric",
+    "quota limit",
+    "model limit",
+    "daily limit",
+    "monthly limit",
     "too many requests",
     "limit reached",
 )
@@ -1351,8 +1361,17 @@ def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
     next_context["failure_reason_bucket"] = classified["bucket"]
     next_context["failure_signature"] = classified["signature"]
     next_context["failure_summary"] = classified["summary"]
+    next_context["failure_action"] = str(classified.get("action") or "")
     next_context["failure_diagnostics_source"] = source
     next_context["failure_diagnostics_present"] = bool(output_text)
+    next_context["failure_context_packet"] = {
+        "bucket": classified["bucket"],
+        "signature": classified["signature"],
+        "summary": classified["summary"],
+        "action": str(classified.get("action") or ""),
+        "diagnostics_source": source,
+        "output_excerpt": output_text[:400],
+    }
     task["context"] = next_context
 
 

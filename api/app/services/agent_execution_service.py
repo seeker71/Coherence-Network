@@ -351,15 +351,66 @@ def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     return _normalize_openrouter_target_model(resolved, executor)
 
 
+def _clip_prompt_text(value: Any, max_chars: int) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 3].rstrip() + "..."
+
+
 def _resolve_prompt(task: dict[str, Any]) -> str:
     prompt = str(task.get("direction") or "").strip()
     if not prompt:
         return ""
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    retry_hint = str(context.get("retry_hint") or "").strip()
-    if not retry_hint:
+    sections: list[str] = []
+
+    retry_hint = _clip_prompt_text(context.get("retry_hint") or "", 700)
+    if retry_hint:
+        sections.append(f"Retry guidance:\n{retry_hint}")
+
+    retry_memory_lines: list[str] = [
+        "Preserve prior work and patch incrementally; do not restart from scratch.",
+    ]
+    for key in (
+        "last_failure_category",
+        "last_failure_signature",
+        "last_failure_summary",
+        "last_failure_action",
+    ):
+        value = _clip_prompt_text(context.get(key) or "", 260)
+        if value:
+            retry_memory_lines.append(f"{key}={value}")
+
+    failure_packet = context.get("last_failure_packet")
+    if isinstance(failure_packet, dict):
+        for key in ("bucket", "signature", "summary", "action"):
+            value = _clip_prompt_text(failure_packet.get(key) or "", 260)
+            if value:
+                retry_memory_lines.append(f"failure_packet.{key}={value}")
+
+    reflections = context.get("retry_reflections")
+    if isinstance(reflections, list):
+        reflection_rows = [row for row in reflections if isinstance(row, dict)]
+        if reflection_rows:
+            latest = reflection_rows[-1]
+            blind_spot = _clip_prompt_text(latest.get("blind_spot") or "", 260)
+            next_action = _clip_prompt_text(latest.get("next_action") or "", 260)
+            if blind_spot:
+                retry_memory_lines.append(f"latest_blind_spot={blind_spot}")
+            if next_action:
+                retry_memory_lines.append(f"latest_next_action={next_action}")
+
+    failure_output_excerpt = _clip_prompt_text(context.get("last_failure_output") or "", 900)
+    if failure_output_excerpt:
+        retry_memory_lines.append(f"last_failure_output_excerpt={failure_output_excerpt}")
+
+    if len(retry_memory_lines) > 1:
+        sections.append("Retry memory packet:\n" + "\n".join(f"- {line}" for line in retry_memory_lines))
+
+    if not sections:
         return prompt
-    return f"{prompt}\n\nRetry guidance:\n{retry_hint}"
+    return f"{prompt}\n\n" + "\n\n".join(sections)
 
 
 def _normalize_positive_float(value: Any, default: float | None = None) -> float | None:

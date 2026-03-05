@@ -1,0 +1,111 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "codex/merge-local-all-20260304-232140",
+  "commit_scope": "Enable non-interactive Gemini CLI defaults, extend quota-aware model cooldown remaps, and preserve actionable retry memory so failed spec/impl/review attempts can be patched without restarting from scratch.",
+  "files_owned": [
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/failure_taxonomy_service.py",
+    "api/tests/test_agent_execution_prompt.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_failure_taxonomy_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-03-05_gemini-quota-retry-feedback.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "108-unified-agent-cli-flow-patch-on-fail"
+  ],
+  "task_ids": [
+    "task-2026-03-05-gemini-quota-retry-feedback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py tests/test_agent_task_persistence.py tests/test_failure_taxonomy_service.py tests/test_agent_execution_prompt.py",
+    "cd api && pytest -q tests/test_agent_usage_tracking_api.py tests/test_agent_visibility_api.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_runtime_event_tracks_task_idea_id tests/test_agent_runner_tool_failure_telemetry.py::test_infer_executor_detects_gemini tests/test_agent_runner_tool_failure_telemetry.py::test_cli_install_provider_for_command_detects_supported_providers",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --baseline docs/system_audit/maintainability_baseline.json --write-baseline --json",
+    "cd api && ruff check app/services/agent_execution_retry.py app/services/agent_execution_service.py app/services/agent_routing_service.py app/services/agent_service.py app/services/failure_taxonomy_service.py tests/test_agent_executor_policy.py tests/test_agent_task_persistence.py tests/test_failure_taxonomy_service.py tests/test_openclaw_executor_integration.py tests/test_agent_execution_prompt.py"
+  ],
+  "change_files": [
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/failure_taxonomy_service.py",
+    "api/tests/test_agent_execution_prompt.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_failure_taxonomy_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-03-05_gemini-quota-retry-feedback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_executor_policy.py tests/test_agent_task_persistence.py tests/test_failure_taxonomy_service.py tests/test_agent_execution_prompt.py",
+      "cd api && pytest -q tests/test_agent_usage_tracking_api.py tests/test_agent_visibility_api.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_runtime_event_tracks_task_idea_id tests/test_agent_runner_tool_failure_telemetry.py::test_infer_executor_detects_gemini tests/test_agent_runner_tool_failure_telemetry.py::test_cli_install_provider_for_command_detects_supported_providers",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --baseline docs/system_audit/maintainability_baseline.json --write-baseline --json",
+      "cd api && ruff check app/services/agent_execution_retry.py app/services/agent_execution_service.py app/services/agent_routing_service.py app/services/agent_service.py app/services/failure_taxonomy_service.py tests/test_agent_executor_policy.py tests/test_agent_task_persistence.py tests/test_failure_taxonomy_service.py tests/test_openclaw_executor_integration.py tests/test_agent_execution_prompt.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push and public deploy verification"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Retries preserve actionable failure context and model cooldown remaps exhausted models while keeping usage attribution linked to real tool and idea ids.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/orchestration-guidance",
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
+      "https://coherence-web-production.up.railway.app/usage"
+    ],
+    "test_flows": [
+      "Run local matrix flows with codex/claude/cursor/gemini and confirm retry memory markers in failed-task context.",
+      "Run production matrix and verify runtime events map task_id to correct tool endpoint and idea_id.",
+      "Induce model-limit failure and verify cooldown remap plus model_selection_decisions telemetry in task context."
+    ]
+  }
+}

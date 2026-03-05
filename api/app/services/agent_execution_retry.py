@@ -321,6 +321,18 @@ def record_failure_hits_and_retry(
         failure_output=failure_output,
     )
     context_patch["last_failure_category"] = failure_category
+    failure_summary = str(context.get("failure_summary") or "").strip()
+    failure_signature = str(context.get("failure_signature") or "").strip()
+    failure_action = str(context.get("failure_action") or "").strip()
+    if failure_summary:
+        context_patch["last_failure_summary"] = failure_summary
+    if failure_signature:
+        context_patch["last_failure_signature"] = failure_signature
+    if failure_action:
+        context_patch["last_failure_action"] = failure_action
+    failure_packet = context.get("failure_context_packet")
+    if isinstance(failure_packet, dict):
+        context_patch["last_failure_packet"] = dict(failure_packet)
 
     can_retry = retry_count < retry_max and retry_depth < retry_max
     if not can_retry:

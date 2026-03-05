@@ -337,6 +337,11 @@ def test_update_task_backfills_failed_output_from_context_error(
     assert context.get("failure_reason_bucket") == "timeout"
     assert context.get("failure_signature") == "timeout_runtime_or_dependency"
     assert "timed out" in str(context.get("failure_summary") or "").lower()
+    assert str(context.get("failure_action") or "").strip()
+    packet = context.get("failure_context_packet") if isinstance(context.get("failure_context_packet"), dict) else {}
+    assert packet.get("bucket") == "timeout"
+    assert packet.get("signature") == "timeout_runtime_or_dependency"
+    assert str(packet.get("action") or "").strip()
 
 
 def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
@@ -370,6 +375,7 @@ def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
     assert context.get("failure_reason_bucket") in {"other", "empty_output"}
     assert str(context.get("failure_signature") or "").strip()
     assert str(context.get("failure_summary") or "").strip()
+    assert str(context.get("failure_action") or "").strip()
 
 
 def test_create_task_records_task_card_validation_metadata(
