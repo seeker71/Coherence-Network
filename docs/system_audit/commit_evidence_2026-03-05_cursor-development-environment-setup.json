@@ -1,0 +1,30 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "merge-cursor-setup",
+  "commit_scope": "Add Cursor Cloud specific instructions to AGENTS.md.",
+  "files_owned": [
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_2026-03-05_cursor-development-environment-setup.json"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "cursor-user",
+      "contributor_type": "human",
+      "roles": ["implementation"]
+    }
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": ["coherence-network-docs"],
+  "spec_ids": ["027-fully-automated-pipeline"],
+  "task_ids": ["cursor-dev-setup-2026"],
+  "agent": {"name": "cursor", "version": "local"},
+  "evidence_refs": ["Cursor Cloud instructions in AGENTS.md; rebased onto main."],
+  "change_files": [
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_2026-03-05_cursor-development-environment-setup.json"
+  ],
+  "local_validation": {"status": "pass", "commands": []},
+  "ci_validation": {"status": "pending", "run_url": ""},
+  "deploy_validation": {"status": "pending", "environment": "n/a"},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Awaiting PR merge."}
+}
