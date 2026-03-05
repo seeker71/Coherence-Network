@@ -6,33 +6,11 @@ Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the ful
 
 ## Requirements
 
-1. **All provider CLIs support all task types**
-   - Each executor (claude/aider, cursor, openclaw) must be able to execute: `spec`, `impl`, `test`, `review`, `heal`.
-   - Routing and command templates already exist in `agent_service` / `agent_routing_service`; ensure no task type is excluded for any executor and that directions are appropriate per phase.
-
-2. **Full flow**
-   - **Spec from idea**: task_type `spec` with direction that references the idea; output is a spec path (or content) per existing `build_direction("spec", ...)`.
-   - **Implement**: task_type `impl` with spec reference; only modify files listed in spec (spec-driven, spec-guard).
-   - **Review / verification**: task_type `review` runs verification (spec compliance, tests, correctness). Review must consume the spec’s Verification section (e.g. `cd api && pytest ...`) and the current implementation state.
-
-3. **Review output contract when verification fails**
-   - When review concludes FAIL (or tests/spec compliance fail), the review task’s output must be structured so a follow-up `impl` or `heal` task can apply a patch without starting from scratch.
-   - Required structure (machine- and human-readable):
-     - **VERIFICATION_RESULT**: `PASS` or `FAIL`.
-     - **FAIL** case must include:
-       - **FILES_TO_CHANGE**: list of paths that need changes (from spec’s Files to Create/Modify or identified violations).
-       - **PATCH_GUIDANCE**: concise, actionable instructions or a minimal diff/edits (file, location, suggested change) so an impl/heal agent can make targeted edits.
-     - Optional: **SPEC_VERIFICATION_IMPROVEMENT**: if the spec’s Verification section is wrong or ambiguous, suggest a concrete improvement (e.g. exact command or steps) so the spec can be updated.
-
-4. **Pipeline use of review output**
-   - When a review task completes with FAIL, the pipeline (e.g. project_manager) must pass the full review output (or a sufficient subset) into the next impl/heal task’s direction/context—not only a truncated snippet (e.g. more than 300 chars when it contains PATCH_GUIDANCE). This allows “patch from review” instead of “start over.”
-
-5. **Local and remote execution**
-   - **Local**: agent_runner runs the CLI command (aider/cursor/openclaw) in a subprocess; task types and routing already apply. No change required for “all task types” per executor beyond ensuring command templates and directions are correct.
-   - **Remote**: same flow must be possible when a runner on another host runs the same agent_runner (or equivalent) and reports status to the API. Server-side execute (OpenRouter chat) is a different path; this spec does not require server-side to run the CLI—only that the contract (task types, review output format) is consistent so that any runner (local or remote) can consume it.
-
-6. **Spec verification improvement (optional)**
-   - If review finds that the spec’s Verification section is missing, wrong, or ambiguous, the review output may include SPEC_VERIFICATION_IMPROVEMENT. A follow-up process (human or automated) may update the spec’s Verification section accordingly so future runs are deterministic.
+- [ ] Every executor (`claude`, `cursor`, `codex`, `gemini`) supports `spec`, `impl`, `test`, `review`, and `heal` task types through routing and command templates.
+- [ ] The flow executes end-to-end (`idea -> spec -> impl -> test -> review`) for local and remote runner modes with no task-type exclusion.
+- [ ] `review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks that can drive a follow-up patch.
+- [ ] On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive truncation.
+- [ ] Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be tightened in follow-up.
 
 ## API Contract
 
@@ -51,6 +29,8 @@ Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the ful
 - **Routing**: For each executor in `EXECUTOR_VALUES` (claude, cursor, openclaw) and each task_type in (spec, impl, test, review, heal), `GET /api/agent/route?task_type=X&executor=Y` returns a valid command_template and model. (Covered by existing agent routing tests; add or extend one test that asserts all pairs if missing.)
 - **Review output contract**: Document in spec and spec-guard that FAIL review output must include VERIFICATION_RESULT=FAIL, FILES_TO_CHANGE, PATCH_GUIDANCE. No new automated test for agent output format unless we add a small parser test for the convention.
 - **Project manager**: After a review task completes with status failed or output indicating FAIL, the next impl task created by project_manager receives direction/context that includes the review output (or PATCH_GUIDANCE) sufficient for patch-oriented fix (e.g. test that state or direction length/carry-over is improved where applicable).
+- **Automated verification references**: `api/tests/test_agent_executor_policy.py`, `api/tests/test_agent_integration_api.py`, `api/tests/test_agent_execute_endpoint.py`.
+- **Manual verification**: Run one local matrix flow and one host-runner flow, then confirm usage page reflects non-zero successes and failure metadata with patch guidance context.
 
 ## Verification
 
@@ -71,6 +51,7 @@ cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py test
 
 ## Known Gaps and Follow-up Tasks
 
+- Follow-up task: add parser coverage for review FAIL output contract in `api/tests/` so malformed `PATCH_GUIDANCE` is detected earlier.
 - Optional: Add a small test that parses a sample review output and asserts presence of PATCH_GUIDANCE when VERIFICATION_RESULT=FAIL.
 - Optional: Automate spec Verification section updates from SPEC_VERIFICATION_IMPROVEMENT (human approval recommended first).
 
