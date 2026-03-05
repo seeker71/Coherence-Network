@@ -267,10 +267,11 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     assert str(task["command"]).startswith("agent ")
 
 
-def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_open_question_prefers_cursor_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "cursor")
+    monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "cursor")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
@@ -284,9 +285,9 @@ def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
 
     context = task.get("context") or {}
     policy = context.get("executor_policy") or {}
-    assert context.get("executor") == "codex"
-    assert policy.get("reason") == "open_question_default"
-    assert str(task["model"]).startswith("codex/")
+    assert context.get("executor") == "cursor"
+    assert policy.get("reason") == "cheap_default"
+    assert str(task["model"]).startswith("cursor/")
 
 
 def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -353,6 +354,7 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
         cursor_call.get("input")[0]["content"][0]["text"]
         == claw_call.get("input")[0]["content"][0]["text"]
     )
+    assert "Startup context: read AGENTS.md, CLAUDE.md" in cursor_call.get("input")[0]["content"][0]["text"]
     assert (cursor_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
     assert (claw_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
 

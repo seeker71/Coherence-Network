@@ -4959,18 +4959,46 @@ def daily_system_summary(
         friction_entry_points = {"entry_points": []}
 
     worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+    worker_events_sorted = sorted(
+        worker_events,
+        key=lambda event: getattr(event, "recorded_at", datetime.min.replace(tzinfo=timezone.utc)),
+        reverse=True,
+    )
     worker_total = len(worker_events)
     worker_failed = sum(1 for event in worker_events if int(getattr(event, "status_code", 0) or 0) >= 400)
     tool_counts: dict[str, dict[str, int]] = {}
-    for event in worker_events:
+    tool_last10_statuses: dict[str, list[int]] = {}
+    for event in worker_events_sorted:
         endpoint = str(getattr(event, "endpoint", "") or "").strip() or "unknown"
         row = tool_counts.setdefault(endpoint, {"count": 0, "failed": 0})
         row["count"] += 1
-        if int(getattr(event, "status_code", 0) or 0) >= 400:
+        status_code = int(getattr(event, "status_code", 0) or 0)
+        if status_code >= 400:
             row["failed"] += 1
+        recent = tool_last10_statuses.setdefault(endpoint, [])
+        if len(recent) < 10:
+            recent.append(status_code)
     top_tools = sorted(
         (
-            {"tool": tool, "events": values["count"], "failed": values["failed"]}
+            {
+                "tool": tool,
+                "events": values["count"],
+                "failed": values["failed"],
+                "last10_considered": len(tool_last10_statuses.get(tool, [])),
+                "last10_failed": sum(1 for code in tool_last10_statuses.get(tool, []) if int(code) >= 400),
+                "last10_success": sum(1 for code in tool_last10_statuses.get(tool, []) if int(code) < 400),
+                "last10_success_rate": (
+                    round(
+                        (
+                            sum(1 for code in tool_last10_statuses.get(tool, []) if int(code) < 400)
+                            / max(1, len(tool_last10_statuses.get(tool, [])))
+                        ),
+                        4,
+                    )
+                    if tool_last10_statuses.get(tool)
+                    else 0.0
+                ),
+            }
             for tool, values in tool_counts.items()
         ),
         key=lambda row: (row["events"], row["failed"]),

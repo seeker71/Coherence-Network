@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -2454,6 +2455,126 @@ def test_daily_summary_includes_quality_awareness_guidance(monkeypatch: pytest.M
     assert quality["hotspots"]
     assert any("maintainability metrics regressed" in row for row in quality["guidance"])
     assert quality["recommended_tasks"][0]["task_id"] == "architecture-modularization-review"
+
+
+def test_daily_summary_top_tools_exposes_last10_counts(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = datetime.now(timezone.utc)
+    cursor_events = [
+        SimpleNamespace(
+            endpoint="/tool:cursor",
+            status_code=(500 if idx % 3 == 0 else 200),
+            recorded_at=now - timedelta(seconds=idx),
+        )
+        for idx in range(12)
+    ]
+    codex_events = [
+        SimpleNamespace(
+            endpoint="/tool:codex",
+            status_code=200,
+            recorded_at=now - timedelta(seconds=100 + idx),
+        )
+        for idx in range(3)
+    ]
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runtime_events_within_window",
+        lambda **kwargs: cursor_events + codex_events,
+    )
+    monkeypatch.setattr(
+        agent_service,
+        "backfill_host_runner_failure_observability",
+        lambda **kwargs: {
+            "window_hours": 24,
+            "host_failed_tasks": 0,
+            "completion_events_backfilled": 0,
+            "friction_events_backfilled": 0,
+            "affected_task_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        agent_service,
+        "get_usage_summary",
+        lambda: {"execution": {"tracked_runs": 0, "failed_runs": 0, "success_runs": 0, "coverage": {}}, "host_runner": {}},
+    )
+    snapshot = ProviderUsageSnapshot(
+        id="provider_coherence_internal_last10",
+        provider="coherence-internal",
+        kind="custom",
+        status="ok",
+        data_source="runtime_events",
+        metrics=[],
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_latest_provider_snapshots",
+        lambda limit=800: {"coherence-internal": snapshot},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "collect_usage_overview",
+        lambda force_refresh=False: ProviderUsageOverview(
+            providers=[snapshot],
+            unavailable_providers=[],
+            tracked_providers=1,
+            limit_coverage={},
+        ),
+    )
+    monkeypatch.setattr(
+        quality_awareness_service,
+        "build_quality_awareness_summary",
+        lambda top_n=3, force_refresh=False: {
+            "status": "ok",
+            "generated_at": now.isoformat(),
+            "intent_focus": ["maintainability"],
+            "summary": {
+                "severity": "low",
+                "risk_score": 0,
+                "regression": False,
+                "regression_reasons": [],
+                "python_module_count": 0,
+                "runtime_file_count": 0,
+                "layer_violations": 0,
+                "large_modules": 0,
+                "very_large_modules": 0,
+                "long_functions": 0,
+                "placeholder_findings": 0,
+            },
+            "hotspots": [],
+            "guidance": [],
+            "recommended_tasks": [],
+        },
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runtime_events_cache_ttl_seconds",
+        lambda: 0.0,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_RUNTIME_EVENTS_WINDOW_CACHE",
+        {},
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_summary_metric",
+        lambda metrics: None,
+    )
+    from app.services import runtime_service
+
+    monkeypatch.setattr(
+        runtime_service,
+        "summarize_endpoint_attention",
+        lambda **kwargs: SimpleNamespace(endpoints=[]),
+    )
+
+    summary = automation_usage_service.daily_system_summary(window_hours=24, top_n=3, force_refresh=True)
+    top_tools = summary["tool_usage"]["top_tools"]
+    cursor_row = next(row for row in top_tools if row["tool"] == "/tool:cursor")
+    assert cursor_row["events"] == 12
+    assert cursor_row["failed"] == 4
+    assert cursor_row["last10_considered"] == 10
+    assert cursor_row["last10_failed"] == 4
+    assert cursor_row["last10_success"] == 6
 
 
 def test_daily_summary_quality_awareness_falls_back_when_audit_errors(

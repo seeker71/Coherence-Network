@@ -112,6 +112,18 @@ _MODEL_LIMIT_SIGNAL_MARKERS: tuple[str, ...] = (
 )
 _MODEL_COOLDOWN_CACHE: dict[str, dict[str, Any]] = {}
 _MODEL_COOLDOWN_SIGNAL_SEEN: dict[str, str] = {}
+_SHARED_STARTUP_DOCS: tuple[str, ...] = (
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/SPEC-TRACKING.md",
+)
+_SHARED_MEMORY_KEYS: tuple[str, ...] = (
+    "failure_context_packet",
+    "target_state_contract",
+    "route_decision",
+    "normalized_response_call",
+)
 
 
 def _int_env(name: str, default: int) -> int:
@@ -179,8 +191,8 @@ def _first_available_executor(preferred: list[str]) -> str:
     configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
     if configured_default and _executor_available(configured_default):
         return configured_default
-    # Final deterministic safety net: prefer codex when available.
-    for candidate in ("codex", "gemini", "cursor", "claude"):
+    # Final deterministic safety net: keep low-cost cursor ahead of paid codex.
+    for candidate in ("cursor", "claude", "gemini", "codex"):
         if _executor_available(candidate):
             return candidate
     return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
@@ -190,11 +202,11 @@ def _executor_fallback_candidates() -> list[str]:
     return [
         _cheap_executor_default(),
         _escalation_executor_default(),
-        "codex",
-        "gemini",
-        "openrouter",
         "cursor",
         "claude",
+        "gemini",
+        "codex",
+        "openrouter",
     ]
 
 
@@ -222,7 +234,7 @@ def _select_executor_with_retry_policy(
         "failure_threshold" if should_escalate else "cheap_default"
     )
     if not _executor_available(selected):
-        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "codex", "gemini", "openrouter"])
+        fallback = _first_available_executor([cheap, escalate_to, "cursor", "claude", "gemini", "codex", "openrouter"])
         return fallback, {
             "policy_applied": True,
             "reason": "selected_executor_unavailable",
@@ -277,8 +289,8 @@ def _repo_question_executor_default() -> str:
 def _open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return _normalize_executor(configured, default="codex")
-    return "codex"
+        return _normalize_executor(configured, default="cursor")
+    return "cursor"
 
 
 def _task_fingerprint(task_type: TaskType, direction: str) -> str:
@@ -731,8 +743,8 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
             _repo_question_executor_default(),
             "cursor",
             "claude",
-            "codex",
             "gemini",
+            "codex",
         ])
         return selected, {
             "policy_applied": True,
@@ -743,10 +755,10 @@ def _select_executor(task_type: TaskType, direction: str, context: dict[str, Any
 
     selected_open = _first_available_executor([
         _open_question_executor_default(),
-        "codex",
-        "gemini",
         "cursor",
         "claude",
+        "gemini",
+        "codex",
     ])
     if selected_open == "codex":
         return selected_open, {
@@ -790,6 +802,13 @@ def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | 
     if guard_agents:
         lines.append(f"Guard agents: {', '.join(guard_agents)}.")
     lines.append(f"Task type: {task_type.value}.")
+    lines.append(
+        "Startup context: read "
+        + ", ".join(_SHARED_STARTUP_DOCS)
+        + "; use task context keys "
+        + ", ".join(_SHARED_MEMORY_KEYS)
+        + " to preserve prior work and retries."
+    )
     lines.append("Respect role boundaries, spec scope, and acceptance criteria.")
     lines.append(f"Direction: {direction}")
     return " ".join(lines)

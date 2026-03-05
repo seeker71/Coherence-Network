@@ -43,6 +43,7 @@ def test_review_task_includes_primary_and_guard_agents(monkeypatch: pytest.Monke
     assert "spec-guard" in (context.get("guard_agents") or [])
     assert "Role agent: reviewer." in str(task.get("command"))
     assert "Guard agents: spec-guard." in str(task.get("command"))
+    assert "Startup context: read AGENTS.md, CLAUDE.md" in str(task.get("command"))
 
 
 def test_task_target_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch) -> None:
