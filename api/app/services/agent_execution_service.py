@@ -383,7 +383,42 @@ def _resolve_prompt(task: dict[str, Any]) -> str:
     retry_hint = str(context.get("retry_hint") or "").strip()
     if not retry_hint:
         return prompt
-    return f"{prompt}\n\nRetry guidance:\n{retry_hint}"
+
+    def _clean_line(value: Any, *, max_chars: int = 220) -> str:
+        text = " ".join(str(value or "").split()).strip()
+        return text[:max_chars]
+
+    memory_lines: list[str] = [
+        "Retry memory packet:",
+        "- Preserve prior work and patch incrementally (do not restart from scratch).",
+    ]
+    category = _clean_line(context.get("last_failure_category"), max_chars=80)
+    signature = _clean_line(context.get("last_failure_signature"), max_chars=120)
+    summary = _clean_line(context.get("last_failure_summary"), max_chars=240)
+    action = _clean_line(context.get("last_failure_action"), max_chars=240)
+    output_excerpt = _clean_line(context.get("last_failure_output"), max_chars=120)
+    if category:
+        memory_lines.append(f"- last_failure_category={category}")
+    if signature:
+        memory_lines.append(f"- last_failure_signature={signature}")
+    if summary:
+        memory_lines.append(f"- last_failure_summary={summary}")
+    if action:
+        memory_lines.append(f"- last_failure_action={action}")
+    if output_excerpt:
+        memory_lines.append(f"- last_failure_output_excerpt={output_excerpt}")
+
+    reflections = context.get("retry_reflections")
+    if isinstance(reflections, list) and reflections:
+        latest = reflections[-1] if isinstance(reflections[-1], dict) else {}
+        blind_spot = _clean_line(latest.get("blind_spot"), max_chars=180)
+        next_action = _clean_line(latest.get("next_action"), max_chars=180)
+        if blind_spot:
+            memory_lines.append(f"- last_retry_blind_spot={blind_spot}")
+        if next_action:
+            memory_lines.append(f"- last_retry_next_action={next_action}")
+
+    return f"{prompt}\n\nRetry guidance:\n{retry_hint}\n\n" + "\n".join(memory_lines)
 
 
 def _normalize_positive_float(value: Any, default: float | None = None) -> float | None:
