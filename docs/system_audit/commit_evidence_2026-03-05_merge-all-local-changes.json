@@ -107,7 +107,8 @@
     "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
     ,
     "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.current.json --baseline docs/system_audit/maintainability_baseline.json --write-baseline --json",
-    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_spec_quality.py --file specs/108-unified-agent-cli-flow-patch-on-fail.md"
   ],
   "change_files": [
     ".cursor/skills/spec-guard/SKILL.md",
@@ -179,7 +180,10 @@
     "status": "pass",
     "commands": [
       "make start-gate",
-      "cd api && pytest -q tests/test_contributions.py tests/test_contributors.py"
+      "cd api && pytest -q tests/test_contributions.py tests/test_contributors.py",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ]
   },
   "ci_validation": {
