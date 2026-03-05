@@ -46,4 +46,13 @@ logs/
 # Generated task packages
 api/packages/
 .aider*
+
+# Local / one-off audit outputs (do not merge)
+docs/system_audit/production_db_*.json
+docs/system_audit/production_db_*.md
+
+# Temp debug / trace (do not merge)
+git_trace.txt
+out.txt
+
 .deployment_config

@@ -673,7 +673,8 @@ def _read_legacy_file_ideas() -> tuple[list[Idea], str]:
     return ideas, "legacy_json"
 
 
-def _read_ideas() -> list[Idea]:
+def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
+    """Load ideas, run ensure logic, optionally persist. When persist_ensures=False (e.g. guard/invariant runs), no writes are made."""
     cached = _read_ideas_cache()
     if cached is not None:
         return cached
@@ -687,17 +688,18 @@ def _read_ideas() -> list[Idea]:
         ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
         ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
-        bootstrap_source = source
-        if required_changed:
-            bootstrap_source = f"{bootstrap_source}+required_system_ideas"
-        if tracked_changed or source == "defaults":
-            bootstrap_source = f"{bootstrap_source}+derived"
-        if domain_discovered_changed:
-            bootstrap_source = f"{bootstrap_source}+domain_discovery"
-        if standing_changed or pruned_changed or transient_pruned_changed:
-            bootstrap_source = f"{bootstrap_source}+standing_question"
-        idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
-        _write_snapshot_file(ideas)
+        if persist_ensures:
+            bootstrap_source = source
+            if required_changed:
+                bootstrap_source = f"{bootstrap_source}+required_system_ideas"
+            if tracked_changed or source == "defaults":
+                bootstrap_source = f"{bootstrap_source}+derived"
+            if domain_discovered_changed:
+                bootstrap_source = f"{bootstrap_source}+domain_discovery"
+            if standing_changed or pruned_changed or transient_pruned_changed:
+                bootstrap_source = f"{bootstrap_source}+standing_question"
+            idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
+            _write_snapshot_file(ideas)
         _cache_ideas(ideas)
         return ideas
 
@@ -707,19 +709,20 @@ def _read_ideas() -> list[Idea]:
     ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
     ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if (
-        required_changed
-        or tracked_changed
-        or domain_discovered_changed
-        or standing_changed
-        or pruned_changed
-        or transient_pruned_changed
-    ):
-        _write_ideas(ideas)
-    else:
-        path = _portfolio_path()
-        if not os.path.isfile(path):
-            _write_snapshot_file(ideas)
+    if persist_ensures:
+        if (
+            required_changed
+            or tracked_changed
+            or domain_discovered_changed
+            or standing_changed
+            or pruned_changed
+            or transient_pruned_changed
+        ):
+            _write_ideas(ideas)
+        else:
+            path = _portfolio_path()
+            if not os.path.isfile(path):
+                _write_snapshot_file(ideas)
     _cache_ideas(ideas)
     return ideas
 
@@ -780,8 +783,10 @@ def list_ideas(
     limit: int | None = None,
     offset: int = 0,
     include_internal: bool = True,
+    read_only_guard: bool = False,
 ) -> IdeaPortfolioResponse:
-    ideas = _read_ideas()
+    """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs)."""
+    ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:

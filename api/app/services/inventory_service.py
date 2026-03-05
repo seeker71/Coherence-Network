@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import copy
-import logging
-import ast
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -28,6 +27,72 @@ from app.services import (
     runtime_service,
     spec_registry_service,
     value_lineage_service,
+)
+from app.services.inventory import (
+    _read_commit_evidence_records,
+    _ROUTE_PROBE_DISCOVERY_CACHE,
+    _project_root,
+    build_commit_evidence_inventory,
+    build_route_evidence_inventory,
+    build_system_lineage_inventory,
+    derive_proactive_questions_from_recent_changes,
+    sync_implementation_request_question_tasks,
+    sync_proactive_questions_from_recent_changes,
+    sync_spec_implementation_gap_tasks,
+)
+from app.services.inventory.cache import (
+    _cache_key,
+    _inventory_environment_cache_key,
+    _inventory_timing_enabled,
+    _inventory_timing_ms_threshold,
+    _read_inventory_cache,
+    _row_signature,
+    _write_inventory_cache,
+)
+from app.services.inventory.constants import (
+    _ASSET_MODULARITY_LIMITS,
+    _FLOW_STAGE_ESTIMATED_COST,
+    _FLOW_STAGE_ORDER,
+    _FLOW_STAGE_TASK_TYPE,
+    _PROCESS_COMPLETENESS_TASK_TYPE_BY_CHECK,
+    _question_roi,
+    _answer_roi,
+)
+from app.services.inventory.constants import logger
+from app.services.inventory.evidence import _latest_commit_evidence_records
+from app.services.inventory.flow_helpers import (
+    _build_flow_interdependencies,
+    _build_unblock_direction,
+    _clamp_confidence,
+    _flow_unblock_fingerprint,
+)
+from app.services.inventory.route_evidence import (
+    _build_api_route_evidence_items,
+    _build_web_route_evidence_items,
+    _count_matching_public_references,
+    _normalize_endpoint_path,
+    _path_template_matches,
+    _probe_api_rows_by_key,
+    _probe_web_rows_by_path,
+    _public_endpoint_reference_counts,
+    _read_latest_route_evidence_probe,
+    _route_evidence_summary,
+)
+from app.services.inventory.spec_discovery import (
+    _discover_specs,
+    _idea_api_path,
+    _spec_api_path,
+    _spec_implementation_gap_candidates,
+    _spec_registry_roi_by_prefix,
+    _spec_source_path_for_id,
+)
+
+_SPEC_COVERAGE_SKIP_HINTS = (
+    "backlog",
+    "placeholder",
+    "template",
+    "test-backlog",
+    "sprint0-graph-foundation-indexer-api",
 )
 
 
