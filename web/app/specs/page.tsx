@@ -14,9 +14,15 @@ import {
   Unlink2,
   type LucideIcon,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "Specs",
+  description: "Browse feature specifications and their implementation status.",
+};
 
 type SpecCardState = "unlinked" | "linked" | "in_progress" | "implemented" | "measured";
 type SpecAttentionLevel = "none" | "low" | "medium" | "high";

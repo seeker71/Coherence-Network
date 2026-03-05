@@ -12,8 +12,6 @@ _RETRY_MAX_DEFAULT = 1
 _RETRY_MAX_CAP = 5
 _FAILURE_OUTPUT_MAX = 1200
 _RETRY_HINT_MAX = 900
-_OPENAI_RETRY_MODEL_DEFAULT = "gpt-5.3-codex"
-_CODEX_SPARK_FALLBACK_MODEL = "gpt-5.3-codex"
 _CODEX_SPARK_MODEL_SUFFIX = "gpt-5.3-codex-spark"
 _RETRY_REFLECTION_HISTORY_MAX = 8
 
@@ -202,7 +200,7 @@ def _resolve_retry_model_override(context: dict[str, Any]) -> str:
     context_model_override = str(context.get("model_override") or "").strip()
     if context_model_override:
         return context_model_override
-    return _OPENAI_RETRY_MODEL_DEFAULT
+    return "gpt-5.3-codex"
 
 
 def _is_codex_spark_model(model_name: str) -> bool:
@@ -239,18 +237,21 @@ def _build_retry_override(
         result_error=result_error,
     ):
         return {
-            "force_paid_providers": True,
-            "force_paid_override_source": "auto_retry_openai_override",
-            "retry_paid_override_applied": True,
-            "model_override": _resolve_retry_model_override(context),
-            "executor": "codex",
+            "retry_route_guidance": "paid_provider_blocked",
+            "retry_route_suggestion": {
+                "executor": "codex",
+                "model_override": _resolve_retry_model_override(context),
+                "source": "auto_retry_openai_override",
+            },
         }
     if _is_codex_spark_model(current_model) and retry_count == 0:
         return {
-            "force_paid_providers": True,
-            "retry_paid_override_applied": True,
-            "model_override": _CODEX_SPARK_FALLBACK_MODEL,
-            "executor": "codex",
+            "retry_route_guidance": "spark_usage_limit_or_access_issue",
+            "retry_route_suggestion": {
+                "executor": "codex",
+                "model_override": "gpt-5.3-codex",
+                "source": "spark_fallback_recommendation",
+            },
             "spark_fallback_retry_applied": True,
         }
     return {}

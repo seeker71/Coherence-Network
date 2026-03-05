@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import {
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
+
+export const metadata: Metadata = {
+  title: "Usage",
+  description: "Runtime telemetry dashboard — API usage, latency, and event metrics.",
+};
 
 type RuntimeIdeaRow = {
   idea_id: string;

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { UI_RUNTIME_WINDOW } from "@/lib/egress";
+
+export const metadata: Metadata = {
+  title: "Automation",
+  description: "Provider automation readiness and subscription status.",
+};
 
 type UsageMetric = {
   id: string;

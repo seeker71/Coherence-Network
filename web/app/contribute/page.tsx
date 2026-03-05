@@ -141,7 +141,7 @@ export default function ContributePage() {
         specsRes.json(),
         crRes.json(),
       ]);
-      const contributorRows = (Array.isArray(contributorsJson) ? contributorsJson : []) as Contributor[];
+      const contributorRows = (contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : [])) as Contributor[];
       const ideaRows = ((ideasJson?.ideas ?? []) as Idea[]).map((item) => ({
         id: item.id,
         name: item.name,

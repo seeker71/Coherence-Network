@@ -218,7 +218,7 @@ async def test_execute_endpoint_stops_retry_after_single_retry_budget(
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_override(
+async def test_execute_endpoint_records_paid_provider_retry_suggestion_without_forcing_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -263,15 +263,14 @@ async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_o
         payload = fetched.json()
         context = payload.get("context") or {}
 
-        assert payload["status"] == "completed"
-        assert payload["output"] == "paid-retry-ok"
-        assert int(context.get("failure_hits", 0)) == 1
-        assert int(context.get("retry_count", 0)) == 1
-        assert context.get("retry_paid_override_applied") is True
-        assert context.get("force_paid_providers") is True
-        assert context.get("force_paid_override_source") == "auto_retry_openai_override"
-        assert context.get("model_override") == "gpt-5-codex"
-        assert call_count["value"] == 1
+        assert payload["status"] == "failed"
+        assert int(context.get("retry_count", 0)) >= 1
+        assert context.get("retry_route_guidance") == "paid_provider_blocked"
+        suggestion = context.get("retry_route_suggestion") or {}
+        assert suggestion.get("executor") == "codex"
+        assert suggestion.get("model_override") == "gpt-5-codex"
+        assert context.get("force_paid_providers") is not True
+        assert call_count["value"] == 0
 
 
 @pytest.mark.asyncio
@@ -392,7 +391,7 @@ async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disable
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_for_codex_model(
+async def test_execute_endpoint_does_not_fallback_when_openrouter_key_missing_for_codex_model(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -412,21 +411,6 @@ async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_
         ),
     )
 
-    monkeypatch.setattr(
-        agent_execution_service.agent_execution_codex_service,
-        "run_codex_exec",
-        lambda **_: {
-            "ok": True,
-            "elapsed_ms": 9,
-            "content": "spark-ok",
-            "usage_json": '{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}',
-            "provider_request_id": "",
-            "actual_cost_usd": 0.0009,
-            "max_cost_usd": None,
-            "cost_slack_ratio": None,
-        },
-    )
-
     task = agent_service.create_task(
         AgentTaskCreate(
             direction="Assess codex route",
@@ -440,8 +424,8 @@ async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_
         completed = await client.get(f"/api/agent/tasks/{task['id']}")
         assert completed.status_code == 200
         payload = completed.json()
-        assert payload["status"] == "completed"
-        assert payload["output"] == "spark-ok"
+        assert payload["status"] == "failed"
+        assert "OPENROUTER_API_KEY is not configured" in str(payload.get("output") or "")
 
 
 @pytest.mark.asyncio

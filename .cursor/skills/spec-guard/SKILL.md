@@ -22,8 +22,19 @@ description: Validates implementation against spec. Flags files modified outside
 
 **PASS**: All changes are within spec.
 
-**FAIL**: List each violation:
-- `path/to/file.py` — not in spec's Files to Create/Modify
+**FAIL**: List each violation and provide patch-ready guidance so a follow-up impl/heal can fix without starting from scratch. Use this structure:
+
+- **VERIFICATION_RESULT**: `FAIL`
+- **FILES_TO_CHANGE**: list of paths that need changes (from spec's Files to Create/Modify or violations)
+- **PATCH_GUIDANCE**: actionable instructions or minimal diff (file, location, suggested change) for targeted edits
+- Optional: **SPEC_VERIFICATION_IMPROVEMENT**: if the spec's Verification section is wrong or ambiguous, suggest concrete improvement (exact command or steps)
+
+Example FAIL block:
+```
+VERIFICATION_RESULT: FAIL
+FILES_TO_CHANGE: api/app/routers/foo.py, api/app/services/foo_service.py
+PATCH_GUIDANCE: In foo.py line 42, return 404 when id not found. In foo_service.py, add null check before calling bar().
+```
 
 Recommend: revert out-of-scope changes. Escalate to `needs_decision` only when human judgment required.
 

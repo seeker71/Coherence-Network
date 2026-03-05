@@ -19,7 +19,6 @@ from app.models.agent import TaskStatus
 from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
 from app.services import (
-    agent_execution_codex_service,
     agent_service,
     automation_usage_service,
     friction_service,
@@ -86,6 +85,38 @@ def _extract_underlying_model(task_model: str) -> str:
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("gemini/"):
         return cleaned.split("/", 1)[1].strip()
+    if cleaned.startswith("claude/"):
+        return cleaned.split("/", 1)[1].strip()
+    return cleaned
+
+
+def _normalize_openrouter_target_model(model: str, executor: str) -> str:
+    cleaned = str(model or "").strip()
+    if not cleaned:
+        return ""
+
+    lowered = cleaned.lower()
+    if lowered.startswith(("anthropic/", "google/", "openai/")):
+        return cleaned
+
+    if lowered.startswith("claude-"):
+        canonical = cleaned
+        canonical = re.sub(r"-4-5(?:-\d{8})?$", "-4.5", canonical)
+        canonical = re.sub(r"-3-7(?:-\d{8})?$", "-3.7", canonical)
+        return f"anthropic/{canonical}"
+
+    if lowered.startswith("gemini-"):
+        return f"google/{cleaned}"
+
+    if lowered.startswith(("gpt-", "o1", "o3", "o4")):
+        return f"openai/{cleaned}"
+
+    if executor == "codex":
+        return f"openai/{cleaned}"
+    if executor == "gemini":
+        return f"google/{cleaned}"
+    if executor == "claude":
+        return f"anthropic/{cleaned}"
     return cleaned
 
 
@@ -201,6 +232,7 @@ def _record_openrouter_tool_event(
     task_id: str,
     model: str,
     is_paid_provider: bool,
+    idea_id: str,
     elapsed_ms: int,
     ok: bool,
     provider_request_id: str | None = None,
@@ -243,7 +275,7 @@ def _record_openrouter_tool_event(
             method="RUN",
             status_code=status_code,
             runtime_ms=float(max(1, int(elapsed_ms))),
-            idea_id="coherence-network-agent-pipeline",
+            idea_id=idea_id or "coherence-network-agent-pipeline",
             metadata=metadata,
         )
     )
@@ -254,6 +286,7 @@ def _run_openrouter(
     task_id: str,
     model: str,
     prompt: str,
+    idea_id: str,
     route_is_paid: bool,
     started_perf: float,
     cost_budget: dict[str, float | None],
@@ -270,6 +303,7 @@ def _run_openrouter(
             task_id=task_id,
             model=model,
             is_paid_provider=route_is_paid,
+            idea_id=idea_id,
             elapsed_ms=elapsed_ms,
             ok=True,
             provider_request_id=str(meta.get("provider_request_id") or ""),
@@ -292,23 +326,12 @@ def _run_openrouter(
         }
     except OpenRouterError as exc:
         fallback_error = str(exc)
-        if agent_execution_codex_service.should_fallback_to_codex_exec(model, fallback_error):
-            fallback_result = agent_execution_codex_service.run_codex_exec(
-                task_id=task_id,
-                model=model,
-                prompt=prompt,
-                route_is_paid=route_is_paid,
-                started_perf=started_perf,
-                cost_budget=cost_budget,
-            )
-            if fallback_result.get("ok") is True:
-                return fallback_result
-
         elapsed_ms = max(1, int(round((time.perf_counter() - started_perf) * 1000)))
         _record_openrouter_tool_event(
             task_id=task_id,
             model=model,
             is_paid_provider=route_is_paid,
+            idea_id=idea_id,
             elapsed_ms=elapsed_ms,
             ok=False,
             actual_cost_usd=_runtime_cost_usd(elapsed_ms),
@@ -325,7 +348,7 @@ def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
     if executor == "openrouter" or str(resolved).strip().lower().startswith("openrouter/"):
         return agent_routing_service.enforce_openrouter_free_model(resolved)
-    return resolved
+    return _normalize_openrouter_target_model(resolved, executor)
 
 
 def _resolve_prompt(task: dict[str, Any]) -> str:

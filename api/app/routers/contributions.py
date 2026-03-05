@@ -12,6 +12,7 @@ from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution, ContributionCreate
 from app.models.contributor import Contributor, ContributorType
 from app.models.error import ErrorDetail
+from app.models.pagination import PaginatedResponse
 from app.services.contribution_cost_service import (
     ACTUAL_VERIFICATION_KEYS,
     ESTIMATOR_VERSION,
@@ -112,9 +113,18 @@ def _resolve_registered_contributor(store: GraphStore, normalized_email: str) ->
     )
 
 
-@router.post("/contributions", response_model=Contribution, status_code=201)
+@router.post(
+    "/contributions",
+    response_model=Contribution,
+    status_code=201,
+    summary="Record a contribution",
+    responses={
+        404: {"model": ErrorDetail, "description": "Contributor or asset not found"},
+        422: {"model": ErrorDetail, "description": "Validation error"},
+    },
+)
 async def create_contribution(contribution: ContributionCreate, store: GraphStore = Depends(get_store)) -> Contribution:
-    """Record a new contribution."""
+    """Record a new contribution linking a contributor to an asset with cost and coherence scoring."""
     if not store.get_contributor(contribution.contributor_id):
         raise HTTPException(status_code=404, detail="Contributor not found")
 
@@ -136,20 +146,28 @@ async def create_contribution(contribution: ContributionCreate, store: GraphStor
 @router.get(
     "/contributions/{contribution_id}",
     response_model=Contribution,
-    responses={404: {"model": ErrorDetail}},
+    summary="Get contribution by ID",
+    responses={404: {"model": ErrorDetail, "description": "Contribution not found"}},
 )
 async def get_contribution(contribution_id: UUID, store: GraphStore = Depends(get_store)) -> Contribution:
-    """Get contribution by ID."""
+    """Retrieve a single contribution record by its unique identifier."""
     contrib = store.get_contribution(contribution_id)
     if not contrib:
         raise HTTPException(status_code=404, detail="Contribution not found")
     return contrib
 
 
-@router.get("/contributions", response_model=list[Contribution])
-def list_contributions(limit: int = 100, store: GraphStore = Depends(get_store)) -> list[Contribution]:
-    """List all contributions (read-only)."""
-    return store.list_contributions(limit=limit)
+@router.get("/contributions", response_model=PaginatedResponse[Contribution], summary="List contributions")
+def list_contributions(
+    limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
+    store: GraphStore = Depends(get_store),
+) -> PaginatedResponse[Contribution]:
+    """List all contributions with pagination metadata (read-only)."""
+    all_items = store.list_contributions(limit=limit + offset + 1)
+    total = len(all_items)
+    page = all_items[offset : offset + limit]
+    return PaginatedResponse(items=page, total=total, limit=limit, offset=offset)
 
 
 @router.get("/assets/{asset_id}/contributions", response_model=list[Contribution])
@@ -170,7 +188,13 @@ async def get_contributor_contributions(
     return store.get_contributor_contributions(contributor_id)
 
 
-@router.post("/contributions/github", response_model=Contribution, status_code=201)
+@router.post(
+    "/contributions/github",
+    response_model=Contribution,
+    status_code=201,
+    summary="Track GitHub contribution",
+    responses={422: {"model": ErrorDetail, "description": "Validation error"}},
+)
 async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
     """Track contribution from GitHub webhook.
 

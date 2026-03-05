@@ -20,8 +20,17 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Coherence Network",
-  description: "Open Source Contribution Intelligence",
+  title: {
+    default: "Coherence Network",
+    template: "%s | Coherence Network",
+  },
+  description: "Open-source contribution intelligence — track, score, and attribute contributions fairly.",
+  openGraph: {
+    type: "website",
+    siteName: "Coherence Network",
+    title: "Coherence Network",
+    description: "Open-source contribution intelligence — track, score, and attribute contributions fairly.",
+  },
 };
 
 export default function RootLayout({
@@ -32,11 +41,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased font-sans`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        >
+          Skip to main content
+        </a>
         <RuntimeBeacon />
         <SiteHeader />
         <LiveUpdatesController />
         <PageContextLinks />
-        {children}
+        <main id="main-content">
+          {children}
+        </main>
       </body>
     </html>
   );

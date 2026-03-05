@@ -309,11 +309,25 @@ def _run_execution(
 ) -> dict[str, Any]:
     started = execution_service.time.perf_counter()
     execution_service._write_task_log(task_id, [f"[execute] worker_id={worker_id} model={model}", f"[prompt]\n{prompt}"])
+    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    execution_idea_id = "coherence-network-agent-pipeline"
+    explicit_idea_id = str(task_context.get("idea_id") or "").strip() if isinstance(task_context, dict) else ""
+    if explicit_idea_id:
+        execution_idea_id = explicit_idea_id
+    else:
+        idea_ids = task_context.get("idea_ids") if isinstance(task_context, dict) else None
+        if isinstance(idea_ids, list):
+            for raw_idea in idea_ids:
+                candidate = str(raw_idea or "").strip()
+                if candidate:
+                    execution_idea_id = candidate
+                    break
 
     try:
         result = execution_service._run_openrouter(
             task_id=task_id,
             model=model,
+            idea_id=execution_idea_id,
             route_is_paid=route_is_paid,
             prompt=prompt,
             started_perf=started,

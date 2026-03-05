@@ -26,7 +26,12 @@ async def test_create_get_list_contributors() -> None:
 
         resp3 = await client.get("/api/contributors?limit=10")
         assert resp3.status_code == 200
-        assert any(x["id"] == cid for x in resp3.json())
+        body = resp3.json()
+        assert "items" in body
+        assert "total" in body
+        assert "limit" in body
+        assert "offset" in body
+        assert any(x["id"] == cid for x in body["items"])
 
 
 @pytest.mark.asyncio
@@ -85,13 +90,14 @@ async def test_list_contributors_can_exclude_system_rows() -> None:
 
         all_rows = await client.get("/api/contributors?limit=10")
         assert all_rows.status_code == 200
-        assert len(all_rows.json()) == 2
+        all_payload = all_rows.json()
+        assert len(all_payload["items"]) == 2
 
         human_only = await client.get("/api/contributors?limit=10&include_system=false")
         assert human_only.status_code == 200
         payload = human_only.json()
-        assert len(payload) == 1
-        assert payload[0]["type"] == "HUMAN"
+        assert len(payload["items"]) == 1
+        assert payload["items"][0]["type"] == "HUMAN"
 
 
 @pytest.mark.asyncio

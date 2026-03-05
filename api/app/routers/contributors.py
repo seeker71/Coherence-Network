@@ -8,6 +8,7 @@ from app.adapters.graph_store import GraphStore
 from app.models.contributor import Contributor, ContributorCreate
 from app.models.contributor import ContributorType
 from app.models.error import ErrorDetail
+from app.models.pagination import PaginatedResponse
 from app.services.contributor_hygiene import (
     is_internal_contributor_email,
     normalize_contributor_email,
@@ -21,9 +22,15 @@ def get_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
 
 
-@router.post("/contributors", response_model=Contributor, status_code=201)
+@router.post(
+    "/contributors",
+    response_model=Contributor,
+    status_code=201,
+    summary="Create contributor",
+    responses={422: {"model": ErrorDetail, "description": "Validation error"}},
+)
 def create_contributor(contributor: ContributorCreate, store: GraphStore = Depends(get_store)) -> Contributor:
-    """Create a new contributor."""
+    """Register a new contributor (human or system) in the network."""
     normalized_email = normalize_contributor_email(str(contributor.email))
     if contributor.type == ContributorType.HUMAN:
         valid, reason = validate_real_human_registration(contributor.name, normalized_email)
@@ -55,24 +62,32 @@ def create_contributor(contributor: ContributorCreate, store: GraphStore = Depen
 @router.get(
     "/contributors/{contributor_id}",
     response_model=Contributor,
-    responses={404: {"model": ErrorDetail}},
+    summary="Get contributor by ID",
+    responses={404: {"model": ErrorDetail, "description": "Contributor not found"}},
 )
 def get_contributor(contributor_id: UUID, store: GraphStore = Depends(get_store)) -> Contributor:
-    """Get contributor by ID."""
+    """Retrieve a single contributor by their unique identifier."""
     contrib = store.get_contributor(contributor_id)
     if not contrib:
         raise HTTPException(status_code=404, detail="Contributor not found")
     return contrib
 
 
-@router.get("/contributors", response_model=list[Contributor])
+@router.get(
+    "/contributors",
+    response_model=PaginatedResponse[Contributor],
+    summary="List contributors",
+)
 def list_contributors(
-    limit: int = 100,
+    limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     include_system: bool = Query(True, description="When false, only include HUMAN contributors."),
     store: GraphStore = Depends(get_store),
-) -> list[Contributor]:
-    """List all contributors."""
-    rows = store.list_contributors(limit=limit)
-    if include_system:
-        return rows
-    return [row for row in rows if str(getattr(row.type, "value", row.type)).upper() == "HUMAN"]
+) -> PaginatedResponse[Contributor]:
+    """List contributors with pagination metadata."""
+    all_items = store.list_contributors(limit=limit + offset + 1)
+    if not include_system:
+        all_items = [row for row in all_items if str(getattr(row.type, "value", row.type)).upper() == "HUMAN"]
+    total = len(all_items)
+    page = all_items[offset : offset + limit]
+    return PaginatedResponse(items=page, total=total, limit=limit, offset=offset)

@@ -4,6 +4,11 @@
 
 ## Current State
 
+### Phase Visibility
+
+- Milestone Tag: **A** (Core Stability)
+- Progress source: [`docs/SPEC-TRACKING.md`](SPEC-TRACKING.md)
+
 | Area | Status |
 |------|--------|
 | API baseline and health endpoints | ✅ Complete |
