@@ -4,104 +4,18 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveRefresh } from "@/lib/live_refresh";
-import { UI_RUNTIME_EVENTS_LIMIT } from "@/lib/egress";
-
-const REQUEST_TIMEOUT_MS = 12000;
-const EVENTS_TIMEOUT_MS = 8000;
-const EVENTS_LIMIT = UI_RUNTIME_EVENTS_LIMIT;
-const DEFAULT_PAGE_SIZE = 25;
-const MAX_PAGE_SIZE = 100;
-
-type AgentTask = {
-  id: string;
-  status: string;
-  task_type: string;
-  direction: string;
-  model?: string;
-  output?: string | null;
-  current_step?: string | null;
-  context?: Record<string, unknown> | null;
-  claimed_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
-};
-
-type RuntimeEvent = {
-  id: string;
-  recorded_at?: string;
-  endpoint: string;
-  method?: string;
-  status_code: number;
-  idea_id?: string | null;
-  origin_idea_id?: string | null;
-  metadata?: Record<string, unknown> | null;
-};
-
-type TaskListResponse = {
-  tasks?: AgentTask[];
-  items?: AgentTask[];
-  total?: number;
-};
-
-type TaskLogResponse = {
-  task_id: string;
-  log?: string;
-};
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
-
-function toInt(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number.parseInt(value.trim(), 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function formatTime(value?: string): string {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
-}
-
-function tailLines(value: string, maxLines: number): string {
-  const rows = value.split("\n");
-  return rows.slice(Math.max(0, rows.length - maxLines)).join("\n");
-}
-
-function parsePositiveInt(value: string | null, fallback: number): number {
-  const parsed = Number.parseInt((value || "").trim(), 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return parsed;
-}
-
-async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  const timeoutPromise = new Promise<Response>((_, reject) => {
-    timeout = setTimeout(() => {
-      controller.abort(new DOMException("Request timed out", "TimeoutError"));
-      reject(new Error(`Request timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-
-  const fetchPromise = fetch(input, {
-    ...init,
-    signal: controller.signal,
-    cache: init.cache ?? "no-store",
-  });
-
-  try {
-    return await Promise.race([fetchPromise, timeoutPromise]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
-}
+import type { AgentTask, RuntimeEvent, TaskListResponse, TaskLogResponse } from "./types";
+import {
+  asRecord,
+  DEFAULT_PAGE_SIZE,
+  EVENTS_LIMIT,
+  EVENTS_TIMEOUT_MS,
+  fetchWithTimeout,
+  MAX_PAGE_SIZE,
+  parsePositiveInt,
+} from "./utils";
+import { EvidenceTrail } from "./EvidenceTrail";
+import { TasksListSection } from "./TasksListSection";
 
 function TasksPageContent() {
   const searchParams = useSearchParams();
@@ -230,11 +144,6 @@ function TasksPageContent() {
   const nextHref = `/tasks?page=${page + 1}&page_size=${pageSize}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${typeFilter ? `&task_type=${encodeURIComponent(typeFilter)}` : ""}`;
 
   const selectedContext = useMemo(() => asRecord(selectedTask?.context), [selectedTask]);
-  const failureHits = toInt(selectedContext.failure_hits);
-  const retryCount = toInt(selectedContext.retry_count);
-  const retryHint = String(selectedContext.retry_hint || "").trim();
-  const lastFailure = String(selectedContext.last_failure_output || "").trim();
-
   const evidenceIdeas = useMemo(() => {
     const map = new Map<string, string>();
     const fromContext = String(selectedContext.idea_id || "").trim();
@@ -247,7 +156,6 @@ function TasksPageContent() {
     }
     return [...map.entries()].map(([ideaId, source]) => ({ ideaId, source }));
   }, [selectedContext, selectedTaskEvents]);
-
   const evidenceEvents = useMemo(() => {
     return selectedTaskEvents.map((event) => {
       const metadata = asRecord(event.metadata);
@@ -300,173 +208,34 @@ function TasksPageContent() {
         {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
         {status === "ok" && (
-        <>
-          <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Showing {pageStart}-{pageEnd} of {totalTasks} | page {page}
-              {(statusFilter || typeFilter || taskIdFilter) ? (
-                <>
-                  {" "}
-                  |{" "}
-                  <Link href="/tasks" className="underline hover:text-foreground">
-                    Clear filters
-                  </Link>
-                </>
-              ) : null}
-            </p>
-            {!taskIdFilter ? (
-              <div className="flex gap-3 text-sm text-muted-foreground">
-                {hasPrevious ? (
-                  <Link href={previousHref} className="underline hover:text-foreground">
-                    Previous
-                  </Link>
-                ) : (
-                  <span className="opacity-50">Previous</span>
-                )}
-                {hasNext ? (
-                  <Link href={nextHref} className="underline hover:text-foreground">
-                    Next
-                  </Link>
-                ) : (
-                  <span className="opacity-50">Next</span>
-                )}
-              </div>
-            ) : null}
-            <ul className="space-y-2 text-sm">
-              {filteredRows.map((t) => (
-                <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
-                  <div className="flex justify-between gap-3">
-                    <span className="font-medium">
-                      <Link href={`/tasks?task_id=${encodeURIComponent(t.id)}`} className="underline hover:text-foreground">
-                        {t.id}
-                      </Link>
-                    </span>
-                    <span className="text-muted-foreground text-right">
-                      <Link href={`/tasks?task_type=${encodeURIComponent(t.task_type)}`} className="underline hover:text-foreground">
-                        {t.task_type}
-                      </Link>{" "}
-                      |{" "}
-                      <Link href={`/tasks?status=${encodeURIComponent(t.status)}`} className="underline hover:text-foreground">
-                        {t.status}
-                      </Link>
-                    </span>
-                  </div>
-                  <div className="text-muted-foreground">{t.direction}</div>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <>
+            <TasksListSection
+              filteredRows={filteredRows}
+              pageStart={pageStart}
+              pageEnd={pageEnd}
+              totalTasks={totalTasks}
+              page={page}
+              statusFilter={statusFilter}
+              typeFilter={typeFilter}
+              taskIdFilter={taskIdFilter}
+              hasPrevious={hasPrevious}
+              hasNext={hasNext}
+              previousHref={previousHref}
+              nextHref={nextHref}
+            />
 
-          {taskIdFilter && (
-            <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3 text-sm">
-              <h2 className="font-semibold">Evidence Trail</h2>
-              {selectedTask ? (
-                <>
-                  <p className="text-muted-foreground">
-                    status <code>{selectedTask.status}</code> | task_type <code>{selectedTask.task_type}</code> | model{" "}
-                    <code>{selectedTask.model || "-"}</code>
-                  </p>
-                  <p className="text-muted-foreground">
-                    created {formatTime(selectedTask.created_at)} | updated {formatTime(selectedTask.updated_at)} | claimed_by{" "}
-                    <code>{selectedTask.claimed_by || "-"}</code>
-                  </p>
-                  {selectedTask.current_step ? (
-                    <p className="text-muted-foreground">
-                      current_step <code>{selectedTask.current_step}</code>
-                    </p>
-                  ) : null}
-                  <div>
-                    <p className="text-muted-foreground mb-1">output</p>
-                    <pre className="rounded bg-muted/40 p-2 overflow-auto whitespace-pre-wrap break-words">
-                      {selectedTask.output || "(empty)"}
-                    </pre>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">retry/failure telemetry</p>
-                    <p>
-                      failure_hits <code>{failureHits ?? "-"}</code> | retry_count <code>{retryCount ?? "-"}</code>
-                    </p>
-                    {lastFailure ? (
-                      <p className="text-muted-foreground">
-                        last_failure_output <code>{lastFailure}</code>
-                      </p>
-                    ) : null}
-                    {retryHint ? (
-                      <p className="text-muted-foreground">
-                        retry_hint <code>{retryHint}</code>
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">linked ideas</p>
-                    {evidenceIdeas.length === 0 ? (
-                      <p className="text-muted-foreground">No idea linkage found for this task.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {evidenceIdeas.map((row) => (
-                          <li key={row.ideaId}>
-                            <Link href={`/ideas/${encodeURIComponent(row.ideaId)}`} className="underline hover:text-foreground">
-                              {row.ideaId}
-                            </Link>{" "}
-                            <span className="text-muted-foreground">({row.source})</span>{" "}
-                            |{" "}
-                            <Link href={`/flow?idea_id=${encodeURIComponent(row.ideaId)}`} className="underline hover:text-foreground">
-                              flow
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">runtime events for this task</p>
-                    {selectedTaskEventsWarning ? (
-                      <p className="text-muted-foreground">
-                        runtime events unavailable: <code>{selectedTaskEventsWarning}</code>
-                      </p>
-                    ) : null}
-                    {evidenceEvents.length === 0 ? (
-                      <p className="text-muted-foreground">No runtime events found.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {evidenceEvents.slice(0, 20).map((row) => (
-                          <li key={row.id}>
-                            <code>{row.id}</code> | {formatTime(row.recordedAt)} | <code>{row.endpoint}</code> | status{" "}
-                            <code>{row.statusCode}</code>
-                            {row.trackingKind ? (
-                              <>
-                                {" "}
-                                | kind <code>{row.trackingKind}</code>
-                              </>
-                            ) : null}
-                            {row.finalStatus ? (
-                              <>
-                                {" "}
-                                | final <code>{row.finalStatus}</code>
-                              </>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-muted-foreground mb-1">task log tail (proof)</p>
-                    <pre className="rounded bg-muted/40 p-2 overflow-auto whitespace-pre-wrap break-words">
-                      {selectedTaskLog ? tailLines(selectedTaskLog, 40) : "(task log unavailable)"}
-                    </pre>
-                  </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground">Task details unavailable for <code>{taskIdFilter}</code>.</p>
-              )}
-            </section>
-          )}
-        </>
+            {taskIdFilter && (
+              <EvidenceTrail
+                taskIdFilter={taskIdFilter}
+                selectedTask={selectedTask}
+                selectedTaskLog={selectedTaskLog}
+                selectedTaskEventsWarning={selectedTaskEventsWarning}
+                selectedContext={selectedContext}
+                evidenceIdeas={evidenceIdeas}
+                evidenceEvents={evidenceEvents}
+              />
+            )}
+          </>
         )}
       </div>
     </main>

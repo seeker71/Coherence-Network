@@ -202,6 +202,86 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 
 This checks: API reachable, metrics endpoint, monitor-issues endpoint, effectiveness endpoint, version tracking, monitor/runner processes. Reports effectiveness summary (throughput, success rate, issues, goal proximity) and required actions if anything needs attention.
 
+## Production Postgres Operations (Railway)
+
+Use this flow for any direct production DB work (assessment or cleanup).
+
+Safety contract:
+- Always run read-only checks first.
+- Never use Railway internal DB host from local shell (`postgres.railway.internal` is not reachable locally).
+- For local execution, resolve the public proxy URL from Railway fallback variable.
+- Use dry-run before any delete and record row counts before/after.
+
+### 1) Resolve a reachable production DB URL
+
+```bash
+cd /path/to/Coherence-Network
+railway run printenv DATABASE_URL_RAILWAY_FALLBACK
+```
+
+This returns the public Railway Postgres proxy URL (`*.proxy.rlwy.net`), suitable for local scripts.
+
+### 2) Run read-only assessment
+
+```bash
+python3 - <<'PY'
+import json, subprocess
+from sqlalchemy import create_engine, text
+url = subprocess.check_output(
+    ['bash','-lc','cd /path/to/Coherence-Network && railway run printenv DATABASE_URL_RAILWAY_FALLBACK'],
+    text=True
+).strip()
+engine = create_engine(url, pool_pre_ping=True)
+with engine.connect() as conn:
+    rows = conn.execute(text("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema='public' AND table_type='BASE TABLE'
+        ORDER BY table_name
+    """)).fetchall()
+print("table_count=", len(rows))
+PY
+```
+
+For existing snapshots, see:
+- `docs/system_audit/production_db_table_assessment_2026-03-05.json`
+- `docs/system_audit/production_db_quality_profile_2026-03-05.json`
+- `docs/system_audit/production_db_cleanup_candidates_2026-03-05.json`
+
+### 3) Clean `agent_tasks` safely
+
+From `api/`:
+
+```bash
+# Targeted cleanup (default): pending + test
+.venv/bin/python scripts/cleanup_pending_agent_test_tasks.py \
+  --use-railway-fallback-url \
+  --dry-run
+
+# Full table cleanup (guarded)
+.venv/bin/python scripts/cleanup_pending_agent_test_tasks.py \
+  --use-railway-fallback-url \
+  --all \
+  --batch-size 5000 \
+  --dry-run
+
+.venv/bin/python scripts/cleanup_pending_agent_test_tasks.py \
+  --use-railway-fallback-url \
+  --all \
+  --batch-size 5000 \
+  --confirm-delete-all DELETE_ALL_AGENT_TASKS
+```
+
+### 4) High-volume telemetry cleanup policy
+
+Before deleting telemetry, review table size and date range first, then enforce retention windows (for example 30-90 days depending on operator needs). Candidate high-volume tables:
+- `runtime_events`
+- `telemetry_external_tool_usage_events`
+- `telemetry_friction_events`
+- `telemetry_task_metrics`
+
+Prefer deleting only old rows by timestamp, not full-table truncation.
+
 ## System Audit (Cost/Value)
 
 Use these when deciding what to fix next (lowest-cost, highest-value first):

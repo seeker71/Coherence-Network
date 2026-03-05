@@ -24,12 +24,14 @@ async def list_ideas(
     include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
     limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
 ) -> IdeaPortfolioResponse:
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
         limit=limit,
         offset=offset,
+        read_only_guard=read_only_guard,
     )
 
 

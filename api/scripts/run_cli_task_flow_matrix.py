@@ -142,6 +142,18 @@ def _missing_markers(output: str, markers: list[str]) -> list[str]:
     return missing
 
 
+def _spec_file_has_markers(spec_path: str, markers: list[str]) -> bool:
+    """Return True if the spec file at spec_path contains all required markers (for fallback contract check)."""
+    if not spec_path or not os.path.isfile(spec_path):
+        return False
+    try:
+        with open(spec_path, encoding="utf-8") as f:
+            content = (f.read() or "").lower()
+    except OSError:
+        return False
+    return all(m.lower() in content for m in markers)
+
+
 def _parse_pass_fail(output: str) -> str:
     text = str(output or "")
     match = PASS_FAIL_RE.search(text)
@@ -257,8 +269,9 @@ def _spec_direction(*, run_label: str, executor: str, attempt: int, spec_path: s
         "1. Define exact behavior for slug generation: lowercase, alphanumeric + hyphen only, collapse separators, trim hyphens.\n"
         "2. Include explicit acceptance criteria that can be verified automatically.\n"
         "3. Include a VERIFICATION_PLAN with executable commands and expected evidence.\n"
-        f"4. VERIFICATION_PLAN must include: python3 {verify_path}\n"
-        "5. Keep scope small and deterministic; no external dependencies.\n"
+        "4. Include ACCEPTANCE_CRITERIA as a distinct section. Use these exact section headers in the spec file: VERIFICATION_PLAN and ACCEPTANCE_CRITERIA (e.g. ## VERIFICATION_PLAN and ## ACCEPTANCE_CRITERIA).\n"
+        f"5. VERIFICATION_PLAN must include: python3 {verify_path}\n"
+        "6. Keep scope small and deterministic; no external dependencies.\n"
     )
 
 
@@ -511,6 +524,11 @@ def _run_flow_for_executor(
         idea_id=str(flow["idea_id"]),
     )
     flow["stages"].append(spec_stage)
+    if spec_stage["status"] == "completed" and not spec_stage.get("contract_ok") and _is_local_base_url(base_url):
+        if _spec_file_has_markers(spec_path, _stage_markers("spec")):
+            spec_stage["contract_ok"] = True
+            spec_stage["markers_missing"] = []
+            spec_stage["contract_ok_from_spec_file"] = True
     if spec_stage["status"] != "completed":
         flow["flow_blocked"] = True
         flow["notes"].append(f"spec stage ended with status={spec_stage['status']}")
@@ -740,19 +758,28 @@ def _run_environment(
     return profile
 
 
-def _top_level_summary(environments: list[dict[str, Any]]) -> dict[str, Any]:
+def _top_level_summary(
+    environments: list[dict[str, Any]],
+    non_blocking_executors: set[str] | None = None,
+) -> dict[str, Any]:
     total_flows = 0
     successful_flows = 0
     failed_flows = 0
+    blocking_failed_flows = 0
     blocked_flows = 0
     terminal_status_counts: dict[str, int] = {}
+    non_blocking = non_blocking_executors or set()
     for env in environments:
         for flow in env.get("flows") or []:
             total_flows += 1
+            executor = str(flow.get("executor") or "").strip().lower()
+            is_blocking = executor not in non_blocking
             if bool(flow.get("flow_success")):
                 successful_flows += 1
             else:
                 failed_flows += 1
+                if is_blocking:
+                    blocking_failed_flows += 1
             if bool(flow.get("flow_blocked")):
                 blocked_flows += 1
             for stage in flow.get("stages") or []:
@@ -765,6 +792,7 @@ def _top_level_summary(environments: list[dict[str, Any]]) -> dict[str, Any]:
         "total_flows": total_flows,
         "successful_flows": successful_flows,
         "failed_flows": failed_flows,
+        "blocking_failed_flows": blocking_failed_flows,
         "blocked_flows": blocked_flows,
         "flow_success_rate": success_rate,
         "stage_status_counts": terminal_status_counts,
@@ -804,6 +832,11 @@ def _parse_args() -> argparse.Namespace:
         help="Per-task timeout (seconds) applied to spawned local runner.",
     )
     parser.add_argument("--strict", action="store_true", help="Exit non-zero when any flow fails")
+    parser.add_argument(
+        "--non-blocking-executors",
+        default=os.getenv("CLI_FLOW_NON_BLOCKING_EXECUTORS", ""),
+        help="Comma-separated executors whose failures do not cause --strict to fail (e.g. codex).",
+    )
     return parser.parse_args()
 
 
@@ -937,7 +970,9 @@ def main() -> int:
             except Exception:
                 pass
 
-    report["summary"] = _top_level_summary(report["environments"])
+    non_blocking = {e.strip().lower() for e in (args.non_blocking_executors or "").split(",") if e.strip()}
+    report["summary"] = _top_level_summary(report["environments"], non_blocking_executors=non_blocking)
+    report["non_blocking_executors"] = list(non_blocking)
 
     default_output = f"logs/cli_task_flow_matrix_{run_id}.json"
     output_path = str(args.output or default_output)
@@ -947,7 +982,8 @@ def main() -> int:
 
     print(json.dumps({"output": output_path, "summary": report["summary"]}, indent=2))
 
-    if args.strict and int(report["summary"].get("failed_flows") or 0) > 0:
+    blocking_failed = int(report["summary"].get("blocking_failed_flows") or report["summary"].get("failed_flows") or 0)
+    if args.strict and blocking_failed > 0:
         return 2
     return 0
 
