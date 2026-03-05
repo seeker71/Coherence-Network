@@ -9,13 +9,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from app.models.runtime import RuntimeEventCreate
-from app.services import runtime_service
+from app.services import agent_service, runtime_service
 
 LifecycleHookPayload = dict[str, Any]
 LifecycleHook = Callable[[LifecycleHookPayload], None]
 
 _LIFECYCLE_HOOKS: list[LifecycleHook] = []
-_PIPELINE_IDEA_ID = "coherence-network-agent-pipeline"
 
 
 def register_lifecycle_hook(hook: LifecycleHook) -> None:
@@ -145,6 +144,10 @@ def _runtime_metadata(payload: LifecycleHookPayload) -> dict[str, str | int | fl
 def _record_runtime_lifecycle_event(payload: LifecycleHookPayload) -> None:
     if not _runtime_subscriber_enabled():
         return
+    task_payload: dict[str, Any] = {
+        "direction": str(payload.get("direction") or ""),
+        "context": payload.get("task_context") if isinstance(payload.get("task_context"), dict) else {},
+    }
     runtime_service.record_event(
         RuntimeEventCreate(
             source="worker",
@@ -152,7 +155,7 @@ def _record_runtime_lifecycle_event(payload: LifecycleHookPayload) -> None:
             method="RUN",
             status_code=_event_status_code(payload),
             runtime_ms=1.0,
-            idea_id=_PIPELINE_IDEA_ID,
+            idea_id=agent_service.resolve_runtime_idea_id_for_task(task_payload),
             metadata=_runtime_metadata(payload),
         )
     )
@@ -207,6 +210,8 @@ def dispatch_lifecycle_event(
         "task_type": _to_text(task.get("task_type")),
         "task_status": _to_text(task.get("status")),
         "model": str(task.get("model") or context.get("model_override") or ""),
+        "direction": str(task.get("direction") or ""),
+        "task_context": context,
     }
     if context.get("last_failure_category"):
         payload["failure_category"] = str(context.get("last_failure_category") or "")

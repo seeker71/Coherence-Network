@@ -1,0 +1,17 @@
+Review this execution output.
+PASS conditions:
+1) contains line starting with 'EVIDENCE ' and includes both success_rate and goal_proximity numeric values.
+2) contains line starting with 'GOAL_REF ' and references docs/PLAN.md or docs/PIPELINE-MONITORING-AUTOMATED.md with :line.
+3) contains line starting with 'MODEL_FLOW ' and exactly strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex).
+If all pass, return exactly:
+PASS_FAIL: PASS
+FINDINGS: aligned to project goals and model policy
+REQUIRED_RETRIES: none
+UNBLOCK_GUIDANCE: none
+Otherwise return exactly:
+PASS_FAIL: FAIL
+FINDINGS: missing required proof lines
+REQUIRED_RETRIES: add missing lines
+UNBLOCK_GUIDANCE: include all proof lines
+Execution:
+MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex)

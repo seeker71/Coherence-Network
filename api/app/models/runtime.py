@@ -79,6 +79,9 @@ class EndpointAttentionRow(BaseModel):
     value_gap: float = Field(ge=0.0)
     attention_score: float = Field(ge=0.0)
     confidence: float = Field(ge=0.0, le=1.0)
+    recent_success_streak: int = Field(ge=0, default=0)
+    success_streak_target: int = Field(ge=1, default=3)
+    failure_recovered: bool = False
     needs_attention: bool = False
     reasons: list[str] = Field(default_factory=list)
 

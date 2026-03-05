@@ -6,7 +6,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, HTTPException, Header, Request, Response
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
@@ -205,166 +205,6 @@ def _slow_route_reasons(
         ordered.append(reason)
     return ordered
 
-
-def _should_capture_runtime_metrics(request_path: str, raw_path: str) -> bool:
-    capture_path = request_path.startswith("/api") or request_path.startswith("/v1")
-    capture_raw = raw_path.startswith("/api") or raw_path.startswith("/v1")
-    if not (capture_path or capture_raw):
-        return False
-    if request_path == "/api/runtime/change-token":
-        # Live refresh polling must remain lightweight and should not self-generate runtime events.
-        return False
-    return True
-
-
-def _content_length_bytes(request: Request) -> int:
-    value = request.headers.get("content-length")
-    if not value:
-        return 0
-    return _safe_int_or_none(value) or 0
-
-
-def _runtime_event_metadata(
-    *,
-    request: Request,
-    method: str,
-    route_label: str,
-    query_count: int,
-    raw_query_rows: list[dict[str, str]],
-    heavy_query_rows: dict[str, str],
-    body_size: int,
-    reasons: list[str],
-    exc_name: str | None,
-) -> dict[str, str | int]:
-    return {
-        "method": method,
-        "route": route_label,
-        "query_count": query_count,
-        "query_samples": ",".join(f"{row.get('k')}={row.get('v')}" for row in raw_query_rows[:6]),
-        "heavy_query_keys": ",".join(sorted(heavy_query_rows.keys())),
-        "body_bytes": body_size,
-        "client": _client_identity(request),
-        "req_id": _correlation_id(request),
-        "page_view_id": (request.headers.get("x-page-view-id") or "").strip(),
-        "page_route": (request.headers.get("x-page-route") or "").strip(),
-        "slow_reasons": ", ".join(reasons),
-        "exception": exc_name or "",
-    }
-
-
-def _append_exposed_headers(existing: str | None, extra: list[str]) -> str:
-    merged: list[str] = []
-    seen: set[str] = set()
-    for chunk in ((existing or "").split(","), extra):
-        for value in chunk:
-            item = str(value).strip()
-            if not item:
-                continue
-            key = item.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            merged.append(item)
-    return ", ".join(merged)
-
-
-def _apply_runtime_response_headers(response: Response, request: Request, elapsed_ms: float) -> None:
-    runtime_ms = max(0.1, float(elapsed_ms))
-    response.headers["x-coherence-runtime-ms"] = f"{runtime_ms:.4f}"
-    response.headers["x-coherence-runtime-cost-estimate"] = (
-        f"{runtime_service.estimate_runtime_cost(runtime_ms):.8f}"
-    )
-    correlation_id = _correlation_id(request)
-    if correlation_id and correlation_id != "none":
-        response.headers["x-coherence-request-id"] = correlation_id
-    response.headers["access-control-expose-headers"] = _append_exposed_headers(
-        response.headers.get("access-control-expose-headers"),
-        [
-            "x-coherence-runtime-ms",
-            "x-coherence-runtime-cost-estimate",
-            "x-coherence-request-id",
-        ],
-    )
-
-
-def _record_runtime_event(
-    *,
-    request: Request,
-    method: str,
-    request_path: str,
-    raw_path: str,
-    status_code: int,
-    elapsed_ms: float,
-    route_label: str,
-    query_count: int,
-    raw_query_rows: list[dict[str, str]],
-    heavy_query_rows: dict[str, str],
-    reasons: list[str],
-    body_size: int,
-    exc_name: str | None,
-) -> None:
-    metadata = _runtime_event_metadata(
-        request=request,
-        method=method,
-        route_label=route_label,
-        query_count=query_count,
-        raw_query_rows=raw_query_rows,
-        heavy_query_rows=heavy_query_rows,
-        body_size=body_size,
-        reasons=reasons,
-        exc_name=exc_name,
-    )
-    runtime_service.record_event(
-        RuntimeEventCreate(
-            source="api",
-            endpoint=request_path,
-            raw_endpoint=raw_path,
-            method=method,
-            status_code=status_code,
-            runtime_ms=max(0.1, elapsed_ms),
-            idea_id=request.headers.get("x-idea-id"),
-            metadata=metadata,
-        )
-    )
-
-
-def _log_slow_request(
-    *,
-    request: Request,
-    method: str,
-    request_path: str,
-    route_label: str,
-    raw_path: str,
-    status_code: int,
-    elapsed_ms: float,
-    query_count: int,
-    raw_query_rows: list[dict[str, str]],
-    heavy_query_rows: dict[str, str],
-    body_size: int,
-    reasons: list[str],
-    exc_name: str | None,
-    exc_message: str | None,
-) -> None:
-    reason_text = ", ".join(reasons) if reasons else "unspecified"
-    logger.warning(
-        "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
-        "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
-        method,
-        request_path,
-        route_label,
-        raw_path,
-        status_code,
-        elapsed_ms,
-        query_count,
-        raw_query_rows,
-        heavy_query_rows,
-        body_size,
-        reason_text,
-        _correlation_id(request),
-        _client_identity(request),
-        f"{exc_name or 'none'}{':' + exc_message if exc_message else ''}",
-    )
-
 # Configure CORS
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
@@ -512,9 +352,9 @@ async def _prime_hot_caches() -> None:
         contribution_payload_rows: list[dict] = []
         asset_payload_rows: list[dict] = []
         if store is not None:
-            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=300)]
-            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=600)]
-            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=300)]
+            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
+            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
+            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
             contributor_rows = len(contributor_payload_rows)
             contribution_rows = len(contribution_payload_rows)
             asset_rows = len(asset_payload_rows)
@@ -525,12 +365,11 @@ async def _prime_hot_caches() -> None:
                 contributor_rows=contributor_payload_rows,
                 contribution_rows=contribution_payload_rows,
                 asset_rows=asset_payload_rows,
-                spec_registry_limit=160,
-                lineage_link_limit=180,
-                usage_event_limit=350,
-                commit_evidence_limit=200,
-                runtime_event_limit=600,
-                list_item_limit=12,
+                spec_registry_limit=200,
+                lineage_link_limit=300,
+                usage_event_limit=1200,
+                commit_evidence_limit=500,
+                runtime_event_limit=2000,
             )
             if not isinstance(flow_payload, dict):
                 flow_payload = {}
@@ -568,10 +407,9 @@ async def capture_runtime_metrics(request: Request, call_next):
     request_path, route_name, raw_path = _build_route_signature(request)
     query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
     route_label = route_name or "unknown"
-    should_capture = _should_capture_runtime_metrics(request_path, raw_path)
+    should_capture = request_path.startswith("/api") or request_path.startswith("/v1") or raw_path.startswith("/api") or raw_path.startswith("/v1")
     slow_threshold_ms = _slow_request_ms_threshold()
     log_all_requests = _env_flag("API_LOG_ALL_REQUESTS", False)
-    response = None
     try:
         response = await call_next(request)
         status_code = response.status_code
@@ -586,7 +424,10 @@ async def capture_runtime_metrics(request: Request, call_next):
         if status_code is None:
             status_code = 500
         if should_capture:
-            body_size = _content_length_bytes(request)
+            if request.headers.get("content-length"):
+                body_size = _safe_int_or_none(request.headers.get("content-length")) or 0
+            else:
+                body_size = 0
             reasons = _slow_route_reasons(
                 path=request_path,
                 status_code=status_code,
@@ -595,42 +436,53 @@ async def capture_runtime_metrics(request: Request, call_next):
                 query_summary=heavy_query_rows,
             )
             try:
-                _record_runtime_event(
-                    request=request,
-                    method=method,
-                    request_path=request_path,
-                    raw_path=raw_path,
-                    status_code=status_code,
-                    elapsed_ms=elapsed_ms,
-                    route_label=route_label,
-                    query_count=query_count,
-                    raw_query_rows=raw_query_rows,
-                    heavy_query_rows=heavy_query_rows,
-                    reasons=reasons,
-                    body_size=body_size,
-                    exc_name=exc_name,
+                metadata = {
+                    "method": method,
+                    "route": route_label,
+                    "query_count": query_count,
+                    "query_samples": ",".join(
+                        f"{row.get('k')}={row.get('v')}" for row in raw_query_rows[:6]
+                    ),
+                    "heavy_query_keys": ",".join(sorted(heavy_query_rows.keys())),
+                    "body_bytes": body_size,
+                    "client": _client_identity(request),
+                    "req_id": _correlation_id(request),
+                    "slow_reasons": ", ".join(reasons),
+                    "exception": exc_name or "",
+                }
+                runtime_service.record_event(
+                    RuntimeEventCreate(
+                        source="api",
+                        endpoint=request_path,
+                        raw_endpoint=raw_path,
+                        method=method,
+                        status_code=status_code,
+                        runtime_ms=max(0.1, elapsed_ms),
+                        idea_id=request.headers.get("x-idea-id"),
+                        metadata=metadata,
+                    )
                 )
             except Exception:
                 # Telemetry should not affect request success.
                 pass
 
-            if response is not None:
-                _apply_runtime_response_headers(response, request, elapsed_ms)
-
             if elapsed_ms >= slow_threshold_ms or log_all_requests or status_code >= 500:
-                _log_slow_request(
-                    request=request,
-                    method=method,
-                    request_path=request_path,
-                    route_label=route_label,
-                    raw_path=raw_path,
-                    status_code=status_code,
-                    elapsed_ms=elapsed_ms,
-                    query_count=query_count,
-                    raw_query_rows=raw_query_rows,
-                    heavy_query_rows=heavy_query_rows,
-                    body_size=body_size,
-                    reasons=reasons,
-                    exc_name=exc_name,
-                    exc_message=exc_message,
-                )
+                    reason_text = ", ".join(reasons) if reasons else "unspecified"
+                    logger.warning(
+                        "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
+                    "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
+                    method,
+                    request_path,
+                    route_label,
+                    raw_path,
+                    status_code,
+                    elapsed_ms,
+                    query_count,
+                    raw_query_rows,
+                    heavy_query_rows,
+                    body_size,
+                    reason_text,
+                        _correlation_id(request),
+                        _client_identity(request),
+                        f"{exc_name or 'none'}{':' + exc_message if exc_message else ''}",
+                    )

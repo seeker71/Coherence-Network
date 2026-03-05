@@ -1,0 +1,5 @@
+You are the cheap execution stage.
+Intentionally minimal first pass for baseline: keep it short and omit concrete command proof.
+Use this plan:
+3. Measurable check: phase visibility includes milestone tag (`A`/`B`/`C`) plus one status source (`docs/STATUS.md` or `docs/SPEC-TRACKING.md`) for progress verification.
+Return exactly: PLAN, PATCH, RUN, RESULT.

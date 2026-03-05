@@ -10,7 +10,7 @@ import time
 from typing import Any
 
 from app.models.runtime import RuntimeEventCreate
-from app.services import runtime_service
+from app.services import agent_service, runtime_service
 
 
 def _extract_underlying_model(task_model: str) -> str:
@@ -40,6 +40,7 @@ def _runtime_cost_usd(runtime_ms: int) -> float:
 def _record_codex_tool_event(
     *,
     task_id: str,
+    task: dict[str, Any] | None,
     model: str,
     is_paid_provider: bool,
     elapsed_ms: int,
@@ -81,7 +82,7 @@ def _record_codex_tool_event(
             method="RUN",
             status_code=status_code,
             runtime_ms=float(max(1, int(elapsed_ms))),
-            idea_id="coherence-network-agent-pipeline",
+            idea_id=agent_service.resolve_runtime_idea_id_for_task(task),
             metadata=metadata,
         )
     )
@@ -120,6 +121,7 @@ def should_fallback_to_codex_exec(model: str, error: str) -> bool:
 def _failure_result(
     *,
     task_id: str,
+    task: dict[str, Any] | None,
     model: str,
     route_is_paid: bool,
     elapsed_ms: int,
@@ -127,6 +129,7 @@ def _failure_result(
 ) -> dict[str, Any]:
     _record_codex_tool_event(
         task_id=task_id,
+        task=task,
         model=model,
         is_paid_provider=route_is_paid,
         elapsed_ms=elapsed_ms,
@@ -153,6 +156,7 @@ def _read_output_file(path: str) -> str:
 def run_codex_exec(
     *,
     task_id: str,
+    task: dict[str, Any] | None,
     model: str,
     prompt: str,
     route_is_paid: bool,
@@ -181,6 +185,7 @@ def run_codex_exec(
         elapsed_ms = max(1, int(round((time.perf_counter() - started_perf) * 1000)))
         return _failure_result(
             task_id=task_id,
+            task=task,
             model=model,
             route_is_paid=route_is_paid,
             elapsed_ms=elapsed_ms,
@@ -194,6 +199,7 @@ def run_codex_exec(
         err = (completed.stderr or completed.stdout or "codex exec failed").strip()
         return _failure_result(
             task_id=task_id,
+            task=task,
             model=model,
             route_is_paid=route_is_paid,
             elapsed_ms=elapsed_ms,
@@ -211,6 +217,7 @@ def run_codex_exec(
     cost_usd = _runtime_cost_usd(elapsed_ms)
     _record_codex_tool_event(
         task_id=task_id,
+        task=task,
         model=model,
         is_paid_provider=route_is_paid,
         elapsed_ms=elapsed_ms,

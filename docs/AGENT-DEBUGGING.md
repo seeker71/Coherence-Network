@@ -49,14 +49,6 @@ cd api && .venv/bin/python scripts/agent_runner.py --once -v
 
 **Verbose** (`-v`) prints progress to stdout. Logs always go to `api/logs/agent_runner.log`.
 
-## Delivery flow and review output (spec 108)
-
-All provider CLIs (aider/claude, cursor, openclaw) support the full flow: **spec → impl → test → review**. When review or tests fail, the next impl/heal task should receive enough information to patch the implementation instead of starting from scratch.
-
-- **Review output contract (FAIL):** Review tasks should output structured blocks: `VERIFICATION_RESULT=FAIL`, `FILES_TO_CHANGE`, `PATCH_GUIDANCE` (and optionally `SPEC_VERIFICATION_IMPROVEMENT`). See `.cursor/skills/spec-guard/SKILL.md`.
-- **Pipeline:** After a failed review, project_manager passes the review output (up to 2000 chars) into the next impl task’s direction so the agent can use PATCH_GUIDANCE.
-- **Local vs remote:** The same flow works when agent_runner runs locally (subprocess CLI) or on another host (remote runner); server-side execute (OpenRouter) is a separate path.
-
 ## When Something Goes Wrong
 
 ### 1. Check task status
@@ -99,19 +91,6 @@ If one file is still large, read its summary first and open only targeted slices
 
 ```bash
 python3 scripts/context_budget.py --force-summaries api/app/services/release_gate_service.py
-
-### 2c. Sync local runtime events into remote usage DB
-
-When local runner/API executions must appear on hosted Usage dashboards, sync local `runtime_events.json` files to the remote API:
-
-```bash
-cd api
-python3 scripts/sync_runtime_events_to_remote.py \
-  --api-url https://coherence-network-production.up.railway.app \
-  --all-worktrees
-```
-
-Use `--dry-run` to preview and `--state-path` to control idempotent sync state.
 sed -n '1,140p' api/app/services/release_gate_service.py
 ```
 

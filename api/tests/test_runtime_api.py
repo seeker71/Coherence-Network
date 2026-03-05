@@ -561,6 +561,65 @@ async def test_runtime_endpoint_attention_reports_paid_ratio_and_friction(
 
 
 @pytest.mark.asyncio
+async def test_runtime_endpoint_attention_recovers_after_success_streak(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setenv("TOOL_SUCCESS_STREAK_TARGET", "3")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        failed = await client.post(
+            "/api/runtime/events",
+            json={
+                "source": "worker",
+                "endpoint": "tool:streak-recovery-check",
+                "method": "RUN",
+                "status_code": 500,
+                "runtime_ms": 10.0,
+                "idea_id": "tool-streak-recovery-test",
+            },
+        )
+        assert failed.status_code == 201
+
+        for _ in range(3):
+            succeeded = await client.post(
+                "/api/runtime/events",
+                json={
+                    "source": "worker",
+                    "endpoint": "tool:streak-recovery-check",
+                    "method": "RUN",
+                    "status_code": 200,
+                    "runtime_ms": 10.0,
+                    "idea_id": "tool-streak-recovery-test",
+                },
+            )
+            assert succeeded.status_code == 201
+
+        attention = await client.get(
+            "/api/runtime/endpoints/attention",
+            params={
+                "seconds": 3600,
+                "min_event_count": 1,
+                "attention_threshold": 10.0,
+                "limit": 20,
+            },
+        )
+        assert attention.status_code == 200
+        row = next(item for item in attention.json()["endpoints"] if item["endpoint"] == "/tool:streak-recovery-check")
+        assert row["event_count"] == 4
+        assert row["success_count"] == 3
+        assert row["failure_count"] == 1
+        assert row["success_rate"] == 0.75
+        assert row["recent_success_streak"] == 3
+        assert row["success_streak_target"] == 3
+        assert row["failure_recovered"] is True
+        assert row["needs_attention"] is True
+        assert any(str(reason).startswith("low_success_rate:") for reason in row["reasons"])
+        assert f"recovered_success_streak:{row['recent_success_streak']}/{row['success_streak_target']}" in row["reasons"]
+
+
+@pytest.mark.asyncio
 async def test_runtime_endpoint_attention_clamps_friction_density_to_one(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

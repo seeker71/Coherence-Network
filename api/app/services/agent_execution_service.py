@@ -19,6 +19,7 @@ from app.models.agent import TaskStatus
 from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
 from app.services import (
+    agent_execution_codex_service,
     agent_service,
     automation_usage_service,
     friction_service,
@@ -81,42 +82,56 @@ def _extract_underlying_model(task_model: str) -> str:
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("openclaw/") or cleaned.startswith("clawwork/"):
         return cleaned.split("/", 1)[1].strip()
+    if cleaned.startswith("claude/"):
+        return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("cursor/"):
         return cleaned.split("/", 1)[1].strip()
     if cleaned.startswith("gemini/"):
         return cleaned.split("/", 1)[1].strip()
-    if cleaned.startswith("claude/"):
-        return cleaned.split("/", 1)[1].strip()
     return cleaned
 
 
-def _normalize_openrouter_target_model(model: str, executor: str) -> str:
-    cleaned = str(model or "").strip()
+_OPENROUTER_MODEL_ALIAS_MAP: dict[str, str] = {
+    # CLI-facing aliases -> OpenRouter catalog IDs.
+    "gpt-5-codex": "openai/gpt-5-codex",
+    "gpt-5-codex-spark": "openai/gpt-5-codex",
+    "gpt-5.3-codex": "openai/gpt-5.3-codex",
+    "gpt-5.3-codex-spark": "openai/gpt-5.3-codex",
+    "claude-sonnet-4-5-20250929": "anthropic/claude-sonnet-4.5",
+    "claude-sonnet-4-5": "anthropic/claude-sonnet-4.5",
+    "claude-opus-4-5": "anthropic/claude-opus-4.5",
+    "gemini-2.5-pro": "google/gemini-2.5-pro",
+}
+_CLAUDE_OPENROUTER_ALIAS_RE = re.compile(
+    r"^claude-(?P<tier>sonnet|opus)-(?P<major>\d+)(?:-(?P<minor>\d+))?(?:[.-].*)?$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_model_for_openrouter(model: str) -> str:
+    cleaned = agent_routing_service.normalize_model_name(str(model or "").strip()).strip()
     if not cleaned:
         return ""
-
-    lowered = cleaned.lower()
-    if lowered.startswith(("anthropic/", "google/", "openai/")):
+    if "/" in cleaned:
         return cleaned
 
-    if lowered.startswith("claude-"):
-        canonical = cleaned
-        canonical = re.sub(r"-4-5(?:-\d{8})?$", "-4.5", canonical)
-        canonical = re.sub(r"-3-7(?:-\d{8})?$", "-3.7", canonical)
-        return f"anthropic/{canonical}"
+    lowered = cleaned.lower()
+    alias = _OPENROUTER_MODEL_ALIAS_MAP.get(lowered)
+    if alias:
+        return alias
 
     if lowered.startswith("gemini-"):
-        return f"google/{cleaned}"
+        return f"google/{lowered}"
 
-    if lowered.startswith(("gpt-", "o1", "o3", "o4")):
-        return f"openai/{cleaned}"
+    match = _CLAUDE_OPENROUTER_ALIAS_RE.match(lowered)
+    if match:
+        tier = str(match.group("tier") or "sonnet").lower()
+        major = str(match.group("major") or "").strip()
+        minor = str(match.group("minor") or "").strip()
+        if major:
+            version = f"{major}.{minor}" if minor else major
+            return f"anthropic/claude-{tier}-{version}"
 
-    if executor == "codex":
-        return f"openai/{cleaned}"
-    if executor == "gemini":
-        return f"google/{cleaned}"
-    if executor == "claude":
-        return f"anthropic/{cleaned}"
     return cleaned
 
 
@@ -232,7 +247,6 @@ def _record_openrouter_tool_event(
     task_id: str,
     model: str,
     is_paid_provider: bool,
-    idea_id: str,
     elapsed_ms: int,
     ok: bool,
     provider_request_id: str | None = None,
@@ -275,7 +289,7 @@ def _record_openrouter_tool_event(
             method="RUN",
             status_code=status_code,
             runtime_ms=float(max(1, int(elapsed_ms))),
-            idea_id=idea_id or "coherence-network-agent-pipeline",
+            idea_id="coherence-network-agent-pipeline",
             metadata=metadata,
         )
     )
@@ -286,7 +300,6 @@ def _run_openrouter(
     task_id: str,
     model: str,
     prompt: str,
-    idea_id: str,
     route_is_paid: bool,
     started_perf: float,
     cost_budget: dict[str, float | None],
@@ -303,7 +316,6 @@ def _run_openrouter(
             task_id=task_id,
             model=model,
             is_paid_provider=route_is_paid,
-            idea_id=idea_id,
             elapsed_ms=elapsed_ms,
             ok=True,
             provider_request_id=str(meta.get("provider_request_id") or ""),
@@ -326,12 +338,23 @@ def _run_openrouter(
         }
     except OpenRouterError as exc:
         fallback_error = str(exc)
+        if agent_execution_codex_service.should_fallback_to_codex_exec(model, fallback_error):
+            fallback_result = agent_execution_codex_service.run_codex_exec(
+                task_id=task_id,
+                model=model,
+                prompt=prompt,
+                route_is_paid=route_is_paid,
+                started_perf=started_perf,
+                cost_budget=cost_budget,
+            )
+            if fallback_result.get("ok") is True:
+                return fallback_result
+
         elapsed_ms = max(1, int(round((time.perf_counter() - started_perf) * 1000)))
         _record_openrouter_tool_event(
             task_id=task_id,
             model=model,
             is_paid_provider=route_is_paid,
-            idea_id=idea_id,
             elapsed_ms=elapsed_ms,
             ok=False,
             actual_cost_usd=_runtime_cost_usd(elapsed_ms),
@@ -343,19 +366,13 @@ def _run_openrouter(
 def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     model = _extract_underlying_model(str(task.get("model") or ""))
     resolved = model or default
+    normalized = _normalize_model_for_openrouter(resolved)
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
     executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
-    if executor == "openrouter" or str(resolved).strip().lower().startswith("openrouter/"):
-        return agent_routing_service.enforce_openrouter_free_model(resolved)
-    return _normalize_openrouter_target_model(resolved, executor)
-
-
-def _clip_prompt_text(value: Any, max_chars: int) -> str:
-    text = " ".join(str(value or "").split())
-    if len(text) <= max_chars:
-        return text
-    return text[: max_chars - 3].rstrip() + "..."
+    if executor == "openrouter" or str(normalized).strip().lower().startswith("openrouter/"):
+        return agent_routing_service.enforce_openrouter_free_model(normalized)
+    return normalized
 
 
 def _resolve_prompt(task: dict[str, Any]) -> str:
@@ -363,54 +380,10 @@ def _resolve_prompt(task: dict[str, Any]) -> str:
     if not prompt:
         return ""
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    sections: list[str] = []
-
-    retry_hint = _clip_prompt_text(context.get("retry_hint") or "", 700)
-    if retry_hint:
-        sections.append(f"Retry guidance:\n{retry_hint}")
-
-    retry_memory_lines: list[str] = [
-        "Preserve prior work and patch incrementally; do not restart from scratch.",
-    ]
-    for key in (
-        "last_failure_category",
-        "last_failure_signature",
-        "last_failure_summary",
-        "last_failure_action",
-    ):
-        value = _clip_prompt_text(context.get(key) or "", 260)
-        if value:
-            retry_memory_lines.append(f"{key}={value}")
-
-    failure_packet = context.get("last_failure_packet")
-    if isinstance(failure_packet, dict):
-        for key in ("bucket", "signature", "summary", "action"):
-            value = _clip_prompt_text(failure_packet.get(key) or "", 260)
-            if value:
-                retry_memory_lines.append(f"failure_packet.{key}={value}")
-
-    reflections = context.get("retry_reflections")
-    if isinstance(reflections, list):
-        reflection_rows = [row for row in reflections if isinstance(row, dict)]
-        if reflection_rows:
-            latest = reflection_rows[-1]
-            blind_spot = _clip_prompt_text(latest.get("blind_spot") or "", 260)
-            next_action = _clip_prompt_text(latest.get("next_action") or "", 260)
-            if blind_spot:
-                retry_memory_lines.append(f"latest_blind_spot={blind_spot}")
-            if next_action:
-                retry_memory_lines.append(f"latest_next_action={next_action}")
-
-    failure_output_excerpt = _clip_prompt_text(context.get("last_failure_output") or "", 900)
-    if failure_output_excerpt:
-        retry_memory_lines.append(f"last_failure_output_excerpt={failure_output_excerpt}")
-
-    if len(retry_memory_lines) > 1:
-        sections.append("Retry memory packet:\n" + "\n".join(f"- {line}" for line in retry_memory_lines))
-
-    if not sections:
+    retry_hint = str(context.get("retry_hint") or "").strip()
+    if not retry_hint:
         return prompt
-    return f"{prompt}\n\n" + "\n\n".join(sections)
+    return f"{prompt}\n\nRetry guidance:\n{retry_hint}"
 
 
 def _normalize_positive_float(value: Any, default: float | None = None) -> float | None:

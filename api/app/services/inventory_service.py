@@ -47,6 +47,8 @@ IMPLEMENTATION_REQUEST_PATTERN = re.compile(
     r"\b(implement|implementation|build|create|add|fix|integrate|ship|expose|wire|develop)\b",
     re.IGNORECASE,
 )
+_API_KEY_TERM_RE = re.compile(r"\bapi[_ -]?key\b", re.IGNORECASE)
+_API_KEY_ENV_RE = re.compile(r"\bOPENAI_API_KEY\b", re.IGNORECASE)
 
 _FLOW_STAGE_ORDER: tuple[str, ...] = ("spec", "process", "implementation", "validation")
 _FLOW_STAGE_ESTIMATED_COST: dict[str, float] = {
@@ -215,6 +217,15 @@ def _is_implementation_request_question(question: str, answer: str | None = None
 def _question_fingerprint(idea_id: str, question: str) -> str:
     payload = f"{idea_id.strip().lower()}::{question.strip().lower()}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _sanitize_oauth_only_language(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    cleaned = _API_KEY_ENV_RE.sub("OAuth session credential", cleaned)
+    cleaned = _API_KEY_TERM_RE.sub("oauth", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 def _flow_unblock_fingerprint(idea_id: str, blocking_stage: str) -> str:
@@ -398,12 +409,14 @@ def sync_implementation_request_question_tasks() -> dict:
             skipped_existing_count += 1
             continue
 
+        question_for_direction = _sanitize_oauth_only_language(question)
         direction = (
-            f"Implementation request for idea '{idea_id}': {question} "
+            f"Implementation request for idea '{idea_id}': {question_for_direction} "
             "Produce a measurable artifact (spec->test->impl), link evidence, and update ROI signals."
         )
         if answer:
-            direction += f" Use this answer as implementation contract: {answer}"
+            answer_for_direction = _sanitize_oauth_only_language(answer)
+            direction += f" Use this answer as implementation contract: {answer_for_direction}"
 
         task = agent_service.create_task(
             AgentTaskCreate(
@@ -1074,6 +1087,8 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
     idea_id = str(top.get("idea_id") or "unknown")
     question = str(top.get("question") or "").strip()
     answer = str(top.get("answer") or "").strip()
+    question_for_direction = _sanitize_oauth_only_language(question)
+    answer_for_direction = _sanitize_oauth_only_language(answer)
     question_fingerprint = _question_fingerprint(idea_id, question)
     question_roi = float(top.get("question_roi") or 0.0)
     answer_roi = float(top.get("answer_roi") or 0.0)
@@ -1081,8 +1096,8 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
     existing_active = agent_service.find_active_task_by_fingerprint(question_fingerprint)
 
     direction = (
-        f"Highest-ROI follow-up for idea '{idea_id}': {question} "
-        f"Use this answer as working contract: {answer} "
+        f"Highest-ROI follow-up for idea '{idea_id}': {question_for_direction} "
+        f"Use this answer as working contract: {answer_for_direction} "
         "Produce a measurable artifact with tests, link to value-lineage usage, and update inventory metrics."
     )
     report: dict = {

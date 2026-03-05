@@ -7,15 +7,6 @@ from app.main import app
 from app.services import agent_service
 
 
-@pytest.fixture(autouse=True)
-def _reset_model_cooldown_state() -> None:
-    agent_service._MODEL_COOLDOWN_CACHE.clear()
-    agent_service._MODEL_COOLDOWN_SIGNAL_SEEN.clear()
-    yield
-    agent_service._MODEL_COOLDOWN_CACHE.clear()
-    agent_service._MODEL_COOLDOWN_SIGNAL_SEEN.clear()
-
-
 @pytest.mark.asyncio
 async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
     tmp_path,
@@ -96,8 +87,8 @@ async def test_agent_visibility_exposes_pipeline_usage_and_remaining_gap(
         assert payload["usage"]["execution"]["tracked_runs"] == 3
         assert payload["usage"]["execution"]["success_rate"] == 1.0
         assert payload["usage"]["execution"]["codex_runs"] == 2
-        assert payload["usage"]["execution"]["by_tool"]["agent"]["count"] == 1
-        assert payload["usage"]["execution"]["by_tool"]["agent"]["failed"] == 0
+        assert payload["usage"]["execution"]["by_tool"]["cursor"]["count"] == 1
+        assert payload["usage"]["execution"]["by_tool"]["cursor"]["failed"] == 0
         assert payload["usage"]["execution"]["by_tool"]["agent-task-completion"]["count"] == 2
         assert payload["remaining_usage"]["coverage_rate"] == 1.0
         assert payload["remaining_usage"]["remaining_to_full_coverage"] == 0
@@ -236,9 +227,9 @@ async def test_agent_visibility_exposes_tool_failures_and_success_rate(
         assert execution["failed_runs"] == 1
         assert execution["success_runs"] == 2
         assert execution["success_rate"] == 0.6667
-        assert execution["by_tool"]["agent"]["count"] == 1
-        assert execution["by_tool"]["agent"]["failed"] == 0
-        assert execution["by_tool"]["agent"]["success_rate"] == 1.0
+        assert execution["by_tool"]["cursor"]["count"] == 1
+        assert execution["by_tool"]["cursor"]["failed"] == 0
+        assert execution["by_tool"]["cursor"]["success_rate"] == 1.0
         assert execution["by_tool"]["agent-task-completion"]["count"] == 1
         assert execution["by_tool"]["agent-task-completion"]["success_rate"] == 1.0
         assert execution["by_tool"]["pytest"]["count"] == 1
@@ -344,124 +335,3 @@ async def test_agent_orchestration_guidance_flags_low_execution_success_rate(
         guidance = payload.get("guidance") or []
         ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
         assert "execution_success_low" in ids
-
-
-@pytest.mark.asyncio
-async def test_agent_orchestration_guidance_reports_underperforming_provider_models(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        task = await client.post(
-            "/api/agent/tasks",
-            json={"direction": "Track underperforming provider model", "task_type": "impl"},
-        )
-        assert task.status_code == 201
-        task_id = task.json()["id"]
-
-        running = await client.patch(
-            f"/api/agent/tasks/{task_id}",
-            json={"status": "running", "worker_id": "openai-codex"},
-        )
-        assert running.status_code == 200
-        completed = await client.patch(
-            f"/api/agent/tasks/{task_id}",
-            json={"status": "completed", "output": "done"},
-        )
-        assert completed.status_code == 200
-
-        for status_code in (500, 500):
-            event = await client.post(
-                "/api/runtime/events",
-                json={
-                    "source": "worker",
-                    "endpoint": "tool:cursor",
-                    "method": "RUN",
-                    "status_code": status_code,
-                    "runtime_ms": 22.0,
-                    "idea_id": "coherence-network-agent-pipeline",
-                    "metadata": {
-                        "task_id": task_id,
-                        "executor": "cursor",
-                        "provider": "cursor",
-                        "model": "cursor/auto",
-                        "agent_id": "openai-codex",
-                    },
-                },
-            )
-            assert event.status_code == 201
-
-        response = await client.get("/api/agent/orchestration/guidance")
-        assert response.status_code == 200
-        payload = response.json()
-
-        awareness = payload.get("awareness") or {}
-        underperforming = awareness.get("underperforming_provider_models") or []
-        assert any(
-            str(row.get("provider") or "") == "cursor" and str(row.get("model") or "") == "cursor/auto"
-            for row in underperforming
-            if isinstance(row, dict)
-        )
-
-        guidance = payload.get("guidance") or []
-        ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
-        assert "provider_model_underperforming" in ids
-
-
-@pytest.mark.asyncio
-async def test_agent_orchestration_guidance_reports_active_model_cooldowns(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
-    monkeypatch.setenv("AGENT_MODEL_COOLDOWN_SECONDS", "7200")
-    agent_service._store.clear()
-    agent_service._store_loaded = False
-    agent_service._store_loaded_path = None
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        task = await client.post(
-            "/api/agent/tasks",
-            json={
-                "direction": "Use spark then switch on limit",
-                "task_type": "impl",
-                "context": {"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
-            },
-        )
-        assert task.status_code == 201
-        task_id = task.json()["id"]
-
-        failed = await client.patch(
-            f"/api/agent/tasks/{task_id}",
-            json={
-                "status": "failed",
-                "output": "spark weekly usage limit reached",
-            },
-        )
-        assert failed.status_code == 200
-
-        response = await client.get("/api/agent/orchestration/guidance")
-        assert response.status_code == 200
-        payload = response.json()
-        awareness = payload.get("awareness") or {}
-        active = awareness.get("active_model_cooldowns") or []
-        assert any(
-            str(row.get("requested_model") or "") == "codex/gpt-5.3-codex-spark"
-            and str(row.get("effective_model") or "") == "codex/gpt-5.3-codex"
-            for row in active
-            if isinstance(row, dict)
-        )
-        guidance = payload.get("guidance") or []
-        ids = {str(item.get("id") or "") for item in guidance if isinstance(item, dict)}
-        assert "model_cooldown_active" in ids

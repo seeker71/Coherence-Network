@@ -43,7 +43,25 @@ def test_review_task_includes_primary_and_guard_agents(monkeypatch: pytest.Monke
     assert "spec-guard" in (context.get("guard_agents") or [])
     assert "Role agent: reviewer." in str(task.get("command"))
     assert "Guard agents: spec-guard." in str(task.get("command"))
-    assert "Startup context: read AGENTS.md, CLAUDE.md" in str(task.get("command"))
+    assert "Output contract: PASS_FAIL, FINDINGS, SPEC_VERIFICATION_STATUS, PATCH_GUIDANCE." in str(
+        task.get("command")
+    )
+    assert "If PASS_FAIL is FAIL, PATCH_GUIDANCE must include file paths" in str(task.get("command"))
+
+
+def test_spec_task_includes_verification_plan_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Turn an idea into a concrete spec",
+            task_type=TaskType.SPEC,
+        )
+    )
+    command = str(task.get("command") or "")
+    assert "Output contract: IDEA, SPEC_SCOPE, ACCEPTANCE_CRITERIA, VERIFICATION_PLAN." in command
+    assert "VERIFICATION_PLAN must include executable checks" in command
 
 
 def test_task_target_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch) -> None:

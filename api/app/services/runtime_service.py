@@ -933,6 +933,32 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _tool_success_streak_target() -> int:
+    raw = str(os.getenv("TOOL_SUCCESS_STREAK_TARGET", "3")).strip()
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError):
+        parsed = 3
+    return max(1, min(parsed, 20))
+
+
+def _is_success_status_code(status_code: int) -> bool:
+    return 200 <= int(status_code) < 400
+
+
+def _recent_success_streak(endpoint_events: list[RuntimeEvent]) -> int:
+    if not endpoint_events:
+        return 0
+    ordered_events = sorted(endpoint_events, key=lambda event: event.recorded_at, reverse=True)
+    streak = 0
+    for event in ordered_events:
+        if _is_success_status_code(int(getattr(event, "status_code", 0) or 0)):
+            streak += 1
+            continue
+        break
+    return streak
+
+
 def _load_idea_value_rows() -> dict[str, dict[str, float]]:
     try:
         from app.services import idea_service
@@ -984,12 +1010,18 @@ def _attention_reasons(
     value_gap: float,
     cost_per_event: float,
     event_count: int,
+    recent_success_streak: int,
+    success_streak_target: int,
+    failure_recovered: bool,
 ) -> list[str]:
     reasons: list[str] = []
     if event_count < 5:
         reasons.append("low_sample")
     if success_rate < 0.90:
         reasons.append(f"low_success_rate:{round(success_rate * 100.0, 2)}%")
+    if recent_success_streak > 0:
+        streak_label = "recovered_success_streak" if failure_recovered else "success_streak"
+        reasons.append(f"{streak_label}:{recent_success_streak}/{success_streak_target}")
     if paid_ratio > 0.0:
         reasons.append(f"paid_requests:{round(paid_ratio * 100.0, 2)}%")
     if friction_density > 0.0:
@@ -1037,7 +1069,7 @@ def _endpoint_attention_status_counts(
     failure_count = 0
     for code_str, count in row.status_counts.items():
         code = _parse_status_code(code_str)
-        if 200 <= code < 400:
+        if _is_success_status_code(code):
             success_count += _safe_int(count, 0)
         else:
             failure_count += _safe_int(count, 0)
@@ -1074,6 +1106,9 @@ def _build_endpoint_attention_row(
     success_count, failure_count = _endpoint_attention_status_counts(row)
 
     success_rate = float(success_count) / float(event_count) if event_count else 0.0
+    success_streak_target = _tool_success_streak_target()
+    recent_success_streak = _recent_success_streak(endpoint_events)
+    failure_recovered = bool(failure_count > 0 and recent_success_streak >= success_streak_target)
 
     paid_tool_event_count, paid_tool_failure_count = _endpoint_attention_paid_counts(endpoint_events)
 
@@ -1125,6 +1160,9 @@ def _build_endpoint_attention_row(
         value_gap=round(value_gap, 4),
         attention_score=round(attention_score, 3),
         confidence=round(max(0.0, min(confidence, 1.0)), 4),
+        recent_success_streak=recent_success_streak,
+        success_streak_target=success_streak_target,
+        failure_recovered=failure_recovered,
         needs_attention=needs_attention,
         reasons=_attention_reasons(
             success_rate=success_rate,
@@ -1133,6 +1171,9 @@ def _build_endpoint_attention_row(
             value_gap=value_gap,
             cost_per_event=cost_per_event,
             event_count=event_count,
+            recent_success_streak=recent_success_streak,
+            success_streak_target=success_streak_target,
+            failure_recovered=failure_recovered,
         ),
     )
 

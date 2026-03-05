@@ -40,6 +40,8 @@ UNBLOCK_QUEUE_WINDOW_SECONDS = int(os.environ.get("SELF_IMPROVE_UNBLOCK_WINDOW_S
 SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE = str(
     os.environ.get("SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE", "oauth")
 ).strip().lower() or "oauth"
+if SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE != "oauth":
+    SELF_IMPROVE_RUNNER_CODEX_AUTH_MODE = "oauth"
 
 STAGE_SPECS = {
     "plan": {"task_type": "spec", "model": PLAN_MODEL},

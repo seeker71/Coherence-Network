@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query
 
@@ -126,11 +127,91 @@ async def get_automation_usage_daily_summary(
             timeout=timeout_seconds,
         )
     except TimeoutError:
-        return automation_usage_service.cached_daily_system_summary_payload(
+        cached_payload = automation_usage_service.daily_system_summary_cached_payload(
             window_hours=window_hours,
             top_n=top_n,
-            force_refresh=False,
         )
+        if isinstance(cached_payload, dict):
+            return cached_payload
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "window_hours": int(window_hours),
+            "host_failure_observability_backfill": {
+                "window_hours": int(window_hours),
+                "host_failed_tasks": 0,
+                "completion_events_backfilled": 0,
+                "friction_events_backfilled": 0,
+                "affected_task_ids": [],
+                "error": "daily_summary_timeout",
+            },
+            "host_runner": {
+                "window_hours": int(window_hours),
+                "total_runs": 0,
+                "failed_runs": 0,
+                "completed_runs": 0,
+                "running_runs": 0,
+                "pending_runs": 0,
+                "status_counts": {},
+                "by_task_type": {},
+            },
+            "execution": {
+                "tracked_runs": 0,
+                "failed_runs": 0,
+                "success_runs": 0,
+                "coverage": {},
+            },
+            "tool_usage": {
+                "worker_events": 0,
+                "worker_failed_events": 0,
+                "attention_worker_events": None,
+                "attention_worker_failed_events": None,
+                "attention_worker_event_gap": None,
+                "attention_worker_failed_event_gap": None,
+                "top_tools": [],
+            },
+            "friction": {
+                "total_events": 0,
+                "open_events": 0,
+                "top_block_types": [],
+                "top_stages": [],
+                "entry_points": [],
+            },
+            "providers": [],
+            "top_attention_areas": [],
+            "tool_reliability_goal": {
+                "target_success_rate": 0.75,
+                "window_calls": 10,
+                "target_successes": 8,
+                "tracked_tools": 0,
+                "tools_meeting_target": 0,
+                "tools_below_target": 0,
+                "rows": [],
+            },
+            "contract_gaps": [
+                "daily summary timed out and no cached payload was available",
+            ],
+            "quality_awareness": {
+                "status": "unavailable",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "intent_focus": [],
+                "summary": {
+                    "severity": "medium",
+                    "risk_score": 0,
+                    "regression": False,
+                    "regression_reasons": [],
+                    "python_module_count": 0,
+                    "runtime_file_count": 0,
+                    "layer_violations": 0,
+                    "large_modules": 0,
+                    "very_large_modules": 0,
+                    "long_functions": 0,
+                    "placeholder_findings": 0,
+                },
+                "hotspots": [],
+                "guidance": [],
+                "recommended_tasks": [],
+            },
+        }
 
 
 @router.post("/automation/usage/provider-validation/run")

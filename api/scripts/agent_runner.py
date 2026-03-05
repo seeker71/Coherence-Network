@@ -284,7 +284,12 @@ DEFAULT_CODEX_MODEL_ALIAS_MAP = (
     "gtp-5.3-codex:gpt-5-codex,"
     "gtp-5.3-codex-spark:gpt-5-codex"
 )
-MANDATORY_CODEX_MODEL_ALIAS_MAP: dict[str, str] = {}
+MANDATORY_CODEX_MODEL_ALIAS_MAP = {
+    "gpt-5.3-codex": "gpt-5-codex",
+    "gpt-5.3-codex-spark": "gpt-5-codex",
+    "gtp-5.3-codex": "gpt-5-codex",
+    "gtp-5.3-codex-spark": "gpt-5-codex",
+}
 DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP = (
     "gpt-5.3-codex:gpt-5-codex,"
     "gpt-5.3-codex-spark:gpt-5-codex,"
@@ -304,13 +309,7 @@ def _tool_token(command: str) -> str:
     if not s:
         return "unknown"
     # Very simple parse: first token.
-    token = s.split()[0].strip().lower() or "unknown"
-    aliases = {
-        "agent": "cursor",
-        "openclaw": "codex",
-        "clawwork": "codex",
-    }
-    return aliases.get(token, token)
+    return s.split()[0].strip() or "unknown"
 
 
 def _model_is_paid(model: str) -> bool:
@@ -3006,8 +3005,6 @@ def _post_runtime_event(
     worker_id: str,
     executor: str,
     is_openai_codex: bool,
-    idea_id: str,
-    requested_executor: str,
 ) -> None:
     if os.environ.get("PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
         return
@@ -3017,7 +3014,7 @@ def _post_runtime_event(
         "method": "RUN",
         "status_code": int(status_code),
         "runtime_ms": max(0.1, float(runtime_ms)),
-        "idea_id": idea_id or "coherence-network-agent-pipeline",
+        "idea_id": "coherence-network-agent-pipeline",
         "metadata": {
             "task_id": task_id,
             "task_type": task_type,
@@ -3027,7 +3024,6 @@ def _post_runtime_event(
             "output_len": int(output_len),
             "worker_id": worker_id,
             "executor": executor,
-            "requested_executor": requested_executor,
             "agent_id": "openai-codex" if is_openai_codex else worker_id,
             "is_openai_codex": bool(is_openai_codex),
         },
@@ -4037,6 +4033,27 @@ def _attempt_codex_oauth_session_refresh_from_env(
     )
     if not encoded:
         return False, "oauth_session_refresh_b64_missing"
+
+    payload, decode_detail = _decode_oauth_session_b64_payload(
+        encoded=encoded,
+        task_id=task_id,
+        log=log,
+        env_key="AGENT_CODEX_OAUTH_SESSION_B64",
+    )
+    if decode_detail:
+        return False, decode_detail
+    incoming_access_token, incoming_refresh_token = _extract_codex_oauth_tokens(payload)
+    if not incoming_refresh_token and not incoming_access_token:
+        return False, "oauth_session_missing_tokens"
+
+    target_path = _codex_oauth_session_target_path(env)
+    if target_path:
+        existing_payload = _read_json_object_file(target_path)
+        _, existing_refresh_token = _extract_codex_oauth_tokens(existing_payload)
+        env["AGENT_CODEX_OAUTH_SESSION_FILE"] = target_path
+        if existing_refresh_token and incoming_refresh_token and existing_refresh_token == incoming_refresh_token:
+            return False, f"oauth_session_refresh_skipped_same_refresh_token:{target_path}"
+
     refreshed, detail = _bootstrap_codex_oauth_session_from_env(
         env=env,
         task_id=task_id,
@@ -4771,6 +4788,8 @@ def _claude_oauth_session_target_path(env: dict[str, str]) -> str:
     config_dir = (
         str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
         or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
     )
     if config_dir:
         return _abs_expanded_path(os.path.join(config_dir, ".credentials.json"))
@@ -4809,6 +4828,8 @@ def _claude_oauth_session_candidates(env: dict[str, str]) -> list[str]:
     config_dir = (
         str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
         or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
+        or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
     )
     if config_dir:
         _append(os.path.join(config_dir, ".credentials.json"))
@@ -4831,10 +4852,6 @@ def _claude_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
 
     if not os.getenv("PYTEST_CURRENT_TEST"):
         try:
-            auth_env = dict(env)
-            # Claude CLI OAuth is discovered from its default config path; forcing
-            # CLAUDE_CONFIG_DIR can invalidate an otherwise healthy login.
-            auth_env.pop("CLAUDE_CONFIG_DIR", None)
             completed = subprocess.run(
                 ["claude", "auth", "status", "--json"],
                 stdout=subprocess.PIPE,
@@ -4842,7 +4859,7 @@ def _claude_oauth_session_status(env: dict[str, str]) -> tuple[bool, str]:
                 check=False,
                 text=True,
                 timeout=8,
-                env={**auth_env, "CLAUDECODE": ""},
+                env={**env, "CLAUDECODE": ""},
             )
             if completed.returncode == 0:
                 payload = json.loads(str(completed.stdout or "{}").strip())
@@ -4883,6 +4900,7 @@ def _bootstrap_claude_oauth_session_from_env(
             log.info("task=%s replacing existing claude oauth session at %s", task_id, target_path)
         else:
             env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+            env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
             return False, f"oauth_session_preserved_existing:{target_path}"
 
     payload, decode_detail = _decode_oauth_session_b64_payload(
@@ -4912,6 +4930,7 @@ def _bootstrap_claude_oauth_session_from_env(
         return False, f"oauth_session_write_failed:{type(exc).__name__}"
 
     env["AGENT_CLAUDE_OAUTH_SESSION_FILE"] = target_path
+    env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
     if existing_refresh_token or existing_access_token:
         return True, f"oauth_session_overwritten:{target_path}"
     return True, f"oauth_session_bootstrapped:{target_path}"
@@ -4965,20 +4984,25 @@ def _configure_claude_cli_environment(
             requested_mode_raw,
         )
 
+    claude_config_override = str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+    if claude_config_override:
+        env["CLAUDE_CONFIG_DIR"] = _abs_expanded_path(claude_config_override)
+
     oauth_session_bootstrapped, oauth_session_bootstrap_detail = _bootstrap_claude_oauth_session_from_env(
         env=env,
         task_id=task_id,
         log=log,
         task_ctx=task_ctx,
     )
-    # Do not export CLAUDE_CONFIG_DIR automatically; it can make claude -p lose
-    # an otherwise valid OAuth session.
-    env.pop("CLAUDE_CONFIG_DIR", None)
     env.pop("ANTHROPIC_API_KEY", None)
     env.pop("ANTHROPIC_AUTH_TOKEN", None)
     env.pop("ANTHROPIC_BASE_URL", None)
     env.pop("CLAUDE_API_KEY", None)
     env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+
+    target_path = _claude_oauth_session_target_path(env)
+    if target_path:
+        env["CLAUDE_CONFIG_DIR"] = os.path.dirname(target_path) or "."
 
     oauth_available, oauth_source = _claude_oauth_session_status(env)
     oauth_missing = bool(not oauth_available)
@@ -5086,20 +5110,12 @@ def _codex_model_alias_map() -> dict[str, str]:
     return aliases
 
 
-def _runner_codex_model_alias_enabled() -> bool:
-    return _as_bool(os.environ.get("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "0"))
-
-
 def _codex_model_not_found_fallback_map() -> dict[str, str]:
     aliases = _parse_codex_model_alias_map(DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP)
     raw = os.environ.get("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", "")
     if raw:
         aliases.update(_parse_codex_model_alias_map(str(raw)))
     return aliases
-
-
-def _runner_codex_model_not_found_fallback_enabled() -> bool:
-    return _as_bool(os.environ.get("AGENT_RUNNER_ENABLE_CODEX_MODEL_NOT_FOUND_FALLBACK", "0"))
 
 
 def _codex_command_model(command: str) -> str:
@@ -5112,8 +5128,6 @@ def _codex_command_model(command: str) -> str:
 
 
 def _apply_codex_model_alias(command: str) -> tuple[str, dict[str, str] | None]:
-    if not _runner_codex_model_alias_enabled():
-        return command, None
     requested_model = _codex_command_model(command)
     if not requested_model:
         return command, None
@@ -5214,8 +5228,6 @@ def _oauth_session_refresh_or_auth_error(output: str) -> bool:
 
 
 def _codex_model_not_found_fallback(command: str, output: str) -> tuple[str, dict[str, str] | None]:
-    if not _runner_codex_model_not_found_fallback_enabled():
-        return command, None
     if not _codex_model_not_found_or_access_error(output):
         return command, None
     requested_model = _codex_command_model(command)
@@ -5863,7 +5875,6 @@ def run_one_task(
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     task_ctx = task_context or {}
-    task_idea_id = _task_idea_id(task_ctx) or "coherence-network-agent-pipeline"
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     requested_executor = str(task_ctx.get("executor") or "").strip().lower()
     inferred_executor = _infer_executor(command, model)
@@ -6720,8 +6731,6 @@ def run_one_task(
             worker_id=worker_id,
             executor=executor,
             is_openai_codex=is_openai_codex,
-            idea_id=task_idea_id,
-            requested_executor=requested_executor,
         )
         if status != "completed":
             _post_tool_failure_friction(
@@ -6908,8 +6917,10 @@ def run_one_task(
                             "detail": relogin_detail,
                             "at": _utc_now_iso(),
                         }
+                        auth_recovered = bool(session_refresh_ok or relogin_ok)
                         retry_disabled = _retry_explicitly_disabled(task_ctx)
-                        if retry_disabled:
+                        retry_blocked = (not auth_recovered) or retry_disabled
+                        if retry_blocked:
                             retry_task_ctx["runner_retry_max"] = 0
                         else:
                             retry_task_ctx["runner_retry_max"] = max(_to_int(task_ctx.get("runner_retry_max"), 0), attempt)
@@ -6934,6 +6945,7 @@ def run_one_task(
                                 "detail": relogin_detail,
                                 "at": _utc_now_iso(),
                             },
+                            "runner_codex_oauth_recovery_ok": auth_recovered,
                             "runner_codex_oauth_refresh_retry": {
                                 "trigger": "oauth_refresh_token_reused",
                                 "mode": "oauth",
@@ -6956,11 +6968,14 @@ def run_one_task(
                             relogin_message = (
                                 f" oauth relogin {relogin_status} ({relogin_detail});"
                             )
-                        retry_suffix = (
-                            "retry disabled by explicit retry_max=0."
-                            if retry_disabled
-                            else "retrying with oauth auth mode."
-                        )
+                        if not auth_recovered:
+                            retry_suffix = (
+                                "oauth recovery did not succeed; not retrying until OAuth session is rotated."
+                            )
+                        elif retry_disabled:
+                            retry_suffix = "retry disabled by explicit retry_max=0."
+                        else:
+                            retry_suffix = "retrying with oauth auth mode."
                         output = (
                             f"{output}\n[runner-codex-auth-retry] oauth refresh token reuse detected; "
                             f"{session_refresh_message}{relogin_message} {retry_suffix}"
@@ -7388,8 +7403,6 @@ def run_one_task(
             worker_id=worker_id,
             executor=executor,
             is_openai_codex=is_openai_codex,
-            idea_id=task_idea_id,
-            requested_executor=requested_executor,
         )
         _post_tool_failure_friction(
             client,
