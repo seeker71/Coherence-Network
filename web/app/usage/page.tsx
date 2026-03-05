@@ -89,6 +89,10 @@ type DailySummaryTopTool = {
   tool: string;
   events: number;
   failed: number;
+  last10_considered?: number;
+  last10_failed?: number;
+  last10_success?: number;
+  last10_success_rate?: number;
 };
 
 type DailySummaryAttentionRow = {
@@ -750,7 +754,8 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                 <li key={tool.tool} className="flex justify-between">
                   <span>{tool.tool}</span>
                   <span className="text-muted-foreground">
-                    events {tool.events} | failed {tool.failed}
+                    events {tool.events} | failed {tool.failed} | last10 success {tool.last10_success ?? 0} | last10 failed{" "}
+                    {tool.last10_failed ?? 0}
                   </span>
                 </li>
               ))}

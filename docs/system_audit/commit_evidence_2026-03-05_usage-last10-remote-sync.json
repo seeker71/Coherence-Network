@@ -1,0 +1,104 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "codex/cursor-default-routing-20260305",
+  "commit_scope": "Add per-tool last-10 success/failure telemetry to Usage summaries, add local-to-remote runtime event sync utility, and preserve shared startup context plus cursor-default routing behavior.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/sync_runtime_events_to_remote.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/system_audit/commit_evidence_2026-03-05_usage-last10-remote-sync.json",
+    "web/app/usage/page.tsx"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "108-unified-agent-cli-flow-patch-on-fail"
+  ],
+  "task_ids": [
+    "task-2026-03-05-usage-last10-remote-sync"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "git fetch origin main && git rebase origin/main --autostash",
+    "cd api && ruff check app/services/agent_service.py app/services/agent_routing_service.py app/services/automation_usage_service.py scripts/sync_runtime_events_to_remote.py tests/test_agent_executor_policy.py tests/test_agent_integration_api.py tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_agent_executor_policy.py tests/test_agent_integration_api.py tests/test_automation_usage_api.py -k 'last10 or executor_policy or integration or daily_summary'"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/sync_runtime_events_to_remote.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "web/app/usage/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd api && ruff check app/services/agent_service.py app/services/agent_routing_service.py app/services/automation_usage_service.py scripts/sync_runtime_events_to_remote.py tests/test_agent_executor_policy.py tests/test_agent_integration_api.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_agent_executor_policy.py tests/test_agent_integration_api.py tests/test_automation_usage_api.py -k 'last10 or executor_policy or integration or daily_summary'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push and remote deploy + usage verification"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Usage summary exposes per-tool last10 success/failure counts and local runtime events can be synced into remote runtime DB for hosted dashboards.",
+    "public_endpoints": [
+      "https://coherence-web-production.up.railway.app/usage",
+      "https://coherence-network-production.up.railway.app/api/runtime/daily-system-summary",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "Run local sync script against hosted API and confirm remote runtime events increase.",
+      "Open hosted usage page and verify top tools show last10 success and failed counts.",
+      "Query daily system summary endpoint and verify top_tools include last10_considered, last10_success, and last10_failed fields."
+    ]
+  }
+}

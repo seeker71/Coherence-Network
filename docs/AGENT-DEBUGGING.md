@@ -99,6 +99,19 @@ If one file is still large, read its summary first and open only targeted slices
 
 ```bash
 python3 scripts/context_budget.py --force-summaries api/app/services/release_gate_service.py
+
+### 2c. Sync local runtime events into remote usage DB
+
+When local runner/API executions must appear on hosted Usage dashboards, sync local `runtime_events.json` files to the remote API:
+
+```bash
+cd api
+python3 scripts/sync_runtime_events_to_remote.py \
+  --api-url https://coherence-network-production.up.railway.app \
+  --all-worktrees
+```
+
+Use `--dry-run` to preview and `--state-path` to control idempotent sync state.
 sed -n '1,140p' api/app/services/release_gate_service.py
 ```
 

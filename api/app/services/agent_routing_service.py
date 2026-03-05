@@ -212,7 +212,7 @@ def first_available_executor(preferred: list[str]) -> str:
         candidate = normalize_executor(executor, default="")
         if candidate and executor_available(candidate):
             return candidate
-    return normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+    return normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="cursor")
 
 
 def is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
@@ -238,8 +238,8 @@ def repo_question_executor_default() -> str:
 def open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return normalize_executor(configured, default="codex")
-    return "codex"
+        return normalize_executor(configured, default="cursor")
+    return "cursor"
 
 
 def cursor_command_template(task_type: TaskType) -> str:
