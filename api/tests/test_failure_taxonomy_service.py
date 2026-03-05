@@ -27,6 +27,12 @@ from app.services import failure_taxonomy_service
             "paid_provider_quota_blocked",
         ),
         (
+            "Gemini execution failed: quota metric exhausted for gemini preview tier",
+            "",
+            "rate_limit",
+            "provider_rate_limit_or_quota",
+        ),
+        (
             "Runtime failed: Module not found: playwright",
             "",
             "dependency_or_tooling",

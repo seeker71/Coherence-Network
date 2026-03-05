@@ -378,6 +378,40 @@ def test_update_task_backfills_failed_output_with_fallback_when_error_missing(
     assert str(context.get("failure_action") or "").strip()
 
 
+def test_update_task_surfaces_completion_tracking_failures_in_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+    agent_service._store_loaded_includes_output = False
+    agent_service._store_loaded_at_monotonic = 0.0
+
+    def _raise_runtime_event_failure(*_args, **_kwargs):
+        raise RuntimeError("runtime event store unavailable")
+
+    monkeypatch.setattr("app.services.runtime_service.record_event", _raise_runtime_event_failure)
+
+    created = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Force tracking failure context for diagnostics",
+            task_type=TaskType.IMPL,
+        )
+    )
+    updated = agent_service.update_task(
+        task_id=created["id"],
+        status=TaskStatus.FAILED,
+        output="Execution timed out while waiting for provider response",
+    )
+
+    assert updated is not None
+    context = updated.get("context") if isinstance(updated.get("context"), dict) else {}
+    assert context.get("completion_tracking_event_status") == "failed"
+    assert context.get("completion_tracking_event_error_type") == "runtime_event_record_failure"
+    assert "record runtime completion event" in str(context.get("completion_tracking_event_error") or "").lower()
+
+
 def test_create_task_records_task_card_validation_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

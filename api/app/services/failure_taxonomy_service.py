@@ -54,7 +54,10 @@ _PATTERNS: list[tuple[re.Pattern[str], str, str, str, str]] = [
         "Fix workspace/runtime permissions (writable paths, ownership, or mount mode) and retry.",
     ),
     (
-        re.compile(r"rate limit|too many requests|status[=: ]429|http 429|quota exceeded|insufficient_quota", re.I),
+        re.compile(
+            r"rate limit|too many requests|status[=: ]429|http 429|quota exceeded|insufficient_quota|quota metric|usage exhausted|resource has been exhausted",
+            re.I,
+        ),
         "rate_limit",
         "provider_rate_limit_or_quota",
         "Provider rate-limit or quota condition blocked execution.",
