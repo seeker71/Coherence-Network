@@ -4892,7 +4892,7 @@ def cached_daily_system_summary_payload(
     window = max(1, min(int(window_hours), 24 * 30))
     top_count = max(1, min(int(top_n), 20))
     params = {"window_hours": window, "top_n": top_count}
-    return _endpoint_cached_payload(
+    payload = _endpoint_cached_payload(
         "automation_usage_daily_summary",
         fresh_ttl_seconds=120.0,
         refresh_producer=lambda: daily_system_summary(
@@ -4908,6 +4908,57 @@ def cached_daily_system_summary_payload(
         params=params,
         force_refresh=force_refresh,
     )
+    return _backfill_top_tools_last10(payload, window_hours=window)
+
+
+def _backfill_top_tools_last10(payload: dict[str, Any], *, window_hours: int) -> dict[str, Any]:
+    tool_usage = payload.get("tool_usage")
+    if not isinstance(tool_usage, dict):
+        return payload
+    top_tools = tool_usage.get("top_tools")
+    if not isinstance(top_tools, list) or not top_tools:
+        return payload
+
+    fields = ("last10_considered", "last10_failed", "last10_success", "last10_success_rate")
+    needs_backfill = any(
+        isinstance(row, dict) and any(row.get(field) is None for field in fields)
+        for row in top_tools
+    )
+    if not needs_backfill:
+        return payload
+
+    window_seconds = max(3600, min(int(window_hours) * 3600, 30 * 24 * 3600))
+    worker_events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+    worker_events_sorted = sorted(
+        worker_events,
+        key=lambda event: getattr(event, "recorded_at", datetime.min.replace(tzinfo=timezone.utc)),
+        reverse=True,
+    )
+    tool_last10_statuses: dict[str, list[int]] = {}
+    for event in worker_events_sorted:
+        endpoint = str(getattr(event, "endpoint", "") or "").strip() or "unknown"
+        recent = tool_last10_statuses.setdefault(endpoint, [])
+        if len(recent) < 10:
+            recent.append(int(getattr(event, "status_code", 0) or 0))
+
+    for row in top_tools:
+        if not isinstance(row, dict):
+            continue
+        tool = str(row.get("tool") or "").strip()
+        recent = tool_last10_statuses.get(tool, [])
+        considered = len(recent)
+        failed = sum(1 for code in recent if int(code) >= 400)
+        success = considered - failed
+        success_rate = round(success / max(1, considered), 4) if considered else 0.0
+        if row.get("last10_considered") is None:
+            row["last10_considered"] = considered
+        if row.get("last10_failed") is None:
+            row["last10_failed"] = failed
+        if row.get("last10_success") is None:
+            row["last10_success"] = success
+        if row.get("last10_success_rate") is None:
+            row["last10_success_rate"] = success_rate
+    return payload
 
 
 def daily_system_summary(

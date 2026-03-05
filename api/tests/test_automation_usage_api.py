@@ -2577,6 +2577,64 @@ def test_daily_summary_top_tools_exposes_last10_counts(monkeypatch: pytest.Monke
     assert cursor_row["last10_success"] == 6
 
 
+def test_cached_daily_summary_backfills_last10_for_stale_top_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = datetime.now(timezone.utc)
+    stale_payload = {
+        "generated_at": now.isoformat(),
+        "window_hours": 24,
+        "tool_usage": {
+            "top_tools": [
+                {"tool": "/tool:cursor", "events": 12, "failed": 4},
+                {"tool": "/tool:claude", "events": 3, "failed": 3},
+            ]
+        },
+    }
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_endpoint_cached_payload",
+        lambda *args, **kwargs: stale_payload,
+    )
+    monkeypatch.setattr(
+        automation_usage_service,
+        "_runtime_events_within_window",
+        lambda **kwargs: [
+            SimpleNamespace(
+                endpoint="/tool:cursor",
+                status_code=200,
+                recorded_at=now - timedelta(minutes=1),
+            ),
+            SimpleNamespace(
+                endpoint="/tool:cursor",
+                status_code=500,
+                recorded_at=now - timedelta(minutes=2),
+            ),
+            SimpleNamespace(
+                endpoint="/tool:claude",
+                status_code=429,
+                recorded_at=now - timedelta(minutes=3),
+            ),
+        ],
+    )
+
+    payload = automation_usage_service.cached_daily_system_summary_payload(
+        window_hours=24,
+        top_n=5,
+        force_refresh=False,
+    )
+    cursor_row = next(row for row in payload["tool_usage"]["top_tools"] if row["tool"] == "/tool:cursor")
+    claude_row = next(row for row in payload["tool_usage"]["top_tools"] if row["tool"] == "/tool:claude")
+    assert cursor_row["last10_considered"] == 2
+    assert cursor_row["last10_failed"] == 1
+    assert cursor_row["last10_success"] == 1
+    assert cursor_row["last10_success_rate"] == 0.5
+    assert claude_row["last10_considered"] == 1
+    assert claude_row["last10_failed"] == 1
+    assert claude_row["last10_success"] == 0
+    assert claude_row["last10_success_rate"] == 0.0
+
+
 def test_daily_summary_quality_awareness_falls_back_when_audit_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
