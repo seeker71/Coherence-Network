@@ -13,10 +13,16 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { UI_RUNTIME_SUMMARY_WINDOW } from "@/lib/egress";
+
+export const metadata: Metadata = {
+  title: "Ideas",
+  description: "Browse the idea portfolio — ranked by ROI and coherence score.",
+};
 
 type IdeaCardItem = {
   idea_id: string;

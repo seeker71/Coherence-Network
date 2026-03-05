@@ -3,12 +3,15 @@ from __future__ import annotations
 import logging
 import os
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
@@ -32,7 +35,29 @@ from app.routers import (
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
-app = FastAPI(title="Coherence Contribution Network API", version="1.0.0")
+app = FastAPI(
+    title="Coherence Contribution Network API",
+    version="1.0.0",
+    description="Spec-driven OSS intelligence platform for contribution tracking, coherence scoring, and fair attribution.",
+    contact={"name": "Coherence Network", "url": "https://github.com/coherence-network"},
+    openapi_tags=[
+        {"name": "health", "description": "Liveness and readiness probes"},
+        {"name": "contributors", "description": "Contributor registry CRUD"},
+        {"name": "assets", "description": "Asset inventory CRUD"},
+        {"name": "contributions", "description": "Contribution tracking with coherence scoring"},
+        {"name": "distributions", "description": "Value distribution calculations"},
+        {"name": "ideas", "description": "Idea portfolio and ROI analysis"},
+        {"name": "spec-registry", "description": "Feature specification tracking"},
+        {"name": "agent", "description": "Task orchestration and agent execution"},
+        {"name": "gates", "description": "Release gate validation"},
+        {"name": "runtime", "description": "Runtime telemetry and event tracking"},
+        {"name": "inventory", "description": "System lineage aggregation"},
+        {"name": "governance", "description": "Change approval workflows"},
+        {"name": "friction", "description": "Pipeline friction signals"},
+        {"name": "automation-usage", "description": "Provider readiness and usage tracking"},
+        {"name": "value-lineage", "description": "Value attribution tracing"},
+    ],
+)
 logger = logging.getLogger("coherence.api.slow")
 if not logger.handlers:
     handler = logging.StreamHandler()
@@ -348,9 +373,45 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-Idea-ID"],
 )
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses per OWASP best practices."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if os.getenv("ENABLE_HSTS", "").strip().lower() in {"1", "true", "yes"}:
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        return response
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Generate or propagate X-Request-ID for tracing across services."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = None
+        for key in ("x-request-id", "x-vercel-id", "x-railway-request-id", "x-amzn-trace-id", "cf-ray"):
+            value = request.headers.get(key)
+            if value:
+                request_id = value
+                break
+        if not request_id:
+            request_id = str(uuid.uuid4())
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 # Initialize graph store based on environment
 database_url = os.getenv("DATABASE_URL")

@@ -50,7 +50,8 @@ function ContributionsPageContent() {
       const res = await fetch(`${API_URL}/api/contributions`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(json));
-      setRows(Array.isArray(json) ? json : []);
+      const data = json?.items ?? (Array.isArray(json) ? json : []);
+      setRows(data);
       setStatus("ok");
     } catch (e) {
       setStatus("error");

@@ -12,6 +12,17 @@ def _reset_agent_store() -> None:
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None
+    agent_service._MODEL_COOLDOWN_CACHE.clear()
+    agent_service._MODEL_COOLDOWN_SIGNAL_SEEN.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_model_cooldown_state() -> None:
+    agent_service._MODEL_COOLDOWN_CACHE.clear()
+    agent_service._MODEL_COOLDOWN_SIGNAL_SEEN.clear()
+    yield
+    agent_service._MODEL_COOLDOWN_CACHE.clear()
+    agent_service._MODEL_COOLDOWN_SIGNAL_SEEN.clear()
 
 
 def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -212,6 +223,27 @@ def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytes
     assert policy.get("fallback_executor") == "cursor"
 
 
+@pytest.mark.asyncio
+async def test_route_all_task_types_all_executors_return_valid_template() -> None:
+    """All four provider CLIs (Codex, Claude Code, Cursor, Gemini) support all task types (spec 108)."""
+    executors = ["claude", "cursor", "openclaw", "codex", "gemini"]
+    task_types = [t.value for t in TaskType]
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for task_type in task_types:
+            for executor in executors:
+                res = await client.get(
+                    "/api/agent/route",
+                    params={"task_type": task_type, "executor": executor},
+                )
+                assert res.status_code == 200, f"{task_type}/{executor}: {res.status_code}"
+                payload = res.json()
+                template = str(payload.get("command_template") or "").strip()
+                assert "{{direction}}" in template, f"{task_type}/{executor}: missing {{direction}}"
+                assert payload.get("task_type") == task_type
+                expected_executor = "codex" if executor == "openclaw" else executor
+                assert payload.get("executor") == expected_executor
+
+
 def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
@@ -323,3 +355,122 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
     )
     assert (cursor_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
     assert (claw_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
+
+
+def test_create_task_includes_orchestrator_model_selection_with_ab_candidate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _which = {
+        "agent": "/usr/bin/agent",
+        "claude": "/usr/bin/claude",
+        "codex": "/usr/bin/codex",
+        "gemini": "/usr/bin/gemini",
+    }
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    task = agent_service.create_task(
+        AgentTaskCreate(direction="Compare providers for implementation stability", task_type=TaskType.IMPL)
+    )
+    selection = (task.get("context") or {}).get("orchestrator_model_selection") or {}
+    primary = selection.get("primary") or {}
+    challenger = selection.get("ab_test_candidate") or {}
+
+    assert str(selection.get("selection_mode") or "") == "orchestrator_guided"
+    assert str(primary.get("executor") or "")
+    assert str(primary.get("model") or "")
+    assert "executor_scorecard" in selection
+    if challenger:
+        assert str(challenger.get("executor") or "") != str(primary.get("executor") or "")
+        assert str(challenger.get("model") or "")
+
+
+def test_model_cooldown_remaps_codex_spark_after_usage_limit_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_MODEL_COOLDOWN_SECONDS", "7200")
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": "/usr/bin/codex"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    first = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Run with spark model first",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+    assert first["model"] == "codex/gpt-5.3-codex-spark"
+    agent_service.update_task(
+        first["id"],
+        status=TaskStatus.FAILED,
+        output="spark weekly usage limit reached for this model",
+    )
+
+    second = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Retry after spark usage cap",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+    assert second["model"] == "codex/gpt-5.3-codex"
+    assert "--model gpt-5.3-codex" in str(second["command"])
+    assert "--model gpt-5.3-codex-spark" not in str(second["command"])
+    second_context = second.get("context") or {}
+    active = second_context.get("model_cooldown_active") or {}
+    assert active.get("requested_model") == "codex/gpt-5.3-codex-spark"
+    assert active.get("effective_model") == "codex/gpt-5.3-codex"
+    assert str(active.get("source_task_id") or "") == str(first["id"])
+    assert str(active.get("reason") or "").startswith("task_failed_model_limit:")
+    route_decision = second_context.get("route_decision") or {}
+    model_selection = route_decision.get("model_selection") or {}
+    assert model_selection.get("policy") == "model_cooldown"
+    assert model_selection.get("requested_model") == "codex/gpt-5.3-codex-spark"
+    assert model_selection.get("effective_model") == "codex/gpt-5.3-codex"
+
+
+def test_model_cooldown_expires_and_retries_requested_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_MODEL_COOLDOWN_SECONDS", "60")
+    monkeypatch.setenv("AGENT_MODEL_COOLDOWN_LOOKBACK_SECONDS", "43200")
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": "/usr/bin/codex"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    base = agent_service.datetime(2026, 3, 5, 10, 0, 0, tzinfo=agent_service.timezone.utc)
+    now_state = {"value": base}
+    monkeypatch.setattr(agent_service, "_now", lambda: now_state["value"])
+
+    first = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Spark model run",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+    agent_service.update_task(
+        first["id"],
+        status=TaskStatus.FAILED,
+        output="out of weekly usage for spark",
+    )
+
+    now_state["value"] = base + agent_service.timedelta(seconds=10)
+    remapped = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Immediate retry should remap",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+    assert remapped["model"] == "codex/gpt-5.3-codex"
+
+    now_state["value"] = base + agent_service.timedelta(hours=3)
+    after_expiry = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Retry after cooldown should use requested model again",
+            task_type=TaskType.IMPL,
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+    assert after_expiry["model"] == "codex/gpt-5.3-codex-spark"

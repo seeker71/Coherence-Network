@@ -60,7 +60,8 @@ function ContributorsPageContent() {
       const flowJson = (await flowRes.json()) as FlowResponse;
       if (!contributorsRes.ok) throw new Error(JSON.stringify(contributorsJson));
       if (!flowRes.ok) throw new Error(JSON.stringify(flowJson));
-      setRows(Array.isArray(contributorsJson) ? contributorsJson : []);
+      const contributorData = contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : []);
+      setRows(contributorData);
       setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
       setStatus("ok");
     } catch (e) {

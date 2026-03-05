@@ -21,6 +21,12 @@ cd api && .venv/bin/python scripts/test_agent_run.py "Create api/test_hello.txt 
 
 ## Running the Agent
 
+### 3. Reviewer-visible execution packet
+
+Before handing off task results to humans, keep reviewer visibility explicit by using:
+`docs/system_audit/MINIMAL_EXECUTION_PACKET_TEMPLATE.md`
+and filling `Validation Commands`/`Validation Results` from the actual command outputs.
+
 **Overnight pipeline (recommended):** Start API first, then:
 ```bash
 cd api && ./scripts/run_overnight_pipeline.sh
@@ -42,6 +48,14 @@ cd api && .venv/bin/python scripts/agent_runner.py --once -v
 ```
 
 **Verbose** (`-v`) prints progress to stdout. Logs always go to `api/logs/agent_runner.log`.
+
+## Delivery flow and review output (spec 108)
+
+All provider CLIs (aider/claude, cursor, openclaw) support the full flow: **spec → impl → test → review**. When review or tests fail, the next impl/heal task should receive enough information to patch the implementation instead of starting from scratch.
+
+- **Review output contract (FAIL):** Review tasks should output structured blocks: `VERIFICATION_RESULT=FAIL`, `FILES_TO_CHANGE`, `PATCH_GUIDANCE` (and optionally `SPEC_VERIFICATION_IMPROVEMENT`). See `.cursor/skills/spec-guard/SKILL.md`.
+- **Pipeline:** After a failed review, project_manager passes the review output (up to 2000 chars) into the next impl task’s direction so the agent can use PATCH_GUIDANCE.
+- **Local vs remote:** The same flow works when agent_runner runs locally (subprocess CLI) or on another host (remote runner); server-side execute (OpenRouter) is a separate path.
 
 ## When Something Goes Wrong
 

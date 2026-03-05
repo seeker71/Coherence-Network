@@ -81,6 +81,27 @@ _TASK_CARD_REQUIRED_FIELDS: tuple[str, ...] = (
     "commands",
     "constraints",
 )
+_MODEL_COOLDOWN_DEFAULT_SECONDS = 2 * 60 * 60
+_MODEL_COOLDOWN_LOOKBACK_SECONDS = 12 * 60 * 60
+_MODEL_COOLDOWN_DEFAULT_MAP = (
+    "codex/gpt-5.3-codex-spark:codex/gpt-5.3-codex,"
+    "gpt-5.3-codex-spark:gpt-5.3-codex"
+)
+_MODEL_LIMIT_SIGNAL_MARKERS: tuple[str, ...] = (
+    "usage limit",
+    "weekly usage",
+    "weekly limit",
+    "usage exhausted",
+    "quota exceeded",
+    "insufficient_quota",
+    "out of quota",
+    "rate limit",
+    "resource_exhausted",
+    "too many requests",
+    "limit reached",
+)
+_MODEL_COOLDOWN_CACHE: dict[str, dict[str, Any]] = {}
+_MODEL_COOLDOWN_SIGNAL_SEEN: dict[str, str] = {}
 
 
 def _int_env(name: str, default: int) -> int:
@@ -253,6 +274,339 @@ def _open_question_executor_default() -> str:
 def _task_fingerprint(task_type: TaskType, direction: str) -> str:
     basis = f"{task_type.value}:{direction.strip().lower()}"
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+
+
+def _model_cooldown_seconds() -> int:
+    raw = os.environ.get("AGENT_MODEL_COOLDOWN_SECONDS", str(_MODEL_COOLDOWN_DEFAULT_SECONDS))
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        value = _MODEL_COOLDOWN_DEFAULT_SECONDS
+    return max(60, min(value, 24 * 60 * 60))
+
+
+def _model_cooldown_lookback_seconds() -> int:
+    raw = os.environ.get("AGENT_MODEL_COOLDOWN_LOOKBACK_SECONDS", str(_MODEL_COOLDOWN_LOOKBACK_SECONDS))
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        value = _MODEL_COOLDOWN_LOOKBACK_SECONDS
+    return max(60, min(value, 7 * 24 * 60 * 60))
+
+
+def _parse_model_cooldown_map(raw: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for pair in str(raw or "").split(","):
+        item = pair.strip()
+        if not item or ":" not in item:
+            continue
+        source, target = item.split(":", 1)
+        source_key = routing_service.normalize_model_name(source.strip()).lower()
+        target_model = routing_service.normalize_model_name(target.strip())
+        if source_key and target_model:
+            mapping[source_key] = target_model
+    return mapping
+
+
+def _model_cooldown_map() -> dict[str, str]:
+    mapping = _parse_model_cooldown_map(_MODEL_COOLDOWN_DEFAULT_MAP)
+    raw = os.environ.get("AGENT_MODEL_COOLDOWN_MAP", "")
+    if raw:
+        mapping.update(_parse_model_cooldown_map(str(raw)))
+    return mapping
+
+
+def _normalized_model_key(value: str) -> str:
+    return routing_service.normalize_model_name(str(value or "").strip()).lower()
+
+
+def _model_override_for_executor(executor: str, model: str) -> str:
+    cleaned_model = routing_service.normalize_model_name(str(model or "").strip())
+    prefix = str(executor or "").strip().lower()
+    if prefix and cleaned_model.lower().startswith(f"{prefix}/"):
+        return cleaned_model.split("/", 1)[1].strip()
+    if prefix == "codex" and cleaned_model.lower().startswith(("openclaw/", "clawwork/")):
+        return cleaned_model.split("/", 1)[1].strip()
+    return cleaned_model
+
+
+def _model_limit_signal_reason(task: dict[str, Any]) -> str | None:
+    output = _task_output_text(task)
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    text = " ".join(
+        part
+        for part in (
+            output,
+            str(context.get("last_error") or ""),
+            str(context.get("failure_reason") or ""),
+            str(context.get("last_failure_category") or ""),
+            str(context.get("failure_reason_bucket") or ""),
+        )
+        if part
+    ).lower()
+    if not text:
+        return None
+    for marker in _MODEL_LIMIT_SIGNAL_MARKERS:
+        if marker in text:
+            return marker
+    return None
+
+
+def _recent_model_limit_signal(model: str) -> tuple[str, str] | None:
+    now = _now()
+    cutoff = now - timedelta(seconds=_model_cooldown_lookback_seconds())
+    target_key = _normalized_model_key(model)
+    if not target_key:
+        return None
+    for task in sorted(
+        _store.values(),
+        key=lambda row: (row.get("updated_at") or row.get("created_at") or now),
+        reverse=True,
+    ):
+        if _status_value(task.get("status")) != "failed":
+            continue
+        event_time = task.get("updated_at") or task.get("created_at")
+        if isinstance(event_time, datetime) and event_time < cutoff:
+            continue
+        task_model_key = _normalized_model_key(str(task.get("model") or ""))
+        if task_model_key != target_key:
+            continue
+        reason = _model_limit_signal_reason(task)
+        if not reason:
+            continue
+        return reason, str(task.get("id") or "")
+    return None
+
+
+def _purge_expired_model_cooldowns() -> None:
+    now_ts = _now().timestamp()
+    expired: list[str] = []
+    for key, value in _MODEL_COOLDOWN_CACHE.items():
+        expires_at = value.get("expires_at")
+        if isinstance(expires_at, datetime):
+            expires_ts = expires_at.timestamp()
+        else:
+            parsed = _parse_dt(expires_at)
+            expires_ts = parsed.timestamp() if parsed else 0.0
+        if expires_ts <= now_ts:
+            expired.append(key)
+    for key in expired:
+        _MODEL_COOLDOWN_CACHE.pop(key, None)
+
+
+def _set_model_cooldown(
+    *,
+    requested_model: str,
+    effective_model: str,
+    reason: str,
+    source_task_id: str = "",
+) -> dict[str, Any]:
+    now = _now()
+    expires_at = now + timedelta(seconds=_model_cooldown_seconds())
+    entry = {
+        "requested_model": routing_service.normalize_model_name(requested_model),
+        "effective_model": routing_service.normalize_model_name(effective_model),
+        "reason": reason,
+        "source_task_id": source_task_id,
+        "activated_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+    }
+    key = _normalized_model_key(requested_model)
+    _MODEL_COOLDOWN_CACHE[key] = entry
+    if source_task_id:
+        _MODEL_COOLDOWN_SIGNAL_SEEN[key] = source_task_id
+    return entry
+
+
+def _active_model_cooldown_for(model: str) -> dict[str, Any] | None:
+    _purge_expired_model_cooldowns()
+    key = _normalized_model_key(model)
+    if not key:
+        return None
+    entry = _MODEL_COOLDOWN_CACHE.get(key)
+    if isinstance(entry, dict):
+        return dict(entry)
+    return None
+
+
+def _resolve_model_cooldown_candidate(model: str, executor: str) -> str:
+    normalized_model = routing_service.normalize_model_name(str(model or "").strip())
+    normalized_key = _normalized_model_key(normalized_model)
+    if not normalized_key:
+        return normalized_model
+
+    mapping = _model_cooldown_map()
+    candidate = mapping.get(normalized_key, "")
+    if not candidate:
+        return normalized_model
+
+    candidate_norm = routing_service.normalize_model_name(candidate)
+    if "/" not in candidate_norm and "/" in normalized_model:
+        prefix = normalized_model.split("/", 1)[0].strip()
+        if prefix:
+            return f"{prefix}/{candidate_norm}"
+    if "/" not in candidate_norm and executor:
+        return f"{executor}/{candidate_norm}"
+    return candidate_norm
+
+
+def _apply_model_cooldown_policy(
+    *,
+    task_id: str,
+    executor: str,
+    model: str,
+    command: str,
+    route_decision: dict[str, Any],
+    normalized_response_call: dict[str, Any],
+    context: dict[str, Any],
+) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    model_key = _normalized_model_key(model)
+    candidate_model = _resolve_model_cooldown_candidate(model, executor)
+    if _normalized_model_key(candidate_model) == _normalized_model_key(model):
+        return model, command, route_decision, normalized_response_call
+
+    cooldown_entry = _active_model_cooldown_for(model)
+    if cooldown_entry is None:
+        recent_signal = _recent_model_limit_signal(model)
+        if recent_signal is not None:
+            signal_reason, signal_task_id = recent_signal
+            seen_task_id = _MODEL_COOLDOWN_SIGNAL_SEEN.get(model_key, "")
+            if not signal_task_id or signal_task_id != seen_task_id:
+                cooldown_entry = _set_model_cooldown(
+                    requested_model=model,
+                    effective_model=candidate_model,
+                    reason=f"recent_model_limit_signal:{signal_reason}",
+                    source_task_id=signal_task_id,
+                )
+    if cooldown_entry is None:
+        return model, command, route_decision, normalized_response_call
+
+    effective_model = routing_service.normalize_model_name(
+        str(cooldown_entry.get("effective_model") or candidate_model).strip()
+    )
+    command_override = _model_override_for_executor(executor, effective_model)
+    updated_command, applied_override = routing_service.apply_model_override(command, command_override)
+    if not applied_override:
+        return model, command, route_decision, normalized_response_call
+
+    if executor == "codex":
+        resolved_model = f"codex/{applied_override}"
+    elif executor == "cursor":
+        resolved_model = f"cursor/{applied_override}"
+    elif executor == "gemini":
+        resolved_model = f"gemini/{applied_override}"
+    elif executor == "openrouter":
+        resolved_model = routing_service.enforce_openrouter_free_model(applied_override)
+    elif executor == "claude":
+        resolved_model = f"claude/{applied_override}"
+    else:
+        resolved_model = effective_model
+
+    provider, billing_provider, is_paid_provider = routing_service.classify_provider(
+        executor=executor,
+        model=resolved_model,
+        command=updated_command,
+        worker_id=None,
+    )
+    updated_route_decision = dict(route_decision)
+    updated_route_decision.update(
+        {
+            "model": resolved_model,
+            "provider": provider,
+            "billing_provider": billing_provider,
+            "is_paid_provider": is_paid_provider,
+            "model_selection": {
+                "policy": "model_cooldown",
+                "requested_model": routing_service.normalize_model_name(model),
+                "effective_model": resolved_model,
+                "reason": str(cooldown_entry.get("reason") or "model_limit_signal"),
+                "source_task_id": str(cooldown_entry.get("source_task_id") or ""),
+                "cooldown_expires_at": str(cooldown_entry.get("expires_at") or ""),
+            },
+        }
+    )
+
+    updated_response = dict(normalized_response_call)
+    updated_response["model"] = routing_service.normalize_open_responses_model(resolved_model)
+    updated_response["provider"] = provider
+    updated_response["task_id"] = task_id
+
+    decision_entry = {
+        "policy": "model_cooldown",
+        "requested_model": routing_service.normalize_model_name(model),
+        "effective_model": resolved_model,
+        "reason": str(cooldown_entry.get("reason") or "model_limit_signal"),
+        "source_task_id": str(cooldown_entry.get("source_task_id") or ""),
+        "cooldown_expires_at": str(cooldown_entry.get("expires_at") or ""),
+    }
+    history = context.get("model_selection_decisions")
+    history_rows = [row for row in history if isinstance(row, dict)] if isinstance(history, list) else []
+    history_rows.append(decision_entry)
+    context["model_selection_decisions"] = history_rows[-8:]
+    context["model_cooldown_active"] = decision_entry
+
+    return resolved_model, updated_command, updated_route_decision, updated_response
+
+
+def _active_model_cooldowns(limit: int = 20) -> list[dict[str, Any]]:
+    _purge_expired_model_cooldowns()
+    rows = [dict(value) for value in _MODEL_COOLDOWN_CACHE.values() if isinstance(value, dict)]
+    rows.sort(key=lambda row: str(row.get("expires_at") or ""), reverse=False)
+    return rows[: max(1, min(int(limit), 100))]
+
+
+def _task_executor_for_model_cooldown(task: dict[str, Any]) -> str:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    if isinstance(context, dict):
+        executor = _normalize_executor(context.get("executor"), default="")
+        if executor:
+            return executor
+        route_decision = context.get("route_decision")
+        if isinstance(route_decision, dict):
+            route_executor = _normalize_executor(route_decision.get("executor"), default="")
+            if route_executor:
+                return route_executor
+    model = routing_service.normalize_model_name(str(task.get("model") or "").strip())
+    if "/" in model:
+        prefix = model.split("/", 1)[0].strip().lower()
+        return _normalize_executor(prefix, default="")
+    return ""
+
+
+def _record_model_limit_cooldown(task: dict[str, Any]) -> dict[str, Any] | None:
+    reason = _model_limit_signal_reason(task)
+    if not reason:
+        return None
+    model = routing_service.normalize_model_name(str(task.get("model") or "").strip())
+    if not model:
+        return None
+    executor = _task_executor_for_model_cooldown(task)
+    candidate_model = _resolve_model_cooldown_candidate(model, executor)
+    if _normalized_model_key(candidate_model) == _normalized_model_key(model):
+        return None
+    entry = _set_model_cooldown(
+        requested_model=model,
+        effective_model=candidate_model,
+        reason=f"task_failed_model_limit:{reason}",
+        source_task_id=str(task.get("id") or ""),
+    )
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    next_context = dict(context) if isinstance(context, dict) else {}
+    signal_detail = {
+        "policy": "model_cooldown_signal",
+        "requested_model": routing_service.normalize_model_name(model),
+        "effective_model": routing_service.normalize_model_name(candidate_model),
+        "reason": str(entry.get("reason") or ""),
+        "source_task_id": str(task.get("id") or ""),
+        "cooldown_expires_at": str(entry.get("expires_at") or ""),
+    }
+    history = next_context.get("model_selection_decisions")
+    history_rows = [row for row in history if isinstance(row, dict)] if isinstance(history, list) else []
+    history_rows.append(signal_detail)
+    next_context["model_selection_decisions"] = history_rows[-8:]
+    next_context["model_limit_signal"] = signal_detail
+    task["context"] = next_context
+    return dict(entry)
 
 
 def _task_retry_hint(context: dict[str, Any]) -> int:
@@ -1061,6 +1415,19 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     runtime_ms = _task_duration_ms(task)
     status_code = 200 if final_status == "completed" else 500
     task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    tracked_idea_id = "coherence-network-agent-pipeline"
+    if isinstance(task_context, dict):
+        explicit_idea_id = str(task_context.get("idea_id") or "").strip()
+        if explicit_idea_id:
+            tracked_idea_id = explicit_idea_id
+        else:
+            idea_ids = task_context.get("idea_ids")
+            if isinstance(idea_ids, list):
+                for raw_idea in idea_ids:
+                    candidate = str(raw_idea or "").strip()
+                    if candidate:
+                        tracked_idea_id = candidate
+                        break
     route_decision = (
         task_context.get("route_decision")
         if isinstance(task_context.get("route_decision"), dict)
@@ -1096,7 +1463,7 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                 method="RUN",
                 status_code=status_code,
                 runtime_ms=runtime_ms,
-                idea_id="coherence-network-agent-pipeline",
+                idea_id=tracked_idea_id,
                 metadata={
                     "task_id": task_id,
                     "task_type": str(task.get("task_type") or ""),
@@ -1351,6 +1718,30 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         primary_agent=primary_agent,
         guard_agents=guard_agents,
     )
+    model, command, route_decision, normalized_response_call = _apply_model_cooldown_policy(
+        task_id=task_id,
+        executor=executor,
+        model=model,
+        command=command,
+        route_decision=route_decision,
+        normalized_response_call=normalized_response_call,
+        context=ctx,
+    )
+    ab_candidate = _orchestrator_ab_candidate(data.task_type, executor)
+    ctx["orchestrator_model_selection"] = {
+        "selection_mode": "orchestrator_guided",
+        "selection_reason": str(policy_meta.get("reason") or "policy"),
+        "primary": {
+            "executor": executor,
+            "model": model,
+            "provider": str(route_decision.get("provider") or ""),
+        },
+        "ab_test_candidate": ab_candidate.get("challenger") if isinstance(ab_candidate, dict) else {},
+        "ab_reason": str(ab_candidate.get("reason") or "coverage_exploration")
+        if isinstance(ab_candidate, dict)
+        else "coverage_exploration",
+        "executor_scorecard": ab_candidate.get("scorecard") if isinstance(ab_candidate, dict) else [],
+    }
     normalized_response_call["task_id"] = task_id
     ctx["route_decision"] = route_decision
     ctx["normalized_response_call"] = normalized_response_call
@@ -1694,6 +2085,7 @@ def update_task(
     _record_completion_tracking_event(task)
     current_status_value = _status_value(task.get("status"))
     if current_status_value == "failed" and previous_status_value != "failed":
+        _record_model_limit_cooldown(task)
         _record_task_failure_friction(task)
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))
@@ -1925,6 +2317,7 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
                 "tool": tool_name,
                 "status_code": int(getattr(event, "status_code", 0)),
                 "executor": executor,
+                "model": _metadata_text(metadata.get("model"), default=""),
                 "agent_id": agent_id,
                 "provider": provider,
                 "is_openai_codex": is_openai_codex,
@@ -2691,6 +3084,114 @@ def _orchestration_route_matrix(cheap_executor: str, escalation_executor: str) -
     return matrix
 
 
+def _task_executor_scorecard(task_type: TaskType, *, limit: int = 200) -> list[dict[str, Any]]:
+    relevant: list[dict[str, Any]] = []
+    for task in _store.values():
+        raw_task_type = task.get("task_type")
+        task_type_value = raw_task_type.value if hasattr(raw_task_type, "value") else str(raw_task_type or "")
+        if task_type_value != task_type.value:
+            continue
+        status_value = _status_value(task.get("status"))
+        if status_value not in {"completed", "failed"}:
+            continue
+        relevant.append(task)
+
+    relevant.sort(
+        key=lambda row: (
+            row.get("updated_at") or row.get("created_at") or _now(),
+            row.get("id") or "",
+        ),
+        reverse=True,
+    )
+    sampled = relevant[: max(1, min(int(limit), 1000))]
+
+    counts: dict[str, dict[str, Any]] = {}
+    for task in sampled:
+        executor = _derive_task_executor(task)
+        row = counts.setdefault(executor, {"executor": executor, "count": 0, "failed": 0})
+        row["count"] += 1
+        if _status_value(task.get("status")) == "failed":
+            row["failed"] += 1
+
+    scorecard: list[dict[str, Any]] = []
+    for row in counts.values():
+        total = int(row.get("count") or 0)
+        failed = int(row.get("failed") or 0)
+        success_rate = 1.0 if total == 0 else round(float(total - failed) / float(total), 4)
+        scorecard.append(
+            {
+                "executor": row.get("executor"),
+                "count": total,
+                "failed": failed,
+                "success_rate": success_rate,
+            }
+        )
+    scorecard.sort(key=lambda row: (int(row.get("count") or 0), float(row.get("success_rate") or 0.0), str(row.get("executor") or "")))
+    return scorecard
+
+
+def _orchestrator_ab_candidate(task_type: TaskType, primary_executor: str) -> dict[str, Any]:
+    available_executors = [
+        executor
+        for executor in ("codex", "claude", "cursor", "gemini")
+        if _executor_available(executor)
+    ]
+    if primary_executor not in available_executors:
+        available_executors.insert(0, primary_executor)
+
+    scorecard = _task_executor_scorecard(task_type, limit=200)
+    score_map = {
+        str(row.get("executor") or ""): row
+        for row in scorecard
+        if isinstance(row, dict)
+    }
+    primary_route = get_route(task_type, executor=primary_executor)
+    primary_score = score_map.get(primary_executor, {"count": 0, "failed": 0, "success_rate": 1.0})
+
+    challenger_rows: list[dict[str, Any]] = []
+    for executor in available_executors:
+        if executor == primary_executor:
+            continue
+        route = get_route(task_type, executor=executor)
+        score = score_map.get(executor, {"count": 0, "failed": 0, "success_rate": 1.0})
+        challenger_rows.append(
+            {
+                "executor": executor,
+                "model": str(route.get("model") or ""),
+                "provider": str(route.get("provider") or ""),
+                "count": int(score.get("count") or 0),
+                "failed": int(score.get("failed") or 0),
+                "success_rate": float(score.get("success_rate") or 1.0),
+            }
+        )
+
+    challenger_rows.sort(
+        key=lambda row: (
+            int(row.get("count") or 0),
+            float(row.get("success_rate") or 0.0),
+            str(row.get("executor") or ""),
+        )
+    )
+    challenger = challenger_rows[0] if challenger_rows else {}
+    reason = "coverage_exploration"
+    if challenger and int(challenger.get("count") or 0) >= int(primary_score.get("count") or 0):
+        reason = "cross_provider_comparison"
+
+    return {
+        "reason": reason,
+        "primary": {
+            "executor": primary_executor,
+            "model": str(primary_route.get("model") or ""),
+            "provider": str(primary_route.get("provider") or ""),
+            "count": int(primary_score.get("count") or 0),
+            "failed": int(primary_score.get("failed") or 0),
+            "success_rate": float(primary_score.get("success_rate") or 1.0),
+        },
+        "challenger": challenger,
+        "scorecard": scorecard[:6],
+    }
+
+
 def _top_failing_tools(execution: dict[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
     by_tool = execution.get("by_tool") if isinstance(execution.get("by_tool"), dict) else {}
     rows: list[dict[str, Any]] = []
@@ -2709,6 +3210,62 @@ def _top_failing_tools(execution: dict[str, Any], *, limit: int = 5) -> list[dic
             }
         )
     rows.sort(key=lambda row: (-int(row["failed"]), float(row["success_rate"]), -int(row["count"]), str(row["tool"])))
+    return rows[:limit]
+
+
+def _underperforming_provider_models(
+    execution: dict[str, Any],
+    *,
+    limit: int = 6,
+    min_runs: int = 2,
+) -> list[dict[str, Any]]:
+    recent_runs = execution.get("recent_runs") if isinstance(execution.get("recent_runs"), list) else []
+    stats: dict[tuple[str, str], dict[str, Any]] = {}
+    for run in recent_runs:
+        if not isinstance(run, dict):
+            continue
+        provider = str(run.get("provider") or "").strip()
+        model = str(run.get("model") or "").strip()
+        if not provider or not model:
+            continue
+        key = (provider, model)
+        row = stats.setdefault(
+            key,
+            {
+                "provider": provider,
+                "model": model,
+                "count": 0,
+                "failed": 0,
+            },
+        )
+        row["count"] += 1
+        if int(run.get("status_code") or 0) >= 400:
+            row["failed"] += 1
+
+    rows: list[dict[str, Any]] = []
+    for row in stats.values():
+        count = int(row.get("count") or 0)
+        if count < max(1, min_runs):
+            continue
+        failed = int(row.get("failed") or 0)
+        success_rate = 1.0 if count == 0 else round(float(count - failed) / float(count), 4)
+        rows.append(
+            {
+                "provider": str(row.get("provider") or ""),
+                "model": str(row.get("model") or ""),
+                "count": count,
+                "failed": failed,
+                "success_rate": success_rate,
+            }
+        )
+    rows.sort(
+        key=lambda row: (
+            float(row.get("success_rate") or 0.0),
+            -int(row.get("count") or 0),
+            str(row.get("provider") or ""),
+            str(row.get("model") or ""),
+        )
+    )
     return rows[:limit]
 
 
@@ -2770,6 +3327,8 @@ def _build_orchestration_guidance_rows(
     execution_success_rate: float,
     coverage_rate: float,
     top_failing_tools: list[dict[str, Any]],
+    underperforming_provider_models: list[dict[str, Any]],
+    active_model_cooldowns: list[dict[str, Any]],
     finalized_events: int,
     lifecycle_failure_ratio: float,
     lifecycle_guidance: list[dict[str, Any]],
@@ -2805,6 +3364,36 @@ def _build_orchestration_guidance_rows(
                 title="Tool failure hotspots detected",
                 detail=f"Most frequent failing tools: {top_tools or 'unknown'}.",
                 action="Run failing tools in smaller deterministic loops before broad orchestration retries.",
+            )
+        )
+    if underperforming_provider_models:
+        model_rows = underperforming_provider_models[:3]
+        labels = ", ".join(
+            f"{str(row.get('provider') or '')}:{str(row.get('model') or '')}"
+            for row in model_rows
+        )
+        guidance_rows.append(
+            _guidance_item(
+                item_id="provider_model_underperforming",
+                severity="medium",
+                title="Provider/model combinations are underperforming",
+                detail=f"Lowest-success combinations in window: {labels or 'unknown'}.",
+                action="Use orchestrator A/B challenger routes for these tasks and tighten prompt instructions from failure reflections before retry.",
+            )
+        )
+    if active_model_cooldowns:
+        cooldown_rows = active_model_cooldowns[:3]
+        labels = ", ".join(
+            f"{str(row.get('requested_model') or '')}->{str(row.get('effective_model') or '')}"
+            for row in cooldown_rows
+        )
+        guidance_rows.append(
+            _guidance_item(
+                item_id="model_cooldown_active",
+                severity="info",
+                title="Model cooldown remaps are active",
+                detail=f"Active temporary remaps: {labels or 'unknown'}.",
+                action="Keep using remapped models until cooldown expires, then probe the requested model again.",
             )
         )
     if finalized_events > 0 and lifecycle_failure_ratio >= 0.25:
@@ -2846,6 +3435,8 @@ def get_orchestration_guidance_summary(*, seconds: int = 6 * 3600, limit: int = 
     execution_success_rate = float(execution.get("success_rate") or 0.0)
     coverage_rate = float(coverage.get("coverage_rate") or 0.0)
     top_failing_tools = _top_failing_tools(execution, limit=5)
+    underperforming_provider_models = _underperforming_provider_models(execution, limit=6, min_runs=2)
+    active_model_cooldowns = _active_model_cooldowns(limit=20)
 
     lifecycle_snapshot = _lifecycle_awareness_snapshot(window_seconds, sample_limit)
     lifecycle = lifecycle_snapshot["lifecycle"]
@@ -2861,6 +3452,8 @@ def get_orchestration_guidance_summary(*, seconds: int = 6 * 3600, limit: int = 
         execution_success_rate=execution_success_rate,
         coverage_rate=coverage_rate,
         top_failing_tools=top_failing_tools,
+        underperforming_provider_models=underperforming_provider_models,
+        active_model_cooldowns=active_model_cooldowns,
         finalized_events=finalized_events,
         lifecycle_failure_ratio=lifecycle_failure_ratio,
         lifecycle_guidance=lifecycle_guidance,
@@ -2887,6 +3480,8 @@ def get_orchestration_guidance_summary(*, seconds: int = 6 * 3600, limit: int = 
             "subscribers": lifecycle.get("subscribers") if isinstance(lifecycle.get("subscribers"), dict) else {},
             "summary_source": str(lifecycle.get("summary_source") or "none"),
             "top_failing_tools": top_failing_tools,
+            "underperforming_provider_models": underperforming_provider_models,
+            "active_model_cooldowns": active_model_cooldowns,
             "top_friction_blocks": top_friction_blocks,
         },
         "guidance": guidance[:10],

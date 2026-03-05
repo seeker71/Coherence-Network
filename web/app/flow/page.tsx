@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PROD_API_URL, getApiBase } from "@/lib/api";
@@ -7,6 +8,11 @@ import {
   UI_CONTRIBUTOR_LIMIT,
 } from "@/lib/egress";
 import { fetchJsonOrNull } from "@/lib/fetch";
+
+export const metadata: Metadata = {
+  title: "Flow",
+  description: "Visual system flow: ideas to specs to implementations to runtime usage.",
+};
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
@@ -128,6 +134,7 @@ type FlowResponse = {
 
 type Contributor = { id: string; name: string; type: string };
 type Contribution = { id: string; contributor_id: string; asset_id: string; timestamp: string };
+type PaginatedList<T> = { items?: T[] };
 
 type FlowSearchParams = Promise<{
   idea_id?: string | string[];
@@ -153,6 +160,16 @@ function toBranchHref(branch: string): string {
   return `${REPO_TREE}/${encodeURIComponent(branch)}`;
 }
 
+function listFromPayload<T>(payload: T[] | PaginatedList<T> | null | undefined, limit: number): T[] {
+  if (Array.isArray(payload)) {
+    return payload.slice(0, limit);
+  }
+  if (payload && Array.isArray(payload.items)) {
+    return payload.items.slice(0, limit);
+  }
+  return [];
+}
+
 async function loadData(): Promise<{
   flow: FlowResponse;
   contributors: Contributor[];
@@ -171,8 +188,16 @@ async function loadDataForIdea(ideaId: string): Promise<{
   flowParams.set("include_internal_ideas", "true");
   const [flowData, contributorData, contributionData] = await Promise.all([
     fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<Contributor[]>(`${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<Contribution[]>(`${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<Contributor[] | PaginatedList<Contributor>>(
+      `${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`,
+      { cache: "no-store" },
+      5000,
+    ),
+    fetchJsonOrNull<Contribution[] | PaginatedList<Contribution>>(
+      `${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`,
+      { cache: "no-store" },
+      5000,
+    ),
   ]);
 
   return {
@@ -191,8 +216,8 @@ async function loadDataForIdea(ideaId: string): Promise<{
       unblock_queue: [],
       items: [],
     },
-    contributors: Array.isArray(contributorData) ? contributorData.slice(0, UI_CONTRIBUTOR_LIMIT) : [],
-    contributions: Array.isArray(contributionData) ? contributionData.slice(0, UI_CONTRIBUTION_LIMIT) : [],
+    contributors: listFromPayload(contributorData, UI_CONTRIBUTOR_LIMIT),
+    contributions: listFromPayload(contributionData, UI_CONTRIBUTION_LIMIT),
   };
 }
 

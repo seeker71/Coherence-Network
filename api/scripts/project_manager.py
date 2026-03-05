@@ -212,7 +212,9 @@ def build_direction(phase: str, item: str, iteration: int, last_output: str = ""
         )
     if phase == "impl":
         if iteration > 1:
-            return f"Fix the issues (iteration {iteration}): {item}. Review feedback or test failures: {last_output[:300]}"
+            # Pass enough review/test output for PATCH_GUIDANCE (spec 108); cap at 2000 to fit direction length
+            review_snippet = (last_output or "")[:2000]
+            return f"Fix the issues (iteration {iteration}): {item}. Review feedback or test failures: {review_snippet}"
         return f"Implement per spec: {item}. Modify only files listed in the spec. Do not add features not in the spec."
     if phase == "test":
         return f"Write and run tests for: {item}. Ensure tests define the contract. Do not modify tests to make impl pass."
@@ -343,7 +345,7 @@ def run_parallel(
 
                 if status == "failed":
                     if phase == "impl" and iteration < MAX_ITERATIONS:
-                        dir = build_direction("impl", backlog[idx], iteration + 1, output[:300])
+                        dir = build_direction("impl", backlog[idx], iteration + 1, (output or "")[:2000])
                         resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
                         if resp.status_code == 201:
                             still_flying.append({
@@ -357,7 +359,7 @@ def run_parallel(
                         state["completed_items"] = state.get("completed_items", 0) + 1
                         log.info("item %d failed max iterations, advance", idx)
                     else:
-                        dir = build_direction("impl", backlog[idx], iteration + 1, output[:300])
+                        dir = build_direction("impl", backlog[idx], iteration + 1, (output or "")[:2000])
                         resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
                         if resp.status_code == 201:
                             still_flying.append({
@@ -401,7 +403,8 @@ def run_parallel(
                             state["next_backlog_idx"] = next_idx
                             state["completed_items"] = state.get("completed_items", 0) + 1
                         else:
-                            dir = build_direction("impl", backlog[idx], iteration + 1, f"pytest={'fail' if not pytest_ok else 'ok'} review={'fail' if not review_ok else 'ok'}")
+                            # Pass full review output so impl can use PATCH_GUIDANCE (spec 108)
+                            dir = build_direction("impl", backlog[idx], iteration + 1, output or "")
                             resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
                             if resp.status_code == 201:
                                 still_flying.append({

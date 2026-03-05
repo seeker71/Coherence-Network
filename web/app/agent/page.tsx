@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "Agent",
+  description: "Agent execution monitoring and task orchestration status.",
+};
 
 type AgentVisibility = {
   pipeline: {

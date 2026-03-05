@@ -24,7 +24,12 @@ async def test_create_get_list_assets() -> None:
 
         resp3 = await client.get("/api/assets?limit=10")
         assert resp3.status_code == 200
-        assert any(x["id"] == aid for x in resp3.json())
+        body = resp3.json()
+        assert "items" in body
+        assert "total" in body
+        assert "limit" in body
+        assert "offset" in body
+        assert any(x["id"] == aid for x in body["items"])
 
         # total_cost default
         got = await client.get(f"/api/assets/{aid}")

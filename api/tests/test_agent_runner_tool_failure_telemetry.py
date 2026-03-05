@@ -214,6 +214,49 @@ def test_infer_executor_detects_gemini():
     assert agent_runner._infer_executor('gemini -p "task"', "gemini/gemini-2.5-pro") == "gemini"
 
 
+def test_tool_token_normalizes_cursor_and_codex_aliases():
+    assert agent_runner._tool_token('agent "run" --model auto') == "cursor"
+    assert agent_runner._tool_token('openclaw run "task"') == "codex"
+    assert agent_runner._tool_token('clawwork run "task"') == "codex"
+
+
+def test_run_one_task_runtime_event_tracks_task_idea_id(monkeypatch, tmp_path):
+    t = [1400.0]
+
+    def _mono():
+        t[0] += 0.25
+        return t[0]
+
+    monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
+    monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        agent_runner.subprocess,
+        "Popen",
+        lambda *args, **kwargs: _Proc(returncode=0, stdout_text='{"result":"ok"}\n'),
+    )
+
+    client = _Client()
+    log = agent_runner._setup_logging(verbose=False)
+    done = agent_runner.run_one_task(
+        client=client,
+        task_id="task_idea_tracking",
+        command='agent "Run implementation task" --model auto',
+        log=log,
+        verbose=False,
+        task_type="impl",
+        model="cursor/auto",
+        task_context={"executor": "cursor", "idea_id": "idea-reliability-123"},
+    )
+    assert done is True
+
+    runtime_posts = [p for p in client.posts if p[0].endswith("/api/runtime/events")]
+    assert len(runtime_posts) == 1
+    _, payload = runtime_posts[0]
+    assert payload["idea_id"] == "idea-reliability-123"
+    assert payload["endpoint"] == "tool:cursor"
+    assert payload["metadata"]["requested_executor"] == "cursor"
+
+
 def test_run_one_task_dispatches_openrouter_server_executor(monkeypatch, tmp_path):
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_WORKER_ID", "runner:test")
@@ -383,7 +426,7 @@ def test_run_one_task_claude_oauth_mode_strips_api_key_env(monkeypatch, tmp_path
     assert captured_env.get("ANTHROPIC_API_KEY", "") == ""
     assert captured_env.get("ANTHROPIC_AUTH_TOKEN", "") == ""
     assert captured_env.get("CLAUDE_CODE_OAUTH_TOKEN", "") == ""
-    assert captured_env.get("CLAUDE_CONFIG_DIR", "") != ""
+    assert "CLAUDE_CONFIG_DIR" not in captured_env or captured_env.get("CLAUDE_CONFIG_DIR", "") == ""
 
 
 def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypatch):
@@ -830,6 +873,7 @@ def test_default_runtime_seconds_for_task_type_uses_defaults_and_env_bounds(monk
 
 
 def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "1")
     monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
@@ -842,20 +886,18 @@ def test_apply_codex_model_alias_uses_configured_map(monkeypatch):
     assert "--model gpt-5.3-codex" not in remapped
 
 
-def test_apply_codex_model_alias_enforces_mandatory_remap_over_env_override(monkeypatch):
+def test_apply_codex_model_alias_allows_env_override_when_enabled(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "1")
     monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5.3-codex")
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
     )
-    assert alias == {
-        "requested_model": "gpt-5.3-codex",
-        "effective_model": "gpt-5-codex",
-    }
-    assert "--model gpt-5-codex" in remapped
-    assert "--model gpt-5.3-codex" not in remapped
+    assert alias is None
+    assert remapped == 'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
 
 
-def test_apply_codex_model_alias_supports_gtp_typo_default_map():
+def test_apply_codex_model_alias_supports_gtp_typo_default_map(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "1")
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model gtp-5.3-codex "Output exactly MODEL_OK."'
     )
@@ -876,6 +918,7 @@ def test_apply_codex_model_alias_does_not_remap_openrouter_free_by_default():
 
 
 def test_apply_codex_model_alias_merges_defaults_with_partial_env_map(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "1")
     monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
     remapped, alias = agent_runner._apply_codex_model_alias(
         'codex exec --model gtp-5.3-codex "Output exactly MODEL_OK."'
@@ -907,7 +950,8 @@ def test_apply_claude_model_alias_noop_for_already_normalized_model():
     assert remapped == command
 
 
-def test_codex_model_not_found_fallback_only_applies_after_not_found_signal():
+def test_codex_model_not_found_fallback_only_applies_after_not_found_signal(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_NOT_FOUND_FALLBACK", "1")
     command = 'codex exec --model gpt-5.3-codex "Output exactly MODEL_OK."'
     output = "stream disconnected before completion: The model `gpt-5.3-codex` does not exist or you do not have access to it."
 
@@ -928,7 +972,7 @@ def test_codex_model_not_found_fallback_only_applies_after_not_found_signal():
     assert unchanged == command
 
 
-def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_path):
+def test_run_one_task_does_not_schedule_model_not_found_fallback_retry_by_default(monkeypatch, tmp_path):
     t = [4500.0]
 
     def _mono():
@@ -969,26 +1013,18 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
     )
     assert done is True
 
-    pending_patch = next(
+    pending_patches = [
         patch
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "pending"
-    )
+    ]
     failed_patches = [
         patch
         for url, patch in client.patches
         if url.endswith("/api/agent/tasks/task_model_fallback") and patch.get("status") == "failed"
     ]
-    assert failed_patches == []
-    context = pending_patch.get("context") or {}
-    assert "retry_override_command" in context
-    assert "--model gpt-5-codex" in context["retry_override_command"]
-    assert context.get("runner_model_not_found_fallback_attempted") is True
-    fallback = context.get("runner_model_not_found_fallback") or {}
-    assert fallback.get("requested_model") == "gpt-5.3-codex"
-    assert fallback.get("effective_model") == "gpt-5-codex"
-    assert fallback.get("trigger") == "model_not_found_or_access"
-    assert "runner-model-fallback" in str(pending_patch.get("output") or "")
+    assert pending_patches == []
+    assert failed_patches
 
 
 def test_run_one_task_skips_codex_auth_retry_when_retry_explicitly_disabled(monkeypatch, tmp_path):
@@ -1129,6 +1165,7 @@ def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monk
         "ANTHROPIC_AUTH_TOKEN": "anthropic-auth",
         "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
         "CLAUDE_CODE_OAUTH_TOKEN": "short-lived-token",
+        "CLAUDE_CONFIG_DIR": str(tmp_path / "bad-config"),
     }
     auth = agent_runner._configure_claude_cli_environment(
         env=env,
@@ -1147,7 +1184,7 @@ def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monk
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
     target = env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE") or ""
     assert target.endswith("/.claude/.credentials.json")
-    assert env.get("CLAUDE_CONFIG_DIR") == str(Path(target).parent)
+    assert "CLAUDE_CONFIG_DIR" not in env
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refreshToken") == "claude-refresh-token"
     assert loaded.get("accessToken") == "claude-access-token"
@@ -1932,6 +1969,7 @@ def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, 
 
     monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_RUNNER_ENABLE_CODEX_MODEL_ALIAS", "1")
     monkeypatch.setenv("AGENT_CODEX_MODEL_ALIAS_MAP", "gpt-5.3-codex:gpt-5-codex")
     monkeypatch.setenv("AGENT_WORKER_ID", "openai-codex:test-runner")
 
