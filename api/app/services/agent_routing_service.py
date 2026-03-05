@@ -16,7 +16,7 @@ _CLAUDE_MODEL = os.environ.get("CLAUDE_FALLBACK_MODEL", "openrouter/free")
 
 _CURSOR_MODEL_DEFAULT = os.environ.get("CURSOR_CLI_MODEL", "auto")
 _CURSOR_MODEL_REVIEW = os.environ.get("CURSOR_CLI_REVIEW_MODEL", "auto")
-_GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_CLI_MODEL", "gemini-2.5-pro")
+_GEMINI_MODEL_DEFAULT = os.environ.get("GEMINI_CLI_MODEL", "gemini-3.1-pro-preview")
 _GEMINI_MODEL_REVIEW = os.environ.get("GEMINI_CLI_REVIEW_MODEL", _GEMINI_MODEL_DEFAULT)
 
 DEFAULT_MODEL_ALIAS_MAP = (
@@ -286,7 +286,7 @@ def gemini_command_template(task_type: TaskType) -> str:
     model = GEMINI_MODEL_BY_TYPE[task_type]
     template = (
         os.environ.get("GEMINI_COMMAND_TEMPLATE", "").strip()
-        or 'gemini -p "{{direction}}" --model {{model}}'
+        or 'gemini -p "{{direction}}" --model {{model}} --yolo --output-format json'
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

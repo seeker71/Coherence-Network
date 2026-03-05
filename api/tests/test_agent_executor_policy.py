@@ -430,6 +430,47 @@ def test_model_cooldown_remaps_codex_spark_after_usage_limit_failure(
     assert model_selection.get("effective_model") == "codex/gpt-5.3-codex"
 
 
+def test_model_cooldown_remaps_gemini_preview_after_quota_limit_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_MODEL_COOLDOWN_SECONDS", "7200")
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "gemini": "/usr/bin/gemini"}
+    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _reset_agent_store()
+
+    first = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Run with gemini preview first",
+            task_type=TaskType.IMPL,
+            context={"executor": "gemini", "model_override": "gemini-3.1-pro-preview"},
+        )
+    )
+    assert first["model"] == "gemini/gemini-3.1-pro-preview"
+    agent_service.update_task(
+        first["id"],
+        status=TaskStatus.FAILED,
+        output="quota metric exhausted for this model tier",
+    )
+
+    second = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Retry after gemini preview quota cap",
+            task_type=TaskType.IMPL,
+            context={"executor": "gemini", "model_override": "gemini-3.1-pro-preview"},
+        )
+    )
+    assert second["model"] == "gemini/gemini-2.5-pro"
+    assert "--model gemini-2.5-pro" in str(second["command"])
+    assert "--model gemini-3.1-pro-preview" not in str(second["command"])
+    second_context = second.get("context") or {}
+    active = second_context.get("model_cooldown_active") or {}
+    assert active.get("requested_model") == "gemini/gemini-3.1-pro-preview"
+    assert active.get("effective_model") == "gemini/gemini-2.5-pro"
+    assert str(active.get("source_task_id") or "") == str(first["id"])
+    assert str(active.get("reason") or "").startswith("task_failed_model_limit:")
+
+
 def test_model_cooldown_expires_and_retries_requested_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_MODEL_COOLDOWN_SECONDS", "60")

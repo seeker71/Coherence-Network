@@ -54,6 +54,7 @@ def test_classify_failure_maps_similar_failures_to_consistent_signatures(
     assert classified["bucket"] == bucket
     assert classified["signature"] == signature
     assert str(classified["summary"] or "").strip()
+    assert str(classified.get("action") or "").strip()
 
 
 def test_is_paid_provider_blocked_detects_all_paid_block_signatures() -> None:
@@ -75,3 +76,4 @@ def test_classify_failure_unknown_message_gets_stable_fallback_signature() -> No
     assert first["bucket"] == "other"
     assert first["signature"].startswith("other_")
     assert first["signature"] == second["signature"]
+    assert str(first.get("action") or "").strip()
