@@ -1,0 +1,48 @@
+2026-02-26T17:17:25.256799Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9a76-e874-7983-a4c1-c4c0bf5cfd4e
+2026-02-26T17:17:25.256858Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.279476Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c95d9-bd47-70e1-87f7-4772999bce20
+2026-02-26T17:17:25.279508Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.307093Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9606-5ed1-7733-b265-ccdae0862c7e
+2026-02-26T17:17:25.307123Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.331208Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9aad-d640-79c0-8991-ca684bf168de
+2026-02-26T17:17:25.331241Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.358534Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c964d-85ee-7133-a6db-b2866c061e19
+2026-02-26T17:17:25.358570Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.385758Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c90da-389d-72e3-98d7-c7c3cf7d6369
+2026-02-26T17:17:25.385799Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.415504Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9608-cf54-7961-825b-755a12e833c0
+2026-02-26T17:17:25.415542Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.441796Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9592-ad6c-7741-8c0f-7f97502ffd75
+2026-02-26T17:17:25.441831Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.468414Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c95db-1dae-76a2-9267-0862ea9c6375
+2026-02-26T17:17:25.468460Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.493380Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9aca-7bcf-7d23-b213-c4427e4c812b
+2026-02-26T17:17:25.493419Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.518395Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9602-71c6-7fe0-a217-d3452bad9b9c
+2026-02-26T17:17:25.518434Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.548443Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9650-fe7d-7162-8c48-65692ae3aab9
+2026-02-26T17:17:25.548496Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.571409Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9559-83b9-7ee0-8eda-0b35441ee265
+2026-02-26T17:17:25.571460Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.595722Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c90ba-cb84-74a2-b1bd-d27faff4cdc9
+2026-02-26T17:17:25.595787Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.608460Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9768-bf2b-7ac0-8821-eea2216514bb
+2026-02-26T17:17:25.608513Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.638323Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9926-7e6c-7f70-b2a3-27affcc8de18
+2026-02-26T17:17:25.638370Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.665366Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9767-3071-7191-9b54-75cd3b8b3486
+2026-02-26T17:17:25.665413Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.694795Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c95eb-ffce-76d3-9db7-a7723cd5def6
+2026-02-26T17:17:25.694890Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.719223Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c964f-a747-7dc3-a4a1-9594a707e6c0
+2026-02-26T17:17:25.719261Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.733939Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c902c-fb8b-73b3-ab83-c298462520c5
+2026-02-26T17:17:25.734007Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.750043Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c964f-d0b1-7070-a9b3-7daa728c1c8a
+2026-02-26T17:17:25.750088Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.776897Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c9766-3c08-7832-8b11-de4b95ef698d
+2026-02-26T17:17:25.776941Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.805060Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c90a8-5a9e-7e51-91cd-a167a1f49b41
+2026-02-26T17:17:25.805107Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back
+2026-02-26T17:17:25.832254Z ERROR codex_core::rollout::list: state db missing rollout path for thread 019c90ca-08a9-7e70-96c5-49bbdbf5312e
+2026-02-26T17:17:25.832303Z  WARN codex_core::state_db: state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back

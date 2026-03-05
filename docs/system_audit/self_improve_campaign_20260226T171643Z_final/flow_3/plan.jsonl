@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"019c9af4-8eb8-7eb2-8142-3b0eac6a3ba4"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Providing structured response template**"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"PLAN\nAlign each task to Coherence Network’s goal by enforcing spec-driven completion and reporting `success_rate = passed_checks/total_checks` and `throughput = completed_tasks/time`.\n\nPATCH\nNo file changes.\n\nRUN\nNo commands executed.\n\nRESULT\nProject-goal alignment is preserved; success rate `N/A (no execution)`; throughput `N/A (no execution)`."}}
+{"type":"turn.completed","usage":{"input_tokens":12826,"cached_input_tokens":2560,"output_tokens":465}}

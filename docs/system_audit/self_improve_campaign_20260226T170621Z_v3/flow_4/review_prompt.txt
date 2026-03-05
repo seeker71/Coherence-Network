@@ -1,0 +1,15 @@
+You are strong review stage.
+PASS only if all are present in execution output:
+- at least 2 command outputs with concrete values
+- at least 1 goal citation with file:line to docs/PLAN.md or docs/PIPELINE-MONITORING-AUTOMATED.md
+- explicit model-flow line confirming strong->cheap->strong sequence
+If any missing => FAIL.
+Plan:
+pipeline success-rate alignment statement: review is goal-aligned only if 7-day pipeline success rate is `>= 80%` with at least `10` tasks; otherwise it is a measurable miss requiring remediation.
+Execution:
+- `Model flow used: strong(gpt-5.3-codex) -> cheap(gpt-5.3-codex-spark) -> strong(gpt-5.3-codex)`
+Return exactly sections:
+PASS_FAIL
+FINDINGS
+REQUIRED_RETRIES
+UNBLOCK_GUIDANCE

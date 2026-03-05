@@ -1,15 +1,9 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import {
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
-
-export const metadata: Metadata = {
-  title: "Usage",
-  description: "Runtime telemetry dashboard — API usage, latency, and event metrics.",
-};
 
 type RuntimeIdeaRow = {
   idea_id: string;
@@ -89,10 +83,10 @@ type DailySummaryTopTool = {
   tool: string;
   events: number;
   failed: number;
-  last10_considered?: number;
-  last10_failed?: number;
-  last10_success?: number;
-  last10_success_rate?: number;
+  active_failed?: number;
+  recent_success_streak?: number;
+  success_streak_target?: number;
+  failure_recovered?: boolean;
 };
 
 type DailySummaryAttentionRow = {
@@ -101,6 +95,10 @@ type DailySummaryAttentionRow = {
   attention_score: number;
   runtime_cost_estimate: number;
   friction_event_count: number;
+  needs_attention?: boolean;
+  recent_success_streak?: number;
+  success_streak_target?: number;
+  failure_recovered?: boolean;
 };
 
 type DailySummaryQualityHotspot = {
@@ -145,6 +143,9 @@ type DailySummary = {
   tool_usage: {
     worker_events: number;
     worker_failed_events: number;
+    worker_failed_events_raw?: number;
+    worker_failed_events_recoverable?: number;
+    recovery_success_streak_target?: number;
     top_tools: DailySummaryTopTool[];
   };
   friction: {
@@ -511,6 +512,11 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const dailySummary = dailySummaryResult.summary;
   const friction = dailySummary.friction ?? DEFAULT_DAILY_SUMMARY.friction;
   const qualityAwareness = dailySummary.quality_awareness ?? DEFAULT_DAILY_SUMMARY.quality_awareness;
+  const toolUsage = dailySummary.tool_usage ?? DEFAULT_DAILY_SUMMARY.tool_usage;
+  const workerFailedRaw = Number(toolUsage.worker_failed_events_raw ?? toolUsage.worker_failed_events || 0);
+  const workerFailedRecoverable = Number(toolUsage.worker_failed_events_recoverable || 0);
+  const workerFailedActive = Math.max(workerFailedRaw - workerFailedRecoverable, 0);
+  const recoveryStreakTarget = Number(toolUsage.recovery_success_streak_target || 3);
   const warnings = [
     ...runtimeSlice.warnings,
     ...dailySummaryResult.warnings,
@@ -518,7 +524,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
 
   const ideas = [...runtime.ideas].sort((a, b) => b.runtime_cost_estimate - a.runtime_cost_estimate);
   const providerRows = [...(dailySummary.providers || [])];
-  const topTools = [...(dailySummary.tool_usage?.top_tools || [])].slice(0, 8);
+  const topTools = [...(toolUsage.top_tools || [])].slice(0, 8);
   const topAttentionRows = [...(dailySummary.top_attention_areas || [])].slice(0, 8);
   const hostTaskTypeRows = Object.entries(dailySummary.host_runner?.by_task_type || {}).slice(0, 10);
   const viewRows = [...(viewPerformance?.rows || [])]
@@ -622,8 +628,9 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         <h2 className="font-semibold">Host Runner (24h)</h2>
         <p className="text-muted-foreground">
           runs {dailySummary.host_runner.total_runs} | failed {dailySummary.host_runner.failed_runs} | completed{" "}
-          {dailySummary.host_runner.completed_runs} | tool events {dailySummary.tool_usage.worker_events} | tool failures{" "}
-          {dailySummary.tool_usage.worker_failed_events}
+          {dailySummary.host_runner.completed_runs} | tool events {toolUsage.worker_events} | tool failures(raw){" "}
+          {workerFailedRaw} | recoverable {workerFailedRecoverable} | active {workerFailedActive} | recovery streak target{" "}
+          {recoveryStreakTarget}x
         </p>
         <ul className="space-y-2">
           {hostTaskTypeRows.map(([taskType, counts]) => (
@@ -754,8 +761,9 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                 <li key={tool.tool} className="flex justify-between">
                   <span>{tool.tool}</span>
                   <span className="text-muted-foreground">
-                    events {tool.events} | failed {tool.failed} | last10 success {tool.last10_success ?? 0} | last10 failed{" "}
-                    {tool.last10_failed ?? 0}
+                    events {tool.events} | failed(active) {tool.active_failed ?? tool.failed} | raw {tool.failed} | streak{" "}
+                    {tool.recent_success_streak ?? 0}/{tool.success_streak_target ?? recoveryStreakTarget}
+                    {tool.failure_recovered ? " | recovered" : ""}
                   </span>
                 </li>
               ))}
@@ -769,7 +777,9 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                 <li key={row.endpoint} className="flex justify-between gap-2">
                   <span className="truncate">{row.endpoint}</span>
                   <span className="text-muted-foreground">
-                    score {row.attention_score.toFixed(1)} | events {row.events}
+                    score {row.attention_score.toFixed(1)} | events {row.events} | streak{" "}
+                    {row.recent_success_streak ?? 0}/{row.success_streak_target ?? recoveryStreakTarget}
+                    {row.failure_recovered ? " | recovered" : ""}
                   </span>
                 </li>
               ))}

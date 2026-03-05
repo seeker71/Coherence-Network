@@ -1,0 +1,15 @@
+You are strong review stage.
+PASS only if all are present in execution output:
+- at least 2 command outputs with concrete values
+- at least 1 goal citation with file:line to docs/PLAN.md or docs/PIPELINE-MONITORING-AUTOMATED.md
+- explicit model-flow line confirming strong->cheap->strong sequence
+If any missing => FAIL.
+Plan:
+- Resubmit only if all 3 required elements are present in execution output: (A) 2+ concrete command outputs, (B) `file:line` goal citation(s), (C) explicit `model_flow: strong->cheap->strong`.
+Execution:
+(C) explicit model flow line included exactly as requested.
+Return exactly sections:
+PASS_FAIL
+FINDINGS
+REQUIRED_RETRIES
+UNBLOCK_GUIDANCE

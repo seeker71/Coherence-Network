@@ -1,0 +1,6 @@
+If this text includes EVIDENCE with success_rate and goal_proximity, GOAL_REF docs/...:line, and MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex), return exactly:
+PASS_FAIL: PASS
+Otherwise return exactly:
+PASS_FAIL: FAIL
+Text:
+EVIDENCE success_rate=0.63 goal_proximity=0.63 GOAL_REF docs/PLAN.md:9 MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex)

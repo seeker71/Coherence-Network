@@ -308,31 +308,37 @@ def _run_execution(
     cost_budget: dict[str, float | None],
 ) -> dict[str, Any]:
     started = execution_service.time.perf_counter()
-    execution_service._write_task_log(task_id, [f"[execute] worker_id={worker_id} model={model}", f"[prompt]\n{prompt}"])
-    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    execution_idea_id = "coherence-network-agent-pipeline"
-    explicit_idea_id = str(task_context.get("idea_id") or "").strip() if isinstance(task_context, dict) else ""
-    if explicit_idea_id:
-        execution_idea_id = explicit_idea_id
-    else:
-        idea_ids = task_context.get("idea_ids") if isinstance(task_context, dict) else None
-        if isinstance(idea_ids, list):
-            for raw_idea in idea_ids:
-                candidate = str(raw_idea or "").strip()
-                if candidate:
-                    execution_idea_id = candidate
-                    break
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
+    executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
+    if executor in {"openclaw", "clawwork"}:
+        executor = "codex"
+
+    execution_service._write_task_log(
+        task_id,
+        [f"[execute] worker_id={worker_id} model={model} executor={executor or 'unknown'}", f"[prompt]\n{prompt}"],
+    )
 
     try:
-        result = execution_service._run_openrouter(
-            task_id=task_id,
-            model=model,
-            idea_id=execution_idea_id,
-            route_is_paid=route_is_paid,
-            prompt=prompt,
-            started_perf=started,
-            cost_budget=cost_budget,
-        )
+        if executor == "codex":
+            codex_model = execution_service._extract_underlying_model(str(task.get("model") or "")).strip() or model
+            result = execution_service.agent_execution_codex_service.run_codex_exec(
+                task_id=task_id,
+                model=codex_model,
+                route_is_paid=route_is_paid,
+                prompt=prompt,
+                started_perf=started,
+                cost_budget=cost_budget,
+            )
+        else:
+            result = execution_service._run_openrouter(
+                task_id=task_id,
+                model=model,
+                route_is_paid=route_is_paid,
+                prompt=prompt,
+                started_perf=started,
+                cost_budget=cost_budget,
+            )
         elapsed_ms = int(result.get("elapsed_ms") or 1)
         if result.get("ok") is True:
             return _handle_openrouter_success(
@@ -513,7 +519,7 @@ def execute_task(
     cost_slack_ratio: float | None = None,
     _retry_depth: int = 0,
 ) -> dict[str, Any]:
-    """Execute a task using OpenRouter (free model by default)."""
+    """Execute a task with executor-aware routing (Codex CLI for codex executor)."""
     task, claim_error = _claim_and_load_task(task_id, worker_id)
     if claim_error:
         return {"ok": False, "error": claim_error}

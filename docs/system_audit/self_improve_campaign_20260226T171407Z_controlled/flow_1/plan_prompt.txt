@@ -1,0 +1,1 @@
+Return exactly sections PLAN, PATCH, RUN, RESULT for a self-improvement loop focused on improving success rate and goal alignment.

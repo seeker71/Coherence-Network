@@ -212,7 +212,7 @@ def first_available_executor(preferred: list[str]) -> str:
         candidate = normalize_executor(executor, default="")
         if candidate and executor_available(candidate):
             return candidate
-    return normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="cursor")
+    return normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
 
 
 def is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
@@ -238,15 +238,15 @@ def repo_question_executor_default() -> str:
 def open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return normalize_executor(configured, default="cursor")
-    return "cursor"
+        return normalize_executor(configured, default="codex")
+    return "codex"
 
 
 def cursor_command_template(task_type: TaskType) -> str:
     model = CURSOR_MODEL_BY_TYPE[task_type]
     template = (
         os.environ.get("CURSOR_COMMAND_TEMPLATE", "").strip()
-        or 'agent --trust --print --output-format json "{{direction}}" --model {{model}}'
+        or 'agent --trust --print --output-format json "{{direction}}" --model {{model}} --sandbox disabled'
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
@@ -286,7 +286,7 @@ def gemini_command_template(task_type: TaskType) -> str:
     model = GEMINI_MODEL_BY_TYPE[task_type]
     template = (
         os.environ.get("GEMINI_COMMAND_TEMPLATE", "").strip()
-        or 'gemini -p "{{direction}}" --model {{model}} --yolo --output-format json'
+        or 'gemini -p "{{direction}}" --model {{model}} --sandbox=false'
     )
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'

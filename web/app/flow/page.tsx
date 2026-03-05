@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PROD_API_URL, getApiBase } from "@/lib/api";
-import {
-  buildFlowSearchParams,
-  UI_CONTRIBUTION_LIMIT,
-  UI_CONTRIBUTOR_LIMIT,
-} from "@/lib/egress";
+import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
 export const metadata: Metadata = {
@@ -134,17 +129,12 @@ type FlowResponse = {
 
 type Contributor = { id: string; name: string; type: string };
 type Contribution = { id: string; contributor_id: string; asset_id: string; timestamp: string };
-type PaginatedList<T> = { items?: T[] };
 
 type FlowSearchParams = Promise<{
   idea_id?: string | string[];
   spec_id?: string | string[];
   contributor_id?: string | string[];
 }>;
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 function normalizeFilter(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return (value[0] || "").trim();
@@ -160,16 +150,6 @@ function toBranchHref(branch: string): string {
   return `${REPO_TREE}/${encodeURIComponent(branch)}`;
 }
 
-function listFromPayload<T>(payload: T[] | PaginatedList<T> | null | undefined, limit: number): T[] {
-  if (Array.isArray(payload)) {
-    return payload.slice(0, limit);
-  }
-  if (payload && Array.isArray(payload.items)) {
-    return payload.items.slice(0, limit);
-  }
-  return [];
-}
-
 async function loadData(): Promise<{
   flow: FlowResponse;
   contributors: Contributor[];
@@ -183,21 +163,13 @@ async function loadDataForIdea(ideaId: string): Promise<{
   contributors: Contributor[];
   contributions: Contribution[];
 }> {
-  const API = process.env.NODE_ENV === "production" ? PROD_API_URL : getApiBase();
-  const flowParams = buildFlowSearchParams({ ideaId });
-  flowParams.set("include_internal_ideas", "true");
+  const API = getApiBase();
+  const flowParams = new URLSearchParams({ runtime_window_seconds: "86400" });
+  if (ideaId) flowParams.set("idea_id", ideaId);
   const [flowData, contributorData, contributionData] = await Promise.all([
     fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<Contributor[] | PaginatedList<Contributor>>(
-      `${API}/api/contributors?limit=${UI_CONTRIBUTOR_LIMIT}`,
-      { cache: "no-store" },
-      5000,
-    ),
-    fetchJsonOrNull<Contribution[] | PaginatedList<Contribution>>(
-      `${API}/api/contributions?limit=${UI_CONTRIBUTION_LIMIT}`,
-      { cache: "no-store" },
-      5000,
-    ),
+    fetchJsonOrNull<{ items: Contributor[] }>(`${API}/api/contributors`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<{ items: Contribution[] }>(`${API}/api/contributions`, { cache: "no-store" }, 5000),
   ]);
 
   return {
@@ -216,8 +188,8 @@ async function loadDataForIdea(ideaId: string): Promise<{
       unblock_queue: [],
       items: [],
     },
-    contributors: listFromPayload(contributorData, UI_CONTRIBUTOR_LIMIT),
-    contributions: listFromPayload(contributionData, UI_CONTRIBUTION_LIMIT),
+    contributors: contributorData?.items?.slice(0, 500) ?? [],
+    contributions: contributionData?.items?.slice(0, 2000) ?? [],
   };
 }
 
@@ -259,98 +231,102 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
     .slice(0, 8);
 
   return (
-    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="space-y-1 px-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Flow In Motion</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Unified tracking of <code>idea -&gt; spec -&gt; process -&gt; implementation -&gt; validation</code> with contributor and contribution visibility.
-          </p>
-        </section>
+    <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link href="/" className="text-muted-foreground hover:text-foreground">
+          ← Home
+        </Link>
+        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
+          Portfolio
+        </Link>
+        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
+          Ideas
+        </Link>
+        <Link href="/specs" className="text-muted-foreground hover:text-foreground">
+          Specs
+        </Link>
+        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+          Usage
+        </Link>
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
+          Contributors
+        </Link>
+        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
+          Contributions
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
+          Gates
+        </Link>
+      </div>
 
-        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { href: "/", label: "Home" },
-              { href: "/portfolio", label: "Portfolio" },
-              { href: "/ideas", label: "Ideas" },
-              { href: "/specs", label: "Specs" },
-              { href: "/usage", label: "Usage" },
-              { href: "/contributors", label: "Contributors" },
-              { href: "/contributions", label: "Contributions" },
-              { href: "/assets", label: "Assets" },
-              { href: "/tasks", label: "Tasks" },
-              { href: "/gates", label: "Gates" },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </section>
+      <h1 className="text-2xl font-bold">Flow</h1>
+      <p className="text-muted-foreground">
+        Unified tracking of <code>idea -&gt; spec -&gt; process -&gt; implementation -&gt; validation</code> with contributor and contribution visibility.
+      </p>
+      {(ideaFilter || specFilter || contributorFilter) && (
+        <p className="text-sm text-muted-foreground">
+          Filters:
+          {ideaFilter ? (
+            <>
+              {" "}
+              idea <code>{ideaFilter}</code>
+            </>
+          ) : null}
+          {specFilter ? (
+            <>
+              {" "}
+              spec <code>{specFilter}</code>
+            </>
+          ) : null}
+          {contributorFilter ? (
+            <>
+              {" "}
+              contributor <code>{contributorFilter}</code>
+            </>
+          ) : null}
+          {" | "}
+          <Link href="/flow" className="underline hover:text-foreground">
+            Clear filters
+          </Link>
+        </p>
+      )}
 
-        {(ideaFilter || specFilter || contributorFilter) && (
-          <p className="px-1 text-sm text-muted-foreground">
-            Filters:
-            {ideaFilter ? (
-              <>
-                {" "}
-                idea <code>{ideaFilter}</code>
-              </>
-            ) : null}
-            {specFilter ? (
-              <>
-                {" "}
-                spec <code>{specFilter}</code>
-              </>
-            ) : null}
-            {contributorFilter ? (
-              <>
-                {" "}
-                contributor <code>{contributorFilter}</code>
-              </>
-            ) : null}
-            {" | "}
-            <Link href="/flow" className="underline hover:text-foreground">
-              Clear filters
-            </Link>
-          </p>
-        )}
-
-        <section className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Ideas tracked</p>
           <p className="text-lg font-semibold">{filteredItems.length}</p>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Flow complete (spec+process+impl+validation)</p>
           <p className="text-lg font-semibold">
             {filteredItems.filter((row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked).length}
           </p>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Contributors in registry</p>
           <p className="text-lg font-semibold">{contributors.length}</p>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Contributions in registry</p>
           <p className="text-lg font-semibold">{contributions.length}</p>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Blocked ideas</p>
           <p className="text-lg font-semibold">{flow.summary.blocked_ideas}</p>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded border p-3">
           <p className="text-muted-foreground">Unblock queue items</p>
           <p className="text-lg font-semibold">{flow.summary.queue_items}</p>
         </div>
-        </section>
+      </section>
 
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2">
+      <section className="rounded border p-4 space-y-2">
         <h2 className="font-semibold">Top Contributors by Contribution Count</h2>
         <ul className="space-y-1 text-sm">
           {topContributorsRows.map((row) => (
@@ -367,16 +343,16 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
             </li>
           ))}
         </ul>
-        </section>
+      </section>
 
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2">
+      <section className="rounded border p-4 space-y-2">
         <h2 className="font-semibold">Unblock Priority Queue</h2>
         <p className="text-sm text-muted-foreground">
           Ordered by estimated unlock value per cost. Work top-down to unblock more downstream tasks.
         </p>
         <ul className="space-y-2 text-sm">
           {flow.unblock_queue.slice(0, 12).map((row) => (
-            <li key={row.task_fingerprint} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
+            <li key={row.task_fingerprint} className="rounded border p-2 space-y-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link href={`/flow?idea_id=${encodeURIComponent(row.idea_id)}`} className="font-medium underline hover:text-foreground">
                   {row.idea_name}
@@ -406,11 +382,11 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
             <li className="text-muted-foreground">No blockers detected in current flow scope.</li>
           )}
         </ul>
-        </section>
+      </section>
 
-        <section className="space-y-4">
+      <section className="space-y-4">
         {filteredItems.map((item) => (
-          <article key={item.idea_id} className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
+          <article key={item.idea_id} className="rounded border p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">
                 <Link href={`/ideas/${encodeURIComponent(item.idea_id)}`} className="hover:underline">
@@ -421,13 +397,13 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
             </div>
 
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">spec: {item.chain.spec}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">process: {item.chain.process}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">implementation: {item.chain.implementation}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">validation: {item.chain.validation}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">contributors: {item.chain.contributors}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">contributions: {item.chain.contributions}</span>
-              <span className="rounded-lg border border-border/70 bg-background/45 px-2 py-1">assets: {item.chain.assets}</span>
+              <span className="rounded border px-2 py-1">spec: {item.chain.spec}</span>
+              <span className="rounded border px-2 py-1">process: {item.chain.process}</span>
+              <span className="rounded border px-2 py-1">implementation: {item.chain.implementation}</span>
+              <span className="rounded border px-2 py-1">validation: {item.chain.validation}</span>
+              <span className="rounded border px-2 py-1">contributors: {item.chain.contributors}</span>
+              <span className="rounded border px-2 py-1">contributions: {item.chain.contributions}</span>
+              <span className="rounded border px-2 py-1">assets: {item.chain.assets}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               blocker {item.interdependencies.blocking_stage ?? "none"} | unblock priority{" "}
@@ -436,7 +412,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
             </p>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 text-sm">
-              <div className="rounded-xl border border-border/70 bg-background/45 p-3 space-y-1">
+              <div className="rounded border p-3 space-y-1">
                 <p className="font-medium">Spec + Process</p>
                 <p className="text-muted-foreground">
                   specs {item.spec.count} ({statLabel(item.spec.tracked)}) | evidence {item.process.evidence_count} ({statLabel(item.process.tracked)})
@@ -500,7 +476,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/45 p-3 space-y-1">
+              <div className="rounded border p-3 space-y-1">
                 <p className="font-medium">Implementation + Contribution</p>
                 <p className="text-muted-foreground">
                   lineage_links {item.implementation.lineage_link_count} ({statLabel(item.implementation.tracked)}) | runtime_events {item.implementation.runtime_events_count}
@@ -550,7 +526,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/45 p-3 space-y-1">
+              <div className="rounded border p-3 space-y-1">
                 <p className="font-medium">Validation</p>
                 <p className="text-muted-foreground">
                   local pass {item.validation.local.pass} | ci pass {item.validation.ci.pass} | deploy pass {item.validation.deploy.pass} | e2e pass {item.validation.e2e.pass}
@@ -573,7 +549,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/45 p-3 space-y-1">
+              <div className="rounded border p-3 space-y-1">
                 <p className="font-medium">Contributors</p>
                 <p className="text-muted-foreground">
                   unique {item.contributors.total_unique} ({statLabel(item.contributors.tracked)})
@@ -606,12 +582,11 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
           </article>
         ))}
         {filteredItems.length === 0 && (
-          <article className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm text-sm text-muted-foreground">
+          <article className="rounded border p-4 text-sm text-muted-foreground">
             No flow rows match current filters.
           </article>
         )}
-        </section>
-      </div>
+      </section>
     </main>
   );
 }

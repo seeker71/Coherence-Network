@@ -27,7 +27,7 @@ def test_resolve_openrouter_model_normalizes_codex_spark_alias_to_openrouter_id(
         "context": {"executor": "codex"},
     }
     resolved = agent_execution_service._resolve_openrouter_model(task, default="openrouter/free")
-    assert resolved == "openai/gpt-5.3-codex-spark"
+    assert resolved == "openai/gpt-5.3-codex"
 
 
 def test_resolve_openrouter_model_normalizes_claude_opus_minor_version() -> None:

@@ -1,0 +1,15 @@
+You are the strong review stage.
+Evaluate whether the execution satisfies plan quality and project-goal alignment.
+Project goals to check: improve success-rate/throughput with quality and move toward PLAN.md objective.
+Plan:
+- Explicit rationale to include in artifact: linking claims directly to PLAN objectives reduces reviewer ambiguity, improving review pass-rate and preserving throughput/visibility goals.
+Execution:
+- No implementation was performed because no explicit file/feature objective was provided in this turn.
+Return exactly these sections:
+PASS_FAIL
+FINDINGS
+REQUIRED_RETRIES
+UNBLOCK_GUIDANCE
+Scoring rule:
+- PASS only if concrete proof artifacts are present and alignment to project goals is explicit.
+- Otherwise FAIL.

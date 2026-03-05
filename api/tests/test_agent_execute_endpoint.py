@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from uuid import uuid4
 from pathlib import Path
 
@@ -15,6 +16,76 @@ from app.services import agent_service
 @pytest.fixture(autouse=True)
 def _allow_legacy_unauthenticated_execute_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", "1")
+
+
+@pytest.fixture(autouse=True)
+def _stub_codex_exec_with_chat_completion(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Avoid running the real codex CLI during endpoint tests.
+
+    The codex execution path is adapted to reuse each test's ``chat_completion`` mocks
+    so existing assertions remain deterministic and fast.
+    """
+    from app.services import agent_execution_service
+
+    def _run_codex_exec_stub(**kwargs):
+        started_perf = kwargs.get("started_perf")
+        try:
+            started = float(started_perf) if started_perf is not None else time.perf_counter()
+        except (TypeError, ValueError):
+            started = time.perf_counter()
+        model = str(kwargs.get("model") or "gpt-5.3-codex")
+        prompt = str(kwargs.get("prompt") or "")
+        cost_budget = kwargs.get("cost_budget") if isinstance(kwargs.get("cost_budget"), dict) else {}
+        route_is_paid = bool(kwargs.get("route_is_paid"))
+        try:
+            content, usage, meta = agent_execution_service.chat_completion(model=model, prompt=prompt)
+            elapsed_ms = max(1, int(meta.get("elapsed_ms") or int(round((time.perf_counter() - started) * 1000))))
+            usage_dict = usage if isinstance(usage, dict) else {}
+            usage_json = json.dumps(usage_dict, sort_keys=True)[:2000]
+            prompt_tokens = int(usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or 0)
+            completion_tokens = int(usage_dict.get("completion_tokens") or usage_dict.get("output_tokens") or 0)
+            total_tokens = int(usage_dict.get("total_tokens") or (prompt_tokens + completion_tokens))
+            actual_cost_usd = max(0.0, float(elapsed_ms) / 1000.0 * 0.002)
+            agent_execution_service.agent_execution_codex_service._record_codex_tool_event(
+                task_id=str(kwargs.get("task_id") or ""),
+                model=model,
+                is_paid_provider=route_is_paid,
+                elapsed_ms=elapsed_ms,
+                ok=True,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                usage_json=usage_json,
+                actual_cost_usd=actual_cost_usd,
+            )
+            return {
+                "ok": True,
+                "elapsed_ms": elapsed_ms,
+                "content": str(content or ""),
+                "usage_json": usage_json,
+                "provider_request_id": str(meta.get("provider_request_id") or ""),
+                "actual_cost_usd": actual_cost_usd,
+                "max_cost_usd": cost_budget.get("max_cost_usd"),
+                "cost_slack_ratio": cost_budget.get("cost_slack_ratio"),
+            }
+        except Exception as exc:
+            elapsed_ms = max(1, int(round((time.perf_counter() - started) * 1000)))
+            agent_execution_service.agent_execution_codex_service._record_codex_tool_event(
+                task_id=str(kwargs.get("task_id") or ""),
+                model=model,
+                is_paid_provider=route_is_paid,
+                elapsed_ms=elapsed_ms,
+                ok=False,
+                error=f"Execution failed (Codex): {exc}",
+                actual_cost_usd=max(0.0, float(elapsed_ms) / 1000.0 * 0.002),
+            )
+            return {
+                "ok": False,
+                "elapsed_ms": elapsed_ms,
+                "error": f"Execution failed (Codex): {exc}",
+            }
+
+    monkeypatch.setattr(agent_execution_service.agent_execution_codex_service, "run_codex_exec", _run_codex_exec_stub)
 
 
 def _reset_agent_store() -> None:
@@ -218,7 +289,7 @@ async def test_execute_endpoint_stops_retry_after_single_retry_budget(
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_records_paid_provider_retry_suggestion_without_forcing_override(
+async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -263,14 +334,15 @@ async def test_execute_endpoint_records_paid_provider_retry_suggestion_without_f
         payload = fetched.json()
         context = payload.get("context") or {}
 
-        assert payload["status"] == "failed"
-        assert int(context.get("retry_count", 0)) >= 1
-        assert context.get("retry_route_guidance") == "paid_provider_blocked"
-        suggestion = context.get("retry_route_suggestion") or {}
-        assert suggestion.get("executor") == "codex"
-        assert suggestion.get("model_override") == "gpt-5-codex"
-        assert context.get("force_paid_providers") is not True
-        assert call_count["value"] == 0
+        assert payload["status"] == "completed"
+        assert payload["output"] == "paid-retry-ok"
+        assert int(context.get("failure_hits", 0)) == 1
+        assert int(context.get("retry_count", 0)) == 1
+        assert context.get("retry_paid_override_applied") is True
+        assert context.get("force_paid_providers") is True
+        assert context.get("force_paid_override_source") == "auto_retry_openai_override"
+        assert context.get("model_override") == "gpt-5-codex"
+        assert call_count["value"] == 1
 
 
 @pytest.mark.asyncio
@@ -391,7 +463,66 @@ async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disable
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_does_not_fallback_when_openrouter_key_missing_for_codex_model(
+async def test_execute_endpoint_uses_codex_cli_for_codex_executor(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    _reset_agent_store()
+
+    from app.services import agent_execution_service
+
+    openrouter_calls = {"count": 0}
+
+    def _chat_completion_should_not_run(**_kwargs):
+        openrouter_calls["count"] += 1
+        raise AssertionError("OpenRouter chat path should not run for codex executor")
+
+    codex_calls = {"count": 0, "model": ""}
+
+    def _codex_exec_stub(**kwargs):
+        codex_calls["count"] += 1
+        codex_calls["model"] = str(kwargs.get("model") or "")
+        return {
+            "ok": True,
+            "elapsed_ms": 7,
+            "content": "codex-cli-ok",
+            "usage_json": '{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}',
+            "provider_request_id": "",
+            "actual_cost_usd": 0.0007,
+            "max_cost_usd": None,
+            "cost_slack_ratio": None,
+        }
+
+    monkeypatch.setattr(agent_execution_service, "chat_completion", _chat_completion_should_not_run)
+    monkeypatch.setattr(agent_execution_service.agent_execution_codex_service, "run_codex_exec", _codex_exec_stub)
+
+    task = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Codex executor should use codex cli path",
+            task_type=TaskType.IMPL,
+            context={"executor": "openclaw", "model_override": "gpt-5.3-codex-spark"},
+        )
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(f"/api/agent/tasks/{task['id']}/execute?force_paid_providers=true")
+        completed = await client.get(f"/api/agent/tasks/{task['id']}")
+        assert completed.status_code == 200
+        payload = completed.json()
+        assert payload["status"] == "completed"
+        assert payload["output"] == "codex-cli-ok"
+
+    assert openrouter_calls["count"] == 0
+    assert codex_calls["count"] == 1
+    assert codex_calls["model"] == "gpt-5.3-codex-spark"
+
+
+@pytest.mark.asyncio
+async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_for_codex_model(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -411,6 +542,21 @@ async def test_execute_endpoint_does_not_fallback_when_openrouter_key_missing_fo
         ),
     )
 
+    monkeypatch.setattr(
+        agent_execution_service.agent_execution_codex_service,
+        "run_codex_exec",
+        lambda **_: {
+            "ok": True,
+            "elapsed_ms": 9,
+            "content": "spark-ok",
+            "usage_json": '{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}',
+            "provider_request_id": "",
+            "actual_cost_usd": 0.0009,
+            "max_cost_usd": None,
+            "cost_slack_ratio": None,
+        },
+    )
+
     task = agent_service.create_task(
         AgentTaskCreate(
             direction="Assess codex route",
@@ -424,8 +570,8 @@ async def test_execute_endpoint_does_not_fallback_when_openrouter_key_missing_fo
         completed = await client.get(f"/api/agent/tasks/{task['id']}")
         assert completed.status_code == 200
         payload = completed.json()
-        assert payload["status"] == "failed"
-        assert "OPENROUTER_API_KEY is not configured" in str(payload.get("output") or "")
+        assert payload["status"] == "completed"
+        assert payload["output"] == "spark-ok"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,103 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "codex/merge-local-all-20260304-232140",
+  "commit_scope": "Validate and harden orchestrator A/B routing across providers/models/prompts with deterministic challenger forcing, sticky retry-policy protection, regression quarantine fallback, and coverage telemetry.",
+  "files_owned": [
+    "config/orchestrator_policy.json",
+    "api/app/services/agent_service.py",
+    "api/app/services/orchestrator_policy_service.py",
+    "api/app/models/coherence.py",
+    "api/config/orchestrator_policy.json",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_orchestrator_policy_service.py",
+    "docs/system_audit/commit_evidence_2026-03-05_orchestrator-ab-provider-prompt-regression-fallback.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "108-unified-agent-cli-flow-patch-on-fail"
+  ],
+  "task_ids": [
+    "task-2026-03-05-orchestrator-ab-validation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
+    "cd api && ruff check app/services/orchestrator_policy_service.py app/models/coherence.py tests/test_orchestrator_policy_service.py",
+    "cd api && pytest -q tests/test_agent_executor_policy.py",
+    "cd api && pytest -q tests/test_orchestrator_policy_service.py",
+    "cd api && pytest -q tests/test_agent_visibility_api.py tests/test_agent_usage_tracking_api.py",
+    "cd api && python3 scripts/run_maintainability_audit.py --output logs/maintainability_audit_refactor_after.json --json",
+    "cd api && python3 - <<'PY' (service-level A/B cohort + regression quarantine simulation)"
+  ],
+  "change_files": [
+    "config/orchestrator_policy.json",
+    "api/app/services/agent_service.py",
+    "api/app/services/orchestrator_policy_service.py",
+    "api/app/models/coherence.py",
+    "api/config/orchestrator_policy.json",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_orchestrator_policy_service.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/agent_service.py app/services/orchestrator_policy_service.py app/models/coherence.py tests/test_agent_executor_policy.py tests/test_orchestrator_policy_service.py",
+      "cd api && pytest -q tests/test_agent_executor_policy.py",
+      "cd api && pytest -q tests/test_orchestrator_policy_service.py",
+      "cd api && pytest -q tests/test_agent_visibility_api.py tests/test_agent_usage_tracking_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push and remote deploy verification"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Orchestrator A/B selection should spread challenger usage when control is overused, preserve sticky retry executor policy, and roll back to control when challenger regression quarantine is active.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/orchestration-guidance",
+      "https://coherence-network-production.up.railway.app/api/agent/usage"
+    ],
+    "test_flows": [
+      "Create impl tasks and verify context.orchestrator_model_selection.ab_test includes cohort, selected model, and target challenger percent.",
+      "Drive forced challenger failures and verify subsequent bucketed task falls back to control with challenger_quarantined fallback_reason.",
+      "Check orchestration guidance awareness contains active_ab_regression_quarantines entries."
+    ]
+  }
+}

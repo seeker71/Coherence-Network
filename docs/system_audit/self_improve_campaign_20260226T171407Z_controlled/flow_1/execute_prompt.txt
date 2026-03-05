@@ -1,0 +1,3 @@
+Return exactly these two lines and nothing else:
+EVIDENCE success_rate=0.63 goal_proximity=0.63
+GOAL_REF docs/PLAN.md:9

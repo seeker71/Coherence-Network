@@ -1,0 +1,32 @@
+{
+  "version": "2026-03-05",
+  "executors": {
+    "ab_candidate_priority": ["codex", "claude", "cursor", "gemini"],
+    "forced_challenger_priority": ["claude", "codex", "cursor", "gemini"]
+  },
+  "prompt_variants": {
+    "control": "baseline_v1",
+    "by_task_type": {
+      "spec": "spec_structure_v2",
+      "test": "verification_focus_v2",
+      "impl": "patch_preservation_v2",
+      "review": "verification_focus_v2",
+      "heal": "patch_preservation_v2"
+    }
+  },
+  "ab": {
+    "regression_cooldown_seconds": 14400,
+    "regression_min_samples": 3,
+    "regression_margin": 0.15,
+    "target_challenger_pct": {
+      "initial": 30,
+      "high_control_share": 45,
+      "mid_control_share": 35,
+      "base": 20
+    },
+    "control_share_thresholds": {
+      "high": 0.7,
+      "mid": 0.55
+    }
+  }
+}

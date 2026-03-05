@@ -47,7 +47,7 @@ def complete_success(
             method="RUN",
             status_code=200,
             runtime_ms=float(max(1, elapsed_ms)),
-            idea_id="coherence-network-agent-pipeline",
+            idea_id=execution_service.agent_service.resolve_runtime_idea_id_for_task(task),
             metadata=execution_service._compact_metadata(
                 {
                     "tracking_kind": "agent_task_execution",
@@ -98,7 +98,7 @@ def complete_failure(
             method="RUN",
             status_code=500,
             runtime_ms=float(max(1, elapsed_ms)),
-            idea_id="coherence-network-agent-pipeline",
+            idea_id=execution_service.agent_service.resolve_runtime_idea_id_for_task(task),
             metadata=execution_service._compact_metadata(
                 {
                     "tracking_kind": "agent_task_execution",

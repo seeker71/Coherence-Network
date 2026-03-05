@@ -780,6 +780,61 @@ async def test_sync_implementation_request_questions_creates_tasks_without_dupli
 
 
 @pytest.mark.asyncio
+async def test_sync_implementation_request_questions_sanitizes_api_key_language(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
+    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+
+    portfolio = {
+        "ideas": [
+            {
+                "id": "oauth-only-idea",
+                "name": "OAuth-only idea",
+                "description": "Ensure task directions avoid API key guidance.",
+                "potential_value": 50.0,
+                "actual_value": 0.0,
+                "estimated_cost": 5.0,
+                "actual_cost": 0.0,
+                "resistance_risk": 1.0,
+                "confidence": 0.9,
+                "manifestation_status": "none",
+                "interfaces": ["machine:api"],
+                "open_questions": [
+                    {
+                        "question": "Should we implement auth hardening with runner_codex_auth_mode=api_key?",
+                        "value_to_whole": 25.0,
+                        "estimated_cost": 2.0,
+                        "answer": "Use OPENAI_API_KEY fallback when api_key auth is selected.",
+                        "measured_delta": 3.0,
+                    }
+                ],
+            }
+        ]
+    }
+    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
+
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post("/api/inventory/questions/sync-implementation-tasks")
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["created_count"] == 1
+        task_id = payload["created_tasks"][0]["task_id"]
+
+        task_resp = await client.get(f"/api/agent/tasks/{task_id}")
+        assert task_resp.status_code == 200
+        task = task_resp.json()
+        direction = str(task["direction"]).lower()
+        assert "api_key" not in direction
+        assert "api key" not in direction
+        assert "openai_api_key" not in direction
+        assert "oauth" in direction
+
+
+@pytest.mark.asyncio
 async def test_sync_spec_implementation_gap_tasks_orders_by_roi_and_dedupes(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

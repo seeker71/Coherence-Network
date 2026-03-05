@@ -1,0 +1,47 @@
+{
+  "timestamp":"20260226T165419Z",
+  "flow_mode":"strong-cheap-strong",
+  "models":{"plan":"gpt-5.3-codex","execute":"gpt-5.3-codex-spark","review":"gpt-5.3-codex"},
+  "flows":[
+    {
+      "flow": 1,
+      "models": {"plan": "gpt-5.3-codex", "execute": "gpt-5.3-codex-spark", "review": "gpt-5.3-codex"},
+      "exit_codes": {"plan": 0, "execute": 0, "review": 0},
+      "verdict": "FAIL",
+      "cumulative_success_rate_pct": 0.00,
+      "plan_excerpt": "  3. Re-run the effectiveness extraction command to capture `success_rate` and `goal_proximity`. ",
+      "execute_excerpt": "- `success_rate` and `goal_proximity` not available until one of the endpoints is reachable. ",
+      "review_excerpt": "3. Resubmit only after including the explicit strong-cheap-strong confirmation line and two concrete command outputs. "
+    },
+    {
+      "flow": 2,
+      "models": {"plan": "gpt-5.3-codex", "execute": "gpt-5.3-codex-spark", "review": "gpt-5.3-codex"},
+      "exit_codes": {"plan": 0, "execute": 0, "review": 0},
+      "verdict": "FAIL",
+      "cumulative_success_rate_pct": 0.00,
+      "plan_excerpt": "Local execution is currently blocked on two prerequisites: invalid `gh` auth for `make start-gate`, and local API unreachable on `:8000` (so `success_rate`/`goal_proximity` cannot be claimed yet). Goal alignment is explicitly anchored to [docs/PLAN.md:38](/Use",
+      "execute_excerpt": "   - Start API on port `8000`, then rerun `curl -sS 'http://127.0.0.1:8000/api/agent/effectiveness' | jq '{success_rate,goal_proximity,completed_7d:.throughput.completed_7d}'` and the `rg` command. ",
+      "review_excerpt": "2. If API still fails, capture exact uvicorn stderr and retry after fixing port/process conflicts (`lsof -i :8000`). "
+    },
+    {
+      "flow": 3,
+      "models": {"plan": "gpt-5.3-codex", "execute": "gpt-5.3-codex-spark", "review": "gpt-5.3-codex"},
+      "exit_codes": {"plan": 0, "execute": 0, "review": 0},
+      "verdict": "FAIL",
+      "cumulative_success_rate_pct": 0.00,
+      "plan_excerpt": "Start-gate and effectiveness proof are currently blocked locally by auth (`gh`) and API bind/connect failures. Planning is aligned to project goals and includes the required API guardrail path to recover and then capture `success_rate` + `goal_proximity` with ",
+      "execute_excerpt": "  - `curl -sS 'http://127.0.0.1:8000/api/agent/effectiveness' | jq '{success_rate,goal_proximity,completed_7d:.throughput.completed_7d}'` ",
+      "review_excerpt": "3. If port conflict exists, free/kill conflicting process or run API on a free port and update curl target consistently. "
+    },
+    {
+      "flow": 4,
+      "models": {"plan": "gpt-5.3-codex", "execute": "gpt-5.3-codex-spark", "review": "gpt-5.3-codex"},
+      "exit_codes": {"plan": 0, "execute": 0, "review": 0},
+      "verdict": "FAIL",
+      "cumulative_success_rate_pct": 0.00,
+      "plan_excerpt": "3. Success-rate/goal-proximity capture is pending until API connectivity is unblocked on a consistent free port. ",
+      "execute_excerpt": "- `rg` confirms success/throughput/goal references in `docs/PLAN.md:9`, `docs/PLAN.md:42`, `docs/PIPELINE-MONITORING-AUTOMATED.md:26`, `docs/PIPELINE-MONITORING-AUTOMATED.md:43`, `docs/PIPELINE-MONITORING-AUTOMATED.md:88`, `docs/PIPELINE-MONITORING-AUTOMATED.m",
+      "review_excerpt": "3. Re-run effectiveness and monitor commands and include concrete returned values in the evidence. "
+    }
+  ]
+}

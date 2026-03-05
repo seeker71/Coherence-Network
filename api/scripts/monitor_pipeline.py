@@ -1257,7 +1257,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             _request_restart("runner_pm_not_seen", log)
             action = "Restart requested (PIPELINE_AUTO_RECOVER=1). Watchdog will restart pipeline. " + action
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "runner_pm_not_seen" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1292,7 +1292,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             _request_restart("no_task_running_stuck", log)
             action = "Restart requested (runner likely hung). " + action
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "no_task_running" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1343,7 +1343,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             elif need_workers and need_parallel:
                 action = f"agent_runner workers={runner_workers}, PM not --parallel. " + action
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "low_phase_coverage" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1391,7 +1391,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         msg = "3+ consecutive failed tasks (same phase)"
         action = "Review task logs; consider heal task or model/prompt change. If root cause identified, suggest meta-pipeline item for specs/007-meta-pipeline-backlog.md."
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "repeated_failures" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1416,7 +1416,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if att.get("output_empty"):
         action = "Agent runner now marks completed-with-zero-output as failed. Check recent task logs for capture issues; consider heal task."
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "output_empty" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1445,7 +1445,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if att.get("executor_fail"):
         action = "Check AGENT_EXECUTOR_DEFAULT, cursor/agent path; verify executor is installed. Check agent_runner.log for 'command not found' or similar."
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "executor_fail" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1474,7 +1474,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if att.get("low_success_rate"):
         action = "Review metrics; consider prompt/model A/B test"
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "low_success_rate" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",
@@ -1935,7 +1935,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if has_runner_errors:
         action = "Check AGENT_API_BASE; ensure API is running; verify runner and API use same base URL. tail -f api/logs/agent_runner.log"
         heal_task_id = None
-        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1":
+        if auto_fix and os.environ.get("PIPELINE_AUTO_FIX_ENABLED") == "1" and "runner_log_errors" not in prev_conditions:
             try:
                 resp = client.post(
                     f"{BASE}/api/agent/tasks",

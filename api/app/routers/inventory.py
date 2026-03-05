@@ -191,7 +191,7 @@ async def sync_traceability_gap_artifacts(
     max_spec_idea_links: int = Query(150, ge=1, le=1000),
     max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
     max_spec_process_backfills: int = Query(500, ge=1, le=5000),
-    max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
+    max_usage_gap_tasks: int = Query(0, ge=0, le=2000),
 ) -> dict:
     payload = inventory_service.sync_traceability_gap_artifacts(
         runtime_window_seconds=runtime_window_seconds,
@@ -211,7 +211,7 @@ async def process_completeness(
     max_spec_idea_links: int = Query(150, ge=1, le=1000),
     max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
     max_spec_process_backfills: int = Query(500, ge=1, le=5000),
-    max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
+    max_usage_gap_tasks: int = Query(0, ge=0, le=2000),
 ) -> dict:
     return inventory_service.evaluate_process_completeness(
         runtime_window_seconds=runtime_window_seconds,
@@ -232,7 +232,7 @@ async def sync_process_gap_tasks(
     max_spec_idea_links: int = Query(150, ge=1, le=1000),
     max_missing_endpoint_specs: int = Query(200, ge=1, le=2000),
     max_spec_process_backfills: int = Query(500, ge=1, le=5000),
-    max_usage_gap_tasks: int = Query(200, ge=1, le=2000),
+    max_usage_gap_tasks: int = Query(0, ge=0, le=2000),
 ) -> dict:
     payload = inventory_service.sync_process_completeness_gap_tasks(
         runtime_window_seconds=runtime_window_seconds,

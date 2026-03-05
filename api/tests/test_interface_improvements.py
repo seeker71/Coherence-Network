@@ -99,8 +99,8 @@ async def test_contributors_list_returns_paginated_envelope():
     """GET /api/contributors returns {items, total, limit, offset} not a bare array."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Create two contributors
-        await client.post("/api/contributors", json={"type": "HUMAN", "name": "Alice Person", "email": "alice@proton.me"})
-        await client.post("/api/contributors", json={"type": "HUMAN", "name": "Bob Person", "email": "bob@proton.me"})
+        await client.post("/api/contributors", json={"type": "HUMAN", "name": "A", "email": "a@test.com"})
+        await client.post("/api/contributors", json={"type": "HUMAN", "name": "B", "email": "b@test.com"})
 
         resp = await client.get("/api/contributors?limit=10&offset=0")
         assert resp.status_code == 200
@@ -124,9 +124,9 @@ async def test_contributors_list_returns_paginated_envelope():
 async def test_contributors_pagination_offset():
     """Offset parameter skips items correctly."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await client.post("/api/contributors", json={"type": "HUMAN", "name": "Casey One", "email": "casey1@proton.me"})
-        await client.post("/api/contributors", json={"type": "HUMAN", "name": "Casey Two", "email": "casey2@proton.me"})
-        await client.post("/api/contributors", json={"type": "HUMAN", "name": "Casey Three", "email": "casey3@proton.me"})
+        await client.post("/api/contributors", json={"type": "HUMAN", "name": "C1", "email": "c1@test.com"})
+        await client.post("/api/contributors", json={"type": "HUMAN", "name": "C2", "email": "c2@test.com"})
+        await client.post("/api/contributors", json={"type": "HUMAN", "name": "C3", "email": "c3@test.com"})
 
         full = await client.get("/api/contributors?limit=100&offset=0")
         offset1 = await client.get("/api/contributors?limit=100&offset=1")
@@ -169,8 +169,7 @@ async def test_contributions_list_returns_paginated_envelope():
     """GET /api/contributions returns {items, total, limit, offset} not a bare array."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Setup: create contributor + asset + contribution
-        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "Xavier Lane", "email": "xavier@proton.me"})
-        assert c.status_code == 201
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "X", "email": "x@test.com"})
         a = await client.post("/api/assets", json={"type": "CODE", "description": "Repo X"})
         await client.post("/api/contributions", json={
             "contributor_id": c.json()["id"],

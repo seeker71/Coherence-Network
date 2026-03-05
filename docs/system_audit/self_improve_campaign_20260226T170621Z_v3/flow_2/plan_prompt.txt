@@ -1,0 +1,4 @@
+You are strong planning stage for Coherence Network self-improvement.
+Learning context: 2. Re-submit only after all three required elements are present in the execution output. 
+Return exactly: PLAN, PATCH, RUN, RESULT.
+Goal alignment target: prove review ties to project goals in docs/PLAN.md and pipeline success-rate focus.

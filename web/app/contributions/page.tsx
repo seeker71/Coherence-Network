@@ -102,46 +102,46 @@ function ContributionsPageContent() {
   };
 
   return (
-    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="space-y-1 px-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Contributions In Motion</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Human interface for <code>GET /api/contributions</code> with normalized cost evidence and attribution.
-          </p>
-          {(contributorFilter || assetFilter) ? (
-            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              {contributorFilter ? <>Contributor <code>{contributorFilter}</code>. </> : null}
-              {assetFilter ? <>Asset <code>{assetFilter}</code>.</> : null}
-            </p>
-          ) : null}
-        </section>
+    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
+      <div className="flex flex-wrap gap-3 text-sm">
+        <Link href="/" className="text-muted-foreground hover:text-foreground">
+          ← Home
+        </Link>
+        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
+          Portfolio
+        </Link>
+        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
+          Contributors
+        </Link>
+        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
+          Assets
+        </Link>
+        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
+          Tasks
+        </Link>
+      </div>
+      <h1 className="text-2xl font-bold">Contributions</h1>
+      <p className="text-muted-foreground">
+        Human interface for `GET /api/contributions`.
+        {contributorFilter ? (
+          <>
+            {" "}
+            Filter contributor <code>{contributorFilter}</code>.
+          </>
+        ) : null}
+        {assetFilter ? (
+          <>
+            {" "}
+            Filter asset <code>{assetFilter}</code>.
+          </>
+        ) : null}
+      </p>
 
-        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { href: "/", label: "Home" },
-              { href: "/portfolio", label: "Portfolio" },
-              { href: "/contributors", label: "Contributors" },
-              { href: "/assets", label: "Assets" },
-              { href: "/tasks", label: "Tasks" },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </section>
+      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+      {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
-        {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-        {status === "error" && <p className="text-destructive">Error: {error}</p>}
-
-        {status === "ok" && (
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
+      {status === "ok" && (
+        <section className="rounded border p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
             Total: {filteredRows.length}
             {(contributorFilter || assetFilter) ? (
@@ -153,7 +153,7 @@ function ContributionsPageContent() {
           </p>
           <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((c) => (
-              <li key={c.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
+              <li key={c.id} className="rounded border p-2 space-y-1">
                 {(() => {
                   const cost = effectiveCost(c);
                   const commitHash = c.metadata?.commit_hash;
@@ -209,15 +209,14 @@ function ContributionsPageContent() {
             ))}
           </ul>
         </section>
-        )}
-      </div>
+      )}
     </main>
   );
 }
 
 export default function ContributionsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8"><div className="mx-auto w-full max-w-7xl"><p className="text-muted-foreground">Loading contributions…</p></div></main>}>
+    <Suspense fallback={<main className="min-h-screen p-8 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributions…</p></main>}>
       <ContributionsPageContent />
     </Suspense>
   );

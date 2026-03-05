@@ -11,7 +11,7 @@ class CoherenceResponse(BaseModel):
         ge=0,
         le=8,
         default=2,
-        description="Count of components with real data; rest are 0.5 stub (spec 020 data confidence)",
+        description="Count of components with measured data inputs (spec 020 data confidence)",
     )
     components: dict[str, float] = Field(
         description="Per-component scores (all 0.0–1.0)"

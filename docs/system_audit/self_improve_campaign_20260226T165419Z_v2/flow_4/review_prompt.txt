@@ -1,0 +1,16 @@
+You are the strong review stage.
+Review the execution against the plan and project goals.
+PASS criteria (all required):
+- at least 2 command proofs with concrete output values
+- at least 1 project-goal citation with file:line
+- explicit confirmation this was strong-cheap-strong model flow
+If any criterion missing => FAIL.
+Plan:
+3. Success-rate/goal-proximity capture is pending until API connectivity is unblocked on a consistent free port.
+Execution:
+- `rg` confirms success/throughput/goal references in `docs/PLAN.md:9`, `docs/PLAN.md:42`, `docs/PIPELINE-MONITORING-AUTOMATED.md:26`, `docs/PIPELINE-MONITORING-AUTOMATED.md:43`, `docs/PIPELINE-MONITORING-AUTOMATED.md:88`, `docs/PIPELINE-MONITORING-AUTOMATED.md:101`, `docs/PIPELINE-MONITORING-AUTOMATED.md:137`.
+Return exactly sections:
+PASS_FAIL
+FINDINGS
+REQUIRED_RETRIES
+UNBLOCK_GUIDANCE
