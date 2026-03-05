@@ -29,6 +29,10 @@ class AgentTaskCreate(BaseModel):
     direction: str = Field(..., min_length=1, max_length=5000)
     task_type: TaskType
     context: Optional[Dict[str, Any]] = None
+    target_state: Optional[str] = None
+    success_evidence: Optional[str] = None
+    abort_evidence: Optional[str] = None
+    observation_window_sec: Optional[int] = None
 
     @field_validator("task_type", mode="before")
     @classmethod

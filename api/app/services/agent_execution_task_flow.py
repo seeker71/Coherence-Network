@@ -322,14 +322,25 @@ def _run_execution(
     try:
         if executor == "codex":
             codex_model = execution_service._extract_underlying_model(str(task.get("model") or "")).strip() or model
-            result = execution_service.agent_execution_codex_service.run_codex_exec(
-                task_id=task_id,
-                model=codex_model,
-                route_is_paid=route_is_paid,
-                prompt=prompt,
-                started_perf=started,
-                cost_budget=cost_budget,
-            )
+            # Route spark-family models to direct codex CLI; non-spark codex models stay on OpenRouter.
+            if "spark" in codex_model.lower():
+                result = execution_service.agent_execution_codex_service.run_codex_exec(
+                    task_id=task_id,
+                    model=codex_model,
+                    route_is_paid=route_is_paid,
+                    prompt=prompt,
+                    started_perf=started,
+                    cost_budget=cost_budget,
+                )
+            else:
+                result = execution_service._run_openrouter(
+                    task_id=task_id,
+                    model=codex_model,
+                    route_is_paid=route_is_paid,
+                    prompt=prompt,
+                    started_perf=started,
+                    cost_budget=cost_budget,
+                )
         else:
             result = execution_service._run_openrouter(
                 task_id=task_id,

@@ -253,8 +253,18 @@ def cursor_command_template(task_type: TaskType) -> str:
     return template.replace("{{model}}", model)
 
 
+def _resolve_codex_default_model(task_type: TaskType) -> str:
+    resolved_model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
+    if not resolved_model:
+        return "gpt-5.3-codex"
+    lower_model = resolved_model.lower()
+    if lower_model.startswith("openrouter/") or lower_model.endswith("/free") or "openrouter/free" in lower_model:
+        return "gpt-5.3-codex"
+    return resolved_model
+
+
 def codex_command_template(task_type: TaskType) -> str:
-    model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
+    model = _resolve_codex_default_model(task_type)
     template = (
         os.environ.get("CODEX_COMMAND_TEMPLATE", "").strip()
         or os.environ.get("OPENCLAW_COMMAND_TEMPLATE", "").strip()
@@ -341,7 +351,7 @@ def route_for_executor(task_type: TaskType, executor: str, default_command_templ
         template = cursor_command_template(task_type)
         tier = "cursor"
     elif normalized == "codex":
-        resolved_model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
+        resolved_model = _resolve_codex_default_model(task_type)
         model = f"codex/{resolved_model}"
         template = codex_command_template(task_type)
         tier = "codex"
