@@ -513,7 +513,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const friction = dailySummary.friction ?? DEFAULT_DAILY_SUMMARY.friction;
   const qualityAwareness = dailySummary.quality_awareness ?? DEFAULT_DAILY_SUMMARY.quality_awareness;
   const toolUsage = dailySummary.tool_usage ?? DEFAULT_DAILY_SUMMARY.tool_usage;
-  const workerFailedRaw = Number(toolUsage.worker_failed_events_raw ?? toolUsage.worker_failed_events || 0);
+  const workerFailedRaw = Number((toolUsage.worker_failed_events_raw ?? toolUsage.worker_failed_events) || 0);
   const workerFailedRecoverable = Number(toolUsage.worker_failed_events_recoverable || 0);
   const workerFailedActive = Math.max(workerFailedRaw - workerFailedRecoverable, 0);
   const recoveryStreakTarget = Number(toolUsage.recovery_success_streak_target || 3);

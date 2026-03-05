@@ -42,10 +42,20 @@ from app.services import (
     agent_run_state_service,
     agent_runner_registry_service,
     agent_service,
+    runner_orphan_recovery_service,
 )
 
 router = APIRouter()
 router.include_router(telegram_router)
+
+_ISSUE_PRIORITY = {"high": 0, "medium": 1, "low": 2}
+
+
+def _task_status_value(task: dict[str, Any] | None) -> str:
+    if not isinstance(task, dict):
+        return ""
+    task_status = task.get("status")
+    return task_status.value if isinstance(task_status, TaskStatus) else str(task_status or "").strip().lower()
 
 
 def _truthy(value: str | bool | None) -> bool:
@@ -139,13 +149,21 @@ def _force_paid_override(
     )
 
 
-def _status_value(value: object) -> str:
-    return str(getattr(value, "value", value) or "").strip().lower()
+def _task_status(task: dict[str, Any]) -> TaskStatus | None:
+    raw = task.get("status")
+    if isinstance(raw, TaskStatus):
+        return raw
+    if raw is None:
+        return None
+    try:
+        return TaskStatus(str(raw))
+    except ValueError:
+        return None
 
 
 def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
-    status_value = _status_value(task.get("status"))
-    if status_value not in {"failed", "completed"}:
+    status = _task_status(task)
+    if status not in {TaskStatus.FAILED, TaskStatus.COMPLETED}:
         return task
 
     refreshed = agent_service.update_task(
@@ -154,7 +172,7 @@ def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> di
         current_step="requeued for manual execute",
         context={
             "manual_reexecute_requested": True,
-            "manual_reexecute_from_status": status_value,
+            "manual_reexecute_from_status": status.value,
         },
     )
     if isinstance(refreshed, dict):
@@ -164,6 +182,7 @@ def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> di
 
 def _task_to_item(task: dict) -> dict:
     """Convert stored task to list item (no command/output)."""
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -174,6 +193,10 @@ def _task_to_item(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "target_state": ctx.get("target_state"),
+        "success_evidence": ctx.get("success_evidence"),
+        "abort_evidence": ctx.get("abort_evidence"),
+        "observation_window_sec": ctx.get("observation_window_sec"),
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
@@ -190,6 +213,7 @@ def _task_to_attention_item(task: dict) -> dict:
 
 def _task_to_full(task: dict) -> dict:
     """Convert stored task to full response."""
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     return {
         "id": task["id"],
         "direction": task["direction"],
@@ -203,11 +227,46 @@ def _task_to_full(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "target_state": ctx.get("target_state"),
+        "success_evidence": ctx.get("success_evidence"),
+        "abort_evidence": ctx.get("abort_evidence"),
+        "observation_window_sec": ctx.get("observation_window_sec"),
         "claimed_by": task.get("claimed_by"),
         "claimed_at": task.get("claimed_at"),
         "created_at": task["created_at"],
         "updated_at": task.get("updated_at"),
     }
+
+
+def _task_update_has_fields(data: AgentTaskUpdate) -> bool:
+    keys = (
+        "status",
+        "output",
+        "progress_pct",
+        "current_step",
+        "decision_prompt",
+        "decision",
+        "context",
+        "worker_id",
+        "target_state",
+        "success_evidence",
+        "abort_evidence",
+        "observation_window_sec",
+    )
+    return any(getattr(data, key) is not None for key in keys)
+
+
+def _target_state_context_patch(data: AgentTaskUpdate) -> dict:
+    context_patch = dict(data.context) if isinstance(data.context, dict) else {}
+    if data.target_state is not None:
+        context_patch["target_state"] = data.target_state
+    if data.success_evidence is not None:
+        context_patch["success_evidence"] = data.success_evidence
+    if data.abort_evidence is not None:
+        context_patch["abort_evidence"] = data.abort_evidence
+    if data.observation_window_sec is not None:
+        context_patch["observation_window_sec"] = data.observation_window_sec
+    return context_patch
 
 
 @router.post(
@@ -287,8 +346,8 @@ async def get_run_state(task_id: str) -> dict:
 
 
 @router.post("/agent/runners/heartbeat", response_model=AgentRunnerSnapshot)
-async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
-    return agent_runner_registry_service.heartbeat_runner(
+async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: BackgroundTasks) -> dict:
+    snapshot = agent_runner_registry_service.heartbeat_runner(
         runner_id=data.runner_id,
         status=data.status,
         lease_seconds=data.lease_seconds,
@@ -301,6 +360,12 @@ async def heartbeat_runner(data: AgentRunnerHeartbeat) -> dict:
         capabilities=data.capabilities if isinstance(data.capabilities, dict) else None,
         metadata=data.metadata if isinstance(data.metadata, dict) else None,
     )
+    await runner_orphan_recovery_service.maybe_recover_on_idle_heartbeat(
+        snapshot=snapshot,
+        background_tasks=background_tasks,
+        alert_builder=lambda task: format_task_alert(task, runner_update=False),
+    )
+    return snapshot
 
 
 @router.get("/agent/runners", response_model=AgentRunnerList)
@@ -438,6 +503,7 @@ async def pickup_and_execute_task(
         task = agent_service.get_task(task_id)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
+        task = _requeue_terminal_task_for_execute(task_id, task)
     else:
         pending, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
         if not pending:
@@ -567,14 +633,14 @@ async def update_task(
     background_tasks: BackgroundTasks,
 ) -> AgentTask:
     """Update task. Supports status, output, progress_pct, current_step, decision_prompt, decision.
-    Sends Telegram alerts for needs_decision/failed and all runner-driven updates.
+    Sends Telegram alerts for needs_decision/failed status only.
     When decision present and task needs_decision, sets status→running.
     """
-    if all(
-        getattr(data, f) is None
-        for f in ("status", "output", "progress_pct", "current_step", "decision_prompt", "decision", "context", "worker_id")
-    ):
+    if not _task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
+    existing_task = agent_service.get_task(task_id)
+    previous_status_value = _task_status_value(existing_task)
+    context_patch = _target_state_context_patch(data)
     try:
         task = agent_service.update_task(
             task_id,
@@ -584,7 +650,7 @@ async def update_task(
             current_step=data.current_step,
             decision_prompt=data.decision_prompt,
             decision=data.decision,
-            context=data.context,
+            context=context_patch if context_patch else None,
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
@@ -592,8 +658,16 @@ async def update_task(
         raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    runner_update = is_runner_task_update(worker_id=data.worker_id, context_patch=data.context)
-    if runner_update or data.status in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED):
+    runner_update = is_runner_task_update(
+        worker_id=data.worker_id,
+        context_patch=context_patch if context_patch else data.context,
+    )
+    task_status_value = _task_status_value(task)
+    entered_attention_state = (
+        task_status_value in {TaskStatus.NEEDS_DECISION.value, TaskStatus.FAILED.value}
+        and task_status_value != previous_status_value
+    )
+    if entered_attention_state:
         from app.services import telegram_adapter
 
         if telegram_adapter.is_configured():
@@ -644,6 +718,15 @@ async def get_visibility() -> dict:
     return agent_service.get_visibility_summary()
 
 
+@router.get("/agent/orchestration/guidance")
+async def get_orchestration_guidance(
+    seconds: int = Query(21600, ge=300, le=2592000),
+    limit: int = Query(500, ge=1, le=5000),
+) -> dict:
+    """Guidance-first routing and awareness summary (advisory, non-blocking)."""
+    return agent_service.get_orchestration_guidance_summary(seconds=seconds, limit=limit)
+
+
 @router.get("/agent/integration")
 async def get_agent_integration() -> dict:
     """Role-agent integration coverage and remaining gaps."""
@@ -668,15 +751,8 @@ async def get_fatal_issues() -> dict:
 @router.get("/agent/monitor-issues")
 async def get_monitor_issues() -> dict:
     """Monitor issues from automated pipeline check. Checkable; use to react and improve. Spec 027."""
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-    path = os.path.join(logs_dir, "monitor_issues.json")
-    if not os.path.isfile(path):
-        return {"issues": [], "last_check": None}
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"issues": [], "last_check": None}
+    logs_dir = _agent_logs_dir()
+    return _resolve_monitor_issues_payload(logs_dir, now=datetime.now(timezone.utc))
 
 
 @router.get("/agent/metrics")
@@ -715,9 +791,438 @@ async def get_effectiveness() -> dict:
         }
 
 
+@router.get("/agent/collective-health")
+async def get_collective_health(
+    window_days: int = Query(7, ge=1, le=30),
+) -> dict:
+    """Collective health scorecard focused on coherence, resonance, flow, and friction."""
+    try:
+        from app.services.collective_health_service import get_collective_health as _get
+
+        return _get(window_days=window_days)
+    except ImportError:
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "window_days": window_days,
+            "scores": {
+                "coherence": 0.0,
+                "resonance": 0.0,
+                "flow": 0.0,
+                "friction": 0.0,
+                "collective_value": 0.0,
+            },
+            "coherence": {},
+            "resonance": {},
+            "flow": {},
+            "friction": {},
+            "top_friction_queue": [],
+            "top_opportunities": [],
+        }
+
+
 def _agent_logs_dir() -> str:
     """Logs directory for status-report and meta_questions; overridable in tests."""
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+
+
+def _orphan_threshold_seconds() -> int:
+    try:
+        return max(
+            60,
+            int(
+                os.environ.get(
+                    "PIPELINE_ORPHAN_RUNNING_SECONDS",
+                    os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        return 1800
+
+
+def _monitor_max_age_seconds() -> int:
+    raw = os.environ.get(
+        "MONITOR_ISSUES_MAX_AGE_SECONDS",
+        os.environ.get("PIPELINE_MONITOR_MAX_AGE_SECONDS", "900"),
+    )
+    try:
+        return max(60, int(raw))
+    except (TypeError, ValueError):
+        return 900
+
+
+def _status_report_max_age_seconds() -> int:
+    raw = os.environ.get("PIPELINE_STATUS_REPORT_MAX_AGE_SECONDS", str(_monitor_max_age_seconds()))
+    try:
+        return max(60, int(raw))
+    except (TypeError, ValueError):
+        return _monitor_max_age_seconds()
+
+
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _timestamp_is_fresh(value: Any, *, now: datetime, max_age_seconds: int) -> bool:
+    parsed = _parse_iso_datetime(value)
+    if parsed is None:
+        return False
+    age_seconds = (now - parsed).total_seconds()
+    return 0 <= age_seconds <= max_age_seconds
+
+
+def _read_json_dict(path: str) -> dict[str, Any] | None:
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return None
+    return None
+
+
+def _derived_issue(
+    condition: str,
+    severity: str,
+    message: str,
+    suggested_action: str,
+    *,
+    now: datetime,
+) -> dict[str, Any]:
+    normalized_severity = str(severity or "medium").strip().lower()
+    priority = _ISSUE_PRIORITY.get(normalized_severity, 2)
+    return {
+        "id": f"derived-{condition}",
+        "condition": condition,
+        "severity": normalized_severity,
+        "priority": priority,
+        "message": message,
+        "suggested_action": suggested_action,
+        "created_at": now.isoformat(),
+        "resolved_at": None,
+        "source": "derived_pipeline_status",
+    }
+
+
+def _running_seconds(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _wait_seconds(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: datetime) -> list[dict[str, Any]]:
+    running = status.get("running") if isinstance(status.get("running"), list) else []
+    pending = status.get("pending") if isinstance(status.get("pending"), list) else []
+    att = status.get("attention") if isinstance(status.get("attention"), dict) else {}
+    issues: list[dict[str, Any]] = []
+
+    wait_values = [_wait_seconds(item.get("wait_seconds")) for item in pending if isinstance(item, dict)]
+    wait_seconds = [value for value in wait_values if value is not None]
+    max_wait = max(wait_seconds) if wait_seconds else 0
+    stuck = bool(att.get("stuck")) or (bool(pending) and not bool(running) and max_wait > 600)
+    if stuck:
+        issues.append(
+            _derived_issue(
+                "no_task_running",
+                "high",
+                f"No task running for {max_wait}s despite {len(pending)} pending.",
+                "Restart agent runner and verify task claims progress.",
+                now=now,
+            )
+        )
+
+    if bool(att.get("repeated_failures")):
+        issues.append(
+            _derived_issue(
+                "repeated_failures",
+                "high",
+                "3+ consecutive failed tasks detected in recent completions.",
+                "Review recent task logs and isolate root cause before continuing new executions.",
+                now=now,
+            )
+        )
+    if bool(att.get("output_empty")):
+        issues.append(
+            _derived_issue(
+                "output_empty",
+                "high",
+                "Recent completed task has empty output.",
+                "Check agent runner log streaming/capture and task log persistence.",
+                now=now,
+            )
+        )
+    if bool(att.get("executor_fail")):
+        issues.append(
+            _derived_issue(
+                "executor_fail",
+                "high",
+                "Recent failed task has empty output (likely executor/tool failure).",
+                "Validate executor path and dependency availability in runner environment.",
+                now=now,
+            )
+        )
+    if bool(att.get("low_success_rate")):
+        issues.append(
+            _derived_issue(
+                "low_success_rate",
+                "medium",
+                "7d success rate is below target (<80%).",
+                "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline.",
+                now=now,
+            )
+        )
+
+    threshold = _orphan_threshold_seconds()
+    stale_running: list[dict[str, Any]] = []
+    for item in running:
+        if not isinstance(item, dict):
+            continue
+        run_seconds = _running_seconds(item.get("running_seconds"))
+        if run_seconds is None or run_seconds <= threshold:
+            continue
+        stale_running.append(
+            {
+                "id": str(item.get("id") or "").strip(),
+                "running_seconds": int(run_seconds),
+            }
+        )
+    if stale_running:
+        stale_ids = [row["id"] for row in stale_running if row.get("id")]
+        preview = ", ".join(stale_ids[:5]) if stale_ids else "unknown"
+        if len(stale_ids) > 5:
+            preview = f"{preview}, ..."
+        longest = max(row["running_seconds"] for row in stale_running)
+        threshold_minutes = max(1, int(round(threshold / 60)))
+        issues.append(
+            _derived_issue(
+                "orphan_running",
+                "high",
+                (
+                    f"{len(stale_running)} running task(s) exceeded stale threshold "
+                    f"{threshold}s (~{threshold_minutes}m); longest={longest}s; ids={preview}"
+                ),
+                "Patch stale task(s) to failed and restart runner/watchdog to recover claims.",
+                now=now,
+            )
+        )
+
+    return issues
+
+
+def _derived_monitor_payload(
+    status: dict[str, Any],
+    *,
+    now: datetime,
+    fallback_reason: str,
+    prior_last_check: Any = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "issues": _derive_monitor_issues_from_pipeline_status(status, now=now),
+        "last_check": now.isoformat(),
+        "history": [],
+        "source": "derived_pipeline_status",
+        "fallback_reason": fallback_reason,
+    }
+    prior_last = str(prior_last_check or "").strip()
+    if prior_last:
+        payload["monitor_last_check"] = prior_last
+    return payload
+
+
+def _resolve_monitor_issues_payload(logs_dir: str, *, now: datetime) -> dict[str, Any]:
+    path = os.path.join(logs_dir, "monitor_issues.json")
+    raw_payload = _read_json_dict(path)
+    if raw_payload is not None and _timestamp_is_fresh(
+        raw_payload.get("last_check"),
+        now=now,
+        max_age_seconds=_monitor_max_age_seconds(),
+    ):
+        return raw_payload
+
+    if not os.path.isfile(path):
+        reason = "missing_monitor_issues_file"
+        prior_last_check = None
+    elif raw_payload is None:
+        reason = "unreadable_monitor_issues_file"
+        prior_last_check = None
+    else:
+        reason = "stale_monitor_issues_file"
+        prior_last_check = raw_payload.get("last_check")
+
+    status = agent_service.get_pipeline_status()
+    return _derived_monitor_payload(
+        status,
+        now=now,
+        fallback_reason=reason,
+        prior_last_check=prior_last_check,
+    )
+
+
+def _build_fallback_status_report(
+    *,
+    now: datetime,
+    fallback_reason: str,
+    monitor_payload: dict[str, Any],
+    effectiveness: dict[str, Any] | None,
+    stale_report_generated_at: Any = None,
+) -> dict[str, Any]:
+    status = agent_service.get_pipeline_status()
+    issues = (
+        monitor_payload.get("issues")
+        if isinstance(monitor_payload.get("issues"), list)
+        else []
+    )
+    running = status.get("running") if isinstance(status.get("running"), list) else []
+    pending = status.get("pending") if isinstance(status.get("pending"), list) else []
+    recent_completed = (
+        status.get("recent_completed")
+        if isinstance(status.get("recent_completed"), list)
+        else []
+    )
+    pm = status.get("project_manager") if isinstance(status.get("project_manager"), dict) else {}
+
+    layer0: dict[str, Any] = {
+        "status": "unknown",
+        "summary": "Derived from live pipeline state; monitor report unavailable.",
+    }
+    if effectiveness:
+        gp = float(effectiveness.get("goal_proximity", 0.0) or 0.0)
+        throughput = (
+            effectiveness.get("throughput")
+            if isinstance(effectiveness.get("throughput"), dict)
+            else {}
+        )
+        success_rate = float(effectiveness.get("success_rate", 0.0) or 0.0)
+        layer0 = {
+            "status": "ok" if gp >= 0.7 and not issues else "needs_attention",
+            "goal_proximity": gp,
+            "throughput_7d": throughput.get("completed_7d", 0),
+            "tasks_per_day": throughput.get("tasks_per_day", 0),
+            "success_rate": success_rate,
+            "summary": (
+                f"{throughput.get('completed_7d', 0)} tasks (7d), "
+                f"{int(success_rate * 100)}% success"
+            ),
+        }
+    elif issues:
+        layer0["status"] = "needs_attention"
+        layer0["summary"] = "Monitor report unavailable and live pipeline indicates active issues."
+
+    pm_seen = bool(pm) and (
+        pm.get("backlog_index") is not None
+        or pm.get("phase") is not None
+        or pm.get("in_flight")
+    )
+    runner_seen = bool(running)
+    layer1 = {
+        "status": "ok" if (pm_seen or runner_seen or not pending) else "needs_attention",
+        "project_manager": "running" if pm_seen else ("idle" if pm else "unknown"),
+        "pm_in_flight": len(pm.get("in_flight") or []) if isinstance(pm.get("in_flight"), list) else 0,
+        "agent_runner": "running" if runner_seen else ("unknown" if not pending else "not_seen"),
+        "runner_workers": None,
+        "pm_parallel": None,
+        "summary": (
+            f"running={len(running)}, pending={len(pending)}, "
+            f"pm_phase={pm.get('phase', '?') if isinstance(pm, dict) else '?'}"
+        ),
+    }
+
+    issue_conditions = {
+        str(item.get("condition") or "").strip()
+        for item in issues
+        if isinstance(item, dict)
+    }
+    execution_needs_attention = bool(
+        {"api_unreachable", "metrics_unavailable", "no_task_running", "orphan_running"}
+        & issue_conditions
+    )
+    layer2 = {
+        "status": "needs_attention" if execution_needs_attention else "ok",
+        "running": running,
+        "pending": pending,
+        "recent_completed": recent_completed,
+        "summary": (
+            f"running={len(running)}, pending={len(pending)}, recent_completed={len(recent_completed)}"
+        ),
+    }
+
+    layer3 = {
+        "status": "ok" if not issues else "needs_attention",
+        "issues_count": len(issues),
+        "issues": [
+            {
+                "priority": item.get("priority"),
+                "condition": item.get("condition"),
+                "severity": item.get("severity"),
+                "message": (item.get("message") or "")[:120],
+            }
+            for item in issues[:10]
+            if isinstance(item, dict)
+        ],
+        "summary": "No issues" if not issues else f"{len(issues)} issue(s) need attention",
+    }
+
+    going_well: list[str] = []
+    if layer0.get("status") == "ok":
+        going_well.append("goal_proximity")
+    if layer1.get("status") == "ok":
+        going_well.append("orchestration_active")
+    if layer2.get("status") == "ok":
+        going_well.append("execution_flow")
+    if layer3.get("status") == "ok":
+        going_well.append("no_issues")
+
+    overall_status = "needs_attention" if any(
+        layer.get("status") == "needs_attention"
+        for layer in (layer0, layer1, layer2, layer3)
+    ) else "ok"
+
+    report: dict[str, Any] = {
+        "generated_at": now.isoformat(),
+        "overall": {
+            "status": overall_status,
+            "going_well": going_well,
+            "needs_attention": [cond for cond in sorted(issue_conditions) if cond],
+        },
+        "layer_0_goal": layer0,
+        "layer_1_orchestration": layer1,
+        "layer_2_execution": layer2,
+        "layer_3_attention": layer3,
+        "source": "derived_pipeline_status",
+        "fallback_reason": fallback_reason,
+    }
+    stale_generated = str(stale_report_generated_at or "").strip()
+    if stale_generated:
+        report["monitor_report_generated_at"] = stale_generated
+    return report
 
 
 def _merge_meta_questions_into_report(report: dict, logs_dir: str) -> dict:
@@ -757,23 +1262,41 @@ async def get_status_report() -> dict:
     Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
     logs_dir = _agent_logs_dir()
     path = os.path.join(logs_dir, "pipeline_status_report.json")
-    if not os.path.isfile(path):
-        out = {
-            "generated_at": None,
-            "overall": {"status": "unknown", "going_well": [], "needs_attention": []},
-            "layer_0_goal": {"status": "unknown", "summary": "Report not yet generated by monitor"},
-            "layer_1_orchestration": {"status": "unknown", "summary": ""},
-            "layer_2_execution": {"status": "unknown", "summary": ""},
-            "layer_3_attention": {"status": "unknown", "summary": ""},
-        }
-        return _merge_meta_questions_into_report(out, logs_dir)
-    try:
-        with open(path, encoding="utf-8") as f:
-            report = json.load(f)
+    now = datetime.now(timezone.utc)
+    report = _read_json_dict(path)
+    if report is not None and _timestamp_is_fresh(
+        report.get("generated_at"),
+        now=now,
+        max_age_seconds=_status_report_max_age_seconds(),
+    ):
         return _merge_meta_questions_into_report(report, logs_dir)
+
+    if not os.path.isfile(path):
+        fallback_reason = "missing_status_report_file"
+        stale_generated_at = None
+    elif report is None:
+        fallback_reason = "unreadable_status_report_file"
+        stale_generated_at = None
+    else:
+        fallback_reason = "stale_status_report_file"
+        stale_generated_at = report.get("generated_at")
+
+    monitor_payload = _resolve_monitor_issues_payload(logs_dir, now=now)
+    try:
+        from app.services.effectiveness_service import get_effectiveness as _get_effectiveness
+
+        effectiveness = _get_effectiveness()
     except Exception:
-        out = {"generated_at": None, "overall": {"status": "unknown", "going_well": [], "needs_attention": []}, "error": "Could not read report"}
-        return _merge_meta_questions_into_report(out, logs_dir)
+        effectiveness = None
+
+    fallback_report = _build_fallback_status_report(
+        now=now,
+        fallback_reason=fallback_reason,
+        monitor_payload=monitor_payload,
+        effectiveness=effectiveness if isinstance(effectiveness, dict) else None,
+        stale_report_generated_at=stale_generated_at,
+    )
+    return _merge_meta_questions_into_report(fallback_report, logs_dir)
 
 
 @router.get("/agent/pipeline-status")
@@ -783,9 +1306,16 @@ async def get_pipeline_status() -> dict:
     Returns 200 in empty state (no running task) per spec 039; body always includes running, pending, recent_completed, attention, running_by_phase."""
     status = agent_service.get_pipeline_status()
     # Guarantee contract keys for empty state (spec 039): scripts/monitors rely on 200 with full shape
-    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase"):
+    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase", "diagnostics"):
         if key not in status:
-            status[key] = [] if key in ("running", "pending", "recent_completed") else ({} if key == "attention" else {"spec": 0, "impl": 0, "test": 0, "review": 0})
+            if key in ("running", "pending", "recent_completed"):
+                status[key] = []
+            elif key == "attention":
+                status[key] = {}
+            elif key == "running_by_phase":
+                status[key] = {"spec": 0, "impl": 0, "test": 0, "review": 0}
+            else:
+                status[key] = {}
     if "attention" in status and isinstance(status["attention"], dict):
         for att_key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
             if att_key not in status["attention"]:
@@ -834,19 +1364,53 @@ async def get_task_log(task_id: str) -> dict:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", f"task_{task_id}.log")
-    if not os.path.isfile(log_path):
-        raise HTTPException(status_code=404, detail="Task log not found")
-    with open(log_path, encoding="utf-8") as f:
-        log_content = f.read()
-    return {"task_id": task_id, "log": log_content, "command": task.get("command"), "output": task.get("output")}
+    if os.path.isfile(log_path):
+        with open(log_path, encoding="utf-8") as f:
+            log_content = f.read()
+        return {
+            "task_id": task_id,
+            "log": log_content,
+            "command": task.get("command"),
+            "output": task.get("output"),
+            "log_source": "file",
+        }
+
+    # Keep task-log links useful even when per-task log files are unavailable.
+    fallback_lines: list[str] = []
+    status = task.get("status")
+    current_step = task.get("current_step")
+    updated_at = task.get("updated_at")
+    if status is not None:
+        fallback_lines.append(f"status: {status}")
+    if current_step:
+        fallback_lines.append(f"current_step: {current_step}")
+    if updated_at:
+        fallback_lines.append(f"updated_at: {updated_at}")
+    output = str(task.get("output") or "").strip()
+    if output:
+        fallback_lines.append("")
+        fallback_lines.append("output:")
+        fallback_lines.append(output[:5000])
+    fallback = "\n".join(fallback_lines).strip() or "No task log file is available for this task yet."
+
+    return {
+        "task_id": task_id,
+        "log": fallback,
+        "command": task.get("command"),
+        "output": task.get("output"),
+        "log_source": "task_snapshot",
+    }
 
 
 @router.get("/agent/route", response_model=RouteResponse)
 async def route(
     task_type: TaskType = Query(...),
-    executor: Optional[str] = Query("auto", description="Executor: auto (default policy), claude, cursor, openclaw, codex, or gemini"),
+    executor: Optional[str] = Query(
+        "auto",
+        description="Executor: auto (default policy), claude, cursor, codex, gemini, openrouter, openclaw (alias), or clawwork (alias).",
+    ),
 ) -> RouteResponse:
-    """Get routing for a task type (no persistence). Four providers: Codex, Claude Code, Cursor, Gemini."""
+    """Get routing for a task type (no persistence). Use executor=cursor|codex|gemini|openrouter (openclaw/clawwork alias to codex)."""
     return RouteResponse(**agent_service.get_route(task_type, executor=executor or "auto"))
 
 

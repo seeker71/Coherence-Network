@@ -618,6 +618,12 @@ def _with_agent_roles(direction: str, task_type: TaskType, primary_agent: str | 
         lines.append(f"Guard agents: {', '.join(guard_agents)}.")
     lines.append(f"Task type: {task_type.value}.")
     lines.append("Respect role boundaries, spec scope, and acceptance criteria.")
+    if task_type == TaskType.REVIEW:
+        lines.append("Output contract: PASS_FAIL, FINDINGS, SPEC_VERIFICATION_STATUS, PATCH_GUIDANCE.")
+        lines.append("If PASS_FAIL is FAIL, PATCH_GUIDANCE must include file paths and concrete patch steps.")
+    elif task_type == TaskType.SPEC:
+        lines.append("Output contract: IDEA, SPEC_SCOPE, ACCEPTANCE_CRITERIA, VERIFICATION_PLAN.")
+        lines.append("VERIFICATION_PLAN must include executable checks and clear pass/fail evidence.")
     lines.append(f"Direction: {direction}")
     return " ".join(lines)
 
@@ -1188,8 +1194,16 @@ def _ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
     next_context["failure_reason_bucket"] = classified["bucket"]
     next_context["failure_signature"] = classified["signature"]
     next_context["failure_summary"] = classified["summary"]
+    next_context["failure_action"] = classified.get("action") or ""
     next_context["failure_diagnostics_source"] = source
     next_context["failure_diagnostics_present"] = bool(output_text)
+    next_context["failure_context_packet"] = {
+        "bucket": classified["bucket"],
+        "signature": classified["signature"],
+        "summary": classified["summary"],
+        "action": classified.get("action") or "",
+        "source": source,
+    }
     task["context"] = next_context
 
 
@@ -1284,17 +1298,14 @@ def _task_runtime_idea_id(task: dict[str, Any], task_context: dict[str, Any]) ->
 
 
 def resolve_runtime_idea_id_for_context(context: dict[str, Any] | None) -> str:
-    """Public helper used by execution services to map runtime events to idea ids."""
-    ctx = context if isinstance(context, dict) else {}
-    return _task_runtime_idea_id({}, ctx)
+    context_map = context if isinstance(context, dict) else {}
+    return _task_runtime_idea_id({}, context_map)
 
 
 def resolve_runtime_idea_id_for_task(task: dict[str, Any] | None) -> str:
-    """Public helper used by execution services to map runtime events to idea ids."""
-    if not isinstance(task, dict):
-        return "coherence-network-agent-pipeline"
-    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
-    return _task_runtime_idea_id(task, task_context)
+    task_map = task if isinstance(task, dict) else {}
+    context = task_map.get("context") if isinstance(task_map.get("context"), dict) else {}
+    return _task_runtime_idea_id(task_map, context)
 
 
 def _task_failure_metadata(task: dict[str, Any], task_context: dict[str, Any]) -> dict[str, Any]:
@@ -1403,6 +1414,7 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
     if failure_metadata:
         metadata.update(failure_metadata)
 
+    mutable_context = task_context if isinstance(task_context, dict) else {}
     try:
         from app.services import runtime_service
 
@@ -1417,8 +1429,17 @@ def _record_completion_tracking_event(task: dict[str, Any]) -> None:
                 metadata=metadata,
             )
         )
+        mutable_context["completion_tracking_event_status"] = "recorded"
+        mutable_context.pop("completion_tracking_event_error_type", None)
+        mutable_context.pop("completion_tracking_event_error", None)
+        task["context"] = mutable_context
     except Exception:
-        # Tracking should never block task state transitions.
+        mutable_context["completion_tracking_event_status"] = "failed"
+        mutable_context["completion_tracking_event_error_type"] = "runtime_event_record_failure"
+        mutable_context["completion_tracking_event_error"] = (
+            "Failed to record runtime completion event; task transition preserved."
+        )
+        task["context"] = mutable_context
         return
 
 
@@ -2194,6 +2215,8 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
             if endpoint_norm.startswith("tool:")
             else endpoint_norm
         )
+        if tool_name == "agent" and executor and executor != "unknown":
+            tool_name = executor
         if not tool_name:
             tool_name = "unknown"
 
