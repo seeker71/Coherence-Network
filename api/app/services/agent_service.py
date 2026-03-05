@@ -1283,6 +1283,20 @@ def _task_runtime_idea_id(task: dict[str, Any], task_context: dict[str, Any]) ->
     return "coherence-network-agent-pipeline"
 
 
+def resolve_runtime_idea_id_for_context(context: dict[str, Any] | None) -> str:
+    """Public helper used by execution services to map runtime events to idea ids."""
+    ctx = context if isinstance(context, dict) else {}
+    return _task_runtime_idea_id({}, ctx)
+
+
+def resolve_runtime_idea_id_for_task(task: dict[str, Any] | None) -> str:
+    """Public helper used by execution services to map runtime events to idea ids."""
+    if not isinstance(task, dict):
+        return "coherence-network-agent-pipeline"
+    task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    return _task_runtime_idea_id(task, task_context)
+
+
 def _task_failure_metadata(task: dict[str, Any], task_context: dict[str, Any]) -> dict[str, Any]:
     output_text = _task_output_text(task).strip()
     summary = str(task_context.get("failure_summary") or "").strip()

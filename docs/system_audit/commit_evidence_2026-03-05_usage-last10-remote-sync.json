@@ -1,7 +1,7 @@
 {
   "date": "2026-03-05",
   "thread_branch": "codex/cursor-default-routing-20260305",
-  "commit_scope": "Add per-tool last-10 success/failure telemetry to Usage summaries, add local-to-remote runtime event sync utility, preserve shared startup context plus cursor-default routing behavior, and backfill stale daily-summary cache payloads with last10 tool fields.",
+  "commit_scope": "Add per-tool last-10 success/failure telemetry to Usage summaries, add local-to-remote runtime event sync utility, preserve shared startup context plus cursor-default routing behavior, backfill stale daily-summary cache payloads with last10 tool fields, and restore agent/runtime compatibility regressions discovered during merge validation.",
   "files_owned": [
     ".cursor/skills/spec-guard/SKILL.md",
     "api/app/main.py",

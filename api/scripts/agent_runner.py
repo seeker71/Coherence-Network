@@ -6972,6 +6972,10 @@ def run_one_task(
                             retry_suffix = (
                                 "oauth recovery did not succeed; not retrying until OAuth session is rotated."
                             )
+                            if retry_disabled:
+                                retry_suffix = (
+                                    f"{retry_suffix} retry disabled by explicit retry_max=0."
+                                )
                         elif retry_disabled:
                             retry_suffix = "retry disabled by explicit retry_max=0."
                         else:

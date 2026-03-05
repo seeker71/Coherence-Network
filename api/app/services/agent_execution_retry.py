@@ -236,11 +236,16 @@ def _build_retry_override(
         failure_output=failure_output,
         result_error=result_error,
     ):
+        retry_model_override = _resolve_retry_model_override(context)
         return {
+            "force_paid_providers": True,
+            "force_paid_override_source": "auto_retry_openai_override",
+            "retry_paid_override_applied": True,
+            "model_override": retry_model_override,
             "retry_route_guidance": "paid_provider_blocked",
             "retry_route_suggestion": {
                 "executor": "codex",
-                "model_override": _resolve_retry_model_override(context),
+                "model_override": retry_model_override,
                 "source": "auto_retry_openai_override",
             },
         }

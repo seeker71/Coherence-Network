@@ -215,6 +215,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-Idea-ID"],
+    expose_headers=["X-Request-ID", "X-Coherence-Runtime-Ms", "X-Coherence-Runtime-Cost-Estimate"],
 )
 
 
@@ -407,7 +408,11 @@ async def capture_runtime_metrics(request: Request, call_next):
     request_path, route_name, raw_path = _build_route_signature(request)
     query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
     route_label = route_name or "unknown"
+    response = None
+    excluded_paths = {"/api/runtime/change-token"}
     should_capture = request_path.startswith("/api") or request_path.startswith("/v1") or raw_path.startswith("/api") or raw_path.startswith("/v1")
+    if request_path in excluded_paths or raw_path in excluded_paths:
+        should_capture = False
     slow_threshold_ms = _slow_request_ms_threshold()
     log_all_requests = _env_flag("API_LOG_ALL_REQUESTS", False)
     try:
@@ -423,6 +428,23 @@ async def capture_runtime_metrics(request: Request, call_next):
         elapsed_ms = (time.perf_counter() - start) * 1000.0
         if status_code is None:
             status_code = 500
+        if response is not None:
+            response.headers["x-coherence-runtime-ms"] = f"{max(0.0, elapsed_ms):.3f}"
+            response.headers["x-coherence-runtime-cost-estimate"] = (
+                f"{runtime_service.estimate_runtime_cost(max(0.0, elapsed_ms)):.8f}"
+            )
+            existing_exposed = str(response.headers.get("access-control-expose-headers") or "")
+            required_exposed = {
+                "x-request-id",
+                "x-coherence-runtime-ms",
+                "x-coherence-runtime-cost-estimate",
+            }
+            if existing_exposed:
+                current = {part.strip().lower() for part in existing_exposed.split(",") if part.strip()}
+            else:
+                current = set()
+            merged = sorted(current | required_exposed)
+            response.headers["access-control-expose-headers"] = ", ".join(merged)
         if should_capture:
             if request.headers.get("content-length"):
                 body_size = _safe_int_or_none(request.headers.get("content-length")) or 0
@@ -449,6 +471,8 @@ async def capture_runtime_metrics(request: Request, call_next):
                     "req_id": _correlation_id(request),
                     "slow_reasons": ", ".join(reasons),
                     "exception": exc_name or "",
+                    "page_view_id": str(request.headers.get("x-page-view-id") or "").strip(),
+                    "page_route": str(request.headers.get("x-page-route") or "").strip(),
                 }
                 runtime_service.record_event(
                     RuntimeEventCreate(

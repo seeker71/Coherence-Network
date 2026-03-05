@@ -9,7 +9,7 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Query, Request
 
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 from app.routers.agent_telegram import (
@@ -37,7 +37,12 @@ from app.models.agent import (
     TaskType,
 )
 from app.models.error import ErrorDetail
-from app.services import agent_run_state_service, agent_runner_registry_service, agent_service
+from app.services import (
+    agent_execution_hooks,
+    agent_run_state_service,
+    agent_runner_registry_service,
+    agent_service,
+)
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -68,6 +73,11 @@ def _require_execute_token(
             route_name,
         )
         raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def _require_execute_token_when_unset() -> bool:
+    """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
+    return not _truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
 
 
 def _coerce_force_paid_override(request: Request) -> bool:
@@ -127,6 +137,29 @@ def _force_paid_override(
         or _truthy(allow_paid_provider)
         or _coerce_force_paid_override(request)
     )
+
+
+def _status_value(value: object) -> str:
+    return str(getattr(value, "value", value) or "").strip().lower()
+
+
+def _requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+    status_value = _status_value(task.get("status"))
+    if status_value not in {"failed", "completed"}:
+        return task
+
+    refreshed = agent_service.update_task(
+        task_id,
+        status=TaskStatus.PENDING,
+        current_step="requeued for manual execute",
+        context={
+            "manual_reexecute_requested": True,
+            "manual_reexecute_from_status": status_value,
+        },
+    )
+    if isinstance(refreshed, dict):
+        return refreshed
+    return task
 
 
 def _task_to_item(task: dict) -> dict:
@@ -282,6 +315,21 @@ async def list_runners(
     )
 
 
+@router.get("/agent/lifecycle/summary")
+async def agent_lifecycle_summary(
+    seconds: int = Query(3600, ge=60, le=2592000),
+    limit: int = Query(500, ge=1, le=5000),
+    task_id: str | None = Query(None),
+    source: str = Query("auto"),
+) -> dict:
+    return agent_execution_hooks.summarize_lifecycle_events(
+        seconds=seconds,
+        limit=limit,
+        task_id=task_id,
+        source=source,
+    )
+
+
 @router.post(
     "/agent/tasks/{task_id}/execute",
     responses={
@@ -311,12 +359,13 @@ async def execute_task(
     _require_execute_token(
         "execute_task",
         x_agent_execute_token,
-        require_when_token_not_configured=False,
+        require_when_token_not_configured=_require_execute_token_when_unset(),
     )
 
     task = agent_service.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    task = _requeue_terminal_task_for_execute(task_id, task)
 
     from app.services import agent_execution_service
 
@@ -807,6 +856,49 @@ async def telegram_diagnostics() -> dict:
     from app.services import telegram_adapter
     from app.services import telegram_diagnostics as diag
 
+    def _iso_ts(raw: object) -> str | None:
+        try:
+            ts = float(raw)  # type: ignore[arg-type]
+        except Exception:
+            return None
+        if ts <= 0:
+            return None
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+
+    webhook_events = diag.get_webhook_events()
+    send_results = diag.get_send_results()
+    report_log = diag.get_report_log()
+
+    webhook_events_out = []
+    for row in webhook_events:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            webhook_events_out.append(out)
+        else:
+            webhook_events_out.append(row)
+
+    send_results_out = []
+    for row in send_results:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            send_results_out.append(out)
+        else:
+            send_results_out.append(row)
+
+    report_log_out = []
+    for row in report_log:
+        if isinstance(row, dict):
+            out = dict(row)
+            out["ts_iso"] = _iso_ts(out.get("ts"))
+            report_log_out.append(out)
+        else:
+            report_log_out.append(row)
+
+    send_success = sum(1 for item in send_results if isinstance(item, dict) and bool(item.get("ok")))
+    send_failures = sum(1 for item in send_results if isinstance(item, dict) and not bool(item.get("ok")))
+
     token = (
         (os.environ.get("TELEGRAM_BOT_TOKEN") or "")[:8] + "..." if os.environ.get("TELEGRAM_BOT_TOKEN") else None
     )
@@ -820,8 +912,19 @@ async def telegram_diagnostics() -> dict:
                 if os.environ.get("TELEGRAM_ALLOWED_USER_IDS") else []
             ),
         },
-        "webhook_events": diag.get_webhook_events(),
-        "send_results": diag.get_send_results(),
+        "summary": {
+            "webhook_event_count": len(webhook_events),
+            "send_count": len(send_results),
+            "send_success_count": send_success,
+            "send_failure_count": send_failures,
+            "report_count": len(report_log),
+            "last_webhook_at": _iso_ts(webhook_events[-1].get("ts")) if webhook_events and isinstance(webhook_events[-1], dict) else None,
+            "last_send_at": _iso_ts(send_results[-1].get("ts")) if send_results and isinstance(send_results[-1], dict) else None,
+            "last_report_at": _iso_ts(report_log[-1].get("ts")) if report_log and isinstance(report_log[-1], dict) else None,
+        },
+        "webhook_events": webhook_events_out,
+        "send_results": send_results_out,
+        "report_log": report_log_out,
     }
 
 
@@ -831,6 +934,7 @@ async def telegram_test_send(
 ) -> dict:
     """Send a test message to TELEGRAM_CHAT_IDS. Returns raw Telegram API response for debugging."""
     import httpx
+    from app.services import telegram_diagnostics as diag
 
     message_text = text or "Test from diagnostics"
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -843,6 +947,12 @@ async def telegram_test_send(
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         for cid in chat_ids[:3]:
             r = await client.post(url, json={"chat_id": cid, "text": message_text})
+            response_text = (
+                r.text[:500]
+                if not r.headers.get("content-type", "").startswith("application/json")
+                else str(r.json())[:500]
+            )
+            diag.record_send(cid, r.status_code == 200, r.status_code, response_text)
             results.append({
                 "chat_id": cid,
                 "status_code": r.status_code,
