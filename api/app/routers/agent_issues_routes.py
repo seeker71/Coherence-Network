@@ -34,20 +34,37 @@ async def get_monitor_issues() -> dict:
     return resolve_monitor_issues_payload(logs_dir, now=datetime.now(timezone.utc))
 
 
-@router.get("/metrics")
-async def get_metrics() -> dict:
+@router.get("/metrics", summary="Task metrics (success rate, duration, by task_type/model)")
+async def get_metrics(
+    metric: str | None = Query(
+        None,
+        description="Filter: time, success, by_task_type, by_model, or omit for full response.",
+    ),
+) -> dict:
     """Task metrics: success rate, execution time, by task_type, by model. Spec 026 Phase 1."""
     try:
         from app.services.metrics_service import get_aggregates
 
-        return get_aggregates()
+        data = get_aggregates()
     except ImportError:
-        return {
+        data = {
             "success_rate": {"completed": 0, "failed": 0, "total": 0, "rate": 0.0},
             "execution_time": {"p50_seconds": 0, "p95_seconds": 0},
             "by_task_type": {},
             "by_model": {},
         }
+
+    if metric:
+        m = metric.strip().lower()
+        if m == "time":
+            return {"execution_time": data.get("execution_time", {"p50_seconds": 0, "p95_seconds": 0})}
+        if m == "success":
+            return {"success_rate": data.get("success_rate", {"completed": 0, "failed": 0, "total": 0, "rate": 0.0})}
+        if m == "by_task_type":
+            return {"by_task_type": data.get("by_task_type", {})}
+        if m == "by_model":
+            return {"by_model": data.get("by_model", {})}
+    return data
 
 
 @router.get("/effectiveness")
