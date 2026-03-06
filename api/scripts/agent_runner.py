@@ -3054,6 +3054,32 @@ def _classify_failure(
     return "command_failed"
 
 
+def _parse_failure_hint_from_output(output: str) -> dict[str, Any]:
+    """Parse [FAILURE] JSON line from subprocess output for suggested_action/unblock_condition.
+    Used for CLI step trackability and actionable responses (e.g. pinned-idea acceptance script).
+    """
+    if not output:
+        return {}
+    hint: dict[str, Any] = {}
+    for line in reversed((output or "").splitlines()):
+        line = (line or "").strip()
+        if line.upper().startswith("[FAILURE]"):
+            rest = line[9:].strip()
+            try:
+                obj = json.loads(rest)
+                if isinstance(obj, dict):
+                    if obj.get("suggested_action"):
+                        hint["cli_failure_suggested_action"] = str(obj["suggested_action"])[:800]
+                    if obj.get("unblock_condition"):
+                        hint["cli_failure_unblock_condition"] = str(obj["unblock_condition"])[:500]
+                    if obj.get("step"):
+                        hint["cli_failure_step"] = str(obj["step"])[:200]
+            except (json.JSONDecodeError, TypeError):
+                pass
+            break
+    return hint
+
+
 def _post_runtime_event(
     client: httpx.Client,
     *,
@@ -6786,6 +6812,7 @@ def run_one_task(
         )
         if _as_bool(contract_observation.get("abort_evidence_met")):
             failure_class = "abort_evidence_triggered"
+        failure_hint = _parse_failure_hint_from_output(output)
         context_patch_base = {
             "target_state_contract": target_contract,
             "target_state_observation": contract_observation,
@@ -6795,6 +6822,8 @@ def run_one_task(
             context_patch_base["timeout_snapshot_at"] = _utc_now_iso()
             context_patch_base["partial_output_len"] = len(output or "")
             context_patch_base["resumable"] = True
+        if failure_hint:
+            context_patch_base.update(failure_hint)
         _patch_task_context(
             client,
             task_id=task_id,
@@ -7337,7 +7366,7 @@ def run_one_task(
                 failure_class=failure_class,
                 attempt=attempt,
                 duration_seconds=duration_sec,
-                extra_context_patch=retry_context_patch,
+                extra_context_patch=(retry_context_patch or {}) | (failure_hint or {}),
             )
             if retry_scheduled:
                 status = "pending"

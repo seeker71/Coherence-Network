@@ -1,5 +1,14 @@
 # Spec: Ideas Prioritization API
 
+## Spec contract summary
+
+| Contract | Content |
+|----------|---------|
+| **IDEA** | Portfolio-governance: track and prioritize ideas via free energy scoring and a structured API. |
+| **SPEC_SCOPE** | Ideas prioritization API (list, get, patch, storage), scoring algorithm, data model, and registry storage. Out of scope: multi-user isolation, CRUD beyond PATCH, versioning, dependencies, auth. |
+| **ACCEPTANCE_CRITERIA** | GET /api/ideas returns ranked ideas and summary; GET /api/ideas/{id} and 404; PATCH updates and persists; GET /api/ideas/storage reports backend and counts. All four tests in `api/tests/test_ideas.py` pass. |
+| **VERIFICATION_PLAN** | See [Verification](#verification) below: pytest for test pass; curl for live list; explicit pass/fail criteria per check. |
+
 ## Purpose
 
 Portfolio-based idea tracking and prioritization using free energy scoring. Enables data-driven decision making by ranking ideas based on potential value, confidence, cost, and resistance risk.
@@ -282,7 +291,7 @@ IdeaUpdate:
 - **Bootstrap**: Imports from legacy JSON file if present, otherwise uses defaults
 - **Compatibility**: Writes `api/logs/idea_portfolio.json` snapshot for existing tooling
 
-## Files
+## Files to Create/Modify
 
 - `api/app/routers/ideas.py` — Route handlers (implemented)
 - `api/app/services/idea_service.py` — Portfolio service (implemented)
@@ -301,6 +310,25 @@ See `api/tests/test_ideas.py`:
 
 All 4 tests passing.
 
+## Verification
+
+Verification plan: executable checks and pass/fail evidence.
+
+| Check | Command | Pass | Fail |
+|-------|---------|------|------|
+| Ideas test suite | `cd api && pytest -q tests/test_ideas.py` | Exit code 0; "passed" in output | Non-zero exit; failures or errors listed |
+| List endpoint (live) | `curl -sS -o /dev/null -w "%{http_code}" http://localhost:8000/api/ideas` | HTTP 200 | Any other status code |
+| List with filter | `curl -sS http://localhost:8000/api/ideas?only_unvalidated=true \| head -c 500` | JSON with `ideas` and `summary` keys | Empty or non-JSON response |
+
+Run the following to validate this spec before marking the idea as accepted:
+
+```bash
+cd api && pytest -q tests/test_ideas.py
+curl -sS http://localhost:8000/api/ideas?only_unvalidated=true | head -c 500
+```
+
+Manual acceptance for the **portfolio-governance** idea: set an idea to `manifestation_status: validated` via `PATCH /api/ideas/{id}` only after all acceptance tests pass and the pipeline has run spec → impl → test → review for this idea.
+
 ## Out of Scope
 
 - Multi-user portfolio isolation (single shared portfolio)
@@ -310,6 +338,15 @@ All 4 tests passing.
 - Real-time collaboration or locking
 - Idea search or filtering beyond manifestation status
 - Authentication or authorization
+
+## Risks and Assumptions
+
+- **Risk:** SQLite default backend may not scale for many concurrent writers; mitigation: use Postgres in production via `DATABASE_URL`.
+- **Assumption:** Idea IDs and manifestation status are the single source of truth for "acceptance"; if inventory/flow derives acceptance from elsewhere, keep them in sync.
+
+## Known Gaps and Follow-up Tasks
+
+- None at spec time. Follow-up: extend portfolio-governance to include flow/inventory acceptance evidence (spec process, implementation, validation) when that contract is stable.
 
 ## Decision Gates
 
