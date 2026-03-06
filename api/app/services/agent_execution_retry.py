@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from app.services import failure_taxonomy_service
+from app.services.agent_routing.model_routing_loader import get_fallback_model, get_model_for_executor
 
 _RETRY_MAX_DEFAULT = 1
 _RETRY_MAX_CAP = 5
@@ -173,6 +174,10 @@ def _truthy(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _codex_executor_disabled() -> bool:
+    return _truthy(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+
+
 def _is_paid_provider_retry_candidate(*, failure_output: str, result_error: str) -> bool:
     if failure_taxonomy_service.is_paid_provider_blocked(
         output_text=failure_output,
@@ -200,7 +205,9 @@ def _resolve_retry_model_override(context: dict[str, Any]) -> str:
     context_model_override = str(context.get("model_override") or "").strip()
     if context_model_override:
         return context_model_override
-    return "gpt-5.3-codex"
+    if _codex_executor_disabled():
+        return get_model_for_executor("openrouter", "default") or "openrouter/free"
+    return get_model_for_executor("codex", "default") or "gpt-5.3-codex"
 
 
 def _is_codex_spark_model(model_name: str) -> bool:
@@ -232,6 +239,7 @@ def _build_retry_override(
     current_model: str,
     retry_count: int,
 ) -> dict[str, Any]:
+    preferred_executor = "openrouter" if _codex_executor_disabled() else "codex"
     if _auto_retry_openai_override_enabled(context) and _is_paid_provider_retry_candidate(
         failure_output=failure_output,
         result_error=result_error,
@@ -244,17 +252,20 @@ def _build_retry_override(
             "model_override": retry_model_override,
             "retry_route_guidance": "paid_provider_blocked",
             "retry_route_suggestion": {
-                "executor": "codex",
+                "executor": preferred_executor,
                 "model_override": retry_model_override,
                 "source": "auto_retry_openai_override",
             },
         }
-    if _is_codex_spark_model(current_model) and retry_count == 0:
+    if (not _codex_executor_disabled()) and _is_codex_spark_model(current_model) and retry_count == 0:
+        spark_fallback = get_fallback_model("codex", current_model.split("/")[-1] if "/" in current_model else current_model)
+        fallback_model = spark_fallback or get_model_for_executor("codex", "default") or "gpt-5.3-codex"
         return {
+            "model_override": fallback_model,
             "retry_route_guidance": "spark_usage_limit_or_access_issue",
             "retry_route_suggestion": {
                 "executor": "codex",
-                "model_override": "gpt-5.3-codex",
+                "model_override": fallback_model,
                 "source": "spark_fallback_recommendation",
             },
             "spark_fallback_retry_applied": True,
@@ -367,6 +378,17 @@ def record_failure_hits_and_retry(
     context_patch.update(override_patch)
     if override_patch.get("force_paid_providers"):
         retry_force_paid_providers = True
+    # Config-driven model fallback when model is out of usage (rate-limit/quota)
+    if failure_category in ("rate_limit", "paid_provider_blocked"):
+        executor = str(context.get("executor") or "").strip()
+        current_model_id = (current_model or "").strip()
+        if "/" in current_model_id:
+            current_model_id = current_model_id.split("/")[-1]
+        if executor:
+            fallback = get_fallback_model(executor, current_model_id)
+            if fallback:
+                context_patch["model_override"] = fallback
+                context_patch["retry_fallback_from_config"] = True
 
     update_task(
         task_id,

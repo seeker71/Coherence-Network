@@ -53,8 +53,11 @@ import httpx
 BASE = os.environ.get("AGENT_API_BASE", "http://localhost:8000")
 LOG_DIR = os.path.join(_api_dir, "logs")
 LOG_FILE = os.path.join(LOG_DIR, "agent_runner.log")
-# Local models need longer; cloud/Claude typically faster. Default 1h for local, 10min for cloud.
-TASK_TIMEOUT = int(os.environ.get("AGENT_TASK_TIMEOUT", "3600"))
+# Local models need longer; cloud/Claude typically faster. Default 1h. Set to 0 to disable timeout (avoid burning budget on aborted long runs; use progress/resume instead).
+TASK_TIMEOUT_RAW = int(os.environ.get("AGENT_TASK_TIMEOUT", "3600"))
+TASK_TIMEOUT = TASK_TIMEOUT_RAW if TASK_TIMEOUT_RAW > 0 else 0
+# When TASK_TIMEOUT is 0 we never kill the process; runner relies on progress snapshots and manual abort/resume.
+NO_TIMEOUT_SENTINEL_SECONDS = 86400 * 365  # 1 year (effectively no deadline)
 HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
 MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
 RETRY_BACKOFF = 2  # seconds between retries
@@ -1420,6 +1423,65 @@ def _tail_output_lines(lines: list[str], max_chars: int = TASK_LOG_TAIL_CHARS) -
     return _tail_text(tail, max_chars)
 
 
+def _parse_agent_activity_from_output(lines: list[str]) -> tuple[str, list[dict[str, Any]]]:
+    """Parse recent stdout lines for structured agent events (e.g. stream-json) and [STATUS] lines; return (current_step, recent_activity).
+    Handles JSON lines with type/event/name; also [STATUS] <step> from agent self-reporting; falls back to 'Running' when no parseable events.
+    """
+    step = "Running"
+    activities: list[dict[str, Any]] = []
+    max_activities = 25
+    for line in reversed(lines[-500:]):
+        line = (line or "").strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.upper().startswith("[STATUS]"):
+            label = line[8:].strip() or "Reported"
+            if not activities or activities[-1].get("step") != label:
+                activities.append({"step": label})
+            if len(activities) >= max_activities:
+                break
+            if step == "Running":
+                step = label
+            continue
+        try:
+            obj = json.loads(line)
+            if not isinstance(obj, dict):
+                continue
+            kind = (obj.get("type") or obj.get("event") or obj.get("kind") or "").lower()
+            name = obj.get("name") or obj.get("tool_name") or obj.get("tool")
+            # Normalize to a short label for current_step and activity list
+            if "content_block_delta" in kind or "text_delta" in kind or "delta" in str(obj):
+                label = "Thinking"
+            elif "input_tool_use" in kind or "tool_use" in kind or name:
+                label = f"Tool: {name}" if name else "Tool"
+            elif "tool_result" in kind or "tool_result" in str(obj):
+                label = "Tool result"
+            elif "message_start" in kind or "message_start" == kind:
+                label = "Started"
+            elif "content_block_start" in kind:
+                block = obj.get("content_block") or obj.get("block") or {}
+                block_type = (block.get("type") or block.get("block_type") or "").lower()
+                if "tool_use" in block_type:
+                    label = f"Tool: {(block.get('name') or block.get('tool_name') or '')}" or "Tool"
+                else:
+                    label = "Thinking"
+            elif "result" in kind or "complete" in kind:
+                label = "Complete"
+            else:
+                label = kind or "Running"
+            if label not in ("Running", ""):
+                if not activities or activities[-1].get("step") != label:
+                    activities.append({"step": label})
+                if len(activities) >= max_activities:
+                    break
+                if step == "Running":
+                    step = label
+        except (json.JSONDecodeError, TypeError):
+            continue
+    activities.reverse()
+    return (step, activities[:20])
+
+
 def _safe_get_task_snapshot(client: httpx.Client, task_id: str) -> dict[str, Any] | None:
     getter = getattr(client, "get", None)
     if getter is None:
@@ -1565,14 +1627,13 @@ def _patch_task_progress(
     client: httpx.Client,
     *,
     task_id: str,
-    progress_pct: int,
+    progress_pct: int | None,
     current_step: str,
     context_patch: dict[str, Any],
 ) -> None:
-    patch_payload: dict[str, Any] = {
-        "progress_pct": int(max(0, min(100, progress_pct))),
-        "current_step": current_step[:300],
-    }
+    patch_payload: dict[str, Any] = {"current_step": current_step[:300]}
+    if progress_pct is not None:
+        patch_payload["progress_pct"] = int(max(0, min(100, progress_pct)))
     if context_patch:
         patch_payload["context"] = context_patch
     try:
@@ -2371,6 +2432,8 @@ _TASK_RUNTIME_ENV_BY_TYPE = {
 
 
 def _default_runtime_seconds_for_task_type(task_type: str) -> int:
+    if TASK_TIMEOUT == 0:
+        return NO_TIMEOUT_SENTINEL_SECONDS
     task_type_normalized = str(task_type or "").strip().lower()
     baseline = _TASK_RUNTIME_DEFAULTS.get(task_type_normalized, TASK_TIMEOUT)
     env_name = _TASK_RUNTIME_ENV_BY_TYPE.get(task_type_normalized)
@@ -3129,12 +3192,6 @@ def _uses_gemini_cli(command: str) -> bool:
     return command.strip().startswith("gemini ")
 
 
-def _uses_openclaw_cli(command: str) -> bool:
-    """True if command uses OpenClaw CLI."""
-    stripped = command.strip()
-    return stripped.startswith("openclaw ") or stripped.startswith("clawwork ")
-
-
 def _uses_codex_cli(command: str) -> bool:
     return command.strip().startswith("codex ")
 
@@ -3819,7 +3876,7 @@ def _prepare_cli_command_for_exec(command: str) -> tuple[str | list[str], bool, 
         _uses_codex_cli(cmd)
         or _uses_cursor_cli(cmd)
         or _uses_gemini_cli(cmd)
-        or _uses_openclaw_cli(cmd)
+        or _uses_codex_cli(cmd)
         or _uses_claude_cli(cmd)
     ):
         return cmd, True, "shell"
@@ -5257,7 +5314,7 @@ def _infer_executor(command: str, model: str) -> str:
         return "openrouter"
     if _uses_codex_cli(command):
         return "codex"
-    if _uses_openclaw_cli(command) or model_value.startswith(("openclaw/", "clawwork/")):
+    if _uses_codex_cli(command) or model_value.startswith("codex/"):
         return "codex"
     if model_value.startswith("codex/"):
         return "codex"
@@ -5824,7 +5881,10 @@ def _dispatch_openrouter_server_executor(
 
     default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
     requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
-    max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
+    if TASK_TIMEOUT == 0:
+        max_runtime_seconds = NO_TIMEOUT_SENTINEL_SECONDS
+    else:
+        max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
     deadline = time.monotonic() + float(max_runtime_seconds)
     while time.monotonic() < deadline:
         snapshot = _safe_get_task_snapshot(client, task_id)
@@ -5878,6 +5938,20 @@ def run_one_task(
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     requested_executor = str(task_ctx.get("executor") or "").strip().lower()
     inferred_executor = _infer_executor(command, model)
+    codex_disabled = _as_bool(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+    if codex_disabled and (requested_executor in {"codex", "openclaw", "clawwork"} or inferred_executor == "codex"):
+        patched_ctx = dict(task_ctx)
+        patched_ctx["executor"] = "openrouter"
+        patched_ctx["codex_disabled_remap"] = True
+        log.info("task=%s remapping codex executor to openrouter (AGENT_DISABLE_CODEX_EXECUTOR=1)", task_id)
+        return _dispatch_openrouter_server_executor(
+            client=client,
+            task_id=task_id,
+            task_ctx=patched_ctx,
+            task_type=str(task_type or "impl"),
+            worker_id=worker_id,
+            log=log,
+        )
     if requested_executor == "openrouter" or inferred_executor == "openrouter":
         return _dispatch_openrouter_server_executor(
             client=client,
@@ -5939,7 +6013,7 @@ def run_one_task(
             )
         if "--dangerously-bypass-approvals-and-sandbox" not in command:
             command = f"{command} --dangerously-bypass-approvals-and-sandbox"
-    elif _uses_openclaw_cli(command):
+    elif _uses_codex_cli(command):
         env.setdefault("OPENCLAW_API_KEY", os.environ.get("OPENCLAW_API_KEY", ""))
         env.setdefault("OPENCLAW_BASE_URL", os.environ.get("OPENCLAW_BASE_URL", ""))
         log.info("task=%s using OpenClaw executor", task_id)
@@ -6370,12 +6444,16 @@ def run_one_task(
 
         default_runtime_seconds = _default_runtime_seconds_for_task_type(task_type)
         requested_runtime = _to_int(task_ctx.get("max_runtime_seconds"), default_runtime_seconds)
-        max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
+        if TASK_TIMEOUT == 0:
+            max_runtime_seconds = NO_TIMEOUT_SENTINEL_SECONDS
+        else:
+            max_runtime_seconds = max(30, min(TASK_TIMEOUT, requested_runtime))
         timed_out = False
         stopped_for_usage = False
         stopped_for_abort = False
         abort_reason = ""
         diagnostic_completed_id = str(task_ctx.get("diagnostic_last_completed_id") or "").strip()
+        unlimited_time = max_runtime_seconds >= NO_TIMEOUT_SENTINEL_SECONDS
         if hasattr(process, "poll"):
             deadline = start_time + float(max_runtime_seconds)
             next_heartbeat = time.monotonic() + RUN_HEARTBEAT_SECONDS
@@ -6388,25 +6466,25 @@ def run_one_task(
             )
             while process.poll() is None:
                 now = time.monotonic()
-                if now >= deadline:
+                if not unlimited_time and now >= deadline:
                     timed_out = True
                     output_lines.append(f"\n[Timeout {max_runtime_seconds}s]\n")
                     break
                 if now >= next_heartbeat:
-                    elapsed = max(0.0, now - start_time)
-                    approx_progress = min(95, max(1, int((elapsed / max_runtime_seconds) * 90)))
                     tail = _tail_output_lines(output_lines)
+                    current_step, recent_activity = _parse_agent_activity_from_output(output_lines)
                     _patch_task_progress(
                         client,
                         task_id=task_id,
-                        progress_pct=approx_progress,
-                        current_step="running command",
+                        progress_pct=None,
+                        current_step=current_step,
                         context_patch={
                             "runner_id": worker_id,
                             "runner_run_id": run_id,
                             "runner_last_seen_at": _utc_now_iso(),
                             "runner_pid": getattr(process, "pid", None),
                             "runner_log_tail": tail,
+                            "runner_recent_activity": recent_activity,
                         },
                     )
                     _sync_run_state(
@@ -6475,7 +6553,7 @@ def run_one_task(
                                 _patch_task_progress(
                                     client,
                                     task_id=task_id,
-                                    progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                    progress_pct=None,
                                     current_step="diagnostic cooldown active",
                                     context_patch=context_patch,
                                 )
@@ -6514,7 +6592,7 @@ def run_one_task(
                                     _patch_task_progress(
                                         client,
                                         task_id=task_id,
-                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                        progress_pct=None,
                                         current_step="diagnostic limited by cadence",
                                         context_patch=context_patch,
                                     )
@@ -6544,7 +6622,7 @@ def run_one_task(
                                     _patch_task_progress(
                                         client,
                                         task_id=task_id,
-                                        progress_pct=min(95, max(1, int(((now - start_time) / max_runtime_seconds) * 90))),
+                                        progress_pct=None,
                                         current_step="running diagnostic",
                                         context_patch=context_patch,
                                     )
@@ -6590,18 +6668,20 @@ def run_one_task(
                         break
                     next_control_poll = now + CONTROL_POLL_SECONDS
                 if now >= next_progress_patch:
-                    elapsed = max(0.0, now - start_time)
-                    approx_progress = min(95, max(1, int((elapsed / max_runtime_seconds) * 90)))
+                    tail = _tail_output_lines(output_lines)
+                    current_step, recent_activity = _parse_agent_activity_from_output(output_lines)
                     _patch_task_progress(
                         client,
                         task_id=task_id,
-                        progress_pct=approx_progress,
-                        current_step="running command",
+                        progress_pct=None,
+                        current_step=current_step,
                         context_patch={
                             "runner_id": worker_id,
                             "runner_run_id": run_id,
                             "runner_last_seen_at": _utc_now_iso(),
-                            "runner_log_tail": _tail_output_lines(output_lines),
+                            "runner_pid": getattr(process, "pid", None),
+                            "runner_log_tail": tail,
+                            "runner_recent_activity": recent_activity,
                         },
                     )
                     next_progress_patch = now + max(2, min(RUN_HEARTBEAT_SECONDS, CONTROL_POLL_SECONDS))
@@ -6643,12 +6723,15 @@ def run_one_task(
                     break
                 time.sleep(1)
         else:
-            # Legacy/mocked process objects may only support wait(timeout=...).
-            try:
-                process.wait(timeout=max_runtime_seconds)
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                output_lines.append(f"\n[Timeout {max_runtime_seconds}s]\n")
+            # Legacy/mocked process objects may only support wait(timeout=...). When no timeout, wait indefinitely.
+            if unlimited_time:
+                process.wait()
+            else:
+                try:
+                    process.wait(timeout=max_runtime_seconds)
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    output_lines.append(f"\n[Timeout {max_runtime_seconds}s]\n")
 
         if timed_out or stopped_for_usage or stopped_for_abort:
             try:
@@ -6703,14 +6786,19 @@ def run_one_task(
         )
         if _as_bool(contract_observation.get("abort_evidence_met")):
             failure_class = "abort_evidence_triggered"
+        context_patch_base = {
+            "target_state_contract": target_contract,
+            "target_state_observation": contract_observation,
+            "target_state_last_observed_at": _utc_now_iso(),
+        }
+        if timed_out:
+            context_patch_base["timeout_snapshot_at"] = _utc_now_iso()
+            context_patch_base["partial_output_len"] = len(output or "")
+            context_patch_base["resumable"] = True
         _patch_task_context(
             client,
             task_id=task_id,
-            context_patch={
-                "target_state_contract": target_contract,
-                "target_state_observation": contract_observation,
-                "target_state_last_observed_at": _utc_now_iso(),
-            },
+            context_patch=context_patch_base,
         )
 
         with open(out_file, "a", encoding="utf-8") as f:
@@ -7631,6 +7719,17 @@ def poll_and_run(
 
         data = r.json()
         tasks = data.get("tasks") or []
+        pin_id = os.environ.get("AGENT_TASK_ID", "").strip()
+        if pin_id:
+            tasks = [t for t in tasks if str(t.get("id") or "") == pin_id]
+            if not tasks:
+                r_pin = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{pin_id}", log)
+                if r_pin and r_pin.status_code == 200:
+                    full = r_pin.json()
+                    if str(full.get("status") or "").lower() == "pending":
+                        tasks = [full]
+                if not tasks:
+                    log.warning("AGENT_TASK_ID=%s not found or not pending", pin_id)
         if not tasks:
             created_count = _auto_generate_tasks_when_idle(client, log)
             if created_count > 0:

@@ -14,6 +14,15 @@ from app.services import agent_execution_service as execution_service
 from app.services import agent_task_continuation_service as continuation_service
 
 
+def _codex_executor_disabled() -> bool:
+    return str(execution_service.os.getenv("AGENT_DISABLE_CODEX_EXECUTOR", "1")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _emit_lifecycle_event(
     event: str,
     *,
@@ -313,6 +322,8 @@ def _run_execution(
     executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
     if executor in {"openclaw", "clawwork"}:
         executor = "codex"
+    if executor == "codex" and _codex_executor_disabled():
+        executor = "openrouter"
 
     execution_service._write_task_log(
         task_id,
@@ -523,14 +534,14 @@ def _claim_and_load_task(task_id: str, worker_id: str) -> tuple[dict[str, Any] |
 def execute_task(
     task_id: str,
     *,
-    worker_id: str = "codex-worker:server",
+    worker_id: str = "agent-worker:server",
     force_paid_providers: bool = False,
     max_cost_usd: float | None = None,
     estimated_cost_usd: float | None = None,
     cost_slack_ratio: float | None = None,
     _retry_depth: int = 0,
 ) -> dict[str, Any]:
-    """Execute a task with executor-aware routing (Codex CLI for codex executor)."""
+    """Execute a task with executor-aware routing."""
     task, claim_error = _claim_and_load_task(task_id, worker_id)
     if claim_error:
         return {"ok": False, "error": claim_error}

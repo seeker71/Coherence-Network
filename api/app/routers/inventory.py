@@ -56,8 +56,10 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
     if not task_ids:
         return
 
-    model_override = os.environ.get("AGENT_AUTO_EXECUTE_MODEL", "openrouter/free")
     from app.services import agent_execution_service
+    from app.services.agent_routing.model_routing_loader import get_auto_execute_default_model
+
+    model_override = os.environ.get("AGENT_AUTO_EXECUTE_MODEL") or get_auto_execute_default_model()
 
     for task_id in task_ids[:20]:
         try:
@@ -65,11 +67,11 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
             task_ctx = task.get("context") if isinstance(task, dict) else {}
             context_patch: dict[str, object] = {}
             if not isinstance(task_ctx, dict):
-                context_patch["executor"] = "openclaw"
+                context_patch["executor"] = "openrouter"
                 context_patch["model_override"] = model_override
             else:
                 if not str(task_ctx.get("executor") or "").strip():
-                    context_patch["executor"] = "openclaw"
+                    context_patch["executor"] = "openrouter"
                 if not str(task_ctx.get("model_override") or "").strip():
                     context_patch["model_override"] = model_override
             if context_patch:
