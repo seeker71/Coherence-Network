@@ -1,4 +1,10 @@
-"""Agent executor selection, command templates, and integration gaps."""
+"""Agent executor selection, command templates, and integration gaps.
+
+Provider-specific code is the exception and must live here (or in command_templates).
+Allowed: (1) command template selection per executor, (2) apply_resume_to_command,
+(3) post_process_command, (4) data maps (RUNNER_AUTH_MODE_*, MODEL_PREFIX_*).
+Orchestration/crud must not branch on executor; they call these helpers.
+"""
 
 import hashlib
 import os
@@ -9,6 +15,10 @@ from typing import Any, Optional
 
 from app.models.agent import TaskType
 from app.services import agent_routing_service as routing_service
+from app.services.agent_routing.executor_routing_loader import (
+    get_model_prefix as _loader_model_prefix,
+    get_runner_auth_context_key as _loader_runner_auth_key,
+)
 
 ROUTING = routing_service.ROUTING
 
@@ -23,6 +33,14 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
 GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
     TaskType.REVIEW: ["spec-guard"],
 }
+
+# --- Executor-specific data: from config (executor_routing.json); no hardcoded maps. Openrouter uses enforce_openrouter_free_model; no prefix. ---
+def _runner_auth_context_key(executor: str) -> str | None:
+    return _loader_runner_auth_key(executor)
+
+
+def _model_prefix(executor: str) -> str:
+    return _loader_model_prefix(executor) or ""
 
 _COMMAND_LOCAL_AGENT = 'claude -p "{{direction}}" --dangerously-skip-permissions'
 _COMMAND_HEAL = 'claude -p "{{direction}}" --dangerously-skip-permissions'
@@ -84,7 +102,7 @@ def _escalation_executor_default() -> str:
     cheap = _cheap_executor_default()
     if cheap == "gemini":
         return "gemini"
-    return "claude" if cheap != "claude" else "codex"
+    return "claude" if cheap != "claude" else "gemini"
 
 
 def _executor_binary_name(executor: str) -> str:
@@ -183,17 +201,16 @@ def _first_available_executor(preferred: list[str]) -> str:
     configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
     if configured_default and _executor_available(configured_default):
         return configured_default
-    for candidate in ("codex", "gemini", "cursor", "claude"):
+    for candidate in ("gemini", "cursor", "claude", "openrouter"):
         if _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="codex")
+    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
 
 
 def _executor_fallback_candidates() -> list[str]:
     return [
         _cheap_executor_default(),
         _escalation_executor_default(),
-        "codex",
         "gemini",
         "openrouter",
         "cursor",
@@ -353,14 +370,14 @@ def _select_executor_with_retry_policy(
         if cheap == "gemini":
             escalate_to = "gemini"
         else:
-            escalate_to = "claude" if cheap != "claude" else "codex"
+            escalate_to = "claude" if cheap != "claude" else "gemini"
 
     stats = _prior_attempt_stats(task_fingerprint, tasks)
     retry_hint = _task_retry_hint(context)
     effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
     should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
     candidates = _dedupe_executors(
-        [cheap, escalate_to, "codex", "gemini", "cursor", "claude"] + (["openrouter"] if budget_pressure else [])
+        [cheap, escalate_to, "gemini", "cursor", "claude"] + (["openrouter"] if budget_pressure else [])
     )
     selected = escalate_to if should_escalate else cheap
     if selected == "openrouter" and not budget_pressure:
@@ -449,8 +466,8 @@ def _repo_question_executor_default() -> str:
 def _open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return _normalize_executor(configured, default="codex")
-    return "codex"
+        return _normalize_executor(configured, default="cursor")
+    return "cursor"
 
 
 def select_executor(
@@ -459,21 +476,15 @@ def select_executor(
     """Select executor and return (executor, policy_meta). Caller passes current task list for retry/budget stats."""
     explicit = _normalize_executor(context.get("executor"), default="")
     if explicit:
+        # Always honor client-requested executor so local runners get the right command
+        # (API node may not have claude in PATH; runner often does).
         if _executor_available(explicit):
             return explicit, {"policy_applied": False, "reason": "explicit_executor"}
-        if _allow_unavailable_explicit_executor():
-            return explicit, {
-                "policy_applied": True,
-                "reason": "explicit_executor_forced",
-                "explicit_executor": explicit,
-                "availability": "unavailable_on_api_node",
-            }
-        fallback = _first_available_executor(_executor_fallback_candidates())
-        return fallback, {
+        return explicit, {
             "policy_applied": True,
-            "reason": "explicit_executor_unavailable",
+            "reason": "explicit_executor_forced",
             "explicit_executor": explicit,
-            "fallback_executor": fallback,
+            "availability": "unavailable_on_api_node",
         }
 
     if not _executor_policy_enabled():
@@ -501,7 +512,6 @@ def select_executor(
                 _repo_question_executor_default(),
                 "cursor",
                 "claude",
-                "codex",
                 "gemini",
             ]
             + (["openrouter"] if budget_pressure else [])
@@ -519,14 +529,13 @@ def select_executor(
     selected_open = _first_available_executor(
         [
             _open_question_executor_default(),
-            "codex",
-            "gemini",
             "cursor",
             "claude",
+            "gemini",
         ]
         + (["openrouter"] if budget_pressure else [])
     )
-    if selected_open == "codex":
+    if selected_open:
         return selected_open, {
             "policy_applied": True,
             "reason": "open_question_default",
@@ -565,10 +574,6 @@ def _cursor_command_template(task_type: TaskType) -> str:
     return routing_service.cursor_command_template(task_type)
 
 
-def _openclaw_command_template(task_type: TaskType) -> str:
-    return routing_service.codex_command_template(task_type)
-
-
 def _openrouter_command_template(task_type: TaskType) -> str:
     return routing_service.openrouter_command_template(task_type)
 
@@ -576,21 +581,43 @@ def _openrouter_command_template(task_type: TaskType) -> str:
 def _with_agent_roles(
     direction: str, task_type: TaskType, primary_agent: str | None, guard_agents: list[str]
 ) -> str:
-    lines: list[str] = []
-    if primary_agent:
-        lines.append(f"Role agent: {primary_agent}.")
-    if guard_agents:
-        lines.append(f"Guard agents: {', '.join(guard_agents)}.")
-    lines.append(f"Task type: {task_type.value}.")
-    lines.append("Respect role boundaries, spec scope, and acceptance criteria.")
-    if task_type == TaskType.REVIEW:
-        lines.append("Output contract: PASS_FAIL, FINDINGS, SPEC_VERIFICATION_STATUS, PATCH_GUIDANCE.")
-        lines.append("If PASS_FAIL is FAIL, PATCH_GUIDANCE must include file paths and concrete patch steps.")
-    elif task_type == TaskType.SPEC:
-        lines.append("Output contract: IDEA, SPEC_SCOPE, ACCEPTANCE_CRITERIA, VERIFICATION_PLAN.")
-        lines.append("VERIFICATION_PLAN must include executable checks and clear pass/fail evidence.")
-    lines.append(f"Direction: {direction}")
-    return " ".join(lines)
+    """Wrap direction with role/contract lines from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import build_direction_with_roles
+
+    return build_direction_with_roles(
+        direction, task_type, primary_agent, guard_agents if guard_agents else None
+    )
+
+
+def apply_runner_auth_defaults(executor: str, ctx: dict[str, Any]) -> None:
+    """Set runner auth context key from config (executor_routing.json). No per-executor branching in callers."""
+    key = _runner_auth_context_key(executor)
+    if key:
+        ctx[key] = "oauth"
+
+
+def format_model_override(executor: str, applied_override: str) -> str:
+    """Return model string for storage/display. Openrouter uses enforce_openrouter_free_model; others use config model_prefix."""
+    if executor == "openrouter":
+        return routing_service.enforce_openrouter_free_model(applied_override)
+    prefix = _model_prefix(executor)
+    return f"{prefix}/{applied_override}" if prefix else applied_override
+
+
+def post_process_command(executor: str, command: str) -> str:
+    """Only place for executor-specific command-line post-processing (e.g. add required flags). All such logic lives here."""
+    if executor == "claude" and "claude -p" in command and "--dangerously-skip-permissions" not in command:
+        return command.rstrip() + " --dangerously-skip-permissions"
+    return command
+
+
+def apply_resume_to_command(executor: str, command: str, context: dict[str, Any]) -> str:
+    """Apply executor-specific resume/continue flag (command construction). Only exception: how to build the CLI invocation."""
+    if not context.get("resume") and not context.get("resume_session_id"):
+        return command
+    if executor == "claude" and "claude -p" in command:
+        return command.replace("claude -p", "claude -c -p", 1)
+    return command
 
 
 def build_command(direction: str, task_type: TaskType, executor: str = "claude") -> str:
@@ -598,7 +625,7 @@ def build_command(direction: str, task_type: TaskType, executor: str = "claude")
     if executor == "cursor":
         template = _cursor_command_template(task_type)
     elif executor == "codex":
-        template = _openclaw_command_template(task_type)
+        template = routing_service.codex_command_template(task_type)
     elif executor == "gemini":
         template = routing_service.gemini_command_template(task_type)
     elif executor == "openrouter":
@@ -643,7 +670,6 @@ def get_integration_gaps() -> dict[str, Any]:
     binary_checks = {
         "claude": _executor_available("claude"),
         "agent": _executor_available("cursor"),
-        "codex": _executor_available("codex"),
         "gemini": _executor_available("gemini"),
         "openrouter": _executor_available("openrouter"),
     }
@@ -714,7 +740,7 @@ def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
     if executor == "auto":
         executor = _cheap_executor_default()
         if executor == "openrouter":
-            executor = _first_available_executor(["codex", "gemini", "cursor", "claude"])
+            executor = _first_available_executor(["gemini", "cursor", "claude", "openrouter"])
     return routing_service.route_for_executor(
         task_type,
         _normalize_executor(executor, default="claude"),
