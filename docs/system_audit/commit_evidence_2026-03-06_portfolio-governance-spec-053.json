@@ -59,9 +59,11 @@
     "api/scripts/agent_runner.py",
     "api/tests/test_automation_usage_api.py",
     "docs/AGENT-DEBUGGING.md",
+    "docs/SPEC-TRACKING.md",
     "scripts/run_pinned_idea_acceptance.py",
     "specs/053-ideas-prioritization.md",
-    "docs/system_audit/commit_evidence_2026-03-06_portfolio-governance-spec-053.json"
+    "docs/system_audit/commit_evidence_2026-03-06_portfolio-governance-spec-053.json",
+    "docs/system_audit/commit_evidence_2026-03-06_spec-114-tracking.json"
   ],
   "change_intent": "runtime_fix"
 }

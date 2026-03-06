@@ -25,8 +25,9 @@ Quick reference: spec status, test coverage, last verified.
 | 093 | ✓ | ✓ | ✓ |
 | 094 | ✓ | ✓ | ✓ |
 | 100 | ✓ | ✓ | ✓ |
+| 114 | ✓ | ✓ | ✓ |
 
-**Total:** 38 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056, 090–094, 100).
+**Total:** 39 tracked specs implemented and covered (001–025 excluding 006, 015, plus 048–056, 090–094, 100).
 
 ## Test Verification
 
@@ -69,6 +70,7 @@ cd web && npm run build      # 11 routes
 | 093 | web build + manual OS light/dark theme verification |
 | 094 | test_ideas.py, test_spec_registry_api.py, test_governance_api.py, web build + manual /contribute flow |
 | 100 | test_automation_usage_api.py, test_inventory_api.py |
+| 114 | test_runtime_api.py (MVP acceptance-summary, acceptance-judge) |
 
 ## Last Updated
 
