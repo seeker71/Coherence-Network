@@ -83,6 +83,6 @@ def test_tasks_list_skips_runtime_backfill_when_store_is_populated_by_default(
 
     monkeypatch.setattr(runtime_service, "list_events", _raise_if_called)
 
-    rows, total = agent_service.list_tasks(limit=20, offset=0)
+    rows, total, _ = agent_service.list_tasks(limit=20, offset=0)
     assert total == 1
     assert rows[0]["id"] == created["id"]

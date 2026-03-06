@@ -6,8 +6,8 @@ import os
 from fastapi import APIRouter
 from datetime import datetime, timezone
 
+from app.routers import agent_monitor_helpers
 from app.routers.agent_monitor_helpers import (
-    agent_logs_dir,
     build_fallback_status_report,
     merge_meta_questions_into_report,
     read_json_dict,
@@ -24,7 +24,7 @@ router = APIRouter()
 async def get_status_report() -> dict:
     """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
     Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
-    logs_dir = agent_logs_dir()
+    logs_dir = agent_monitor_helpers.agent_logs_dir()
     path = os.path.join(logs_dir, "pipeline_status_report.json")
     now = datetime.now(timezone.utc)
     report = read_json_dict(path)
@@ -33,6 +33,10 @@ async def get_status_report() -> dict:
         now=now,
         max_age_seconds=status_report_max_age_seconds(),
     ):
+        report = dict(report)
+        report.setdefault("fallback_reason", None)
+        report.setdefault("source", "monitor_report")
+        report.setdefault("fallbacks_used", [])
         return merge_meta_questions_into_report(report, logs_dir)
 
     if not os.path.isfile(path):

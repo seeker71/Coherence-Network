@@ -408,6 +408,7 @@ def build_fallback_status_report(
         "layer_3_attention": layer3,
         "source": "derived_pipeline_status",
         "fallback_reason": fallback_reason,
+        "fallbacks_used": [fallback_reason],
     }
     stale_generated = str(stale_report_generated_at or "").strip()
     if stale_generated:

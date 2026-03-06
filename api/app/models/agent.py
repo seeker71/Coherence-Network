@@ -206,10 +206,11 @@ class AgentTaskListItem(BaseModel):
 
 
 class AgentTaskList(BaseModel):
-    """List of tasks with total."""
+    """List of tasks with total. meta reports fallbacks (e.g. runtime_fallback_backfill_count) for validation."""
 
     tasks: List[AgentTaskListItem]
     total: int
+    meta: Optional[dict] = None
 
 
 class RouteResponse(BaseModel):

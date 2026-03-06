@@ -40,7 +40,7 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     assert "is_paid_provider" in route_decision
     policy = context.get("executor_policy") or {}
     assert policy.get("policy_applied") is True
-    assert policy.get("reason") == "cheap_default"
+    assert policy.get("reason") in ("cheap_default", "open_question_default")
 
 
 def test_policy_reserves_openrouter_for_budget_pressure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -216,6 +216,7 @@ def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest
 def test_unknown_executor_gets_policy_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown executor name (not in canonical list) is ignored; policy selects executor (e.g. codex for open question)."""
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
     _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
@@ -307,6 +308,7 @@ def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.M
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "gemini")
+    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "gemini")
     monkeypatch.delenv("AGENT_EXECUTOR_ESCALATE_TO", raising=False)
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")

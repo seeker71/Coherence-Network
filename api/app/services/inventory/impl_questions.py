@@ -27,7 +27,7 @@ def _question_fingerprint(idea_id: str, question: str) -> str:
 
 
 def _active_impl_question_fingerprints() -> set[str]:
-    tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
+    tasks, _, _ = agent_service.list_tasks(limit=100000, offset=0)
     fingerprints: set[str] = set()
     for task in tasks:
         status = task.get("status")

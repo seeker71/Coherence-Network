@@ -57,7 +57,7 @@ async def pickup_and_execute_task(
             raise HTTPException(status_code=404, detail="Task not found")
         task = requeue_terminal_task_for_execute(task_id, task)
     else:
-        pending, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
+        pending, _, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
         if not pending:
             return {"ok": False, "picked": False, "reason": "No pending tasks"}
         task = pending[-1]

@@ -3,6 +3,7 @@
 import os
 from typing import Any, List, Optional, Tuple
 
+from app.config_loader import get_bool
 from app.models.agent import TaskStatus, TaskType
 
 from app.services import agent_task_store_service
@@ -91,9 +92,14 @@ def list_tasks(
     task_type: Optional[TaskType] = None,
     limit: int = 20,
     offset: int = 0,
-) -> tuple:
-    """List tasks with optional filters. Sorted by created_at descending."""
-    if agent_task_store_service.enabled():
+) -> tuple[list[dict[str, Any]], int, int]:
+    """List tasks with optional filters. Sorted by created_at descending.
+    Returns (items, total, runtime_fallback_backfill_count)."""
+    raw = os.getenv("AGENT_TASKS_USE_DB")
+    if raw is None:
+        raw = "1" if get_bool("agent_tasks", "use_db") else "0"
+    use_db = str(raw).strip().lower() not in ("0", "false", "no", "off")
+    if use_db and agent_task_store_service.enabled():
         status_value = status.value if isinstance(status, TaskStatus) else None
         task_type_value = task_type.value if isinstance(task_type, TaskType) else None
         rows, total = agent_task_store_service.load_tasks_page(
@@ -111,6 +117,7 @@ def list_tasks(
                 continue
             _store[task["id"]] = task
             items.append(task)
+        runtime_backfill = 0
         if total == 0 and status is None and task_type is None and offset == 0:
             events = _runtime_fallback_events_for_tasks(0)
             seen: set[str] = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
@@ -120,21 +127,24 @@ def list_tasks(
                     continue
                 items.append(derived)
                 seen.add(str(derived.get("id") or ""))
+                runtime_backfill += 1
             items.sort(key=lambda t: t["created_at"], reverse=True)
             items = items[:limit]
             total = len(items)
-        return items, total
+        return items, total, runtime_backfill
 
     _ensure_store_loaded(include_output=False)
     items = list(_store.values())
     events = _runtime_fallback_events_for_tasks(len(items))
     seen = {str(t.get("id") or "") for t in items if isinstance(t, dict)}
+    runtime_backfill = 0
     for event in events:
         derived = _runtime_completion_event_to_task(event, seen)
         if derived is None:
             continue
         items.append(derived)
         seen.add(str(derived.get("id") or ""))
+        runtime_backfill += 1
     if status is not None:
         items = [t for t in items if t["status"] == status]
     if task_type is not None:
@@ -142,7 +152,7 @@ def list_tasks(
     total = len(items)
     items.sort(key=lambda t: t["created_at"], reverse=True)
     items = items[offset : offset + limit]
-    return items, total
+    return items, total, runtime_backfill
 
 
 def get_attention_tasks(limit: int = 20) -> Tuple[List[dict], int]:

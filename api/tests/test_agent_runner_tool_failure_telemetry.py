@@ -36,7 +36,7 @@ class _Client:
         self.patches.append((url, json))
         return _Resp(200)
 
-    def post(self, url: str, json: dict, timeout: float | None = None):
+    def post(self, url: str, json: dict | None = None, timeout: float | None = None, **kwargs):
         self.posts.append((url, json))
         return _Resp(201)
 

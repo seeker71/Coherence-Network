@@ -13,6 +13,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Optional
 
+from app.config_loader import get_bool as _config_bool, get_str as _config_str
 from app.models.agent import TaskType
 from app.services import agent_routing_service as routing_service
 from app.services.agent_routing.executor_routing_loader import (
@@ -79,8 +80,9 @@ def _int_env(name: str, default: int) -> int:
 
 
 def _executor_policy_enabled() -> bool:
-    raw = os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED", "1").strip().lower()
-    return raw not in {"0", "false", "no", "off"}
+    if os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED") is not None:
+        return os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED", "").strip().lower() not in {"0", "false", "no", "off"}
+    return _config_bool("executor", "policy_enabled", True)
 
 
 def _normalize_executor(value: str | None, default: str = "claude") -> str:
@@ -88,15 +90,15 @@ def _normalize_executor(value: str | None, default: str = "claude") -> str:
 
 
 def _cheap_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_CHEAP_DEFAULT")
+    configured = os.environ.get("AGENT_EXECUTOR_CHEAP_DEFAULT") or _config_str("executor", "cheap_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
-    fallback = os.environ.get("AGENT_EXECUTOR_DEFAULT", "cursor")
+    fallback = os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default") or "cursor"
     return _normalize_executor(fallback, default="cursor")
 
 
 def _escalation_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_ESCALATE_TO")
+    configured = os.environ.get("AGENT_EXECUTOR_ESCALATE_TO") or _config_str("executor", "escalate_to")
     if configured:
         return _normalize_executor(configured, default="claude")
     cheap = _cheap_executor_default()
@@ -120,8 +122,9 @@ def _executor_available(executor: str) -> bool:
 
 
 def _allow_unavailable_explicit_executor() -> bool:
-    raw = os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "1").strip().lower()
-    return raw not in {"0", "false", "no", "off"}
+    if os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT") is not None:
+        return os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "").strip().lower() not in {"0", "false", "no", "off"}
+    return _config_bool("executor", "allow_unavailable_explicit", True)
 
 
 def _truthy_flag(value: Any) -> bool:
@@ -133,7 +136,9 @@ def _truthy_flag(value: Any) -> bool:
 
 
 def _paid_providers_enabled() -> bool:
-    return _truthy_flag(os.environ.get("AGENT_ALLOW_PAID_PROVIDERS", "1"))
+    if os.environ.get("AGENT_ALLOW_PAID_PROVIDERS") is not None:
+        return _truthy_flag(os.environ.get("AGENT_ALLOW_PAID_PROVIDERS"))
+    return _config_bool("executor", "allow_paid_providers", True)
 
 
 def _context_budget_pressure_hint(context: dict[str, Any]) -> bool:
@@ -198,13 +203,17 @@ def _first_available_executor(preferred: list[str]) -> str:
         candidate = _normalize_executor(executor, default="")
         if candidate and _executor_available(candidate):
             return candidate
-    configured_default = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="")
+    configured_default = _normalize_executor(
+        os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default=""
+    )
     if configured_default and _executor_available(configured_default):
         return configured_default
     for candidate in ("gemini", "cursor", "claude", "openrouter"):
         if _executor_available(candidate):
             return candidate
-    return _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+    return _normalize_executor(
+        os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default="claude"
+    )
 
 
 def _executor_fallback_candidates() -> list[str]:
@@ -212,6 +221,7 @@ def _executor_fallback_candidates() -> list[str]:
         _cheap_executor_default(),
         _escalation_executor_default(),
         "gemini",
+        "codex",
         "openrouter",
         "cursor",
         "claude",
@@ -255,14 +265,31 @@ def _task_card_value_present(value: Any) -> bool:
     return bool(str(value).strip())
 
 
-def _task_card_validation(context: dict[str, Any]) -> dict[str, Any] | None:
+def _task_card_field_value(context: dict[str, Any], field: str) -> Any:
+    """Resolve task card field from context or context.task_card."""
+    v = context.get(field)
+    if _task_card_value_present(v):
+        return v
+    task_card = context.get("task_card") if isinstance(context.get("task_card"), dict) else {}
+    return task_card.get(field)
+
+
+def _task_card_validation(context: dict[str, Any]) -> dict[str, Any]:
+    """Return validation dict: present=True, score in [0,1], missing=list (and missing_fields for compat)."""
+    required = list(_TASK_CARD_REQUIRED_FIELDS)
     missing: list[str] = []
-    for field in _TASK_CARD_REQUIRED_FIELDS:
-        if not _task_card_value_present(context.get(field)):
+    for field in required:
+        if not _task_card_value_present(_task_card_field_value(context, field)):
             missing.append(field)
-    if not missing:
-        return None
-    return {"missing_fields": missing, "required": list(_TASK_CARD_REQUIRED_FIELDS)}
+    n = len(required)
+    score = 1.0 if n == 0 else round(1.0 - float(len(missing)) / float(n), 6)
+    return {
+        "present": True,
+        "score": score,
+        "missing": missing,
+        "missing_fields": missing,
+        "required": required,
+    }
 
 
 def _prior_attempt_stats(task_fingerprint: str, tasks: list[dict[str, Any]]) -> dict[str, int]:
@@ -457,14 +484,14 @@ def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
 
 
 def _repo_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT")
+    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT") or _config_str("executor", "repo_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
     return "cursor"
 
 
 def _open_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
+    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT") or _config_str("executor", "open_question_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
     return "cursor"
@@ -488,7 +515,9 @@ def select_executor(
         }
 
     if not _executor_policy_enabled():
-        default_executor = _normalize_executor(os.environ.get("AGENT_EXECUTOR_DEFAULT"), default="claude")
+        default_executor = _normalize_executor(
+            os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default="claude"
+        )
         if _executor_available(default_executor):
             return default_executor, {"policy_applied": False, "reason": "policy_disabled"}
         fallback = _first_available_executor(_executor_fallback_candidates())
@@ -526,16 +555,29 @@ def select_executor(
             "selection_engine": "budget-aware-router-lite-v1",
         }
 
-    selected_open = _first_available_executor(
-        [
-            _open_question_executor_default(),
-            "cursor",
-            "claude",
-            "gemini",
-        ]
-        + (["openrouter"] if budget_pressure else [])
-    )
-    if selected_open:
+    open_candidates = [
+        _open_question_executor_default(),
+        "cursor",
+        "claude",
+        "gemini",
+    ]
+    if budget_pressure:
+        open_candidates = ["openrouter"] + open_candidates
+    selected_open = _first_available_executor(open_candidates)
+    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
+    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
+    stats = _prior_attempt_stats(task_fingerprint, tasks)
+    retry_hint = _task_retry_hint(context)
+    effective_retry_count = max(retry_hint, max(0, stats["attempts"]))
+    should_escalate = stats["failed"] >= failure_threshold or effective_retry_count >= retry_threshold
+    if selected_open and not should_escalate:
+        experiment = _routing_experiment_summary(
+            task_fingerprint=task_fingerprint,
+            candidates=open_candidates,
+            selected=selected_open,
+            budget_pressure=budget_pressure,
+            tasks=tasks,
+        )
         return selected_open, {
             "policy_applied": True,
             "reason": "open_question_default",
@@ -543,6 +585,7 @@ def select_executor(
             "open_question_executor": selected_open,
             "budget_pressure": budget_pressure,
             "budget_reasons": list(budget_reasons),
+            "routing_experiment": experiment,
             "selection_engine": "budget-aware-router-lite-v1",
         }
     return _select_executor_with_retry_policy(
@@ -748,8 +791,8 @@ def get_route(task_type: TaskType, executor: str = "claude") -> dict[str, Any]:
     )
 
 
-def task_card_validation(context: dict[str, Any]) -> dict[str, Any] | None:
-    """Return validation errors dict if context is missing task card fields; else None."""
+def task_card_validation(context: dict[str, Any]) -> dict[str, Any]:
+    """Return validation dict: present, score, missing (and missing_fields/required)."""
     return _task_card_validation(context)
 
 

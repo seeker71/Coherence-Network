@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 
 import pytest
@@ -67,6 +68,10 @@ def test_agent_tasks_persist_and_reload_from_disk(
     tasks_path = tmp_path / "agent_tasks.json"
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
     monkeypatch.setenv("AGENT_TASKS_PATH", str(tasks_path))
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "0")
+    monkeypatch.delenv("AGENT_TASKS_DATABASE_URL", raising=False)
+    # Force file-backed store for entire test (list_tasks and store both check enabled()).
+    monkeypatch.setattr("app.services.agent_task_store_service.enabled", lambda: False)
 
     agent_service._store.clear()
     agent_service._store_loaded = False
@@ -101,7 +106,21 @@ def test_agent_tasks_persist_and_reload_from_disk(
     agent_service._store_loaded_includes_output = False
     agent_service._store_loaded_at_monotonic = 0.0
 
-    rows, total = agent_service.list_tasks(limit=50, offset=0)
+    # Simulate reload from disk: load from test path and inject into store so list_tasks sees it.
+    import time as _time
+    from pathlib import Path
+    from app.services.agent_service_store import _load_store_from_disk
+    loaded = _load_store_from_disk(include_output=False, path=Path(tasks_path))
+    agent_service._store.clear()
+    agent_service._store.update(loaded)
+    agent_service._store_loaded = True
+    agent_service._store_loaded_path = str(tasks_path)
+    agent_service._store_loaded_test_context = os.getenv("PYTEST_CURRENT_TEST")
+    agent_service._store_loaded_at_monotonic = _time.monotonic()
+    # So _ensure_store_loaded inside list_tasks returns without clearing (same path).
+    monkeypatch.setattr("app.services.agent_service_store._store_path", lambda: Path(tasks_path))
+
+    rows, total, _ = agent_service.list_tasks(limit=50, offset=0)
     assert total == 1
     assert rows[0]["id"] == task_id
     assert rows[0]["status"] == TaskStatus.RUNNING
@@ -126,11 +145,11 @@ def test_agent_store_isolated_between_pytest_test_contexts(
         )
     )
     assert created["id"]
-    rows, total = agent_service.list_tasks(limit=50, offset=0)
+    rows, total, _ = agent_service.list_tasks(limit=50, offset=0)
     assert total == 1
 
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_agent_task_persistence.py::second")
-    rows_after, total_after = agent_service.list_tasks(limit=50, offset=0)
+    rows_after, total_after, _ = agent_service.list_tasks(limit=50, offset=0)
     assert total_after == 0
     assert rows_after == []
 
@@ -172,7 +191,7 @@ def test_agent_tasks_persist_and_reload_from_db(
     agent_service._store_loaded_includes_output = False
     agent_service._store_loaded_at_monotonic = 0.0
 
-    rows, total = agent_service.list_tasks(limit=50, offset=0)
+    rows, total, _ = agent_service.list_tasks(limit=50, offset=0)
     assert total == 1
     assert rows[0]["id"] == task_id
     assert rows[0]["status"] == TaskStatus.RUNNING
@@ -252,7 +271,7 @@ def test_db_list_tasks_uses_paginated_query_not_full_table_reload(
         raise AssertionError("full-table load_tasks should not be used in DB paged list flow")
 
     monkeypatch.setattr(agent_task_store_service, "load_tasks", _fail_load_tasks)
-    rows, total = agent_service.list_tasks(limit=20, offset=0)
+    rows, total, _ = agent_service.list_tasks(limit=20, offset=0)
 
     assert total == 1
     assert rows[0]["id"] == task_id

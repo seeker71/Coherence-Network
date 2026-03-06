@@ -34,7 +34,7 @@ def _open_task_count() -> int:
         execution_service.TaskStatus.RUNNING,
         execution_service.TaskStatus.NEEDS_DECISION,
     ):
-        _, count = execution_service.agent_service.list_tasks(status=status, limit=1, offset=0)
+        _, count, _ = execution_service.agent_service.list_tasks(status=status, limit=1, offset=0)
         total += int(count)
     return total
 

@@ -45,7 +45,7 @@ def _sample_path_value(param_name: str) -> str:
         try:
             from app.services import agent_service
 
-            rows, total = agent_service.list_tasks(limit=1)
+            rows, total, _ = agent_service.list_tasks(limit=1)
             if total > 0 and rows:
                 value = str(rows[0].get("id") or "").strip()
                 if value:

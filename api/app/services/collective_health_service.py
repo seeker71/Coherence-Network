@@ -296,7 +296,7 @@ def _top_opportunities(
 def get_collective_health(window_days: int = 7) -> dict[str, Any]:
     """Compute collective health scorecard for coherence, resonance, flow, and friction."""
     bounded_window = max(1, min(int(window_days), 30))
-    tasks, _total = agent_service.list_tasks(limit=5000, offset=0)
+    tasks, _total, _ = agent_service.list_tasks(limit=5000, offset=0)
     metrics = metrics_service.get_aggregates()
 
     coherence = _coherence_summary(tasks)

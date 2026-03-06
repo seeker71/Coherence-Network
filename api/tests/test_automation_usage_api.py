@@ -25,6 +25,7 @@ from app.services import (
     runtime_service,
     telemetry_persistence_service,
 )
+from app.services import runtime_event_store
 
 
 def test_configured_status_openai_codex_accepts_oauth_session(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -650,6 +651,22 @@ def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
     required = automation_usage_service._required_providers_from_env()
     assert required == ["openai", "claude", "cursor", "gemini", "railway"]
+
+
+def test_railway_snapshot_skipped_when_running_on_railway(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When RAILWAY_SERVICE_ID is set (app running on Railway), we skip calling backboard to comply with ToS."""
+    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc-uuid")
+    monkeypatch.setenv("RAILWAY_TOKEN", "token")
+    monkeypatch.setenv("RAILWAY_PROJECT_ID", "proj")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "production")
+    monkeypatch.setenv("RAILWAY_SERVICE", "api")
+    snapshot = automation_usage_service._build_railway_snapshot()
+    assert snapshot.provider == "railway"
+    assert snapshot.status == "ok"
+    assert any("ToS" in n or "not called" in n for n in snapshot.notes)
+    assert snapshot.raw.get("skipped") == "running_on_railway"
 
 
 def test_required_providers_auto_include_railway_when_host_configured(
@@ -2013,7 +2030,7 @@ async def test_provider_validation_contract_blocks_without_execution_events(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
             "/api/automation/usage/provider-validation",
-            params={"required_providers": ",".join(required), "force_refresh": False},
+            params={"required_providers": ",".join(required), "force_refresh": True},
         )
         assert report.status_code == 200
         payload = report.json()
@@ -2037,6 +2054,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.setattr(runtime_event_store, "enabled", lambda: False)
 
     required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
     monkeypatch.setattr(
@@ -2085,12 +2103,12 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
                 "required_providers": ",".join(required),
                 "runtime_window_seconds": 86400,
                 "min_execution_events": 1,
-                "force_refresh": False,
+                "force_refresh": True,
             },
         )
         assert report.status_code == 200
         payload = report.json()
-        assert payload["all_required_validated"] is True
+        assert payload["all_required_validated"] is True, payload.get("blocking_issues")
         for row in payload["providers"]:
             assert row["usage_events"] >= 1
             assert row["successful_events"] >= 1

@@ -483,7 +483,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
     elif cmd == "tasks":
         status_filter = _extract_status_filter(arg)
         status_enum = TaskStatus(status_filter) if status_filter else None
-        items, total = agent_service.list_tasks(status=status_enum, limit=10)
+        items, total, _ = agent_service.list_tasks(status=status_enum, limit=10)
         reply = _format_tasks_reply(items, total, status_filter=status_filter)
     elif cmd == "task":
         if not arg:

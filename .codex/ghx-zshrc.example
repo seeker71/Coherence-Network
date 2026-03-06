@@ -16,7 +16,8 @@ __ghx_workspace_root() {
   local path="${1:-$PWD}"
   local root
 
-  root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null || true)"
+  # Use 'command git' to avoid recursion when git is this wrapper
+  root="$(command git -C "$path" rev-parse --show-toplevel 2>/dev/null || true)"
   if [[ -n "$root" ]]; then
     path="$root"
   fi
@@ -129,7 +130,8 @@ fi
 git() {
   local gh_config_dir
   local gh_credential_helper
-  gh_config_dir="$(__ghx_git_config_dir)"
+  # Don't inherit exit status from helper (e.g. when .codex missing or no profile)
+  gh_config_dir="$(__ghx_git_config_dir)" || true
   if [[ -n "$gh_config_dir" ]]; then
     gh_credential_helper="!GH_CONFIG_DIR=$gh_config_dir /opt/homebrew/bin/gh auth git-credential"
     env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN \

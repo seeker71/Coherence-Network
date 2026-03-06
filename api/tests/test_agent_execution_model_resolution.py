@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from app.services import agent_execution_service
 
 
@@ -21,7 +23,8 @@ def test_resolve_openrouter_model_normalizes_gemini_alias_to_openrouter_id() -> 
     assert resolved == "google/gemini-2.5-pro"
 
 
-def test_resolve_openrouter_model_normalizes_codex_spark_alias_to_openrouter_id() -> None:
+def test_resolve_openrouter_model_normalizes_codex_spark_alias_to_openrouter_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_DISABLE_CODEX_EXECUTOR", "0")
     task = {
         "model": "codex/gpt-5.3-codex-spark",
         "context": {"executor": "codex"},

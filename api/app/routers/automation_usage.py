@@ -20,7 +20,7 @@ async def get_automation_usage(
 ) -> dict:
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
     try:
-        return await asyncio.wait_for(
+        payload = await asyncio.wait_for(
             asyncio.to_thread(
                 automation_usage_service.cached_usage_overview_payload,
                 force_refresh=force_refresh,
@@ -29,11 +29,17 @@ async def get_automation_usage(
             ),
             timeout=timeout_seconds,
         )
+        if isinstance(payload, dict) and "meta" not in payload:
+            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+        return payload
     except TimeoutError:
-        return automation_usage_service.usage_overview_payload_from_snapshots(
+        payload = automation_usage_service.usage_overview_payload_from_snapshots(
             compact=compact,
             include_raw=include_raw,
         )
+        if isinstance(payload, dict):
+            payload = {**payload, "meta": {"data_source": "snapshot_fallback", "fallback_reason": "timeout", "fallbacks_used": ["timeout"]}}
+        return payload
 
 
 @router.get("/automation/usage/snapshots")
@@ -66,7 +72,7 @@ async def get_automation_usage_alerts(
 ) -> dict:
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
     try:
-        return await asyncio.wait_for(
+        payload = await asyncio.wait_for(
             asyncio.to_thread(
                 automation_usage_service.cached_usage_alerts_payload,
                 threshold_ratio=threshold_ratio,
@@ -74,11 +80,17 @@ async def get_automation_usage_alerts(
             ),
             timeout=timeout_seconds,
         )
+        if isinstance(payload, dict) and "meta" not in payload:
+            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+        return payload
     except TimeoutError:
-        return automation_usage_service.evaluate_usage_alerts(
+        payload = automation_usage_service.evaluate_usage_alerts(
             threshold_ratio=threshold_ratio,
             force_refresh=False,
         ).model_dump(mode="json")
+        if isinstance(payload, dict):
+            payload = {**payload, "meta": {"data_source": "snapshot_fallback", "fallback_reason": "timeout", "fallbacks_used": ["timeout"]}}
+        return payload
 
 
 @router.get("/automation/usage/subscription-estimator")
@@ -95,7 +107,7 @@ async def get_provider_readiness(
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
     try:
-        return await asyncio.wait_for(
+        payload = await asyncio.wait_for(
             asyncio.to_thread(
                 automation_usage_service.cached_provider_readiness_payload,
                 required_providers=requested or None,
@@ -103,10 +115,16 @@ async def get_provider_readiness(
             ),
             timeout=timeout_seconds,
         )
+        if isinstance(payload, dict) and "meta" not in payload:
+            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+        return payload
     except TimeoutError:
-        return automation_usage_service.provider_readiness_report_from_snapshots(
+        payload = automation_usage_service.provider_readiness_report_from_snapshots(
             required_providers=requested or None,
         ).model_dump(mode="json")
+        if isinstance(payload, dict):
+            payload = {**payload, "meta": {"data_source": "snapshot_fallback", "fallback_reason": "timeout", "fallbacks_used": ["timeout"]}}
+        return payload
 
 
 @router.get("/automation/usage/daily-summary")
@@ -132,10 +150,12 @@ async def get_automation_usage_daily_summary(
             top_n=top_n,
         )
         if isinstance(cached_payload, dict):
+            cached_payload = {**cached_payload, "meta": {"data_source": "cached_fallback", "fallback_reason": "timeout", "fallbacks_used": ["timeout"]}}
             return cached_payload
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "window_hours": int(window_hours),
+            "meta": {"data_source": "empty_fallback", "fallback_reason": "timeout_no_cache", "fallbacks_used": ["timeout", "no_cache"]},
             "host_failure_observability_backfill": {
                 "window_hours": int(window_hours),
                 "host_failed_tasks": 0,
@@ -254,7 +274,7 @@ async def get_provider_validation_report(
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds(default=2.0)
     try:
-        return await asyncio.wait_for(
+        payload = await asyncio.wait_for(
             asyncio.to_thread(
                 automation_usage_service.cached_provider_validation_payload,
                 required_providers=requested or None,
@@ -264,10 +284,16 @@ async def get_provider_validation_report(
             ),
             timeout=timeout_seconds,
         )
+        if isinstance(payload, dict) and "meta" not in payload:
+            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+        return payload
     except TimeoutError:
-        return automation_usage_service.cached_provider_validation_payload(
+        payload = automation_usage_service.cached_provider_validation_payload(
             required_providers=requested or None,
             runtime_window_seconds=runtime_window_seconds,
             min_execution_events=min_execution_events,
             force_refresh=False,
         )
+        if isinstance(payload, dict):
+            payload = {**payload, "meta": {"data_source": "snapshot_fallback", "fallback_reason": "timeout", "fallbacks_used": ["timeout"]}}
+        return payload

@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query
 
-from app.routers.agent_monitor_helpers import agent_logs_dir, resolve_monitor_issues_payload
+from app.routers import agent_monitor_helpers
+from app.routers.agent_monitor_helpers import resolve_monitor_issues_payload
 
 router = APIRouter()
 
@@ -29,7 +30,7 @@ async def get_fatal_issues() -> dict:
 @router.get("/monitor-issues")
 async def get_monitor_issues() -> dict:
     """Monitor issues from automated pipeline check. Checkable; use to react and improve. Spec 027."""
-    logs_dir = agent_logs_dir()
+    logs_dir = agent_monitor_helpers.agent_logs_dir()
     return resolve_monitor_issues_payload(logs_dir, now=datetime.now(timezone.utc))
 
 

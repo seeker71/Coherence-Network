@@ -1,56 +1,56 @@
 {
   "date": "2026-03-06",
   "thread_branch": "codex/local-validation",
-  "commit_scope": "Consolidate all local worktree and branch changes: CI gate fixes (codex executor, orchestrator, model_routing, openclaw/commit_progress tests), conftest DB env wipe from routing-test-heal worktree, MVP config, docs, and validation proof.",
+  "commit_scope": "Ready for main: Railway ToS mitigations (skip backboard when on Railway, 2h deploy contract), stashed ghx fix, local validation proof and idea-to-acceptance steps. Deploy to Railway skipped until ban lifted or new account.",
   "files_owned": [
-    "docs/system_audit/commit_evidence_2026-03-06_consolidate_worktrees.json",
-    "docs/WORKTREE-CONSOLIDATION-2026-03-06.md"
+    "docs/system_audit/commit_evidence_2026-03-06_ready-for-main-railway-skip.json",
+    "docs/system_audit/local_validation_proof_2026-03-06.md",
+    "docs/DEPLOY.md"
   ],
   "local_validation": {
     "status": "pass",
     "commands": [
-      "make start-gate",
-      "cd api && pytest -q tests/test_runtime_api.py tests/test_openclaw_executor_integration.py tests/test_orchestrator_policy_service.py tests/test_commit_progress.py"
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest tests/test_runtime_api.py tests/test_openclaw_executor_integration.py tests/test_orchestrator_policy_service.py tests/test_commit_progress.py -q --tb=no",
+      "cd api && .venv/bin/pytest tests/test_automation_usage_api.py -q -k railway"
     ]
   },
   "ci_validation": {
     "status": "pending",
-    "notes": "Full pytest has other failures; critical subset passes."
+    "notes": "Critical subset passes; full pytest has pre-existing failures in other modules."
   },
   "deploy_validation": {
     "status": "pending",
-    "notes": "After merge to main."
+    "notes": "Push to origin/main; do not deploy to Railway until ban lifted or new account."
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "CI gates and tests fixed; worktree changes not abandoned.",
-    "public_endpoints": ["/api/health", "/api/agent/route"],
-    "test_flows": ["runtime-api", "openclaw-executor"]
+    "expected_behavior_delta": "Railway API no longer called from app when running on Railway; deploy contract runs every 2h; full idea-to-acceptance pass documented.",
+    "public_endpoints": ["/api/health", "/api/automation/usage/readiness", "/api/runtime/mvp/acceptance-summary"],
+    "test_flows": ["runtime-api", "automation-usage-readiness", "mvp-acceptance"]
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "CI/deploy pending."
+    "reason": "Ready for push to main; CI/deploy pending. Railway deploy skipped until ban lifted or new account."
   },
   "idea_ids": [
-    "portfolio-governance",
-    "coherence-network-agent-pipeline"
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
   ],
   "spec_ids": [
-    "114-mvp-cost-and-acceptance-proof",
-    "002-agent-orchestration-api"
+    "002-agent-orchestration-api",
+    "100-automation-provider-usage-readiness-api",
+    "114-mvp-cost-and-acceptance-proof"
   ],
   "task_ids": [
-    "consolidate_worktrees_20260306",
-    "routing-test-heal"
+    "railway-tos-mitigation",
+    "local-validation-idea-acceptance"
   ],
   "contributors": [
     {
       "contributor_id": "cursor-agent",
       "contributor_type": "machine",
-      "roles": [
-        "implementation",
-        "docs"
-      ]
+      "roles": ["implementation", "docs"]
     }
   ],
   "agent": {
@@ -58,8 +58,8 @@
     "version": "agent"
   },
   "evidence_refs": [
-    "docs/WORKTREE-CONSOLIDATION-2026-03-06.md",
-    "docs/system_audit/commit_evidence_2026-03-06_consolidate_worktrees.json"
+    "docs/system_audit/local_validation_proof_2026-03-06.md",
+    "docs/DEPLOY.md"
   ],
   "change_files": [
     ".codex/ghx-zshrc.example",

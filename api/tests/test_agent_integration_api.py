@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service
+from app.services.agent_service_executor import build_command
 
 
 def _reset_agent_store() -> None:
@@ -43,10 +44,9 @@ def test_review_task_includes_primary_and_guard_agents(monkeypatch: pytest.Monke
     assert "spec-guard" in (context.get("guard_agents") or [])
     assert "Role agent: reviewer." in str(task.get("command"))
     assert "Guard agents: spec-guard." in str(task.get("command"))
-    assert "Output contract: PASS_FAIL, FINDINGS, SPEC_VERIFICATION_STATUS, PATCH_GUIDANCE." in str(
-        task.get("command")
-    )
-    assert "If PASS_FAIL is FAIL, PATCH_GUIDANCE must include file paths" in str(task.get("command"))
+    cmd = str(task.get("command"))
+    assert "PASS_FAIL" in cmd and "FINDINGS" in cmd and "PATCH_GUIDANCE" in cmd
+    assert "Required output:" in cmd or "Output contract:" in cmd
 
 
 def test_spec_task_includes_verification_plan_contract(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -60,8 +60,8 @@ def test_spec_task_includes_verification_plan_contract(monkeypatch: pytest.Monke
         )
     )
     command = str(task.get("command") or "")
-    assert "Output contract: IDEA, SPEC_SCOPE, ACCEPTANCE_CRITERIA, VERIFICATION_PLAN." in command
-    assert "VERIFICATION_PLAN must include executable checks" in command
+    assert "SPEC_PATH" in command and "JUDGE" in command and "VALIDATION" in command
+    assert "Required output:" in command or "Output contract:" in command
 
 
 def test_task_target_state_contract_is_persisted(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -138,7 +138,7 @@ def test_update_task_graph_state_validation_reports_actionable_errors(
 
 
 def test_build_command_escapes_shell_sensitive_direction_tokens() -> None:
-    command = agent_service._build_command(
+    command = build_command(
         'Check `uname -a` and "$HOME" value',
         TaskType.IMPL,
         executor="codex",
