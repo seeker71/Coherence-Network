@@ -133,11 +133,12 @@ def _load_records() -> List[dict]:
     return records
 
 
-def get_aggregates() -> dict[str, Any]:
-    """Aggregate metrics for GET /api/agent/metrics. Rolling 7d window. Returns empty structure on error."""
+def get_aggregates(window_days: int | None = None) -> dict[str, Any]:
+    """Aggregate metrics for GET /api/agent/metrics. Rolling window (default 7d). Returns empty structure on error."""
+    days = window_days if window_days is not None and 1 <= window_days <= 90 else WINDOW_DAYS
     try:
         records = _load_records()
-        cutoff = datetime.now(timezone.utc) - timedelta(days=WINDOW_DAYS)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         windowed = []
         for r in records:
             try:
@@ -186,11 +187,14 @@ def get_aggregates() -> dict[str, Any]:
             ds = v.pop("durations", [])
             v["avg_duration"] = round(sum(ds) / len(ds), 1) if ds else 0
 
-        return {
+        out = {
             "success_rate": {"completed": completed, "failed": failed, "total": total, "rate": float(round(rate, 2))},
             "execution_time": {"p50_seconds": p50_seconds, "p95_seconds": p95_seconds},
             "by_task_type": by_task_type,
             "by_model": by_model,
         }
+        if window_days is not None and 1 <= window_days <= 90:
+            out["window_days"] = days
+        return out
     except Exception:
         return _empty_aggregates()
