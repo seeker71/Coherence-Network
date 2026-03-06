@@ -219,7 +219,7 @@ class RouteResponse(BaseModel):
     model: str
     command_template: str
     tier: str
-    executor: Optional[str] = None  # "claude", "cursor", "codex"/"openclaw", "gemini", or "openrouter"
+    executor: Optional[str] = None  # canonical: claude, cursor, codex, gemini, openrouter
     provider: Optional[str] = None
     billing_provider: Optional[str] = None
     is_paid_provider: Optional[bool] = None

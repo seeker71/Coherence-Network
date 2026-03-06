@@ -1,0 +1,60 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "codex/routing-test-heal-20250305",
+  "commit_scope": "Heal routing tests by clearing DATABASE_URL-style env vars during pytest startup so local runs never hit shared Supabase/Postgres endpoints.",
+  "files_owned": [
+    "api/tests/conftest.py",
+    "docs/system_audit/commit_evidence_2026-03-05_routing-test-heal.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api"
+  ],
+  "task_ids": [
+    "routing-test-heal"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/tests/conftest.py",
+    "docs/system_audit/commit_evidence_2026-03-05_routing-test-heal.json"
+  ],
+  "change_intent": "test_only",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Will run in PR once pushed"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Not in scope"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR + CI validation"
+  }
+}

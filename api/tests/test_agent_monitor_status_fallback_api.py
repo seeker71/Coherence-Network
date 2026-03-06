@@ -22,7 +22,7 @@ async def test_monitor_issues_returns_fresh_file_payload_without_derivation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    monkeypatch.setattr("app.routers.agent_monitor_helpers.agent_logs_dir", lambda: str(tmp_path))
     _reset_agent_store()
 
     expected = {
@@ -58,7 +58,7 @@ async def test_monitor_issues_derives_orphan_running_when_monitor_file_missing(
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("PIPELINE_ORPHAN_RUNNING_SECONDS", "60")
-    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    monkeypatch.setattr("app.routers.agent_monitor_helpers.agent_logs_dir", lambda: str(tmp_path))
     _reset_agent_store()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -96,7 +96,7 @@ async def test_status_report_falls_back_to_derived_live_report_when_file_missing
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("PIPELINE_ORPHAN_RUNNING_SECONDS", "60")
-    monkeypatch.setattr("app.routers.agent._agent_logs_dir", lambda: str(tmp_path))
+    monkeypatch.setattr("app.routers.agent_monitor_helpers.agent_logs_dir", lambda: str(tmp_path))
     _reset_agent_store()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

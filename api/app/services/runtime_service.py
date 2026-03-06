@@ -6,6 +6,7 @@ import json
 import os
 import re
 import time
+import base64
 import hashlib
 import logging
 import threading
@@ -13,9 +14,12 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
+from nacl.exceptions import BadSignatureError
+from nacl.signing import VerifyKey
 
 from app.models.runtime import (
     EndpointAttentionReport,
@@ -63,6 +67,101 @@ _RUNTIME_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
     thread_name_prefix="runtime-endpoint-cache-refresh",
 )
 _RUNTIME_ENDPOINT_CACHE_BUSTER = 0
+
+_DEFAULT_MVP_ACCEPTANCE_POLICY: dict[str, Any] = {
+    "version": "2026-03-06",
+    "budget": {
+        "railway_base_budget_usd": 0.0,
+        "provider_base_budget_usd": 0.0,
+    },
+    "revenue": {
+        "per_accepted_review_usd": 0.0,
+    },
+    "reinvestment": {
+        "ratio": 0.4,
+        "allocations": {
+            "infrastructure": 0.5,
+            "code_quality": 0.3,
+            "product_delivery": 0.2,
+        },
+    },
+    "acceptance": {
+        "min_accepted_reviews": 1,
+        "min_acceptance_rate": 0.7,
+        "require_budget_coverage": True,
+        "require_revenue_coverage": True,
+    },
+    "trust": {
+        "require_trust_for_payout": True,
+        "require_trust_adjusted_revenue_coverage": False,
+        "require_payout_readiness": False,
+        "revenue_multipliers": {
+            "validator": 1.15,
+            "anchor": 1.10,
+            "cap": 2.0,
+        },
+        "public_validator": {
+            "required": False,
+            "quorum": 0,
+            "keys": [],
+            "attestations": [],
+        },
+        "public_transparency_anchor": {
+            "required": False,
+            "min_anchors": 0,
+            "trusted_domains": ["rekor.sigstore.dev"],
+            "anchors": [],
+            "fetch_timeout_seconds": 5.0,
+        },
+    },
+}
+_MVP_ACCEPTANCE_POLICY_CACHE: dict[str, Any] | None = None
+
+
+def _mvp_acceptance_policy_path() -> Path:
+    for base in [
+        Path(__file__).resolve().parents[3] / "config" / "mvp_acceptance_policy.json",
+        Path(__file__).resolve().parents[2] / "config" / "mvp_acceptance_policy.json",
+    ]:
+        if base.exists():
+            return base
+    return Path(__file__).resolve().parents[2] / "config" / "mvp_acceptance_policy.json"
+
+
+def _deep_merge_dict(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            merged[key] = _deep_merge_dict(base[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_mvp_acceptance_policy() -> dict[str, Any]:
+    global _MVP_ACCEPTANCE_POLICY_CACHE
+    if _MVP_ACCEPTANCE_POLICY_CACHE is not None:
+        return _MVP_ACCEPTANCE_POLICY_CACHE
+    path = _mvp_acceptance_policy_path()
+    if not path.exists():
+        _MVP_ACCEPTANCE_POLICY_CACHE = dict(_DEFAULT_MVP_ACCEPTANCE_POLICY)
+        return _MVP_ACCEPTANCE_POLICY_CACHE
+    try:
+        with path.open(encoding="utf-8") as f:
+            payload = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        _MVP_ACCEPTANCE_POLICY_CACHE = dict(_DEFAULT_MVP_ACCEPTANCE_POLICY)
+        return _MVP_ACCEPTANCE_POLICY_CACHE
+    if not isinstance(payload, dict):
+        _MVP_ACCEPTANCE_POLICY_CACHE = dict(_DEFAULT_MVP_ACCEPTANCE_POLICY)
+        return _MVP_ACCEPTANCE_POLICY_CACHE
+    _MVP_ACCEPTANCE_POLICY_CACHE = _deep_merge_dict(_DEFAULT_MVP_ACCEPTANCE_POLICY, payload)
+    return _MVP_ACCEPTANCE_POLICY_CACHE
+
+
+def reset_mvp_acceptance_policy_cache() -> None:
+    global _MVP_ACCEPTANCE_POLICY_CACHE
+    _MVP_ACCEPTANCE_POLICY_CACHE = None
 
 
 def _default_events_path() -> Path:
@@ -725,6 +824,679 @@ def summarize_by_idea(
     safe_offset = max(0, int(summary_offset))
     safe_limit = max(1, min(int(summary_limit), 2000))
     return summaries[safe_offset:safe_offset + safe_limit]
+
+
+def _metadata_float(metadata: dict[str, Any], key: str, fallback: float = 0.0) -> float:
+    try:
+        return float(metadata.get(key))
+    except Exception:
+        return fallback
+
+
+def _mvp_policy_value(*keys: str, default: Any) -> Any:
+    node: Any = _load_mvp_acceptance_policy()
+    for key in keys:
+        if not isinstance(node, dict):
+            return default
+        node = node.get(key)
+    return default if node is None else node
+
+
+def _policy_non_negative_float(*keys: str, default: float) -> float:
+    raw = _mvp_policy_value(*keys, default=default)
+    try:
+        parsed = float(raw)
+    except (TypeError, ValueError):
+        parsed = float(default)
+    return max(0.0, parsed)
+
+
+def _policy_non_negative_int(*keys: str, default: int) -> int:
+    raw = _mvp_policy_value(*keys, default=default)
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError):
+        parsed = int(default)
+    return max(0, parsed)
+
+
+def _policy_ratio(*keys: str, default: float) -> float:
+    return min(1.0, max(0.0, _policy_non_negative_float(*keys, default=default)))
+
+
+def _policy_bool(*keys: str, default: bool) -> bool:
+    raw = _mvp_policy_value(*keys, default=default)
+    if isinstance(raw, bool):
+        return raw
+    normalized = str(raw).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return bool(default)
+
+
+def _policy_list_of_dicts(*keys: str) -> list[dict[str, Any]]:
+    raw = _mvp_policy_value(*keys, default=[])
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for row in raw:
+        if isinstance(row, dict):
+            out.append(row)
+    return out
+
+
+def _allocation_ratios() -> dict[str, float]:
+    infra = _policy_non_negative_float("reinvestment", "allocations", "infrastructure", default=0.5)
+    code_quality = _policy_non_negative_float("reinvestment", "allocations", "code_quality", default=0.3)
+    product_delivery = _policy_non_negative_float("reinvestment", "allocations", "product_delivery", default=0.2)
+    total = infra + code_quality + product_delivery
+    if total <= 0:
+        return {"infrastructure": 0.5, "code_quality": 0.3, "product_delivery": 0.2}
+    return {
+        "infrastructure": round(infra / total, 6),
+        "code_quality": round(code_quality / total, 6),
+        "product_delivery": round(product_delivery / total, 6),
+    }
+
+
+def _budget_revenue_reinvestment_payload(totals: dict[str, Any]) -> dict[str, Any]:
+    railway_budget = _policy_non_negative_float("budget", "railway_base_budget_usd", default=0.0)
+    provider_budget = _policy_non_negative_float("budget", "provider_base_budget_usd", default=0.0)
+    base_budget = round(railway_budget + provider_budget, 6)
+
+    revenue_per_accepted = _policy_non_negative_float("revenue", "per_accepted_review_usd", default=0.0)
+    accepted_reviews = int(totals.get("accepted_reviews") or 0)
+    estimated_revenue = round(float(accepted_reviews) * revenue_per_accepted, 6)
+
+    total_cost = float(totals.get("total_cost_usd") or 0.0)
+    operating_surplus = round(estimated_revenue - total_cost, 6)
+    reinvestment_ratio = _policy_ratio("reinvestment", "ratio", default=0.4)
+    reinvestment_pool = round(max(0.0, operating_surplus) * reinvestment_ratio, 6)
+    ratios = _allocation_ratios()
+
+    return {
+        "budget": {
+            "railway_base_budget_usd": round(railway_budget, 6),
+            "provider_base_budget_usd": round(provider_budget, 6),
+            "base_budget_usd": base_budget,
+        },
+        "revenue": {
+            "revenue_per_accepted_review_usd": round(revenue_per_accepted, 6),
+            "estimated_revenue_usd": estimated_revenue,
+            "operating_surplus_usd": operating_surplus,
+        },
+        "reinvestment": {
+            "reinvestment_ratio": round(reinvestment_ratio, 6),
+            "reinvestment_pool_usd": reinvestment_pool,
+            "allocations": {
+                "infrastructure_usd": round(reinvestment_pool * ratios["infrastructure"], 6),
+                "code_quality_usd": round(reinvestment_pool * ratios["code_quality"], 6),
+                "product_delivery_usd": round(reinvestment_pool * ratios["product_delivery"], 6),
+            },
+        },
+    }
+
+
+def _trust_multiplier_component(kind: str, default: float) -> float:
+    return max(1.0, _policy_non_negative_float("trust", "revenue_multipliers", kind, default=default))
+
+
+def _trust_adjusted_revenue_proof(
+    *,
+    estimated_revenue_usd: float,
+    total_cost_usd: float,
+    public_validator: dict[str, Any],
+    transparency_anchor: dict[str, Any],
+) -> dict[str, Any]:
+    validator_pass = bool(public_validator.get("pass"))
+    anchor_pass = bool(transparency_anchor.get("pass"))
+
+    multiplier = 1.0
+    if validator_pass:
+        multiplier *= _trust_multiplier_component("validator", 1.15)
+    if anchor_pass:
+        multiplier *= _trust_multiplier_component("anchor", 1.10)
+    multiplier_cap = _trust_multiplier_component("cap", 2.0)
+    multiplier = min(multiplier, multiplier_cap)
+
+    baseline_revenue = max(0.0, float(estimated_revenue_usd))
+    trust_adjusted_revenue = round(max(0.0, baseline_revenue * multiplier), 6)
+    uplift = round(max(0.0, trust_adjusted_revenue - baseline_revenue), 6)
+    trust_adjusted_surplus = round(trust_adjusted_revenue - max(0.0, float(total_cost_usd)), 6)
+
+    require_trust_for_payout = _policy_bool("trust", "require_trust_for_payout", default=True)
+    trust_ready = (
+        (not bool(public_validator.get("required")) or validator_pass)
+        and (not bool(transparency_anchor.get("required")) or anchor_pass)
+    )
+    payout_ready = (trust_adjusted_revenue >= max(0.0, float(total_cost_usd))) and (
+        trust_ready if require_trust_for_payout else True
+    )
+
+    return {
+        "trust": {
+            "public_validator_pass": validator_pass,
+            "public_transparency_anchor_pass": anchor_pass,
+        },
+        "revenue": {
+            "estimated_revenue_usd": round(baseline_revenue, 6),
+            "trust_adjusted_revenue_usd": trust_adjusted_revenue,
+            "trust_revenue_uplift_usd": uplift,
+            "trust_multiplier": round(multiplier, 6),
+            "trust_adjusted_operating_surplus_usd": trust_adjusted_surplus,
+        },
+        "payout_ready": bool(payout_ready),
+    }
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+
+
+def _sha256_hex_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _public_validator_keys() -> list[dict[str, Any]]:
+    rows = _policy_list_of_dicts("trust", "public_validator", "keys")
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        validator_id = str(row.get("id") or "").strip()
+        public_key_b64 = str(row.get("public_key_base64") or "").strip()
+        if not validator_id or not public_key_b64:
+            continue
+        out.append(
+            {
+                "id": validator_id,
+                "public_key_base64": public_key_b64,
+                "source": str(row.get("source") or "").strip(),
+                "label": str(row.get("label") or "").strip(),
+            }
+        )
+    return out
+
+
+def _public_validator_attestations() -> list[dict[str, Any]]:
+    rows = _policy_list_of_dicts("trust", "public_validator", "attestations")
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        validator_id = str(row.get("id") or row.get("validator_id") or "").strip()
+        signature_b64 = str(row.get("signature_base64") or "").strip()
+        if not validator_id or not signature_b64:
+            continue
+        out.append(
+            {
+                "id": validator_id,
+                "signature_base64": signature_b64,
+            }
+        )
+    return out
+
+
+def _public_validator_report(
+    *,
+    claim_payload: dict[str, Any],
+) -> dict[str, Any]:
+    keys = _public_validator_keys()
+    attestations = _public_validator_attestations()
+    configured_count = len(keys)
+    required = _policy_bool("trust", "public_validator", "required", default=False)
+    default_quorum = 1 if required and configured_count > 0 else 0
+    required_quorum = _policy_non_negative_int("trust", "public_validator", "quorum", default=default_quorum)
+    if required and required_quorum <= 0:
+        required_quorum = 1
+
+    key_by_id = {str(row["id"]): row for row in keys}
+    claim_bytes = _canonical_json_bytes(claim_payload)
+    claim_sha256 = _sha256_hex_bytes(claim_bytes)
+    verified_ids: set[str] = set()
+    rows: list[dict[str, Any]] = []
+
+    for att in attestations:
+        validator_id = str(att.get("id") or "").strip()
+        key_row = key_by_id.get(validator_id)
+        if not key_row:
+            rows.append(
+                {
+                    "id": validator_id,
+                    "verified": False,
+                    "reason": "unknown_validator_id",
+                }
+            )
+            continue
+        public_key_b64 = str(key_row.get("public_key_base64") or "").strip()
+        signature_b64 = str(att.get("signature_base64") or "").strip()
+        try:
+            verify_key = VerifyKey(base64.b64decode(public_key_b64))
+            verify_key.verify(claim_bytes, base64.b64decode(signature_b64))
+            verified = True
+            reason = ""
+            verified_ids.add(validator_id)
+        except (ValueError, BadSignatureError, TypeError):
+            verified = False
+            reason = "invalid_signature"
+        rows.append(
+            {
+                "id": validator_id,
+                "source": str(key_row.get("source") or ""),
+                "label": str(key_row.get("label") or ""),
+                "verified": verified,
+                "reason": reason,
+            }
+        )
+
+    verified_count = len(verified_ids)
+    quorum_pass = verified_count >= required_quorum if required_quorum > 0 else True
+    return {
+        "required": required,
+        "required_quorum": required_quorum,
+        "configured_validators": configured_count,
+        "attestations_submitted": len(attestations),
+        "valid_signatures": verified_count,
+        "pass": quorum_pass,
+        "claim_sha256": claim_sha256,
+        "validators": rows,
+    }
+
+
+def _trusted_transparency_domains() -> list[str]:
+    raw = _mvp_policy_value("trust", "public_transparency_anchor", "trusted_domains", default=["rekor.sigstore.dev"])
+    if isinstance(raw, str):
+        source = [segment.strip().lower() for segment in raw.split(",")]
+    elif isinstance(raw, list):
+        source = [str(segment or "").strip().lower() for segment in raw]
+    else:
+        source = []
+    out: list[str] = []
+    seen: set[str] = set()
+    for domain in source:
+        if not domain or domain in seen:
+            continue
+        seen.add(domain)
+        out.append(domain)
+    return out or ["rekor.sigstore.dev"]
+
+
+def _public_transparency_anchors() -> list[dict[str, Any]]:
+    rows = _policy_list_of_dicts("trust", "public_transparency_anchor", "anchors")
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        url = str(row.get("url") or row.get("entry_url") or "").strip()
+        if not url:
+            continue
+        out.append(
+            {
+                "id": str(row.get("id") or "").strip(),
+                "url": url,
+                "claim_sha256": str(row.get("claim_sha256") or "").strip().lower(),
+                "source": str(row.get("source") or "").strip(),
+            }
+        )
+    return out
+
+
+def _transparency_entry_text(url: str) -> str:
+    timeout_seconds = max(
+        0.5,
+        min(
+            _policy_non_negative_float("trust", "public_transparency_anchor", "fetch_timeout_seconds", default=5.0),
+            20.0,
+        ),
+    )
+    with httpx.Client(timeout=timeout_seconds) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        return response.text or ""
+
+
+def _transparency_anchor_report(*, claim_sha256: str) -> dict[str, Any]:
+    required = _policy_bool("trust", "public_transparency_anchor", "required", default=False)
+    anchors = _public_transparency_anchors()
+    trusted_domains = _trusted_transparency_domains()
+    default_min = 1 if required else 0
+    min_valid = _policy_non_negative_int("trust", "public_transparency_anchor", "min_anchors", default=default_min)
+    if required and min_valid <= 0:
+        min_valid = 1
+
+    claim_hash = str(claim_sha256 or "").strip().lower()
+    valid_count = 0
+    rows: list[dict[str, Any]] = []
+
+    for anchor in anchors:
+        url = str(anchor.get("url") or "").strip()
+        parsed = urlparse(url)
+        domain = str(parsed.netloc or "").strip().lower()
+        domain_trusted = domain in set(trusted_domains)
+        anchor_hash = str(anchor.get("claim_sha256") or "").strip().lower()
+        hash_match = bool(anchor_hash) and anchor_hash == claim_hash
+        content_match = False
+        reason = ""
+        if not domain_trusted:
+            reason = "untrusted_domain"
+        elif not hash_match:
+            reason = "claim_hash_mismatch"
+        else:
+            try:
+                body = _transparency_entry_text(url)
+                content_match = claim_hash in body.lower()
+                if not content_match:
+                    reason = "claim_hash_not_found_in_entry"
+            except Exception:
+                reason = "entry_fetch_failed"
+
+        verified = domain_trusted and hash_match and content_match
+        if verified:
+            valid_count += 1
+        rows.append(
+            {
+                "id": str(anchor.get("id") or ""),
+                "url": url,
+                "source": str(anchor.get("source") or ""),
+                "domain": domain,
+                "domain_trusted": domain_trusted,
+                "hash_match": hash_match,
+                "content_match": content_match,
+                "verified": verified,
+                "reason": reason,
+            }
+        )
+
+    report_pass = valid_count >= min_valid if min_valid > 0 else True
+    return {
+        "required": required,
+        "required_min_anchors": min_valid,
+        "trusted_domains": trusted_domains,
+        "anchors_submitted": len(anchors),
+        "valid_anchors": valid_count,
+        "pass": report_pass,
+        "claim_sha256": claim_hash,
+        "anchors": rows,
+    }
+
+
+def summarize_mvp_acceptance(
+    *,
+    seconds: int = 86400,
+    event_limit: int = 2000,
+) -> dict[str, Any]:
+    window_seconds = max(60, min(int(seconds), 60 * 60 * 24 * 30))
+    requested_limit = max(100, min(int(event_limit), 5000))
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    rows = list_events(limit=requested_limit, since=cutoff)
+
+    task_rows: dict[str, dict[str, Any]] = {}
+
+    for event in rows:
+        metadata = event.metadata if isinstance(event.metadata, dict) else {}
+        tracking_kind = str(metadata.get("tracking_kind") or "").strip()
+        task_id = str(metadata.get("task_id") or "").strip()
+        if not task_id:
+            continue
+        task_row = task_rows.setdefault(
+            task_id,
+            {
+                "task_id": task_id,
+                "task_type": "",
+                "final_status": "",
+                "review_pass_fail": "",
+                "verified_assertions": "",
+                "review_accepted": False,
+                "infrastructure_cost_usd": 0.0,
+                "external_provider_cost_usd": 0.0,
+                "total_cost_usd": 0.0,
+            },
+        )
+
+        if tracking_kind == "agent_task_completion":
+            task_row["task_type"] = str(metadata.get("task_type") or task_row["task_type"] or "").strip()
+            task_row["final_status"] = str(metadata.get("task_final_status") or task_row["final_status"] or "").strip()
+            pass_fail = str(metadata.get("review_pass_fail") or "").strip().upper()
+            if pass_fail in {"PASS", "FAIL"}:
+                task_row["review_pass_fail"] = pass_fail
+                task_row["review_accepted"] = pass_fail == "PASS"
+            verified = str(metadata.get("verified_assertions") or "").strip()
+            if verified:
+                task_row["verified_assertions"] = verified
+            continue
+
+        if tracking_kind != "agent_tool_call":
+            continue
+
+        infra = _metadata_float(metadata, "infrastructure_cost_usd", fallback=float(event.runtime_cost_estimate or 0.0))
+        external = _metadata_float(metadata, "external_provider_cost_usd", fallback=0.0)
+        total = _metadata_float(metadata, "total_cost_usd", fallback=infra + external)
+
+        task_row["infrastructure_cost_usd"] = round(float(task_row["infrastructure_cost_usd"]) + max(0.0, infra), 6)
+        task_row["external_provider_cost_usd"] = round(float(task_row["external_provider_cost_usd"]) + max(0.0, external), 6)
+        task_row["total_cost_usd"] = round(float(task_row["total_cost_usd"]) + max(0.0, total), 6)
+
+    task_values = list(task_rows.values())
+    task_values.sort(key=lambda row: (float(row.get("total_cost_usd") or 0.0), str(row.get("task_id") or "")), reverse=True)
+
+    completed_tasks = [row for row in task_values if str(row.get("final_status") or "").strip() == "completed"]
+    completed_reviews = [
+        row
+        for row in completed_tasks
+        if str(row.get("task_type") or "").strip().lower() == "review"
+    ]
+    accepted_reviews = [row for row in completed_reviews if bool(row.get("review_accepted"))]
+
+    infra_total = round(sum(float(row.get("infrastructure_cost_usd") or 0.0) for row in task_values), 6)
+    external_total = round(sum(float(row.get("external_provider_cost_usd") or 0.0) for row in task_values), 6)
+    total_cost = round(sum(float(row.get("total_cost_usd") or 0.0) for row in task_values), 6)
+    acceptance_rate = (
+        round(float(len(accepted_reviews)) / float(len(completed_reviews)), 6)
+        if completed_reviews
+        else 0.0
+    )
+    totals = {
+        "tasks_seen": len(task_values),
+        "completed_tasks": len(completed_tasks),
+        "review_tasks_completed": len(completed_reviews),
+        "accepted_reviews": len(accepted_reviews),
+        "acceptance_rate": acceptance_rate,
+        "infrastructure_cost_usd": infra_total,
+        "external_provider_cost_usd": external_total,
+        "total_cost_usd": total_cost,
+    }
+    economics = _budget_revenue_reinvestment_payload(totals)
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "window_seconds": window_seconds,
+        "event_limit": requested_limit,
+        "totals": totals,
+        "tasks": task_values,
+        "budget": economics["budget"],
+        "revenue": economics["revenue"],
+        "reinvestment": economics["reinvestment"],
+    }
+
+
+def evaluate_mvp_acceptance_judge(
+    *,
+    seconds: int = 86400,
+    event_limit: int = 2000,
+) -> dict[str, Any]:
+    summary = summarize_mvp_acceptance(seconds=seconds, event_limit=event_limit)
+    totals = summary.get("totals") if isinstance(summary.get("totals"), dict) else {}
+    budget = summary.get("budget") if isinstance(summary.get("budget"), dict) else {}
+    revenue = summary.get("revenue") if isinstance(summary.get("revenue"), dict) else {}
+    claim_payload = {
+        "judge_id": "coherence_mvp_acceptance_judge_v1",
+        "window_seconds": int(summary.get("window_seconds") or 0),
+        "event_limit": int(summary.get("event_limit") or 0),
+        "totals": {
+            "accepted_reviews": int(totals.get("accepted_reviews") or 0),
+            "acceptance_rate": float(totals.get("acceptance_rate") or 0.0),
+            "total_cost_usd": float(totals.get("total_cost_usd") or 0.0),
+        },
+        "budget": {"base_budget_usd": float(budget.get("base_budget_usd") or 0.0)},
+        "revenue": {"estimated_revenue_usd": float(revenue.get("estimated_revenue_usd") or 0.0)},
+    }
+    public_validator = _public_validator_report(claim_payload=claim_payload)
+    transparency_anchor = _transparency_anchor_report(claim_sha256=str(public_validator.get("claim_sha256") or ""))
+
+    min_accepted_reviews = _policy_non_negative_int("acceptance", "min_accepted_reviews", default=1)
+    min_acceptance_rate = _policy_ratio("acceptance", "min_acceptance_rate", default=0.7)
+    require_budget_coverage = _policy_bool("acceptance", "require_budget_coverage", default=True)
+    require_revenue_coverage = _policy_bool("acceptance", "require_revenue_coverage", default=True)
+    require_trust_adjusted_revenue_coverage = _policy_bool(
+        "trust",
+        "require_trust_adjusted_revenue_coverage",
+        default=False,
+    )
+    require_payout_readiness = _policy_bool("trust", "require_payout_readiness", default=False)
+
+    accepted_reviews = int(totals.get("accepted_reviews") or 0)
+    acceptance_rate = float(totals.get("acceptance_rate") or 0.0)
+    total_cost_usd = float(totals.get("total_cost_usd") or 0.0)
+    base_budget_usd = float(budget.get("base_budget_usd") or 0.0)
+    estimated_revenue_usd = float(revenue.get("estimated_revenue_usd") or 0.0)
+    business_proof = _trust_adjusted_revenue_proof(
+        estimated_revenue_usd=estimated_revenue_usd,
+        total_cost_usd=total_cost_usd,
+        public_validator=public_validator,
+        transparency_anchor=transparency_anchor,
+    )
+    trust_revenue = (
+        business_proof.get("revenue")
+        if isinstance(business_proof.get("revenue"), dict)
+        else {}
+    )
+    trust_adjusted_revenue_usd = float(trust_revenue.get("trust_adjusted_revenue_usd") or 0.0)
+
+    assertions: list[dict[str, Any]] = [
+        {
+            "id": "accepted_reviews_minimum",
+            "expected": f">= {min_accepted_reviews}",
+            "actual": str(accepted_reviews),
+            "pass": accepted_reviews >= min_accepted_reviews,
+        },
+        {
+            "id": "acceptance_rate_minimum",
+            "expected": f">= {round(min_acceptance_rate, 6)}",
+            "actual": str(round(acceptance_rate, 6)),
+            "pass": acceptance_rate >= min_acceptance_rate,
+        },
+    ]
+
+    if require_budget_coverage and base_budget_usd > 0.0:
+        assertions.append(
+            {
+                "id": "base_budget_covers_total_cost",
+                "expected": f"total_cost_usd <= {round(base_budget_usd, 6)}",
+                "actual": str(round(total_cost_usd, 6)),
+                "pass": total_cost_usd <= base_budget_usd,
+            }
+        )
+
+    if require_revenue_coverage:
+        assertions.append(
+            {
+                "id": "estimated_revenue_covers_total_cost",
+                "expected": f"estimated_revenue_usd >= {round(total_cost_usd, 6)}",
+                "actual": str(round(estimated_revenue_usd, 6)),
+                "pass": estimated_revenue_usd >= total_cost_usd,
+            }
+        )
+    if require_trust_adjusted_revenue_coverage:
+        assertions.append(
+            {
+                "id": "trust_adjusted_revenue_covers_total_cost",
+                "expected": f"trust_adjusted_revenue_usd >= {round(total_cost_usd, 6)}",
+                "actual": str(round(trust_adjusted_revenue_usd, 6)),
+                "pass": trust_adjusted_revenue_usd >= total_cost_usd,
+            }
+        )
+    if require_payout_readiness:
+        assertions.append(
+            {
+                "id": "payout_readiness",
+                "expected": "payout_ready == true",
+                "actual": str(bool(business_proof.get("payout_ready"))).lower(),
+                "pass": bool(business_proof.get("payout_ready")),
+            }
+        )
+    if bool(public_validator.get("required")):
+        assertions.append(
+            {
+                "id": "public_validator_quorum",
+                "expected": f"valid_signatures >= {int(public_validator.get('required_quorum') or 0)}",
+                "actual": str(int(public_validator.get("valid_signatures") or 0)),
+                "pass": bool(public_validator.get("pass")),
+            }
+        )
+    if bool(transparency_anchor.get("required")):
+        assertions.append(
+            {
+                "id": "public_transparency_anchor",
+                "expected": f"valid_anchors >= {int(transparency_anchor.get('required_min_anchors') or 0)}",
+                "actual": str(int(transparency_anchor.get("valid_anchors") or 0)),
+                "pass": bool(transparency_anchor.get("pass")),
+            }
+        )
+
+    overall_pass = all(bool(item.get("pass")) for item in assertions)
+    return {
+        "pass": overall_pass,
+        "assertions": assertions,
+        "summary": summary,
+        "contract": {
+            "judge_id": "coherence_mvp_acceptance_judge_v1",
+            "external_validation_endpoint": "/api/runtime/mvp/acceptance-judge",
+            "claim_payload": claim_payload,
+            "claim_sha256": str(public_validator.get("claim_sha256") or ""),
+            "public_validator": public_validator,
+            "public_transparency_anchor": transparency_anchor,
+            "business_proof": business_proof,
+            "measurement": {
+                "acceptance_rate_formula": "accepted_reviews / review_tasks_completed",
+                "total_cost_formula": "sum(task.total_cost_usd)",
+                "base_budget_formula": "railway_base_budget_usd + provider_base_budget_usd",
+                "estimated_revenue_formula": "accepted_reviews * revenue_per_accepted_review_usd",
+                "trust_adjusted_revenue_formula": "estimated_revenue_usd * trust_multiplier",
+                "trust_revenue_uplift_formula": "trust_adjusted_revenue_usd - estimated_revenue_usd",
+                "reinvestment_pool_formula": "max(0, estimated_revenue_usd - total_cost_usd) * reinvestment_ratio",
+                "public_validator_formula": "valid_signatures >= required_quorum",
+                "public_transparency_anchor_formula": "valid_anchors >= required_min_anchors",
+                "payout_readiness_formula": "trust_adjusted_revenue_usd >= total_cost_usd and required trust gates pass",
+            },
+            "implementation_evidence": {
+                "summary_endpoint": "/api/runtime/mvp/acceptance-summary",
+                "required_summary_fields": [
+                    "totals.accepted_reviews",
+                    "totals.acceptance_rate",
+                    "totals.total_cost_usd",
+                    "budget.base_budget_usd",
+                    "revenue.estimated_revenue_usd",
+                    "reinvestment.reinvestment_pool_usd",
+                ],
+                "public_validator_inputs": [
+                    "mvp_acceptance_policy.trust.public_validator.keys",
+                    "mvp_acceptance_policy.trust.public_validator.attestations",
+                    "mvp_acceptance_policy.trust.public_validator.quorum",
+                    "mvp_acceptance_policy.trust.public_validator.required",
+                ],
+                "public_transparency_inputs": [
+                    "mvp_acceptance_policy.trust.public_transparency_anchor.anchors",
+                    "mvp_acceptance_policy.trust.public_transparency_anchor.trusted_domains",
+                    "mvp_acceptance_policy.trust.public_transparency_anchor.min_anchors",
+                    "mvp_acceptance_policy.trust.public_transparency_anchor.required",
+                ],
+                "trust_revenue_inputs": [
+                    "mvp_acceptance_policy.trust.revenue_multipliers.validator",
+                    "mvp_acceptance_policy.trust.revenue_multipliers.anchor",
+                    "mvp_acceptance_policy.trust.revenue_multipliers.cap",
+                    "mvp_acceptance_policy.trust.require_trust_adjusted_revenue_coverage",
+                    "mvp_acceptance_policy.trust.require_trust_for_payout",
+                    "mvp_acceptance_policy.trust.require_payout_readiness",
+                ],
+            },
+        },
+    }
 
 
 def cached_runtime_ideas_summary_payload(

@@ -36,8 +36,8 @@ async def test_tasks_list_includes_runtime_completion_events_when_store_empty(tm
                     "task_id": task_id,
                     "task_type": "impl",
                     "task_final_status": "completed",
-                    "model": "openclaw/openrouter/free",
-                    "worker_id": "openclaw-worker:test",
+                    "model": "codex/openrouter/free",
+                    "worker_id": "codex-worker:test",
                     "repeatable_tool_call": "codex exec \"Direction: hello\" --model openrouter/free",
                     "provider": "openrouter",
                 },
@@ -56,7 +56,7 @@ async def test_tasks_list_includes_runtime_completion_events_when_store_empty(tm
         body = one.json()
         assert body["id"] == task_id
         assert body["status"] == "completed"
-        assert body["model"] == "openclaw/openrouter/free"
+        assert body["model"] == "codex/openrouter/free"
 
 
 def test_tasks_list_skips_runtime_backfill_when_store_is_populated_by_default(

@@ -106,7 +106,7 @@ async def test_execute_endpoint_requires_token_when_configured(tmp_path, monkeyp
         AgentTaskCreate(
             direction="Return ok",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -159,7 +159,7 @@ async def test_execute_endpoint_completes_task_when_openrouter_is_stubbed(
         AgentTaskCreate(
             direction="Return ok",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -208,7 +208,7 @@ async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
         AgentTaskCreate(
             direction="Return retry success",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -268,7 +268,7 @@ async def test_execute_endpoint_stops_retry_after_single_retry_budget(
         AgentTaskCreate(
             direction="Keep failing to test retry budget",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -321,7 +321,7 @@ async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_o
         AgentTaskCreate(
             direction="Retry paid route with override",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -373,7 +373,7 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
         AgentTaskCreate(
             direction="Assess codex route",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -391,7 +391,7 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
             AgentTaskCreate(
                 direction="Assess codex route",
                 task_type=TaskType.IMPL,
-                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+                context={"executor": "codex", "model_override": "gpt-5.3-codex"},
             )
         )
 
@@ -449,7 +449,7 @@ async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disable
         AgentTaskCreate(
             direction="Assess codex route default paid policy",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -504,7 +504,7 @@ async def test_execute_endpoint_uses_codex_cli_for_codex_executor(
         AgentTaskCreate(
             direction="Codex executor should use codex cli path",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex-spark"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
         )
     )
 
@@ -561,7 +561,7 @@ async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_
         AgentTaskCreate(
             direction="Assess codex route",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex-spark"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex-spark"},
         )
     )
 
@@ -601,7 +601,7 @@ async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_k
         AgentTaskCreate(
             direction="Assess codex route",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -617,7 +617,7 @@ async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_k
             AgentTaskCreate(
                 direction="Assess codex route",
                 task_type=TaskType.IMPL,
-                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+                context={"executor": "codex", "model_override": "gpt-5.3-codex"},
             )
         )
         await client.post(
@@ -662,7 +662,7 @@ async def test_execute_endpoint_requeues_failed_task_for_manual_rerun(
         AgentTaskCreate(
             direction="Rerun failed task",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -715,7 +715,7 @@ async def test_execute_endpoint_accepts_hyphenated_force_paid_query_key(
         AgentTaskCreate(
             direction="Assess hyphenated override",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -757,7 +757,7 @@ async def test_execute_endpoint_accepts_case_insensitive_force_paid_query_key(
         AgentTaskCreate(
             direction="Assess case-insensitive override",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -799,7 +799,7 @@ async def test_execute_endpoint_accepts_force_paid_header_override(
         AgentTaskCreate(
             direction="Assess header override",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -868,7 +868,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
             AgentTaskCreate(
                 direction="Assess codex route with budget cap",
                 task_type=TaskType.IMPL,
-                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+                context={"executor": "codex", "model_override": "gpt-5.3-codex"},
             )
         )
 
@@ -905,7 +905,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
             AgentTaskCreate(
                 direction="Assess codex route with budget override",
                 task_type=TaskType.IMPL,
-                context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+                context={"executor": "codex", "model_override": "gpt-5.3-codex"},
             )
         )
 
@@ -980,7 +980,7 @@ async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_i
         AgentTaskCreate(
             direction="Assess codex route with soft provider quota threshold",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -1034,7 +1034,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_r
         AgentTaskCreate(
             direction="Assess codex route with provider quota guard",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -1100,7 +1100,7 @@ async def test_review_task_can_return_confidence_with_paid_override(
         AgentTaskCreate(
             direction="Review the implementation and provide confidence + value estimates.",
             task_type=TaskType.REVIEW,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 
@@ -1146,7 +1146,7 @@ async def test_execute_task_fails_on_cost_limit_and_posts_friction(
         AgentTaskCreate(
             direction="Run quick task",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1226,7 +1226,7 @@ async def test_execution_updates_cost_value_targets(
                 direction="Update value records with metrics",
                 task_type=TaskType.IMPL,
                 context={
-                    "executor": "openclaw",
+                    "executor": "codex",
                     "model_override": "openrouter/free",
                     "idea_id": idea_id,
                     "spec_id": spec_id,
@@ -1329,7 +1329,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
         AgentTaskCreate(
             direction="Complete and continue",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1384,14 +1384,14 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
         AgentTaskCreate(
             direction="Remain pending",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
     task = agent_service.create_task(
         AgentTaskCreate(
             direction="Complete without spawning follow-up",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1431,7 +1431,7 @@ async def test_execute_endpoint_emits_lifecycle_runtime_events(
         AgentTaskCreate(
             direction="Emit lifecycle events",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1501,7 +1501,7 @@ async def test_execute_endpoint_hook_error_listener_does_not_fail_execution(
             AgentTaskCreate(
                 direction="Run even when lifecycle listener fails",
                 task_type=TaskType.IMPL,
-                context={"executor": "openclaw", "model_override": "openrouter/free"},
+                context={"executor": "codex", "model_override": "openrouter/free"},
             )
         )
 
@@ -1549,7 +1549,7 @@ async def test_execute_endpoint_lifecycle_summary_endpoint_reports_recent_events
         AgentTaskCreate(
             direction="Emit lifecycle summary test",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1601,7 +1601,7 @@ async def test_execute_endpoint_lifecycle_summary_respects_disabled_runtime_subs
         AgentTaskCreate(
             direction="Disable runtime lifecycle subscriber",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1657,7 +1657,7 @@ async def test_execute_endpoint_lifecycle_jsonl_subscriber_writes_audit_lines_an
         AgentTaskCreate(
             direction="Write lifecycle jsonl audit lines",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1730,7 +1730,7 @@ async def test_execute_endpoint_lifecycle_source_override_uses_jsonl_when_reques
         AgentTaskCreate(
             direction="Force summary source override",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "openrouter/free"},
+            context={"executor": "codex", "model_override": "openrouter/free"},
         )
     )
 
@@ -1787,7 +1787,7 @@ async def test_execute_endpoint_lifecycle_jsonl_retention_caps_audit_file(
                 AgentTaskCreate(
                     direction=f"Retention test task {idx}",
                     task_type=TaskType.IMPL,
-                    context={"executor": "openclaw", "model_override": "openrouter/free"},
+                    context={"executor": "codex", "model_override": "openrouter/free"},
                 )
             )
             executed = await client.post(f"/api/agent/tasks/{task['id']}/execute")
@@ -1856,7 +1856,7 @@ async def test_execute_endpoint_lifecycle_guidance_flags_paid_guard_blocks(
         AgentTaskCreate(
             direction="Trigger paid guard guidance",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw", "model_override": "gpt-5.3-codex"},
+            context={"executor": "codex", "model_override": "gpt-5.3-codex"},
         )
     )
 

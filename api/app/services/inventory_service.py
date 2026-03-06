@@ -78,6 +78,7 @@ from app.services.inventory.route_evidence import (
     _read_latest_route_evidence_probe,
     _route_evidence_summary,
 )
+from app.services.agent_routing.model_routing_loader import get_roi_spec_cheap_model
 from app.services.inventory.spec_discovery import (
     _discover_specs,
     _idea_api_path,
@@ -158,7 +159,6 @@ _ASSET_MODULARITY_LIMITS: dict[str, int] = {
     "implementation_file_lines": 450,
 }
 
-_ROI_SPEC_CHEAP_MODEL = "openai/gpt-4o-mini"
 _ROI_SPEC_TASK_INPUT_MAX_TOKENS = 1200
 _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS = 300
 _ROI_SPEC_CHUNK_PLAN: tuple[tuple[str, str, str], ...] = (
@@ -876,7 +876,10 @@ def _spec_implementation_gap_candidates(limit: int = 200) -> list[dict[str, Any]
     return candidates[: max(1, min(limit, 500))]
 
 
-def sync_spec_implementation_gap_tasks(create_task: bool = False, limit: int = 200) -> dict[str, Any]:
+def sync_spec_implementation_gap_tasks(
+    create_task: bool = False,
+    limit: int = 200,
+) -> dict[str, Any]:
     candidates = _spec_implementation_gap_candidates(limit=max(1, min(limit, 500)))
     if not candidates:
         return {
@@ -921,18 +924,19 @@ def sync_spec_implementation_gap_tasks(create_task: bool = False, limit: int = 2
             "Follow the spec verification contract, add/update tests for behavior, and run local validation. "
             "Do not modify tests only to force pass."
         )
+        ctx: dict[str, Any] = {
+            "source": "spec_implementation_gap",
+            "spec_id": spec_id,
+            "spec_title": title,
+            "spec_path": source_path,
+            "estimated_roi": float(row.get("estimated_roi") or 0.0),
+            "task_fingerprint": fingerprint,
+        }
         task = agent_service.create_task(
             AgentTaskCreate(
                 direction=direction,
                 task_type=TaskType.IMPL,
-                context={
-                    "source": "spec_implementation_gap",
-                    "spec_id": spec_id,
-                    "spec_title": title,
-                    "spec_path": source_path,
-                    "estimated_roi": float(row.get("estimated_roi") or 0.0),
-                    "task_fingerprint": fingerprint,
-                },
+                context=ctx,
             )
         )
         created_tasks.append(
@@ -1861,25 +1865,32 @@ def _spec_chunk_rows_for_cheap_execution(rows: list[dict[str, Any]]) -> list[dic
 
 
 def _build_idea_progress_direction(row: dict[str, Any]) -> str:
-    gap_hint = ""
-    if not bool(row.get("has_linked_spec")):
-        gap_hint = " No linked spec exists yet; seed a focused spec with explicit ROI estimates first."
-    return (
-        f"Advance high-ROI idea '{row['idea_id']}' ({row['name']})."
-        f"{gap_hint} "
-        "Define the next measurable spec checkpoint, acceptance tests, and expected ROI signal updates."
+    """Build idea progress direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_idea_progress_direction
+
+    return get_idea_progress_direction(
+        idea_id=row["idea_id"],
+        idea_name=row["name"],
+        has_linked_spec=bool(row.get("has_linked_spec")),
     )
 
 
 def _build_spec_progress_direction(row: dict[str, Any]) -> str:
+    """Build spec progress direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_spec_progress_direction
+
     chunk = row.get("spec_chunk") if isinstance(row.get("spec_chunk"), dict) else {}
     chunk_index = int(chunk.get("chunk_index") or 1)
     chunk_total = int(chunk.get("chunk_total") or len(_ROI_SPEC_CHUNK_PLAN))
     chunk_label = str(chunk.get("chunk_label") or "Spec slice").strip()
     chunk_goal = str(chunk.get("chunk_goal") or "").strip()
-    return (
-        f"Advance high-ROI spec '{row['spec_id']}' ({row['title']}) part {chunk_index}/{chunk_total}: {chunk_label}. "
-        f"{chunk_goal} Keep this chunk small enough for cheap-model execution with concrete ROI evidence updates."
+    return get_spec_progress_direction(
+        spec_id=row["spec_id"],
+        title=row["title"],
+        chunk_index=chunk_index,
+        chunk_total=chunk_total,
+        chunk_label=chunk_label,
+        chunk_goal=chunk_goal,
     )
 
 
@@ -1915,7 +1926,7 @@ def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> t
             "spec_title": row["title"],
             "estimated_roi": row["estimated_roi"],
             "actual_roi": row["actual_roi"],
-            "model_override": _ROI_SPEC_CHEAP_MODEL,
+            "model_override": get_roi_spec_cheap_model(),
             "max_input_tokens": _ROI_SPEC_TASK_INPUT_MAX_TOKENS,
             "max_output_tokens": _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS,
             "spec_chunk": row.get("spec_chunk"),

@@ -1015,7 +1015,7 @@ def test_codex_events_within_window_ignores_agent_completion_duplicates(
             endpoint="/tool:codex",
             metadata={
                 "provider": "openai-codex",
-                "model": "openclaw/gpt-5.3-codex-spark",
+                "model": "codex/gpt-5.3-codex-spark",
                 "task_id": "task-2",
             },
         ),
@@ -1985,7 +1985,7 @@ async def test_provider_validation_contract_blocks_without_execution_events(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2019,12 +2019,12 @@ async def test_provider_validation_contract_blocks_without_execution_events(
         payload = report.json()
         assert payload["all_required_validated"] is False
         assert payload["blocking_issues"] == [
-            "openclaw: configured=True, readiness_status=ok, successful_events=0/1"
+            "codex: configured=True, readiness_status=ok, successful_events=0/1"
         ]
         by_provider = {row["provider"]: row for row in payload["providers"]}
-        assert by_provider["openclaw"]["usage_events"] == 0
-        assert by_provider["openclaw"]["successful_events"] == 0
-        assert by_provider["openclaw"]["validated_execution"] is False
+        assert by_provider["codex"]["usage_events"] == 0
+        assert by_provider["codex"]["successful_events"] == 0
+        assert by_provider["codex"]["validated_execution"] is False
         assert by_provider["openai"]["validated_execution"] is True
         assert by_provider["claude"]["validated_execution"] is True
 
@@ -2038,7 +2038,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["coherence-internal", "openai-codex", "openclaw", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2064,7 +2064,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     )
     monkeypatch.setattr(automation_usage_service, "_probe_internal", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_openclaw", lambda: (True, "ok"))
+    monkeypatch.setattr(automation_usage_service, "_probe_codex", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_github", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_railway", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_claude", lambda: (True, "ok"))
@@ -2330,11 +2330,11 @@ def test_daily_summary_backfills_missing_host_failure_observability(
         "direction": "legacy failed task missing telemetry",
         "task_type": TaskType.IMPL,
         "status": TaskStatus.FAILED,
-        "model": "openclaw/openrouter/free",
+        "model": "codex/openrouter/free",
         "command": "codex exec",
         "started_at": now,
         "output": "failed before friction contract",
-        "context": {"executor": "openclaw"},
+        "context": {"executor": "codex"},
         "progress_pct": None,
         "current_step": None,
         "decision_prompt": None,
@@ -2640,7 +2640,7 @@ async def test_daily_summary_endpoint_passes_query_arguments(
 
 
 @pytest.mark.asyncio
-async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime_event_metadata(
+async def test_provider_validation_infers_codex_and_openai_codex_from_runtime_event_metadata(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2648,7 +2648,7 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["openai-codex", "openclaw"]
+    required = ["openai-codex", "codex"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2684,9 +2684,9 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
                 "runtime_ms": 1500.0,
                 "idea_id": "coherence-network-agent-pipeline",
                 "metadata": {
-                    "task_id": "task_openclaw_infer",
-                    "executor": "openclaw",
-                    "model": "openclaw/gpt-5.1-codex",
+                    "task_id": "task_codex_infer",
+                    "executor": "codex",
+                    "model": "codex/gpt-5.1-codex",
                     "repeatable_tool_call": 'codex exec "demo" --json',
                     "tracking_kind": "agent_task_completion",
                 },
@@ -2709,12 +2709,12 @@ async def test_provider_validation_infers_openclaw_and_openai_codex_from_runtime
         rows = {row["provider"]: row for row in payload["providers"]}
         assert rows["openai"]["usage_events"] >= 1
         assert rows["openai"]["validated_execution"] is True
-        assert rows["openclaw"]["usage_events"] >= 1
-        assert rows["openclaw"]["validated_execution"] is True
+        assert rows["codex"]["usage_events"] >= 1
+        assert rows["codex"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio
-async def test_provider_validation_infers_clawwork_executor_alias_as_openclaw(
+async def test_provider_validation_infers_codex_executor_from_runtime_event_metadata(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2722,7 +2722,7 @@ async def test_provider_validation_infers_clawwork_executor_alias_as_openclaw(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["openai-codex", "openclaw"]
+    required = ["openai-codex", "codex"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2758,9 +2758,9 @@ async def test_provider_validation_infers_clawwork_executor_alias_as_openclaw(
                 "runtime_ms": 1500.0,
                 "idea_id": "coherence-network-agent-pipeline",
                 "metadata": {
-                    "task_id": "task_clawwork_infer",
-                    "executor": "clawwork",
-                    "model": "clawwork/gpt-5.1-codex",
+                    "task_id": "task_codex_infer_2",
+                    "executor": "codex",
+                    "model": "codex/gpt-5.1-codex",
                     "repeatable_tool_call": 'codex exec "demo" --json',
                     "tracking_kind": "agent_task_completion",
                 },
@@ -2783,8 +2783,8 @@ async def test_provider_validation_infers_clawwork_executor_alias_as_openclaw(
         rows = {row["provider"]: row for row in payload["providers"]}
         assert rows["openai"]["usage_events"] >= 1
         assert rows["openai"]["validated_execution"] is True
-        assert rows["openclaw"]["usage_events"] >= 1
-        assert rows["openclaw"]["validated_execution"] is True
+        assert rows["codex"]["usage_events"] >= 1
+        assert rows["codex"]["validated_execution"] is True
 
 
 @pytest.mark.asyncio

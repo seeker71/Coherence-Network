@@ -132,3 +132,19 @@ async def verify_runtime_usage_internal_vs_public(
         runtime_window_seconds=runtime_window_seconds,
         timeout_seconds=timeout_seconds,
     )
+
+
+@router.get("/runtime/mvp/acceptance-summary")
+async def runtime_mvp_acceptance_summary(
+    seconds: int = Query(86400, ge=60, le=2592000),
+    limit: int = Query(2000, ge=100, le=5000),
+) -> dict:
+    return runtime_service.summarize_mvp_acceptance(seconds=seconds, event_limit=limit)
+
+
+@router.get("/runtime/mvp/acceptance-judge")
+async def runtime_mvp_acceptance_judge(
+    seconds: int = Query(86400, ge=60, le=2592000),
+    limit: int = Query(2000, ge=100, le=5000),
+) -> dict:
+    return runtime_service.evaluate_mvp_acceptance_judge(seconds=seconds, event_limit=limit)

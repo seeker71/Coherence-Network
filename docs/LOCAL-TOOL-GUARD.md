@@ -94,3 +94,30 @@ curl "http://127.0.0.1:8000/api/ideas?limit=500&include_internal=true&read_only_
 ```
 
 The baseline capture script uses this for the capture pass after warm-up.
+
+## Run Claude locally on a real impl task (skip spec)
+
+Use this to run **Claude** on one real impl task: discover the highest-ROI gap from the **public API**, create the task on your **local API** with `executor=claude`, then run the agent once. No API app changes required; discovery is read-only from public, task creation uses existing `POST /api/agent/tasks` (context.executor).
+
+**Prereqs:** Claude Code CLI in PATH (`which claude`), local API running with `AGENT_AUTO_EXECUTE=0`.
+
+1. **One-shot script** (recommended):
+   ```bash
+   # Optional: PUBLIC_API_URL=... LOCAL_API_URL=... to override defaults
+   # Local validation (pin spec, no discovery): SPEC_ID=... SPEC_TITLE="..." ./scripts/run_claude_impl_once.sh
+   ./scripts/run_claude_impl_once.sh
+   ```
+   The script: when `SPEC_ID` is set, builds the task from that spec and skips discovery; otherwise fetches from public API `GET /api/spec-registry/cards?state=in_progress&sort=roi_desc&limit=1` (specs without implementation), or if none then `GET /api/ideas/cards?state=none&sort=roi_desc&limit=1` (ideas without spec); picks the first (highest ROI); creates a task on local API via `POST /api/agent/tasks` with `context.executor=claude`; runs the runner once with `AGENT_TASK_ID` set so only that task is executed (local validation with multiple pending tasks).
+
+2. **Manual:** Discover from public API, then create and run:
+   ```bash
+   # Discover (public)
+   curl -s "https://coherence-network-production.up.railway.app/api/spec-registry/cards?state=in_progress&sort=roi_desc&limit=1"
+   # Create task (local) with direction + context.executor=claude
+   curl -s -X POST "http://127.0.0.1:8000/api/agent/tasks" -H "Content-Type: application/json" \
+     -d '{"direction":"Implement spec SPEC_ID (Title) from spec file. ...","task_type":"impl","context":{"executor":"claude","source":"spec_implementation_gap","spec_id":"SPEC_ID","spec_title":"Title"}}'
+   # Run runner once (optional: AGENT_TASK_ID=<id> to run only that task)
+   cd api && AGENT_AUTO_GENERATE_IDLE_TASKS=0 AGENT_TASK_TIMEOUT=600 .venv/bin/python scripts/agent_runner.py --once --workers 1 --interval 1
+   ```
+
+If the public API returns no in_progress specs and no ideas without spec, the script exits 0 and reports no gap. If `claude` is not in PATH, the runner may fail or fall back (see `AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT`); install [Claude Code CLI](https://claude.com/docs/claude-code) and ensure it is on your PATH.

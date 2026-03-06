@@ -37,6 +37,39 @@ def _runtime_cost_usd(runtime_ms: int) -> float:
     return max(0.0, float(runtime_ms)) / 1000.0 * _runtime_cost_per_second()
 
 
+def _external_provider_cost_per_1k_input_tokens() -> float:
+    raw = os.getenv("AGENT_EXTERNAL_INPUT_COST_PER_1K", "0.00015").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 0.00015
+    return value if value > 0.0 else 0.00015
+
+
+def _external_provider_cost_per_1k_output_tokens() -> float:
+    raw = os.getenv("AGENT_EXTERNAL_OUTPUT_COST_PER_1K", "0.0006").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 0.0006
+    return value if value > 0.0 else 0.0006
+
+
+def _external_provider_cost_usd(
+    *,
+    is_paid_provider: bool,
+    prompt_tokens: int,
+    completion_tokens: int,
+) -> float:
+    if not is_paid_provider:
+        return 0.0
+    in_tokens = max(0, int(prompt_tokens))
+    out_tokens = max(0, int(completion_tokens))
+    in_cost = (float(in_tokens) / 1000.0) * _external_provider_cost_per_1k_input_tokens()
+    out_cost = (float(out_tokens) / 1000.0) * _external_provider_cost_per_1k_output_tokens()
+    return round(max(0.0, in_cost + out_cost), 6)
+
+
 def _record_codex_tool_event(
     *,
     task_id: str,
@@ -53,6 +86,13 @@ def _record_codex_tool_event(
     actual_cost_usd: float | None = None,
 ) -> None:
     status_code = 200 if ok else 500
+    infra_cost_usd = _runtime_cost_usd(elapsed_ms)
+    external_cost_usd = _external_provider_cost_usd(
+        is_paid_provider=bool(is_paid_provider),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
+    total_cost_usd = round(infra_cost_usd + external_cost_usd, 6)
     metadata: dict[str, str | float | int | bool] = {
         "tracking_kind": "agent_tool_call",
         "task_id": task_id,
@@ -60,6 +100,9 @@ def _record_codex_tool_event(
         "provider": "openai-codex",
         "is_openai_codex": True,
         "is_paid_provider": bool(is_paid_provider),
+        "infrastructure_cost_usd": round(infra_cost_usd, 6),
+        "external_provider_cost_usd": external_cost_usd,
+        "total_cost_usd": total_cost_usd,
     }
     if actual_cost_usd is not None:
         metadata["runtime_cost_usd"] = round(float(actual_cost_usd), 6)

@@ -102,6 +102,80 @@ tail -50 api/logs/agent_runner.log
 
 Shows: task_id, command, exit code, output length, any errors.
 
+### 4. Claude PID and whether it is still running
+
+For a **running** task, the runner stores the **Claude (child) process PID** in the task context so you can check if the CLI is still alive and what it’s doing.
+
+- **`context.runner_pid`** — PID of the **child process** (the `claude -p "..."` subprocess). This is the Claude CLI process.
+- **`context.runner_id`** — `hostname:pid` of the **runner** (Python) process, e.g. `Urss-MacBook-Pro.local:2821`.
+
+**Check if Claude is still running:**
+```bash
+# Get task (replace TASK_ID)
+curl -s "http://127.0.0.1:8000/api/agent/tasks/TASK_ID" | jq '{status, progress_pct, current_step, "claude_pid": .context.runner_pid, "runner_id": .context.runner_id, "runner_last_seen_at": .context.runner_last_seen_at}'
+
+# If claude_pid is set, check process (replace 2914)
+ps -p 2914 -o pid,stat,etime,command
+```
+If the task is still **running** but `ps -p <runner_pid>` shows “no such process”, the child exited (e.g. crash or finished) and the runner will soon update the task status.
+
+### 5. Latest logs and how progress is made
+
+- **Task log (streaming output from Claude):** `api/logs/task_{task_id}.log`  
+  The runner writes a header (task_id, command) then streams the child’s stdout line-by-line. Use `tail -f api/logs/task_TASK_ID.log` to watch live.
+
+- **Progress fields (updated every heartbeat):** The runner patches the task periodically with:
+  - **`current_step`** — Latest parsed activity (e.g. "Thinking", "Tool: read_file") or "Running" when no structured events yet.
+  - **`context.runner_recent_activity`** — List of recent step labels from agent output (when using stream-json or parseable JSON lines).
+  - **`context.runner_log_tail`** — last lines of captured output (same as tail of the task log).
+  - **`context.runner_last_seen_at`** — last heartbeat time (UTC).
+  - **`progress_pct`** — Not set during run (no misleading time-based %). Set to 100 only when the task completes.
+
+So: **actual progress** = `current_step` and `context.runner_recent_activity`; **logs** = task log file and `runner_log_tail`. For real-time steps/tools/thinking, use `CLAUDE_CODE_OUTPUT_FORMAT=stream-json` (Claude) or have the agent emit **`[STATUS] <step>`** lines at least every 2 minutes (the runner parses these). **Resume:** set `context.resume` or `context.resume_session_id` when creating a task to continue a previous session. Resume is applied in a provider-agnostic way (Claude: `-c`; Codex/Cursor/Gemini: add in `apply_resume_to_command` when supported). **Task reuse:** when creating a task, pass `context.task_fingerprint`; if an active (pending/running) task with that fingerprint exists, it is returned instead of creating a new one. **Resume before restart:** To validate without losing the current run, start the runner with `AGENT_TASK_ID=<id>` set to the existing running task so it claims that task and sends a running heartbeat. Orphan recovery only reaps tasks when a runner reports *idle* and the task is past the stale threshold and was claimed by that same runner, so the task you want to resume is not reaped while the new runner is starting. If you stopped the previous runner and want a *new* runner to take over the same task, either wait for the run-state lease to expire (~2 min) or clear the task to pending so the new runner can claim.
+
+## Long runs: no timeout, progress, and resume
+
+Avoid burning LLM budget by aborting long runs without the ability to see progress or continue. Use no timeout, snapshots, and resume.
+
+### No timeout (recommended for costly runs)
+
+Set **`AGENT_TASK_TIMEOUT=0`** so the runner never kills a task. The process runs until it completes, you abort via API, or a usage guard triggers. Default is 3600s; with 0 there is no time limit.
+
+```bash
+AGENT_TASK_TIMEOUT=0 .venv/bin/python scripts/agent_runner.py --once -v
+```
+
+### Seeing progress
+
+While a task is **running**, the runner periodically patches the task with:
+
+- **`current_step`** — Latest activity from agent output (e.g. "Thinking", "Tool: read_file") or "Running"
+- **`context.runner_recent_activity`** — List of recent steps (when output is stream-json or parseable)
+- **`context.runner_log_tail`** — last lines of captured stdout/stderr
+- **`context.runner_last_seen_at`**, **`context.runner_pid`**
+- **`progress_pct`** — not set during run (only 100 when completed)
+
+**API:** `GET /api/agent/tasks/{task_id}` and inspect `current_step`, `context.runner_recent_activity`, `context.runner_log_tail`.
+
+**Log file:** Output is streamed to `api/logs/task_{task_id}.log`; use `tail -f api/logs/task_{task_id}.log` to watch live.
+
+**Status report:** `GET /api/agent/status-report` (or `check_pipeline.py`) for high-level run state.
+
+### Snapshots on timeout or abort
+
+If a run is stopped by a **time limit** (when `AGENT_TASK_TIMEOUT` > 0), the runner:
+
+- Saves the **partial output** into the task (and appends to the task log file).
+- Sets **`context.timeout_snapshot_at`**, **`context.partial_output_len`**, **`context.resumable`** so you can see that the run was cut by timeout and can be retried/resumed.
+
+So you always have a snapshot of progress and can decide to requeue the same task.
+
+### Resuming unfinished work
+
+- **Requeue the same task:** Set the task back to **pending** (e.g. PATCH `status: "pending"`) so the runner picks it up again. The same `direction` and context are used; for PR-mode tasks the runner uses **`resume_checkpoint_sha`** / **`resume_branch`** when present.
+- **PR mode:** The runner already checkpoints partial progress (git commit + push on the task branch) and can requeue with **resume_attempts** / **resume_checkpoint_sha** so the next run continues from the last checkpoint.
+- **No timeout:** Prefer **`AGENT_TASK_TIMEOUT=0`** for expensive or long-running tasks so you don’t lose progress to a hard kill; use progress and manual abort if you need to stop.
+
 ### 4. Pipeline status and visibility
 
 **Quick status:**

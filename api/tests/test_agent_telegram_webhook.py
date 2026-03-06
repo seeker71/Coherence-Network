@@ -491,7 +491,7 @@ def test_format_task_alert_includes_updated_and_action() -> None:
         "status": "needs_decision",
         "direction": "Handle release blocker",
         "updated_at": "2026-02-19T17:00:00Z",
-        "model": "openclaw/gpt-5.3-codex",
+        "model": "codex/gpt-5.3-codex",
         "context": {"executor": "codex"},
     }
     message = format_task_alert(task)
@@ -534,7 +534,7 @@ def test_format_runner_update_card_uses_clean_title_and_links() -> None:
 
 def test_telegram_card_helpers_summarize_runtime_and_action() -> None:
     assert summarize_direction("   A   long  task    description   ") == "A long task description"
-    assert task_runtime_label("openclaw", "openclaw/gpt-5.3-codex-spark") == "Executor: codex | Model: gpt-5.3-codex-spark"
+    assert task_runtime_label("codex", "codex/gpt-5.3-codex-spark") == "Executor: codex | Model: gpt-5.3-codex-spark"
     assert next_action_for_status({"id": "task_77", "status": "failed", "output": "Execution failed: lint + pytest"}) == (
         "/direction Fix failing tests/lint for task task_77 and rerun with proof"
     )

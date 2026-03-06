@@ -46,4 +46,9 @@ export type EvidenceEventRow = {
   statusCode: number;
   trackingKind: string;
   finalStatus: string;
+  reviewPassFail: string;
+  verifiedAssertions: string;
+  infrastructureCostUsd: number;
+  externalProviderCostUsd: number;
+  totalCostUsd: number;
 };

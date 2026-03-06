@@ -1,6 +1,8 @@
 """Agent task completion tracking: runtime events, idea_id resolution."""
 
+import json
 import hashlib
+import re
 from typing import Any
 
 from app.models.runtime import RuntimeEventCreate
@@ -122,6 +124,43 @@ def _task_failure_metadata(task: dict[str, Any], task_context: dict[str, Any]) -
     return payload
 
 
+def _review_acceptance_metadata(task: dict[str, Any]) -> dict[str, Any]:
+    task_type = str(task.get("task_type") or "").strip().lower()
+    if task_type != "review":
+        return {}
+    output_text = task_output_text(task).strip()
+    if not output_text:
+        return {}
+
+    pass_fail = ""
+    verified = ""
+    if output_text.startswith("{"):
+        try:
+            payload = json.loads(output_text)
+        except Exception:
+            payload = {}
+        if isinstance(payload, dict):
+            pass_fail = str(payload.get("PASS_FAIL") or payload.get("pass_fail") or "").strip().upper()
+            verified = str(payload.get("VERIFIED") or payload.get("verified") or "").strip()
+
+    if not pass_fail:
+        match = re.search(r"(?im)^\s*PASS_FAIL\s*:\s*(PASS|FAIL)\b", output_text)
+        if match:
+            pass_fail = str(match.group(1) or "").strip().upper()
+    if not verified:
+        match = re.search(r"(?im)^\s*VERIFIED\s*:\s*([^\n]+)", output_text)
+        if match:
+            verified = str(match.group(1) or "").strip()
+
+    out: dict[str, Any] = {}
+    if pass_fail in {"PASS", "FAIL"}:
+        out["review_pass_fail"] = pass_fail
+        out["review_accepted"] = pass_fail == "PASS"
+    if verified:
+        out["verified_assertions"] = verified[:120]
+    return out
+
+
 def record_completion_tracking_event(task: dict[str, Any]) -> None:
     status_value = task.get("status")
     final_status = status_value.value if hasattr(status_value, "value") else str(status_value or "")
@@ -196,6 +235,9 @@ def record_completion_tracking_event(task: dict[str, Any]) -> None:
         "repeatable_replay_hint": command
         or "Replay by patching the task to completed/failed with the same task id.",
     }
+    review_acceptance = _review_acceptance_metadata(task)
+    if review_acceptance:
+        metadata.update(review_acceptance)
     if failure_metadata:
         metadata.update(failure_metadata)
 

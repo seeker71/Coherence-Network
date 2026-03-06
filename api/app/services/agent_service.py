@@ -4,7 +4,7 @@ Public API and store re-exports for backward compatibility.
 Implementation lives in agent_service_*.py modules.
 """
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from app.models.agent import TaskType
 from app.services import agent_routing_service as routing_service

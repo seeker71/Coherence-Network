@@ -122,6 +122,20 @@ Notes:
 - `GET /api/agent/route` supports `executor=auto` (policy default).
 - Each task stores policy decision metadata under `context.executor_policy` for auditability.
 
+### External configuration (config over env)
+
+Configuration lives in **config files**; env is only for override paths.
+
+- **Executors (no aliasing):** `api/config/executor_routing.json` (or `EXECUTOR_ROUTING_CONFIG_PATH`). Defines canonical `executors` list, `runner_auth_context_key_by_executor`, and `model_prefix_by_executor`. One name per executor; no executor_aliases. Every executor has a model prefix (e.g. `claude`, `openrouter`) so stored models are uniformly `executor/model_id`. Only canonical executor names are accepted; no aliasing.
+- **Models:** `api/config/model_routing.json` (or `MODEL_ROUTING_CONFIG_PATH`). Defines:
+  - **Strong / fast tiers:** `tiers_by_executor` (e.g. `strong`, `fast` model id per executor) and `task_type_tier` (e.g. `spec`/`review`/`heal` → strong, `impl`/`test` → fast). Routing uses `get_model_for_executor_and_task_type(executor, task_type)` so spec and review use the strong model, impl and test use the fast model.
+  - `default_models_by_executor`: optional legacy model id per executor (default/review); used only when `tiers_by_executor` is not set for that executor.
+  - `openrouter_models_by_task_type`: **only used when executor is openrouter**. Model per task type (spec/test/impl/review/heal); typically `openrouter/free` for free-tier.
+  - `openrouter_free_model`: default for openrouter when not per-task.
+  - **Fallback when a model is out of usage:** `fallback_chains` is an object keyed by executor; each value is an ordered list of model ids. On rate-limit or quota errors, the runner/retry path calls `get_fallback_model(executor, current_model)` and retries with the next model in the chain if non-null. Execution retry (`agent_execution_retry.record_failure_hits_and_retry`) applies this when the failure category is `rate_limit` or `paid_provider_blocked`.
+  No aliasing: model ids are used as-is.
+See `api/config/model_routing.json` and `api/app/services/agent_routing/model_routing_loader.py`.
+
 ---
 
 ## Setup Order

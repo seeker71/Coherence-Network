@@ -198,12 +198,8 @@ def test_agent_runner_runtime_event_includes_codex_execution_metadata(monkeypatc
     assert metadata["is_openai_codex"] is True
 
 
-def test_infer_executor_detects_openclaw():
-    assert agent_runner._infer_executor('openclaw run "task"', "openclaw/model") == "codex"
-
-
-def test_infer_executor_detects_clawwork_alias():
-    assert agent_runner._infer_executor('clawwork run "task"', "clawwork/model") == "codex"
+def test_infer_executor_detects_codex():
+    assert agent_runner._infer_executor('codex exec "task"', "codex/gpt-5.3-codex") == "codex"
 
 
 def test_infer_executor_detects_openrouter_model():
@@ -965,7 +961,7 @@ def test_run_one_task_schedules_model_not_found_fallback_retry(monkeypatch, tmp_
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
     )
     assert done is True
 
@@ -1040,7 +1036,7 @@ def test_run_one_task_skips_codex_auth_retry_when_retry_explicitly_disabled(monk
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5-codex",
+        model="codex/gpt-5-codex",
         task_context={"retry_max": 0},
     )
     assert done is True
@@ -1519,7 +1515,7 @@ def test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
     )
     assert done is True
 
@@ -1576,7 +1572,7 @@ def test_run_one_task_schedules_oauth_retry_when_retry_max_is_null(monkeypatch, 
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
         task_context={"retry_max": None},
     )
     assert done is True
@@ -1639,7 +1635,7 @@ def test_run_one_task_does_not_retry_when_oauth_refresh_reseed_is_stale_and_relo
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
     )
     assert done is True
 
@@ -1713,7 +1709,7 @@ def test_run_one_task_refresh_token_reuse_recovers_oauth_session_from_task_conte
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
         task_context={"runner_codex_oauth_session_b64": encoded},
     )
     assert done is True
@@ -1969,7 +1965,7 @@ def test_run_one_task_executes_codex_via_argv_to_avoid_shell_expansion(monkeypat
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5.3-codex",
+        model="codex/gpt-5.3-codex",
     )
     assert done is True
     assert popen_calls
@@ -2051,7 +2047,7 @@ def test_run_one_task_records_codex_model_alias_in_context_and_log(monkeypatch, 
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/openrouter/free",
+        model="codex/openrouter/free",
     )
     assert done is True
 
@@ -2109,7 +2105,7 @@ def test_run_one_task_records_codex_oauth_auth_context_and_log(monkeypatch, tmp_
         log=log,
         verbose=False,
         task_type="impl",
-        model="openclaw/gpt-5-codex",
+        model="codex/gpt-5-codex",
     )
     assert done is True
 

@@ -8,8 +8,10 @@ from app.models.agent import TaskType
 
 from app.services.agent_routing.model_config import (
     enforce_openrouter_free_model,
+    get_openrouter_free_model,
     normalize_model_name,
 )
+from app.services.agent_routing.model_routing_loader import get_model_for_executor
 from app.services.agent_routing.routing_config import (
     CLAUDE_CODE_MODEL_BY_TYPE,
     CURSOR_MODEL_BY_TYPE,
@@ -33,10 +35,12 @@ def cursor_command_template(task_type: TaskType) -> str:
 def _resolve_codex_default_model(task_type: TaskType) -> str:
     resolved_model = normalize_model_name(OPENCLAW_MODEL_BY_TYPE[task_type])
     if not resolved_model:
-        return "gpt-5.3-codex"
+        fallback = get_model_for_executor("codex", "default")
+        return normalize_model_name(str(fallback or "").strip()) or get_openrouter_free_model()
     lower_model = resolved_model.lower()
     if lower_model.startswith("openrouter/") or lower_model.endswith("/free") or "openrouter/free" in lower_model:
-        return "gpt-5.3-codex"
+        fallback = get_model_for_executor("codex", "default")
+        return normalize_model_name(str(fallback or "").strip()) or get_openrouter_free_model()
     return resolved_model
 
 
@@ -50,10 +54,6 @@ def codex_command_template(task_type: TaskType) -> str:
     if "{{direction}}" not in template:
         template = template.strip() + ' "{{direction}}"'
     return template.replace("{{model}}", model)
-
-
-def openclaw_command_template(task_type: TaskType) -> str:
-    return codex_command_template(task_type)
 
 
 def openrouter_command_template(task_type: TaskType) -> str:
@@ -93,11 +93,12 @@ def claude_command_template(task_type: TaskType) -> str:
         return template.replace("{{model}}", model)
     model_flag = f" --model {model}" if model else ""
     budget = os.environ.get("CLAUDE_CODE_MAX_BUDGET_USD", "2.00")
+    out_fmt = os.environ.get("CLAUDE_CODE_OUTPUT_FORMAT", "json")
     return (
         'claude -p "{{direction}}"'
         + model_flag
         + " --dangerously-skip-permissions"
-        + " --output-format json"
+        + f" --output-format {out_fmt}"
         + f" --max-budget-usd {budget}"
     )
 

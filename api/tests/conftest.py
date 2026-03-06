@@ -19,6 +19,24 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+_DB_ENV_VARS = (
+    "DATABASE_URL",
+    "IDEA_REGISTRY_DATABASE_URL",
+    "IDEA_REGISTRY_DB_URL",
+    "GOVERNANCE_DATABASE_URL",
+    "GOVERNANCE_DB_URL",
+    "COMMIT_EVIDENCE_DATABASE_URL",
+    "IDEA_COMMIT_EVIDENCE_DIR",
+)
+
+if os.getenv("PYTEST_ALLOW_DATABASE_URL", "").strip().lower() not in {"1", "true", "yes", "on"}:
+    for _env_key in _DB_ENV_VARS:
+        # Wipe external DB URLs before importing application modules so
+        # tests never try to connect to shared Postgres instances during
+        # collection. Individual tests can still opt into a DB by setting
+        # their own env vars via monkeypatch.
+        os.environ.pop(_env_key, None)
+
 try:  # prefer real plugin when available
     import pytest_asyncio as _pytest_asyncio  # noqa: F401
 except ModuleNotFoundError:

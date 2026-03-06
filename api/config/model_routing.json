@@ -16,6 +16,10 @@
       "strong": "claude-sonnet-4-6",
       "fast": "claude-3-5-haiku-20241022"
     },
+    "codex": {
+      "strong": "gpt-5.3-codex-spark",
+      "fast": "gpt-5.3-codex-spark"
+    },
     "cursor": {
       "strong": "auto",
       "fast": "auto"

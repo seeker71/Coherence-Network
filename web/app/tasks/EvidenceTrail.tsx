@@ -12,6 +12,14 @@ type EvidenceTrailProps = {
   selectedContext: Record<string, unknown>;
   evidenceIdeas: EvidenceIdeaRow[];
   evidenceEvents: EvidenceEventRow[];
+  acceptanceProof: {
+    reviewPassFail: string;
+    verifiedAssertions: string;
+    reviewAccepted: boolean | null;
+    infrastructureCostUsd: number;
+    externalProviderCostUsd: number;
+    totalCostUsd: number;
+  };
 };
 
 export function EvidenceTrail({
@@ -22,6 +30,7 @@ export function EvidenceTrail({
   selectedContext,
   evidenceIdeas,
   evidenceEvents,
+  acceptanceProof,
 }: EvidenceTrailProps) {
   const failureHits = toInt(selectedContext.failure_hits);
   const retryCount = toInt(selectedContext.retry_count);
@@ -45,6 +54,17 @@ export function EvidenceTrail({
             <p className="text-muted-foreground">
               current_step <code>{selectedTask.current_step}</code>
             </p>
+          ) : null}
+          {Array.isArray(selectedContext.runner_recent_activity) &&
+          selectedContext.runner_recent_activity.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-muted-foreground">recent activity</p>
+              <ul className="list-disc list-inside text-muted-foreground">
+                {(selectedContext.runner_recent_activity as { step?: string }[]).map((a, i) => (
+                  <li key={i}>{a.step ?? "—"}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           <div>
             <p className="text-muted-foreground mb-1">output</p>
@@ -123,6 +143,28 @@ export function EvidenceTrail({
                 ))}
               </ul>
             )}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-muted-foreground">MVP acceptance proof</p>
+            <p>
+              review_pass_fail <code>{acceptanceProof.reviewPassFail || "-"}</code> | review_accepted{" "}
+              <code>
+                {acceptanceProof.reviewAccepted === null
+                  ? "-"
+                  : acceptanceProof.reviewAccepted
+                    ? "true"
+                    : "false"}
+              </code>
+            </p>
+            <p className="text-muted-foreground">
+              verified_assertions <code>{acceptanceProof.verifiedAssertions || "-"}</code>
+            </p>
+            <p className="text-muted-foreground">
+              infrastructure_cost_usd <code>{acceptanceProof.infrastructureCostUsd.toFixed(6)}</code> | external_provider_cost_usd{" "}
+              <code>{acceptanceProof.externalProviderCostUsd.toFixed(6)}</code> | total_cost_usd{" "}
+              <code>{acceptanceProof.totalCostUsd.toFixed(6)}</code>
+            </p>
           </div>
 
           <div>

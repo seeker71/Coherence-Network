@@ -48,13 +48,6 @@ def derive_task_executor(task: dict[str, Any]) -> str:
         return "openrouter"
     if model.startswith("codex/") or command.startswith("codex "):
         return "codex"
-    if (
-        model.startswith("openclaw/")
-        or model.startswith("clawwork/")
-        or command.startswith("openclaw ")
-        or command.startswith("clawwork ")
-    ):
-        return "codex"
     if command.startswith("aider "):
         return "aider"
     if command.startswith("claude "):
