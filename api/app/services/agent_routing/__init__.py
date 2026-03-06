@@ -5,7 +5,6 @@ from app.services.agent_routing.command_templates import (
     codex_command_template,
     cursor_command_template,
     gemini_command_template,
-    openclaw_command_template,
     openrouter_command_template,
     resolve_codex_default_model,
 )
@@ -25,7 +24,6 @@ from app.services.agent_routing.executor_config import (
     repo_question_executor_default,
 )
 from app.services.agent_routing.model_config import (
-    DEFAULT_MODEL_ALIAS_MAP,
     enforce_openrouter_free_model,
     normalize_model_name,
 )
@@ -43,7 +41,6 @@ from app.services.agent_routing.routing_config import (
 )
 
 __all__ = [
-    "DEFAULT_MODEL_ALIAS_MAP",
     "ROUTING",
     "CURSOR_MODEL_BY_TYPE",
     "OPENCLAW_MODEL_BY_TYPE",
@@ -67,7 +64,6 @@ __all__ = [
     "enforce_openrouter_free_model",
     "cursor_command_template",
     "codex_command_template",
-    "openclaw_command_template",
     "openrouter_command_template",
     "gemini_command_template",
     "claude_command_template",

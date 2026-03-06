@@ -203,24 +203,10 @@ def review_indicates_pass(output: str) -> bool:
 
 
 def build_direction(phase: str, item: str, iteration: int, last_output: str = "") -> str:
-    if phase == "spec":
-        return (
-            f"Write or expand the spec for: {item}. Use specs/TEMPLATE.md and include explicit "
-            "Verification, Risks/Assumptions, and Known Gaps with follow-up tasks. "
-            "Run `python3 scripts/validate_spec_quality.py --file <spec-path>` before finishing. "
-            "Output the spec path."
-        )
-    if phase == "impl":
-        if iteration > 1:
-            # Pass enough review/test output for PATCH_GUIDANCE (spec 108); cap at 2000 to fit direction length
-            review_snippet = (last_output or "")[:2000]
-            return f"Fix the issues (iteration {iteration}): {item}. Review feedback or test failures: {review_snippet}"
-        return f"Implement per spec: {item}. Modify only files listed in the spec. Do not add features not in the spec."
-    if phase == "test":
-        return f"Write and run tests for: {item}. Ensure tests define the contract. Do not modify tests to make impl pass."
-    if phase == "review":
-        return f"Review the implementation for: {item}. Check spec compliance, security, correctness. Output: pass/fail and issues."
-    return item
+    """Build direction from config (api/config/prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import build_direction as _build_from_config
+
+    return _build_from_config(phase, item, iteration, last_output)
 
 
 def _task_payload(direction: str, task_type: str, use_cursor: bool = False) -> dict:

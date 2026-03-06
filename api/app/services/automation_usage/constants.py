@@ -48,7 +48,7 @@ PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
     "anthropic": {"kind": "subscription_window", "all_of": []},
     "cursor": {"kind": "subscription_window", "all_of": []},
-    "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
+    "codex": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
     "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
     "db-host": {"kind": "custom", "any_of": ["RUNTIME_DATABASE_URL", "DATABASE_URL"]},
@@ -59,7 +59,6 @@ DEFAULT_PROVIDER_VALIDATION_REQUIRED = ("openai", "claude", "cursor", "gemini", 
 
 PROVIDER_ALIASES: dict[str, str] = {
     "anthropic": "claude",
-    "clawwork": "openclaw",
     "codex": "openai",
     "openai-codex": "openai",
 }

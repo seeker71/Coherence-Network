@@ -11,7 +11,6 @@ from app.services.agent_routing import (
     CLAUDE_CODE_MODEL_BY_TYPE,
     CODEX_MODEL_BY_TYPE,
     CURSOR_MODEL_BY_TYPE,
-    DEFAULT_MODEL_ALIAS_MAP,
     EXECUTOR_VALUES,
     GEMINI_MODEL_BY_TYPE,
     OPENCLAW_MODEL_BY_TYPE,
@@ -35,7 +34,6 @@ from app.services.agent_routing import (
     normalize_executor,
     normalize_model_name,
     open_question_executor_default,
-    openclaw_command_template,
     openrouter_command_template,
     repo_question_executor_default,
     resolve_codex_default_model,
@@ -111,7 +109,7 @@ def normalize_open_responses_model(model: str) -> str:
     cleaned = str(model or "").strip()
     if "/" in cleaned:
         prefix, _, suffix = cleaned.partition("/")
-        if prefix in {"codex", "openclaw", "clawwork", "cursor", "gemini"} and suffix.strip():
+        if prefix in EXECUTOR_VALUES and suffix.strip():
             return suffix.strip()
     return cleaned
 
@@ -144,7 +142,6 @@ def build_normalized_response_call(
 
 # Re-export for backward compatibility; all symbols above also available via agent_routing package.
 __all__ = [
-    "DEFAULT_MODEL_ALIAS_MAP",
     "ROUTING",
     "CURSOR_MODEL_BY_TYPE",
     "OPENCLAW_MODEL_BY_TYPE",
@@ -168,7 +165,6 @@ __all__ = [
     "enforce_openrouter_free_model",
     "cursor_command_template",
     "codex_command_template",
-    "openclaw_command_template",
     "openrouter_command_template",
     "gemini_command_template",
     "claude_command_template",

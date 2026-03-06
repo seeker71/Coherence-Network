@@ -17,6 +17,15 @@ import {
 import { EvidenceTrail } from "./EvidenceTrail";
 import { TasksListSection } from "./TasksListSection";
 
+function toNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
@@ -166,9 +175,38 @@ function TasksPageContent() {
         statusCode: event.status_code,
         trackingKind: String(metadata.tracking_kind || "").trim(),
         finalStatus: String(metadata.task_final_status || "").trim(),
+        reviewPassFail: String(metadata.review_pass_fail || "").trim(),
+        verifiedAssertions: String(metadata.verified_assertions || "").trim(),
+        infrastructureCostUsd: toNumber(metadata.infrastructure_cost_usd),
+        externalProviderCostUsd: toNumber(metadata.external_provider_cost_usd),
+        totalCostUsd: toNumber(metadata.total_cost_usd),
       };
     });
   }, [selectedTaskEvents]);
+
+  const acceptanceProof = useMemo(() => {
+    let infrastructureCostUsd = 0;
+    let externalProviderCostUsd = 0;
+    let totalCostUsd = 0;
+    for (const row of evidenceEvents) {
+      if (row.trackingKind !== "agent_tool_call") continue;
+      infrastructureCostUsd += row.infrastructureCostUsd;
+      externalProviderCostUsd += row.externalProviderCostUsd;
+      totalCostUsd += row.totalCostUsd;
+    }
+    const completionRow = evidenceEvents.find((row) => row.trackingKind === "agent_task_completion");
+    const reviewPassFail = completionRow?.reviewPassFail || "";
+    const verifiedAssertions = completionRow?.verifiedAssertions || "";
+    const reviewAccepted = reviewPassFail === "PASS" ? true : reviewPassFail === "FAIL" ? false : null;
+    return {
+      reviewPassFail,
+      verifiedAssertions,
+      reviewAccepted,
+      infrastructureCostUsd: Number(infrastructureCostUsd.toFixed(6)),
+      externalProviderCostUsd: Number(externalProviderCostUsd.toFixed(6)),
+      totalCostUsd: Number(totalCostUsd.toFixed(6)),
+    };
+  }, [evidenceEvents]);
 
   return (
     <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
@@ -233,6 +271,7 @@ function TasksPageContent() {
                 selectedContext={selectedContext}
                 evidenceIdeas={evidenceIdeas}
                 evidenceEvents={evidenceEvents}
+                acceptanceProof={acceptanceProof}
               />
             )}
           </>

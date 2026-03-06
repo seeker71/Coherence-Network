@@ -282,25 +282,26 @@ def test_plan_prompt_includes_friction_focus_when_bundle_present() -> None:
 
 
 def test_stage_payloads_pin_expected_models() -> None:
+    """Stage payloads use config-driven PLAN_MODEL, EXECUTE_MODEL, REVIEW_MODEL (model_routing.json)."""
     plan_payload = run_self_improve_cycle.build_task_payload(
         direction="plan",
         task_type="spec",
-        model_override="gpt-5.3-codex",
+        model_override=run_self_improve_cycle.PLAN_MODEL,
     )
     execute_payload = run_self_improve_cycle.build_task_payload(
         direction="execute",
         task_type="impl",
-        model_override="gpt-5.3-codex-spark",
+        model_override=run_self_improve_cycle.EXECUTE_MODEL,
     )
     review_payload = run_self_improve_cycle.build_task_payload(
         direction="review",
         task_type="review",
-        model_override="gpt-5.3-codex",
+        model_override=run_self_improve_cycle.REVIEW_MODEL,
     )
 
-    assert plan_payload["context"]["model_override"] == "gpt-5.3-codex"
-    assert execute_payload["context"]["model_override"] == "gpt-5.3-codex-spark"
-    assert review_payload["context"]["model_override"] == "gpt-5.3-codex"
+    assert plan_payload["context"]["model_override"] == run_self_improve_cycle.PLAN_MODEL
+    assert execute_payload["context"]["model_override"] == run_self_improve_cycle.EXECUTE_MODEL
+    assert review_payload["context"]["model_override"] == run_self_improve_cycle.REVIEW_MODEL
     assert plan_payload["context"]["executor"] == "codex"
     assert execute_payload["context"]["executor"] == "codex"
     assert review_payload["context"]["executor"] == "codex"

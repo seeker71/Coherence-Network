@@ -7,6 +7,7 @@ from typing import Any
 from app.services import agent_execution_completion as completion_service
 from app.services import agent_execution_metrics as metrics_service
 from app.services import agent_execution_service as execution_service
+from app.services.agent_routing.model_routing_loader import get_openrouter_free_model
 
 
 def resolve_execution_plan(
@@ -15,7 +16,7 @@ def resolve_execution_plan(
     estimated_cost_usd: float | None,
     cost_slack_ratio: float | None,
 ) -> tuple[str, str, dict[str, float | None]]:
-    default_model = execution_service.os.getenv("OPENROUTER_FREE_MODEL", "openrouter/free").strip() or "openrouter/free"
+    default_model = get_openrouter_free_model()
     model = execution_service._resolve_openrouter_model(task, default_model)
     prompt = execution_service._resolve_prompt(task)
     cost_budget = metrics_service.resolve_cost_controls(task, max_cost_usd, estimated_cost_usd, cost_slack_ratio)

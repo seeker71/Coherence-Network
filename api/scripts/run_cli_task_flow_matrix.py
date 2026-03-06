@@ -29,6 +29,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from app.services.agent_routing.model_routing_loader import get_model_for_executor
+
 DEFAULT_EXECUTORS = ("codex", "claude", "cursor", "gemini")
 DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_REMOTE_BASE_URL = "https://coherence-network-production.up.railway.app"
@@ -276,45 +278,25 @@ def _spec_direction(*, run_label: str, executor: str, attempt: int, spec_path: s
 
 
 def _impl_direction(*, spec_path: str, impl_path: str, verify_path: str) -> str:
-    return (
-        "Implement the spec exactly and do not expand scope.\n"
-        f"Spec path: {spec_path}\n"
-        f"Implementation path: {impl_path}\n"
-        f"Verification script path: {verify_path}\n\n"
-        "Implementation requirements:\n"
-        "1. Implement a callable slug function and deterministic behavior defined in spec.\n"
-        "2. Create a standalone verification script with multiple assertions and clear pass/fail output.\n"
-        f"3. Execute: python3 {verify_path}\n"
-        "4. Return VERIFICATION_EVIDENCE including command + output snippet.\n"
-    )
+    """Build impl direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_cli_flow_direction
+
+    return get_cli_flow_direction("impl", spec_path, impl_path, verify_path, "")
 
 
 def _review_direction(*, spec_path: str, impl_path: str, verify_path: str) -> str:
-    return (
-        "Review implementation against spec verification contract.\n"
-        f"Spec path: {spec_path}\n"
-        f"Implementation path: {impl_path}\n"
-        f"Verification script path: {verify_path}\n\n"
-        "Review requirements:\n"
-        "1. Validate acceptance criteria coverage and correctness.\n"
-        f"2. Re-run verification command: python3 {verify_path}\n"
-        "3. Return PASS_FAIL, FINDINGS, SPEC_VERIFICATION_STATUS, PATCH_GUIDANCE.\n"
-        "4. If FAIL, PATCH_GUIDANCE must contain exact file edits and re-verification commands.\n"
-    )
+    """Build review direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_cli_flow_direction
+
+    return get_cli_flow_direction("review", spec_path, impl_path, verify_path, "")
 
 
 def _heal_direction(*, spec_path: str, impl_path: str, verify_path: str, review_output: str) -> str:
-    return (
-        "Apply a minimal patch based on failed review guidance and recover to pass.\n"
-        f"Spec path: {spec_path}\n"
-        f"Implementation path: {impl_path}\n"
-        f"Verification script path: {verify_path}\n\n"
-        "Failed review output (for patch guidance):\n"
-        f"{_clip(review_output, max_chars=2200)}\n\n"
-        "Heal requirements:\n"
-        "1. Apply concrete patch changes only for the identified failures.\n"
-        f"2. Re-run: python3 {verify_path}\n"
-        "3. Return PATCH_APPLIED, FILES_CHANGED, VERIFICATION_EVIDENCE.\n"
+    """Build heal direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_cli_flow_direction
+
+    return get_cli_flow_direction(
+        "heal", spec_path, impl_path, verify_path, _clip(review_output, max_chars=2200)
     )
 
 
@@ -813,10 +795,22 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout-seconds", type=int, default=900)
     parser.add_argument("--poll-seconds", type=float, default=3.0)
     parser.add_argument("--force-paid-providers", action="store_true", default=True)
-    parser.add_argument("--codex-model", default=os.getenv("CLI_FLOW_CODEX_MODEL", "gpt-5.3-codex"))
-    parser.add_argument("--claude-model", default=os.getenv("CLI_FLOW_CLAUDE_MODEL", ""))
-    parser.add_argument("--cursor-model", default=os.getenv("CLI_FLOW_CURSOR_MODEL", ""))
-    parser.add_argument("--gemini-model", default=os.getenv("CLI_FLOW_GEMINI_MODEL", "gemini-3.1-pro-preview"))
+    parser.add_argument(
+        "--codex-model",
+        default=os.getenv("CLI_FLOW_CODEX_MODEL") or get_model_for_executor("codex", "default") or "gpt-5.3-codex",
+    )
+    parser.add_argument(
+        "--claude-model",
+        default=os.getenv("CLI_FLOW_CLAUDE_MODEL") or get_model_for_executor("claude", "default") or "",
+    )
+    parser.add_argument(
+        "--cursor-model",
+        default=os.getenv("CLI_FLOW_CURSOR_MODEL") or get_model_for_executor("cursor", "default") or "",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default=os.getenv("CLI_FLOW_GEMINI_MODEL") or get_model_for_executor("gemini", "default") or "gemini-2.0-flash",
+    )
     parser.add_argument("--output", default="")
     parser.add_argument(
         "--spawn-local-runner",

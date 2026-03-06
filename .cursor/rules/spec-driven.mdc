@@ -25,7 +25,8 @@ alwaysApply: true
 
 - Only modify files listed in the spec/issue
 - Do not refactor adjacent code or add features not in spec
-- **Avoid creating new documents and files** unless the spec/issue explicitly requires them or they are absolutely needed (e.g. a new spec for a new feature). Prefer editing existing files and integrating content into PLAN.md, CLAUDE.md, or existing specs.
+- **Avoid creating new documents and files** unless the spec/issue explicitly requires them or the user explicitly asks for a file to be created. Do not create report, analysis, or summary files on your own. Prefer editing existing files and integrating content into PLAN.md, CLAUDE.md, or existing specs.
+- When cleaning up: remove report/analysis/summary artifacts and any files the final product does not need or that are not in use.
 
 ## Principles (from Living Codex)
 
@@ -33,6 +34,10 @@ alwaysApply: true
 - Adapters over features — external I/O stays thin
 - Tiny deltas — minimal, git-like changes
 - No mocks — prefer real data and algorithms
+
+## Orchestration / executor
+
+- Provider-specific logic is the exception and must live in `api/app/services/agent_service_executor.py` (or `agent_routing/command_templates.py`): command template selection, resume flag, post_process_command, and data maps (RUNNER_AUTH_MODE_*, MODEL_PREFIX_*). No executor branching in CRUD or orchestration; they call helpers.
 
 ## Interface
 

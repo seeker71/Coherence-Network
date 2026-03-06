@@ -89,7 +89,7 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "openrouter": {"kind": "custom", "all_of": ["OPENROUTER_API_KEY"]},
     "anthropic": {"kind": "subscription_window", "all_of": []},
     "cursor": {"kind": "subscription_window", "all_of": []},
-    "openclaw": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
+    "codex": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
     "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
     "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
     "db-host": {"kind": "custom", "any_of": ["RUNTIME_DATABASE_URL", "DATABASE_URL"]},
@@ -112,7 +112,6 @@ _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
 
 _PROVIDER_ALIASES: dict[str, str] = {
     "anthropic": "claude",
-    "clawwork": "openclaw",
     "codex": "openai",
     "openai-codex": "openai",
 }
@@ -2087,7 +2086,7 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
         return True, [], ["gh_auth"], ["Configured via gh CLI auth session."]
     if provider_name == "railway" and _railway_auth_available():
         return True, [], ["railway_cli_auth"], ["Configured via Railway CLI auth session."]
-    if provider_name == "openclaw" and active_runs > 0:
+    if provider_name == "codex" and active_runs > 0:
         openai_key = bool(
             os.getenv("OPENAI_ADMIN_API_KEY", "").strip()
             or os.getenv("OPENAI_API_KEY", "").strip()
@@ -2095,7 +2094,7 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
         codex_active = int(active_counts.get("openai", 0)) > 0
         if openai_key or codex_active:
             notes.append(
-                "OpenClaw observed with Codex/OpenAI execution context; treating as configured for runtime validation."
+                "Codex observed with OpenAI execution context; treating as configured for runtime validation."
             )
             return True, [], present, notes
 
@@ -2168,10 +2167,6 @@ def _infer_provider_from_model(model_name: str) -> str:
         return "openai"
     if model.startswith("cursor/"):
         return "cursor"
-    if model.startswith("clawwork/"):
-        return "openclaw"
-    if model.startswith("openclaw/"):
-        return "openclaw"
     if model.startswith("openrouter/") or "openrouter" in model:
         return "openrouter"
     if "claude" in model:
@@ -2209,8 +2204,6 @@ def _active_provider_usage_counts() -> dict[str, int]:
         "cursor": "cursor",
         "gemini": "gemini",
         "codex": "openai",
-        "openclaw": "openai",
-        "clawwork": "openai",
         "openrouter": "openrouter",
         "claude": "claude-code",
     }
@@ -2443,7 +2436,7 @@ def _codex_events_within_window(window_seconds: int) -> int:
         ):
             count += 1
             continue
-        if "codex" in model and (executor in {"openclaw", "codex"} or "openai-codex" in agent_id):
+        if "codex" in model and (executor == "codex" or "openai-codex" in agent_id):
             count += 1
             continue
     return count
@@ -4003,8 +3996,7 @@ def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
     snapshot.notes.append(
         f"Subscription usage limits (5h/weekly windows) are server-side only. "
         f"Per-run cap: --max-budget-usd ${max_budget} (CLAUDE_CODE_MAX_BUDGET_USD). "
-        f"Set CLAUDE_CODE_MODEL=claude-sonnet-4-5-20250929 (SPEC/TEST/IMPL) and "
-        f"CLAUDE_CODE_REVIEW_MODEL=claude-opus-4-5 (REVIEW/HEAL) to enable model-tier routing."
+        "Model-tier routing: configure api/config/model_routing.json (tiers_by_executor, task_type_tier)."
     )
 
     # Apply quota probe from messages endpoint if we have explicit API key credentials.
@@ -5485,18 +5477,17 @@ def _probe_openai() -> tuple[bool, str]:
     return False, "missing_openai_subscription_window_signals"
 
 
-def _probe_openclaw() -> tuple[bool, str]:
-    openclaw_key = os.getenv("OPENCLAW_API_KEY", "").strip()
-    if openclaw_key:
-        return True, "ok_via_openclaw_key"
+def _probe_codex() -> tuple[bool, str]:
+    codex_key = os.getenv("OPENCLAW_API_KEY", "").strip()
+    if codex_key:
+        return True, "ok_via_codex_key"
 
     active = _active_provider_usage_counts()
-    openclaw_active = int(active.get("openclaw", 0))
-    openai_active = int(active.get("openai", 0))
+    codex_active = int(active.get("openai", 0))
     openai_ok, openai_detail = _probe_openai()
-    if openai_ok and (openclaw_active > 0 or openai_active > 0):
+    if openai_ok and codex_active > 0:
         return True, f"ok_via_openai_codex_backend:{openai_detail}"
-    return False, "missing_openclaw_key_and_openai_codex_backend"
+    return False, "missing_codex_key_and_openai_codex_backend"
 
 
 def _probe_cursor() -> tuple[bool, str]:
@@ -5687,7 +5678,7 @@ def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
         "railway": _probe_railway,
         "claude": _probe_claude,
         "claude-code": _probe_claude_code,
-        "openclaw": _probe_openclaw,
+        "codex": _probe_codex,
         "openrouter": _probe_openrouter,
     }
 
@@ -6163,13 +6154,7 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         if explicit:
             providers.add(explicit)
 
-        raw_executor = str(metadata.get("executor") or "").strip().lower()
-        executor = raw_executor
-        if executor in {"clawwork", "openclaw"}:
-            # Legacy executor aliases map to codex for canonical execution,
-            # but still count as openclaw evidence for compatibility checks.
-            providers.add("openclaw")
-            executor = "codex"
+        executor = str(metadata.get("executor") or "").strip().lower()
         model = str(metadata.get("model") or "").strip()
         model_lower = model.lower()
         worker_id = str(metadata.get("worker_id") or "").strip().lower()
@@ -6179,8 +6164,8 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
         inferred = _infer_provider_from_model(model)
         if inferred:
             providers.add(inferred)
-        if model_lower.startswith(("openclaw/", "clawwork/")):
-            providers.add("openclaw")
+        if model_lower.startswith("codex/"):
+            providers.add("openai")
         if executor == "openrouter":
             providers.add("openrouter")
         if executor == "codex":

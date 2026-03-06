@@ -141,7 +141,7 @@ def test_build_command_escapes_shell_sensitive_direction_tokens() -> None:
     command = agent_service._build_command(
         'Check `uname -a` and "$HOME" value',
         TaskType.IMPL,
-        executor="openclaw",
+        executor="codex",
     )
 
     assert "\\`uname -a\\`" in command

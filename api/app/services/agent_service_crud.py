@@ -11,7 +11,11 @@ from app.services.agent_service_executor import (
     AGENT_BY_TASK_TYPE,
     COMMAND_TEMPLATES,
     GUARD_AGENTS_BY_TASK_TYPE,
+    apply_resume_to_command,
+    apply_runner_auth_defaults,
     build_command,
+    format_model_override,
+    post_process_command,
     select_executor,
     task_card_validation,
     _with_agent_roles,
@@ -91,17 +95,6 @@ def _normalize_target_state_contract(
     }
 
 
-def _apply_runner_auth_mode_defaults(ctx: dict[str, Any], executor: str) -> None:
-    if executor == "codex":
-        ctx["runner_codex_auth_mode"] = "oauth"
-    elif executor == "cursor":
-        ctx["runner_cursor_auth_mode"] = "oauth"
-    elif executor == "gemini":
-        ctx["runner_gemini_auth_mode"] = "oauth"
-    elif executor == "claude":
-        ctx["runner_claude_auth_mode"] = "oauth"
-
-
 def _enforce_openrouter_executor_policy(ctx: dict[str, Any], executor: str) -> str:
     requested_override_raw = str(ctx.get("model_override") or "").strip()
     requested_override = routing_service.normalize_model_name(requested_override_raw)
@@ -145,22 +138,13 @@ def _resolve_task_route(
         )
         normalized_direction = direction
         command = build_command(direction, data.task_type, executor=executor)
+        command = apply_resume_to_command(executor, command, ctx)
+        command = post_process_command(executor, command)
         if ctx.get("model_override"):
             override = str(ctx["model_override"]).strip()
             command, applied_override = routing_service.apply_model_override(command, override)
             if applied_override:
-                if executor == "codex":
-                    model = f"codex/{applied_override}"
-                elif executor == "cursor":
-                    model = f"cursor/{applied_override}"
-                elif executor == "gemini":
-                    model = f"gemini/{applied_override}"
-                elif executor == "openrouter":
-                    model = routing_service.enforce_openrouter_free_model(applied_override)
-                else:
-                    model = applied_override
-        if "claude -p" in command and "--dangerously-skip-permissions" not in command:
-            command = command.rstrip() + " --dangerously-skip-permissions"
+                model = format_model_override(executor, applied_override)
     provider, billing_provider, is_paid_provider = routing_service.classify_provider(
         executor=executor, model=model, command=str(command), worker_id=None
     )
@@ -214,10 +198,21 @@ def _claim_running_task(task: dict[str, Any], worker_id: str | None) -> None:
 
 
 def create_task(data: AgentTaskCreate) -> dict[str, Any]:
-    """Create task and return full task dict."""
+    """Create task and return full task dict. Reuses existing active task when context has task_fingerprint."""
     _ensure_store_loaded(include_output=False)
-    task_id = _generate_id()
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    fingerprint = (ctx.get("task_fingerprint") or "").strip()
+    if fingerprint:
+        from app.services.agent_service_active_task import find_active_task_by_fingerprint
+        existing = find_active_task_by_fingerprint(fingerprint)
+        if existing is not None:
+            existing["updated_at"] = _now()
+            if agent_task_store_service.enabled():
+                agent_task_store_service.upsert_task(_serialize_task(existing))
+            else:
+                _save_store_to_disk()
+            return existing
+    task_id = _generate_id()
     validation = task_card_validation(ctx)
     if validation is not None:
         ctx["task_card_validation"] = validation
@@ -244,7 +239,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if "task_fingerprint" in policy_meta:
         ctx.setdefault("task_fingerprint", policy_meta["task_fingerprint"])
     ctx["executor"] = executor
-    _apply_runner_auth_mode_defaults(ctx, executor)
+    apply_runner_auth_defaults(executor, ctx)
     primary_agent = AGENT_BY_TASK_TYPE.get(data.task_type)
     guard_agents = GUARD_AGENTS_BY_TASK_TYPE.get(data.task_type, [])
     if primary_agent:

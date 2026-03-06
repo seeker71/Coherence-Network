@@ -35,26 +35,17 @@ def _build_unblock_direction(
     blocked_stages: list[str],
     spec_ids: list[str],
 ) -> str:
+    """Build unblock direction from config (prompt_templates.json). No prompt data in code."""
+    from app.services.agent_routing.prompt_templates_loader import get_unblock_direction
+
     blocked_text = ", ".join(blocked_stages) if blocked_stages else "flow completion"
-    if blocking_stage == "spec":
-        return (
-            f"Unblock idea '{idea_id}' ({idea_name}) by adding/updating spec coverage. "
-            f"This unlocks: {blocked_text}. Define acceptance checks and link to process and implementation."
-        )
-    if blocking_stage == "process":
-        spec_hint = ", ".join(spec_ids[:5]) if spec_ids else "linked spec"
-        return (
-            f"Unblock idea '{idea_id}' ({idea_name}) by defining process and pseudocode grounded in {spec_hint}. "
-            f"This unlocks: {blocked_text}."
-        )
-    if blocking_stage == "implementation":
-        return (
-            f"Unblock idea '{idea_id}' ({idea_name}) by implementing the tracked spec/process artifacts "
-            f"and linking code references. This unlocks: {blocked_text}."
-        )
-    return (
-        f"Unblock idea '{idea_id}' ({idea_name}) by validating the current implementation "
-        "with local, CI, deploy, and e2e evidence updates."
+    spec_hint = ", ".join(spec_ids[:5]) if spec_ids else ""
+    return get_unblock_direction(
+        blocking_stage=blocking_stage,
+        idea_id=idea_id,
+        idea_name=idea_name,
+        blocked_text=blocked_text,
+        spec_hint=spec_hint,
     )
 
 

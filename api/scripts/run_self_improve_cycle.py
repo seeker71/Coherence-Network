@@ -14,9 +14,12 @@ from typing import Any
 
 import httpx
 
-PLAN_MODEL = "gpt-5.3-codex"
-EXECUTE_MODEL = "gpt-5.3-codex-spark"
-REVIEW_MODEL = "gpt-5.3-codex"
+from app.models.agent import TaskType
+from app.services.agent_routing.model_routing_loader import get_model_for_executor_and_task_type
+
+PLAN_MODEL = get_model_for_executor_and_task_type("codex", TaskType.SPEC)
+EXECUTE_MODEL = get_model_for_executor_and_task_type("codex", TaskType.IMPL)
+REVIEW_MODEL = get_model_for_executor_and_task_type("codex", TaskType.REVIEW)
 DEFAULT_LIMIT_THRESHOLD_RATIO = 0.15
 USAGE_CACHE_FILE = Path(".cache/self_improve_usage_snapshot.json")
 USAGE_CACHE_TTL_SECONDS = int(os.environ.get("SELF_IMPROVE_USAGE_CACHE_TTL_SECONDS", "21600"))

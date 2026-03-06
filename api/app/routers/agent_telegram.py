@@ -61,17 +61,13 @@ def summarize_direction(text: str, max_chars: int = 140) -> str:
         return normalized
     return f"{normalized[: max_chars - 3].rstrip()}..."
 
-def _normalize_executor_alias(executor: str) -> str:
-    value = str(executor or "").strip().lower()
-    if value in {"openclaw", "clawwork"}:
-        return "codex"
-    return value or "unknown"
-
 def task_runtime_label(executor: str, model: str) -> str:
-    normalized_executor = _normalize_executor_alias(executor)
+    normalized_executor = str(executor or "").strip().lower() or "unknown"
     cleaned_model = str(model or "").strip()
-    if cleaned_model.startswith("openclaw/") or cleaned_model.startswith("clawwork/"):
-        cleaned_model = cleaned_model.split("/", 1)[1].strip()
+    for prefix in ("claude/", "cursor/", "codex/", "gemini/", "openrouter/"):
+        if cleaned_model.startswith(prefix):
+            cleaned_model = cleaned_model.split("/", 1)[1].strip()
+            break
     if not cleaned_model:
         cleaned_model = "unknown (metadata missing)"
     return f"Executor: {normalized_executor} | Model: {cleaned_model}"

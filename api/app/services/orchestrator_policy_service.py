@@ -40,7 +40,7 @@ _DEFAULT_POLICY: dict[str, Any] = {
         },
     },
 }
-_VALID_EXECUTORS = {"claude", "cursor", "gemini", "openrouter"}
+_VALID_EXECUTORS = {"claude", "codex", "cursor", "gemini", "openrouter"}
 
 
 def _policy_path() -> Path:

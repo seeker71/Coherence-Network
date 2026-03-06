@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_service
+from app.services import agent_service_executor
 
 
 def _reset_agent_store() -> None:
@@ -22,7 +23,7 @@ def test_policy_uses_cheap_executor_by_default(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "2")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "3")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": None}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -48,7 +49,7 @@ def test_policy_reserves_openrouter_for_budget_pressure(monkeypatch: pytest.Monk
     monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "openrouter")
     monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "cursor")
     _which = {"agent": "/usr/bin/agent", "claude": None, "codex": "/usr/bin/codex", "gemini": None}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -68,7 +69,7 @@ def test_policy_can_route_to_openrouter_when_budget_pressure_is_reported(monkeyp
     monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "openrouter")
     monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "cursor")
     _which = {"agent": "/usr/bin/agent", "claude": None, "codex": "/usr/bin/codex", "gemini": None}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -95,7 +96,7 @@ def test_policy_escalates_after_failure_threshold(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
     _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": None}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     first = agent_service.create_task(
@@ -133,14 +134,14 @@ async def test_route_auto_executor_uses_policy_default(monkeypatch: pytest.Monke
 def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
         AgentTaskCreate(
             direction="Run with explicit executor",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw"},
+            context={"executor": "codex"},
         )
     )
     context = task.get("context") or {}
@@ -152,7 +153,7 @@ def test_explicit_executor_is_respected(monkeypatch: pytest.MonkeyPatch) -> None
 def test_explicit_executor_is_forced_when_unavailable_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -170,26 +171,27 @@ def test_explicit_executor_is_forced_when_unavailable_by_default(monkeypatch: py
     assert policy.get("availability") == "unavailable_on_api_node"
 
 
-def test_explicit_executor_falls_back_when_unavailable_and_forcing_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_explicit_executor_always_honored_even_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Client-requested executor is always used so local runners get the right command (API node may not have claude)."""
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "0")
     _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
         AgentTaskCreate(
-            direction="Run with explicit unavailable executor and forcing disabled",
+            direction="Run with explicit unavailable executor",
             task_type=TaskType.IMPL,
             context={"executor": "claude"},
         )
     )
     context = task.get("context") or {}
-    assert context.get("executor") == "codex"
+    assert context.get("executor") == "claude"
     policy = context.get("executor_policy") or {}
-    assert policy.get("reason") == "explicit_executor_unavailable"
+    assert policy.get("reason") == "explicit_executor_forced"
     assert policy.get("explicit_executor") == "claude"
-    assert policy.get("fallback_executor") == "codex"
+    assert policy.get("availability") == "unavailable_on_api_node"
 
 
 def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -197,7 +199,7 @@ def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "0")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "claude")
     _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -211,23 +213,22 @@ def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest
     assert policy.get("fallback_executor") == "codex"
 
 
-def test_explicit_clawwork_executor_alias_is_respected(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unknown_executor_gets_policy_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unknown executor name (not in canonical list) is ignored; policy selects executor (e.g. codex for open question)."""
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": "/usr/bin/codex"}
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
         AgentTaskCreate(
-            direction="Run with explicit clawwork alias",
+            direction="Task with unknown executor name",
             task_type=TaskType.IMPL,
-            context={"executor": "clawwork"},
+            context={"executor": "unknown_executor"},
         )
     )
     context = task.get("context") or {}
     assert context.get("executor") == "codex"
-    policy = context.get("executor_policy") or {}
-    assert policy == {}
 
 
 def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -238,7 +239,7 @@ def test_policy_falls_back_when_selected_executor_unavailable(monkeypatch: pytes
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
     _which = {"agent": "/usr/bin/agent", "aider": None, "codex": None}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     first = agent_service.create_task(
@@ -262,7 +263,7 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_REPO_DEFAULT", "cursor")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -285,7 +286,7 @@ def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -310,7 +311,7 @@ def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.M
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
     monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
     _which = {"agent": None, "claude": "/usr/bin/claude", "codex": None, "gemini": "/usr/bin/gemini"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     first = agent_service.create_task(
@@ -335,7 +336,7 @@ def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.M
 def test_open_responses_normalization_is_shared_across_executors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
-    monkeypatch.setattr(agent_service.shutil, "which", lambda name: _which.get(name))
+    monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
 
     cursor_task = agent_service.create_task(
@@ -349,7 +350,7 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
         AgentTaskCreate(
             direction="Normalize responses across providers",
             task_type=TaskType.IMPL,
-            context={"executor": "openclaw"},
+            context={"executor": "codex"},
         )
     )
 
@@ -368,3 +369,42 @@ def test_open_responses_normalization_is_shared_across_executors(monkeypatch: py
     )
     assert (cursor_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
     assert (claw_ctx.get("route_decision") or {}).get("request_schema") == "open_responses_v1"
+
+
+def test_apply_resume_to_command_claude_injects_c_and_other_executors_unchanged() -> None:
+    from app.services.agent_service_executor import apply_resume_to_command, build_command
+
+    claude_cmd = build_command("Direction", TaskType.IMPL, executor="claude")
+    assert "claude -c -p" not in claude_cmd
+    resumed = apply_resume_to_command("claude", claude_cmd, {"resume": True})
+    assert "claude -c -p" in resumed
+
+    cursor_cmd = build_command("Direction", TaskType.IMPL, executor="cursor")
+    cursor_resumed = apply_resume_to_command("cursor", cursor_cmd, {"resume": True})
+    assert cursor_cmd == cursor_resumed
+
+
+def test_create_task_reuses_existing_when_fingerprint_matches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    first = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Impl with fingerprint",
+            task_type=TaskType.IMPL,
+            context={"task_fingerprint": "spec_impl::007"},
+        )
+    )
+    first_id = first["id"]
+
+    second = agent_service.create_task(
+        AgentTaskCreate(
+            direction="Same fingerprint",
+            task_type=TaskType.IMPL,
+            context={"task_fingerprint": "spec_impl::007"},
+        )
+    )
+    assert second["id"] == first_id
+    assert second["updated_at"] is not None

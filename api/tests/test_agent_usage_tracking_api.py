@@ -349,7 +349,7 @@ async def test_failed_task_friction_link_is_idempotent_on_repeat_failed_patch(
 
 
 @pytest.mark.asyncio
-async def test_openclaw_openrouter_override_tracks_openrouter_provider(
+async def test_codex_openrouter_override_tracks_openrouter_provider(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -367,7 +367,7 @@ async def test_openclaw_openrouter_override_tracks_openrouter_provider(
             json={
                 "direction": "Track openrouter free path",
                 "task_type": "impl",
-                "context": {"executor": "openclaw", "model_override": "openrouter/free"},
+                "context": {"executor": "codex", "model_override": "openrouter/free"},
             },
         )
         assert task.status_code == 201
@@ -379,7 +379,7 @@ async def test_openclaw_openrouter_override_tracks_openrouter_provider(
 
         running = await client.patch(
             f"/api/agent/tasks/{task_id}",
-            json={"status": "running", "worker_id": "openclaw-worker"},
+            json={"status": "running", "worker_id": "codex-worker"},
         )
         assert running.status_code == 200
         completed = await client.patch(
@@ -405,7 +405,7 @@ async def test_openclaw_openrouter_override_tracks_openrouter_provider(
 
 
 @pytest.mark.asyncio
-async def test_clawwork_alias_openrouter_override_tracks_openrouter_provider(
+async def test_codex_executor_openrouter_override_tracks_openrouter_provider(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -421,9 +421,9 @@ async def test_clawwork_alias_openrouter_override_tracks_openrouter_provider(
         task = await client.post(
             "/api/agent/tasks",
             json={
-                "direction": "Track clawwork openrouter free path",
+                "direction": "Track codex openrouter free path",
                 "task_type": "impl",
-                "context": {"executor": "clawwork", "model_override": "openrouter/free"},
+                "context": {"executor": "codex", "model_override": "openrouter/free"},
             },
         )
         assert task.status_code == 201
@@ -435,7 +435,7 @@ async def test_clawwork_alias_openrouter_override_tracks_openrouter_provider(
 
         running = await client.patch(
             f"/api/agent/tasks/{task_id}",
-            json={"status": "running", "worker_id": "openclaw-worker"},
+            json={"status": "running", "worker_id": "codex-worker"},
         )
         assert running.status_code == 200
         completed = await client.patch(
