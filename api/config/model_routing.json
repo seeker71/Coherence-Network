@@ -1,0 +1,41 @@
+{
+  "version": "2026-03-05",
+  "description": "Strong/fast tiers per task type, model ids per executor tier, openrouter model per task type, and fallback chains when a model is out of usage. Runners use get_fallback_model(executor, current_model) on rate-limit/quota errors and retry with next in chain.",
+  "openrouter_free_model": "openrouter/free",
+  "auto_execute_default_model": "openrouter/free",
+  "roi_spec_cheap_model": "openai/gpt-4o-mini",
+  "task_type_tier": {
+    "spec": "strong",
+    "test": "fast",
+    "impl": "fast",
+    "review": "strong",
+    "heal": "strong"
+  },
+  "tiers_by_executor": {
+    "claude": {
+      "strong": "claude-sonnet-4-6",
+      "fast": "claude-3-5-haiku-20241022"
+    },
+    "cursor": {
+      "strong": "auto",
+      "fast": "auto"
+    },
+    "gemini": {
+      "strong": "gemini-2.5-pro",
+      "fast": "gemini-2.5-flash"
+    }
+  },
+  "openrouter_models_by_task_type": {
+    "spec": "openrouter/free",
+    "test": "openrouter/free",
+    "impl": "openrouter/free",
+    "review": "openrouter/free",
+    "heal": "openrouter/free"
+  },
+  "fallback_chains": {
+    "claude": ["claude-sonnet-4-6", "claude-sonnet-4-5", "openrouter/free"],
+    "cursor": ["auto"],
+    "gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash-001", "openrouter/free"],
+    "openrouter": ["openrouter/free"]
+  }
+}

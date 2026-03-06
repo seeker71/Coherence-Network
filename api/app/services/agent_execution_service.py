@@ -61,6 +61,11 @@ def _paid_providers_allowed() -> bool:
     return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "1"))
 
 
+def _codex_execution_disabled() -> bool:
+    # Temporary safety switch: keep Codex execution paths off on hosted runners.
+    return _truthy(os.getenv("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+
+
 def _paid_route_override_requested(task: dict[str, Any]) -> bool:
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     override_keys = (
@@ -259,12 +264,22 @@ def _record_openrouter_tool_event(
     actual_cost_usd: float | None = None,
 ) -> None:
     status_code = 200 if ok else 500
+    infra_cost_usd = _runtime_cost_usd(elapsed_ms)
+    external_cost_usd = _external_provider_cost_usd(
+        is_paid_provider=bool(is_paid_provider),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
+    total_cost_usd = round(infra_cost_usd + external_cost_usd, 6)
     metadata: dict[str, str | float | int | bool] = {
         "tracking_kind": "agent_tool_call",
         "task_id": task_id,
         "model": model,
         "provider": "openrouter",
         "is_paid_provider": bool(is_paid_provider),
+        "infrastructure_cost_usd": round(infra_cost_usd, 6),
+        "external_provider_cost_usd": external_cost_usd,
+        "total_cost_usd": total_cost_usd,
     }
     if actual_cost_usd is not None:
         metadata["runtime_cost_usd"] = round(float(actual_cost_usd), 6)
@@ -338,7 +353,9 @@ def _run_openrouter(
         }
     except OpenRouterError as exc:
         fallback_error = str(exc)
-        if agent_execution_codex_service.should_fallback_to_codex_exec(model, fallback_error):
+        if (not _codex_execution_disabled()) and agent_execution_codex_service.should_fallback_to_codex_exec(
+            model, fallback_error
+        ):
             fallback_result = agent_execution_codex_service.run_codex_exec(
                 task_id=task_id,
                 model=model,
@@ -367,6 +384,8 @@ def _resolve_openrouter_model(task: dict[str, Any], default: str) -> str:
     model = _extract_underlying_model(str(task.get("model") or ""))
     resolved = model or default
     normalized = _normalize_model_for_openrouter(resolved)
+    if _codex_execution_disabled() and "codex" in str(normalized).lower():
+        return agent_routing_service.enforce_openrouter_free_model(normalized)
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
     executor = str(route.get("executor") or context.get("executor") or "").strip().lower()
@@ -612,6 +631,35 @@ def _runtime_cost_per_second() -> float:
 
 def _runtime_cost_usd(runtime_ms: int) -> float:
     return max(0.0, float(runtime_ms)) / 1000.0 * _runtime_cost_per_second()
+
+
+def _external_provider_cost_per_1k_input_tokens() -> float:
+    return _normalize_positive_float(
+        os.getenv("AGENT_EXTERNAL_INPUT_COST_PER_1K", "0.00015"),
+        default=0.00015,
+    ) or 0.00015
+
+
+def _external_provider_cost_per_1k_output_tokens() -> float:
+    return _normalize_positive_float(
+        os.getenv("AGENT_EXTERNAL_OUTPUT_COST_PER_1K", "0.0006"),
+        default=0.0006,
+    ) or 0.0006
+
+
+def _external_provider_cost_usd(
+    *,
+    is_paid_provider: bool,
+    prompt_tokens: int,
+    completion_tokens: int,
+) -> float:
+    if not is_paid_provider:
+        return 0.0
+    in_tokens = max(0, int(prompt_tokens))
+    out_tokens = max(0, int(completion_tokens))
+    in_cost = (float(in_tokens) / 1000.0) * _external_provider_cost_per_1k_input_tokens()
+    out_cost = (float(out_tokens) / 1000.0) * _external_provider_cost_per_1k_output_tokens()
+    return round(max(0.0, in_cost + out_cost), 6)
 
 
 def _compact_metadata(values: dict[str, Any]) -> dict[str, str | float | int | bool]:
