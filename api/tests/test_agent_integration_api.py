@@ -146,3 +146,42 @@ def test_build_command_escapes_shell_sensitive_direction_tokens() -> None:
 
     assert "\\`uname -a\\`" in command
     assert '\\"\\$HOME\\"' in command
+
+
+@pytest.mark.asyncio
+async def test_agent_metrics_returns_200_and_supports_metric_filter() -> None:
+    """GET /api/agent/metrics returns full structure; ?metric=time|success filters response."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        full = await client.get("/api/agent/metrics")
+    assert full.status_code == 200
+    data = full.json()
+    assert "success_rate" in data
+    assert "execution_time" in data
+    assert "by_task_type" in data
+    assert "by_model" in data
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        time_only = await client.get("/api/agent/metrics", params={"metric": "time"})
+    assert time_only.status_code == 200
+    t = time_only.json()
+    assert t.keys() == {"execution_time"}
+    assert "p50_seconds" in t["execution_time"]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        success_only = await client.get("/api/agent/metrics", params={"metric": "success"})
+    assert success_only.status_code == 200
+    s = success_only.json()
+    assert s.keys() == {"success_rate"}
+
+
+@pytest.mark.asyncio
+async def test_openapi_metrics_has_summary() -> None:
+    """OpenAPI docs include operation summary for GET /api/agent/metrics (api-docs-completion)."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/openapi.json")
+    assert resp.status_code == 200
+    schema = resp.json()
+    path_spec = schema.get("paths", {}).get("/api/agent/metrics", {})
+    get_op = path_spec.get("get", {})
+    summary = (get_op.get("summary") or "").strip()
+    assert "metrics" in summary.lower() or "task" in summary.lower()
