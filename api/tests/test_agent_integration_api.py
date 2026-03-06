@@ -175,6 +175,16 @@ async def test_agent_metrics_returns_200_and_supports_metric_filter() -> None:
 
 
 @pytest.mark.asyncio
+async def test_agent_metrics_window_days_parameter() -> None:
+    """GET /api/agent/metrics?window_days=1 returns window_days in response (tracking-infrastructure-upgrade)."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/agent/metrics", params={"window_days": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data.get("window_days") == 1
+
+
+@pytest.mark.asyncio
 async def test_openapi_metrics_has_summary() -> None:
     """OpenAPI docs include operation summary for GET /api/agent/metrics (api-docs-completion)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

@@ -40,12 +40,18 @@ async def get_metrics(
         None,
         description="Filter: time, success, by_task_type, by_model, or omit for full response.",
     ),
+    window_days: int | None = Query(
+        None,
+        ge=1,
+        le=90,
+        description="Rolling window in days (default 7). Spec 026 / tracking-infrastructure-upgrade.",
+    ),
 ) -> dict:
     """Task metrics: success rate, execution time, by task_type, by model. Spec 026 Phase 1."""
     try:
         from app.services.metrics_service import get_aggregates
 
-        data = get_aggregates()
+        data = get_aggregates(window_days=window_days)
     except ImportError:
         data = {
             "success_rate": {"completed": 0, "failed": 0, "total": 0, "rate": 0.0},

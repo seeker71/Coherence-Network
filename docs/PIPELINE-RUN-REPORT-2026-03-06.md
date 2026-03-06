@@ -4,26 +4,88 @@
 
 - **tracking-mechanism-efficiency**: Accepted (manifestation_status=validated)
 - **api-docs-completion**: Implemented, validated, accepted
-- **Validated ideas**: 5
-- **Unvalidated ideas**: 47
-- **Commit**: `fe2d317` api-docs-completion + tracking-mechanism-efficiency
+- **tracking-infrastructure-upgrade**: Implemented, validated (window_days param)
+- **Validated ideas**: 6
+- **Unvalidated ideas**: 46
+- **Commit**: `d071489` tracking-infrastructure-upgrade + pipeline report with Cursor CLI prompts
 
 ---
 
-## Cursor CLI vs Validation CLI
+## Cursor CLI calls — per step, actual prompts, models, generated steps
 
-| Step type | Performed by | CLI | Prompt / Input |
-|-----------|--------------|-----|----------------|
-| **Spec** | Cursor CLI (agent) | `agent --trust --print --output-format json "{{direction}}" --model {{model}}` | Direction from task (e.g. "Create spec for...") |
-| **Impl** | Cursor CLI (agent) | Same, direction = impl scope | Returned from `POST /api/agent/tasks` |
-| **Test** | Cursor CLI or validation | `pytest -q ...` | From task context |
-| **Review** | Cursor CLI (agent) | Same, task_type=review | Review spec compliance |
-| **Acceptance** | Validation CLI | `python3 scripts/run_pinned_idea_acceptance.py` | N/A (script runs subprocess: validate_spec_quality, pytest, curl) |
+Each step is a **separate Cursor CLI call** with its own model, prompt, and output contract. Run via `POST /api/agent/tasks` → API returns `command` → agent_runner (or manual) executes it.
 
-**Cursor CLI command** (returned by API when task created):
+### Spec (Cursor CLI)
+
+| Field | Value |
+|-------|-------|
+| **Model** | `auto` (strong tier per `model_routing.json`) |
+| **Role agent** | `product-manager` |
+| **CLI** | `agent --trust --print --output-format json "{{direction}}" --model auto --sandbox disabled` |
+| **Prompt (direction)** | `Spec: {item}\n\nGoal: produce one valid spec file accepted by the judge.\nJudge: python3 scripts/validate_spec_quality.py --file <spec_path>\n\n1. Read specs/TEMPLATE.md and use the same section names.\n2. Create one file: specs/<name>.md.\n3. Include at minimum: Purpose, Requirements (>=3), Research Inputs, Task Card, Files to Create/Modify, Acceptance Tests, Verification, Out of Scope, Risks, Known Gaps.\n4. Run judge until PASS.` |
+| **Generated steps** | 1. Create spec file 2. Run validate_spec_quality 3. Fix until PASS |
+| **Required output** | `SPEC_PATH`, `JUDGE`, `VALIDATION` |
+
+### Impl (Cursor CLI)
+
+| Field | Value |
+|-------|-------|
+| **Model** | `auto` (fast tier) |
+| **Role agent** | `dev-engineer` |
+| **CLI** | Same template, direction = impl scope |
+| **Prompt (direction)** | `Implement: {item}\n\nGoal: satisfy spec assertions with minimum cost and scope.\n\n1. Read spec: Files to Create/Modify, Acceptance Tests.\n2. Edit only listed files. Smallest patch only.\n3. Run acceptance commands; stop at first FAIL, fix, rerun.\n4. Repeat until all PASS.` |
+| **Generated steps** | 1. Edit spec-listed files 2. Run acceptance commands 3. Fix and rerun until PASS |
+| **Required output** | `FILES_CHANGED`, `TESTS`, `JUDGE`, `RESULT` |
+| **On failure** | Next impl uses `impl_iteration` template with `{last_output}` (test failures or PATCH_GUIDANCE) |
+
+### Test (Cursor CLI)
+
+| Field | Value |
+|-------|-------|
+| **Model** | `auto` (fast tier) |
+| **Role agent** | `qa-engineer` |
+| **CLI** | Same template |
+| **Prompt (direction)** | `Tests: {item}\n\nGoal: encode spec assertions as deterministic tests.\n\n1. Read spec requirements and acceptance criteria.\n2. Create/update one test file mapping assertions to requirements.\n3. Run: cd api && pytest <test-file> -q` |
+| **Generated steps** | 1. Create/update test file 2. Run pytest |
+| **Required output** | `TEST_FILE`, `TESTS`, `JUDGE`, `RESULT` |
+
+### Review (Cursor CLI)
+
+| Field | Value |
+|-------|-------|
+| **Model** | `auto` (strong tier) |
+| **Role agent** | `reviewer` |
+| **Guard agents** | `spec-guard` |
+| **CLI** | Same template |
+| **Prompt (direction)** | `Review: {item}\n\nGoal: decide PASS/FAIL using the agreed judge only.\n\n1. Read spec Acceptance Tests and Files to Create/Modify.\n2. Run each acceptance command; record pass/fail.\n3. Check changed files in allowed scope.\n4. PASS only when all pass and scope clean.` |
+| **Generated steps** | 1. Run acceptance commands 2. Scope check 3. Emit PASS_FAIL and PATCH_GUIDANCE |
+| **Required output** | `PASS_FAIL`, `VERIFIED`, `JUDGE`, `FINDINGS`, `PATCH_GUIDANCE` |
+| **On FAIL** | `PATCH_GUIDANCE` = `file:line:minimal fix` — fed into next impl iteration |
+
+### Feedback loop
+
+| Condition | Action |
+|-----------|--------|
+| Test fails | Next impl uses `impl_iteration` with `{last_output}` = test failure output |
+| Review FAIL | Next impl uses `impl_iteration` with `{last_output}` = PATCH_GUIDANCE + findings |
+| Loop until | All acceptance commands PASS and review says PASS_FAIL: PASS |
+
+**impl_iteration prompt** (from `prompt_templates.json`):
 ```
-agent --trust --print --output-format json "Role agent: dev-engineer. Task type: impl. Scope: only spec-listed files. Minimize tokens..." --model ...
+Fix (iteration {iteration}): {item}
+Previous failure: {last_output}
+Goal: resolve the current failure with the smallest safe delta.
+ROOT_CAUSE: [one line]
+FIX: [one line]
+FILES_CHANGED: [paths]
+VERIFICATION: [command -> PASS|FAIL]
 ```
+
+### Validation CLI (post Cursor pipeline)
+
+| Step | CLI | Output |
+|------|-----|--------|
+| Acceptance | `python3 scripts/run_pinned_idea_acceptance.py` | Runs: no_placeholder, spec_quality, pytest, live_api |
 
 ---
 
@@ -66,6 +128,30 @@ agent --trust --print --output-format json "Role agent: dev-engineer. Task type:
 | acceptance_complete | — | — | `[PROOF] acceptance_complete: all steps passed` |
 
 **Cursor CLI** (agent does spec→impl→test→review before this): API returns `command` when task created; agent_runner runs it. Example: `agent --trust --print --output-format json "{{direction}}" --model {{model}}`.
+
+---
+
+---
+
+## Next idea (highest ROI, unvalidated): tracking-infrastructure-upgrade — implemented & validated
+
+| Field | Value |
+|-------|-------|
+| **id** | tracking-infrastructure-upgrade |
+| **score** | 6.18 |
+| **status** | validated |
+| **Files changed** | `api/app/services/metrics_service.py`, `api/app/routers/agent_issues_routes.py`, `api/tests/test_agent_integration_api.py` |
+
+**Implementation:** Added `window_days` query param (1–90) to `GET /api/agent/metrics`. Configurable rolling window; response includes `window_days` when provided.
+
+**Verification CLI:**
+```
+curl -s 'http://127.0.0.1:8000/api/agent/metrics?window_days=1' | python3 -c "import sys,json; d=json.load(sys.stdin); print('window_days:', d.get('window_days'))"
+# Expected: window_days: 1
+
+cd api && pytest -q tests/test_agent_integration_api.py::test_agent_metrics_window_days_parameter
+# Expected: 1 passed
+```
 
 ---
 
