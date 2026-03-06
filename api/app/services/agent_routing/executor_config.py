@@ -1,4 +1,4 @@
-"""Executor normalization, availability, and scope-based defaults."""
+"""Executor normalization, availability, and scope-based defaults. Canonical list from config only; no aliasing."""
 
 from __future__ import annotations
 
@@ -7,9 +7,21 @@ import re
 import shutil
 from typing import Any
 
-_CANONICAL_EXECUTOR_VALUES = ("claude", "cursor", "codex", "gemini", "openrouter")
-_EXECUTOR_ALIASES = {"clawwork": "codex", "openclaw": "codex"}
-EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES + tuple(_EXECUTOR_ALIASES.keys())
+from app.services.agent_routing.executor_routing_loader import get_executors as _loader_executors
+
+
+def _canonical_executors() -> tuple[str, ...]:
+    executors = _loader_executors()
+    if executors:
+        return executors
+    raw = os.environ.get("AGENT_EXECUTORS", "").strip()
+    if not raw:
+        return ()
+    return tuple(s.strip().lower() for s in raw.split(",") if s.strip())
+
+
+_CANONICAL_EXECUTOR_VALUES = _canonical_executors()
+EXECUTOR_VALUES = _CANONICAL_EXECUTOR_VALUES
 
 REPO_SCOPE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis repo\b", re.IGNORECASE),
@@ -44,7 +56,6 @@ def executor_policy_enabled() -> bool:
 
 def normalize_executor(value: str | None, default: str = "claude") -> str:
     candidate = (value or "").strip().lower()
-    candidate = _EXECUTOR_ALIASES.get(candidate, candidate)
     if candidate in _CANONICAL_EXECUTOR_VALUES:
         return candidate
     return default
@@ -65,7 +76,7 @@ def escalation_executor_default() -> str:
     cheap = cheap_executor_default()
     if cheap == "gemini":
         return "gemini"
-    return "claude" if cheap != "claude" else "codex"
+    return "claude" if cheap != "claude" else "gemini"
 
 
 def executor_binary_name(executor: str) -> str:
@@ -124,5 +135,5 @@ def repo_question_executor_default() -> str:
 def open_question_executor_default() -> str:
     configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT")
     if configured:
-        return normalize_executor(configured, default="codex")
-    return "codex"
+        return normalize_executor(configured, default="cursor")
+    return "cursor"

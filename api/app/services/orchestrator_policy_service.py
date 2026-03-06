@@ -11,8 +11,8 @@ from typing import Any
 _DEFAULT_POLICY: dict[str, Any] = {
     "version": "default",
     "executors": {
-        "ab_candidate_priority": ["codex", "claude", "cursor", "gemini"],
-        "forced_challenger_priority": ["claude", "codex", "cursor", "gemini"],
+        "ab_candidate_priority": ["claude", "cursor", "gemini", "openrouter"],
+        "forced_challenger_priority": ["claude", "cursor", "gemini", "openrouter"],
     },
     "prompt_variants": {
         "control": "baseline_v1",
@@ -40,7 +40,7 @@ _DEFAULT_POLICY: dict[str, Any] = {
         },
     },
 }
-_VALID_EXECUTORS = {"codex", "claude", "cursor", "gemini", "openrouter"}
+_VALID_EXECUTORS = {"claude", "cursor", "gemini", "openrouter"}
 
 
 def _policy_path() -> Path:

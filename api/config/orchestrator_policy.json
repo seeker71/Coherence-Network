@@ -1,8 +1,8 @@
 {
   "version": "2026-03-05",
   "executors": {
-    "ab_candidate_priority": ["codex", "claude", "cursor", "gemini"],
-    "forced_challenger_priority": ["claude", "codex", "cursor", "gemini"]
+    "ab_candidate_priority": ["claude", "cursor", "gemini", "openrouter"],
+    "forced_challenger_priority": ["claude", "cursor", "gemini", "openrouter"]
   },
   "prompt_variants": {
     "control": "baseline_v1",
