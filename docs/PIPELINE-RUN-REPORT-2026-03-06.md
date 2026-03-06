@@ -6,6 +6,24 @@
 - **api-docs-completion**: Implemented, validated, accepted
 - **Validated ideas**: 5
 - **Unvalidated ideas**: 47
+- **Commit**: `fe2d317` api-docs-completion + tracking-mechanism-efficiency
+
+---
+
+## Cursor CLI vs Validation CLI
+
+| Step type | Performed by | CLI | Prompt / Input |
+|-----------|--------------|-----|----------------|
+| **Spec** | Cursor CLI (agent) | `agent --trust --print --output-format json "{{direction}}" --model {{model}}` | Direction from task (e.g. "Create spec for...") |
+| **Impl** | Cursor CLI (agent) | Same, direction = impl scope | Returned from `POST /api/agent/tasks` |
+| **Test** | Cursor CLI or validation | `pytest -q ...` | From task context |
+| **Review** | Cursor CLI (agent) | Same, task_type=review | Review spec compliance |
+| **Acceptance** | Validation CLI | `python3 scripts/run_pinned_idea_acceptance.py` | N/A (script runs subprocess: validate_spec_quality, pytest, curl) |
+
+**Cursor CLI command** (returned by API when task created):
+```
+agent --trust --print --output-format json "Role agent: dev-engineer. Task type: impl. Scope: only spec-listed files. Minimize tokens..." --model ...
+```
 
 ---
 
@@ -37,6 +55,20 @@
 
 ---
 
+## Proof-of-idea-to-acceptance pipeline (run_pinned_idea_acceptance.py)
+
+| Step | Performed by | CLI | Output (proof) |
+|------|--------------|-----|----------------|
+| step_1_no_placeholder | Validation | `scripts/run_pinned_idea_acceptance.py` (in-process file check) | `[PROOF] step_1_no_placeholder: {"files_checked": [...], "result": "no_forbidden_tokens"}` |
+| step_2_spec_quality | Validation | `python3 scripts/validate_spec_quality.py --file specs/053-ideas-prioritization.md` | `[PROOF] step_2_spec_quality: {"validator_exit": 0, "sections_present": {...}}` |
+| step_3_pytest | Validation | `python -m pytest -q tests/test_ideas.py` | `[PROOF] step_3_pytest: {"exit_code": 0, "tests_passed": 14}` |
+| step_4_live_api | Validation | `curl -sS http://localhost:8000/api/ideas?only_unvalidated=true` | `[PROOF] step_4_live_api: {"status": 200, "ideas_returned": 47}` |
+| acceptance_complete | — | — | `[PROOF] acceptance_complete: all steps passed` |
+
+**Cursor CLI** (agent does spec→impl→test→review before this): API returns `command` when task created; agent_runner runs it. Example: `agent --trust --print --output-format json "{{direction}}" --model {{model}}`.
+
+---
+
 ## Verification
 
 All tasks passed. Pipeline works as expected:
@@ -44,3 +76,4 @@ All tasks passed. Pipeline works as expected:
 - Live API returns expected responses after restart
 - pytest passes for changed code
 - Unvalidated count declined: 48 → 47
+- run_pinned_idea_acceptance.py: all 4 steps passed
