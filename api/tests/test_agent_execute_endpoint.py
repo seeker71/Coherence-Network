@@ -468,6 +468,7 @@ async def test_execute_endpoint_uses_codex_cli_for_codex_executor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_DISABLE_CODEX_EXECUTOR", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
@@ -527,6 +528,7 @@ async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    monkeypatch.setenv("AGENT_DISABLE_CODEX_EXECUTOR", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)

@@ -1,6 +1,8 @@
 # Coherence Network — Deploy Guide (Railway Only)
 
-This project deploys both API and web on Railway.
+**Railway deploy paused:** Do not deploy to Railway until the account ban is lifted or a new account is used. Push to `origin/main` and open/merge PRs as normal; skip triggering Railway redeploys or linking production to this repo until then.
+
+This project deploys both API and web on Railway (when enabled).
 
 ## Vercel Note (Disable PR Deployments)
 
@@ -114,6 +116,27 @@ curl -fsS https://coherence-network-production.up.railway.app/api/gates/main-hea
 curl -fsS https://coherence-web-production.up.railway.app/api-health | jq .
 curl -fsS https://coherence-web-production.up.railway.app/gates | head -c 200
 ```
+
+## Railway ToS / policy (if you get a ToS violation)
+
+Railway may flag accounts for policy or abuse. Possible triggers from this repo:
+
+1. **Calling Railway’s API from the app**  
+   With `RAILWAY_TOKEN` (and related env) set on the API service, the app calls `https://backboard.railway.com/graphql/v2` when building usage/readiness (e.g. `GET /api/automation/usage`, `GET /api/automation/usage/readiness`). The web automation page requests with `force_refresh=true`, so each load can trigger a GraphQL call from your Railway-hosted API to Railway’s backend. Programmatic or high-frequency use of their dashboard/GraphQL from a deployed app may be against their terms.  
+   **Mitigation:** Unset `RAILWAY_TOKEN` (and `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`) on the API service so the app does not call backboard. Use the Railway CLI or dashboard only from your machine or CI when needed.
+
+2. **Frequent redeploys from CI**  
+   The public deploy contract runs every 30 minutes and, on failure, can run `railway redeploy` (and `railway link`) from GitHub Actions. If the contract fails often, that can mean many deploy/API calls.  
+   **Mitigation:** Fix the underlying contract (e.g. SHA drift) so redeploys are rare, or temporarily disable the “Trigger Railway redeploy” step in `.github/workflows/public-deploy-contract.yml` (e.g. by removing/commenting the step or the workflow’s `schedule`).
+
+3. **Heavy outbound or CPU from task execution**  
+   With `AGENT_AUTO_EXECUTE=1`, creating tasks runs execution on the server (e.g. OpenRouter). Many tasks mean more outbound calls and CPU; extreme volume could trip resource or abuse policies.  
+   **Mitigation:** Set `AGENT_AUTO_EXECUTE=0` in production until you control task creation, or throttle task creation and enforce limits.
+
+4. **Other common Railway ToS reasons**  
+   Card testing / payment issues, trial abuse, or account access problems are unrelated to this codebase; resolve those with Railway (e.g. team@railway.com from the account email).
+
+**Next step:** Ask Railway support for the exact reason (e.g. “programmatic use of Railway API from hosted app”, “excessive redeploys”, “resource usage”). Then apply the matching mitigation above.
 
 ## Failure Triage
 

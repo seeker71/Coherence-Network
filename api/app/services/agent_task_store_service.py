@@ -12,6 +12,8 @@ from sqlalchemy import DateTime, Integer, String, Text, create_engine, func, ins
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, load_only, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from app.config_loader import get_bool, get_str
+
 
 class Base(DeclarativeBase):
     pass
@@ -52,18 +54,22 @@ def _truthy(raw: str | None) -> bool:
 
 
 def _database_url() -> str:
-    return (
+    url = (
         os.getenv("AGENT_TASKS_DATABASE_URL")
         or os.getenv("DATABASE_URL")
+        or get_str("agent_tasks", "database_url")
         or ""
     ).strip()
+    return url
 
 
 def enabled() -> bool:
     toggle = os.getenv("AGENT_TASKS_USE_DB")
     if toggle is not None:
         return _truthy(toggle)
-    return bool(_database_url())
+    if not _database_url():
+        return False
+    return get_bool("agent_tasks", "use_db", True)
 
 
 def _create_engine(url: str):

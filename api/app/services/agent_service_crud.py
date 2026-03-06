@@ -213,9 +213,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
                 _save_store_to_disk()
             return existing
     task_id = _generate_id()
-    validation = task_card_validation(ctx)
-    if validation is not None:
-        ctx["task_card_validation"] = validation
+    ctx["task_card_validation"] = task_card_validation(ctx)
     target_contract = _normalize_target_state_contract(
         direction=data.direction,
         task_type=data.task_type,

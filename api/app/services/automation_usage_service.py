@@ -22,6 +22,7 @@ import httpx
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
+from app.config_loader import get_bool, get_float, get_int, get_str
 from app.models.automation_usage import (
     ProviderValidationReport,
     ProviderValidationRow,
@@ -52,8 +53,18 @@ _ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
 _ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 180.0
 _ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
 _ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
+def _automation_endpoint_cache_max_workers() -> int:
+    env_val = os.getenv("AUTOMATION_ENDPOINT_CACHE_MAX_WORKERS")
+    if env_val is not None:
+        try:
+            return max(2, min(int(env_val), 8))
+        except ValueError:
+            pass
+    return max(2, min(get_int("automation_usage", "endpoint_cache_max_workers", 4), 8))
+
+
 _ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
-    max_workers=max(2, min(int(os.getenv("AUTOMATION_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    max_workers=_automation_endpoint_cache_max_workers(),
     thread_name_prefix="automation-endpoint-cache-refresh",
 )
 _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
@@ -183,21 +194,23 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
 
 
 def _snapshots_path() -> Path:
-    configured = os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH")
+    configured = get_str("automation_usage", "snapshots_path") or os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", "").strip()
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "logs" / "automation_usage_snapshots.json"
 
 
 def _use_db_snapshots() -> bool:
-    override = str(os.getenv("AUTOMATION_USAGE_USE_DB", "")).strip().lower()
-    if override in {"1", "true", "yes", "on"}:
-        return True
-    if override in {"0", "false", "no", "off"}:
+    override = os.getenv("AUTOMATION_USAGE_USE_DB")
+    if override is not None:
+        o = str(override).strip().lower()
+        if o in {"1", "true", "yes", "on"}:
+            return True
+        if o in {"0", "false", "no", "off"}:
+            return False
+    if get_str("automation_usage", "snapshots_path") or os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH"):
         return False
-    if os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH"):
-        return False
-    return True
+    return get_bool("automation_usage", "use_db", True)
 
 
 def _ensure_store() -> None:
@@ -206,8 +219,11 @@ def _ensure_store() -> None:
         legacy_path = _snapshots_path()
         report = telemetry_persistence_service.import_automation_snapshots_from_file(legacy_path)
         if int(report.get("imported") or 0) > 0:
-            purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
-            if purge_raw not in {"0", "false", "no", "off"}:
+            purge = get_bool("automation_usage", "purge_imported_files", True)
+            env_purge = os.getenv("TRACKING_PURGE_IMPORTED_FILES")
+            if env_purge is not None:
+                purge = str(env_purge).strip().lower() in {"1", "true", "yes", "on"}
+            if purge:
                 try:
                     legacy_path.unlink(missing_ok=True)
                 except OSError:
@@ -238,7 +254,14 @@ def _read_store() -> list[dict[str, Any]]:
 def _write_store(rows: list[dict[str, Any]]) -> None:
     if _use_db_snapshots():
         telemetry_persistence_service.ensure_schema()
-        max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+        max_rows = get_int("automation_usage", "max_snapshots", 800)
+        env_max = os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS")
+        if env_max is not None:
+            try:
+                max_rows = int(env_max)
+            except ValueError:
+                pass
+        max_rows = max(10, min(max_rows, 5000))
         # Rewrite in insertion order using append behavior.
         for row in rows[-max_rows:]:
             if isinstance(row, dict):
@@ -249,9 +272,19 @@ def _write_store(rows: list[dict[str, Any]]) -> None:
     path.write_text(json.dumps({"snapshots": rows}, indent=2), encoding="utf-8")
 
 
+def _automation_max_snapshots() -> int:
+    env_val = os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS")
+    if env_val is not None:
+        try:
+            return max(10, min(int(env_val), 5000))
+        except ValueError:
+            pass
+    return max(10, min(get_int("automation_usage", "max_snapshots", 800), 5000))
+
+
 def _store_snapshot(snapshot: ProviderUsageSnapshot) -> None:
     if _use_db_snapshots():
-        max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+        max_rows = _automation_max_snapshots()
         telemetry_persistence_service.append_automation_snapshot(
             snapshot.model_dump(mode="json"),
             max_rows=max_rows,
@@ -259,7 +292,7 @@ def _store_snapshot(snapshot: ProviderUsageSnapshot) -> None:
         return
     rows = _read_store()
     rows.append(snapshot.model_dump(mode="json"))
-    max_rows = max(10, min(int(os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS", "800")), 5000))
+    max_rows = _automation_max_snapshots()
     if len(rows) > max_rows:
         rows = rows[-max_rows:]
     _write_store(rows)
@@ -302,10 +335,15 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _usage_overview_cache_ttl_seconds(default: float = _CACHE_TTL_SECONDS) -> float:
-    parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_OVERVIEW_CACHE_TTL_SECONDS"))
-    if parsed is None:
-        return max(10.0, min(float(default), 86400.0))
-    return max(10.0, min(float(parsed), 86400.0))
+    env_val = os.getenv("AUTOMATION_USAGE_OVERVIEW_CACHE_TTL_SECONDS")
+    if env_val is not None:
+        parsed = _coerce_float(env_val)
+        if parsed is not None:
+            return max(10.0, min(float(parsed), 86400.0))
+    cfg = get_float("automation_usage", "overview_cache_ttl_seconds", 0)
+    if cfg > 0:
+        return max(10.0, min(cfg, 86400.0))
+    return max(10.0, min(float(default), 86400.0))
 
 
 def _endpoint_cache_ttl_seconds(cache_name: str, default: float = _ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
@@ -4021,7 +4059,22 @@ def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
     return snapshot
 
 
+def _is_running_on_railway() -> bool:
+    """True when this process is the deployed app on Railway (Railway injects RAILWAY_SERVICE_ID at runtime). We skip calling backboard.railway.com from the app to avoid ToS issues."""
+    return bool(os.getenv("RAILWAY_SERVICE_ID", "").strip() or os.getenv("RAILWAY_ENVIRONMENT_ID", "").strip())
+
+
 def _build_railway_snapshot() -> ProviderUsageSnapshot:
+    if _is_running_on_railway():
+        return ProviderUsageSnapshot(
+            id=f"provider_railway_{int(time.time())}",
+            provider="railway",
+            kind="custom",
+            status="ok",
+            data_source="configuration_only",
+            notes=["Railway API not called when running on Railway (ToS compliance)."],
+            raw={"skipped": "running_on_railway"},
+        )
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
     environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
@@ -5544,6 +5597,8 @@ def _probe_openrouter() -> tuple[bool, str]:
 
 
 def _probe_railway() -> tuple[bool, str]:
+    if _is_running_on_railway():
+        return True, "ok_skipped_on_railway_tos"
     token = os.getenv("RAILWAY_TOKEN", "").strip()
     project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
     environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
@@ -5980,17 +6035,13 @@ def _detail_indicates_missing_cli(detail: str) -> bool:
 
 
 def run_provider_validation_probes(*, required_providers: list[str] | None = None) -> dict[str, Any]:
-    required = [
-        _normalize_provider_name(item)
-        for item in (required_providers or _validation_required_providers_from_env())
-        if str(item).strip()
-    ]
-    required = _dedupe_preserve_order([item for item in required if item])
+    raw = [str(item).strip() for item in (required_providers or _validation_required_providers_from_env()) if str(item).strip()]
+    required = _dedupe_preserve_order(raw)
     probe_map = _provider_probe_map()
 
     out: list[dict[str, Any]] = []
     for provider in required:
-        probe = probe_map.get(provider)
+        probe = probe_map.get(provider) or probe_map.get(_normalize_provider_name(provider))
         if probe is None:
             out.append({"provider": provider, "ok": False, "detail": "unsupported_provider"})
             continue
@@ -6170,6 +6221,7 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
             providers.add("openrouter")
         if executor == "codex":
             providers.add("openai")
+            providers.add("codex")
         if worker_id.startswith("openai-codex") or agent_id.startswith("openai-codex"):
             providers.add("openai")
         if "codex" in model_lower or repeatable_tool_call.startswith("codex "):
@@ -6254,8 +6306,12 @@ def _build_provider_validation_report(
     min_events = max(1, min(int(min_execution_events), 50))
 
     for provider in required:
-        readiness_row = readiness_by_provider.get(provider)
-        usage_snapshot = usage_by_provider.get(provider)
+        readiness_row = readiness_by_provider.get(provider) or readiness_by_provider.get(_normalize_provider_name(provider))
+        # Codex must not inherit openai's snapshot; it requires its own execution events for validation.
+        family = _provider_family_name(provider)
+        usage_snapshot = usage_by_provider.get(provider) or (
+            usage_by_provider.get(family) if provider != "codex" else None
+        )
         runtime_row = runtime_rows.get(provider, {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []})
         configured = bool(readiness_row.configured) if readiness_row is not None else False
         readiness_status = readiness_row.status if readiness_row is not None else "unavailable"
@@ -6300,9 +6356,10 @@ def _build_provider_validation_report(
             else:
                 blocking.append(f"{provider}: readiness_status={readiness_status}")
 
+        row_provider = _normalize_provider_name(provider) if provider == "openai-codex" else provider
         rows.append(
             ProviderValidationRow(
-                provider=provider,
+                provider=row_provider,
                 configured=configured,
                 readiness_status=readiness_status,
                 usage_events=usage_events,
@@ -6330,12 +6387,8 @@ def provider_validation_report(
     min_execution_events: int = 1,
     force_refresh: bool = True,
 ) -> ProviderValidationReport:
-    required = [
-        _normalize_provider_name(item)
-        for item in (required_providers or _validation_required_providers_from_env())
-        if str(item).strip()
-    ]
-    required = _dedupe_preserve_order([item for item in required if item])
+    raw = [str(item).strip() for item in (required_providers or _validation_required_providers_from_env()) if str(item).strip()]
+    required = _dedupe_preserve_order(raw)
     active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
     required_set = _resolved_required_provider_set(required, active_counts=active_counts)
     overview = coalesce_usage_overview_families(

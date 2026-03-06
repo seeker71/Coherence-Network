@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "*/30 * * * *"
+    # Every 2 hours (was */30 min; reduced to limit Railway API/redeploy frequency for ToS)
+    - cron: "0 */2 * * *"
   workflow_dispatch:
 
 concurrency:

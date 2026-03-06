@@ -15,6 +15,7 @@ from starlette.responses import Response
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
+from app.config_loader import get_float
 from app.routers import (
     agent,
     automation_usage,
@@ -73,11 +74,13 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 
 def _slow_request_ms_threshold() -> float:
-    raw = os.getenv("API_SLOW_REQUEST_MS", "1500").strip()
-    try:
-        return max(25.0, float(raw))
-    except ValueError:
-        return 1500.0
+    raw = os.getenv("API_SLOW_REQUEST_MS")
+    if raw is not None:
+        try:
+            return max(25.0, float(raw.strip()))
+        except ValueError:
+            pass
+    return max(25.0, get_float("api", "slow_request_ms", 1500.0))
 
 
 def _build_route_signature(request) -> tuple[str, str, str]:

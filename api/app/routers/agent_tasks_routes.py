@@ -100,12 +100,15 @@ async def list_tasks(
     offset: int = Query(0, ge=0),
 ) -> AgentTaskList:
     """List tasks with optional filters. Pagination: limit, offset."""
-    items, total = agent_service.list_tasks(
+    items, total, runtime_fallback_backfill = agent_service.list_tasks(
         status=status, task_type=task_type, limit=limit, offset=offset
     )
     return AgentTaskList(
         tasks=[AgentTaskListItem(**task_to_item(t)) for t in items],
         total=total,
+        meta={"runtime_fallback_backfill_count": runtime_fallback_backfill}
+        if runtime_fallback_backfill > 0
+        else None,
     )
 
 

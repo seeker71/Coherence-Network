@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_bool, get_float, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
 from app.services import agent_task_store_service
 
@@ -35,35 +36,39 @@ def _default_store_path() -> Path:
 
 
 def _store_path() -> Path:
-    configured = os.getenv("AGENT_TASKS_PATH")
+    configured = get_str("agent_tasks", "path") or os.getenv("AGENT_TASKS_PATH", "").strip()
     if configured:
         return Path(configured)
     return _default_store_path()
 
 
 def _persistence_enabled() -> bool:
-    configured = os.getenv("AGENT_TASKS_PERSIST")
-    if configured is not None:
-        return configured.strip().lower() not in {"0", "false", "no", "off"}
-    return os.getenv("PYTEST_CURRENT_TEST") is None
+    env_val = os.getenv("AGENT_TASKS_PERSIST")
+    if env_val is not None:
+        return env_val.strip().lower() not in {"0", "false", "no", "off"}
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    return get_bool("agent_tasks", "persist", default=False)
 
 
 def _db_store_reload_ttl_seconds() -> float:
-    raw = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS", "120").strip()
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 30.0
-    return max(0.0, min(value, 300.0))
+    env_val = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS")
+    if env_val is not None:
+        try:
+            return max(0.0, min(float(env_val.strip()), 300.0))
+        except ValueError:
+            pass
+    return max(0.0, min(get_float("agent_tasks", "db_reload_ttl_seconds", 120.0), 300.0))
 
 
 def _max_task_output_chars() -> int:
-    raw = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "4000").strip()
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 4000
-    return max(500, min(value, 200000))
+    env_val = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS")
+    if env_val is not None:
+        try:
+            return max(500, min(int(env_val.strip()), 200000))
+        except ValueError:
+            pass
+    return max(500, min(get_int("agent_tasks", "task_output_max_chars", 4000), 200000))
 
 
 def _sanitize_task_output(value: str | None) -> str | None:
@@ -146,10 +151,12 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
     return task
 
 
-def _load_store_from_disk(*, include_output: bool = True) -> dict[str, dict[str, Any]]:
-    if not _persistence_enabled():
+def _load_store_from_disk(
+    *, include_output: bool = True, path: Path | None = None
+) -> dict[str, dict[str, Any]]:
+    if not _persistence_enabled() and path is None:
         return {}
-    if agent_task_store_service.enabled():
+    if agent_task_store_service.enabled() and path is None:
         loaded: dict[str, dict[str, Any]] = {}
         for raw in agent_task_store_service.load_tasks(include_output=include_output):
             task = _deserialize_task(raw)
@@ -157,7 +164,7 @@ def _load_store_from_disk(*, include_output: bool = True) -> dict[str, dict[str,
                 continue
             loaded[task["id"]] = task
         return loaded
-    path = _store_path()
+    path = path if path is not None else _store_path()
     if not path.exists():
         return {}
     try:
@@ -194,7 +201,8 @@ def _save_store_to_disk() -> None:
 def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = False) -> None:
     global _store_loaded, _store_loaded_path, _store_loaded_test_context
     global _store_loaded_includes_output, _store_loaded_at_monotonic
-    current_path = str(_store_path())
+    store_path = _store_path()
+    current_path = str(store_path)
     current_test = os.getenv("PYTEST_CURRENT_TEST")
 
     if not _persistence_enabled() and current_test and _store_loaded_test_context != current_test:
@@ -204,6 +212,9 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
         _store_loaded_test_context = current_test
         _store_loaded_includes_output = False
         _store_loaded_at_monotonic = 0.0
+
+    if not _persistence_enabled():
+        return
 
     if agent_task_store_service.enabled():
         now = time.monotonic()
@@ -223,7 +234,7 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
     if _store_loaded and _store_loaded_path == current_path and not force_reload:
         return
     _store.clear()
-    _store.update(_load_store_from_disk(include_output=include_output))
+    _store.update(_load_store_from_disk(include_output=include_output, path=store_path))
     _store_loaded = True
     _store_loaded_path = current_path
     _store_loaded_test_context = current_test

@@ -424,7 +424,7 @@ def _build_flow_interdependencies(
 
 
 def _active_impl_question_fingerprints() -> set[str]:
-    tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
+    tasks, _, _ = agent_service.list_tasks(limit=100000, offset=0)
     fingerprints: set[str] = set()
     for task in tasks:
         status = task.get("status")
@@ -3015,7 +3015,7 @@ def _asset_modularity_fingerprint(asset_id: str, metric: str) -> str:
 
 
 def _all_task_fingerprints_for_source(source: str) -> set[str]:
-    tasks, _ = agent_service.list_tasks(limit=100000, offset=0)
+    tasks, _, _ = agent_service.list_tasks(limit=100000, offset=0)
     out: set[str] = set()
     for task in tasks:
         context = task.get("context")

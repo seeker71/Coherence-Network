@@ -21,6 +21,7 @@ import httpx
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
+from app.config_loader import get_float, get_int, get_str
 from app.models.runtime import (
     EndpointAttentionReport,
     EndpointAttentionRow,
@@ -62,8 +63,18 @@ _RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 120.0
 _RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
 _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
 _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
+def _runtime_endpoint_cache_max_workers() -> int:
+    env_val = os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS")
+    if env_val is not None:
+        try:
+            return max(2, min(int(env_val), 8))
+        except ValueError:
+            pass
+    return max(2, min(get_int("runtime", "endpoint_cache_max_workers", 4), 8))
+
+
 _RUNTIME_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
-    max_workers=max(2, min(int(os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    max_workers=_runtime_endpoint_cache_max_workers(),
     thread_name_prefix="runtime-endpoint-cache-refresh",
 )
 _RUNTIME_ENDPOINT_CACHE_BUSTER = 0
@@ -169,7 +180,7 @@ def _default_events_path() -> Path:
 
 
 def _events_path() -> Path:
-    configured = os.getenv("RUNTIME_EVENTS_PATH")
+    configured = get_str("runtime", "events_path") or os.getenv("RUNTIME_EVENTS_PATH", "").strip()
     return Path(configured) if configured else _default_events_path()
 
 
@@ -178,7 +189,7 @@ def _default_idea_map_path() -> Path:
 
 
 def _idea_map_path() -> Path:
-    configured = os.getenv("RUNTIME_IDEA_MAP_PATH")
+    configured = get_str("runtime", "idea_map_path") or os.getenv("RUNTIME_IDEA_MAP_PATH", "").strip()
     return Path(configured) if configured else _default_idea_map_path()
 
 
@@ -187,7 +198,7 @@ def _logs_dir() -> Path:
 
 
 def _agent_tasks_path() -> Path:
-    configured = os.getenv("AGENT_TASKS_PATH")
+    configured = get_str("runtime", "agent_tasks_path") or os.getenv("AGENT_TASKS_PATH", "").strip()
     if configured:
         return Path(configured)
     return _logs_dir() / "agent_tasks.json"
@@ -214,7 +225,13 @@ def _path_signature(path: Path) -> dict[str, Any]:
 
 
 def _runtime_cost_per_second() -> float:
-    return float(os.getenv("RUNTIME_COST_PER_SECOND", "0.002"))
+    env_val = os.getenv("RUNTIME_COST_PER_SECOND")
+    if env_val is not None:
+        try:
+            return float(env_val)
+        except ValueError:
+            pass
+    return get_float("runtime", "cost_per_second", 0.002)
 
 
 def estimate_runtime_cost(runtime_ms: float) -> float:

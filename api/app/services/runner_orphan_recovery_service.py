@@ -80,7 +80,7 @@ async def maybe_recover_on_idle_heartbeat(
         )
         max_recoveries = _int_env("AGENT_ORPHAN_REAP_MAX_TASKS", 10, minimum=1, maximum=50)
 
-        running_tasks, _ = agent_service.list_tasks(status=TaskStatus.RUNNING, limit=500, offset=0)
+        running_tasks, _, _ = agent_service.list_tasks(status=TaskStatus.RUNNING, limit=500, offset=0)
         now = datetime.now(timezone.utc)
         candidates: list[tuple[int, dict[str, Any]]] = []
         for task in running_tasks:

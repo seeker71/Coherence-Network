@@ -3,6 +3,12 @@
 **Branch:** `codex/local-validation`  
 **Generated:** 2026-03-06
 
+## Railway ToS mitigations (this session)
+
+- **Skip backboard from app when on Railway:** In `api/app/services/automation_usage_service.py`, `_is_running_on_railway()` detects Railway runtime (`RAILWAY_SERVICE_ID` / `RAILWAY_ENVIRONMENT_ID`). When true, `_build_railway_snapshot()` and `_probe_railway()` return stub/skip without calling `https://backboard.railway.com/graphql/v2`, so the deployed app no longer hits Railway’s API (ToS compliance).
+- **Less frequent deploy contract:** `.github/workflows/public-deploy-contract.yml` schedule changed from `*/30 * * * *` to `0 */2 * * *` (every 2 hours) to reduce Railway redeploy/API traffic from CI.
+- **Stashed work restored:** Applied `stash@{0}` (ghx zshrc fix) into the current branch.
+
 ## Summary
 
 | Gate / check | Status | Notes |
@@ -70,3 +76,42 @@ All selected checks passed:
 3. **Critical tests:**  
    With CI-fix changes applied:  
    `cd api && .venv/bin/pytest tests/test_runtime_api.py tests/test_openclaw_executor_integration.py tests/test_orchestrator_policy_service.py tests/test_commit_progress.py -q`
+
+## Full idea-to-acceptance pass (Cursor and Claude)
+
+To validate that a full idea → implementation → acceptance flow runs with Cursor and Claude:
+
+1. **Entry gate**  
+   `make prompt-gate`  
+   (Dirty tree: continuation mode; clean tree: full start-gate + rebase + local guard.)
+
+2. **Start API (local)**  
+   `cd api && .venv/bin/uvicorn app.main:app --reload --port 8000`  
+   Use `AGENT_AUTO_EXECUTE=0` so execution is driven by the runner, not the server.
+
+3. **Create a small task (idea)**  
+   ```bash
+   curl -sS -X POST http://127.0.0.1:8000/api/agent/tasks \
+     -H "Content-Type: application/json" \
+     -d '{"direction": "Create api/test_idea_acceptance.txt with content ok", "task_type": "impl"}' | jq -r '.id'
+   ```
+   Save the returned `task_id`.
+
+4. **Execute with Cursor**  
+   In a second terminal (Cursor executor must be available):  
+   `cd api && AGENT_TASK_ID=<task_id> .venv/bin/python scripts/agent_runner.py --once -v`  
+   Or use the `command` from `GET /api/agent/tasks/<task_id>` and run it in Cursor/terminal.  
+   Confirm the task status moves to `completed` and `api/test_idea_acceptance.txt` exists.
+
+5. **Execute with Claude (optional)**  
+   Same as step 4 but ensure Claude Code CLI is in PATH and the task is routed to `claude` (or create a task with `context.executor` / `model_override` for Claude). Run `agent_runner.py --once` and confirm completion.
+
+6. **Acceptance / runtime proof**  
+   - Task completion: `curl -sS http://127.0.0.1:8000/api/agent/tasks/<task_id> | jq '{ status, output }'`  
+   - Runtime events for the task: `curl -sS "http://127.0.0.1:8000/api/runtime/events?limit=50" | jq --arg id <task_id> '[.[] | select(.metadata.task_id == $id)]'`  
+   - For MVP acceptance (spec 114): `curl -sS "http://127.0.0.1:8000/api/runtime/mvp/acceptance-summary?seconds=3600" | jq`
+
+7. **Local guard (before push)**  
+   After committing, run:  
+   `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests`  
+   Resolve commit-evidence-guard by adding or updating `docs/system_audit/commit_evidence_*.json` with all changed files.
