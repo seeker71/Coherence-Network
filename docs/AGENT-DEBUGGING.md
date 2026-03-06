@@ -2,6 +2,69 @@
 
 How to add tasks, run them, and debug when something goes wrong.
 
+## Pipeline validation: highest-ROI unvalidated idea
+
+To validate the full idea → spec → impl → test → review → acceptance pipeline, pick the **highest-ROI idea that has not passed acceptance yet** and run it **through the agent CLI**, then confirm with the acceptance checklist.
+
+### Order of operations (required)
+
+1. **Agent CLI does the work** — The pipeline must use **agent CLI calls** (via the runner) to:
+   - **Spec:** update or create the spec for the idea (e.g. spec 053 for portfolio-governance).
+   - **Impl:** implement the spec (code, tests, files per spec).
+   - **Test:** run tests (agent runs pytest/verification commands).
+   - **Review:** review implementation against the spec (agent produces pass/fail and, on fail, PATCH_GUIDANCE).
+   - Loop impl → test → review until review passes (see spec 108, project_manager).
+2. **Then validate acceptance** — **Only after** the agent has completed spec → impl → test → review do you run the **acceptance validation** (the checklist or `run_pinned_idea_acceptance.py`) to confirm that acceptance has passed. That validation is the final gate; it does not replace the agent doing spec/impl/review.
+
+So: **agent updates spec, implementation, and review first; only then do we validate that acceptance has passed.**
+
+**Current pick:** **portfolio-governance** (Unified idea portfolio governance)
+
+- **Idea ID:** `portfolio-governance`
+- **ROI (free_energy_score):** highest among unvalidated ideas (e.g. ~5.1 from `potential_value=82`, `confidence=0.75`, `estimated_cost=10`, `resistance_risk=2`)
+- **Status:** `manifestation_status: partial` (not yet `validated`)
+- **Spec:** `specs/053-ideas-prioritization.md` — Ideas Prioritization API (implements list/score/update; spec now has full quality gate: Verification, Risks, Gaps)
+
+**Acceptance checklist — one path, proof at each step:**
+
+1. **Agent does the work:** spec → impl → test → review (via runner). After the pipeline, open the **review** task log and confirm the payload contains **`VERIFICATION_RESULT=PASS`** (not FAIL). If it says FAIL, fix implementation per the review’s PATCH_GUIDANCE and re-run review.
+
+2. **Run the acceptance script** (from repo root, with API running):  
+   `python3 scripts/run_pinned_idea_acceptance.py`  
+   It runs four steps in order and prints **`[PROOF]`** for each so you have required data and files that passed. Use `--force` to re-run all steps.
+
+3. **Mark idea accepted** only when the script finishes with `[PROOF] acceptance_complete: all steps passed`:  
+   `PATCH /api/ideas/portfolio-governance` with `{"manifestation_status": "validated"}`.
+
+**How to use this for pipeline validation:** Start the API, then (1) run the **agent** (project manager or explicit spec → impl → test → review tasks for this idea) so the agent CLI updates the spec, implementation, and review; (2) **then** run the acceptance checklist (or script below) to validate that acceptance has passed. Fix any blocking test/guard failures and re-run the agent or validation as needed so the idea can move to accepted.
+
+**Why did review run before spec?** The runner does not enforce phase order. The API returns pending tasks **newest-first** (`created_at.desc()` in `agent_task_store_service.load_tasks_page`). If you create tasks in order spec → impl → test → review, the **review** task (created last) is first in the list, so the runner picks it first. To get **spec-first** order, create tasks in **reverse** order (review, test, impl, spec) so spec is newest and runs first, or add phase-aware ordering to the list endpoint / runner.
+
+### Run pinned-idea acceptance — one path, proof at each step
+
+**Guidance:** After the agent has completed spec → impl → test → review, run the script once. It runs four steps in order and prints **`[PROOF]`** with the required data and files for each step that passes.
+
+```bash
+# From repo root. Start API first: cd api && uvicorn app.main:app --port 8000
+python3 scripts/run_pinned_idea_acceptance.py
+
+# Re-run all steps (ignore saved state)
+python3 scripts/run_pinned_idea_acceptance.py --force
+```
+
+**What the script does (in order):**
+
+| Step | What it checks | Proof printed |
+|------|----------------|---------------|
+| step_1_no_placeholder | Spec + impl files have no placeholder/mock/fake/TODO implement | `files_checked`, `result: no_forbidden_tokens` |
+| step_2_spec_quality | Spec 053 passes quality validator; has Purpose, Requirements, Verification, Risks, Known Gaps | `spec_file`, `validator_exit: 0`, `sections_present` |
+| step_3_pytest | `pytest -q tests/test_ideas.py` passes | `exit_code: 0`, `tests_passed`, `output_tail` |
+| step_4_live_api | GET /api/ideas returns JSON with non-empty ideas and summary (real data) | `url`, `status`, `summary`, `ideas_returned`, `first_idea_ids`, `shape_ok` |
+
+**Example proof output (success):** Each step prints `[PROOF] step_id: { ... }` with the evidence above. At the end you get `[PROOF] acceptance_complete: all steps passed.` If a step fails, the script prints `[FAILURE]` with `suggested_action` and exits; fix the cause and re-run (completed steps are skipped unless you use `--force`).
+
+**Review payload:** The script does not read task logs. After the pipeline, open the **review** task log (e.g. `api/logs/task_<review_task_id>.log`) and confirm the payload contains **`VERIFICATION_RESULT=PASS`**. If it says FAIL, fix implementation per the review’s PATCH_GUIDANCE and re-run the review task, then run this script again.
+
 ## Adding a Task
 
 **Via API:**
@@ -175,6 +238,15 @@ So you always have a snapshot of progress and can decide to requeue the same tas
 - **Requeue the same task:** Set the task back to **pending** (e.g. PATCH `status: "pending"`) so the runner picks it up again. The same `direction` and context are used; for PR-mode tasks the runner uses **`resume_checkpoint_sha`** / **`resume_branch`** when present.
 - **PR mode:** The runner already checkpoints partial progress (git commit + push on the task branch) and can requeue with **resume_attempts** / **resume_checkpoint_sha** so the next run continues from the last checkpoint.
 - **No timeout:** Prefer **`AGENT_TASK_TIMEOUT=0`** for expensive or long-running tasks so you don’t lose progress to a hard kill; use progress and manual abort if you need to stop.
+
+### CLI step trackability and actionable failures
+
+For **multi-step CLI flows** (e.g. pinned-idea acceptance), the runner and task context support:
+
+- **Step visibility:** If the child process prints **`[STATUS] <step_name>`** (e.g. `[STATUS] step_2_pytest_ideas`), the runner parses it and updates **`current_step`** and run-state so you can see which step is running or last ran.
+- **Actionable failure hints:** If the child prints **`[FAILURE] {"suggested_action": "...", "unblock_condition": "...", "step": "..."}`** (one JSON object), the runner stores them in task context as **`cli_failure_suggested_action`**, **`cli_failure_unblock_condition`**, **`cli_failure_step`**. Use these for LLM reasoning or human next steps.
+- **Monitoring:** Use **`GET /api/agent/tasks/{task_id}`** (fields `current_step`, `context.runner_recent_activity`, `context.cli_failure_*`) and **`GET /api/agent/run-state/{task_id}`** (status, next_action, failure_class). Full output: **`api/logs/task_{task_id}.log`**.
+- **Resume:** For script-based flows that support it (e.g. `scripts/run_pinned_idea_acceptance.py`), set **`RESUME_FROM_STEP=<step_id>`** when re-running so completed steps are skipped. Requeue the task (status → pending) to retry after fixing.
 
 ### 4. Pipeline status and visibility
 
