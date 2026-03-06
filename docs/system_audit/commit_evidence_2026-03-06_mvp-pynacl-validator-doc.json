@@ -1,0 +1,66 @@
+{
+  "date": "2026-03-06",
+  "thread_branch": "main",
+  "commit_scope": "Add PyNaCl for MVP validator attestations; document external validator governance for Railway deploy.",
+  "files_owned": [
+    "api/pyproject.toml",
+    "docs/MVP-EXTERNAL-VALIDATORS.md",
+    "specs/114-mvp-cost-and-acceptance-proof.md",
+    "docs/system_audit/commit_evidence_2026-03-06_mvp-pynacl-validator-doc.json",
+    "web/package-lock.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_runtime_api.py",
+      "./scripts/verify_worktree_local_web.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting PR/merge checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Push to main triggers Railway auto-deploy; verify API and web health after deploy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "API starts with PyNaCl for Ed25519 validator verification; docs describe third-party validator onboarding and quorum.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/runtime/mvp/acceptance-summary",
+      "/api/runtime/mvp/acceptance-judge"
+    ],
+    "test_flows": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Deploy validation pending after push."
+  },
+  "idea_ids": ["portfolio-governance"],
+  "spec_ids": ["114-mvp-cost-and-acceptance-proof"],
+  "task_ids": ["deploy_railway_mvp_validator_doc_20260306"],
+  "contributors": [
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation", "docs"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "agent"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-03-06_mvp-pynacl-validator-doc.json"
+  ],
+  "change_files": [
+    "api/pyproject.toml",
+    "docs/MVP-EXTERNAL-VALIDATORS.md",
+    "specs/114-mvp-cost-and-acceptance-proof.md",
+    "docs/system_audit/commit_evidence_2026-03-06_mvp-pynacl-validator-doc.json",
+    "web/package-lock.json"
+  ],
+  "change_intent": "docs_only"
+}
