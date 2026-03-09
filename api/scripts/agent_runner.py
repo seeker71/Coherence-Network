@@ -1141,6 +1141,30 @@ def _safe_get_task_context(task: object) -> dict[str, Any]:
     return {}
 
 
+def _task_dependencies_satisfied(
+    client: httpx.Client,
+    context: dict[str, Any],
+    log: logging.Logger,
+) -> bool:
+    """True if task has no depends_on_task_ids or all listed task IDs are completed (scheduler dependency gating)."""
+    dep_ids = context.get("depends_on_task_ids")
+    if not isinstance(dep_ids, list) or len(dep_ids) == 0:
+        return True
+    for tid in dep_ids:
+        tid_str = str(tid).strip() if tid is not None else ""
+        if not tid_str:
+            continue
+        r = _http_with_retry(client, "GET", f"{BASE}/api/agent/tasks/{tid_str}", log)
+        if r is None or r.status_code != 200:
+            log.debug("task dependency %s not found or unreachable; blocking", tid_str)
+            return False
+        status = str((r.json() or {}).get("status") or "").strip().lower()
+        if status != "completed":
+            log.debug("task dependency %s status=%s; blocking until completed", tid_str, status)
+            return False
+    return True
+
+
 def _safe_agent_slug(value: str, default: str = "unknown-agent") -> str:
     cleaned = re.sub(r"[^A-Za-z0-9_.-]", "-", (value or "").strip().lower())
     cleaned = cleaned.strip("-.")
@@ -7790,6 +7814,8 @@ def poll_and_run(
             task_type = str(full.get("task_type", "impl"))
             model = str(full.get("model", "unknown"))
             context = _safe_get_task_context(full)
+            if not _task_dependencies_satisfied(client, context, log):
+                continue
             retry_not_before = _parse_iso_utc(context.get("retry_not_before"))
             if retry_not_before is not None and retry_not_before > datetime.now(timezone.utc):
                 continue
