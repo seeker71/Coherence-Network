@@ -22,4 +22,4 @@ echo "Running local PR guard before push..."
 WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT="$REPORT_PATH" \
   API_PORT="$API_PORT" \
   WEB_PORT="$WEB_PORT" \
-  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build

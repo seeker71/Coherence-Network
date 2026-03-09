@@ -1,7 +1,7 @@
 {
   "date": "2026-03-09",
   "thread_branch": "main",
-  "commit_scope": "Agent execution hooks config/summary, telemetry persistence modules, project manager orchestrator, remote-ops UI sections, pipeline reports, metrics window_days param.",
+  "commit_scope": "Agent execution hooks config/summary, telemetry persistence modules, project manager orchestrator, remote-ops UI sections, pipeline reports, metrics window_days param; pre-push skip api/web, PR guard progress output.",
   "files_owned": [
     "docs/system_audit/commit_evidence_2026-03-09_agent-hooks-telemetry-remote-ops.json"
   ],
@@ -57,6 +57,7 @@
     "specs/005-project-manager-orchestrator.md"
   ],
   "change_files": [
+    ".githooks/pre-push",
     "api/app/routers/agent_issues_routes.py",
     "api/app/routers/agent_tasks_routes.py",
     "api/app/services/agent_execution_hooks.py",
@@ -90,6 +91,7 @@
     "web/app/remote-ops/types.ts",
     "web/app/remote-ops/use-remote-ops.ts",
     "web/app/remote-ops/utils.ts",
+    "scripts/worktree_pr_guard.py",
     "docs/system_audit/commit_evidence_2026-03-09_agent-hooks-telemetry-remote-ops.json"
   ],
   "change_intent": "runtime_feature"
