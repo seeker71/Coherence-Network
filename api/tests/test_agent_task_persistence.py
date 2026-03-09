@@ -61,6 +61,31 @@ async def test_upsert_active_task_creates_once_and_reuses_by_session_key(
         assert listed_payload["total"] == 1
 
 
+@pytest.mark.asyncio
+async def test_clear_all_tasks_requires_confirm_and_clears_queue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    agent_service.clear_store()
+    agent_service._store_loaded = False
+    # Create one task so we can verify clear removes it.
+    agent_service.create_task(
+        AgentTaskCreate(direction="To be cleared", task_type=TaskType.SPEC, context={}),
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Without confirm=clear → 400
+        r = await client.delete("/api/agent/tasks")
+        assert r.status_code == 400
+        r = await client.delete("/api/agent/tasks?confirm=wrong")
+        assert r.status_code == 400
+        # With confirm=clear → 204 and queue empty
+        r = await client.delete("/api/agent/tasks?confirm=clear")
+        assert r.status_code == 204
+        listed = await client.get("/api/agent/tasks")
+        assert listed.status_code == 200
+        assert listed.json()["total"] == 0
+
+
 def test_agent_tasks_persist_and_reload_from_disk(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

@@ -92,6 +92,22 @@ async def upsert_active_task(data: AgentTaskUpsertActive) -> dict:
     }
 
 
+@router.delete(
+    "/tasks",
+    status_code=204,
+    responses={400: {"description": "Missing confirm=clear query parameter"}},
+)
+async def clear_all_tasks(confirm: Optional[str] = Query(None)) -> None:
+    """Clear the entire task queue (in-memory and persistence). Use before a fresh pipeline run.
+    Requires ?confirm=clear to avoid accidental use."""
+    if confirm != "clear":
+        raise HTTPException(
+            status_code=400,
+            detail="Refusing to clear all tasks without confirm=clear query parameter",
+        )
+    agent_service.clear_store()
+
+
 @router.get("/tasks")
 async def list_tasks(
     status: Optional[TaskStatus] = Query(None),

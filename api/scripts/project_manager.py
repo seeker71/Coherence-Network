@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Tuple
 import os
 import re
@@ -41,8 +42,137 @@ STATE_FILE = os.path.join(LOG_DIR, "project_manager_state.json")
 MAX_ITERATIONS = 5
 NEEDS_DECISION_TIMEOUT_HOURS = float(os.environ.get("PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS", "0"))
 
-PHASES = ["spec", "impl", "test", "review"]
-TASK_TYPE_BY_PHASE = {"spec": "spec", "impl": "impl", "test": "test", "review": "review"}
+PHASES = ["spec", "impl", "test", "review", "acceptance"]
+TASK_TYPE_BY_PHASE = {"spec": "spec", "impl": "impl", "test": "test", "review": "review", "acceptance": None}
+
+# Split/combine heuristics (deterministic; no AI or external services)
+SPLIT_MAX_IDEA_CHARS = int(os.environ.get("PM_SPLIT_MAX_IDEA_CHARS", "300"))
+SPLIT_MAX_SPEC_CHARS = int(os.environ.get("PM_SPLIT_MAX_SPEC_CHARS", "300"))
+SPLIT_MAX_IMPL_CHARS = int(os.environ.get("PM_SPLIT_MAX_IMPL_CHARS", "300"))
+SPLIT_MAX_PARTS = 5
+SPLIT_MIN_PART_CHARS = 40
+
+
+def _split_threshold(node_type: str) -> int:
+    if node_type == "idea":
+        return SPLIT_MAX_IDEA_CHARS
+    if node_type == "spec":
+        return SPLIT_MAX_SPEC_CHARS
+    return SPLIT_MAX_IMPL_CHARS
+
+
+def is_too_large(node_type: str, item: str) -> bool:
+    """True if item exceeds split threshold for node_type. Deterministic heuristic."""
+    return len(item) > _split_threshold(node_type)
+
+
+def split_item(node_type: str, item: str) -> list[str]:
+    """Split item into 2–5 child items. Deterministic: split by ' — ' or ';' or ' and '. Returns at least [item]."""
+    items, _ = split_with_ordering(node_type, item)
+    return items
+
+
+def split_with_ordering(node_type: str, item: str) -> tuple[list[str], list[list[int]]]:
+    """Split item into child items and return ordering: (children_items, depends_on_per_child).
+    Ordering is decided at split time: default linear (child i depends on 0..i-1).
+    Callers use this so sub-impls can be signaled ordering constraints."""
+    threshold = _split_threshold(node_type)
+    if len(item) <= threshold:
+        return [item], [[]]
+    parts = re.split(r"\s+—\s+|\s*;\s*|\s+and\s+", item, maxsplit=SPLIT_MAX_PARTS - 1)
+    parts = [p.strip() for p in parts if p.strip() and len(p.strip()) >= SPLIT_MIN_PART_CHARS]
+    if len(parts) <= 1:
+        chunk = max(SPLIT_MIN_PART_CHARS, (len(item) + 1) // 2)
+        parts = [item[:chunk].rsplit(" ", 1)[0] or item[:chunk], item[chunk:].lstrip()]
+    items = parts[: SPLIT_MAX_PARTS] if len(parts) > 1 else [item]
+    # Default ordering: linear — child i depends on 0..i-1
+    ordering = [list(range(i)) for i in range(len(items))]
+    return items, ordering
+
+
+def format_ordering_signal(child: dict, total_children: int) -> str:
+    """Format ordering constraints for the sub-impl so it sees its position and dependencies."""
+    idx = child.get("child_idx", 0)
+    deps = child.get("depends_on", [])
+    if total_children <= 1:
+        return ""
+    dep_str = ", ".join(str(d + 1) for d in deps) if deps else "none"
+    return f" [Sub-impl {idx + 1} of {total_children}; depends on sub-impl(s) {dep_str}. Complete only this part.]"
+
+
+def next_runnable_in_parallel(done_indices: list[int], ordering: list[list[int]], total: int) -> int | None:
+    """First child index k not in done_indices whose depends_on are all in done_indices. None if all done or no runnable."""
+    done_set = set(done_indices)
+    for k in range(total):
+        if k in done_set:
+            continue
+        deps = ordering[k] if k < len(ordering) else list(range(k))
+        if all(j in done_set for j in deps):
+            return k
+    return None
+
+
+def all_children_complete(split_parent: dict) -> bool:
+    """True if every child in split_parent has complete=True."""
+    children = split_parent.get("children") or []
+    return all(c.get("complete") for c in children) and len(children) > 0
+
+
+def _has_depends_on(children: list) -> bool:
+    """True if any child declares depends_on (explicit ordering)."""
+    return any("depends_on" in c for c in children)
+
+
+def get_next_runnable_index(split_parent: dict) -> int | None:
+    """Index of next child that can run: not complete and all depends_on complete. None if all done or no runnable."""
+    children = split_parent.get("children") or []
+    if not children:
+        return None
+    if _has_depends_on(children):
+        for k, c in enumerate(children):
+            if c.get("complete"):
+                continue
+            deps = c.get("depends_on", [])
+            if all(children[j].get("complete") for j in deps if 0 <= j < len(children)):
+                return k
+        return None
+    idx = split_parent.get("current_child_idx", 0)
+    if idx >= len(children):
+        return None
+    if children[idx].get("complete"):
+        idx += 1
+        while idx < len(children) and children[idx].get("complete"):
+            idx += 1
+        split_parent["current_child_idx"] = idx
+    return idx if idx < len(children) else None
+
+
+def get_current_child(split_parent: dict) -> dict | None:
+    """Return the child we're currently working on (respects depends_on ordering), or None if all done."""
+    children = split_parent.get("children") or []
+    runnable_idx = get_next_runnable_index(split_parent)
+    if runnable_idx is None:
+        return None
+    split_parent["current_child_idx"] = runnable_idx
+    return children[runnable_idx]
+
+
+def mark_child_complete(split_parent: dict, child_idx: int) -> None:
+    """Mark child at child_idx as complete."""
+    children = split_parent.get("children") or []
+    if 0 <= child_idx < len(children):
+        children[child_idx]["complete"] = True
+
+
+def advance_to_next_child(split_parent: dict) -> int | None:
+    """Advance current_child_idx to next incomplete child (linear order). Returns next idx or None if all done."""
+    children = split_parent.get("children") or []
+    idx = split_parent.get("current_child_idx", 0)
+    idx += 1
+    while idx < len(children) and children[idx].get("complete"):
+        idx += 1
+    split_parent["current_child_idx"] = idx
+    return idx if idx < len(children) else None
 
 
 def _setup_logging(verbose: bool = False) -> logging.Logger:
@@ -139,7 +269,14 @@ def refresh_backlog(log: logging.Logger, remaining: int = 2) -> bool:
 
 
 def load_state() -> dict:
-    data = {"backlog_index": 0, "phase": "spec", "current_task_id": None, "iteration": 1, "blocked": False}
+    data = {
+        "backlog_index": 0,
+        "phase": "spec",
+        "current_task_id": None,
+        "iteration": 1,
+        "blocked": False,
+        "split_parent": None,
+    }
     if os.path.isfile(STATE_FILE):
         try:
             with open(STATE_FILE, encoding="utf-8") as f:
@@ -166,6 +303,26 @@ def save_state(state: dict) -> None:
                 os.remove(tmp)
             except OSError:
                 pass
+
+
+def _run_acceptance_gate(backlog_idx: int, item_preview: str, log: logging.Logger) -> tuple[bool, str]:
+    """First-class acceptance gate: run validation and write minimal evidence. Returns (ok, evidence_path)."""
+    pytest_ok, pytest_out = run_pytest()
+    os.makedirs(LOG_DIR, exist_ok=True)
+    evidence_path = os.path.join(LOG_DIR, f"acceptance_evidence_item_{backlog_idx}.json")
+    evidence = {
+        "backlog_idx": backlog_idx,
+        "item_preview": (item_preview or "")[:80],
+        "pytest_ok": pytest_ok,
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        with open(evidence_path, "w", encoding="utf-8") as f:
+            json.dump(evidence, f, indent=2)
+    except OSError as e:
+        log.warning("acceptance gate: could not write evidence %s: %s", evidence_path, e)
+    log.info("acceptance gate item %d: pytest=%s evidence=%s", backlog_idx, "ok" if pytest_ok else "fail", evidence_path)
+    return pytest_ok, evidence_path
 
 
 def run_pytest() -> Tuple[bool, str]:
@@ -209,20 +366,31 @@ def build_direction(phase: str, item: str, iteration: int, last_output: str = ""
     return _build_from_config(phase, item, iteration, last_output)
 
 
-def _task_payload(direction: str, task_type: str, use_cursor: bool = False) -> dict:
-    """Build POST body for /api/agent/tasks. use_cursor=True passes context.executor=cursor."""
-    # Default to cursor when AGENT_EXECUTOR_DEFAULT=cursor (env)
+def _task_payload(direction: str, task_type: str, use_cursor: bool = False, context_extra: dict | None = None) -> dict:
+    """Build POST body for /api/agent/tasks. context_extra merged into context (e.g. split ordering for sub-impls)."""
     default_cursor = os.environ.get("AGENT_EXECUTOR_DEFAULT", "").lower() == "cursor"
     use_cursor = use_cursor or default_cursor
     payload = {"direction": direction, "task_type": task_type}
+    ctx = dict(context_extra or {})
     if use_cursor:
-        payload["context"] = {"executor": "cursor"}
+        ctx["executor"] = "cursor"
+    if ctx:
+        payload["context"] = ctx
     return payload
 
 
 def _load_parallel_state() -> dict:
-    """Load state for parallel mode: in_flight, item_phase, next_backlog_idx."""
-    default = {"in_flight": [], "item_phase": {}, "next_backlog_idx": 0, "completed_items": 0, "blocked": False}
+    """Load state for parallel mode: in_flight, next_backlog_idx, split_total, split_done."""
+    default = {
+        "in_flight": [],
+        "next_backlog_idx": 0,
+        "completed_items": 0,
+        "blocked": False,
+        "split_total": {},
+        "split_done": {},
+        "split_items": {},
+        "split_ordering": {},
+    }
     if os.path.isfile(STATE_FILE):
         try:
             with open(STATE_FILE, encoding="utf-8") as f:
@@ -296,7 +464,6 @@ def run_parallel(
             state = _load_parallel_state()
             state["blocked"] = False
             in_flight = state.get("in_flight") or []
-            item_phase = state.get("item_phase") or {}
             next_idx = state.get("next_backlog_idx", 0)
 
             # Poll in-flight tasks
@@ -320,6 +487,7 @@ def run_parallel(
                 phase = ent["phase"]
                 iteration = ent.get("iteration", 1)
                 output = t.get("output") or ""
+                completed_tid = tid
 
                 if status == "needs_decision":
                     state["blocked"] = True
@@ -332,13 +500,13 @@ def run_parallel(
                 if status == "failed":
                     if phase == "impl" and iteration < MAX_ITERATIONS:
                         dir = build_direction("impl", backlog[idx], iteration + 1, (output or "")[:2000])
-                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [completed_tid]}))
                         if resp.status_code == 201:
                             still_flying.append({
                                 "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
                                 "iteration": iteration + 1,
                             })
-                            log.info("retry impl iteration %d item %d", iteration + 1, idx)
+                            log.info("retry impl iteration %d item %d (triggered_by=%s)", iteration + 1, idx, completed_tid)
                     elif phase == "review" or iteration >= MAX_ITERATIONS:
                         next_idx = max(next_idx, idx + 1)
                         state["next_backlog_idx"] = next_idx
@@ -346,7 +514,7 @@ def run_parallel(
                         log.info("item %d failed max iterations, advance", idx)
                     else:
                         dir = build_direction("impl", backlog[idx], iteration + 1, (output or "")[:2000])
-                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [completed_tid]}))
                         if resp.status_code == 201:
                             still_flying.append({
                                 "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
@@ -357,23 +525,61 @@ def run_parallel(
 
                 # status == completed
                 if phase == "spec":
-                    dir = build_direction("impl", backlog[idx], 1)
-                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
-                    if resp.status_code == 201:
-                        still_flying.append({"item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"), "iteration": 1})
-                        log.info("item %d spec done, impl created", idx)
+                    total_children = ent.get("total_children")
+                    child_idx = ent.get("child_idx", 0)
+                    if total_children is not None:
+                        key = f"{idx}:spec"
+                        split_done = dict(state.get("split_done") or {})
+                        split_total = state.get("split_total") or {}
+                        split_items = state.get("split_items") or {}
+                        split_ordering = state.get("split_ordering") or {}
+                        raw_done = split_done.get(key, [])
+                        done_list = list(range(raw_done)) if isinstance(raw_done, int) else list(raw_done)
+                        done_list.append(child_idx)
+                        split_done[key] = done_list
+                        state["split_done"] = split_done
+                        ordering = split_ordering.get(key, [list(range(j)) for j in range(total_children)])
+                        next_k = next_runnable_in_parallel(done_list, ordering, total_children)
+                        if next_k is not None:
+                            children_items = split_items.get(key, [])
+                            if next_k < len(children_items):
+                                part = children_items[next_k]
+                                dir = build_direction("spec", part, 1)
+                                child_ctx = {"child_idx": next_k, "depends_on": ordering[next_k] if next_k < len(ordering) else list(range(next_k))}
+                                dir = dir + format_ordering_signal(child_ctx, total_children)
+                                context_extra = {"split_child_index": next_k, "split_total_children": total_children, "split_depends_on": child_ctx["depends_on"]}
+                                resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "spec", use_cursor, context_extra))
+                                if resp.status_code == 201:
+                                    still_flying.append({"item_idx": idx, "phase": "spec", "task_id": resp.json().get("id"), "iteration": 1, "child_idx": next_k, "total_children": total_children})
+                                    log.info("item %d spec child %d/%d done, created next runnable %d", idx, child_idx + 1, total_children, next_k + 1)
+                        elif len(done_list) >= total_children:
+                            state["split_done"] = {k: v for k, v in split_done.items() if k != key}
+                            state["split_total"] = {k: v for k, v in split_total.items() if k != key}
+                            state["split_items"] = {k: v for k, v in split_items.items() if k != key}
+                            state["split_ordering"] = {k: v for k, v in split_ordering.items() if k != key}
+                            dir = build_direction("impl", backlog[idx], 1)
+                            resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [completed_tid]}))
+                            if resp.status_code == 201:
+                                still_flying.append({"item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"), "iteration": 1})
+                                log.info("item %d spec split combined (%d children), impl created (depends_on=%s)", idx, total_children, completed_tid)
+                    else:
+                        dir = build_direction("impl", backlog[idx], 1)
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [completed_tid]}))
+                        if resp.status_code == 201:
+                            still_flying.append({"item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"), "iteration": 1})
+                            log.info("item %d spec done, impl created (depends_on=%s)", idx, completed_tid)
                 elif phase == "impl":
                     dir = build_direction("test", backlog[idx], 1)
-                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "test", use_cursor))
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "test", use_cursor, {"depends_on_task_ids": [completed_tid]}))
                     if resp.status_code == 201:
                         still_flying.append({"item_idx": idx, "phase": "test", "task_id": resp.json().get("id"), "iteration": 1})
-                        log.info("item %d impl done, test created", idx)
+                        log.info("item %d impl done, test created (depends_on=%s)", idx, completed_tid)
                 elif phase == "test":
                     dir = build_direction("review", backlog[idx], 1)
-                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "review", use_cursor))
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "review", use_cursor, {"depends_on_task_ids": [completed_tid]}))
                     if resp.status_code == 201:
                         still_flying.append({"item_idx": idx, "phase": "review", "task_id": resp.json().get("id"), "iteration": 1})
-                        log.info("item %d test done, review created", idx)
+                        log.info("item %d test done, review created (depends_on=%s)", idx, completed_tid)
                 elif phase == "review":
                     pytest_ok, _ = run_pytest()
                     review_ok = review_indicates_pass(output)
@@ -391,7 +597,7 @@ def run_parallel(
                         else:
                             # Pass full review output so impl can use PATCH_GUIDANCE (spec 108)
                             dir = build_direction("impl", backlog[idx], iteration + 1, output or "")
-                            resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor))
+                            resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [completed_tid]}))
                             if resp.status_code == 201:
                                 still_flying.append({
                                     "item_idx": idx, "phase": "impl", "task_id": resp.json().get("id"),
@@ -401,18 +607,55 @@ def run_parallel(
             state["in_flight"] = still_flying
 
             # Fill slots: create spec tasks for next backlog items (buffer 2+ specs)
-            phases_in_flight = {e["phase"] for e in still_flying}
             spec_count = sum(1 for e in still_flying if e["phase"] == "spec")
+            split_total = state.get("split_total") or {}
+            split_done = state.get("split_done") or {}
             while next_idx < len(backlog) and spec_count < 2:  # buffer at least 2 specs
                 item = backlog[next_idx]
-                dir = build_direction("spec", item, 1)
-                resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "spec", use_cursor))
-                if resp.status_code != 201:
-                    break
-                still_flying.append({"item_idx": next_idx, "phase": "spec", "task_id": resp.json().get("id"), "iteration": 1})
-                log.info("created spec for item %d (buffer)", next_idx)
-                next_idx += 1
-                spec_count += 1
+                if is_too_large("spec", item):
+                    children_items, ordering = split_with_ordering("spec", item)
+                    key = f"{next_idx}:spec"
+                    N = len(children_items)
+                    split_total = dict(state.get("split_total") or {})
+                    split_total[key] = N
+                    state["split_total"] = split_total
+                    state["split_done"] = dict(state.get("split_done") or {})
+                    state["split_done"][key] = []
+                    state["split_items"] = dict(state.get("split_items") or {})
+                    state["split_items"][key] = children_items
+                    state["split_ordering"] = dict(state.get("split_ordering") or {})
+                    state["split_ordering"][key] = ordering
+                    split_done = state["split_done"]
+                    # Create only first runnable child (ordering-aware)
+                    i = next_runnable_in_parallel(split_done[key], ordering, N)
+                    if i is not None:
+                        part = children_items[i]
+                        dir = build_direction("spec", part, 1)
+                        child_ctx = {"child_idx": i, "depends_on": ordering[i] if i < len(ordering) else list(range(i))}
+                        dir = dir + format_ordering_signal(child_ctx, N)
+                        context_extra = {
+                            "split_child_index": i,
+                            "split_total_children": N,
+                            "split_depends_on": child_ctx["depends_on"],
+                        }
+                        resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "spec", use_cursor, context_extra))
+                        if resp.status_code == 201:
+                            still_flying.append({
+                                "item_idx": next_idx, "phase": "spec", "task_id": resp.json().get("id"),
+                                "iteration": 1, "child_idx": i, "total_children": N,
+                            })
+                            spec_count += 1
+                            log.info("created spec child %d/%d for item %d (split, ordering)", i + 1, N, next_idx)
+                    next_idx += 1
+                else:
+                    dir = build_direction("spec", item, 1)
+                    resp = client.post(f"{BASE}/api/agent/tasks", json=_task_payload(dir, "spec", use_cursor))
+                    if resp.status_code != 201:
+                        break
+                    still_flying.append({"item_idx": next_idx, "phase": "spec", "task_id": resp.json().get("id"), "iteration": 1})
+                    log.info("created spec for item %d (buffer)", next_idx)
+                    next_idx += 1
+                    spec_count += 1
 
             state["in_flight"] = still_flying
             state["next_backlog_idx"] = next_idx
@@ -536,6 +779,33 @@ def run(
                     # Task finished
                     state["current_task_id"] = None
                     output = t.get("output") or ""
+                    split_parent = state.get("split_parent")
+
+                    # If in split, mark child complete and advance to next child or combine
+                    if split_parent and status == "completed":
+                        child_idx = split_parent.get("current_child_idx", 0)
+                        mark_child_complete(split_parent, child_idx)
+                        next_idx = advance_to_next_child(split_parent)
+                        if next_idx is None:
+                            state["split_parent"] = None
+                            next_phase_idx = (PHASES.index(phase) + 1) % len(PHASES)
+                            state["phase"] = PHASES[next_phase_idx]
+                            state["iteration"] = 1
+                            if next_phase_idx == 0:
+                                state["backlog_index"] = idx + 1
+                                items_completed_this_run += 1
+                                log.info("combined %d children for item %d, advanced to next item", len(split_parent["children"]), idx)
+                                refresh_backlog(log)
+                                if max_items > 0 and items_completed_this_run >= max_items:
+                                    save_state(state)
+                                    return
+                            else:
+                                log.info("combined %d children, advanced to phase=%s", len(split_parent["children"]), state["phase"])
+                        save_state(state)
+                        if once:
+                            break
+                        time.sleep(interval)
+                        continue
 
                     if status == "needs_decision":
                         state["blocked"] = True
@@ -567,78 +837,65 @@ def run(
                                 dir = build_direction("impl", backlog[idx], iteration + 1, output)
                                 resp = client.post(
                                     f"{BASE}/api/agent/tasks",
-                                    json=_task_payload(dir, "impl", use_cursor),
+                                    json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [task_id]}),
                                 )
                                 if resp.status_code == 201:
                                     state["current_task_id"] = resp.json().get("id")
-                                    log.info("retry impl iteration %d task=%s", iteration + 1, state["current_task_id"])
+                                    log.info("retry impl iteration %d task=%s (triggered_by=%s)", iteration + 1, state["current_task_id"], task_id)
                         else:
                             state["phase"] = "impl"
                             state["iteration"] = iteration + 1
                             dir = build_direction("impl", backlog[idx], iteration + 1, output)
                             resp = client.post(
                                 f"{BASE}/api/agent/tasks",
-                                json=_task_payload(dir, "impl", use_cursor),
+                                json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [task_id]}),
                             )
                             if resp.status_code == 201:
                                 state["current_task_id"] = resp.json().get("id")
-                                log.info("phase %s failed, retry impl task=%s", phase, state["current_task_id"])
+                                log.info("phase %s failed, retry impl task=%s (triggered_by=%s)", phase, state["current_task_id"], task_id)
                         save_state(state)
                         if once:
                             break
                         time.sleep(interval)
                         continue
 
-                    # status == "completed"
+                    # status == "completed" — create next phase with depends_on_task_ids so runner gates on completion
                     if phase == "spec":
                         state["phase"] = "impl"
                         dir = build_direction("impl", backlog[idx], 1)
                         resp = client.post(
                             f"{BASE}/api/agent/tasks",
-                            json=_task_payload(dir, "impl", use_cursor),
+                            json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [task_id]}),
                         )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
-                            log.info("spec done, created impl task=%s", state["current_task_id"])
+                            log.info("spec done, created impl task=%s (depends_on=%s)", state["current_task_id"], task_id)
                     elif phase == "impl":
                         state["phase"] = "test"
                         dir = build_direction("test", backlog[idx], 1)
                         resp = client.post(
                             f"{BASE}/api/agent/tasks",
-                            json=_task_payload(dir, "test", use_cursor),
+                            json=_task_payload(dir, "test", use_cursor, {"depends_on_task_ids": [task_id]}),
                         )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
-                            log.info("impl done, created test task=%s", state["current_task_id"])
+                            log.info("impl done, created test task=%s (depends_on=%s)", state["current_task_id"], task_id)
                     elif phase == "test":
                         state["phase"] = "review"
                         dir = build_direction("review", backlog[idx], 1)
                         resp = client.post(
                             f"{BASE}/api/agent/tasks",
-                            json=_task_payload(dir, "review", use_cursor),
+                            json=_task_payload(dir, "review", use_cursor, {"depends_on_task_ids": [task_id]}),
                         )
                         if resp.status_code == 201:
                             state["current_task_id"] = resp.json().get("id")
-                            log.info("test done, created review task=%s", state["current_task_id"])
+                            log.info("test done, created review task=%s (depends_on=%s)", state["current_task_id"], task_id)
                     elif phase == "review":
                         pytest_ok, pytest_out = run_pytest()
                         review_ok = review_indicates_pass(output)
                         if pytest_ok and review_ok:
-                            state["backlog_index"] = idx + 1
-                            state["phase"] = "spec"
-                            state["iteration"] = 1
-                            items_completed_this_run += 1
-                            log.info("item %d passed validation, next item", idx)
-                            refresh_backlog(log)
-                            if max_items > 0 and items_completed_this_run >= max_items:
-                                log.info("Reached --max-items=%d, stopping", max_items)
-                                return
-                            if idx + 1 >= len(backlog):
-                                log.info("Backlog complete")
-                                if once:
-                                    break
-                                time.sleep(interval)
-                                continue
+                            state["phase"] = "acceptance"
+                            log.info("item %d review passed, advance to acceptance gate", idx)
                         else:
                             state["phase"] = "impl"
                             state["iteration"] = iteration + 1
@@ -653,11 +910,11 @@ def run(
                                 dir = build_direction("impl", backlog[idx], state["iteration"], fail_reason)
                                 resp = client.post(
                                     f"{BASE}/api/agent/tasks",
-                                    json=_task_payload(dir, "impl", use_cursor),
+                                    json=_task_payload(dir, "impl", use_cursor, {"depends_on_task_ids": [task_id]}),
                                 )
                                 if resp.status_code == 201:
                                     state["current_task_id"] = resp.json().get("id")
-                                    log.info("validation failed, retry impl task=%s", state["current_task_id"])
+                                    log.info("validation failed, retry impl task=%s (triggered_by=%s)", state["current_task_id"], task_id)
                             if max_items > 0 and items_completed_this_run >= max_items:
                                 log.info("Reached --max-items=%d, stopping", max_items)
                                 save_state(state)
@@ -672,7 +929,25 @@ def run(
                 time.sleep(interval)
                 continue
 
-            # No current task — create next
+            # No current task — run acceptance gate or create next task
+            if phase == "acceptance":
+                gate_ok, evidence_path = _run_acceptance_gate(idx, backlog[idx] if idx < len(backlog) else "", log)
+                state["backlog_index"] = idx + 1
+                state["phase"] = "spec"
+                state["iteration"] = 1
+                state["current_task_id"] = None
+                items_completed_this_run += 1
+                log.info("item %d acceptance gate done (ok=%s), next item", idx, gate_ok)
+                refresh_backlog(log)
+                if max_items > 0 and items_completed_this_run >= max_items:
+                    save_state(state)
+                    return
+                save_state(state)
+                if once:
+                    break
+                time.sleep(interval)
+                continue
+
             if idx >= len(backlog):
                 log.info("Backlog complete")
                 if once:
@@ -681,17 +956,81 @@ def run(
                 continue
 
             item = backlog[idx]
+            split_parent = state.get("split_parent")
+
+            # Check if we need to split (before creating task); split decision is ordering-aware
+            if split_parent is None and is_too_large(phase, item):
+                children_items, ordering = split_with_ordering(phase, item)
+                split_parent = {
+                    "backlog_idx": idx,
+                    "phase": phase,
+                    "children": [
+                        {
+                            "item": c,
+                            "child_idx": i,
+                            "complete": False,
+                            "task_id": None,
+                            "depends_on": ordering[i] if i < len(ordering) else list(range(i)),
+                        }
+                        for i, c in enumerate(children_items)
+                    ],
+                    "split_reason": "item_too_long",
+                    "current_child_idx": 0,
+                }
+                state["split_parent"] = split_parent
+                log.info("split %s for item %d into %d children (reason=%s, ordering=linear)", phase, idx, len(children_items), split_parent["split_reason"])
+
+            # Use child item when in split
+            if split_parent:
+                current_child = get_current_child(split_parent)
+                if current_child is None:
+                    # All children done — combine and advance phase
+                    state["split_parent"] = None
+                    next_phase_idx = (PHASES.index(phase) + 1) % len(PHASES)
+                    state["phase"] = PHASES[next_phase_idx]
+                    state["iteration"] = 1
+                    if next_phase_idx == 0:
+                        state["backlog_index"] = idx + 1
+                        items_completed_this_run += 1
+                        log.info("combined %d children for item %d, advanced to next item", len(split_parent["children"]), idx)
+                        refresh_backlog(log)
+                        if max_items > 0 and items_completed_this_run >= max_items:
+                            save_state(state)
+                            return
+                    else:
+                        log.info("combined %d children, advanced to phase=%s", len(split_parent["children"]), state["phase"])
+                    save_state(state)
+                    if once:
+                        break
+                    time.sleep(interval)
+                    continue
+                item = current_child["item"]
+
             task_type = TASK_TYPE_BY_PHASE[phase]
             direction = build_direction(phase, item, iteration)
+            context_extra = None
+            if split_parent:
+                total_children = len(split_parent["children"])
+                direction = direction + format_ordering_signal(current_child, total_children)
+                context_extra = {
+                    "split_child_index": current_child.get("child_idx", 0),
+                    "split_total_children": total_children,
+                    "split_depends_on": current_child.get("depends_on", []),
+                }
 
             resp = client.post(
                 f"{BASE}/api/agent/tasks",
-                json=_task_payload(direction, task_type, use_cursor),
+                json=_task_payload(direction, task_type, use_cursor, context_extra),
             )
             if resp.status_code == 201:
                 t = resp.json()
-                state["current_task_id"] = t.get("id")
+                task_id = t.get("id")
+                state["current_task_id"] = task_id
                 state["phase"] = phase
+                if split_parent:
+                    current_child = get_current_child(split_parent)
+                    if current_child is not None:
+                        current_child["task_id"] = task_id
                 save_state(state)
                 log.info("created %s task=%s for item %d", phase, state["current_task_id"], idx)
                 if verbose:
@@ -771,7 +1110,7 @@ def main():
             print("DRY-RUN: backlog empty or complete")
         sys.stdout.flush()
         sys.stderr.flush()
-        return
+        sys.exit(0)
 
     # Short timeout so we fail fast when API is down (avoids "Connection stalled" / long waits in CI)
     with httpx.Client(timeout=5.0) as client:

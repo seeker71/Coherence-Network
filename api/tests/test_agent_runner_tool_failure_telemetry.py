@@ -210,6 +210,45 @@ def test_infer_executor_detects_gemini():
     assert agent_runner._infer_executor('gemini -p "task"', "gemini/gemini-2.5-pro") == "gemini"
 
 
+def test_task_dependencies_satisfied_blocks_until_deps_completed(monkeypatch):
+    """Runner must only run tasks whose depends_on_task_ids are all completed (order respected)."""
+    log = agent_runner._setup_logging(verbose=False)
+    mock_client = object()  # not used when _http_with_retry is mocked
+
+    # No deps -> satisfied
+    assert agent_runner._task_dependencies_satisfied(mock_client, {}, log) is True
+    assert agent_runner._task_dependencies_satisfied(mock_client, {"depends_on_task_ids": []}, log) is True
+
+    # Dep returns pending -> not satisfied
+    def _retry_pending(*args, **kwargs):
+        r = _Resp(200, {"status": "pending"})
+        return r
+
+    monkeypatch.setattr(agent_runner, "_http_with_retry", _retry_pending)
+    assert (
+        agent_runner._task_dependencies_satisfied(
+            mock_client,
+            {"depends_on_task_ids": ["task_spec_123"]},
+            log,
+        )
+        is False
+    )
+
+    # Dep returns completed -> satisfied
+    def _retry_completed(*args, **kwargs):
+        return _Resp(200, {"status": "completed"})
+
+    monkeypatch.setattr(agent_runner, "_http_with_retry", _retry_completed)
+    assert (
+        agent_runner._task_dependencies_satisfied(
+            mock_client,
+            {"depends_on_task_ids": ["task_spec_123"]},
+            log,
+        )
+        is True
+    )
+
+
 def test_run_one_task_dispatches_openrouter_server_executor(monkeypatch, tmp_path):
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_WORKER_ID", "runner:test")
