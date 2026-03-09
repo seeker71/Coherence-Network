@@ -943,6 +943,7 @@ def main() -> int:
         snapshots = _snapshot_files(auto_heal_targets)
         healed_artifacts: set[str] = set()
         steps: list[StepResult] = []
+        print("[PR guard] Running: rebase-freshness-guard", file=sys.stderr, flush=True)
         rebase_step = _run_rebase_freshness_guard(args.base_ref)
         steps.append(rebase_step)
         if not rebase_step.ok:
@@ -967,6 +968,7 @@ def main() -> int:
             if n8n_step is None:
                 report["n8n_security_floor"] = {"status": "skipped"}
             else:
+                print("[PR guard] Running: n8n-security-floor-guard", file=sys.stderr, flush=True)
                 steps.append(n8n_step)
                 report["n8n_security_floor"] = {
                     "status": "pass" if n8n_step.ok else "fail",
@@ -983,6 +985,7 @@ def main() -> int:
             ):
                 if steps and not steps[-1].ok:
                     break
+                print(f"[PR guard] Running: {name}", file=sys.stderr, flush=True)
                 step = _run_step(name, command, cwd=REPO_ROOT)
                 healed_now = _auto_heal_generated_artifacts(
                     preexisting_changed_paths=preexisting_changed_paths,
@@ -999,6 +1002,7 @@ def main() -> int:
                 if not step.ok:
                     break
                 if step.name == "spec-quality-guard":
+                    print("[PR guard] Running: commit-evidence-guard", file=sys.stderr, flush=True)
                     evidence_step = _run_commit_evidence_guard(args.base_ref)
                     steps.append(evidence_step)
                     if not evidence_step.ok:
