@@ -11,6 +11,13 @@ import sys
 from app.services import release_gate_service as gates
 
 
+def _env_to_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _default_endpoints(api_base: str, web_base: str) -> list[str]:
     return [
         f"{api_base.rstrip('/')}/api/health",
@@ -34,6 +41,15 @@ def main() -> None:
     parser.add_argument("--poll-seconds", type=int, default=30)
     parser.add_argument("--min-approvals", type=int, default=1)
     parser.add_argument("--min-unique-approvers", type=int, default=1)
+    parser.add_argument(
+        "--local-only-validation",
+        action="store_true",
+        default=_env_to_bool("MVP_LOCAL_ONLY_VALIDATION", True),
+        help=(
+            "Skip hosted public endpoint validation and enforce checks/review only. "
+            "Defaults from MVP_LOCAL_ONLY_VALIDATION (default: enabled)."
+        ),
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -50,6 +66,7 @@ def main() -> None:
         min_approvals=args.min_approvals,
         min_unique_approvers=args.min_unique_approvers,
         github_token=token,
+        require_public_validation=not args.local_only_validation,
     )
     _emit(report, as_json=args.json)
     if str(report.get("result")) == "contract_passed":
