@@ -16,7 +16,7 @@
 | Coherence endpoint support | ✅ Complete |
 | Import stack support (lockfile + requirements) | ✅ Complete |
 | Agent orchestration endpoints | ✅ Complete |
-| Production deployment (Railway (API + web)) | ✅ Complete |
+| Production deployment | ⚠️ Blocked (Railway account/project unavailable) |
 | Pipeline monitoring + attention workflow | 🚧 In progress |
 | Full unattended effectiveness loop | 🚧 In progress |
 
@@ -24,15 +24,15 @@
 
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
-| API | Railway | https://coherence-network-production.up.railway.app | ✅ Live |
-| Web | Railway web | https://coherence-web-production.up.railway.app | ✅ Live |
+| API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
+| Web | Railway web (previous) | https://coherence-web-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
 
 ### Deployment Health
-- API health endpoint: ✅ Responding
-- API ready endpoint: ✅ Responding
-- Web root: ✅ Responding
-- Web API health page: ✅ Responding
-- CORS configuration: ⚙️ Configured (requires Railway env update)
+- API health endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
+- API ready endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
+- Web root: ❌ Not reachable on previous Railway URL (HTTP 404)
+- Web API health page: ❌ Not reachable on previous Railway URL (HTTP 404)
+- CORS configuration: ⚙️ Pending new hosting cutover
 
 ## Specs Implemented (Selected)
 
@@ -49,9 +49,10 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 1. Improve pipeline effectiveness and issue resolution loop.
 2. Keep status/coverage artifacts in sync with shipped behavior.
 3. Continue graph + coherence quality improvements through scoped specs.
+4. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
 
 ## Validation Snapshot
 
-- API endpoint set is available for health, tasks, projects, search, and import stack.
+- API endpoint set is implemented and locally testable; public deployment is currently blocked pending new hosting cutover.
 - Test suite remains the release gate.
 - Overnight pipeline remains the main autonomous execution path.

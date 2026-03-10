@@ -26,6 +26,8 @@ jobs:
       RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE || secrets.RAILWAY_SERVICE }}
       RAILWAY_WEB_SERVICE: ${{ secrets.RAILWAY_WEB_SERVICE }}
       RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+      PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://coherence-network-production.up.railway.app' }}
+      PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherence-web-production.up.railway.app' }}
       PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA: ${{ vars.PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA || '1' }}
       PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA: ${{ vars.PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA || '1' }}
       PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || '8' }}
@@ -60,6 +62,8 @@ jobs:
           python scripts/validate_public_deploy_contract.py \
             --repo "${{ github.repository }}" \
             --branch main \
+            --api-base "${PUBLIC_DEPLOY_API_BASE}" \
+            --web-base "${PUBLIC_DEPLOY_WEB_BASE}" \
             --json > ../public_deploy_contract_report.json
           code=$?
           cd ..
@@ -192,6 +196,8 @@ jobs:
             python scripts/validate_public_deploy_contract.py \
               --repo "${{ github.repository }}" \
               --branch main \
+              --api-base "${PUBLIC_DEPLOY_API_BASE}" \
+              --web-base "${PUBLIC_DEPLOY_WEB_BASE}" \
               --json > ../public_deploy_contract_report.json
             code=$?
             cd ..

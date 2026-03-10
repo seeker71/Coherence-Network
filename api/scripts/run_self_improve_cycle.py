@@ -51,6 +51,11 @@ STAGE_SPECS = {
     "execute": {"task_type": "impl", "model": EXECUTE_MODEL},
     "review": {"task_type": "review", "model": REVIEW_MODEL},
 }
+TASK_TYPE_TO_STAGE = {
+    "spec": "plan",
+    "impl": "execute",
+    "review": "review",
+}
 
 
 def _safe_text(value: Any, max_chars: int = 200) -> str:
@@ -447,10 +452,6 @@ def _restore_stage_from_checkpoint(
                 continue
             if task and not _task_is_fresh_for_resume(task):
                 continue
-        model = str(row.get("model") or "")
-        expected_model = STAGE_SPECS[stage_name]["model"]
-        if model and model != expected_model:
-            continue
         restored = dict(row)
         restored["task_id"] = task_id
         restored["resumed"] = True
@@ -461,17 +462,22 @@ def _restore_stage_from_checkpoint(
 
 def _infer_stage_name(task: dict[str, Any]) -> str | None:
     task_type = str(task.get("task_type") or "").strip().lower()
+    mapped_stage = TASK_TYPE_TO_STAGE.get(task_type)
+    if mapped_stage is None:
+        return None
     model = str(task.get("model") or "")
     context = _coerce_dict(task.get("context"), {})
     if not model:
         model = str(context.get("model_override") or "")
 
-    if task_type == "spec" and model == PLAN_MODEL:
-        return "plan"
-    if task_type == "impl" and model == EXECUTE_MODEL:
-        return "execute"
-    if task_type == "review" and model == REVIEW_MODEL:
-        return "review"
+    expected_model = STAGE_SPECS[mapped_stage]["model"]
+    if not model or model == expected_model:
+        return mapped_stage
+
+    # Backward-compatible resume for older self-improve tasks/checkpoints
+    # that used previous model ids but the same task_type/stage mapping.
+    if str(context.get("source") or "").strip() == "self_improve_cycle":
+        return mapped_stage
     return None
 
 

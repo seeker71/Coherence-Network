@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_URL="${1:-https://coherence-network-production.up.railway.app}"
-WEB_URL="${2:-https://coherence-web-production.up.railway.app}"
+API_URL="${1:-${PUBLIC_API_BASE_URL:-}}"
+WEB_URL="${2:-${PUBLIC_WEB_BASE_URL:-}}"
+
+if [[ -z "$API_URL" || -z "$WEB_URL" ]]; then
+  echo "Usage: ./scripts/verify_web_api_deploy.sh <api_base_url> <web_base_url>"
+  echo "Or set PUBLIC_API_BASE_URL and PUBLIC_WEB_BASE_URL."
+  exit 2
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

@@ -80,6 +80,17 @@ if [[ "$current_branch" == "HEAD" ]]; then
   exit 1
 fi
 
+if [[ "${AUTO_HEAL_SKIP_CONTINUITY:-0}" != "1" ]]; then
+  if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
+    echo "auto-heal-start-gate: sibling worktree continuity risk detected."
+    echo "Resolve sibling dirty/detached/unpushed-ahead worktrees before auto-heal runs."
+    echo "Temporary override (not recommended): AUTO_HEAL_SKIP_CONTINUITY=1 ./scripts/auto_heal_start_gate.sh ..."
+    exit 1
+  fi
+else
+  echo "auto-heal-start-gate: continuity guard skipped via AUTO_HEAL_SKIP_CONTINUITY=1."
+fi
+
 restore_stash_if_needed() {
   local stash_ref="$1"
   local restore_flag="$2"
