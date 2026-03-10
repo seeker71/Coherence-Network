@@ -36,7 +36,7 @@
     "./scripts/ghx.sh auth status",
     "./scripts/ghx.sh repo view seeker71/Coherence-Network --json nameWithOwner,viewerPermission"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
