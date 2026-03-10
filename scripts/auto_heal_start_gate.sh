@@ -66,6 +66,12 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! ./scripts/check_ghx_auth.sh; then
+  echo "auto-heal-start-gate: ghx auth smoke check failed."
+  echo "Temporary override (not recommended): GHX_SKIP_AUTH_CHECK=1 ./scripts/auto_heal_start_gate.sh ..."
+  exit 1
+fi
+
 current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
 if [[ -z "$current_branch" ]]; then
   echo "auto-heal-start-gate: failed to detect current branch name."

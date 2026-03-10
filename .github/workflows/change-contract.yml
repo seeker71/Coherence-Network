@@ -34,6 +34,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+          MVP_LOCAL_ONLY_VALIDATION: ${{ vars.MVP_LOCAL_ONLY_VALIDATION || '1' }}
           MIN_APPROVALS: ${{ vars.CHANGE_CONTRACT_MIN_APPROVALS || '0' }}
           MIN_UNIQUE_APPROVERS: ${{ vars.CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS || '0' }}
         run: |
@@ -97,13 +98,17 @@ jobs:
             const contributor = "${{ steps.contract.outputs.contributor }}";
             const approvals = "${{ steps.contract.outputs.approvals }}";
             const approvers = JSON.parse('${{ steps.contract.outputs.unique_approvers }}');
+            const isLocalOnly = Boolean(report.public_validation && report.public_validation.skipped === true);
+            const validationLine = isLocalOnly
+              ? "- Public validation: local-only mode enabled (hosted provider checks skipped)"
+              : "- Public validation: passed on Railway API + Railway web endpoints";
             const body = [
               "✅ **Change Contract Passed**",
               "",
               "This merged change passed the smart-contract style gate:",
               "- Commit checks: green",
               "- Collective review: evaluated",
-              "- Public validation: passed on Railway API + Railway web endpoints",
+              validationLine,
               "",
               `Contributor acknowledged: **@${contributor}**`,
               `Collective review passed: ${"${{ steps.contract.outputs.collective_review_passed }}"}`,

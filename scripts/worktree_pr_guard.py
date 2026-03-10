@@ -896,6 +896,15 @@ def main() -> int:
         help="Maximum age (hours) for latest successful Public Deploy Contract run on main.",
     )
     parser.add_argument(
+        "--skip-deployment-health",
+        action="store_true",
+        default=_env_bool("MVP_LOCAL_ONLY_VALIDATION", True),
+        help=(
+            "Skip remote hosted deployment-health blocking checks and validate MVP locally only. "
+            "Defaults from MVP_LOCAL_ONLY_VALIDATION (default: enabled)."
+        ),
+    )
+    parser.add_argument(
         "--optional-status-contexts",
         default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
         help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
@@ -1040,11 +1049,20 @@ def main() -> int:
                 token=token,
                 optional_status_contexts=optional_status_contexts,
             )
-            report["deployment_health"] = _collect_deployment_health(
-                repo=args.repo,
-                token=token,
-                max_age_hours=args.deploy_success_max_age_hours,
-            )
+            if args.skip_deployment_health:
+                report["deployment_health"] = {
+                    "status": "skipped_local_only",
+                    "healthy": None,
+                    "message": (
+                        "Hosted deployment-health check skipped because MVP_LOCAL_ONLY_VALIDATION is enabled."
+                    ),
+                }
+            else:
+                report["deployment_health"] = _collect_deployment_health(
+                    repo=args.repo,
+                    token=token,
+                    max_age_hours=args.deploy_success_max_age_hours,
+                )
 
     blocking = False
     local_status = report["local_preflight"].get("status")

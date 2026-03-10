@@ -1293,6 +1293,42 @@ def evaluate_pr_to_public_report(
     return report
 
 
+def _resolve_public_validation_for_merged_contract(
+    *,
+    require_public_validation: bool,
+    endpoint_urls: list[str] | None,
+    api_base: str,
+    web_base: str,
+    timeout_seconds: int,
+    poll_seconds: int,
+) -> tuple[dict[str, Any], bool]:
+    if not require_public_validation:
+        return (
+            {
+                "ready": None,
+                "skipped": True,
+                "scope": "local_only",
+                "reason": "Hosted provider unavailable; local-only MVP validation enabled.",
+                "checks": [],
+            },
+            True,
+        )
+
+    endpoints = endpoint_urls or [
+        f"{api_base.rstrip('/')}/api/health",
+        f"{api_base.rstrip('/')}/api/ideas",
+        f"{api_base.rstrip('/')}/api/gates/main-head",
+        f"{web_base.rstrip('/')}/gates",
+        f"{web_base.rstrip('/')}/api-health",
+    ]
+    public = wait_for_public_validation(
+        endpoint_urls=endpoints,
+        timeout_seconds=timeout_seconds,
+        poll_interval_seconds=poll_seconds,
+    )
+    return public, bool(public.get("ready"))
+
+
 def evaluate_merged_change_contract_report(
     repository: str,
     sha: str,
@@ -1304,6 +1340,7 @@ def evaluate_merged_change_contract_report(
     min_approvals: int = 1,
     min_unique_approvers: int = 1,
     github_token: str | None = None,
+    require_public_validation: bool = True,
 ) -> dict[str, Any]:
     """Build merged-change contract report used by API and scripts."""
     report: dict[str, Any] = {"repo": repository, "sha": sha}
@@ -1354,27 +1391,27 @@ def evaluate_merged_change_contract_report(
         report["reason"] = "Commit checks are not green on main"
         return report
 
-    endpoints = endpoint_urls or [
-        f"{api_base.rstrip('/')}/api/health",
-        f"{api_base.rstrip('/')}/api/ideas",
-        f"{api_base.rstrip('/')}/api/gates/main-head",
-        f"{web_base.rstrip('/')}/gates",
-        f"{web_base.rstrip('/')}/api-health",
-    ]
-    public = wait_for_public_validation(
-        endpoint_urls=endpoints,
+    public, public_ok = _resolve_public_validation_for_merged_contract(
+        require_public_validation=require_public_validation,
+        endpoint_urls=endpoint_urls,
+        api_base=api_base,
+        web_base=web_base,
         timeout_seconds=timeout_seconds,
-        poll_interval_seconds=poll_seconds,
+        poll_seconds=poll_seconds,
     )
     report["public_validation"] = public
-    if not public.get("ready"):
+    if not public_ok:
         report["result"] = "blocked"
         report["reason"] = "Public validation timed out or failed"
         return report
 
     report["contributor_ack"] = {
         "eligible": True,
-        "rule": "acknowledge only when checks + collective review + public validation pass",
+        "rule": (
+            "acknowledge only when checks + collective review + public validation pass"
+            if require_public_validation
+            else "acknowledge only when checks + collective review pass (local-only MVP mode)"
+        ),
         "contributor": report["pr"]["author"] if isinstance(report.get("pr"), dict) else None,
     }
     report["result"] = "contract_passed"

@@ -15,6 +15,13 @@ _N8N_V1_MIN = (1, 123, 17)
 _N8N_V2_MIN = (2, 5, 2)
 
 
+def _env_to_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _default_endpoints(api_base: str, web_base: str) -> list[str]:
     return [
         f"{api_base.rstrip('/')}/api/health",
@@ -89,6 +96,15 @@ def main() -> None:
         help="Explicit endpoint to validate (can be repeated). Overrides defaults when provided.",
     )
     parser.add_argument("--wait-public", action="store_true", help="Wait for public endpoints to be 200.")
+    parser.add_argument(
+        "--local-only-validation",
+        action="store_true",
+        default=_env_to_bool("MVP_LOCAL_ONLY_VALIDATION", True),
+        help=(
+            "Disable hosted endpoint wait and keep validation local-only. "
+            "Defaults from MVP_LOCAL_ONLY_VALIDATION (default: enabled)."
+        ),
+    )
     parser.add_argument("--timeout-seconds", type=int, default=1200)
     parser.add_argument("--poll-seconds", type=int, default=30)
     parser.add_argument("--json", action="store_true", help="Output JSON only.")
@@ -105,18 +121,27 @@ def main() -> None:
     token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     n8n_version = args.n8n_version.strip() or os.getenv("N8N_VERSION", "").strip()
     endpoints = args.endpoint or _default_endpoints(args.api_base, args.web_base)
+    wait_public = bool(args.wait_public and not args.local_only_validation)
     report = gates.evaluate_pr_to_public_report(
         repository=args.repo,
         branch=args.branch,
         base=args.base,
         api_base=args.api_base,
         web_base=args.web_base,
-        wait_public=args.wait_public,
+        wait_public=wait_public,
         timeout_seconds=args.timeout_seconds,
         poll_seconds=args.poll_seconds,
         endpoint_urls=endpoints,
         github_token=token,
     )
+    if args.local_only_validation:
+        report["validation_scope"] = "local_only"
+        report["public_validation"] = {
+            "ready": None,
+            "skipped": True,
+            "reason": "Hosted provider unavailable; local-only MVP validation enabled.",
+            "checks": [],
+        }
     if n8n_version:
         n8n_gate = _evaluate_n8n_minimum(n8n_version)
         report["n8n_gate"] = n8n_gate
