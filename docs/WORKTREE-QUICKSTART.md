@@ -35,8 +35,34 @@ Mandatory for every prompt (new or follow-up). This command is continuation-safe
 - clean worktree: runs full preflight (`start-gate`, rebase refresh, local guard),
 - dirty worktree: skips start-gate/rebase and treats the prompt as in-flight continuation,
 - detached HEAD: fails fast with exact branch attach commands.
+- sibling continuity guard: fails fast if another linked worktree has risky state (`dirty`, `detached`, or local commits ahead of `origin/main` without upstream), to prevent abandoned changes across threads.
 
 Equivalent legacy flow (manual/clean tree): `make start-gate`.
+
+### If prompt-gate blocks on continuity risk
+
+Inspect sibling worktree risk report:
+
+```bash
+python3 scripts/worktree_continuity_guard.py --json
+```
+
+For each risky sibling worktree:
+
+```bash
+cd <worktree-path>
+git status --short
+git add <files> && git commit -m "<message>"   # if changes are ready
+git push -u origin "$(git rev-parse --abbrev-ref HEAD)"   # if branch has no upstream
+```
+
+If the work is intentionally in progress, continue from that same worktree/thread instead of starting a new one.
+
+Temporary bypass (not recommended):
+
+```bash
+PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate
+```
 
 ## Mandatory Local Guard (before commit/push)
 

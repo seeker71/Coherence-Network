@@ -5988,7 +5988,7 @@ def run_one_task(
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     requested_executor = str(task_ctx.get("executor") or "").strip().lower()
     inferred_executor = _infer_executor(command, model)
-    codex_disabled = _as_bool(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+    codex_disabled = _as_bool(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "0"))
     if codex_disabled and (requested_executor in {"codex", "openclaw", "clawwork"} or inferred_executor == "codex"):
         patched_ctx = dict(task_ctx)
         patched_ctx["executor"] = "openrouter"

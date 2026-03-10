@@ -916,8 +916,15 @@ def update_idea(
     actual_cost: float | None = None,
     confidence: float | None = None,
     manifestation_status: ManifestationStatus | None = None,
+    potential_value: float | None = None,
+    estimated_cost: float | None = None,
 ) -> IdeaWithScore | None:
-    """Update idea per spec 053: only actual_value, actual_cost, confidence, manifestation_status."""
+    """Update an idea.
+
+    Public API patch contract remains limited to actual_value/actual_cost/confidence/
+    manifestation_status. Internal services may also adjust potential_value and
+    estimated_cost for ROI normalization/calibration flows.
+    """
     ideas = _read_ideas()
     updated: Idea | None = None
 
@@ -932,6 +939,10 @@ def update_idea(
             idea.confidence = confidence
         if manifestation_status is not None:
             idea.manifestation_status = manifestation_status
+        if potential_value is not None:
+            idea.potential_value = max(0.0, float(potential_value))
+        if estimated_cost is not None:
+            idea.estimated_cost = max(0.0, float(estimated_cost))
         ideas[idx] = idea
         updated = idea
         break

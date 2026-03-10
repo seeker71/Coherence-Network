@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate public Railway deployment contract (API + web) against main SHA."""
+"""Validate public deployment contract (API + web) against main SHA."""
 
 from __future__ import annotations
 
@@ -12,17 +12,26 @@ from app.services import release_gate_service as gates
 
 
 def main() -> None:
+    api_base_default = os.getenv("PUBLIC_DEPLOY_API_BASE", "").strip()
+    web_base_default = os.getenv("PUBLIC_DEPLOY_WEB_BASE", "").strip()
     parser = argparse.ArgumentParser(
-        description="Validate public deployment contract (Railway API + Railway web)."
+        description="Validate public deployment contract (API + web)."
     )
     parser.add_argument("--repo", default="seeker71/Coherence-Network")
     parser.add_argument("--branch", default="main")
-    parser.add_argument("--api-base", default="https://coherence-network-production.up.railway.app")
-    parser.add_argument("--web-base", default="https://coherence-web-production.up.railway.app")
+    parser.add_argument("--api-base", default=api_base_default)
+    parser.add_argument("--web-base", default=web_base_default)
     parser.add_argument("--expected-sha", default="")
     parser.add_argument("--timeout", type=float, default=8.0)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
+    if not args.api_base or not args.web_base:
+        print(
+            "Missing deployment base URLs. Provide --api-base and --web-base "
+            "or set PUBLIC_DEPLOY_API_BASE and PUBLIC_DEPLOY_WEB_BASE.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     report = gates.evaluate_public_deploy_contract_report(

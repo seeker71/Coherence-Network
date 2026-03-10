@@ -60,6 +60,17 @@ if [[ "$branch" == "HEAD" ]]; then
   exit 1
 fi
 
+if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
+  if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
+    echo "prompt-entry-gate: sibling worktree continuity risk detected."
+    echo "Resolve or park sibling worktree changes before continuing this prompt."
+    echo "Temporary override (not recommended): PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate"
+    exit 1
+  fi
+else
+  echo "prompt-entry-gate: continuity guard skipped via PROMPT_GATE_SKIP_CONTINUITY=1."
+fi
+
 if [[ "$force_full" == "1" ]]; then
   echo "prompt-entry-gate: force-full enabled; running full preflight."
   exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
@@ -75,4 +86,3 @@ echo "prompt-entry-gate: continue implementation in this thread and run required
 echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
-
