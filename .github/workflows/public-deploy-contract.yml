@@ -20,6 +20,7 @@ jobs:
       issues: write
       actions: write
     env:
+      MVP_LOCAL_ONLY_VALIDATION: ${{ vars.MVP_LOCAL_ONLY_VALIDATION || '1' }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
@@ -72,7 +73,7 @@ jobs:
           exit 0
 
       - name: Install Railway CLI
-        if: ${{ steps.validate.outputs.exit_code != '0' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' }}
         run: |
           if [ -z "${RAILWAY_TOKEN:-}" ]; then
             echo "RAILWAY_TOKEN not configured, skipping CLI install."
@@ -82,7 +83,7 @@ jobs:
 
       - name: Trigger Railway redeploy
         id: railway_redeploy
-        if: ${{ steps.validate.outputs.exit_code != '0' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' }}
         run: |
           set +e
           if [ -z "${RAILWAY_TOKEN:-}" ] || [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT:-}" ]; then
@@ -178,7 +179,7 @@ jobs:
 
       - name: Re-validate after Railway redeploy
         id: revalidate
-        if: ${{ steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || '8' }}
@@ -253,7 +254,7 @@ jobs:
             railway_redeploy_*.json
 
       - name: Create or update deploy drift issue
-        if: ${{ steps.outcome.outputs.exit_code != '0' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' }}
         uses: actions/github-script@v8
         with:
           script: |
@@ -305,7 +306,7 @@ jobs:
             }
 
       - name: Resolve deploy drift issue when contract passes
-        if: ${{ steps.outcome.outputs.exit_code == '0' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code == '0' }}
         uses: actions/github-script@v8
         with:
           script: |
@@ -330,7 +331,7 @@ jobs:
             });
 
       - name: Dispatch auto-heal workflow
-        if: ${{ steps.outcome.outputs.exit_code != '0' && github.event_name == 'push' && vars.AUTO_HEAL_DEPLOY_GATES_ENABLED == '1' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && github.event_name == 'push' && vars.AUTO_HEAL_DEPLOY_GATES_ENABLED == '1' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -341,8 +342,13 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/auto-heal-deploy-gates.yml/dispatches" \
             -d '{"ref":"main","inputs":{"sha":"${{ github.sha }}"}}'
 
+      - name: Note local-only MVP mode
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION == '1' }}
+        run: |
+          echo "MVP_LOCAL_ONLY_VALIDATION=1; hosted public deploy checks are non-blocking until provider is restored."
+
       - name: Fail when contract is not satisfied
-        if: ${{ steps.outcome.outputs.exit_code != '0' && github.event_name != 'schedule' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && github.event_name != 'schedule' }}
         run: |
           echo "Public deployment contract failed"
           exit 1
