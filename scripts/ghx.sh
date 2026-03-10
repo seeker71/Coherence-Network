@@ -129,7 +129,7 @@ workspace_profile=""
 WORKSPACE_MAP_FILE="${PROFILE_FILE_OVERRIDE:-${workspace_root}/.codex/ghx-workspace-profiles.conf}"
 
 if [[ -n "${PROJECT_MAP}" ]]; then
-  workspace_profile="$(resolve_custom_workspace_map "$workspace_name")"
+  workspace_profile="$(resolve_custom_workspace_map "$workspace_name" || true)"
 fi
 
 if [[ -z "${workspace_profile}" && -f "$WORKSPACE_MAP_FILE" ]]; then
@@ -149,7 +149,7 @@ if [[ -z "${workspace_profile}" && -f "$WORKSPACE_MAP_FILE" ]]; then
 fi
 
 if [[ -z "${workspace_profile}" ]]; then
-  workspace_profile="$(resolve_workspace_profile "$workspace_name")"
+  workspace_profile="$(resolve_workspace_profile "$workspace_name" || true)"
 fi
 
 for remote_name in origin upstream fork; do
@@ -169,6 +169,9 @@ elif [[ -n "${workspace_profile}" ]]; then
   profile="${workspace_profile}"
 elif [[ -n "$repo_owner" ]]; then
   case "$repo_owner" in
+    seeker71|Seeker71|SEEKER71)
+      profile="seeker71"
+      ;;
     merly-ai|Merly-AI|merly.ai|Merly.AI)
       profile="merly-ai"
       ;;
@@ -203,4 +206,3 @@ if [[ "$PRESERVE_ENV_TOKEN" != "1" && "$IGNORE_ENV_TOKEN" == "1" ]]; then
 fi
 
 exec gh "$@"
-
