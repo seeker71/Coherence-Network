@@ -80,6 +80,7 @@ const LANDING_PATHS: Array<{
     title: "Start Exploring",
     description: "Understand where value and uncertainty are concentrated before picking work.",
     links: [
+      { href: "/demo", label: "MVP demo path" },
       { href: "/ideas", label: "High-upside ideas" },
       { href: "/search", label: "Project search" },
       { href: "/flow", label: "System flow map" },
@@ -227,6 +228,9 @@ export default async function Home() {
             <div className="flex flex-wrap gap-3 pt-1">
               <Button asChild>
                 <Link href="/contribute">Join the Workspace</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/demo">Run MVP Demo</Link>
               </Button>
               <Button asChild variant="secondary">
                 <Link href="/ideas">Explore Opportunities</Link>
