@@ -10,6 +10,37 @@
 - [ ] Requirement 2 (specific and testable)
 - [ ] Requirement 3 (specific and testable)
 
+## Intake: DiSSS (Required for new specs)
+
+### Deconstruction
+
+Break the idea into atomic sub-claims. Each sub-claim should be independently testable and deliverable.
+
+- Sub-claim 1: [concrete statement] — value: [X], cost: [Y], confidence: [0.0–1.0]
+- Sub-claim 2: [concrete statement] — value: [X], cost: [Y], confidence: [0.0–1.0]
+
+### Selection
+
+Which sub-claims cover ≥80% of the total value? List only the selected sub-claims and justify why the others are deferred.
+
+- Selected: [sub-claim refs]
+- Deferred: [sub-claim refs] — reason: [why]
+
+### Sequencing
+
+Declare ordering constraints for the selected sub-claims.
+
+- `depends_on`: [spec IDs or capability names that must exist first]
+- `unblocks`: [spec IDs or capabilities this enables]
+
+### Stakes
+
+What is lost if this isn't done soon? Create accountability.
+
+- `value_decay_days`: [N] — opportunity cost doubles after N days
+- `committed_by`: [ISO 8601 date]
+- `owner`: [who is accountable]
+
 ## Research Inputs (Required)
 
 List the primary sources that informed this spec (docs/changelog/paper/security advisory).
