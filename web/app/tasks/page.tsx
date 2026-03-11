@@ -272,6 +272,7 @@ function TasksPageContent() {
                 evidenceIdeas={evidenceIdeas}
                 evidenceEvents={evidenceEvents}
                 acceptanceProof={acceptanceProof}
+                onTaskUpdated={loadRows}
               />
             )}
           </>
