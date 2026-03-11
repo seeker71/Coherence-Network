@@ -10,36 +10,18 @@
 - [ ] Requirement 2 (specific and testable)
 - [ ] Requirement 3 (specific and testable)
 
-## Intake: DiSSS (Required for new specs)
+## Idea Shaping (recommended)
 
-### Deconstruction
+Use these four lenses to stress-test the idea before writing the rest of the spec.
+Skip or adapt freely — the goal is sharper thinking, not paperwork.
 
-Break the idea into atomic sub-claims. Each sub-claim should be independently testable and deliverable.
+**Deconstruct** — What are the independent pieces inside this idea? Break it down until each piece could ship alone.
 
-- Sub-claim 1: [concrete statement] — value: [X], cost: [Y], confidence: [0.0–1.0]
-- Sub-claim 2: [concrete statement] — value: [X], cost: [Y], confidence: [0.0–1.0]
+**Select** — Which pieces carry most of the value? Name what you're doing *and* what you're deliberately leaving out.
 
-### Selection
+**Sequence** — What order? What must exist before this can start, and what does this unlock for others?
 
-Which sub-claims cover ≥80% of the total value? List only the selected sub-claims and justify why the others are deferred.
-
-- Selected: [sub-claim refs]
-- Deferred: [sub-claim refs] — reason: [why]
-
-### Sequencing
-
-Declare ordering constraints for the selected sub-claims.
-
-- `depends_on`: [spec IDs or capability names that must exist first]
-- `unblocks`: [spec IDs or capabilities this enables]
-
-### Stakes
-
-What is lost if this isn't done soon? Create accountability.
-
-- `value_decay_days`: [N] — opportunity cost doubles after N days
-- `committed_by`: [ISO 8601 date]
-- `owner`: [who is accountable]
+**Stakes** — Why now? What gets harder or more expensive if this waits? Who owns the outcome?
 
 ## Research Inputs (Required)
 

@@ -2,20 +2,17 @@
 
 ## Purpose
 
-Raw ideas stall between capture and implementation because the pipeline lacks structured decomposition, principled selection, explicit sequencing, and real stakes. This spec introduces a four-phase intake process — Deconstruction, Selection, Sequencing, Stakes — applied to every idea before it earns a full spec. The goal is to eliminate spec bloat, surface the highest-leverage work faster, and create accountability that prevents ideas from rotting in the backlog.
+Raw ideas stall between capture and implementation because they aren't examined through the right lenses. This spec introduces four thinking prompts — Deconstruct, Select, Sequence, Stakes — as recommended guidance when shaping an idea into a spec. The goal is sharper specs and faster surfacing of high-leverage work, without adding process overhead that discourages contribution.
 
 ## Requirements
 
-- [ ] Every new idea submitted to the Ideas API or `specs/` must pass through a four-phase intake gate before a full spec is authored
-- [ ] **Deconstruction phase**: idea is broken into atomic sub-claims, each with its own `potential_value`, `estimated_cost`, and `confidence`
-- [ ] **Selection phase**: sub-claims are ranked by free energy score; only the top sub-claims (those covering ≥80% of total value) proceed to spec
-- [ ] **Sequencing phase**: selected sub-claims declare explicit `depends_on` and `unblocks` references (spec IDs or capability names)
-- [ ] **Stakes phase**: each selected sub-claim declares a `value_decay_days` (integer) — the number of days after which the opportunity cost doubles, and a `committed_by` date (ISO 8601)
-- [ ] The spec template (`specs/TEMPLATE.md`) is updated with a new `## Intake: DiSSS` section containing these four phases
-- [ ] `validate_spec_quality.py` is updated to check that new specs include the Intake section with non-placeholder content
-- [ ] The Ideas API data model gains optional `sub_claims` and `intake_status` fields (enum: `raw`, `deconstructed`, `selected`, `sequenced`, `committed`)
-- [ ] Ideas with `intake_status: raw` cannot have specs authored against them (enforced by validator)
-- [ ] Existing specs are not retroactively required to have the Intake section (backwards compatible)
+- [ ] The spec template (`specs/TEMPLATE.md`) includes an "Idea Shaping" section with four thinking prompts: Deconstruct, Select, Sequence, Stakes
+- [ ] The section is marked as recommended guidance, not a hard gate — authors can skip or adapt it
+- [ ] The Ideas API data model gains optional `sub_claims` and `intake_status` fields for teams that want structured tracking
+- [ ] `intake_status` values: `raw`, `deconstructed`, `selected`, `sequenced`, `committed` — all optional, default `raw`
+- [ ] Sub-claims support optional `depends_on`, `unblocks`, `value_decay_days`, and `committed_by` fields
+- [ ] `validate_spec_quality.py` does **not** enforce the Idea Shaping section — it remains advisory
+- [ ] Existing specs are unaffected (fully backwards compatible)
 
 ## Research Inputs (Required)
 
@@ -25,7 +22,7 @@ Raw ideas stall between capture and implementation because the pipeline lacks st
 ## Task Card (Required)
 
 ```yaml
-goal: Add four-phase DiSSS intake gate to the idea-to-spec pipeline
+goal: Add four-lens idea shaping guidance to the spec template and optional intake fields to the Ideas API
 files_allowed:
   - specs/TEMPLATE.md
   - specs/116-second-brain-idea-to-spec-process.md
@@ -35,8 +32,8 @@ files_allowed:
   - api/app/routers/ideas.py
   - api/tests/test_ideas.py
 done_when:
-  - TEMPLATE.md contains Intake DiSSS section
-  - validate_spec_quality.py checks for Intake section on new specs
+  - TEMPLATE.md contains Idea Shaping section with four lenses
+  - validate_spec_quality.py unchanged (section is advisory)
   - Ideas model includes sub_claims and intake_status fields
   - Existing specs pass validation without Intake section
 commands:
@@ -152,8 +149,8 @@ cd api && pytest -q tests/test_ideas.py
 
 ## Risks and Assumptions
 
-- **Risk:** Adding required fields to the intake process may slow down idea capture; mitigation: `intake_status` defaults to `raw` and all new fields are optional
-- **Risk:** Sub-claim decomposition quality varies by author; mitigation: validator checks for minimum claim count (≥2) when intake_status is `deconstructed` or beyond
+- **Risk:** If guidance is too prescriptive, authors skip it entirely; mitigation: keep it to four short prompts, not a form to fill out
+- **Risk:** Sub-claim decomposition quality varies by author; mitigation: seed examples in existing high-priority ideas so the pattern is learned by imitation, not enforcement
 - **Assumption:** The free energy score formula applies equally well at the sub-claim level as at the idea level; if sub-claims have fundamentally different cost structures, the formula may need tuning
 
 ## Known Gaps and Follow-up Tasks
@@ -171,4 +168,4 @@ cd api && pytest -q tests/test_ideas.py
 
 ## Decision Gates (if any)
 
-- `needs-decision`: Should `intake_status: raw` ideas be hard-blocked from spec authoring, or should it be a warning only?
+- None — guidance approach chosen deliberately over enforcement.
