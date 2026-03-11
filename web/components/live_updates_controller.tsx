@@ -150,23 +150,23 @@ export default function LiveUpdatesController() {
     };
   }, [enabled, isEligiblePath, pollMs, router, routerRefreshEveryTicks, skipRouterRefresh]);
 
-  const statusLabel = enabled ? (isEligiblePath ? "On" : "Standby") : "Off";
+  const statusLabel = enabled ? (isEligiblePath ? "On" : "Available") : "Off";
 
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-40">
       <details className="group pointer-events-auto">
         <summary className="list-none cursor-pointer rounded-full border border-border/70 bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
-          Live sync <span className="font-semibold text-foreground">{statusLabel}</span>
+          Auto refresh <span className="font-semibold text-foreground">{statusLabel}</span>
         </summary>
         <div className="mt-2 w-64 rounded-2xl border border-border/70 bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
           <p className="text-muted-foreground">
-            Keep pages current while you work, then pause when you want a quieter view.
+            Keep this page up to date while you work, then pause when you want a quieter view.
           </p>
           <p className="mt-2 text-muted-foreground">
             Path <code>{pathname || "/"}</code>
           </p>
           <p className="text-muted-foreground">
-            Last sync{" "}
+            Last refresh{" "}
             <code>{lastRefreshAt === "never" ? "never" : new Date(lastRefreshAt).toLocaleTimeString()}</code>
           </p>
           <button

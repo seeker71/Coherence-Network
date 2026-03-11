@@ -10,7 +10,7 @@ from app.models.runtime import (
     RuntimeEventCreate,
     WebViewPerformanceReport,
 )
-from app.services import runtime_service
+from app.services import mvp_baseline_service, runtime_service
 
 router = APIRouter()
 
@@ -148,3 +148,10 @@ async def runtime_mvp_acceptance_judge(
     limit: int = Query(2000, ge=100, le=5000),
 ) -> dict:
     return runtime_service.evaluate_mvp_acceptance_judge(seconds=seconds, event_limit=limit)
+
+
+@router.get("/runtime/mvp/local-baselines")
+async def runtime_mvp_local_baselines(
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    return mvp_baseline_service.list_local_mvp_baselines(limit=limit)
