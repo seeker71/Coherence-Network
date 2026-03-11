@@ -1,4 +1,4 @@
-# NVP Partner Outreach Starter Pack
+# MVP Partner Outreach Starter Pack
 
 Last updated: 2026-03-11
 Owner: `seeker71`

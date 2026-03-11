@@ -1,4 +1,4 @@
-# NVP Marketplace Track Status
+# MVP Marketplace Track Status
 
 Last updated: 2026-03-11
 Owner: `seeker71`
@@ -14,14 +14,14 @@ Build a trusted marketplace that connects aligned investors/funders with pilot p
 
 ### Scope (v1)
 
-In scope for NVP phase:
+In scope for MVP phase:
 - Attract and qualify 3-5 pilot projects.
 - Attract and qualify initial funders/investors.
 - Track each project from intake -> evaluation -> commitment -> execution readiness.
 - Operate a documented quality/trust process for onboarding and ongoing participation.
 - Maintain a simple investment allocation log and monthly review cadence.
 
-Out of scope for NVP phase:
+Out of scope for MVP phase:
 - Full-scale automated trading/investment infrastructure.
 - Complex compliance automation or custom legal tooling.
 - Enterprise-grade multi-tenant marketplace feature set.
@@ -80,8 +80,8 @@ Objective 3: Build financial discipline while MVP planning progresses.
 ## Immediate Next Commands
 
 1. Execute first outreach sprint:
-   - Use `docs/NVP-PARTNER-OUTREACH.md` and send first 10 messages.
+   - Use `docs/MVP-PARTNER-OUTREACH.md` and send first 10 messages.
 2. Start weekly operating review:
-   - Use `docs/NVP-DASHBOARD-METRICS.md` and publish week-1 baseline.
+   - Use `docs/MVP-DASHBOARD-METRICS.md` and publish week-1 baseline.
 3. Finalize security + allocation policies:
    - Add policy refs under this file and mark readiness for pilot onboarding.

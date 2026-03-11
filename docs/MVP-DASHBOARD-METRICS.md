@@ -1,4 +1,4 @@
-# NVP Dashboard Metrics (Weekly)
+# MVP Dashboard Metrics (Weekly)
 
 Last updated: 2026-03-11
 Owner: `seeker71`
@@ -6,7 +6,7 @@ Cadence: weekly (same day/time each week)
 
 ## Purpose
 
-Track whether the NVP marketplace is moving toward validated demand, trusted execution, and funding readiness.
+Track whether the MVP marketplace is moving toward validated demand, trusted execution, and funding readiness.
 
 ## Core Weekly Metrics
 
@@ -40,7 +40,7 @@ Track whether the NVP marketplace is moving toward validated demand, trusted exe
 ## Review Process
 
 1. Update metrics before weekly review.
-2. Compare against 30-day OKRs in `docs/NVP-MARKETPLACE-STATUS.md`.
+2. Compare against 30-day OKRs in `docs/MVP-MARKETPLACE-STATUS.md`.
 3. Record:
 - 3 wins
 - 3 blockers
