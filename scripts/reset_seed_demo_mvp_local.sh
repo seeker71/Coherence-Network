@@ -6,6 +6,9 @@ DEFAULT_API_BASE="http://127.0.0.1:${API_PORT:-18000}"
 API_BASE="${API_BASE:-${API_URL:-${DEFAULT_API_BASE}}}"
 IDEA_ID="demo-community-climate-marketplace"
 CLEAR_TASKS=1
+DEMO_IDEA_NAME="Community Climate Resilience Marketplace (Pilot)"
+DEMO_IDEA_DESCRIPTION="A two-sided marketplace connecting funders with local climate adaptation projects, with transparent progress and trust safeguards."
+DEMO_QUESTION_COMMITMENT="Will pilot partners commit within 30 days?"
 
 usage() {
   cat <<'USAGE'
@@ -108,17 +111,20 @@ ensure_idea() {
   build_payload() {
     jq -n \
       --arg id "$1" \
+      --arg name "${DEMO_IDEA_NAME}" \
+      --arg description "${DEMO_IDEA_DESCRIPTION}" \
+      --arg question_commitment "${DEMO_QUESTION_COMMITMENT}" \
       '{
         id: $id,
-        name: "Community Climate Resilience Marketplace (Pilot)",
-        description: "A two-sided marketplace connecting funders with local climate adaptation projects, with transparent progress and trust safeguards.",
+        name: $name,
+        description: $description,
         potential_value: 2400000,
         estimated_cost: 60000,
         confidence: 0.82,
         interfaces: ["/ideas", "/flow", "/tasks", "/contribute"],
         open_questions: [
           {
-            question: "Will pilot partners commit within 30 days?",
+            question: $question_commitment,
             value_to_whole: 250000,
             estimated_cost: 6000
           },
@@ -146,15 +152,29 @@ ensure_idea() {
   body="$(printf "%s" "${out}" | tail -n +2)"
 
   if [[ "${code}" == "409" ]]; then
-    IDEA_ID="${IDEA_ID}-$(date -u +%Y%m%d%H%M%S)"
-    create_payload="$(build_payload "${IDEA_ID}")"
-    out="$(api_json POST "/api/ideas" "${create_payload}")"
+    out="$(api_json GET "/api/ideas/${IDEA_ID}")"
     code="$(printf "%s" "${out}" | head -n1)"
     body="$(printf "%s" "${out}" | tail -n +2)"
+    if [[ "${code}" != "200" ]]; then
+      echo "Idea ID exists but could not load existing idea for reuse: HTTP ${code}" >&2
+      printf "%s\n" "${body}" >&2
+      return 1
+    fi
+    local existing_name
+    existing_name="$(printf "%s" "${body}" | jq -r '.name // ""')"
+    if [[ -n "${existing_name}" && "${existing_name}" != "${DEMO_IDEA_NAME}" ]]; then
+      echo "Existing idea uses requested ID but is not the demo idea." >&2
+      echo "ID: ${IDEA_ID}" >&2
+      echo "Existing name: ${existing_name}" >&2
+      echo "Expected name: ${DEMO_IDEA_NAME}" >&2
+      echo "Use --idea-id <new-id> for this run or reset local data." >&2
+      return 1
+    fi
+    echo "Reusing existing demo idea with deterministic ID: ${IDEA_ID}"
   fi
 
-  if [[ "${code}" != "201" ]]; then
-    echo "Failed to create demo idea: HTTP ${code}" >&2
+  if [[ "${code}" != "201" && "${code}" != "200" ]]; then
+    echo "Failed to create/reuse demo idea: HTTP ${code}" >&2
     printf "%s\n" "${body}" >&2
     return 1
   fi
@@ -170,8 +190,23 @@ ensure_idea() {
     return 1
   fi
 
+  local add_question_payload
+  add_question_payload="$(jq -n \
+    --arg question_commitment "${DEMO_QUESTION_COMMITMENT}" \
+    '{question: $question_commitment, value_to_whole: 250000, estimated_cost: 6000}')"
+  out="$(api_json POST "/api/ideas/${IDEA_ID}/questions" "${add_question_payload}")"
+  code="$(printf "%s" "${out}" | head -n1)"
+  body="$(printf "%s" "${out}" | tail -n +2)"
+  if [[ "${code}" != "200" && "${code}" != "409" ]]; then
+    echo "Failed to ensure demo question exists: HTTP ${code}" >&2
+    printf "%s\n" "${body}" >&2
+    return 1
+  fi
+
   local answer_payload
-  answer_payload='{"question":"Will pilot partners commit within 30 days?","answer":"Three pilot projects and two funders provided written commitments.","measured_delta":80000}'
+  answer_payload="$(jq -n \
+    --arg question_commitment "${DEMO_QUESTION_COMMITMENT}" \
+    '{question: $question_commitment, answer: "Three pilot projects and two funders provided written commitments.", measured_delta: 80000}')"
   out="$(api_json POST "/api/ideas/${IDEA_ID}/questions/answer" "${answer_payload}")"
   code="$(printf "%s" "${out}" | head -n1)"
   body="$(printf "%s" "${out}" | tail -n +2)"
