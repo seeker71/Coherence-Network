@@ -12,7 +12,7 @@
 
 ## Idea Shaping (recommended)
 
-Use these four lenses to stress-test the idea before writing the rest of the spec.
+Use these lenses to stress-test the idea before writing the rest of the spec.
 Skip or adapt freely — the goal is sharper thinking, not paperwork.
 
 **Deconstruct** — What are the independent pieces inside this idea? Break it down until each piece could ship alone.
@@ -22,6 +22,12 @@ Skip or adapt freely — the goal is sharper thinking, not paperwork.
 **Sequence** — What order? What must exist before this can start, and what does this unlock for others?
 
 **Stakes** — Why now? What gets harder or more expensive if this waits? Who owns the outcome?
+
+**Context as files** — What existing files, docs, or examples should the implementer read to understand the full picture? List them here instead of explaining everything inline.
+
+**Describe the outcome** — What does "done" look like as a concrete artifact? Describe the finished state, not the steps to get there.
+
+**Open questions** — What don't you know yet? List the questions that, if answered, would change the shape of this spec. Force clarity before implementation.
 
 ## Research Inputs (Required)
 

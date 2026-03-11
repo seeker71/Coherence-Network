@@ -1,12 +1,14 @@
-# Spec: Second Brain — Idea-to-Spec Process (DiSSS Framework)
+# Spec: Second Brain — Idea-to-Spec Process
 
 ## Purpose
 
-Raw ideas stall between capture and implementation because they aren't examined through the right lenses. This spec introduces four thinking prompts — Deconstruct, Select, Sequence, Stakes — as recommended guidance when shaping an idea into a spec. The goal is sharper specs and faster surfacing of high-leverage work, without adding process overhead that discourages contribution.
+Raw ideas stall between capture and implementation because they aren't examined through the right lenses, and because context lives in people's heads instead of in files. This spec introduces seven thinking prompts for the Idea Shaping section of the spec template, drawing on two complementary frameworks: DiSSS (Deconstruct, Select, Sequence, Stakes) for breaking ideas apart, and Cowork principles (context as files, outcome-first, forced questions) for making the resulting spec actionable by both humans and AI agents. The goal is sharper specs and faster implementation, without adding process overhead.
 
 ## Requirements
 
-- [ ] The spec template (`specs/TEMPLATE.md`) includes an "Idea Shaping" section with four thinking prompts: Deconstruct, Select, Sequence, Stakes
+- [ ] The spec template (`specs/TEMPLATE.md`) includes an "Idea Shaping" section with seven thinking prompts
+- [ ] Four decomposition prompts (Deconstruct, Select, Sequence, Stakes) help the author break the idea apart
+- [ ] Three execution prompts (Context as files, Describe the outcome, Open questions) help the implementer act on it
 - [ ] The section is marked as recommended guidance, not a hard gate — authors can skip or adapt it
 - [ ] The Ideas API data model gains optional `sub_claims` and `intake_status` fields for teams that want structured tracking
 - [ ] `intake_status` values: `raw`, `deconstructed`, `selected`, `sequenced`, `committed` — all optional, default `raw`
@@ -18,11 +20,12 @@ Raw ideas stall between capture and implementation because they aren't examined 
 
 - `2007-01-01` - [The 4-Hour Chef / DiSSS framework (Tim Ferriss)](https://tim.blog/the-4-hour-chef/) - Deconstruction, Selection, Sequencing, Stakes as a meta-learning framework applied to skill acquisition; adapted here for idea-to-spec conversion
 - `2026-03-11` - [Second Brain Substack](https://substack.com/@secondbrain1) - Principle articulation that prompted this spec
+- `2026-03-01` - [Cowork — Ruben Hassid](https://ruben.substack.com/p/claude-cowork) - Context via files not prompts, outcome-driven delegation, force the system to ask questions; adapted here as three execution prompts for spec authoring
 
 ## Task Card (Required)
 
 ```yaml
-goal: Add four-lens idea shaping guidance to the spec template and optional intake fields to the Ideas API
+goal: Add seven-lens idea shaping guidance to the spec template and optional intake fields to the Ideas API
 files_allowed:
   - specs/TEMPLATE.md
   - specs/116-second-brain-idea-to-spec-process.md
@@ -32,7 +35,7 @@ files_allowed:
   - api/app/routers/ideas.py
   - api/tests/test_ideas.py
 done_when:
-  - TEMPLATE.md contains Idea Shaping section with four lenses
+  - TEMPLATE.md contains Idea Shaping section with seven lenses
   - validate_spec_quality.py unchanged (section is advisory)
   - Ideas model includes sub_claims and intake_status fields
   - Existing specs pass validation without Intake section
@@ -115,9 +118,9 @@ Idea (extended):
 
 ## Files to Create/Modify
 
-- `specs/TEMPLATE.md` — Add `## Intake: DiSSS` section with four subsections
+- `specs/TEMPLATE.md` — Add `## Idea Shaping` section with seven thinking prompts
 - `specs/116-second-brain-idea-to-spec-process.md` — This spec
-- `scripts/validate_spec_quality.py` — Add intake section validation for new specs
+- `scripts/validate_spec_quality.py` — No changes (section is advisory)
 - `api/app/models/idea.py` — Add `IntakeStatus`, `SubClaim`, and extend `Idea` model
 - `api/app/services/idea_service.py` — Compute `free_energy_score` for sub-claims
 - `api/app/routers/ideas.py` — Accept `intake_status` and `sub_claims` in PATCH
