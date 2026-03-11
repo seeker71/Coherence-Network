@@ -357,3 +357,4 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
 - Lint runs with: `cd api && .venv/bin/ruff check .`
 - The `.env` files are not committed. Copy from `.env.example` for API (`api/.env`) and create `web/.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:8000`.
+- The full test suite (689 tests) may hang on some tests that attempt external network calls. Running with `-x` (stop on first failure) or targeting specific test files is recommended for fast feedback.
