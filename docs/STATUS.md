@@ -50,6 +50,17 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 2. Keep status/coverage artifacts in sync with shipped behavior.
 3. Continue graph + coherence quality improvements through scoped specs.
 4. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
+5. Execute non-software MVP marketplace track with ROI ordering (see [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md)).
+
+## Non-Software MVP Track
+
+- Current highest-ROI item: mission and scope definition (`in progress`).
+- Status + continuation plan: [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md).
+- OKRs + operations docs:
+  - [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md) (`30-Day OKRs (v1)`)
+  - [MVP-PARTNER-OUTREACH.md](MVP-PARTNER-OUTREACH.md)
+  - [MVP-DASHBOARD-METRICS.md](MVP-DASHBOARD-METRICS.md)
+- Next execution step: run first 10-contact outreach sprint and log week-1 dashboard baseline.
 
 ## Validation Snapshot
 
