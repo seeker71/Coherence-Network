@@ -67,7 +67,7 @@ export default async function DemoMvpPage() {
   const [ideasData, flowData, taskData] = await Promise.all([
     fetchJsonOrNull<IdeasResponse>(`${apiBase}/api/ideas`, { cache: "no-store" }, 5000),
     fetchJsonOrNull<FlowResponse>(`${apiBase}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<TaskListPayload>(`${apiBase}/api/agent/tasks?limit=200`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<TaskListPayload>(`${apiBase}/api/agent/tasks?limit=100`, { cache: "no-store" }, 5000),
   ]);
 
   const ideas = [...(ideasData?.ideas ?? [])].sort((a, b) => b.free_energy_score - a.free_energy_score);
