@@ -26,6 +26,13 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+type IdeasLookupResponse = {
+  ideas?: Array<{
+    id?: string;
+    name?: string;
+  }>;
+};
+
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
@@ -34,6 +41,7 @@ function TasksPageContent() {
   const [selectedTaskLog, setSelectedTaskLog] = useState<string>("");
   const [selectedTaskEvents, setSelectedTaskEvents] = useState<RuntimeEvent[]>([]);
   const [selectedTaskEventsWarning, setSelectedTaskEventsWarning] = useState<string | null>(null);
+  const [ideaNamesById, setIdeaNamesById] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
@@ -57,9 +65,12 @@ function TasksPageContent() {
       });
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("task_type", typeFilter);
-      const res = await fetchWithTimeout(`/api/agent/tasks?${params.toString()}`);
-      const json = (await res.json()) as TaskListResponse;
-      if (!res.ok) throw new Error(JSON.stringify(json));
+      const [tasksResponse, ideasResponse] = await Promise.all([
+        fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
+        fetchWithTimeout("/api/ideas?limit=500"),
+      ]);
+      const json = (await tasksResponse.json()) as TaskListResponse;
+      if (!tasksResponse.ok) throw new Error(JSON.stringify(json));
       const taskRows = Array.isArray(json.tasks)
         ? json.tasks
         : Array.isArray(json.items)
@@ -70,6 +81,19 @@ function TasksPageContent() {
       setRows(taskRows);
       const responseTotal = Number.isFinite(Number(json.total)) ? Number(json.total) : taskRows.length;
       setTotalTasks(Math.max(taskRows.length, responseTotal));
+
+      if (ideasResponse.ok) {
+        const ideasPayload = (await ideasResponse.json()) as IdeasLookupResponse;
+        const names = (ideasPayload.ideas || []).reduce<Record<string, string>>((acc, row) => {
+          const id = String(row.id || "").trim();
+          const name = String(row.name || "").trim();
+          if (id && name) acc[id] = name;
+          return acc;
+        }, {});
+        setIdeaNamesById(names);
+      } else {
+        setIdeaNamesById({});
+      }
 
       if (!taskIdFilter) {
         setSelectedTask(null);
@@ -163,8 +187,12 @@ function TasksPageContent() {
       if (ideaId && !map.has(ideaId)) map.set(ideaId, "runtime idea_id");
       if (originIdeaId && !map.has(originIdeaId)) map.set(originIdeaId, "runtime origin_idea_id");
     }
-    return [...map.entries()].map(([ideaId, source]) => ({ ideaId, source }));
-  }, [selectedContext, selectedTaskEvents]);
+    return [...map.entries()].map(([ideaId, source]) => ({
+      ideaId,
+      ideaName: ideaNamesById[ideaId] || undefined,
+      source,
+    }));
+  }, [ideaNamesById, selectedContext, selectedTaskEvents]);
   const evidenceEvents = useMemo(() => {
     return selectedTaskEvents.map((event) => {
       const metadata = asRecord(event.metadata);
@@ -249,6 +277,7 @@ function TasksPageContent() {
           <>
             <TasksListSection
               filteredRows={filteredRows}
+              ideaNamesById={ideaNamesById}
               pageStart={pageStart}
               pageEnd={pageEnd}
               totalTasks={totalTasks}
