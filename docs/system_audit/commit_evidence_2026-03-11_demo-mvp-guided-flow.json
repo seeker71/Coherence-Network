@@ -1,0 +1,78 @@
+{
+  "date": "2026-03-11",
+  "thread_branch": "codex/demo-mvp-progress-20260311",
+  "commit_scope": "Add a guided Demo MVP product page and navigation entry points so users can execute a clear 5-minute idea->progress->flow->tasks walkthrough.",
+  "files_owned": [
+    "web/app/demo/",
+    "web/app/demo/page.tsx",
+    "web/app/page.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_demo-mvp-guided-flow.json"
+  ],
+  "change_files": [
+    "web/app/demo/",
+    "web/app/demo/page.tsx",
+    "web/app/page.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "012-landing-page-contributor-onboarding-highlights"
+  ],
+  "task_ids": [
+    "task-2026-03-11-demo-mvp-guided-flow"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make prompt-gate",
+    "npm --prefix web run build"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "npm --prefix web run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Users can open /demo and follow a human-readable, step-by-step Demo MVP path with live snapshot metrics and direct links to core flow pages.",
+    "public_endpoints": [
+      "http://127.0.0.1:3000/demo"
+    ],
+    "test_flows": [
+      "Open /demo and confirm links for choose idea, update progress, verify flow, and review tasks are present.",
+      "Confirm top navigation includes Demo on desktop/mobile menu.",
+      "Confirm home page exposes a Run MVP Demo CTA and Start Exploring includes MVP demo path."
+    ]
+  }
+}
