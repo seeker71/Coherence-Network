@@ -68,6 +68,7 @@ N/A - no model changes in this spec.
 
 - `specs/TEMPLATE.md` — Add Idea Shaping section with seven thinking prompts, reorder before Requirements
 - `specs/116-second-brain-idea-to-spec-process.md` — This spec
+- `specs/116-idea-shaping-all-ideas.md` — Companion: Idea Shaping applied to all 9 ideas with manifestation deltas and measurable ROI
 
 ## Acceptance Tests
 
@@ -97,7 +98,7 @@ python3 scripts/validate_spec_quality.py --file specs/116-second-brain-idea-to-s
 ## Known Gaps and Follow-up Tasks
 
 - Follow-up task: API extensions — add optional `intake_status` and `sub_claims` fields to the Ideas data model for teams that want structured tracking
-- Follow-up task: Worked examples — fill in Idea Shaping for 3 existing high-priority specs to demonstrate the pattern
+- Completed: Worked examples — all 9 ideas shaped with full delta analysis in `specs/116-idea-shaping-all-ideas.md`
 
 ## Failure/Retry Reflection
 
