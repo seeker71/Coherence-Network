@@ -50,6 +50,17 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 2. Keep status/coverage artifacts in sync with shipped behavior.
 3. Continue graph + coherence quality improvements through scoped specs.
 4. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
+5. Execute non-software NVP marketplace track with ROI ordering (see [NVP-MARKETPLACE-STATUS.md](NVP-MARKETPLACE-STATUS.md)).
+
+## Non-Software NVP Track
+
+- Current highest-ROI item: mission and scope definition (`in progress`).
+- Status + continuation plan: [NVP-MARKETPLACE-STATUS.md](NVP-MARKETPLACE-STATUS.md).
+- OKRs + operations docs:
+  - [NVP-MARKETPLACE-STATUS.md](NVP-MARKETPLACE-STATUS.md) (`30-Day OKRs (v1)`)
+  - [NVP-PARTNER-OUTREACH.md](NVP-PARTNER-OUTREACH.md)
+  - [NVP-DASHBOARD-METRICS.md](NVP-DASHBOARD-METRICS.md)
+- Next execution step: run first 10-contact outreach sprint and log week-1 dashboard baseline.
 
 ## Validation Snapshot
 
