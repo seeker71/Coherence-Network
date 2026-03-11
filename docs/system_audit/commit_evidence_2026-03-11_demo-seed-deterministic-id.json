@@ -43,7 +43,7 @@
     "API_BASE=http://127.0.0.1:18000 ./scripts/reset_seed_demo_mvp_local.sh",
     "curl -sS http://127.0.0.1:18000/api/ideas | jq -r '.ideas[].id' | sort"
   ],
-  "change_intent": "runtime_feature",
+  "change_intent": "process_only",
   "local_validation": {
     "status": "pass",
     "commands": [
