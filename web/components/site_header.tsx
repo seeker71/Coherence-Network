@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
 
 const NAV = [
+  { href: "/today", label: "Today" },
   { href: "/demo", label: "Demo" },
   { href: "/search", label: "Search" },
   { href: "/portfolio", label: "Portfolio" },

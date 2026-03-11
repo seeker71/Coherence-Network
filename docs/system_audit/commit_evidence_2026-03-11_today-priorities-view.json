@@ -1,0 +1,82 @@
+{
+  "date": "2026-03-11",
+  "thread_branch": "codex/today-priorities-view-20260311",
+  "commit_scope": "Add a new Today priorities screen that combines top ideas, task pressure, and explicit next actions in one plain-language view.",
+  "files_owned": [
+    "web/app/today/",
+    "web/app/today/page.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_today-priorities-view.json"
+  ],
+  "change_files": [
+    "web/app/today/",
+    "web/app/today/page.tsx",
+    "web/components/site_header.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_today-priorities-view.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "demo-community-climate-marketplace"
+  ],
+  "spec_ids": [
+    "012-landing-page-contributor-onboarding-highlights"
+  ],
+  "task_ids": [
+    "task-2026-03-11-today-priorities-view"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "npm --prefix web run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-11_today-priorities-view.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "npm --prefix web run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-11_today-priorities-view.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Users can open /today to immediately see top ideas, tasks needing attention, and a direct next action link.",
+    "public_endpoints": [
+      "http://127.0.0.1:3100/today",
+      "http://127.0.0.1:3100/tasks",
+      "http://127.0.0.1:3100/ideas"
+    ],
+    "test_flows": [
+      "Open /today and verify Start Here card proposes the highest-priority next action.",
+      "Verify Top Ideas and Tasks Requiring Attention sections show plain-language context and direct links.",
+      "Verify /today is reachable from global navigation and home Start Exploring links."
+    ]
+  }
+}
