@@ -1,0 +1,81 @@
+{
+  "date": "2026-03-11",
+  "thread_branch": "codex/demo-seed-deterministic-id-20260311",
+  "commit_scope": "Make localhost MVP demo seed idempotent with a deterministic idea ID across reruns; remove timestamp-suffix fallback and reuse validated existing demo idea.",
+  "files_owned": [
+    "scripts/reset_seed_demo_mvp_local.sh",
+    "docs/system_audit/commit_evidence_2026-03-11_demo-seed-deterministic-id.json"
+  ],
+  "change_files": [
+    "scripts/reset_seed_demo_mvp_local.sh",
+    "docs/system_audit/commit_evidence_2026-03-11_demo-seed-deterministic-id.json"
+  ],
+  "idea_ids": [
+    "demo-community-climate-marketplace"
+  ],
+  "spec_ids": [
+    "012-landing-page-contributor-onboarding-highlights"
+  ],
+  "task_ids": [
+    "task_b4b5f9c4100434ec",
+    "task_fa59f2c9ef50a5a7",
+    "task_a66f3cdc18ac16a1",
+    "task_35e1a01165660a7f",
+    "task_8714c7df460907fb",
+    "task_bf545ca4054ad34d"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "bash -n scripts/reset_seed_demo_mvp_local.sh",
+    "API_BASE=http://127.0.0.1:18000 ./scripts/reset_seed_demo_mvp_local.sh",
+    "API_BASE=http://127.0.0.1:18000 ./scripts/reset_seed_demo_mvp_local.sh",
+    "curl -sS http://127.0.0.1:18000/api/ideas | jq -r '.ideas[].id' | sort"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/reset_seed_demo_mvp_local.sh",
+      "API_BASE=http://127.0.0.1:18000 ./scripts/reset_seed_demo_mvp_local.sh",
+      "API_BASE=http://127.0.0.1:18000 ./scripts/reset_seed_demo_mvp_local.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-11_demo-seed-deterministic-id.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The demo seed script now preserves one stable idea ID for link consistency across repeated local MVP runs.",
+    "public_endpoints": [
+      "http://127.0.0.1:18000/api/ideas/demo-community-climate-marketplace",
+      "http://127.0.0.1:18000/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Run seed script once and verify output idea is demo-community-climate-marketplace.",
+      "Run seed script again and verify it reports reusing existing deterministic ID instead of generating a suffix.",
+      "Verify ideas list contains demo-community-climate-marketplace with no timestamp-suffixed replacement from this run."
+    ]
+  }
+}
