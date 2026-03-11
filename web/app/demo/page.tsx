@@ -175,7 +175,7 @@ export default async function DemoMvpPage() {
               <li>Update actual value/cost and confidence on the idea detail page.</li>
               <li>Create the next task from the idea detail page to start execution.</li>
               <li>Open Flow and confirm spec/process/implementation visibility.</li>
-              <li>Open Tasks and confirm active/completed work is visible.</li>
+              <li>Open Tasks and update one task status to confirm the loop closes in-app.</li>
               <li>Capture one screenshot set for desktop and mobile readiness review.</li>
             </ol>
             <p className="text-xs text-muted-foreground">
