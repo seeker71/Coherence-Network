@@ -36,6 +36,7 @@ export type TaskLogResponse = {
 
 export type EvidenceIdeaRow = {
   ideaId: string;
+  ideaName?: string;
   source: string;
 };
 

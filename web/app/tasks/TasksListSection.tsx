@@ -5,6 +5,7 @@ import type { AgentTask } from "./types";
 
 type TasksListSectionProps = {
   filteredRows: AgentTask[];
+  ideaNamesById: Record<string, string>;
   pageStart: number;
   pageEnd: number;
   totalTasks: number;
@@ -20,6 +21,7 @@ type TasksListSectionProps = {
 
 export function TasksListSection({
   filteredRows,
+  ideaNamesById,
   pageStart,
   pageEnd,
   totalTasks,
@@ -32,6 +34,21 @@ export function TasksListSection({
   previousHref,
   nextHref,
 }: TasksListSectionProps) {
+  function taskIdeaContext(task: AgentTask): { ideaId: string; ideaName: string } | null {
+    const ctx = task.context && typeof task.context === "object" && !Array.isArray(task.context)
+      ? task.context
+      : null;
+    if (!ctx) return null;
+    const ideaId = String(ctx.idea_id || "").trim();
+    if (!ideaId) return null;
+    const fromContext = String(ctx.idea_name || "").trim();
+    const fromLookup = ideaNamesById[ideaId] || "";
+    return {
+      ideaId,
+      ideaName: fromContext || fromLookup || "Linked idea",
+    };
+  }
+
   return (
     <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
       <p className="text-sm text-muted-foreground">
@@ -65,31 +82,54 @@ export function TasksListSection({
         </div>
       ) : null}
       <ul className="space-y-2 text-sm">
-        {filteredRows.map((t, index) => (
-          <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
-            <div className="flex justify-between gap-3">
-              <span className="font-medium">
-                <Link
-                  href={`/tasks?task_id=${encodeURIComponent(t.id)}`}
-                  className="underline hover:text-foreground"
-                  title={`Task ID: ${t.id}`}
-                >
-                  Task {pageStart + index}
-                </Link>
-              </span>
-              <span className="text-muted-foreground text-right">
-                <Link href={`/tasks?task_type=${encodeURIComponent(t.task_type)}`} className="underline hover:text-foreground">
-                  {t.task_type}
-                </Link>{" "}
-                |{" "}
-                <Link href={`/tasks?status=${encodeURIComponent(t.status)}`} className="underline hover:text-foreground">
-                  {t.status}
-                </Link>
-              </span>
-            </div>
-            <div className="text-muted-foreground">{t.direction}</div>
-          </li>
-        ))}
+        {filteredRows.map((t, index) => {
+          const linkedIdea = taskIdeaContext(t);
+          return (
+            <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-2">
+              <div className="flex justify-between gap-3">
+                <span className="font-medium">
+                  <Link
+                    href={`/tasks?task_id=${encodeURIComponent(t.id)}`}
+                    className="underline hover:text-foreground"
+                    title={`Task ID: ${t.id}`}
+                  >
+                    Task {pageStart + index}
+                  </Link>
+                </span>
+                <span className="text-muted-foreground text-right">
+                  <Link href={`/tasks?task_type=${encodeURIComponent(t.task_type)}`} className="underline hover:text-foreground">
+                    {t.task_type}
+                  </Link>{" "}
+                  |{" "}
+                  <Link href={`/tasks?status=${encodeURIComponent(t.status)}`} className="underline hover:text-foreground">
+                    {t.status}
+                  </Link>
+                </span>
+              </div>
+              <div className="text-muted-foreground">{t.direction}</div>
+              {linkedIdea ? (
+                <div className="text-muted-foreground">
+                  Idea{" "}
+                  <Link
+                    href={`/ideas/${encodeURIComponent(linkedIdea.ideaId)}`}
+                    className="underline hover:text-foreground"
+                    title={`Idea ID: ${linkedIdea.ideaId}`}
+                  >
+                    {linkedIdea.ideaName}
+                  </Link>{" "}
+                  |{" "}
+                  <Link
+                    href={`/flow?idea_id=${encodeURIComponent(linkedIdea.ideaId)}`}
+                    className="underline hover:text-foreground"
+                    title={`Idea ID: ${linkedIdea.ideaId}`}
+                  >
+                    Open flow
+                  </Link>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
         {filteredRows.length === 0 ? (
           <li className="rounded-lg border border-dashed border-border/70 bg-background/45 p-4 space-y-2">
             <p className="text-muted-foreground">No tasks yet in this view.</p>
