@@ -1,7 +1,9 @@
-# Idea Shaping: All Ideas — Current State and Manifestation Delta
+# Idea Shaping: All Ideas — Current State, Manifestation Delta, and Flow Design
 
 Companion to spec 116. Applies the seven-lens Idea Shaping framework to every idea
-in the portfolio and identifies what's built vs what's missing.
+in the portfolio and identifies what's built vs what's missing. Includes measurable ROI
+for every gap and OpenClaw-inspired design principles for reducing friction and increasing
+collective rewards.
 
 ---
 
@@ -641,3 +643,112 @@ with minimal new instrumentation.
 | portfolio-governance | 4 | Decision accuracy | ~4 weeks | Medium-term |
 | coherence-network-web-interface | 6 | Operator efficiency | ~4 weeks/page | Ongoing |
 | federated-instance-aggregation | 20 | Throughput multiplier | Scales with adoption | Long-term bet |
+
+---
+
+## Learning from OpenClaw: Reducing Friction, Increasing Flow, Rewarding the Collective
+
+[OpenClaw](https://github.com/openclaw/clawhub) grew to 160K+ GitHub stars and 300K+ users
+in months by making contribution nearly frictionless: a skill is a single SKILL.md file with
+YAML frontmatter and natural language instructions. No compilation, no SDK, no approval queue.
+But OpenClaw's explosive growth also exposed a critical gap: **no governance framework, no
+contributor reward system, and a security crisis** (800+ malicious skills, 42K exposed gateways).
+
+Coherence Network can learn from both the success and the failure.
+
+### What OpenClaw got right (adopt)
+
+| OpenClaw pattern | Coherence equivalent | Current state | Gap |
+|-----------------|---------------------|---------------|-----|
+| **SKILL.md** — single file, YAML + markdown, zero friction to contribute | **Spec template** — single file, structured markdown | Template exists but 13 required sections is high friction | Simplify: the Idea Shaping section already reduces cognitive load; consider a "light spec" format for small changes |
+| **ClawHub** — centralized discovery, decentralized contribution | **Ideas API + specs/** — centralized prioritization, anyone can submit | Ideas API exists but no public submission flow | Add `POST /api/ideas` for external contributors to propose ideas |
+| **Embedding-based search** — find skills by meaning, not keywords | **Search-first home page** — search across projects | Search exists but doesn't search specs/ideas | Extend search to cover `specs/` and `GET /api/ideas` content |
+| **One-line install** — `npx openclaw` and you're running | **Quick start** — `docker compose up` or manual setup | Setup documented but multi-step | Reduce to single command for contributor onboarding |
+
+### What OpenClaw got wrong (avoid)
+
+| OpenClaw failure | Root cause | Coherence safeguard |
+|-----------------|------------|---------------------|
+| 800+ malicious skills in ClawHub | No review gate, no trust scoring | Spec quality validator + CI gates already enforce structure |
+| 42K exposed gateways | No deployment governance | Railway deploy gates + E2E validation (partially built) |
+| No contributor rewards | No value tracking | **Value lineage + payout attribution already exists** — this is Coherence's structural advantage |
+| Shadow AI proliferation | No audit trail | Runtime telemetry + commit evidence already captures provenance |
+
+### Coherence's advantage: the reward loop OpenClaw is missing
+
+OpenClaw has contributors but no way to reward them. Coherence has:
+
+1. **Value lineage** (`POST /api/value-lineage/links`) — traces value from idea → spec → implementation → usage
+2. **Payout attribution** (`POST /api/value-lineage/links/{id}/payout-preview`) — splits credit by stage (idea 10%, research 20%, spec 20%, implementation 50%, review 20%) and by objective (coherence 35%, energy flow 20%, awareness 20%, friction relief 15%, balance 10%)
+3. **Free energy scoring** — prioritizes ideas by `(value × confidence) / (cost + risk)`
+
+The gap: **this loop is invisible**. Contributors can't see their attribution. The math exists but the feedback doesn't flow.
+
+### Design principles for flow (from both frameworks)
+
+**1. Contribution should take less time than deciding to contribute.**
+- Light spec format: Purpose + 3 requirements + done state. Skip the other 10 sections for small changes.
+- Idea submission: one API call or one markdown file, not a full spec.
+- Remove friction: if a contributor has to ask "where do I start?", the onboarding failed.
+
+**2. Every contribution should be immediately visible.**
+- Contributor payout UI (gap in `coherence-network-value-attribution`)
+- Real-time portfolio dashboard showing contribution flow
+- Runtime telemetry showing which contributions are being used
+
+**3. Governance should accelerate flow, not block it.**
+- Gates say "yes, and here's what to fix" not "no, go away"
+- Validator warnings, not errors, for advisory sections
+- Auto-fix suggestions: if a spec fails validation, show exactly what's missing
+- Trust scoring: contributors who pass gates consistently earn faster review
+
+**4. Rewards should be proportional, transparent, and timely.**
+- Attribution visible within 24 hours of merge
+- Stage weights public and auditable
+- Value gap visible per idea — contributors can see where the opportunity is
+- Standing question on every idea: "how can this measurement be improved?"
+
+**5. The system should learn from its own friction.**
+- Measure: time from idea submission to first spec draft
+- Measure: time from spec draft to passing tests
+- Measure: number of review cycles before merge
+- Friction report: `GET /api/friction` or `specs/050-friction-analysis.md` already specced
+- Auto-generate tasks from friction signals (pipeline observability Phase 6)
+
+### Concrete next actions from this analysis
+
+| Action | Idea it serves | Effort | Impact on flow |
+|--------|---------------|--------|----------------|
+| Build contributor payout UI | value-attribution | 8 hrs | Makes the reward loop visible — existential for contributor retention |
+| Add `POST /api/ideas` for public submission | portfolio-governance | 4 hrs | Removes the biggest contribution barrier |
+| Create "light spec" format (3-section minimum) | all | 2 hrs | Cuts spec authoring time by 60% for small changes |
+| Extend search to specs/ideas | web-interface | 4 hrs | Contributors find where to help without browsing 100+ files |
+| Publish stage weights in UI | value-attribution | 2 hrs | Transparency → trust → more contributions |
+| Auto-suggest spec fixes on validation failure | portfolio-governance | 4 hrs | Gate becomes a guide, not a wall |
+| Measure contribution cycle time (idea → merge) | agent-pipeline | 3 hrs | First friction metric — baseline for improvement |
+
+### Branch cleanup needed
+
+55 unmerged branches were audited. 7 clean branches merged into this PR.
+44 branches have merge conflicts (most are 700+ commits behind main).
+4 remaining clean branches are stale duplicates or bot artifacts.
+
+**Branches merged in this PR:**
+- `cursor/development-environment-setup-2cf2` — docs update
+- `codex/disable-vercel-pr-deploys` — Vercel deploy policy
+- `codex/fix-external-tools-audit` — audit stability
+- `codex/fix-runtime-persistence-ready` — runtime telemetry DB fix
+- `codex/20260217-endpoint-usage-metrics-complete` — route registry loading
+- `codex/runner-validation-artifact-20260219c` — validation artifacts
+- `codex/runner-soak-validation-20260219b` — soak test artifacts
+
+**Branches recommended for deletion** (conflicted, stale, superseded):
+
+The remaining 48 branches are all from Feb 13–20 and 700+ commits behind main.
+Most represent work that was either:
+- Superseded by later branches (e.g., `ci-unblock-workflows` vs `ci-unblock-workflows-v2`)
+- Completed via different PRs on main
+- Bot checkpoint artifacts with no mergeable value
+
+Recommended: delete all `codex/*` branches older than 2026-02-20 that have merge conflicts.
+This reduces branch noise from 55 to ~3 active branches.

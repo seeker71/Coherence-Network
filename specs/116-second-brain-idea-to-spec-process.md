@@ -37,6 +37,7 @@ Raw ideas stall between capture and implementation because they aren't examined 
 - `2007-01-01` - [The 4-Hour Chef / DiSSS framework (Tim Ferriss)](https://tim.blog/the-4-hour-chef/) - Deconstruction, Selection, Sequencing, Stakes as a meta-learning framework; adapted here for idea-to-spec conversion
 - `2026-03-11` - [Second Brain Substack](https://substack.com/@secondbrain1) - Principle articulation that prompted this spec
 - `2026-03-01` - [Cowork — Ruben Hassid](https://ruben.substack.com/p/claude-cowork) - Context via files not prompts, outcome-driven delegation, force the system to ask questions; adapted as three execution prompts
+- `2026-03-11` - [OpenClaw / ClawHub ecosystem](https://github.com/openclaw/clawhub) - Single-file contribution format (SKILL.md), zero-friction onboarding, centralized discovery with decentralized contribution; also a cautionary tale on governance gaps (800+ malicious skills, no reward system)
 
 ## Task Card (Required)
 
@@ -98,7 +99,12 @@ python3 scripts/validate_spec_quality.py --file specs/116-second-brain-idea-to-s
 ## Known Gaps and Follow-up Tasks
 
 - Follow-up task: API extensions — add optional `intake_status` and `sub_claims` fields to the Ideas data model for teams that want structured tracking
+- Follow-up task: `POST /api/ideas` — public idea submission endpoint (OpenClaw-inspired: reduce barrier to contribute)
+- Follow-up task: Light spec format — 3-section minimum for small changes (Purpose, Requirements, Done state)
+- Follow-up task: Contributor payout UI — make the reward loop visible (OpenClaw's missing piece that Coherence already has the data for)
+- Follow-up task: Contribution cycle time metric — measure idea → spec → merge duration as a friction signal
 - Completed: Worked examples — all 9 ideas shaped with full delta analysis in `specs/116-idea-shaping-all-ideas.md`
+- Completed: OpenClaw comparison — what to adopt, what to avoid, 5 flow design principles, 7 concrete next actions
 
 ## Failure/Retry Reflection
 
