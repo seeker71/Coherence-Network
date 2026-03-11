@@ -6,6 +6,8 @@ import {
   buildFlowSearchParams,
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
+import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
+import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
@@ -86,6 +88,12 @@ type IdeaListPayload =
 function toRepoHref(pathOrUrl: string): string {
   if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
   return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
+}
+
+function fileLabel(pathOrUrl: string): string {
+  const normalized = pathOrUrl.split("?")[0].split("#")[0];
+  const pieces = normalized.split("/");
+  return pieces[pieces.length - 1] || "Implementation file";
 }
 
 function wait(ms: number): Promise<void> {
@@ -178,7 +186,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-4">
         <h1 className="text-2xl font-bold">Idea Details Unavailable</h1>
         <p className="text-muted-foreground">
-          Could not load <code>{ideaId}</code> from upstream right now.
+          Could not load this idea from upstream right now.
         </p>
         <p className="text-sm text-muted-foreground">
           details <code>{ideaResult.details}</code>
@@ -245,10 +253,18 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
 
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">{idea.name}</h1>
-        <p className="text-muted-foreground">{idea.id}</p>
+        <p className="text-muted-foreground">{humanizeStatus(idea.manifestation_status)}</p>
       </div>
 
       <p>{idea.description}</p>
+
+      <IdeaProgressEditor
+        ideaId={idea.id}
+        initialActualValue={idea.actual_value}
+        initialActualCost={idea.actual_cost}
+        initialConfidence={idea.confidence}
+        initialManifestationStatus={idea.manifestation_status as "none" | "partial" | "validated"}
+      />
 
       {flowResult.details ? (
         <p className="text-sm text-muted-foreground">
@@ -258,33 +274,37 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Manifestation</p>
-          <p className="text-lg font-semibold">{idea.manifestation_status}</p>
+          <p className="text-muted-foreground">Validation status</p>
+          <p className="text-lg font-semibold">{humanizeStatus(idea.manifestation_status)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Free energy</p>
-          <p className="text-lg font-semibold">{idea.free_energy_score.toFixed(2)}</p>
+          <p className="text-muted-foreground">Priority score</p>
+          <p className="text-lg font-semibold">{formatDecimal(idea.free_energy_score)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Value gap</p>
-          <p className="text-lg font-semibold">{idea.value_gap.toFixed(2)}</p>
+          <p className="text-muted-foreground">Remaining upside</p>
+          <p className="text-lg font-semibold">{formatUsd(idea.value_gap)}</p>
         </div>
         <div className="rounded border p-3">
           <p className="text-muted-foreground">Confidence</p>
-          <p className="text-lg font-semibold">{idea.confidence.toFixed(2)}</p>
+          <p className="text-lg font-semibold">{formatConfidence(idea.confidence)}</p>
         </div>
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Linked Spec → Process → Implementation → Contributors</h2>
+        <h2 className="font-semibold">Journey Through The System</h2>
         <p className="text-muted-foreground">
-          specs{" "}
+          Specs{" "}
           {flow && flow.spec.spec_ids.length > 0
             ? flow.spec.spec_ids.map((specId, idx) => (
                 <span key={specId}>
                   {idx > 0 ? ", " : ""}
-                  <Link href={`/specs/${encodeURIComponent(specId)}`} className="underline hover:text-foreground">
-                    {specId}
+                  <Link
+                    href={`/specs/${encodeURIComponent(specId)}`}
+                    className="underline hover:text-foreground"
+                    title={`Spec ID: ${specId}`}
+                  >
+                    Open spec {idx + 1}
                   </Link>
                 </span>
               ))
@@ -303,33 +323,43 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           </Link>
         </p>
         <p className="text-muted-foreground">
-          task_ids{" "}
+          Execution tasks{" "}
           {flow && flow.process.task_ids.length > 0
             ? flow.process.task_ids.map((taskId, idx) => (
                 <span key={taskId}>
                   {idx > 0 ? ", " : ""}
-                  <Link href={`/tasks?task_id=${encodeURIComponent(taskId)}`} className="underline hover:text-foreground">
-                    {taskId}
+                  <Link
+                    href={`/tasks?task_id=${encodeURIComponent(taskId)}`}
+                    className="underline hover:text-foreground"
+                    title={`Task ID: ${taskId}`}
+                  >
+                    Task {idx + 1}
                   </Link>
                 </span>
               ))
             : "-"}
         </p>
         <p className="text-muted-foreground">
-          implementation_refs{" "}
+          Implementation references{" "}
           {flow && flow.implementation.implementation_refs.length > 0
             ? flow.implementation.implementation_refs.slice(0, 8).map((ref, idx) => (
                 <span key={ref}>
                   {idx > 0 ? ", " : ""}
-                  <a href={toRepoHref(ref)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-                    {ref}
+                  <a
+                    href={toRepoHref(ref)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-foreground"
+                    title={ref}
+                  >
+                    {fileLabel(ref) || `File ${idx + 1}`}
                   </a>
                 </span>
               ))
             : "-"}
         </p>
         <p className="text-muted-foreground">
-          contributors{" "}
+          Contributors{" "}
           {flow && flow.contributors.all.length > 0
             ? flow.contributors.all.slice(0, 10).map((contributorId, idx) => (
                 <span key={contributorId}>
@@ -337,8 +367,9 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
                   <Link
                     href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
                     className="underline hover:text-foreground"
+                    title={`Contributor ID: ${contributorId}`}
                   >
-                    {contributorId}
+                    Contributor {idx + 1}
                   </Link>
                 </span>
               ))
@@ -349,8 +380,9 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
             )}
         </p>
         <p className="text-muted-foreground">
-          usage_events {flow?.contributions.usage_events_count ?? 0} | measured_value {flow?.contributions.measured_value_total.toFixed(2) ?? "0.00"} |
-          runtime_events {flow?.implementation.runtime_events_count ?? 0} | runtime_ms {flow?.implementation.runtime_total_ms.toFixed(2) ?? "0.00"}
+          Usage events {flow?.contributions.usage_events_count ?? 0} | Measured value{" "}
+          {formatUsd(flow?.contributions.measured_value_total ?? 0)} | Runtime events {flow?.implementation.runtime_events_count ?? 0} | Runtime time{" "}
+          {formatDecimal(flow?.implementation.runtime_total_ms ?? 0, 0)} ms
         </p>
       </section>
 
@@ -364,12 +396,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
               <li key={q.question} className="rounded border p-3 space-y-1">
                 <p className="font-medium">{q.question}</p>
                 <p className="text-muted-foreground">
-                  value {q.value_to_whole} | cost {q.estimated_cost} | ROI {roi.toFixed(2)}
+                  Value {formatUsd(q.value_to_whole)} | Cost {formatUsd(q.estimated_cost)} | ROI {formatDecimal(roi)}
                 </p>
                 {q.answer ? (
-                  <p className="text-muted-foreground">answer: {q.answer}</p>
+                  <p className="text-muted-foreground">Answer: {q.answer}</p>
                 ) : (
-                  <p className="text-muted-foreground">answer: (unanswered)</p>
+                  <p className="text-muted-foreground">Answer: (unanswered)</p>
                 )}
               </li>
             );
@@ -378,12 +410,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">API Links</h2>
-        <p className="text-muted-foreground">Use these for machine inspection and automation.</p>
+        <h2 className="font-semibold">Technical Links</h2>
+        <p className="text-muted-foreground">Use these only when you need raw system records.</p>
         <ul className="space-y-1">
           <li>
             <a href={`${apiBase}/api/ideas/${encodeURIComponent(idea.id)}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-              /api/ideas/{idea.id}
+              Open idea API record
             </a>
           </li>
           <li>
@@ -393,7 +425,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
             >
-              /api/inventory/flow?idea_id={idea.id}
+              Open flow API record
             </a>
           </li>
           <li>
@@ -403,12 +435,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
             >
-              /api/runtime/ideas/summary
+              Open runtime summary API
             </a>
           </li>
           <li>
             <a href={`${apiBase}/api/inventory/system-lineage`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-              /api/inventory/system-lineage
+              Open system lineage API
             </a>
           </li>
         </ul>

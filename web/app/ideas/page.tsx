@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
 
 export const metadata: Metadata = {
   title: "Ideas",
@@ -93,7 +94,7 @@ export default async function IdeasPage() {
       </div>
 
       <h1 className="text-2xl font-bold">Ideas</h1>
-      <p className="text-muted-foreground">Human interface for `GET /api/ideas`.</p>
+      <p className="text-muted-foreground">Explore opportunities from concept to measured impact.</p>
 
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div className="rounded border p-3">
@@ -102,29 +103,32 @@ export default async function IdeasPage() {
         </div>
         <div className="rounded border p-3">
           <p className="text-muted-foreground">Actual value</p>
-          <p className="text-lg font-semibold">{data.summary.total_actual_value}</p>
+          <p className="text-lg font-semibold">{formatUsd(data.summary.total_actual_value)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Value gap</p>
-          <p className="text-lg font-semibold">{data.summary.total_value_gap}</p>
+          <p className="text-muted-foreground">Remaining upside</p>
+          <p className="text-lg font-semibold">{formatUsd(data.summary.total_value_gap)}</p>
         </div>
       </section>
 
       <section className="rounded border p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">Sorted by free energy score (higher first).</p>
+        <p className="text-sm text-muted-foreground">Ranked by priority and expected return.</p>
         <ul className="space-y-2">
-          {ideas.map((idea) => (
+          {ideas.map((idea, index) => (
             <li key={idea.id} className="rounded border p-3 space-y-1">
               <div className="flex justify-between gap-3">
                 <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="font-medium hover:underline">
-                  {idea.name}
+                  {index + 1}. {idea.name}
                 </Link>
-                <span className="text-muted-foreground">{idea.manifestation_status}</span>
+                <span className="text-muted-foreground">{humanizeStatus(idea.manifestation_status)}</span>
               </div>
-              <p className="text-sm text-muted-foreground">{idea.id}</p>
               <p className="text-sm">{idea.description}</p>
               <p className="text-sm text-muted-foreground">
-                free_energy {idea.free_energy_score.toFixed(2)} | value_gap {idea.value_gap.toFixed(2)} | cost_est {idea.estimated_cost}
+                Potential value {formatUsd(idea.potential_value)} | Remaining upside {formatUsd(idea.value_gap)} | Estimated cost{" "}
+                {formatUsd(idea.estimated_cost)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Confidence {formatConfidence(idea.confidence)} | Priority score {formatDecimal(idea.free_energy_score)}
               </p>
             </li>
           ))}

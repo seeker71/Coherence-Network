@@ -16,6 +16,7 @@ export default function GatesPage() {
   const [contractReport, setContractReport] = useState<Record<string, unknown> | null>(null);
   const [publicDeployReport, setPublicDeployReport] = useState<Record<string, unknown> | null>(null);
   const [traceabilityReport, setTraceabilityReport] = useState<Record<string, unknown> | null>(null);
+  const [baselineReport, setBaselineReport] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,12 @@ export default function GatesPage() {
       if (typeof mainJson.sha === "string") setSha(mainJson.sha);
       setPublicDeployReport(publicJson);
       setTraceabilityReport(traceJson);
+      const baselinesRes = await fetch(`${API_URL}/api/runtime/mvp/local-baselines?limit=8`, {
+        cache: "no-store",
+      });
+      const baselinesJson = await baselinesRes.json();
+      if (!baselinesRes.ok) throw new Error(JSON.stringify(baselinesJson));
+      setBaselineReport(baselinesJson);
       setStatus("idle");
     } catch (e) {
       setStatus("error");
@@ -212,6 +219,33 @@ export default function GatesPage() {
         </Button>
       </section>
 
+      <section className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+        <h2 className="text-lg font-semibold">Local MVP Baseline History</h2>
+        <p className="text-sm text-muted-foreground">
+          Latest local MVP acceptance runs produced by the baseline runner.
+        </p>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            setStatus("loading");
+            setError(null);
+            try {
+              const res = await fetch(`${API_URL}/api/runtime/mvp/local-baselines?limit=8`, { cache: "no-store" });
+              const json = await res.json();
+              if (!res.ok) throw new Error(JSON.stringify(json));
+              setBaselineReport(json);
+              setStatus("idle");
+            } catch (e) {
+              setStatus("error");
+              setError(String(e));
+            }
+          }}
+          disabled={status === "loading"}
+        >
+          Refresh Baseline History
+        </Button>
+      </section>
+
       {status === "error" && error && (
         <p className="text-destructive">Error: {error}</p>
       )}
@@ -248,6 +282,15 @@ export default function GatesPage() {
           <h3 className="font-medium">Endpoint Traceability Report</h3>
           <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
             {JSON.stringify(traceabilityReport, null, 2)}
+          </pre>
+        </section>
+      )}
+
+      {baselineReport && (
+        <section className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+          <h3 className="font-medium">Local MVP Baseline Runs</h3>
+          <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+            {JSON.stringify(baselineReport, null, 2)}
           </pre>
         </section>
       )}

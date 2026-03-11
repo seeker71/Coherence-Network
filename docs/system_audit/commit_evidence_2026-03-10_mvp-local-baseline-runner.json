@@ -1,0 +1,116 @@
+{
+  "date": "2026-03-10",
+  "thread_branch": "codex/mvp-baseline-post-merge-20260310",
+  "commit_scope": "Deliver local-only MVP baseline flow (API endpoint + baseline runner + web visibility) and human-readable MVP journey UX updates for ideas, flow, specs, and tasks.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/routers/runtime.py",
+    "api/app/services/mvp_baseline_service.py",
+    "api/tests/test_runtime_api.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/run_mvp_local_baseline.sh",
+    "web/.env.example",
+    "web/lib/api.ts",
+    "web/lib/humanize.ts",
+    "web/components/ideas/IdeaProgressEditor.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/flow/FlowItemCard.tsx",
+    "web/app/flow/FlowSummaryCards.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.json",
+    "docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.md",
+    "docs/system_audit/commit_evidence_2026-03-10_mvp-local-baseline-runner.json"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/routers/runtime.py",
+    "api/app/services/mvp_baseline_service.py",
+    "api/tests/test_runtime_api.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/run_mvp_local_baseline.sh",
+    "web/.env.example",
+    "web/lib/api.ts",
+    "web/lib/humanize.ts",
+    "web/components/ideas/IdeaProgressEditor.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/components/page_context_links.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/flow/FlowItemCard.tsx",
+    "web/app/flow/FlowSummaryCards.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.json",
+    "docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.md"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "014-deploy-readiness"
+  ],
+  "task_ids": [
+    "task-2026-03-10-mvp-local-baseline-runner"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "chmod +x scripts/run_mvp_local_baseline.sh",
+    "./scripts/run_mvp_local_baseline.sh --skip-prompt-gate",
+    "sed -n '1,220p' docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.json",
+    "sed -n '1,220p' docs/system_audit/mvp_acceptance_2026-03-10_post_merge_main_5dc7fe9_20260310T221525Z.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/run_mvp_local_baseline.sh --skip-prompt-gate"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit, push, and PR checks."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Local MVP baseline artifacts are now generated in one deterministic command with comparable fields and HTTP evidence.",
+    "public_endpoints": [
+      "http://127.0.0.1:18145/api/health",
+      "http://127.0.0.1:3245/api-health"
+    ],
+    "test_flows": [
+      "Run scripts/run_mvp_local_baseline.sh and verify it exits 0.",
+      "Verify generated JSON has result=pass and all required API/web checks at HTTP 200.",
+      "Verify generated Markdown includes checklist and evidence summary."
+    ]
+  }
+}

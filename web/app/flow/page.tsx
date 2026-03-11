@@ -84,27 +84,24 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
 
       <h1 className="text-2xl font-bold">Flow</h1>
       <p className="text-muted-foreground">
-        Unified tracking of <code>idea -&gt; spec -&gt; process -&gt; implementation -&gt; validation</code> with contributor and contribution visibility.
+        Follow each idea from plan to implementation to validation, with contribution visibility at each step.
       </p>
       {(ideaFilter || specFilter || contributorFilter) && (
         <p className="text-sm text-muted-foreground">
-          Filters:
+          Filters active:
           {ideaFilter ? (
             <>
-              {" "}
-              idea <code>{ideaFilter}</code>
+              {" "}idea selected
             </>
           ) : null}
           {specFilter ? (
             <>
-              {" "}
-              spec <code>{specFilter}</code>
+              {" "}spec selected
             </>
           ) : null}
           {contributorFilter ? (
             <>
-              {" "}
-              contributor <code>{contributorFilter}</code>
+              {" "}contributor selected
             </>
           ) : null}
           {" | "}

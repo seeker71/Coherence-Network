@@ -23,11 +23,11 @@ export function FlowSummaryCards({ filteredItems, flow, contributorsLength, cont
         <p className="text-lg font-semibold">{flowCompleteCount}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Contributors in registry</p>
+        <p className="text-muted-foreground">Contributors in team records</p>
         <p className="text-lg font-semibold">{contributorsLength}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Contributions in registry</p>
+        <p className="text-muted-foreground">Contributions in team records</p>
         <p className="text-lg font-semibold">{contributionsLength}</p>
       </div>
       <div className="rounded border p-3">
