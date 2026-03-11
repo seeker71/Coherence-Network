@@ -15,7 +15,14 @@
     "web/app/demo/page.tsx",
     "docs/system_audit/mvp_demo_screenshot_packet_2026-03-11.json",
     "docs/system_audit/mvp_demo_screenshot_packet_2026-03-11.md",
-    "docs/system_audit/mvp_demo_screenshots_2026-03-11/"
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/demo_desktop.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/demo_mobile.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/flow_desktop.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/idea_detail_desktop.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/idea_detail_mobile.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/ideas_desktop.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/tasks_desktop.png",
+    "docs/system_audit/mvp_demo_screenshots_2026-03-11/tasks_mobile.png"
   ],
   "idea_ids": [
     "demo-community-climate-marketplace",
