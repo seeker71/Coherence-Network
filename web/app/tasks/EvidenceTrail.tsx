@@ -108,12 +108,20 @@ export function EvidenceTrail({
               <ul className="space-y-1">
                 {evidenceIdeas.map((row) => (
                   <li key={row.ideaId}>
-                    <Link href={`/ideas/${encodeURIComponent(row.ideaId)}`} className="underline hover:text-foreground">
-                      {row.ideaId}
+                    <Link
+                      href={`/ideas/${encodeURIComponent(row.ideaId)}`}
+                      className="underline hover:text-foreground"
+                      title={`Idea ID: ${row.ideaId}`}
+                    >
+                      {row.ideaName || "Linked idea"}
                     </Link>{" "}
                     <span className="text-muted-foreground">({row.source})</span>{" "}
                     |{" "}
-                    <Link href={`/flow?idea_id=${encodeURIComponent(row.ideaId)}`} className="underline hover:text-foreground">
+                    <Link
+                      href={`/flow?idea_id=${encodeURIComponent(row.ideaId)}`}
+                      className="underline hover:text-foreground"
+                      title={`Idea ID: ${row.ideaId}`}
+                    >
                       flow
                     </Link>
                   </li>
