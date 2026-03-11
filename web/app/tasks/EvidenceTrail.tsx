@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { AgentTask, EvidenceEventRow, EvidenceIdeaRow } from "./types";
+import { TaskQuickUpdate } from "./TaskQuickUpdate";
 import { formatTime, tailLines, toInt } from "./utils";
 
 type EvidenceTrailProps = {
@@ -20,6 +21,7 @@ type EvidenceTrailProps = {
     externalProviderCostUsd: number;
     totalCostUsd: number;
   };
+  onTaskUpdated: () => Promise<void> | void;
 };
 
 export function EvidenceTrail({
@@ -31,6 +33,7 @@ export function EvidenceTrail({
   evidenceIdeas,
   evidenceEvents,
   acceptanceProof,
+  onTaskUpdated,
 }: EvidenceTrailProps) {
   const failureHits = toInt(selectedContext.failure_hits);
   const retryCount = toInt(selectedContext.retry_count);
@@ -50,6 +53,13 @@ export function EvidenceTrail({
             created {formatTime(selectedTask.created_at)} | updated {formatTime(selectedTask.updated_at)} | claimed_by{" "}
             <code>{selectedTask.claimed_by || "-"}</code>
           </p>
+          <TaskQuickUpdate
+            taskId={taskIdFilter}
+            initialStatus={selectedTask.status || "pending"}
+            initialCurrentStep={selectedTask.current_step || ""}
+            initialOutput={selectedTask.output || ""}
+            onUpdated={onTaskUpdated}
+          />
           {selectedTask.current_step ? (
             <p className="text-muted-foreground">
               current_step <code>{selectedTask.current_step}</code>
