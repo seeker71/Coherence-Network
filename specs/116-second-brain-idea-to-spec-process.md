@@ -2,172 +2,108 @@
 
 ## Purpose
 
-Raw ideas stall between capture and implementation because they aren't examined through the right lenses, and because context lives in people's heads instead of in files. This spec introduces seven thinking prompts for the Idea Shaping section of the spec template, drawing on two complementary frameworks: DiSSS (Deconstruct, Select, Sequence, Stakes) for breaking ideas apart, and Cowork principles (context as files, outcome-first, forced questions) for making the resulting spec actionable by both humans and AI agents. The goal is sharper specs and faster implementation, without adding process overhead.
+Raw ideas stall between capture and implementation because they aren't examined through the right lenses, and because context lives in people's heads instead of in files. This spec adds an "Idea Shaping" section to the spec template with seven thinking prompts drawn from two frameworks: DiSSS (Deconstruct, Select, Sequence, Stakes) for breaking ideas apart, and Cowork principles (context as files, outcome-first, forced questions) for making specs actionable by both humans and AI agents.
+
+## Idea Shaping
+
+### Break it apart
+
+**Deconstruct** — Two pieces: (1) the template section itself, (2) optional API fields for structured tracking.
+
+**Select** — The template guidance is the high-leverage piece — it changes how every future spec gets written. The API fields are useful but secondary; they can follow once the guidance pattern proves out.
+
+**Sequence** — Template first (no dependencies). API fields depend on seeing whether authors actually use the prompts.
+
+**Stakes** — Every spec written without these lenses is a missed chance to catch vague thinking early. The template change costs nothing to try and is easy to revert.
+
+### Make it actionable
+
+**Context to read** — `specs/TEMPLATE.md` (the file being changed), `specs/053-ideas-prioritization.md` (existing ideas model), `scripts/validate_spec_quality.py` (to confirm no enforcement needed).
+
+**Done state** — The spec template has an Idea Shaping section with seven prompts in two groups, positioned before Requirements. New specs can use the prompts to sharpen their thinking. Nothing breaks for existing specs.
+
+**Open questions** — Should the API fields (`intake_status`, `sub_claims`) be in this spec or split into a follow-up? (Answer: follow-up — keep this spec focused on the template.)
 
 ## Requirements
 
-- [ ] The spec template (`specs/TEMPLATE.md`) includes an "Idea Shaping" section with seven thinking prompts
-- [ ] Four decomposition prompts (Deconstruct, Select, Sequence, Stakes) help the author break the idea apart
-- [ ] Three execution prompts (Context as files, Describe the outcome, Open questions) help the implementer act on it
-- [ ] The section is marked as recommended guidance, not a hard gate — authors can skip or adapt it
-- [ ] The Ideas API data model gains optional `sub_claims` and `intake_status` fields for teams that want structured tracking
-- [ ] `intake_status` values: `raw`, `deconstructed`, `selected`, `sequenced`, `committed` — all optional, default `raw`
-- [ ] Sub-claims support optional `depends_on`, `unblocks`, `value_decay_days`, and `committed_by` fields
-- [ ] `validate_spec_quality.py` does **not** enforce the Idea Shaping section — it remains advisory
+- [ ] The spec template (`specs/TEMPLATE.md`) includes an "Idea Shaping" section before Requirements
+- [ ] Seven thinking prompts in two groups: four for decomposition (Deconstruct, Select, Sequence, Stakes), three for execution (Context to read, Done state, Open questions)
+- [ ] The section is marked as recommended guidance — authors can skip or adapt it
+- [ ] `validate_spec_quality.py` does **not** enforce the section — it remains advisory
 - [ ] Existing specs are unaffected (fully backwards compatible)
 
 ## Research Inputs (Required)
 
-- `2007-01-01` - [The 4-Hour Chef / DiSSS framework (Tim Ferriss)](https://tim.blog/the-4-hour-chef/) - Deconstruction, Selection, Sequencing, Stakes as a meta-learning framework applied to skill acquisition; adapted here for idea-to-spec conversion
+- `2007-01-01` - [The 4-Hour Chef / DiSSS framework (Tim Ferriss)](https://tim.blog/the-4-hour-chef/) - Deconstruction, Selection, Sequencing, Stakes as a meta-learning framework; adapted here for idea-to-spec conversion
 - `2026-03-11` - [Second Brain Substack](https://substack.com/@secondbrain1) - Principle articulation that prompted this spec
-- `2026-03-01` - [Cowork — Ruben Hassid](https://ruben.substack.com/p/claude-cowork) - Context via files not prompts, outcome-driven delegation, force the system to ask questions; adapted here as three execution prompts for spec authoring
+- `2026-03-01` - [Cowork — Ruben Hassid](https://ruben.substack.com/p/claude-cowork) - Context via files not prompts, outcome-driven delegation, force the system to ask questions; adapted as three execution prompts
 
 ## Task Card (Required)
 
 ```yaml
-goal: Add seven-lens idea shaping guidance to the spec template and optional intake fields to the Ideas API
+goal: Add seven-lens idea shaping guidance to the spec template
 files_allowed:
   - specs/TEMPLATE.md
   - specs/116-second-brain-idea-to-spec-process.md
-  - scripts/validate_spec_quality.py
-  - api/app/models/idea.py
-  - api/app/services/idea_service.py
-  - api/app/routers/ideas.py
-  - api/tests/test_ideas.py
 done_when:
-  - TEMPLATE.md contains Idea Shaping section with seven lenses
-  - validate_spec_quality.py unchanged (section is advisory)
-  - Ideas model includes sub_claims and intake_status fields
-  - Existing specs pass validation without Intake section
+  - TEMPLATE.md contains Idea Shaping section with seven prompts before Requirements
+  - Existing specs pass validation unchanged
 commands:
   - python3 scripts/validate_spec_quality.py --file specs/TEMPLATE.md
-  - cd api && pytest -q tests/test_ideas.py
 constraints:
   - Backwards compatible — existing specs must not break
-  - No changes to scoring algorithm
-  - intake_status fields are optional (default: raw)
+  - No changes to validate_spec_quality.py
+  - No API or model changes in this spec
 ```
 
 ## API Contract (if applicable)
 
-### Changes to existing endpoints
-
-#### `GET /api/ideas` — Response additions
-
-Each idea in the `ideas` array gains optional fields:
-
-```json
-{
-  "intake_status": "deconstructed",
-  "sub_claims": [
-    {
-      "claim": "Route registry can be derived from FastAPI app introspection",
-      "potential_value": 40.0,
-      "estimated_cost": 4.0,
-      "confidence": 0.9,
-      "free_energy_score": 9.0,
-      "selected": true,
-      "depends_on": [],
-      "unblocks": ["spec-055"],
-      "value_decay_days": 14,
-      "committed_by": "2026-03-25"
-    }
-  ]
-}
-```
-
-#### `PATCH /api/ideas/{idea_id}` — Body additions
-
-```json
-{
-  "intake_status": "selected",
-  "sub_claims": [...]
-}
-```
-
-- `intake_status`: String (optional) — One of: "raw", "deconstructed", "selected", "sequenced", "committed"
-- `sub_claims`: List (optional) — Atomic decomposition of the idea
+N/A - no API contract changes in this spec. API extensions (`intake_status`, `sub_claims`) are a follow-up.
 
 ## Data Model (if applicable)
 
-```yaml
-IntakeStatus: enum
-  - raw            # Idea captured, not yet decomposed
-  - deconstructed  # Broken into sub-claims
-  - selected       # Top sub-claims chosen (≥80% value coverage)
-  - sequenced      # Dependencies and unblocks declared
-  - committed      # Stakes set, ready for spec authoring
-
-SubClaim:
-  claim: String (min 1 char)
-  potential_value: Float (≥ 0.0)
-  estimated_cost: Float (≥ 0.0)
-  confidence: Float (0.0–1.0)
-  free_energy_score: Float (computed, read-only)
-  selected: Boolean (default: false)
-  depends_on: List[String] (default: [])
-  unblocks: List[String] (default: [])
-  value_decay_days: Integer | null (≥ 1)
-  committed_by: String | null (ISO 8601 date)
-
-Idea (extended):
-  # ... existing fields ...
-  intake_status: IntakeStatus (default: raw)
-  sub_claims: List[SubClaim] (default: [])
-```
+N/A - no model changes in this spec.
 
 ## Files to Create/Modify
 
-- `specs/TEMPLATE.md` — Add `## Idea Shaping` section with seven thinking prompts
+- `specs/TEMPLATE.md` — Add Idea Shaping section with seven thinking prompts, reorder before Requirements
 - `specs/116-second-brain-idea-to-spec-process.md` — This spec
-- `scripts/validate_spec_quality.py` — No changes (section is advisory)
-- `api/app/models/idea.py` — Add `IntakeStatus`, `SubClaim`, and extend `Idea` model
-- `api/app/services/idea_service.py` — Compute `free_energy_score` for sub-claims
-- `api/app/routers/ideas.py` — Accept `intake_status` and `sub_claims` in PATCH
-- `api/tests/test_ideas.py` — Add tests for intake fields and sub-claim scoring
 
 ## Acceptance Tests
 
-- `api/tests/test_ideas.py::test_patch_idea_intake_status` — PATCH updates intake_status
-- `api/tests/test_ideas.py::test_patch_idea_sub_claims_with_scoring` — Sub-claims get computed free_energy_score
-- `api/tests/test_ideas.py::test_list_ideas_includes_intake_fields` — GET /api/ideas returns intake_status and sub_claims
 - Manual validation: `python3 scripts/validate_spec_quality.py --file specs/TEMPLATE.md` passes
-- Manual validation: existing specs without Intake section still pass validation
+- Manual validation: `python3 scripts/validate_spec_quality.py` (all specs) passes without regression
 
 ## Verification
 
 ```bash
-python3 scripts/validate_spec_quality.py --file specs/116-second-brain-idea-to-spec-process.md
 python3 scripts/validate_spec_quality.py --file specs/TEMPLATE.md
-cd api && pytest -q tests/test_ideas.py
+python3 scripts/validate_spec_quality.py --file specs/116-second-brain-idea-to-spec-process.md
 ```
 
 ## Out of Scope
 
-- Automated idea decomposition (AI-assisted breakdown is a follow-up)
-- UI for the intake flow (web pages for DiSSS phases)
-- Enforcing committed_by deadlines (alerting/escalation is a follow-up)
-- Changing the existing free energy scoring formula
-- Retroactive intake annotation of existing ideas
+- API fields for structured intake tracking (`intake_status`, `sub_claims`) — follow-up spec
+- AI-assisted idea deconstruction
+- Web UI for idea shaping flow
+- Enforcement via validator — this is guidance, not a gate
+- Retroactive application to existing specs
 
 ## Risks and Assumptions
 
-- **Risk:** If guidance is too prescriptive, authors skip it entirely; mitigation: keep it to four short prompts, not a form to fill out
-- **Risk:** Sub-claim decomposition quality varies by author; mitigation: seed examples in existing high-priority ideas so the pattern is learned by imitation, not enforcement
-- **Assumption:** The free energy score formula applies equally well at the sub-claim level as at the idea level; if sub-claims have fundamentally different cost structures, the formula may need tuning
+- **Risk:** Authors skip the section because it feels like overhead; mitigation: keep it short (seven one-line prompts), position it early in the template so it's seen before the detailed sections, and seed worked examples in high-priority specs
+- **Assumption:** Guidance that improves thinking quality will be adopted voluntarily without enforcement; if adoption is low after 10+ new specs, reconsider adding a soft validator warning
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task: AI-assisted deconstruction — use LLM to suggest sub-claims from a raw idea description
-- Follow-up task: Decay alerting — notify when an idea's `value_decay_days` threshold is crossed without a spec
-- Follow-up task: Web UI for intake flow — visual pipeline from raw → committed
-- Follow-up task: Sequencing graph visualization — show depends_on/unblocks as a DAG
+- Follow-up task: API extensions — add optional `intake_status` and `sub_claims` fields to the Ideas data model for teams that want structured tracking
+- Follow-up task: Worked examples — fill in Idea Shaping for 3 existing high-priority specs to demonstrate the pattern
 
 ## Failure/Retry Reflection
 
-- Failure mode: Spec authors skip the intake section because it feels like overhead
-- Blind spot: Process adoption requires visible value within the first 2-3 uses
-- Next action: Seed 3 existing high-priority ideas with fully worked intake sections as examples
+- Failure mode: Spec authors treat the section as boilerplate and fill it mechanically
+- Blind spot: The prompts only work if they actually change the author's thinking, not just add text
+- Next action: Review the first 5 specs that use the section — if the answers are generic, simplify or cut prompts that aren't earning their keep
 
 ## Decision Gates (if any)
 

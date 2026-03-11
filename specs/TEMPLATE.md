@@ -4,16 +4,12 @@
 
 [At least 1 sentence, ideally 2-4. Explain why this exists, who benefits, and what failure/cost it prevents.]
 
-## Requirements
-
-- [ ] Requirement 1 (specific and testable)
-- [ ] Requirement 2 (specific and testable)
-- [ ] Requirement 3 (specific and testable)
-
 ## Idea Shaping (recommended)
 
-Use these lenses to stress-test the idea before writing the rest of the spec.
-Skip or adapt freely — the goal is sharper thinking, not paperwork.
+Use these lenses to sharpen the idea before writing requirements.
+Skip or adapt freely — the goal is better thinking, not more paperwork.
+
+### Break it apart
 
 **Deconstruct** — What are the independent pieces inside this idea? Break it down until each piece could ship alone.
 
@@ -23,11 +19,19 @@ Skip or adapt freely — the goal is sharper thinking, not paperwork.
 
 **Stakes** — Why now? What gets harder or more expensive if this waits? Who owns the outcome?
 
-**Context as files** — What existing files, docs, or examples should the implementer read to understand the full picture? List them here instead of explaining everything inline.
+### Make it actionable
 
-**Describe the outcome** — What does "done" look like as a concrete artifact? Describe the finished state, not the steps to get there.
+**Context to read** — What existing files, specs, or prior art should the implementer study first? Point to them instead of re-explaining.
 
-**Open questions** — What don't you know yet? List the questions that, if answered, would change the shape of this spec. Force clarity before implementation.
+**Done state** — What does the finished artifact look like? Describe the end result, not the steps.
+
+**Open questions** — What would change the shape of this spec if answered? List unknowns here to force clarity before implementation.
+
+## Requirements
+
+- [ ] Requirement 1 (specific and testable)
+- [ ] Requirement 2 (specific and testable)
+- [ ] Requirement 3 (specific and testable)
 
 ## Research Inputs (Required)
 
