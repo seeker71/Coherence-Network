@@ -94,6 +94,14 @@ function collectSpecRelations(flowItems: FlowItem[]): Map<string, SpecRelations>
   return map;
 }
 
+function humanizeSource(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return "Unknown";
+  if (normalized === "local") return "This workspace";
+  if (normalized === "api") return "Live API";
+  return value;
+}
+
 async function loadSpecs(): Promise<{ source: string; items: SpecItem[]; registry: SpecRegistryEntry[]; flowItems: FlowItem[] }> {
   const API = getApiBase();
   const [inventoryRes, registryRes, flowRes] = await Promise.all([
@@ -163,11 +171,11 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
 
       <h1 className="text-2xl font-bold">Specs</h1>
       <p className="text-muted-foreground">
-        Spec index with direct links to idea, contributor, process, and implementation relations.
+        Feature plans with direct links to idea context, delivery workflow, and implementation proof.
       </p>
       {specFilter ? (
         <p className="text-sm text-muted-foreground">
-          Filter spec <code>{specFilter}</code> |{" "}
+          Spec filter active |{" "}
           <Link href="/specs" className="underline hover:text-foreground">
             Clear filter
           </Link>
@@ -176,7 +184,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
 
       <section className="rounded border p-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Total discovered specs: {filteredSpecs.length} | source: {source}
+          Total discovered specs: {filteredSpecs.length} | data source: {humanizeSource(source)}
         </p>
         <ul className="space-y-2 text-sm">
           {filteredSpecs.map((s) => {
@@ -186,27 +194,35 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
             return (
               <li key={s.spec_id} className="rounded border p-3 space-y-1">
                 <div className="flex justify-between gap-3">
-                  <Link href={`/specs/${encodeURIComponent(s.spec_id)}`} className="font-medium underline hover:text-foreground">
-                    Spec {s.spec_id}
+                  <Link
+                    href={`/specs/${encodeURIComponent(s.spec_id)}`}
+                    className="font-medium underline hover:text-foreground"
+                    title={`Spec ID: ${s.spec_id}`}
+                  >
+                    {s.title}
                   </Link>
                   <a
                     href={s.api_path ?? `/api/spec-registry/${encodeURIComponent(s.spec_id)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground underline hover:text-foreground"
+                    title={`Spec ID: ${s.spec_id}`}
                   >
-                    {s.api_path ?? `/api/spec-registry/${s.spec_id}`}
+                    Open API
                   </a>
                 </div>
-                <p>{s.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  idea{" "}
+                  Idea{" "}
                   {ideaIds.length > 0
                     ? ideaIds.map((ideaId, idx) => (
                         <span key={`${s.spec_id}-idea-${ideaId}`}>
                           {idx > 0 ? ", " : ""}
-                          <Link href={`/ideas/${encodeURIComponent(ideaId)}`} className="underline hover:text-foreground">
-                            {ideaId}
+                          <Link
+                            href={`/ideas/${encodeURIComponent(ideaId)}`}
+                            className="underline hover:text-foreground"
+                            title={`Idea ID: ${ideaId}`}
+                          >
+                            Idea {idx + 1}
                           </Link>
                         </span>
                       ))
@@ -215,7 +231,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                         missing
                       </Link>
                     )}{" "}
-                  | contributors{" "}
+                  | Contributors{" "}
                   {contributorIds.length > 0
                     ? contributorIds.slice(0, 6).map((contributorId, idx) => (
                         <span key={`${s.spec_id}-contributor-${contributorId}`}>
@@ -223,8 +239,9 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                           <Link
                             href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
                             className="underline hover:text-foreground"
+                            title={`Contributor ID: ${contributorId}`}
                           >
-                            {contributorId}
+                            Contributor {idx + 1}
                           </Link>
                         </span>
                       ))
@@ -251,7 +268,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
 
       <section className="rounded border p-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Registry specs: {filteredRegistry.length} | create/update via{" "}
+          Team-authored specs: {filteredRegistry.length} | create/update via{" "}
           <Link href="/contribute" className="underline hover:text-foreground">
             Contribution Console
           </Link>
@@ -260,12 +277,15 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
           {filteredRegistry.map((s) => (
             <li key={s.spec_id} className="rounded border p-3 space-y-1">
               <div className="flex justify-between gap-3">
-                <Link href={`/specs/${encodeURIComponent(s.spec_id)}`} className="font-medium underline hover:text-foreground">
-                  Spec {s.spec_id}
+                <Link
+                  href={`/specs/${encodeURIComponent(s.spec_id)}`}
+                  className="font-medium underline hover:text-foreground"
+                  title={`Spec ID: ${s.spec_id}`}
+                >
+                  {s.title}
                 </Link>
                 <span className="text-muted-foreground">updated {s.updated_at}</span>
               </div>
-              <p>{s.title}</p>
               <p className="text-muted-foreground">{s.summary}</p>
               <p className="text-xs text-muted-foreground">
                 value potential {s.potential_value.toFixed(2)} | value actual {s.actual_value.toFixed(2)} | value_gap{" "}
@@ -273,36 +293,42 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                 {s.cost_gap.toFixed(2)} | roi est {s.estimated_roi.toFixed(2)} | roi actual {s.actual_roi.toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                idea{" "}
+                Idea{" "}
                 {s.idea_id ? (
-                  <Link href={`/ideas/${encodeURIComponent(s.idea_id)}`} className="underline hover:text-foreground">
-                    {s.idea_id}
+                  <Link
+                    href={`/ideas/${encodeURIComponent(s.idea_id)}`}
+                    className="underline hover:text-foreground"
+                    title={`Idea ID: ${s.idea_id}`}
+                  >
+                    Open idea
                   </Link>
                 ) : (
                   <Link href="/ideas" className="underline hover:text-foreground">
                     missing
                   </Link>
                 )}{" "}
-                | created_by{" "}
+                | Created by{" "}
                 {s.created_by_contributor_id ? (
                   <Link
                     href={`/contributors?contributor_id=${encodeURIComponent(s.created_by_contributor_id)}`}
                     className="underline hover:text-foreground"
+                    title={`Contributor ID: ${s.created_by_contributor_id}`}
                   >
-                    {s.created_by_contributor_id}
+                    Contributor profile
                   </Link>
                 ) : (
                   <Link href="/contributors" className="underline hover:text-foreground">
                     missing
                   </Link>
                 )}{" "}
-                | updated_by{" "}
+                | Updated by{" "}
                 {s.updated_by_contributor_id ? (
                   <Link
                     href={`/contributors?contributor_id=${encodeURIComponent(s.updated_by_contributor_id)}`}
                     className="underline hover:text-foreground"
+                    title={`Contributor ID: ${s.updated_by_contributor_id}`}
                   >
-                    {s.updated_by_contributor_id}
+                    Contributor profile
                   </Link>
                 ) : (
                   <Link href="/contributors" className="underline hover:text-foreground">
@@ -325,7 +351,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
             </li>
           ))}
           {filteredRegistry.length === 0 && (
-            <li className="text-muted-foreground">No contributor-authored registry specs match current filter.</li>
+            <li className="text-muted-foreground">No contributor-authored specs match current filter.</li>
           )}
         </ul>
       </section>

@@ -19,6 +19,7 @@ WEB_STARTED=0
 START_SERVERS=0
 AUTO_HEAL=0
 SHOW_PORTS=0
+DB_URL="${DB_URL:-${DATABASE_URL:-sqlite+pysqlite:///${ROOT_DIR}/.cache/local-instance/coherence_local.db}}"
 
 THREAD_RUNTIME_HELPER="${ROOT_DIR}/scripts/thread_runtime_ports.sh"
 if [[ -f "${THREAD_RUNTIME_HELPER}" ]]; then
@@ -202,6 +203,9 @@ configure_ports() {
     API_BASE="http://127.0.0.1:${API_PORT}"
     WEB_BASE="http://127.0.0.1:${WEB_PORT}"
   fi
+  API_URL="${API_BASE}"
+  NEXT_PUBLIC_API_URL="${API_BASE}"
+  DATABASE_URL="${DB_URL}"
 }
 
 maybe_dump_thread_ports() {
@@ -230,9 +234,15 @@ start_api_if_needed() {
   fi
 
   echo "Starting API on ${API_BASE} with ${python_bin}"
+  mkdir -p "${ROOT_DIR}/.cache/local-instance"
   (
     cd "${API_DIR}"
-    AGENT_TASKS_PERSIST=0 RUNTIME_TELEMETRY_ENABLED=0 "${python_bin}" -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}"
+    AGENT_TASKS_PERSIST=0 \
+    RUNTIME_TELEMETRY_ENABLED=0 \
+    API_URL="${API_URL}" \
+    DATABASE_URL="${DATABASE_URL}" \
+    DB_URL="${DB_URL}" \
+    "${python_bin}" -m uvicorn app.main:app --host 127.0.0.1 --port "${API_PORT}"
   ) >"${API_LOG}" 2>&1 &
   API_PID=$!
   API_STARTED=1
@@ -265,10 +275,10 @@ start_web_if_needed() {
   fi
 
   echo "Building web app..."
-  NEXT_PUBLIC_API_URL="${API_BASE}" npm run build
+  NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" API_URL="${API_URL}" npm run build
   (
     cd "${WEB_DIR}"
-    NEXT_PUBLIC_API_URL="${API_BASE}" npm run start -- --hostname 127.0.0.1 --port "${WEB_PORT}"
+    NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" API_URL="${API_URL}" npm run start -- --hostname 127.0.0.1 --port "${WEB_PORT}"
   ) >"${WEB_LOG}" 2>&1 &
   WEB_PID=$!
   WEB_STARTED=1
@@ -335,6 +345,8 @@ maybe_dump_thread_ports
 echo "Using repo root: ${ROOT_DIR}"
 echo "Using API base: ${API_BASE}"
 echo "Using web base: ${WEB_BASE}"
+echo "Using API_URL: ${API_URL}"
+echo "Using DB_URL: ${DB_URL}"
 if [[ -n "${THREAD_RUNTIME_KEY:-}" ]]; then
   echo "Thread runtime key: ${THREAD_RUNTIME_KEY}"
 fi

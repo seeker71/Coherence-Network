@@ -12,7 +12,7 @@ from nacl.signing import SigningKey
 
 from app.main import app
 from app.models.runtime import IdeaRuntimeSummary, RuntimeEvent, WebViewPerformanceReport, WebViewPerformanceRow
-from app.services import runtime_service
+from app.services import mvp_baseline_service, runtime_service
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -80,6 +80,61 @@ async def test_runtime_event_ingest_and_summary(tmp_path, monkeypatch: pytest.Mo
         assert data["window_seconds"] == 3600
         assert isinstance(data["ideas"], list)
         assert any(item["idea_id"] == "oss-interface-alignment" for item in data["ideas"])
+
+
+@pytest.mark.asyncio
+async def test_runtime_mvp_local_baselines_endpoint_returns_runs(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    system_audit = tmp_path / "docs" / "system_audit"
+    system_audit.mkdir(parents=True, exist_ok=True)
+    (system_audit / "mvp_acceptance_2026-03-10_sample.json").write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-03-10T22:15:25Z",
+                "run_id": "sample",
+                "branch": "codex/sample",
+                "origin_main_sha": "abc123",
+                "validation_scope": "local_only",
+                "result": "pass",
+                "checks": {"api": {"health": 200}, "web": {"root": 200}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mvp_baseline_service, "_repo_root", lambda: tmp_path)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/runtime/mvp/local-baselines", params={"limit": 5})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["count"] == 1
+        assert payload["runs"][0]["run_id"] == "sample"
+        assert payload["runs"][0]["result"] == "pass"
+
+
+@pytest.mark.asyncio
+async def test_runtime_mvp_local_baselines_endpoint_sorts_by_generated_at(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    system_audit = tmp_path / "docs" / "system_audit"
+    system_audit.mkdir(parents=True, exist_ok=True)
+    (system_audit / "mvp_acceptance_old.json").write_text(
+        json.dumps({"generated_at_utc": "2026-03-10T10:00:00Z", "run_id": "old", "checks": {"api": {}, "web": {}}}),
+        encoding="utf-8",
+    )
+    (system_audit / "mvp_acceptance_new.json").write_text(
+        json.dumps({"generated_at_utc": "2026-03-10T12:00:00Z", "run_id": "new", "checks": {"api": {}, "web": {}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mvp_baseline_service, "_repo_root", lambda: tmp_path)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/runtime/mvp/local-baselines", params={"limit": 2})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["runs"][0]["run_id"] == "new"
+        assert payload["runs"][1]["run_id"] == "old"
 
 
 @pytest.mark.asyncio
