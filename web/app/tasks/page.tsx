@@ -214,10 +214,10 @@ function TasksPageContent() {
         <section className="space-y-1 px-1">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tasks In Motion</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Human interface for <code>GET /api/agent/tasks</code> with live execution proof and runtime evidence.
+            Track work in progress, completed outcomes, and supporting evidence in one place.
           </p>
-          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            {statusFilter || typeFilter || taskIdFilter ? "Filtered task stream." : "All active and historical tasks."}
+          <p className="text-xs text-muted-foreground">
+            {statusFilter || typeFilter || taskIdFilter ? "Showing filtered tasks." : "Showing active and historical tasks."}
           </p>
         </section>
 

@@ -282,6 +282,7 @@ export default function PageContextLinks() {
       (item) => item.href !== pathname
     )
   );
+  const relatedMobile = related.slice(0, 6);
 
   const machine = [...base.machinePaths];
   if (key === "/ideas/[idea_id]" && dynamicIdeaId) {
@@ -318,17 +319,25 @@ export default function PageContextLinks() {
           <div className="flex-1" />
           <details className="relative">
             <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
-              Navigate
+              <span className="sm:hidden">Quick links</span>
+              <span className="hidden sm:inline">Navigate</span>
             </summary>
             <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
-              {related.map((item) => (
-                <Link key={`rel-${item.href}`} href={item.href} className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
+              {related.map((item, idx) => (
+                <Link
+                  key={`rel-${item.href}`}
+                  href={item.href}
+                  className={`block rounded px-2 py-1.5 text-sm hover:bg-accent ${idx < relatedMobile.length ? "" : "hidden sm:block"}`}
+                >
                   {item.label}
                 </Link>
               ))}
+              <p className="mt-1 px-2 text-[11px] text-muted-foreground sm:hidden">
+                Open the full menu in the header for all pages.
+              </p>
             </div>
           </details>
-          <details className="relative">
+          <details className="relative hidden sm:block">
             <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
               Data links
             </summary>

@@ -65,12 +65,16 @@ export function TasksListSection({
         </div>
       ) : null}
       <ul className="space-y-2 text-sm">
-        {filteredRows.map((t) => (
+        {filteredRows.map((t, index) => (
           <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-1">
             <div className="flex justify-between gap-3">
               <span className="font-medium">
-                <Link href={`/tasks?task_id=${encodeURIComponent(t.id)}`} className="underline hover:text-foreground">
-                  {t.id}
+                <Link
+                  href={`/tasks?task_id=${encodeURIComponent(t.id)}`}
+                  className="underline hover:text-foreground"
+                  title={`Task ID: ${t.id}`}
+                >
+                  Task {pageStart + index}
                 </Link>
               </span>
               <span className="text-muted-foreground text-right">
@@ -86,6 +90,22 @@ export function TasksListSection({
             <div className="text-muted-foreground">{t.direction}</div>
           </li>
         ))}
+        {filteredRows.length === 0 ? (
+          <li className="rounded-lg border border-dashed border-border/70 bg-background/45 p-4 space-y-2">
+            <p className="text-muted-foreground">No tasks yet in this view.</p>
+            <p className="text-muted-foreground">
+              Start from an idea and create execution work, then return here to track progress.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/ideas" className="underline hover:text-foreground">
+                Browse ideas
+              </Link>
+              <Link href="/contribute" className="underline hover:text-foreground">
+                Open contribution console
+              </Link>
+            </div>
+          </li>
+        ) : null}
       </ul>
     </section>
   );
