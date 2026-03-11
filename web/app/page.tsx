@@ -80,6 +80,7 @@ const LANDING_PATHS: Array<{
     title: "Start Exploring",
     description: "Understand where value and uncertainty are concentrated before picking work.",
     links: [
+      { href: "/today", label: "Today's priorities" },
       { href: "/demo", label: "MVP demo path" },
       { href: "/ideas", label: "High-upside ideas" },
       { href: "/search", label: "Project search" },
