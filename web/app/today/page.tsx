@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import TodayTopIdeaQuickLaunch from "@/components/today/TodayTopIdeaQuickLaunch";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 import { formatConfidence, formatCount, formatUsd, humanizeStatus } from "@/lib/humanize";
@@ -193,6 +194,10 @@ export default async function TodayPrioritiesPage() {
             {mainNextAction.cta}
           </Link>
         </section>
+
+        {topIdea ? (
+          <TodayTopIdeaQuickLaunch ideaId={topIdea.id} ideaName={topIdea.name} />
+        ) : null}
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <article className="rounded-xl border p-4 space-y-3">
