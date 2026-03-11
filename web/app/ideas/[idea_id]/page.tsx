@@ -8,6 +8,7 @@ import {
 } from "@/lib/egress";
 import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
 import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
+import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
@@ -264,6 +265,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         initialActualCost={idea.actual_cost}
         initialConfidence={idea.confidence}
         initialManifestationStatus={idea.manifestation_status as "none" | "partial" | "validated"}
+      />
+
+      <IdeaTaskQuickCreate
+        ideaId={idea.id}
+        ideaName={idea.name}
+        unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
       />
 
       {flowResult.details ? (

@@ -173,6 +173,7 @@ export default async function DemoMvpPage() {
             <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
               <li>Open Ideas and choose one high-upside item.</li>
               <li>Update actual value/cost and confidence on the idea detail page.</li>
+              <li>Create the next task from the idea detail page to start execution.</li>
               <li>Open Flow and confirm spec/process/implementation visibility.</li>
               <li>Open Tasks and confirm active/completed work is visible.</li>
               <li>Capture one screenshot set for desktop and mobile readiness review.</li>
