@@ -1,0 +1,77 @@
+{
+  "date": "2026-03-11",
+  "thread_branch": "codex/tasks-human-idea-context-20260311",
+  "commit_scope": "Improve Tasks page human readability by showing linked idea names in task rows and evidence trail instead of raw IDs in primary text.",
+  "files_owned": [
+    "web/app/tasks/types.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "web/app/tasks/EvidenceTrail.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_tasks-human-idea-context.json"
+  ],
+  "change_files": [
+    "web/app/tasks/types.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "web/app/tasks/EvidenceTrail.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_tasks-human-idea-context.json"
+  ],
+  "idea_ids": [
+    "demo-community-climate-marketplace"
+  ],
+  "spec_ids": [
+    "012-landing-page-contributor-onboarding-highlights"
+  ],
+  "task_ids": [
+    "task-2026-03-11-tasks-human-idea-context"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "npm --prefix web run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-11_tasks-human-idea-context.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "npm --prefix web run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-11_tasks-human-idea-context.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Tasks now show human-readable linked idea names in both list and evidence views, with idea IDs moved to link metadata/tooltips.",
+    "public_endpoints": [
+      "http://127.0.0.1:3100/tasks"
+    ],
+    "test_flows": [
+      "Open /tasks and verify rows with linked idea context display idea name plus quick links to idea and flow.",
+      "Open /tasks?task_id=<id> and verify linked idea list uses names rather than raw IDs in primary text.",
+      "Confirm idea IDs remain available via link tooltip/title, not primary copy."
+    ]
+  }
+}
