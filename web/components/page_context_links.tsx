@@ -17,6 +17,7 @@ type ContextDef = {
 };
 
 const SHARED_RELATED: LinkItem[] = [
+  { href: "/demo", label: "Demo" },
   { href: "/search", label: "Search" },
   { href: "/ideas", label: "Ideas" },
   { href: "/flow", label: "Flow" },
@@ -64,6 +65,15 @@ const CONTEXTS: Record<string, ContextDef> = {
     machinePaths: [
       { href: "/api/ideas", label: "Ideas API" },
       { href: "/api/inventory/system-lineage", label: "System lineage" },
+    ],
+  },
+  "/demo": {
+    ideaId: "portfolio-governance",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/ideas", label: "Ideas API" },
+      { href: "/api/inventory/flow?runtime_window_seconds=86400", label: "Flow inventory API" },
+      { href: "/api/agent/tasks?limit=200", label: "Tasks API" },
     ],
   },
   "/ideas/[idea_id]": {
