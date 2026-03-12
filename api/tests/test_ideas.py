@@ -368,6 +368,49 @@ async def test_required_federation_idea_is_backfilled_for_existing_portfolio(
 
 
 @pytest.mark.asyncio
+async def test_required_demo_idea_is_backfilled_for_existing_portfolio(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio_path = tmp_path / "idea_portfolio.json"
+    portfolio_path.write_text(
+        json.dumps(
+            {
+                "ideas": [
+                    {
+                        "id": "custom-local-only",
+                        "name": "Custom local idea",
+                        "description": "Existing portfolio should keep custom ideas while demo seed ideas are backfilled.",
+                        "potential_value": 18.0,
+                        "actual_value": 0.0,
+                        "estimated_cost": 5.0,
+                        "actual_cost": 0.0,
+                        "resistance_risk": 1.0,
+                        "confidence": 0.55,
+                        "manifestation_status": "none",
+                        "interfaces": ["machine:api"],
+                        "open_questions": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        listed = await client.get("/api/ideas")
+        assert listed.status_code == 200
+        ideas = listed.json()["ideas"]
+        by_id = {row["id"]: row for row in ideas}
+        assert "custom-local-only" in by_id
+        assert "community-project-funder-match" in by_id
+        demo_idea = by_id["community-project-funder-match"]
+        assert demo_idea["manifestation_status"] == "partial"
+        assert demo_idea["potential_value"] >= 70.0
+        assert any("funder" in q["question"].lower() for q in demo_idea["open_questions"])
+
+
+@pytest.mark.asyncio
 async def test_ideas_cards_endpoint_returns_paginated_card_feed(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
