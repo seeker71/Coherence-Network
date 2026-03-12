@@ -16,11 +16,11 @@ type TaskQuickUpdateProps = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 const STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
-  { value: "running", label: "Running" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "needs_decision", label: "Needs decision" },
+  { value: "pending", label: "Ready to start" },
+  { value: "running", label: "In progress" },
+  { value: "completed", label: "Finished" },
+  { value: "failed", label: "Blocked" },
+  { value: "needs_decision", label: "Waiting for your decision" },
 ];
 
 export function TaskQuickUpdate({
@@ -77,38 +77,38 @@ export function TaskQuickUpdate({
 
   async function quickSet(nextStatus: string): Promise<void> {
     if (nextStatus === "completed" && !output.trim()) {
-      setOutput("Completed and reviewed in Tasks In Motion.");
+      setOutput("The work is finished and ready for the next follow-up.");
     }
     if (nextStatus === "running" && !currentStep.trim()) {
-      setCurrentStep("Actively progressing this task.");
+      setCurrentStep("Someone is actively moving this forward.");
     }
     if (nextStatus === "failed" && !output.trim()) {
-      setOutput("Blocked or failed; follow-up decision required.");
+      setOutput("This work is blocked and needs a follow-up decision.");
     }
     await save(nextStatus);
   }
 
   return (
     <div className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-3">
-      <h3 className="font-medium">Update Task Status</h3>
+      <h3 className="font-medium">Update This Work Card</h3>
       <p className="text-muted-foreground">
-        Keep task progress current without leaving this page.
+        Keep the status, current step, and outcome note up to date without leaving this page.
       </p>
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => void quickSet("running")} disabled={saveState === "saving"}>
-          Mark running
+          Mark in progress
         </Button>
         <Button type="button" variant="outline" onClick={() => void quickSet("completed")} disabled={saveState === "saving"}>
-          Mark completed
+          Mark finished
         </Button>
         <Button type="button" variant="outline" onClick={() => void quickSet("failed")} disabled={saveState === "saving"}>
-          Mark failed
+          Mark blocked
         </Button>
       </div>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">Status</span>
+        <span className="text-muted-foreground">Current state</span>
         <select
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           value={status}
@@ -127,7 +127,7 @@ export function TaskQuickUpdate({
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">Current step</span>
+        <span className="text-muted-foreground">What is happening now</span>
         <Input
           value={currentStep}
           onChange={(event) => {
@@ -135,7 +135,7 @@ export function TaskQuickUpdate({
             setSaveState("idle");
             setErrorMsg("");
           }}
-          placeholder="What is happening now"
+          placeholder="Example: drafting the short summary for the next review"
         />
       </label>
 
@@ -149,7 +149,7 @@ export function TaskQuickUpdate({
             setSaveState("idle");
             setErrorMsg("");
           }}
-          placeholder="Write a short human-readable update"
+          placeholder="Write a short update another person can understand quickly"
         />
       </label>
 
@@ -157,7 +157,7 @@ export function TaskQuickUpdate({
         <Button type="button" onClick={() => void save()} disabled={saveState === "saving"}>
           {saveState === "saving" ? "Saving..." : "Save update"}
         </Button>
-        {saveState === "saved" ? <span className="text-sm text-green-700">Updated</span> : null}
+        {saveState === "saved" ? <span className="text-sm text-green-700">Saved</span> : null}
         {saveState === "error" ? <span className="text-sm text-destructive">Update failed: {errorMsg}</span> : null}
       </div>
     </div>

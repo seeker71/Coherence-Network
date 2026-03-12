@@ -3,7 +3,14 @@
 import Link from "next/link";
 import type { AgentTask, EvidenceEventRow, EvidenceIdeaRow } from "./types";
 import { TaskQuickUpdate } from "./TaskQuickUpdate";
-import { formatTime, tailLines, toInt } from "./utils";
+import {
+  describeTaskStatus,
+  formatTime,
+  humanizeTaskStatus,
+  humanizeTaskType,
+  tailLines,
+  toInt,
+} from "./utils";
 
 type EvidenceTrailProps = {
   taskIdFilter: string;
@@ -24,6 +31,24 @@ type EvidenceTrailProps = {
   onTaskUpdated: () => Promise<void> | void;
 };
 
+function latestActivitySummary(events: EvidenceEventRow[]): string {
+  const latest = events[0];
+  if (!latest) return "No recent activity is visible for this work card yet.";
+  if (latest.finalStatus) {
+    return `Latest recorded result: ${humanizeTaskStatus(latest.finalStatus)}.`;
+  }
+  if (latest.trackingKind === "agent_tool_call") {
+    return `Latest recorded update happened at ${formatTime(latest.recordedAt)}.`;
+  }
+  return `Latest recorded update happened at ${formatTime(latest.recordedAt)}.`;
+}
+
+function reviewSummary(acceptanceProof: EvidenceTrailProps["acceptanceProof"]): string {
+  if (acceptanceProof.reviewAccepted === true) return "Recent review passed.";
+  if (acceptanceProof.reviewAccepted === false) return "Recent review did not pass yet.";
+  return "No review result is recorded yet.";
+}
+
 export function EvidenceTrail({
   taskIdFilter,
   selectedTask,
@@ -41,18 +66,26 @@ export function EvidenceTrail({
   const lastFailure = String(selectedContext.last_failure_output || "").trim();
 
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3 text-sm">
-      <h2 className="font-semibold">Evidence Trail</h2>
+    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-4 text-sm">
+      <h2 className="font-semibold">Work Details</h2>
       {selectedTask ? (
         <>
-          <p className="text-muted-foreground">
-            status <code>{selectedTask.status}</code> | task_type <code>{selectedTask.task_type}</code> | model{" "}
-            <code>{selectedTask.model || "-"}</code>
-          </p>
-          <p className="text-muted-foreground">
-            created {formatTime(selectedTask.created_at)} | updated {formatTime(selectedTask.updated_at)} | claimed_by{" "}
-            <code>{selectedTask.claimed_by || "-"}</code>
-          </p>
+          <div className="space-y-1">
+            <p className="font-medium">
+              {humanizeTaskType(selectedTask.task_type)} | {humanizeTaskStatus(selectedTask.status)}
+            </p>
+            <p className="text-muted-foreground">{describeTaskStatus(selectedTask.status)}</p>
+            <p className="text-muted-foreground">
+              Started {formatTime(selectedTask.created_at)} | Last updated {formatTime(selectedTask.updated_at)}
+            </p>
+            {selectedTask.current_step ? (
+              <p className="text-muted-foreground">What is happening now: {selectedTask.current_step}</p>
+            ) : null}
+            {selectedTask.output ? (
+              <p className="text-muted-foreground">Latest outcome note: {selectedTask.output}</p>
+            ) : null}
+          </div>
+
           <TaskQuickUpdate
             taskId={taskIdFilter}
             initialStatus={selectedTask.status || "pending"}
@@ -60,69 +93,29 @@ export function EvidenceTrail({
             initialOutput={selectedTask.output || ""}
             onUpdated={onTaskUpdated}
           />
-          {selectedTask.current_step ? (
-            <p className="text-muted-foreground">
-              current_step <code>{selectedTask.current_step}</code>
-            </p>
-          ) : null}
-          {Array.isArray(selectedContext.runner_recent_activity) &&
-          selectedContext.runner_recent_activity.length > 0 ? (
-            <div className="space-y-1">
-              <p className="text-muted-foreground">recent activity</p>
-              <ul className="list-disc list-inside text-muted-foreground">
-                {(selectedContext.runner_recent_activity as { step?: string }[]).map((a, i) => (
-                  <li key={i}>{a.step ?? "—"}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div>
-            <p className="text-muted-foreground mb-1">output</p>
-            <pre className="rounded bg-muted/40 p-2 overflow-auto whitespace-pre-wrap break-words">
-              {selectedTask.output || "(empty)"}
-            </pre>
-          </div>
 
-          <div className="space-y-1">
-            <p className="text-muted-foreground">retry/failure telemetry</p>
-            <p>
-              failure_hits <code>{failureHits ?? "-"}</code> | retry_count <code>{retryCount ?? "-"}</code>
-            </p>
-            {lastFailure ? (
-              <p className="text-muted-foreground">
-                last_failure_output <code>{lastFailure}</code>
-              </p>
-            ) : null}
-            {retryHint ? (
-              <p className="text-muted-foreground">
-                retry_hint <code>{retryHint}</code>
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-muted-foreground">linked ideas</p>
+          <div className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-2">
+            <p className="font-medium">What Connects To This Work</p>
             {evidenceIdeas.length === 0 ? (
-              <p className="text-muted-foreground">No idea linkage found for this task.</p>
+              <p className="text-muted-foreground">This work card is not linked to an idea yet.</p>
             ) : (
               <ul className="space-y-1">
                 {evidenceIdeas.map((row) => (
-                  <li key={row.ideaId}>
+                  <li key={row.ideaId} className="text-muted-foreground">
                     <Link
                       href={`/ideas/${encodeURIComponent(row.ideaId)}`}
                       className="underline hover:text-foreground"
                       title={`Idea ID: ${row.ideaId}`}
                     >
                       {row.ideaName || "Linked idea"}
-                    </Link>{" "}
-                    <span className="text-muted-foreground">({row.source})</span>{" "}
-                    |{" "}
+                    </Link>
+                    {" "}|{" "}
                     <Link
                       href={`/flow?idea_id=${encodeURIComponent(row.ideaId)}`}
                       className="underline hover:text-foreground"
                       title={`Idea ID: ${row.ideaId}`}
                     >
-                      flow
+                      Open progress
                     </Link>
                   </li>
                 ))}
@@ -130,70 +123,78 @@ export function EvidenceTrail({
             )}
           </div>
 
-          <div className="space-y-1">
-            <p className="text-muted-foreground">runtime events for this task</p>
+          <div className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-2">
+            <p className="font-medium">What The System Has Seen</p>
+            <p className="text-muted-foreground">{latestActivitySummary(evidenceEvents)}</p>
+            <p className="text-muted-foreground">{reviewSummary(acceptanceProof)}</p>
             {selectedTaskEventsWarning ? (
+              <p className="text-muted-foreground">Detailed activity is unavailable right now.</p>
+            ) : null}
+            {failureHits || retryCount ? (
               <p className="text-muted-foreground">
-                runtime events unavailable: <code>{selectedTaskEventsWarning}</code>
+                This work has hit {failureHits || 0} recent failure signal{failureHits === 1 ? "" : "s"} and {retryCount || 0} retr{retryCount === 1 ? "y" : "ies"}.
               </p>
             ) : null}
-            {evidenceEvents.length === 0 ? (
-              <p className="text-muted-foreground">No runtime events found.</p>
-            ) : (
-              <ul className="space-y-1">
-                {evidenceEvents.slice(0, 20).map((row) => (
-                  <li key={row.id}>
-                    <code>{row.id}</code> | {formatTime(row.recordedAt)} | <code>{row.endpoint}</code> | status{" "}
-                    <code>{row.statusCode}</code>
-                    {row.trackingKind ? (
-                      <>
-                        {" "}
-                        | kind <code>{row.trackingKind}</code>
-                      </>
-                    ) : null}
-                    {row.finalStatus ? (
-                      <>
-                        {" "}
-                        | final <code>{row.finalStatus}</code>
-                      </>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {lastFailure ? <p className="text-muted-foreground">Latest blocker note: {lastFailure}</p> : null}
+            {retryHint ? <p className="text-muted-foreground">Suggested retry note: {retryHint}</p> : null}
           </div>
 
-          <div className="space-y-1">
-            <p className="text-muted-foreground">MVP acceptance proof</p>
-            <p>
-              review_pass_fail <code>{acceptanceProof.reviewPassFail || "-"}</code> | review_accepted{" "}
-              <code>
-                {acceptanceProof.reviewAccepted === null
-                  ? "-"
-                  : acceptanceProof.reviewAccepted
-                    ? "true"
-                    : "false"}
-              </code>
-            </p>
-            <p className="text-muted-foreground">
-              verified_assertions <code>{acceptanceProof.verifiedAssertions || "-"}</code>
-            </p>
-            <p className="text-muted-foreground">
-              infrastructure_cost_usd <code>{acceptanceProof.infrastructureCostUsd.toFixed(6)}</code> | external_provider_cost_usd{" "}
-              <code>{acceptanceProof.externalProviderCostUsd.toFixed(6)}</code> | total_cost_usd{" "}
-              <code>{acceptanceProof.totalCostUsd.toFixed(6)}</code>
-            </p>
-          </div>
-
-          <div>
-            <p className="text-muted-foreground mb-1">task log tail (proof)</p>
-            <pre className="rounded bg-muted/40 p-2 overflow-auto whitespace-pre-wrap break-words">
-              {selectedTaskLog ? tailLines(selectedTaskLog, 40) : "(task log unavailable)"}
-            </pre>
-          </div>
+          <details className="rounded-lg border border-border/70 bg-background/35 p-3">
+            <summary className="cursor-pointer font-medium">Behind the scenes</summary>
+            <div className="mt-3 space-y-3 text-muted-foreground">
+              <p>
+                Internal state <code>{selectedTask.status}</code> | work type <code>{selectedTask.task_type}</code> | model <code>{selectedTask.model || "-"}</code>
+              </p>
+              <p>
+                claimed_by <code>{selectedTask.claimed_by || "-"}</code> | task id <code>{taskIdFilter}</code>
+              </p>
+              <div>
+                <p className="mb-1">Runtime events</p>
+                {evidenceEvents.length === 0 ? (
+                  <p>No runtime events found.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {evidenceEvents.slice(0, 20).map((row) => (
+                      <li key={row.id}>
+                        <code>{row.id}</code> | {formatTime(row.recordedAt)} | <code>{row.endpoint}</code> | status <code>{row.statusCode}</code>
+                        {row.trackingKind ? <> | kind <code>{row.trackingKind}</code></> : null}
+                        {row.finalStatus ? <> | final <code>{row.finalStatus}</code></> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="mb-1">Review and cost record</p>
+                <p>
+                  review_pass_fail <code>{acceptanceProof.reviewPassFail || "-"}</code> | review_accepted{" "}
+                  <code>
+                    {acceptanceProof.reviewAccepted === null
+                      ? "-"
+                      : acceptanceProof.reviewAccepted
+                        ? "true"
+                        : "false"}
+                  </code>
+                </p>
+                <p>
+                  verified_assertions <code>{acceptanceProof.verifiedAssertions || "-"}</code>
+                </p>
+                <p>
+                  infrastructure_cost_usd <code>{acceptanceProof.infrastructureCostUsd.toFixed(6)}</code> | external_provider_cost_usd{" "}
+                  <code>{acceptanceProof.externalProviderCostUsd.toFixed(6)}</code> | total_cost_usd <code>{acceptanceProof.totalCostUsd.toFixed(6)}</code>
+                </p>
+              </div>
+              <div>
+                <p className="mb-1">Task log tail</p>
+                <pre className="rounded bg-muted/40 p-2 overflow-auto whitespace-pre-wrap break-words">
+                  {selectedTaskLog ? tailLines(selectedTaskLog, 40) : "(task log unavailable)"}
+                </pre>
+              </div>
+            </div>
+          </details>
         </>
       ) : (
-        <p className="text-muted-foreground">Task details unavailable for <code>{taskIdFilter}</code>.</p>
+        <p className="text-muted-foreground">The selected work card could not be loaded right now.</p>
       )}
     </section>
   );
