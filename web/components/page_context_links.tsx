@@ -12,6 +12,7 @@ type LinkItem = {
 
 type ContextDef = {
   ideaId: string;
+  focusLabel?: string;
   related: LinkItem[];
   machinePaths: LinkItem[];
 };
@@ -165,6 +166,7 @@ const CONTEXTS: Record<string, ContextDef> = {
   },
   "/tasks": {
     ideaId: "coherence-network-agent-pipeline",
+    focusLabel: "work planning and follow-through",
     related: SHARED_RELATED,
     machinePaths: [
       { href: "/api/agent/tasks", label: "Tasks API" },
@@ -322,7 +324,7 @@ export default function PageContextLinks() {
   }
 
   const machineLinks = dedupe(machine);
-  const focusLabel = ideaId.replace(/[-_]/g, " ");
+  const focusLabel = base.focusLabel || ideaId.replace(/[-_]/g, " ");
 
   return (
     <section className="border-b border-border/70 bg-background/55">
