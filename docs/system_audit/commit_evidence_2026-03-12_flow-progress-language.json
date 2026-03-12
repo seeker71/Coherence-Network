@@ -1,0 +1,95 @@
+{
+  "date": "2026-03-12",
+  "thread_branch": "codex/humanize-flow-page-20260312",
+  "commit_scope": "Rewrite the MVP progress page in plain language so a first-time user can understand what is planned, moving, blocked, and proven without reading internal inventory jargon.",
+  "files_owned": [
+    "web/app/flow/FlowItemCard.tsx",
+    "web/app/flow/FlowSummaryCards.tsx",
+    "web/app/flow/FlowTopContributors.tsx",
+    "web/app/flow/FlowUnblockQueue.tsx",
+    "web/app/flow/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_flow-progress-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "web/app/flow/FlowItemCard.tsx",
+    "web/app/flow/FlowSummaryCards.tsx",
+    "web/app/flow/FlowTopContributors.tsx",
+    "web/app/flow/FlowUnblockQueue.tsx",
+    "web/app/flow/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_flow-progress-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment",
+    "federated-instance-aggregation"
+  ],
+  "spec_ids": [
+    "076-ui-alignment-overhaul"
+  ],
+  "task_ids": [
+    "task-2026-03-12-flow-progress-language"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "ux_review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make prompt-gate",
+    "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+    "http://127.0.0.1:3102/flow",
+    "/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/playwright-mcp-output/1773302145236/page-2026-03-12T09-06-59-770Z.png",
+    "/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/playwright-mcp-output/1773302145236/page-2026-03-12T09-07-08-969Z.png",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_flow-progress-language.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_flow-progress-language.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The progress page now explains plans, work, blockers, and proof in plain language, humanizes slug-like idea names, and keeps machine identifiers in links instead of visible copy.",
+    "public_endpoints": [
+      "http://127.0.0.1:3102/flow"
+    ],
+    "test_flows": [
+      "Open /flow on desktop and confirm the hero, summary cards, unblock list, and idea cards read like a human progress summary rather than an inventory table.",
+      "Open /flow on mobile and confirm the same key information remains visible and readable without horizontal scrolling.",
+      "Confirm slug-like idea names are humanized on the visible page and that blocker suggestions are short plain-language actions."
+    ]
+  }
+}
