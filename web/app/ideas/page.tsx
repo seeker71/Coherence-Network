@@ -115,7 +115,7 @@ export default async function IdeasPage() {
               </div>
               <p className="text-sm">{idea.description}</p>
               <p className="text-sm text-muted-foreground">
-                Possible value {formatUsd(idea.potential_value)} | Value still available {formatUsd(idea.value_gap)} | Likely effort{" "}
+                Total possible value {formatUsd(idea.potential_value)} | Value still available {formatUsd(idea.value_gap)} | Expected work size{" "}
                 {formatUsd(idea.estimated_cost)}
               </p>
               <p className="text-sm text-muted-foreground">
