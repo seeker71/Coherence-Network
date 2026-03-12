@@ -1,21 +1,24 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
 import { useLiveRefresh } from "@/lib/live_refresh";
+
+import { EvidenceTrail } from "./EvidenceTrail";
+import { TasksListSection } from "./TasksListSection";
 import type { AgentTask, RuntimeEvent, TaskListResponse, TaskLogResponse } from "./types";
 import {
   asRecord,
   DEFAULT_PAGE_SIZE,
+  describeTaskStatus,
   EVENTS_LIMIT,
   EVENTS_TIMEOUT_MS,
   fetchWithTimeout,
   MAX_PAGE_SIZE,
   parsePositiveInt,
 } from "./utils";
-import { EvidenceTrail } from "./EvidenceTrail";
-import { TasksListSection } from "./TasksListSection";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -236,41 +239,89 @@ function TasksPageContent() {
     };
   }, [evidenceEvents]);
 
+  const readyCount = useMemo(
+    () => filteredRows.filter((row) => ["pending", "queued"].includes(row.status)).length,
+    [filteredRows],
+  );
+  const activeCount = useMemo(
+    () => filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
+    [filteredRows],
+  );
+  const blockedCount = useMemo(
+    () => filteredRows.filter((row) => row.status === "failed" || row.status === "needs_decision").length,
+    [filteredRows],
+  );
+  const finishedCount = useMemo(
+    () => filteredRows.filter((row) => row.status === "completed").length,
+    [filteredRows],
+  );
+  const selectedSummary = taskIdFilter
+    ? selectedTask
+      ? describeTaskStatus(selectedTask.status)
+      : status === "loading"
+        ? "Loading selected work card…"
+        : "The selected work card is unavailable right now."
+    : "Open a work card to see details and keep it up to date.";
+
   return (
     <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="space-y-1 px-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tasks In Motion</h1>
+        <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-7 space-y-3">
+          <p className="text-sm text-muted-foreground">Work view</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Work That Is Moving</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Track work in progress, completed outcomes, and supporting evidence in one place.
+            See what is active, what is blocked, what finished recently, and open one work card when you need to update it.
           </p>
           <p className="text-xs text-muted-foreground">
-            {statusFilter || typeFilter || taskIdFilter ? "Showing filtered tasks." : "Showing active and historical tasks."}
+            {statusFilter || typeFilter || taskIdFilter ? "Showing a filtered work view." : "Showing active and past work cards."}
           </p>
-        </section>
-
-        <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { href: "/", label: "Home" },
-              { href: "/portfolio", label: "Portfolio" },
-              { href: "/gates", label: "Gates" },
-              { href: "/flow", label: "Flow" },
-              { href: "/agent", label: "Agent" },
-              { href: "/contributors", label: "Contributors" },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/today" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+              Today
+            </Link>
+            <Link href="/ideas" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+              Ideas
+            </Link>
+            <Link href="/flow" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+              Progress
+            </Link>
+            <Link href="/demo" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+              Demo
+            </Link>
           </div>
         </section>
 
-        {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+        <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+          <div className="rounded-xl border p-3">
+            <p className="text-muted-foreground">Work cards in view</p>
+            <p className="text-xl font-semibold">{filteredRows.length}</p>
+          </div>
+          <div className="rounded-xl border p-3">
+            <p className="text-muted-foreground">Ready to start</p>
+            <p className="text-xl font-semibold">{readyCount}</p>
+          </div>
+          <div className="rounded-xl border p-3">
+            <p className="text-muted-foreground">In progress</p>
+            <p className="text-xl font-semibold">{activeCount}</p>
+          </div>
+          <div className="rounded-xl border p-3">
+            <p className="text-muted-foreground">Needs attention</p>
+            <p className="text-xl font-semibold">{blockedCount}</p>
+          </div>
+          <div className="rounded-xl border p-3">
+            <p className="text-muted-foreground">Finished</p>
+            <p className="text-xl font-semibold">{finishedCount}</p>
+          </div>
+        </section>
+
+        {taskIdFilter ? (
+          <section className="rounded-xl border p-4 space-y-2">
+            <h2 className="text-lg font-semibold">Selected Work Card</h2>
+            <p className="text-sm text-muted-foreground">{selectedSummary}</p>
+          </section>
+        ) : null}
+
+        {status === "loading" && <p className="text-muted-foreground">Loading work cards…</p>}
         {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
         {status === "ok" && (
@@ -291,7 +342,7 @@ function TasksPageContent() {
               nextHref={nextHref}
             />
 
-            {taskIdFilter && (
+            {taskIdFilter ? (
               <EvidenceTrail
                 taskIdFilter={taskIdFilter}
                 selectedTask={selectedTask}
@@ -303,7 +354,7 @@ function TasksPageContent() {
                 acceptanceProof={acceptanceProof}
                 onTaskUpdated={loadRows}
               />
-            )}
+            ) : null}
           </>
         )}
       </div>
@@ -317,7 +368,7 @@ export default function TasksPage() {
       fallback={
         <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl">
-            <p className="text-muted-foreground">Loading tasks…</p>
+            <p className="text-muted-foreground">Loading work cards…</p>
           </div>
         </main>
       }

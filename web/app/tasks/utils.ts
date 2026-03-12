@@ -1,4 +1,5 @@
 import { UI_RUNTIME_EVENTS_LIMIT } from "@/lib/egress";
+import { humanizeStatus } from "@/lib/humanize";
 
 export const REQUEST_TIMEOUT_MS = 12000;
 export const EVENTS_TIMEOUT_MS = 8000;
@@ -63,4 +64,48 @@ export async function fetchWithTimeout(
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+export function humanizeTaskType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "impl") return "Build step";
+  if (normalized === "review") return "Check-in";
+  if (normalized === "spec") return "Plan";
+  if (!normalized) return "Work card";
+  return humanizeStatus(normalized);
+}
+
+export function humanizeTaskStatus(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "pending") return "Ready to start";
+  if (normalized === "running" || normalized === "in_progress" || normalized === "claimed") return "In progress";
+  if (normalized === "queued") return "Waiting in line";
+  if (normalized === "completed") return "Finished";
+  if (normalized === "failed") return "Blocked";
+  if (normalized === "needs_decision") return "Waiting for your decision";
+  return humanizeStatus(normalized);
+}
+
+export function describeTaskStatus(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "pending") return "This work card is ready for someone to pick up.";
+  if (normalized === "running" || normalized === "in_progress" || normalized === "claimed") return "Someone is actively moving this work forward.";
+  if (normalized === "queued") return "This work is waiting behind something else right now.";
+  if (normalized === "completed") return "This work is finished and ready for review or follow-up.";
+  if (normalized === "failed") return "This work is blocked and needs attention before it can continue.";
+  if (normalized === "needs_decision") return "This work is paused until someone makes a choice.";
+  return "This work card exists, but its current state needs a quick review.";
+}
+
+export function humanizeIdeaName(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "Linked idea";
+  if (/[_-]/.test(trimmed) && !trimmed.includes(" ")) {
+    return trimmed
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
+      .join(" ");
+  }
+  return trimmed;
 }
