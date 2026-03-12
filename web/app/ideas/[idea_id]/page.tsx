@@ -7,6 +7,7 @@ import {
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
 import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
+import IdeaDsssSpecBuilder from "@/components/ideas/IdeaDsssSpecBuilder";
 import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
 
@@ -271,6 +272,16 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         ideaId={idea.id}
         ideaName={idea.name}
         unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
+      />
+
+      <IdeaDsssSpecBuilder
+        ideaId={idea.id}
+        ideaName={idea.name}
+        description={idea.description}
+        potentialValue={idea.potential_value}
+        estimatedCost={idea.estimated_cost}
+        openQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
+        existingSpecIds={flow?.spec.spec_ids ?? []}
       />
 
       {flowResult.details ? (
