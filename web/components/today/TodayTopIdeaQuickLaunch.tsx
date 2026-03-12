@@ -11,8 +11,15 @@ type TodayTopIdeaQuickLaunchProps = {
 };
 
 type LaunchState = "idle" | "creating" | "starting" | "running" | "created" | "error";
+type TaskType = "impl" | "review" | "spec";
 
-function defaultDirection(ideaName: string): string {
+function directionForType(taskType: TaskType, ideaName: string): string {
+  if (taskType === "review") {
+    return `Review current progress for ${ideaName}. Report confidence, key risks, and one clear next action to improve MVP readiness.`;
+  }
+  if (taskType === "spec") {
+    return `Define the next one-week plan for ${ideaName} with measurable outcomes and evidence to collect before implementation.`;
+  }
   return `Deliver the next highest-value milestone for ${ideaName}. Focus on visible MVP progress and record what changed for users.`;
 }
 
@@ -30,6 +37,7 @@ export default function TodayTopIdeaQuickLaunch({
   ideaId,
   ideaName,
 }: TodayTopIdeaQuickLaunchProps) {
+  const [taskType, setTaskType] = useState<TaskType>("impl");
   const [launchState, setLaunchState] = useState<LaunchState>("idle");
   const [createdTaskId, setCreatedTaskId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -44,13 +52,14 @@ export default function TodayTopIdeaQuickLaunch({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          task_type: "impl",
-          direction: defaultDirection(ideaName),
+          task_type: taskType,
+          direction: directionForType(taskType, ideaName),
           context: {
             idea_id: ideaId,
             idea_name: ideaName,
             created_from: "today_top_idea_quick_launch",
             launch_mode: "one_click_create_and_execute",
+            launch_task_type: taskType,
           },
         }),
       });
@@ -89,8 +98,25 @@ export default function TodayTopIdeaQuickLaunch({
     <section className="rounded-xl border p-4 space-y-2">
       <h2 className="text-lg font-semibold">Launch Top Idea Now</h2>
       <p className="text-sm text-muted-foreground">
-        One click will create a build task for <span className="font-medium text-foreground">{ideaName}</span> and try to start execution immediately.
+        One click will create a task for <span className="font-medium text-foreground">{ideaName}</span> and try to start execution immediately.
       </p>
+      <label className="block space-y-1 text-sm">
+        <span className="text-muted-foreground">Task type</span>
+        <select
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          value={taskType}
+          onChange={(event) => {
+            setTaskType(event.target.value as TaskType);
+            setLaunchState("idle");
+            setErrorMessage("");
+            setCreatedTaskId("");
+          }}
+        >
+          <option value="impl">Build next outcome</option>
+          <option value="review">Quality review</option>
+          <option value="spec">Plan next step</option>
+        </select>
+      </label>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           type="button"
