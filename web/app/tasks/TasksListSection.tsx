@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { AgentTask } from "./types";
+import { humanizeIdeaName, humanizeTaskStatus, humanizeTaskType } from "./utils";
 
 type TasksListSectionProps = {
   filteredRows: AgentTask[];
@@ -45,85 +46,78 @@ export function TasksListSection({
     const fromLookup = ideaNamesById[ideaId] || "";
     return {
       ideaId,
-      ideaName: fromContext || fromLookup || "Linked idea",
+      ideaName: humanizeIdeaName(fromContext || fromLookup || ideaId),
     };
   }
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Showing {pageStart}-{pageEnd} of {totalTasks} | page {page}
-        {(statusFilter || typeFilter || taskIdFilter) ? (
-          <>
-            {" "}
-            |{" "}
-            <Link href="/tasks" className="underline hover:text-foreground">
-              Clear filters
-            </Link>
-          </>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Showing {pageStart}-{pageEnd} of {totalTasks} work cards | page {page}
+          {statusFilter || typeFilter || taskIdFilter ? (
+            <>
+              {" "}|{" "}
+              <Link href="/tasks" className="underline hover:text-foreground">
+                Clear filters
+              </Link>
+            </>
+          ) : null}
+        </p>
+        {!taskIdFilter ? (
+          <div className="flex gap-3 text-sm text-muted-foreground">
+            {hasPrevious ? (
+              <Link href={previousHref} className="underline hover:text-foreground">
+                Previous page
+              </Link>
+            ) : (
+              <span className="opacity-50">Previous page</span>
+            )}
+            {hasNext ? (
+              <Link href={nextHref} className="underline hover:text-foreground">
+                Next page
+              </Link>
+            ) : (
+              <span className="opacity-50">Next page</span>
+            )}
+          </div>
         ) : null}
-      </p>
-      {!taskIdFilter ? (
-        <div className="flex gap-3 text-sm text-muted-foreground">
-          {hasPrevious ? (
-            <Link href={previousHref} className="underline hover:text-foreground">
-              Previous
-            </Link>
-          ) : (
-            <span className="opacity-50">Previous</span>
-          )}
-          {hasNext ? (
-            <Link href={nextHref} className="underline hover:text-foreground">
-              Next
-            </Link>
-          ) : (
-            <span className="opacity-50">Next</span>
-          )}
-        </div>
-      ) : null}
+      </div>
       <ul className="space-y-2 text-sm">
-        {filteredRows.map((t, index) => {
-          const linkedIdea = taskIdeaContext(t);
+        {filteredRows.map((task, index) => {
+          const linkedIdea = taskIdeaContext(task);
           return (
-            <li key={t.id} className="rounded-lg border border-border/70 bg-background/45 p-2 space-y-2">
-              <div className="flex justify-between gap-3">
-                <span className="font-medium">
-                  <Link
-                    href={`/tasks?task_id=${encodeURIComponent(t.id)}`}
-                    className="underline hover:text-foreground"
-                    title={`Task ID: ${t.id}`}
-                  >
-                    Task {pageStart + index}
-                  </Link>
-                </span>
+            <li key={task.id} className="rounded-lg border border-border/70 bg-background/45 p-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href={`/tasks?task_id=${encodeURIComponent(task.id)}`}
+                  className="font-medium underline hover:text-foreground"
+                  title={`Task ID: ${task.id}`}
+                >
+                  Work card {pageStart + index}
+                </Link>
                 <span className="text-muted-foreground text-right">
-                  <Link href={`/tasks?task_type=${encodeURIComponent(t.task_type)}`} className="underline hover:text-foreground">
-                    {t.task_type}
-                  </Link>{" "}
-                  |{" "}
-                  <Link href={`/tasks?status=${encodeURIComponent(t.status)}`} className="underline hover:text-foreground">
-                    {t.status}
-                  </Link>
+                  {humanizeTaskType(task.task_type)} | {humanizeTaskStatus(task.status)}
                 </span>
               </div>
-              <div className="text-muted-foreground">{t.direction}</div>
+              <div className="text-muted-foreground">{task.direction}</div>
               {linkedIdea ? (
                 <div className="text-muted-foreground">
-                  Idea{" "}
+                  Linked idea{" "}
                   <Link
                     href={`/ideas/${encodeURIComponent(linkedIdea.ideaId)}`}
                     className="underline hover:text-foreground"
                     title={`Idea ID: ${linkedIdea.ideaId}`}
                   >
                     {linkedIdea.ideaName}
-                  </Link>{" "}
-                  |{" "}
+                  </Link>
+                  {" "}|{" "}
                   <Link
                     href={`/flow?idea_id=${encodeURIComponent(linkedIdea.ideaId)}`}
                     className="underline hover:text-foreground"
                     title={`Idea ID: ${linkedIdea.ideaId}`}
                   >
-                    Open flow
+                    Open progress
                   </Link>
                 </div>
               ) : null}
@@ -132,16 +126,16 @@ export function TasksListSection({
         })}
         {filteredRows.length === 0 ? (
           <li className="rounded-lg border border-dashed border-border/70 bg-background/45 p-4 space-y-2">
-            <p className="text-muted-foreground">No tasks yet in this view.</p>
+            <p className="text-muted-foreground">No work cards are visible in this view yet.</p>
             <p className="text-muted-foreground">
-              Start from an idea and create execution work, then return here to track progress.
+              Start from Today or Ideas, create the next small step, then return here to keep the work current.
             </p>
             <div className="flex flex-wrap gap-3">
+              <Link href="/today" className="underline hover:text-foreground">
+                Open today view
+              </Link>
               <Link href="/ideas" className="underline hover:text-foreground">
                 Browse ideas
-              </Link>
-              <Link href="/contribute" className="underline hover:text-foreground">
-                Open contribution console
               </Link>
             </div>
           </li>
