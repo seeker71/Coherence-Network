@@ -9,7 +9,6 @@ import {
 import {
   explainIdeaPriority,
   formatConfidence,
-  formatDecimal,
   formatUsd,
   humanizeIdeaPriority,
   humanizeManifestationStatus,
@@ -432,12 +431,11 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">Nothing open right now.</p>}
         <ul className="space-y-2 text-sm">
           {idea.open_questions.map((q) => {
-            const roi = q.estimated_cost > 0 ? q.value_to_whole / q.estimated_cost : 0;
             return (
               <li key={q.question} className="rounded border p-3 space-y-1">
                 <p className="font-medium">{q.question}</p>
                 <p className="text-muted-foreground">
-                  Possible value {formatUsd(q.value_to_whole)} | Estimated effort {formatUsd(q.estimated_cost)} | Value for effort {formatDecimal(roi)}
+                  Why this matters {formatUsd(q.value_to_whole)} | Expected work {formatUsd(q.estimated_cost)}
                 </p>
                 {q.answer ? (
                   <p className="text-muted-foreground">Current answer: {q.answer}</p>

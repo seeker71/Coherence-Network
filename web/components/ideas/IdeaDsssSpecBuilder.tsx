@@ -424,7 +424,7 @@ export default function IdeaDsssSpecBuilder({
                   </Button>
                 )}
                 <span className="text-muted-foreground">
-                  Possible value {draft.potentialValue.toFixed(1)} | Likely effort {draft.estimatedCost.toFixed(1)}
+                  Expected impact {draft.potentialValue.toFixed(1)} | Work size {draft.estimatedCost.toFixed(1)}
                 </span>
               </div>
               {startedFromSpecId === draft.specId && startState === "saved" && startMessage ? (
