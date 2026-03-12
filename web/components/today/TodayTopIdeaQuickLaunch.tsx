@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { humanizeStatus } from "@/lib/humanize";
@@ -23,6 +23,8 @@ type CreatedTaskSnapshot = {
   output?: string | null;
   updated_at?: string | null;
 };
+
+const LATEST_TODAY_TASK_STORAGE_KEY = "coherence.today.latest_task_id";
 
 function directionForType(taskType: TaskType, ideaName: string): string {
   if (taskType === "review") {
@@ -56,10 +58,21 @@ export default function TodayTopIdeaQuickLaunch({
   const [updateMessage, setUpdateMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  function persistLatestTaskId(taskId: string): void {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LATEST_TODAY_TASK_STORAGE_KEY, taskId);
+  }
+
+  function clearLatestTaskId(): void {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(LATEST_TODAY_TASK_STORAGE_KEY);
+  }
+
   async function refreshCreatedTask(taskId: string): Promise<void> {
     const response = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
     if (!response.ok) throw new Error(await readErrorMessage(response));
     const payload = (await response.json()) as CreatedTaskSnapshot;
+    setCreatedTaskId(taskId);
     setCreatedTask(payload);
   }
 
@@ -124,6 +137,7 @@ export default function TodayTopIdeaQuickLaunch({
       const createPayload = (await createResponse.json()) as { id?: string };
       const taskId = String(createPayload.id || "").trim();
       if (!taskId) throw new Error("Task was created but response did not include task id.");
+      persistLatestTaskId(taskId);
       setCreatedTaskId(taskId);
       await refreshCreatedTask(taskId);
 
@@ -150,6 +164,37 @@ export default function TodayTopIdeaQuickLaunch({
     }
   }
 
+  useEffect(() => {
+    const storedTaskId =
+      typeof window === "undefined" ? "" : window.localStorage.getItem(LATEST_TODAY_TASK_STORAGE_KEY) || "";
+    const taskId = storedTaskId.trim();
+    if (!taskId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
+        if (!response.ok) {
+          if (!cancelled) clearLatestTaskId();
+          return;
+        }
+        const payload = (await response.json()) as CreatedTaskSnapshot;
+        if (cancelled) return;
+        setCreatedTaskId(taskId);
+        setCreatedTask(payload);
+      } catch {
+        if (!cancelled) {
+          setUpdateState("idle");
+          setUpdateMessage("");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <section className="rounded-xl border p-4 space-y-2">
       <h2 className="text-lg font-semibold">Launch Top Idea Now</h2>
@@ -165,8 +210,6 @@ export default function TodayTopIdeaQuickLaunch({
             setTaskType(event.target.value as TaskType);
             setLaunchState("idle");
             setErrorMessage("");
-            setCreatedTaskId("");
-            setCreatedTask(null);
             setUpdateState("idle");
             setUpdateMessage("");
           }}
@@ -259,6 +302,22 @@ export default function TodayTopIdeaQuickLaunch({
               disabled={updateState === "saving"}
             >
               Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                clearLatestTaskId();
+                setCreatedTaskId("");
+                setCreatedTask(null);
+                setLaunchState("idle");
+                setUpdateState("idle");
+                setUpdateMessage("");
+                setErrorMessage("");
+              }}
+              disabled={updateState === "saving"}
+            >
+              Clear
             </Button>
           </div>
           {updateState === "saving" ? <p className="text-sm text-muted-foreground">Saving update…</p> : null}
