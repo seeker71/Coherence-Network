@@ -36,6 +36,12 @@ type TaskActivityRow = {
   title: string;
   detail: string;
 };
+type NextActionRecommendation = {
+  title: string;
+  detail: string;
+  href: string;
+  cta: string;
+};
 
 const LATEST_TODAY_TASK_STORAGE_KEY = "coherence.today.latest_task_id";
 const ACTIVITY_LIMIT = 5;
@@ -119,6 +125,60 @@ function activityRowFromEvent(event: RuntimeEvent): TaskActivityRow {
   };
 }
 
+function deriveNextAction(
+  task: CreatedTaskSnapshot,
+  activityRows: TaskActivityRow[],
+): NextActionRecommendation {
+  const latestActivity = activityRows[0];
+  const latestDetail = latestActivity?.detail || "";
+  const currentStep = String(task.current_step || "").trim();
+  const latestOutcome = String(task.output || "").trim();
+  const taskHref = `/tasks?task_id=${encodeURIComponent(task.id)}`;
+
+  if (task.status === "failed") {
+    return {
+      title: "Resolve the blocker before restarting work",
+      detail: latestOutcome || latestDetail || "This task is blocked or failed and needs a human decision on how to continue.",
+      href: taskHref,
+      cta: "Review blocker",
+    };
+  }
+
+  if (task.status === "completed") {
+    return {
+      title: "Review the result and choose the follow-up task",
+      detail: latestOutcome || latestDetail || "This task is complete. Confirm the outcome and decide what should happen next.",
+      href: taskHref,
+      cta: "Review result",
+    };
+  }
+
+  if (task.status === "running") {
+    return {
+      title: "Check whether execution is still making progress",
+      detail: currentStep || latestDetail || "This task is in progress. Confirm it is advancing and update status if it has stalled.",
+      href: taskHref,
+      cta: "Inspect progress",
+    };
+  }
+
+  if (task.status === "needs_decision") {
+    return {
+      title: "Make the decision this task is waiting on",
+      detail: latestOutcome || latestDetail || "Execution is paused pending a human choice.",
+      href: taskHref,
+      cta: "Open decision",
+    };
+  }
+
+  return {
+    title: "Start or re-start this task now",
+    detail: latestDetail || "The task exists, but it is not actively moving. Re-open it and decide whether to execute or update it.",
+    href: taskHref,
+    cta: "Open task",
+  };
+}
+
 export default function TodayTopIdeaQuickLaunch({
   ideaId,
   ideaName,
@@ -131,6 +191,8 @@ export default function TodayTopIdeaQuickLaunch({
   const [updateState, setUpdateState] = useState<UpdateState>("idle");
   const [updateMessage, setUpdateMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const nextAction = createdTask ? deriveNextAction(createdTask, activityRows) : null;
 
   function persistLatestTaskId(taskId: string): void {
     if (typeof window === "undefined") return;
@@ -362,6 +424,16 @@ export default function TodayTopIdeaQuickLaunch({
       {createdTask ? (
         <section className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-2">
           <p className="text-sm font-medium">Latest launched task</p>
+          {nextAction ? (
+            <div className="rounded-md border border-border/60 bg-background/60 px-3 py-2 space-y-1">
+              <p className="text-sm font-medium">What should I do next?</p>
+              <p className="text-sm text-muted-foreground">{nextAction.title}</p>
+              <p className="text-sm text-muted-foreground">{nextAction.detail}</p>
+              <Link href={nextAction.href} className="text-sm underline">
+                {nextAction.cta}
+              </Link>
+            </div>
+          ) : null}
           <p className="text-sm text-muted-foreground">
             {humanizeStatus(createdTask.status)} {createdTask.task_type} task
             {" · "}
