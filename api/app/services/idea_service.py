@@ -34,7 +34,7 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
     {
         "id": "oss-interface-alignment",
         "name": "Align OSS intelligence interfaces with runtime",
-        "description": "Expose and validate declared API routes used by web and scripts.",
+        "description": "Keep the site and the API telling the same story, so people can trust what they see and do.",
         "potential_value": 90.0,
         "actual_value": 10.0,
         "estimated_cost": 18.0,
@@ -45,12 +45,12 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "interfaces": ["machine:api", "human:web", "ai:automation"],
         "open_questions": [
             {
-                "question": "Which route set is canonical for current milestone?",
+                "question": "Which pages and endpoints most need to match for a first-time user to trust the product?",
                 "value_to_whole": 30.0,
                 "estimated_cost": 1.0,
             },
             {
-                "question": "What is the minimum E2E flow to validate machine-human interface integrity?",
+                "question": "What is the smallest start-to-finish path we should keep working every time?",
                 "value_to_whole": 25.0,
                 "estimated_cost": 2.0,
             },
@@ -59,7 +59,7 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
     {
         "id": "portfolio-governance",
         "name": "Unified idea portfolio governance",
-        "description": "Track potential value, actual value, cost, and open questions for all ideas.",
+        "description": "Give one clear place to see what each idea could deliver, what it has delivered already, what it costs, and what should happen next.",
         "potential_value": 82.0,
         "actual_value": 12.0,
         "estimated_cost": 10.0,
@@ -70,7 +70,7 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "interfaces": ["machine:api", "human:docs", "human:operators"],
         "open_questions": [
             {
-                "question": "Which leading indicators best represent energy flow to the whole?",
+                "question": "What are the clearest signs that an idea is moving from promise to real results?",
                 "value_to_whole": 28.0,
                 "estimated_cost": 2.0,
             }
@@ -79,7 +79,7 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
     {
         "id": "coherence-signal-depth",
         "name": "Increase coherence signal depth with real data",
-        "description": "Convert coherence components from stubs to measured signals.",
+        "description": "Replace placeholder signals with real evidence so the system reflects what is actually happening.",
         "potential_value": 78.0,
         "actual_value": 8.0,
         "estimated_cost": 24.0,
@@ -90,7 +90,7 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "interfaces": ["machine:api", "human:web", "external:github"],
         "open_questions": [
             {
-                "question": "What minimal GitHub ingestion yields measurable component uplift?",
+                "question": "What is the smallest real data feed that would make these signals feel trustworthy?",
                 "value_to_whole": 20.0,
                 "estimated_cost": 4.0,
             }
@@ -100,8 +100,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "id": "federated-instance-aggregation",
         "name": "Federated instance aggregation for contributor-owned deployments",
         "description": (
-            "Allow contributors to run full or partial forks and publish verifiable telemetry back to the shared system. "
-            "This increases contributor throughput without central infrastructure bottlenecks and raises collective value."
+            "Let partners run their own copy of the system and safely share useful results back. "
+            "This removes pressure on one central setup while keeping the shared picture useful."
         ),
         "potential_value": 128.0,
         "actual_value": 0.0,
@@ -113,12 +113,12 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "interfaces": ["machine:api", "machine:federation", "human:web", "external:forks"],
         "open_questions": [
             {
-                "question": "What is the minimal federation contract for cross-instance data aggregation with provenance?",
+                "question": "What is the smallest federation contract, or shared agreement, two separate copies need so they can safely share useful results?",
                 "value_to_whole": 34.0,
                 "estimated_cost": 6.0,
             },
             {
-                "question": "Which anti-duplication and trust signals are required before federated data affects ROI ranking?",
+                "question": "What proof should we require before shared results change rankings or decisions?",
                 "value_to_whole": 31.0,
                 "estimated_cost": 5.0,
             },
@@ -127,8 +127,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
 ]
 
 STANDING_QUESTION_TEXT = (
-    "How can we improve this idea, and if it cannot be measured yet how can it be measured, "
-    "and if it is measured how can that measurement be improved?"
+    "How can we improve this idea, show whether it is working yet, "
+    "and make that proof clearer over time?"
 )
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
@@ -140,7 +140,7 @@ _IDEAS_CACHE_TTL_SECONDS = 180.0
 DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     "coherence-network-agent-pipeline": {
         "name": "Coherence network agent pipeline",
-        "description": "Evolve autonomous task orchestration, validation gates, and failure recovery signals.",
+        "description": "Keep the background work loop moving, visible, and easy to recover when something gets stuck.",
         "interfaces": ["machine:api", "machine:automation", "human:operators"],
         "potential_value": 88.0,
         "estimated_cost": 16.0,
@@ -148,7 +148,7 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     },
     "coherence-network-api-runtime": {
         "name": "Coherence network API runtime parity",
-        "description": "Ensure public API behavior, runtime telemetry, and deployment state stay in sync.",
+        "description": "Keep the public site, the API, and the live system telling the same story.",
         "interfaces": ["machine:api", "human:web", "external:railway"],
         "potential_value": 80.0,
         "estimated_cost": 14.0,
@@ -156,7 +156,7 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     },
     "coherence-network-value-attribution": {
         "name": "Coherence network value attribution",
-        "description": "Track value lineage from idea to payout with measurable contribution attribution.",
+        "description": "Show how value moves from an idea to the people who helped make it real.",
         "interfaces": ["machine:api", "human:web", "human:contributors"],
         "potential_value": 92.0,
         "estimated_cost": 18.0,
@@ -164,7 +164,7 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     },
     "coherence-network-web-interface": {
         "name": "Coherence network web interface parity",
-        "description": "Keep human-facing navigation and detail views aligned with machine-facing inventory.",
+        "description": "Keep the site easy to understand while staying aligned with the live data underneath.",
         "interfaces": ["human:web", "machine:api", "human:contributors"],
         "potential_value": 84.0,
         "estimated_cost": 13.0,
@@ -172,7 +172,7 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
     },
     "deployment-gate-reliability": {
         "name": "Deployment gate reliability",
-        "description": "Harden deploy and validation gates so failures are detected quickly and recovered automatically.",
+        "description": "Catch broken releases early and make recovery fast and predictable.",
         "interfaces": ["external:github", "external:railway"],
         "potential_value": 86.0,
         "estimated_cost": 15.0,

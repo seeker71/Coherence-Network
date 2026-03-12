@@ -6,7 +6,14 @@ import {
   buildFlowSearchParams,
   UI_RUNTIME_SUMMARY_WINDOW,
 } from "@/lib/egress";
-import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
+import {
+  explainIdeaPriority,
+  formatConfidence,
+  formatDecimal,
+  formatUsd,
+  humanizeIdeaPriority,
+  humanizeManifestationStatus,
+} from "@/lib/humanize";
 import IdeaDsssSpecBuilder from "@/components/ideas/IdeaDsssSpecBuilder";
 import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
@@ -96,13 +103,6 @@ function fileLabel(pathOrUrl: string): string {
   const normalized = pathOrUrl.split("?")[0].split("#")[0];
   const pieces = normalized.split("/");
   return pieces[pieces.length - 1] || "Implementation file";
-}
-
-function proofLabel(status: string): string {
-  if (status === "none") return "Not proven yet";
-  if (status === "partial") return "Partly proven";
-  if (status === "validated") return "Proven in real use";
-  return humanizeStatus(status);
 }
 
 function referenceLabel(pathOrUrl: string, index: number): string {
@@ -262,7 +262,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <h1 className="text-2xl font-bold">{idea.name}</h1>
         <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
         <p className="text-sm text-muted-foreground">
-          Current proof level: {proofLabel(idea.manifestation_status)}
+          Current proof level: {humanizeManifestationStatus(idea.manifestation_status)}
         </p>
       </div>
 
@@ -299,11 +299,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <div className="rounded border p-3">
           <p className="text-muted-foreground">How real it is</p>
-          <p className="text-lg font-semibold">{proofLabel(idea.manifestation_status)}</p>
+          <p className="text-lg font-semibold">{humanizeManifestationStatus(idea.manifestation_status)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Priority right now</p>
-          <p className="text-lg font-semibold">{formatDecimal(idea.free_energy_score)}</p>
+          <p className="text-muted-foreground">Best time to work on this</p>
+          <p className="text-lg font-semibold">{humanizeIdeaPriority(idea.free_energy_score)}</p>
+          <p className="text-xs text-muted-foreground">{explainIdeaPriority(idea.free_energy_score)}</p>
         </div>
         <div className="rounded border p-3">
           <p className="text-muted-foreground">Value still available</p>

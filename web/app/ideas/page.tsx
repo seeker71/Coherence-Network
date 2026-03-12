@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
-import { formatConfidence, formatDecimal, formatUsd, humanizeStatus } from "@/lib/humanize";
+import {
+  explainIdeaPriority,
+  formatConfidence,
+  formatUsd,
+  humanizeIdeaPriority,
+  humanizeManifestationStatus,
+} from "@/lib/humanize";
 
 export const metadata: Metadata = {
   title: "Ideas",
-  description: "Browse the idea portfolio — ranked by ROI and coherence score.",
+  description: "Browse ideas in plain language and choose what looks most worth moving next.",
 };
 
 type IdeaQuestion = {
@@ -64,37 +70,22 @@ export default async function IdeasPage() {
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Home
         </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
+        <Link href="/today" className="text-muted-foreground hover:text-foreground">
+          Today
         </Link>
-        <Link href="/specs" className="text-muted-foreground hover:text-foreground">
-          Specs
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
+        <Link href="/demo" className="text-muted-foreground hover:text-foreground">
+          Demo
         </Link>
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
+          Work
         </Link>
-        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
-          Gates
+        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
+          Progress
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold">Ideas</h1>
-      <p className="text-muted-foreground">Explore opportunities from concept to measured impact.</p>
+      <h1 className="text-2xl font-bold">Ideas Worth Exploring</h1>
+      <p className="text-muted-foreground">Choose the ideas that look most worth moving next.</p>
 
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div className="rounded border p-3">
@@ -112,7 +103,7 @@ export default async function IdeasPage() {
       </section>
 
       <section className="rounded border p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">Ranked by priority and expected return.</p>
+        <p className="text-sm text-muted-foreground">Ordered by what looks most worth moving next.</p>
         <ul className="space-y-2">
           {ideas.map((idea, index) => (
             <li key={idea.id} className="rounded border p-3 space-y-1">
@@ -120,16 +111,25 @@ export default async function IdeasPage() {
                 <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="font-medium hover:underline">
                   {index + 1}. {idea.name}
                 </Link>
-                <span className="text-muted-foreground">{humanizeStatus(idea.manifestation_status)}</span>
+                <span className="text-muted-foreground">{humanizeManifestationStatus(idea.manifestation_status)}</span>
               </div>
               <p className="text-sm">{idea.description}</p>
               <p className="text-sm text-muted-foreground">
-                Potential value {formatUsd(idea.potential_value)} | Remaining upside {formatUsd(idea.value_gap)} | Estimated cost{" "}
+                Possible value {formatUsd(idea.potential_value)} | Value still available {formatUsd(idea.value_gap)} | Likely effort{" "}
                 {formatUsd(idea.estimated_cost)}
               </p>
               <p className="text-sm text-muted-foreground">
-                Confidence {formatConfidence(idea.confidence)} | Priority score {formatDecimal(idea.free_energy_score)}
+                Why now: {humanizeIdeaPriority(idea.free_energy_score)} | Confidence {formatConfidence(idea.confidence)}
               </p>
+              <p className="text-sm text-muted-foreground">{explainIdeaPriority(idea.free_energy_score)}</p>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+                  Open idea
+                </Link>
+                <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+                  Open progress
+                </Link>
+              </div>
             </li>
           ))}
         </ul>
