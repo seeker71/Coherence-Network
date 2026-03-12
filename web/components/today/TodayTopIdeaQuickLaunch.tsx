@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { humanizeStatus } from "@/lib/humanize";
 
 type TodayTopIdeaQuickLaunchProps = {
   ideaId: string;
@@ -12,6 +13,16 @@ type TodayTopIdeaQuickLaunchProps = {
 
 type LaunchState = "idle" | "creating" | "starting" | "running" | "created" | "error";
 type TaskType = "impl" | "review" | "spec";
+type UpdateState = "idle" | "saving" | "saved" | "error";
+type CreatedTaskSnapshot = {
+  id: string;
+  status: string;
+  task_type: string;
+  direction: string;
+  current_step?: string | null;
+  output?: string | null;
+  updated_at?: string | null;
+};
 
 function directionForType(taskType: TaskType, ideaName: string): string {
   if (taskType === "review") {
@@ -40,12 +51,54 @@ export default function TodayTopIdeaQuickLaunch({
   const [taskType, setTaskType] = useState<TaskType>("impl");
   const [launchState, setLaunchState] = useState<LaunchState>("idle");
   const [createdTaskId, setCreatedTaskId] = useState("");
+  const [createdTask, setCreatedTask] = useState<CreatedTaskSnapshot | null>(null);
+  const [updateState, setUpdateState] = useState<UpdateState>("idle");
+  const [updateMessage, setUpdateMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  async function refreshCreatedTask(taskId: string): Promise<void> {
+    const response = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(await readErrorMessage(response));
+    const payload = (await response.json()) as CreatedTaskSnapshot;
+    setCreatedTask(payload);
+  }
+
+  async function quickUpdateCreatedTask(nextStatus: "running" | "completed" | "failed"): Promise<void> {
+    if (!createdTaskId) return;
+
+    setUpdateState("saving");
+    setUpdateMessage("");
+    try {
+      const payload: { status: string; current_step?: string | null; output?: string | null } = {
+        status: nextStatus,
+      };
+      if (nextStatus === "running") payload.current_step = "Actively progressing from Today quick launch.";
+      if (nextStatus === "completed") payload.output = "Completed and confirmed from Today quick launch.";
+      if (nextStatus === "failed") payload.output = "Blocked and flagged from Today quick launch; follow-up decision needed.";
+
+      const response = await fetch(`/api/agent/tasks/${encodeURIComponent(createdTaskId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response));
+
+      await refreshCreatedTask(createdTaskId);
+      setUpdateState("saved");
+      setUpdateMessage(`Task marked ${humanizeStatus(nextStatus)}.`);
+    } catch (error) {
+      setUpdateState("error");
+      setUpdateMessage(String(error));
+    }
+  }
 
   async function launchTopIdeaTask() {
     setLaunchState("creating");
     setErrorMessage("");
     setCreatedTaskId("");
+    setCreatedTask(null);
+    setUpdateState("idle");
+    setUpdateMessage("");
 
     try {
       const createResponse = await fetch("/api/agent/tasks", {
@@ -72,6 +125,7 @@ export default function TodayTopIdeaQuickLaunch({
       const taskId = String(createPayload.id || "").trim();
       if (!taskId) throw new Error("Task was created but response did not include task id.");
       setCreatedTaskId(taskId);
+      await refreshCreatedTask(taskId);
 
       setLaunchState("starting");
       const executeResponse = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}/execute`, {
@@ -84,10 +138,12 @@ export default function TodayTopIdeaQuickLaunch({
         setErrorMessage(
           `Task created, but auto-start was blocked: ${executeError}. You can start it from Remote Ops with an execute token.`,
         );
+        await refreshCreatedTask(taskId);
         return;
       }
 
       setLaunchState("running");
+      await refreshCreatedTask(taskId);
     } catch (error) {
       setLaunchState("error");
       setErrorMessage(String(error));
@@ -110,6 +166,9 @@ export default function TodayTopIdeaQuickLaunch({
             setLaunchState("idle");
             setErrorMessage("");
             setCreatedTaskId("");
+            setCreatedTask(null);
+            setUpdateState("idle");
+            setUpdateMessage("");
           }}
         >
           <option value="impl">Build next outcome</option>
@@ -160,6 +219,52 @@ export default function TodayTopIdeaQuickLaunch({
 
       {errorMessage ? (
         <p className="text-sm text-destructive">Launch failed: {errorMessage}</p>
+      ) : null}
+
+      {createdTask ? (
+        <section className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-2">
+          <p className="text-sm font-medium">Latest launched task</p>
+          <p className="text-sm text-muted-foreground">
+            {humanizeStatus(createdTask.status)} {createdTask.task_type} task
+            {" · "}
+            <Link href={`/tasks?task_id=${encodeURIComponent(createdTask.id)}`} className="underline">
+              Open task
+            </Link>
+          </p>
+          <p className="text-sm text-muted-foreground">{createdTask.direction}</p>
+          {createdTask.current_step ? (
+            <p className="text-sm text-muted-foreground">Current step: {createdTask.current_step}</p>
+          ) : null}
+          {createdTask.output ? (
+            <p className="text-sm text-muted-foreground">Latest outcome: {createdTask.output}</p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("running")} disabled={updateState === "saving"}>
+              Mark running
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("completed")} disabled={updateState === "saving"}>
+              Mark completed
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("failed")} disabled={updateState === "saving"}>
+              Mark failed
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setUpdateState("idle");
+                setUpdateMessage("");
+                void refreshCreatedTask(createdTask.id);
+              }}
+              disabled={updateState === "saving"}
+            >
+              Refresh
+            </Button>
+          </div>
+          {updateState === "saving" ? <p className="text-sm text-muted-foreground">Saving update…</p> : null}
+          {updateState === "saved" && updateMessage ? <p className="text-sm text-green-700">{updateMessage}</p> : null}
+          {updateState === "error" && updateMessage ? <p className="text-sm text-destructive">Update failed: {updateMessage}</p> : null}
+        </section>
       ) : null}
     </section>
   );
