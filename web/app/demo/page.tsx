@@ -3,7 +3,13 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
-import { formatCount, formatConfidence, formatUsd, humanizeStatus } from "@/lib/humanize";
+import {
+  formatCount,
+  formatConfidence,
+  formatUsd,
+  humanizeIdeaPriority,
+  humanizeManifestationStatus,
+} from "@/lib/humanize";
 
 type Idea = {
   id: string;
@@ -51,7 +57,7 @@ type TaskListPayload =
 
 export const metadata: Metadata = {
   title: "Demo MVP",
-  description: "Guided 5-minute MVP demo path from idea selection to measurable progress and execution proof.",
+  description: "Guided 5-minute MVP demo path from choosing an idea to showing visible progress.",
 };
 
 function extractTasks(payload: TaskListPayload | null): AgentTask[] {
@@ -90,7 +96,7 @@ export default async function DemoMvpPage() {
           <p className="text-sm text-muted-foreground">Demo path</p>
           <h1 className="text-3xl font-semibold tracking-tight">Demo MVP in 5 minutes</h1>
           <p className="max-w-3xl text-muted-foreground">
-            Walk a single idea through discovery, progress updates, and execution proof without reading internal IDs or technical traces.
+            Walk one idea from selection to visible progress without reading internal records or system jargon.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/ideas" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
@@ -120,15 +126,15 @@ export default async function DemoMvpPage() {
             <p className="text-xl font-semibold">{formatCount(ideasData?.summary?.total_ideas ?? 0)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Active tasks</p>
+            <p className="text-muted-foreground">Work in progress</p>
             <p className="text-xl font-semibold">{formatCount(activeTasks)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Completed tasks</p>
+            <p className="text-muted-foreground">Finished work</p>
             <p className="text-xl font-semibold">{formatCount(completedTasks)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Flow-complete ideas</p>
+            <p className="text-muted-foreground">Ideas with full story visible</p>
             <p className="text-xl font-semibold">{formatCount(flowComplete)}</p>
           </div>
         </section>
@@ -141,10 +147,10 @@ export default async function DemoMvpPage() {
                 <p className="font-medium">{spotlightIdea.name}</p>
                 <p className="text-sm text-muted-foreground">{spotlightIdea.description}</p>
                 <p className="text-sm text-muted-foreground">
-                  Status {humanizeStatus(spotlightIdea.manifestation_status)} | Confidence {formatConfidence(spotlightIdea.confidence)}
+                  Why it stands out now: {humanizeIdeaPriority(spotlightIdea.free_energy_score)} | {humanizeManifestationStatus(spotlightIdea.manifestation_status)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Actual value {formatUsd(spotlightIdea.actual_value)} | Remaining upside {formatUsd(spotlightIdea.value_gap)}
+                  Confidence {formatConfidence(spotlightIdea.confidence)} | Value still available {formatUsd(spotlightIdea.value_gap)}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Link
@@ -159,7 +165,7 @@ export default async function DemoMvpPage() {
                     className="rounded border px-3 py-1.5 text-sm hover:bg-accent"
                     title={`Idea ID: ${spotlightIdea.id}`}
                   >
-                    Open flow trail
+                    Open progress trail
                   </Link>
                 </div>
               </>
@@ -171,16 +177,13 @@ export default async function DemoMvpPage() {
           <article className="rounded-xl border p-4 space-y-2">
             <h2 className="text-lg font-semibold">Demo checklist</h2>
             <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Open Ideas and choose one high-upside item.</li>
-              <li>Update actual value/cost and confidence on the idea detail page.</li>
-              <li>Create the next task from the idea detail page to start execution.</li>
-              <li>Open Flow and confirm spec/process/implementation visibility.</li>
-              <li>Open Tasks and update one task status to confirm the loop closes in-app.</li>
-              <li>Capture one screenshot set for desktop and mobile readiness review.</li>
+              <li>Open Ideas and choose the one that looks most worth moving next.</li>
+              <li>Update what has been learned so far on the idea page.</li>
+              <li>Create the next piece of work from that same page.</li>
+              <li>Open Progress and confirm the path from idea to work is visible.</li>
+              <li>Open Work and update one work card so the loop closes in the app.</li>
+              <li>Capture desktop and mobile screens to check the story is clear.</li>
             </ol>
-            <p className="text-xs text-muted-foreground">
-              API target for this demo: <span className="font-mono">{apiBase}</span>
-            </p>
           </article>
         </section>
       </div>
