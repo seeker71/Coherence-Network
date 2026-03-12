@@ -1,0 +1,71 @@
+{
+  "date": "2026-03-11",
+  "thread_branch": "codex/today-launch-task-type-selector-20260311",
+  "commit_scope": "Add task-type selector to /today top-idea quick launch while preserving one-click default behavior.",
+  "files_owned": [
+    "web/components/today/TodayTopIdeaQuickLaunch.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_today-launch-task-type-selector.json"
+  ],
+  "change_files": [
+    "web/components/today/TodayTopIdeaQuickLaunch.tsx",
+    "docs/system_audit/commit_evidence_2026-03-11_today-launch-task-type-selector.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "demo-community-climate-marketplace"
+  ],
+  "spec_ids": [
+    "012-landing-page-contributor-onboarding-highlights"
+  ],
+  "task_ids": [
+    "task-2026-03-11-today-launch-task-type-selector"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "npm --prefix web run build"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "npm --prefix web run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Users can choose impl/review/spec before one-click launch from /today, with impl remaining the default option.",
+    "public_endpoints": [
+      "http://127.0.0.1:3100/today",
+      "http://127.0.0.1:3100/tasks"
+    ],
+    "test_flows": [
+      "Open /today and verify task type selector defaults to Build next outcome (impl).",
+      "Select review or spec, click Create + Start, verify created task uses selected task_type.",
+      "Verify existing fallback links still appear when execute is blocked."
+    ]
+  }
+}
