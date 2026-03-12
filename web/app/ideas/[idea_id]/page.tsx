@@ -98,6 +98,20 @@ function fileLabel(pathOrUrl: string): string {
   return pieces[pieces.length - 1] || "Implementation file";
 }
 
+function proofLabel(status: string): string {
+  if (status === "none") return "Not proven yet";
+  if (status === "partial") return "Partly proven";
+  if (status === "validated") return "Proven in real use";
+  return humanizeStatus(status);
+}
+
+function referenceLabel(pathOrUrl: string, index: number): string {
+  if (!pathOrUrl.includes("/") && pathOrUrl.includes(":")) {
+    return `Saved record ${index + 1}`;
+  }
+  return fileLabel(pathOrUrl);
+}
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -214,6 +228,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   const flowResult = await loadFlowForIdea(ideaId);
   const flow = flowResult.flow;
   const apiBase = getApiBase();
+  const linkedPlanIds = flow?.spec.spec_ids ?? [];
+  const linkedTaskIds = flow?.process.task_ids ?? [];
+  const linkedRefs = flow?.implementation.implementation_refs ?? [];
+  const contributorCount = flow?.contributors.all.length ?? 0;
+  const usageEventsCount = flow?.contributions.usage_events_count ?? 0;
+  const measuredValueTotal = flow?.contributions.measured_value_total ?? 0;
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
@@ -221,44 +241,30 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Home
         </Link>
+        <Link href="/today" className="text-muted-foreground hover:text-foreground">
+          Today
+        </Link>
         <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
           Ideas
         </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
         <Link href="/specs" className="text-muted-foreground hover:text-foreground">
-          Specs
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
+          Plans
         </Link>
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
+          Work
         </Link>
-        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
-          Gates
+        <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="text-muted-foreground hover:text-foreground">
+          Progress
         </Link>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold">{idea.name}</h1>
-        <p className="text-muted-foreground">{humanizeStatus(idea.manifestation_status)}</p>
+        <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
+        <p className="text-sm text-muted-foreground">
+          Current proof level: {proofLabel(idea.manifestation_status)}
+        </p>
       </div>
-
-      <p>{idea.description}</p>
 
       <IdeaProgressEditor
         ideaId={idea.id}
@@ -292,121 +298,137 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Validation status</p>
-          <p className="text-lg font-semibold">{humanizeStatus(idea.manifestation_status)}</p>
+          <p className="text-muted-foreground">How real it is</p>
+          <p className="text-lg font-semibold">{proofLabel(idea.manifestation_status)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Priority score</p>
+          <p className="text-muted-foreground">Priority right now</p>
           <p className="text-lg font-semibold">{formatDecimal(idea.free_energy_score)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Remaining upside</p>
+          <p className="text-muted-foreground">Value still available</p>
           <p className="text-lg font-semibold">{formatUsd(idea.value_gap)}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="text-muted-foreground">Confidence</p>
+          <p className="text-muted-foreground">How sure we are</p>
           <p className="text-lg font-semibold">{formatConfidence(idea.confidence)}</p>
         </div>
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Journey Through The System</h2>
+        <h2 className="font-semibold">Where This Idea Already Shows Up</h2>
         <p className="text-muted-foreground">
-          Specs{" "}
-          {flow && flow.spec.spec_ids.length > 0
-            ? flow.spec.spec_ids.map((specId, idx) => (
-                <span key={specId}>
-                  {idx > 0 ? ", " : ""}
-                  <Link
-                    href={`/specs/${encodeURIComponent(specId)}`}
-                    className="underline hover:text-foreground"
-                    title={`Spec ID: ${specId}`}
-                  >
-                    Open spec {idx + 1}
-                  </Link>
-                </span>
-              ))
-            : (
-              <Link href="/specs" className="underline hover:text-foreground">
-                missing
-              </Link>
-            )}{" "}
-          |{" "}
-          <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
-            process
-          </Link>{" "}
-          |{" "}
-          <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
-            implementation
-          </Link>
+          Use this as a quick sense of what is already planned, moving, or producing proof.
         </p>
-        <p className="text-muted-foreground">
-          Execution tasks{" "}
-          {flow && flow.process.task_ids.length > 0
-            ? flow.process.task_ids.map((taskId, idx) => (
-                <span key={taskId}>
-                  {idx > 0 ? ", " : ""}
-                  <Link
-                    href={`/tasks?task_id=${encodeURIComponent(taskId)}`}
-                    className="underline hover:text-foreground"
-                    title={`Task ID: ${taskId}`}
-                  >
-                    Task {idx + 1}
-                  </Link>
-                </span>
-              ))
-            : "-"}
-        </p>
-        <p className="text-muted-foreground">
-          Implementation references{" "}
-          {flow && flow.implementation.implementation_refs.length > 0
-            ? flow.implementation.implementation_refs.slice(0, 8).map((ref, idx) => (
-                <span key={ref}>
-                  {idx > 0 ? ", " : ""}
-                  <a
-                    href={toRepoHref(ref)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-foreground"
-                    title={ref}
-                  >
-                    {fileLabel(ref) || `File ${idx + 1}`}
-                  </a>
-                </span>
-              ))
-            : "-"}
-        </p>
-        <p className="text-muted-foreground">
-          Contributors{" "}
-          {flow && flow.contributors.all.length > 0
-            ? flow.contributors.all.slice(0, 10).map((contributorId, idx) => (
-                <span key={contributorId}>
-                  {idx > 0 ? ", " : ""}
-                  <Link
-                    href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
-                    className="underline hover:text-foreground"
-                    title={`Contributor ID: ${contributorId}`}
-                  >
-                    Contributor {idx + 1}
-                  </Link>
-                </span>
-              ))
-            : (
-              <Link href="/contributors" className="underline hover:text-foreground">
-                missing
-              </Link>
-            )}
-        </p>
-        <p className="text-muted-foreground">
-          Usage events {flow?.contributions.usage_events_count ?? 0} | Measured value{" "}
-          {formatUsd(flow?.contributions.measured_value_total ?? 0)} | Runtime events {flow?.implementation.runtime_events_count ?? 0} | Runtime time{" "}
-          {formatDecimal(flow?.implementation.runtime_total_ms ?? 0, 0)} ms
-        </p>
+        {flow ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded border p-3 space-y-2">
+              <p className="font-medium">Plans</p>
+              <p className="text-muted-foreground">
+                {linkedPlanIds.length > 0
+                  ? `${linkedPlanIds.length} plan${linkedPlanIds.length === 1 ? "" : "s"} linked to this idea.`
+                  : "No plans linked yet."}
+              </p>
+              {linkedPlanIds.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {linkedPlanIds.slice(0, 3).map((specId, idx) => (
+                    <Link
+                      key={specId}
+                      href={`/specs/${encodeURIComponent(specId)}`}
+                      className="underline hover:text-foreground"
+                      title={`Plan ID: ${specId}`}
+                    >
+                      Open plan {idx + 1}
+                    </Link>
+                  ))}
+                  {linkedPlanIds.length > 3 ? (
+                    <Link href="/specs" className="underline hover:text-foreground">
+                      See all plans
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded border p-3 space-y-2">
+              <p className="font-medium">Work cards</p>
+              <p className="text-muted-foreground">
+                {linkedTaskIds.length > 0
+                  ? `${linkedTaskIds.length} work card${linkedTaskIds.length === 1 ? "" : "s"} created so far.`
+                  : "No work cards yet."}
+              </p>
+              {linkedTaskIds.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {linkedTaskIds.slice(0, 3).map((taskId, idx) => (
+                    <Link
+                      key={taskId}
+                      href={`/tasks?task_id=${encodeURIComponent(taskId)}`}
+                      className="underline hover:text-foreground"
+                      title={`Task ID: ${taskId}`}
+                    >
+                      Open work card {idx + 1}
+                    </Link>
+                  ))}
+                  {linkedTaskIds.length > 3 ? (
+                    <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+                      See all work
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded border p-3 space-y-2">
+              <p className="font-medium">Files and saved results</p>
+              <p className="text-muted-foreground">
+                {linkedRefs.length > 0
+                  ? `${linkedRefs.length} linked file${linkedRefs.length === 1 ? "" : "s"} or saved result${linkedRefs.length === 1 ? "" : "s"}.`
+                  : "No linked files or saved results yet."}
+              </p>
+              {linkedRefs.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {linkedRefs.slice(0, 3).map((ref, idx) => (
+                    <a
+                      key={ref}
+                      href={toRepoHref(ref)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-foreground"
+                      title={ref}
+                    >
+                      {referenceLabel(ref, idx)}
+                    </a>
+                  ))}
+                  {linkedRefs.length > 3 ? (
+                    <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+                      See more links
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded border p-3 space-y-2">
+              <p className="font-medium">People and proof</p>
+              <p className="text-muted-foreground">
+                {contributorCount} people or agents touched this idea. {usageEventsCount} usage
+                signal{usageEventsCount === 1 ? "" : "s"} recorded. Measured value so far: {formatUsd(measuredValueTotal)}.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground">
+                  Open progress view
+                </Link>
+                <Link href="/contributors" className="underline hover:text-foreground">
+                  Open people view
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">The linked progress summary is not available right now.</p>
+        )}
       </section>
 
       <section className="rounded border p-4 space-y-3">
-        <h2 className="font-semibold">Open Questions</h2>
-        {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">None</p>}
+        <h2 className="font-semibold">Questions Still To Answer</h2>
+        {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">Nothing open right now.</p>}
         <ul className="space-y-2 text-sm">
           {idea.open_questions.map((q) => {
             const roi = q.estimated_cost > 0 ? q.value_to_whole / q.estimated_cost : 0;
@@ -414,12 +436,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
               <li key={q.question} className="rounded border p-3 space-y-1">
                 <p className="font-medium">{q.question}</p>
                 <p className="text-muted-foreground">
-                  Value {formatUsd(q.value_to_whole)} | Cost {formatUsd(q.estimated_cost)} | ROI {formatDecimal(roi)}
+                  Possible value {formatUsd(q.value_to_whole)} | Estimated effort {formatUsd(q.estimated_cost)} | Value for effort {formatDecimal(roi)}
                 </p>
                 {q.answer ? (
-                  <p className="text-muted-foreground">Answer: {q.answer}</p>
+                  <p className="text-muted-foreground">Current answer: {q.answer}</p>
                 ) : (
-                  <p className="text-muted-foreground">Answer: (unanswered)</p>
+                  <p className="text-muted-foreground">No answer yet.</p>
                 )}
               </li>
             );
@@ -428,8 +450,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Technical Links</h2>
-        <p className="text-muted-foreground">Use these only when you need raw system records.</p>
+        <h2 className="font-semibold">Raw Records</h2>
+        <p className="text-muted-foreground">Most people can ignore this section. Use it only when you need the underlying records.</p>
         <ul className="space-y-1">
           <li>
             <a href={`${apiBase}/api/ideas/${encodeURIComponent(idea.id)}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
