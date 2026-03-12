@@ -23,8 +23,22 @@ type CreatedTaskSnapshot = {
   output?: string | null;
   updated_at?: string | null;
 };
+type RuntimeEvent = {
+  id: string;
+  endpoint: string;
+  status_code: number;
+  recorded_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+type TaskActivityRow = {
+  id: string;
+  recordedAt: string;
+  title: string;
+  detail: string;
+};
 
 const LATEST_TODAY_TASK_STORAGE_KEY = "coherence.today.latest_task_id";
+const ACTIVITY_LIMIT = 5;
 
 function directionForType(taskType: TaskType, ideaName: string): string {
   if (taskType === "review") {
@@ -46,6 +60,65 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function humanizeWords(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return "Unknown";
+  return normalized
+    .split("_")
+    .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
+}
+
+function formatEventTime(value?: string | null): string {
+  if (!value) return "Time unavailable";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Time unavailable";
+  return parsed.toLocaleString();
+}
+
+function activityRowFromEvent(event: RuntimeEvent): TaskActivityRow {
+  const metadata = asRecord(event.metadata);
+  const trackingKind = String(metadata.tracking_kind || "").trim();
+  const lifecycleEvent = String(metadata.lifecycle_event || "").trim();
+  const taskStatus = String(metadata.task_status || "").trim();
+  const reason = String(metadata.reason || metadata.error || "").trim();
+  const finalStatus = String(metadata.task_final_status || "").trim();
+  const reviewPassFail = String(metadata.review_pass_fail || "").trim().toUpperCase();
+  const verifiedAssertions = String(metadata.verified_assertions || "").trim();
+
+  if (trackingKind === "agent_task_completion") {
+    const reviewSuffix = reviewPassFail ? ` Review ${reviewPassFail}.` : "";
+    const verifiedSuffix = verifiedAssertions ? ` Verified: ${verifiedAssertions}.` : "";
+    return {
+      id: event.id,
+      recordedAt: formatEventTime(event.recorded_at),
+      title: `${humanizeStatus(finalStatus || "completed")} result recorded`,
+      detail: `${humanizeWords(trackingKind)} via ${event.endpoint}.${reviewSuffix}${verifiedSuffix}`.trim(),
+    };
+  }
+
+  if (trackingKind === "agent_task_lifecycle") {
+    return {
+      id: event.id,
+      recordedAt: formatEventTime(event.recorded_at),
+      title: `${humanizeWords(lifecycleEvent || "lifecycle")} (${humanizeStatus(taskStatus || "pending")})`,
+      detail: reason ? reason : `${humanizeWords(trackingKind)} at ${event.endpoint}.`,
+    };
+  }
+
+  return {
+    id: event.id,
+    recordedAt: formatEventTime(event.recorded_at),
+    title: `${humanizeWords(trackingKind || "activity")} at ${event.endpoint}`,
+    detail: `Status code ${event.status_code}.`,
+  };
+}
+
 export default function TodayTopIdeaQuickLaunch({
   ideaId,
   ideaName,
@@ -54,6 +127,7 @@ export default function TodayTopIdeaQuickLaunch({
   const [launchState, setLaunchState] = useState<LaunchState>("idle");
   const [createdTaskId, setCreatedTaskId] = useState("");
   const [createdTask, setCreatedTask] = useState<CreatedTaskSnapshot | null>(null);
+  const [activityRows, setActivityRows] = useState<TaskActivityRow[]>([]);
   const [updateState, setUpdateState] = useState<UpdateState>("idle");
   const [updateMessage, setUpdateMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -69,11 +143,37 @@ export default function TodayTopIdeaQuickLaunch({
   }
 
   async function refreshCreatedTask(taskId: string): Promise<void> {
-    const response = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(await readErrorMessage(response));
-    const payload = (await response.json()) as CreatedTaskSnapshot;
+    const taskResponse = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
+    if (!taskResponse.ok) throw new Error(await readErrorMessage(taskResponse));
+    const payload = (await taskResponse.json()) as CreatedTaskSnapshot;
+
+    let timeline: TaskActivityRow[] = [];
+    try {
+      const eventsResponse = await fetch(`/api/runtime/events?limit=80`, { cache: "no-store" });
+      if (eventsResponse.ok) {
+        const eventsPayload = (await eventsResponse.json()) as RuntimeEvent[];
+        if (Array.isArray(eventsPayload)) {
+          timeline = eventsPayload
+            .filter((event) => {
+              const metadata = asRecord(event.metadata);
+              return String(metadata.task_id || "").trim() === taskId;
+            })
+            .sort((a, b) => {
+              const aTime = new Date(String(a.recorded_at || "")).getTime();
+              const bTime = new Date(String(b.recorded_at || "")).getTime();
+              return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+            })
+            .slice(0, ACTIVITY_LIMIT)
+            .map(activityRowFromEvent);
+        }
+      }
+    } catch {
+      timeline = [];
+    }
+
     setCreatedTaskId(taskId);
     setCreatedTask(payload);
+    setActivityRows(timeline);
   }
 
   async function quickUpdateCreatedTask(nextStatus: "running" | "completed" | "failed"): Promise<void> {
@@ -110,6 +210,7 @@ export default function TodayTopIdeaQuickLaunch({
     setErrorMessage("");
     setCreatedTaskId("");
     setCreatedTask(null);
+    setActivityRows([]);
     setUpdateState("idle");
     setUpdateMessage("");
 
@@ -173,17 +274,11 @@ export default function TodayTopIdeaQuickLaunch({
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch(`/api/agent/tasks/${encodeURIComponent(taskId)}`, { cache: "no-store" });
-        if (!response.ok) {
-          if (!cancelled) clearLatestTaskId();
-          return;
-        }
-        const payload = (await response.json()) as CreatedTaskSnapshot;
-        if (cancelled) return;
-        setCreatedTaskId(taskId);
-        setCreatedTask(payload);
+        await refreshCreatedTask(taskId);
       } catch {
         if (!cancelled) {
+          clearLatestTaskId();
+          setActivityRows([]);
           setUpdateState("idle");
           setUpdateMessage("");
         }
@@ -310,6 +405,7 @@ export default function TodayTopIdeaQuickLaunch({
                 clearLatestTaskId();
                 setCreatedTaskId("");
                 setCreatedTask(null);
+                setActivityRows([]);
                 setLaunchState("idle");
                 setUpdateState("idle");
                 setUpdateMessage("");
@@ -323,6 +419,22 @@ export default function TodayTopIdeaQuickLaunch({
           {updateState === "saving" ? <p className="text-sm text-muted-foreground">Saving update…</p> : null}
           {updateState === "saved" && updateMessage ? <p className="text-sm text-green-700">{updateMessage}</p> : null}
           {updateState === "error" && updateMessage ? <p className="text-sm text-destructive">Update failed: {updateMessage}</p> : null}
+          <div className="space-y-2 pt-1">
+            <p className="text-sm font-medium">Recent activity</p>
+            {activityRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No task activity recorded yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {activityRows.map((row) => (
+                  <li key={row.id} className="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+                    <p className="text-sm font-medium">{row.title}</p>
+                    <p className="text-xs text-muted-foreground">{row.recordedAt}</p>
+                    <p className="text-sm text-muted-foreground">{row.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       ) : null}
     </section>
