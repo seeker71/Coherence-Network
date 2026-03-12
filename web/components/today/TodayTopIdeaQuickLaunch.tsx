@@ -22,6 +22,7 @@ type CreatedTaskSnapshot = {
   current_step?: string | null;
   output?: string | null;
   updated_at?: string | null;
+  context?: Record<string, unknown> | null;
 };
 type RuntimeEvent = {
   id: string;
@@ -42,8 +43,16 @@ type NextActionRecommendation = {
   href: string;
   cta: string;
 };
+type TaskNoteSnapshot = {
+  text: string;
+  savedAt: string;
+  kind: string;
+};
 
 const LATEST_TODAY_TASK_STORAGE_KEY = "coherence.today.latest_task_id";
+const TODAY_TASK_NOTE_KEY = "today_user_note";
+const TODAY_TASK_NOTE_AT_KEY = "today_user_note_at";
+const TODAY_TASK_NOTE_KIND_KEY = "today_user_note_kind";
 const ACTIVITY_LIMIT = 5;
 
 function directionForType(taskType: TaskType, ideaName: string): string {
@@ -179,6 +188,46 @@ function deriveNextAction(
   };
 }
 
+function readTaskNote(task: CreatedTaskSnapshot): TaskNoteSnapshot | null {
+  const context = asRecord(task.context);
+  const text = String(context[TODAY_TASK_NOTE_KEY] || "").trim();
+  if (!text) return null;
+  return {
+    text,
+    savedAt: formatEventTime(String(context[TODAY_TASK_NOTE_AT_KEY] || task.updated_at || "")),
+    kind: String(context[TODAY_TASK_NOTE_KIND_KEY] || "note").trim() || "note",
+  };
+}
+
+function taskNoteKind(task: CreatedTaskSnapshot): string {
+  if (task.status === "needs_decision") return "decision";
+  if (task.status === "completed" || task.status === "failed") return "outcome";
+  return "instruction";
+}
+
+function taskNoteHelper(task: CreatedTaskSnapshot): string {
+  if (task.status === "needs_decision") {
+    return "Answer the pending decision here. Saving will resume the task.";
+  }
+  if (task.status === "completed" || task.status === "failed") {
+    return "Leave a short outcome note so the next person knows what happened.";
+  }
+  return "Leave a short instruction or progress note for this task.";
+}
+
+function taskNotePlaceholder(task: CreatedTaskSnapshot): string {
+  if (task.status === "needs_decision") return "Example: continue with the local demo flow and summarize blockers in one paragraph.";
+  if (task.status === "completed") return "Example: demo flow works locally; next step is polishing the dashboard copy.";
+  if (task.status === "failed") return "Example: blocked on missing local seed data; restore sample idea content before retrying.";
+  return "Example: focus on the user-facing summary first and keep all task language human-readable.";
+}
+
+function taskNoteButtonLabel(task: CreatedTaskSnapshot): string {
+  if (task.status === "needs_decision") return "Send decision";
+  if (task.status === "completed" || task.status === "failed") return "Save outcome note";
+  return "Save instruction";
+}
+
 export default function TodayTopIdeaQuickLaunch({
   ideaId,
   ideaName,
@@ -190,9 +239,14 @@ export default function TodayTopIdeaQuickLaunch({
   const [activityRows, setActivityRows] = useState<TaskActivityRow[]>([]);
   const [updateState, setUpdateState] = useState<UpdateState>("idle");
   const [updateMessage, setUpdateMessage] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteState, setNoteState] = useState<UpdateState>("idle");
+  const [noteMessage, setNoteMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const nextAction = createdTask ? deriveNextAction(createdTask, activityRows) : null;
+  const latestTaskNote = createdTask ? readTaskNote(createdTask) : null;
+  const isMutating = updateState === "saving" || noteState === "saving";
 
   function persistLatestTaskId(taskId: string): void {
     if (typeof window === "undefined") return;
@@ -267,6 +321,51 @@ export default function TodayTopIdeaQuickLaunch({
     }
   }
 
+  async function saveTaskNote(): Promise<void> {
+    if (!createdTask) return;
+    const trimmedNote = noteDraft.trim();
+    if (!trimmedNote) {
+      setNoteState("error");
+      setNoteMessage("Enter a short note before saving.");
+      return;
+    }
+
+    const noteKind = taskNoteKind(createdTask);
+    const payload: {
+      context: Record<string, string>;
+      decision?: string;
+    } = {
+      context: {
+        [TODAY_TASK_NOTE_KEY]: trimmedNote,
+        [TODAY_TASK_NOTE_AT_KEY]: new Date().toISOString(),
+        [TODAY_TASK_NOTE_KIND_KEY]: noteKind,
+      },
+    };
+
+    if (createdTask.status === "needs_decision") {
+      payload.decision = trimmedNote;
+    }
+
+    setNoteState("saving");
+    setNoteMessage("");
+    try {
+      const response = await fetch(`/api/agent/tasks/${encodeURIComponent(createdTask.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response));
+
+      await refreshCreatedTask(createdTask.id);
+      setNoteDraft("");
+      setNoteState("saved");
+      setNoteMessage(createdTask.status === "needs_decision" ? "Decision sent and task resumed." : "Note saved to this task.");
+    } catch (error) {
+      setNoteState("error");
+      setNoteMessage(String(error));
+    }
+  }
+
   async function launchTopIdeaTask() {
     setLaunchState("creating");
     setErrorMessage("");
@@ -275,6 +374,9 @@ export default function TodayTopIdeaQuickLaunch({
     setActivityRows([]);
     setUpdateState("idle");
     setUpdateMessage("");
+    setNoteDraft("");
+    setNoteState("idle");
+    setNoteMessage("");
 
     try {
       const createResponse = await fetch("/api/agent/tasks", {
@@ -369,6 +471,8 @@ export default function TodayTopIdeaQuickLaunch({
             setErrorMessage("");
             setUpdateState("idle");
             setUpdateMessage("");
+            setNoteState("idle");
+            setNoteMessage("");
           }}
         >
           <option value="impl">Build next outcome</option>
@@ -448,14 +552,45 @@ export default function TodayTopIdeaQuickLaunch({
           {createdTask.output ? (
             <p className="text-sm text-muted-foreground">Latest outcome: {createdTask.output}</p>
           ) : null}
+          <div className="rounded-md border border-border/60 bg-background/60 px-3 py-3 space-y-2">
+            <p className="text-sm font-medium">Leave an update here</p>
+            <p className="text-sm text-muted-foreground">{taskNoteHelper(createdTask)}</p>
+            <textarea
+              className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              rows={3}
+              value={noteDraft}
+              onChange={(event) => {
+                setNoteDraft(event.target.value);
+                if (noteState !== "idle") {
+                  setNoteState("idle");
+                  setNoteMessage("");
+                }
+              }}
+              placeholder={taskNotePlaceholder(createdTask)}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => void saveTaskNote()} disabled={isMutating}>
+                {taskNoteButtonLabel(createdTask)}
+              </Button>
+              {latestTaskNote ? (
+                <p className="text-sm text-muted-foreground">
+                  Latest {latestTaskNote.kind}: {latestTaskNote.savedAt}
+                </p>
+              ) : null}
+            </div>
+            {noteState === "saving" ? <p className="text-sm text-muted-foreground">Saving note…</p> : null}
+            {noteState === "saved" && noteMessage ? <p className="text-sm text-green-700">{noteMessage}</p> : null}
+            {noteState === "error" && noteMessage ? <p className="text-sm text-destructive">Save failed: {noteMessage}</p> : null}
+            {latestTaskNote ? <p className="text-sm text-muted-foreground">{latestTaskNote.text}</p> : null}
+          </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("running")} disabled={updateState === "saving"}>
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("running")} disabled={isMutating}>
               Mark running
             </Button>
-            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("completed")} disabled={updateState === "saving"}>
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("completed")} disabled={isMutating}>
               Mark completed
             </Button>
-            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("failed")} disabled={updateState === "saving"}>
+            <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("failed")} disabled={isMutating}>
               Mark failed
             </Button>
             <Button
@@ -466,7 +601,7 @@ export default function TodayTopIdeaQuickLaunch({
                 setUpdateMessage("");
                 void refreshCreatedTask(createdTask.id);
               }}
-              disabled={updateState === "saving"}
+              disabled={isMutating}
             >
               Refresh
             </Button>
@@ -481,9 +616,12 @@ export default function TodayTopIdeaQuickLaunch({
                 setLaunchState("idle");
                 setUpdateState("idle");
                 setUpdateMessage("");
+                setNoteDraft("");
+                setNoteState("idle");
+                setNoteMessage("");
                 setErrorMessage("");
               }}
-              disabled={updateState === "saving"}
+              disabled={isMutating}
             >
               Clear
             </Button>
