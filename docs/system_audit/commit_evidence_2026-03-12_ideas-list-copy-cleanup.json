@@ -1,0 +1,81 @@
+{
+  "date": "2026-03-12",
+  "thread_branch": "codex/ideas-list-copy-cleanup-20260312",
+  "commit_scope": "Remove remaining value/effort jargon on the Ideas list so first-time users see plain-language labels across idea cards.",
+  "files_owned": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_ideas-list-copy-cleanup.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "web/app/ideas/page.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_ideas-list-copy-cleanup.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "community-project-funder-match",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "076-ui-alignment-overhaul"
+  ],
+  "task_ids": [
+    "task-2026-03-12-ideas-list-copy-cleanup"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "ux_copy"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make prompt-gate",
+    "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_ideas-list-copy-cleanup.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_ideas-list-copy-cleanup.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Ideas list cards now say 'Total possible value' and 'Expected work size' instead of technical possible/effort language.",
+    "public_endpoints": [
+      "http://127.0.0.1:3105/ideas"
+    ],
+    "test_flows": [
+      "Open /ideas and confirm idea-card summary labels read in plain language for first-time users."
+    ]
+  }
+}
