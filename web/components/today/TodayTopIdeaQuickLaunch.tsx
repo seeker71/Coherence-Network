@@ -12,6 +12,7 @@ type TodayTopIdeaQuickLaunchProps = {
 };
 
 type LaunchState = "idle" | "creating" | "starting" | "running" | "created" | "error";
+type FollowUpState = "idle" | "saving" | "saved" | "error";
 type TaskType = "impl" | "review" | "spec";
 type UpdateState = "idle" | "saving" | "saved" | "error";
 type CreatedTaskSnapshot = {
@@ -94,6 +95,12 @@ function formatEventTime(value?: string | null): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "Time unavailable";
   return parsed.toLocaleString();
+}
+
+function clipText(value: string, maxLength = 260): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 }
 
 function activityRowFromEvent(event: RuntimeEvent): TaskActivityRow {
@@ -228,6 +235,56 @@ function taskNoteButtonLabel(task: CreatedTaskSnapshot): string {
   return "Save instruction";
 }
 
+function followUpTaskType(task: CreatedTaskSnapshot): TaskType {
+  if (task.status === "failed" || task.status === "needs_decision") return "review";
+  if (task.task_type === "spec") return "impl";
+  if (task.task_type === "review") return "impl";
+  if (task.status === "completed") return "impl";
+  return "review";
+}
+
+function followUpButtonLabel(task: CreatedTaskSnapshot): string {
+  const nextType = followUpTaskType(task);
+  if (nextType === "impl") return "Create follow-up build task";
+  if (nextType === "spec") return "Create follow-up plan task";
+  return "Create follow-up review task";
+}
+
+function carryForwardContext(
+  task: CreatedTaskSnapshot,
+  activityRows: TaskActivityRow[],
+  latestTaskNote: TaskNoteSnapshot | null,
+): string {
+  return clipText(
+    latestTaskNote?.text ||
+      String(task.output || "").trim() ||
+      String(task.current_step || "").trim() ||
+      activityRows[0]?.detail ||
+      task.direction,
+    320,
+  );
+}
+
+function buildFollowUpDirection(
+  task: CreatedTaskSnapshot,
+  activityRows: TaskActivityRow[],
+  latestTaskNote: TaskNoteSnapshot | null,
+  ideaName: string,
+): string {
+  const nextType = followUpTaskType(task);
+  const carryForward = carryForwardContext(task, activityRows, latestTaskNote);
+
+  if (nextType === "review") {
+    return `Review the latest context for ${ideaName} and decide the most useful next move. Focus on one clear blocker, risk, or unresolved choice. Carry forward this context: ${carryForward}`;
+  }
+
+  if (nextType === "spec") {
+    return `Turn the latest context for ${ideaName} into a clear next spec or scoped plan. Keep the output specific enough that the next implementation task is obvious. Carry forward this context: ${carryForward}`;
+  }
+
+  return `Deliver the next highest-value outcome for ${ideaName} using the latest confirmed context. Build the smallest visible improvement that keeps the MVP moving. Carry forward this context: ${carryForward}`;
+}
+
 export default function TodayTopIdeaQuickLaunch({
   ideaId,
   ideaName,
@@ -239,6 +296,9 @@ export default function TodayTopIdeaQuickLaunch({
   const [activityRows, setActivityRows] = useState<TaskActivityRow[]>([]);
   const [updateState, setUpdateState] = useState<UpdateState>("idle");
   const [updateMessage, setUpdateMessage] = useState("");
+  const [followUpState, setFollowUpState] = useState<FollowUpState>("idle");
+  const [followUpMessage, setFollowUpMessage] = useState("");
+  const [followUpTaskId, setFollowUpTaskId] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
   const [noteState, setNoteState] = useState<UpdateState>("idle");
   const [noteMessage, setNoteMessage] = useState("");
@@ -246,7 +306,7 @@ export default function TodayTopIdeaQuickLaunch({
 
   const nextAction = createdTask ? deriveNextAction(createdTask, activityRows) : null;
   const latestTaskNote = createdTask ? readTaskNote(createdTask) : null;
-  const isMutating = updateState === "saving" || noteState === "saving";
+  const isMutating = updateState === "saving" || noteState === "saving" || followUpState === "saving";
 
   function persistLatestTaskId(taskId: string): void {
     if (typeof window === "undefined") return;
@@ -366,6 +426,66 @@ export default function TodayTopIdeaQuickLaunch({
     }
   }
 
+  async function createFollowUpTask(): Promise<void> {
+    if (!createdTask) return;
+
+    setFollowUpState("saving");
+    setFollowUpMessage("");
+    setFollowUpTaskId("");
+
+    const nextType = followUpTaskType(createdTask);
+    const carryForward = carryForwardContext(createdTask, activityRows, latestTaskNote);
+    const direction = buildFollowUpDirection(createdTask, activityRows, latestTaskNote, ideaName);
+
+    try {
+      const response = await fetch("/api/agent/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_type: nextType,
+          direction,
+          context: {
+            idea_id: ideaId,
+            idea_name: ideaName,
+            created_from: "today_follow_up_task",
+            parent_task_id: createdTask.id,
+            parent_task_type: createdTask.task_type,
+            parent_task_status: createdTask.status,
+            parent_task_direction: clipText(createdTask.direction, 240),
+            parent_task_note: latestTaskNote?.text || "",
+            parent_task_output: clipText(String(createdTask.output || ""), 240),
+            parent_task_current_step: clipText(String(createdTask.current_step || ""), 240),
+            parent_task_latest_activity: activityRows[0]?.detail || "",
+            [TODAY_TASK_NOTE_KEY]: carryForward,
+            [TODAY_TASK_NOTE_AT_KEY]: new Date().toISOString(),
+            [TODAY_TASK_NOTE_KIND_KEY]: "follow-up context",
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+      }
+
+      const payload = (await response.json()) as { id?: string };
+      const taskId = String(payload.id || "").trim();
+      if (!taskId) throw new Error("Follow-up task was created but response did not include task id.");
+
+      persistLatestTaskId(taskId);
+      setFollowUpTaskId(taskId);
+      await refreshCreatedTask(taskId);
+      setFollowUpState("saved");
+      setFollowUpMessage(`Follow-up ${humanizeWords(nextType)} task created and made current.`);
+      setLaunchState("created");
+      setNoteDraft("");
+      setNoteState("idle");
+      setNoteMessage("");
+    } catch (error) {
+      setFollowUpState("error");
+      setFollowUpMessage(String(error));
+    }
+  }
+
   async function launchTopIdeaTask() {
     setLaunchState("creating");
     setErrorMessage("");
@@ -374,6 +494,9 @@ export default function TodayTopIdeaQuickLaunch({
     setActivityRows([]);
     setUpdateState("idle");
     setUpdateMessage("");
+    setFollowUpState("idle");
+    setFollowUpMessage("");
+    setFollowUpTaskId("");
     setNoteDraft("");
     setNoteState("idle");
     setNoteMessage("");
@@ -471,6 +594,9 @@ export default function TodayTopIdeaQuickLaunch({
             setErrorMessage("");
             setUpdateState("idle");
             setUpdateMessage("");
+            setFollowUpState("idle");
+            setFollowUpMessage("");
+            setFollowUpTaskId("");
             setNoteState("idle");
             setNoteMessage("");
           }}
@@ -553,6 +679,37 @@ export default function TodayTopIdeaQuickLaunch({
             <p className="text-sm text-muted-foreground">Latest outcome: {createdTask.output}</p>
           ) : null}
           <div className="rounded-md border border-border/60 bg-background/60 px-3 py-3 space-y-2">
+            <p className="text-sm font-medium">Keep momentum</p>
+            <p className="text-sm text-muted-foreground">
+              Turn the current result into the next task without retyping the context.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => void createFollowUpTask()} disabled={isMutating}>
+                {followUpButtonLabel(createdTask)}
+              </Button>
+              <Link
+                href={`/ideas/${encodeURIComponent(ideaId)}`}
+                className="text-sm underline text-muted-foreground hover:text-foreground"
+              >
+                Turn idea into specs
+              </Link>
+            </div>
+            {followUpState === "saving" ? <p className="text-sm text-muted-foreground">Creating follow-up task…</p> : null}
+            {followUpState === "saved" && followUpMessage ? (
+              <p className="text-sm text-green-700">
+                {followUpMessage}{" "}
+                {followUpTaskId ? (
+                  <Link href={`/tasks?task_id=${encodeURIComponent(followUpTaskId)}`} className="underline">
+                    Open follow-up
+                  </Link>
+                ) : null}
+              </p>
+            ) : null}
+            {followUpState === "error" && followUpMessage ? (
+              <p className="text-sm text-destructive">Follow-up failed: {followUpMessage}</p>
+            ) : null}
+          </div>
+          <div className="rounded-md border border-border/60 bg-background/60 px-3 py-3 space-y-2">
             <p className="text-sm font-medium">Leave an update here</p>
             <p className="text-sm text-muted-foreground">{taskNoteHelper(createdTask)}</p>
             <textarea
@@ -616,6 +773,9 @@ export default function TodayTopIdeaQuickLaunch({
                 setLaunchState("idle");
                 setUpdateState("idle");
                 setUpdateMessage("");
+                setFollowUpState("idle");
+                setFollowUpMessage("");
+                setFollowUpTaskId("");
                 setNoteDraft("");
                 setNoteState("idle");
                 setNoteMessage("");
