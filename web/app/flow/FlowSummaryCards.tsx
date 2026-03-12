@@ -3,40 +3,41 @@ import type { FlowItem, FlowResponse } from "./types";
 type Props = {
   filteredItems: FlowItem[];
   flow: FlowResponse;
-  contributorsLength: number;
-  contributionsLength: number;
 };
 
-export function FlowSummaryCards({ filteredItems, flow, contributorsLength, contributionsLength }: Props) {
-  const flowCompleteCount = filteredItems.filter(
-    (row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked
+export function FlowSummaryCards({ filteredItems, flow }: Props) {
+  const plannedCount = filteredItems.filter((row) => row.spec.tracked).length;
+  const workCount = filteredItems.filter((row) => row.process.tracked).length;
+  const proofCount = filteredItems.filter((row) => row.implementation.tracked || row.validation.tracked).length;
+  const fullStoryCount = filteredItems.filter(
+    (row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked,
   ).length;
 
   return (
-    <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+    <section className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3 lg:grid-cols-6">
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Ideas tracked</p>
+        <p className="text-muted-foreground">Ideas in view</p>
         <p className="text-lg font-semibold">{filteredItems.length}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Flow complete (spec+process+impl+validation)</p>
-        <p className="text-lg font-semibold">{flowCompleteCount}</p>
+        <p className="text-muted-foreground">Ideas with a plan</p>
+        <p className="text-lg font-semibold">{plannedCount}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Contributors in team records</p>
-        <p className="text-lg font-semibold">{contributorsLength}</p>
+        <p className="text-muted-foreground">Ideas with work linked</p>
+        <p className="text-lg font-semibold">{workCount}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Contributions in team records</p>
-        <p className="text-lg font-semibold">{contributionsLength}</p>
+        <p className="text-muted-foreground">Ideas with proof visible</p>
+        <p className="text-lg font-semibold">{proofCount}</p>
       </div>
       <div className="rounded border p-3">
-        <p className="text-muted-foreground">Blocked ideas</p>
+        <p className="text-muted-foreground">Full story visible</p>
+        <p className="text-lg font-semibold">{fullStoryCount}</p>
+      </div>
+      <div className="rounded border p-3">
+        <p className="text-muted-foreground">Needs help now</p>
         <p className="text-lg font-semibold">{flow.summary.blocked_ideas}</p>
-      </div>
-      <div className="rounded border p-3">
-        <p className="text-muted-foreground">Unblock queue items</p>
-        <p className="text-lg font-semibold">{flow.summary.queue_items}</p>
       </div>
     </section>
   );
