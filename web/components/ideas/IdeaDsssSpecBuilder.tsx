@@ -17,6 +17,7 @@ type IdeaDsssSpecBuilderProps = {
 
 type DsssMode = "single" | "set";
 type CreateState = "idle" | "saving" | "saved" | "error";
+type StartState = "idle" | "saving" | "saved" | "error";
 type SuggestedSpecDraft = {
   specId: string;
   title: string;
@@ -69,11 +70,11 @@ function buildDsssGuide(
 
   return {
     direction: `Clarify the first real-world outcome ${ideaName} should create and the person it helps first.`,
-    scope: `Keep the MVP tight: one walkable flow, one visible result, and only the minimum support needed. ${cleanDescription}`,
+    scope: `Keep the first version tight: one walkable flow, one visible result, and only the minimum support needed. ${cleanDescription}`,
     slices:
       mode === "single"
-        ? "Keep the idea in one spec so the team can align on the MVP before splitting further."
-        : "Split the idea into promise, flow, and proof so each spec stays small enough to build and validate.",
+        ? "Keep the idea in one plan so people can agree on the first version before splitting it further."
+        : "Split the idea into promise, flow, and proof so each plan stays small enough to build and check.",
     success: question
       ? `A human can understand the value, walk the flow, and answer this open question next: ${question}`
       : "A human can understand the value, walk the flow, and see what proof confirms the idea is working.",
@@ -90,20 +91,20 @@ function buildSuggestedSpecs(props: IdeaDsssSpecBuilderProps, mode: DsssMode): S
     const whyItMatters = `Capture the smallest version of ${props.ideaName} that an external person can understand, try, and judge.`;
     const whatItCovers = question
       ? `Describe the first user journey, the data it needs, and how this open question should be resolved: ${question}`
-      : `Describe the first user journey, the supporting data it needs, and the boundary for what this MVP leaves out. ${cleanDescription}`;
+      : `Describe the first user journey, the supporting data it needs, and the boundary for what this first version leaves out. ${cleanDescription}`;
     const successEvidence = "A first-time user can explain the promise, complete the flow, and see what changed or what should happen next.";
 
     return [
       {
         specId: `${baseId}-dsss-mvp`,
-        title: `${props.ideaName}: MVP direction, scope, and success`,
+        title: `${props.ideaName}: first release plan`,
         whyItMatters,
         whatItCovers,
         successEvidence,
         summary: `${whyItMatters} ${whatItCovers}`,
-        processSummary: `DSSS direction: define the first audience and outcome. DSSS scope: keep the MVP to one walkable flow.`,
-        pseudocodeSummary: `DSSS slices: hold this as one spec until the first user-facing flow and evidence path are unambiguous.`,
-        implementationSummary: `DSSS success: ${successEvidence}`,
+        processSummary: "Direction: define the first audience and outcome. Scope: keep the first version to one walkable flow.",
+        pseudocodeSummary: "Smaller parts: keep this as one plan until the first user-facing flow and proof path are clear.",
+        implementationSummary: `Proof of success: ${successEvidence}`,
         potentialValue: Math.max(1, props.potentialValue),
         estimatedCost: Math.max(1, props.estimatedCost),
       },
@@ -113,14 +114,14 @@ function buildSuggestedSpecs(props: IdeaDsssSpecBuilderProps, mode: DsssMode): S
   return [
     {
       specId: `${baseId}-dsss-promise`,
-      title: `${props.ideaName}: MVP promise and audience`,
-      whyItMatters: `Lock the first audience and promise for ${props.ideaName} so the MVP says something concrete.`,
+      title: `${props.ideaName}: promise and audience`,
+      whyItMatters: `Lock the first audience and promise for ${props.ideaName} so the first version says something concrete.`,
       whatItCovers: `Define who this helps first, what tension it resolves, and what the first visible result should be. ${cleanDescription}`,
       successEvidence: "A new user can tell who this is for, why it matters, and where to start without extra explanation.",
       summary: `Define the first audience, promise, and visible result for ${props.ideaName}.`,
-      processSummary: "DSSS direction: audience, promise, and first outcome.",
-      pseudocodeSummary: "DSSS scope: keep only the first externally valuable journey and exclude secondary complexity.",
-      implementationSummary: "DSSS success: the MVP promise is obvious and actionable.",
+      processSummary: "Direction: audience, promise, and first outcome.",
+      pseudocodeSummary: "Scope: keep only the first externally valuable journey and leave out secondary complexity.",
+      implementationSummary: "Proof of success: the promise is obvious and actionable.",
       potentialValue: scaledValue(props.potentialValue, 0.35),
       estimatedCost: scaledValue(props.estimatedCost, 0.25),
     },
@@ -131,11 +132,11 @@ function buildSuggestedSpecs(props: IdeaDsssSpecBuilderProps, mode: DsssMode): S
       whatItCovers: question
         ? `Map the creation, update, review, and follow-up loop in plain language. Use this open question as a design constraint: ${question}`
         : "Map the creation, update, review, and follow-up loop in plain language so a new person can actually use it.",
-      successEvidence: "Someone can complete the core journey locally without needing internal IDs, operator jargon, or hidden navigation.",
+      successEvidence: "Someone can complete the core journey locally without needing hidden IDs, inside language, or hard-to-find navigation.",
       summary: `Define the main human flow for ${props.ideaName} from entry to outcome.`,
-      processSummary: "DSSS scope: capture the smallest complete user journey.",
-      pseudocodeSummary: "DSSS slices: entry, action, review, and next-step handoff.",
-      implementationSummary: "DSSS success: the end-to-end flow is walkable and understandable.",
+      processSummary: "Scope: capture the smallest complete user journey.",
+      pseudocodeSummary: "Smaller parts: entry, action, review, and next-step handoff.",
+      implementationSummary: "Proof of success: the end-to-end flow is easy to walk and understand.",
       potentialValue: scaledValue(props.potentialValue, 0.4),
       estimatedCost: scaledValue(props.estimatedCost, 0.45),
     },
@@ -143,12 +144,12 @@ function buildSuggestedSpecs(props: IdeaDsssSpecBuilderProps, mode: DsssMode): S
       specId: `${baseId}-dsss-evidence`,
       title: `${props.ideaName}: measurement, trust, and follow-up`,
       whyItMatters: `Make progress for ${props.ideaName} credible by showing what changed, what is blocked, and what should happen next.`,
-      whatItCovers: "Define the status signals, proof markers, human review points, and follow-up rules that keep the MVP trustworthy.",
-      successEvidence: "The system makes value movement, blockers, and next actions visible to a human without extra technical interpretation.",
+      whatItCovers: "Define the status signals, proof markers, human review points, and follow-up rules that keep the first version trustworthy.",
+      successEvidence: "The experience makes value movement, blockers, and next actions visible without extra technical interpretation.",
       summary: `Define measurement, trust, and next-step evidence for ${props.ideaName}.`,
-      processSummary: "DSSS direction: prove value and trust, not just activity.",
-      pseudocodeSummary: "DSSS slices: evidence, review checkpoints, and follow-up handoff.",
-      implementationSummary: "DSSS success: humans can judge whether the idea is advancing or stuck.",
+      processSummary: "Direction: prove value and trust, not just activity.",
+      pseudocodeSummary: "Smaller parts: proof, review checkpoints, and next-step handoff.",
+      implementationSummary: "Proof of success: people can judge whether the idea is moving or stuck.",
       potentialValue: scaledValue(props.potentialValue, 0.25),
       estimatedCost: scaledValue(props.estimatedCost, 0.3),
     },
@@ -169,6 +170,11 @@ export default function IdeaDsssSpecBuilder({
   const [busyKey, setBusyKey] = useState("");
   const [message, setMessage] = useState("");
   const [knownSpecIds, setKnownSpecIds] = useState<string[]>(existingSpecIds);
+  const [startState, setStartState] = useState<StartState>("idle");
+  const [startBusyKey, setStartBusyKey] = useState("");
+  const [startedFromSpecId, setStartedFromSpecId] = useState("");
+  const [startMessage, setStartMessage] = useState("");
+  const [startedTaskId, setStartedTaskId] = useState("");
 
   const guide = useMemo(() => {
     return buildDsssGuide(ideaName, description, openQuestions, mode);
@@ -196,6 +202,11 @@ export default function IdeaDsssSpecBuilder({
     setCreateState("idle");
     setBusyKey("");
     setMessage("");
+    setStartState("idle");
+    setStartBusyKey("");
+    setStartedFromSpecId("");
+    setStartMessage("");
+    setStartedTaskId("");
   }
 
   async function createSpecDraft(draft: SuggestedSpecDraft): Promise<"created" | "existing"> {
@@ -238,8 +249,8 @@ export default function IdeaDsssSpecBuilder({
       setCreateState("saved");
       setMessage(
         result === "created"
-          ? `${draft.title} is now in the spec registry.`
-          : `${draft.title} already existed, so the builder linked you to the existing spec.`,
+          ? `${draft.title} is now saved as a plan.`
+          : `${draft.title} already existed, so this page linked you to the existing plan.`,
       );
     } catch (error) {
       setCreateState("error");
@@ -265,7 +276,7 @@ export default function IdeaDsssSpecBuilder({
 
       setCreateState("saved");
       setMessage(
-        `DSSS spec set ready: ${createdCount} created${existingCount > 0 ? `, ${existingCount} already existed` : ""}.`,
+        `Plan set ready: ${createdCount} created${existingCount > 0 ? `, ${existingCount} already existed` : ""}.`,
       );
     } catch (error) {
       setCreateState("error");
@@ -275,17 +286,67 @@ export default function IdeaDsssSpecBuilder({
     }
   }
 
+  async function startWorkFromPlan(draft: SuggestedSpecDraft): Promise<void> {
+    setStartState("saving");
+    setStartBusyKey(draft.specId);
+    setStartedFromSpecId(draft.specId);
+    setStartMessage("");
+    setStartedTaskId("");
+
+    try {
+      const response = await fetch("/api/agent/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_type: "impl",
+          direction: `Start the first visible work step for ${ideaName} using this plan: ${draft.title}. Keep it small, clear, and easy for a first-time user to follow.`,
+          context: {
+            idea_id: ideaId,
+            idea_name: ideaName,
+            spec_id: draft.specId,
+            spec_title: draft.title,
+            created_from: "idea_dsss_spec_builder_start_work",
+            source_plan_summary: draft.summary,
+            source_plan_success: draft.successEvidence,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { id?: string };
+      const taskId = String(payload.id || "").trim();
+      if (!taskId) throw new Error("The work card was created, but the response did not include its id.");
+
+      setStartedTaskId(taskId);
+      setStartState("saved");
+      setStartMessage("The first work step is ready from this plan.");
+    } catch (error) {
+      setStartState("error");
+      setStartMessage(String(error));
+    } finally {
+      setStartBusyKey("");
+    }
+  }
+
   return (
     <section className="rounded border p-4 space-y-4">
       <div className="space-y-2">
-        <h2 className="font-semibold">Turn This Idea Into Specs</h2>
+        <h2 className="font-semibold">Turn This Idea Into A Clear Plan</h2>
         <p className="text-sm text-muted-foreground">
-          Use the DSSS framing to move from a broad idea to concrete spec work: set the direction, narrow the scope,
-          split the work into slices, and define the success evidence.
+          Start with the big idea, then make it easier to act on. This view helps you name the direction, keep the
+          scope small, break the work into smaller parts, and say how you will know it worked.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          This creates plan cards only. You can review them first, then start work from the plan you want to use.
         </p>
         {existingSpecIds.length > 0 ? (
           <p className="text-sm text-muted-foreground">
-            Already linked specs: {existingSpecIds.length}. Use DSSS to tighten the MVP or add the missing slice.
+            Plans already linked here: {existingSpecIds.length}. Use this to tighten the first version or fill in the
+            missing part.
           </p>
         ) : null}
       </div>
@@ -300,21 +361,21 @@ export default function IdeaDsssSpecBuilder({
           <p className="text-muted-foreground">{guide.scope}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="font-medium">Slices</p>
+          <p className="font-medium">Smaller parts</p>
           <p className="text-muted-foreground">{guide.slices}</p>
         </div>
         <div className="rounded border p-3">
-          <p className="font-medium">Success</p>
+          <p className="font-medium">Proof of success</p>
           <p className="text-muted-foreground">{guide.success}</p>
         </div>
       </section>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant={mode === "single" ? "default" : "outline"} onClick={() => applyMode("single")}>
-          One spec
+          One clear plan
         </Button>
         <Button type="button" variant={mode === "set" ? "default" : "outline"} onClick={() => applyMode("set")}>
-          Split into spec set
+          Split into smaller plans
         </Button>
         <Button
           type="button"
@@ -322,7 +383,7 @@ export default function IdeaDsssSpecBuilder({
           onClick={() => void createAllSpecs()}
           disabled={createState === "saving" || allSuggestedKnown}
         >
-          {createState === "saving" && busyKey === "all" ? "Creating specs..." : "Create all suggested specs"}
+          {createState === "saving" && busyKey === "all" ? "Creating plans..." : "Create all plans"}
         </Button>
       </div>
 
@@ -330,18 +391,28 @@ export default function IdeaDsssSpecBuilder({
         {suggestedSpecs.map((draft) => {
           const exists = knownSpecIds.includes(draft.specId);
           return (
-            <article key={draft.specId} className="rounded border p-4 space-y-2" title={`Spec ID: ${draft.specId}`}>
+            <article key={draft.specId} className="rounded border p-4 space-y-2" title={`Plan ID: ${draft.specId}`}>
               <div className="space-y-1">
                 <h3 className="font-medium">{draft.title}</h3>
                 <p className="text-sm text-muted-foreground">{draft.whyItMatters}</p>
               </div>
               <p className="text-sm text-muted-foreground">{draft.whatItCovers}</p>
-              <p className="text-sm text-muted-foreground">Success evidence: {draft.successEvidence}</p>
+              <p className="text-sm text-muted-foreground">How you will know it worked: {draft.successEvidence}</p>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 {exists ? (
-                  <Link href={`/specs/${encodeURIComponent(draft.specId)}`} className="underline hover:text-foreground">
-                    Open spec
-                  </Link>
+                  <>
+                    <Link href={`/specs/${encodeURIComponent(draft.specId)}`} className="underline hover:text-foreground">
+                      Open plan
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void startWorkFromPlan(draft)}
+                      disabled={startState === "saving"}
+                    >
+                      {startState === "saving" && startBusyKey === draft.specId ? "Creating work card..." : "Start first work step"}
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     type="button"
@@ -349,20 +420,33 @@ export default function IdeaDsssSpecBuilder({
                     onClick={() => void createSingleSpec(draft)}
                     disabled={createState === "saving"}
                   >
-                    {createState === "saving" && busyKey === draft.specId ? "Creating..." : "Create spec"}
+                    {createState === "saving" && busyKey === draft.specId ? "Creating..." : "Create plan"}
                   </Button>
                 )}
                 <span className="text-muted-foreground">
-                  Potential value {draft.potentialValue.toFixed(1)} | Estimated cost {draft.estimatedCost.toFixed(1)}
+                  Possible value {draft.potentialValue.toFixed(1)} | Likely effort {draft.estimatedCost.toFixed(1)}
                 </span>
               </div>
+              {startedFromSpecId === draft.specId && startState === "saved" && startMessage ? (
+                <p className="text-sm text-green-700">
+                  {startMessage}{" "}
+                  {startedTaskId ? (
+                    <Link href={`/tasks?task_id=${encodeURIComponent(startedTaskId)}`} className="underline">
+                      Open work card
+                    </Link>
+                  ) : null}
+                </p>
+              ) : null}
+              {startedFromSpecId === draft.specId && startState === "error" && startMessage ? (
+                <p className="text-sm text-destructive">Could not create the work card: {startMessage}</p>
+              ) : null}
             </article>
           );
         })}
       </div>
 
       {createState === "saved" && message ? <p className="text-sm text-green-700">{message}</p> : null}
-      {createState === "error" && message ? <p className="text-sm text-destructive">Create failed: {message}</p> : null}
+      {createState === "error" && message ? <p className="text-sm text-destructive">Could not create the plan: {message}</p> : null}
     </section>
   );
 }

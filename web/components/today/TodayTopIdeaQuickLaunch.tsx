@@ -58,12 +58,12 @@ const ACTIVITY_LIMIT = 5;
 
 function directionForType(taskType: TaskType, ideaName: string): string {
   if (taskType === "review") {
-    return `Review current progress for ${ideaName}. Report confidence, key risks, and one clear next action to improve MVP readiness.`;
+    return `Check the current progress for ${ideaName}. Say what is clear, what feels risky, and the one next step that matters most.`;
   }
   if (taskType === "spec") {
-    return `Define the next one-week plan for ${ideaName} with measurable outcomes and evidence to collect before implementation.`;
+    return `Turn ${ideaName} into a short plan for the next week with a clear outcome and a simple way to tell if it worked.`;
   }
-  return `Deliver the next highest-value milestone for ${ideaName}. Focus on visible MVP progress and record what changed for users.`;
+  return `Move ${ideaName} forward in a way a first-time user can see. Say what changed and what should happen next.`;
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
@@ -119,8 +119,8 @@ function activityRowFromEvent(event: RuntimeEvent): TaskActivityRow {
     return {
       id: event.id,
       recordedAt: formatEventTime(event.recorded_at),
-      title: `${humanizeStatus(finalStatus || "completed")} result recorded`,
-      detail: `${humanizeWords(trackingKind)} via ${event.endpoint}.${reviewSuffix}${verifiedSuffix}`.trim(),
+      title: `${humanizeStatus(finalStatus || "completed")} result saved`,
+      detail: (`The latest result was recorded.${reviewSuffix}${verifiedSuffix}`).trim(),
     };
   }
 
@@ -128,16 +128,16 @@ function activityRowFromEvent(event: RuntimeEvent): TaskActivityRow {
     return {
       id: event.id,
       recordedAt: formatEventTime(event.recorded_at),
-      title: `${humanizeWords(lifecycleEvent || "lifecycle")} (${humanizeStatus(taskStatus || "pending")})`,
-      detail: reason ? reason : `${humanizeWords(trackingKind)} at ${event.endpoint}.`,
+      title: humanizeWords(lifecycleEvent || `status ${taskStatus || "pending"}`),
+      detail: reason ? reason : `This work card moved to ${humanizeStatus(taskStatus || "pending")}.`,
     };
   }
 
   return {
     id: event.id,
     recordedAt: formatEventTime(event.recorded_at),
-    title: `${humanizeWords(trackingKind || "activity")} at ${event.endpoint}`,
-    detail: `Status code ${event.status_code}.`,
+    title: "Update recorded",
+    detail: "A recent system update was saved for this work card.",
   };
 }
 
@@ -154,7 +154,7 @@ function deriveNextAction(
   if (task.status === "failed") {
     return {
       title: "Resolve the blocker before restarting work",
-      detail: latestOutcome || latestDetail || "This task is blocked or failed and needs a human decision on how to continue.",
+      detail: latestOutcome || latestDetail || "This work is blocked and needs a human decision on how to continue.",
       href: taskHref,
       cta: "Review blocker",
     };
@@ -162,8 +162,8 @@ function deriveNextAction(
 
   if (task.status === "completed") {
     return {
-      title: "Review the result and choose the follow-up task",
-      detail: latestOutcome || latestDetail || "This task is complete. Confirm the outcome and decide what should happen next.",
+      title: "Review the result and choose the next step",
+      detail: latestOutcome || latestDetail || "This work is complete. Confirm the outcome and decide what should happen next.",
       href: taskHref,
       cta: "Review result",
     };
@@ -171,8 +171,8 @@ function deriveNextAction(
 
   if (task.status === "running") {
     return {
-      title: "Check whether execution is still making progress",
-      detail: currentStep || latestDetail || "This task is in progress. Confirm it is advancing and update status if it has stalled.",
+      title: "Check that this work is still moving",
+      detail: currentStep || latestDetail || "This work card is in progress. Confirm it is still moving and update it if it has stalled.",
       href: taskHref,
       cta: "Inspect progress",
     };
@@ -180,18 +180,18 @@ function deriveNextAction(
 
   if (task.status === "needs_decision") {
     return {
-      title: "Make the decision this task is waiting on",
-      detail: latestOutcome || latestDetail || "Execution is paused pending a human choice.",
+      title: "Make the choice this work is waiting on",
+      detail: latestOutcome || latestDetail || "This work is paused until someone chooses how to continue.",
       href: taskHref,
       cta: "Open decision",
     };
   }
 
   return {
-    title: "Start or re-start this task now",
-    detail: latestDetail || "The task exists, but it is not actively moving. Re-open it and decide whether to execute or update it.",
+    title: "Open this work card and decide what to do next",
+    detail: latestDetail || "This work card exists, but it is not moving right now. Open it and decide whether to restart it or update it.",
     href: taskHref,
-    cta: "Open task",
+    cta: "Open work card",
   };
 }
 
@@ -214,25 +214,25 @@ function taskNoteKind(task: CreatedTaskSnapshot): string {
 
 function taskNoteHelper(task: CreatedTaskSnapshot): string {
   if (task.status === "needs_decision") {
-    return "Answer the pending decision here. Saving will resume the task.";
+    return "Answer the open question here. Saving will move the work forward again.";
   }
   if (task.status === "completed" || task.status === "failed") {
-    return "Leave a short outcome note so the next person knows what happened.";
+    return "Leave a short note so the next person understands what happened.";
   }
-  return "Leave a short instruction or progress note for this task.";
+  return "Leave a short note about what to do next or what changed.";
 }
 
 function taskNotePlaceholder(task: CreatedTaskSnapshot): string {
-  if (task.status === "needs_decision") return "Example: continue with the local demo flow and summarize blockers in one paragraph.";
-  if (task.status === "completed") return "Example: demo flow works locally; next step is polishing the dashboard copy.";
-  if (task.status === "failed") return "Example: blocked on missing local seed data; restore sample idea content before retrying.";
-  return "Example: focus on the user-facing summary first and keep all task language human-readable.";
+  if (task.status === "needs_decision") return "Example: continue with the local demo flow and write down the main blocker in plain language.";
+  if (task.status === "completed") return "Example: the main flow now works; next step is making the summary easier to understand.";
+  if (task.status === "failed") return "Example: blocked on missing sample data; restore that first, then try again.";
+  return "Example: focus on the short user summary first and keep the wording simple.";
 }
 
 function taskNoteButtonLabel(task: CreatedTaskSnapshot): string {
-  if (task.status === "needs_decision") return "Send decision";
-  if (task.status === "completed" || task.status === "failed") return "Save outcome note";
-  return "Save instruction";
+  if (task.status === "needs_decision") return "Send answer";
+  if (task.status === "completed" || task.status === "failed") return "Save note";
+  return "Save note";
 }
 
 function followUpTaskType(task: CreatedTaskSnapshot): TaskType {
@@ -245,9 +245,22 @@ function followUpTaskType(task: CreatedTaskSnapshot): TaskType {
 
 function followUpButtonLabel(task: CreatedTaskSnapshot): string {
   const nextType = followUpTaskType(task);
-  if (nextType === "impl") return "Create follow-up build task";
-  if (nextType === "spec") return "Create follow-up plan task";
-  return "Create follow-up review task";
+  if (nextType === "impl") return "Create the next build step";
+  if (nextType === "spec") return "Create the next planning step";
+  return "Create the next check-in";
+}
+
+function workCardTypeLabel(taskType: string): string {
+  if (taskType === "impl") return "build step";
+  if (taskType === "review") return "check-in";
+  if (taskType === "spec") return "plan";
+  return "work card";
+}
+
+function noteKindLabel(kind: string): string {
+  if (kind === "decision") return "answer";
+  if (kind === "follow-up context") return "context";
+  return "note";
 }
 
 function carryForwardContext(
@@ -279,10 +292,10 @@ function buildFollowUpDirection(
   }
 
   if (nextType === "spec") {
-    return `Turn the latest context for ${ideaName} into a clear next spec or scoped plan. Keep the output specific enough that the next implementation task is obvious. Carry forward this context: ${carryForward}`;
+    return `Turn the latest context for ${ideaName} into a clear next plan. Keep the result specific enough that the next build step is obvious. Carry forward this context: ${carryForward}`;
   }
 
-  return `Deliver the next highest-value outcome for ${ideaName} using the latest confirmed context. Build the smallest visible improvement that keeps the MVP moving. Carry forward this context: ${carryForward}`;
+  return `Deliver the next highest-value outcome for ${ideaName} using the latest confirmed context. Build the smallest visible improvement that keeps the first version moving. Carry forward this context: ${carryForward}`;
 }
 
 export default function TodayTopIdeaQuickLaunch({
@@ -361,9 +374,9 @@ export default function TodayTopIdeaQuickLaunch({
       const payload: { status: string; current_step?: string | null; output?: string | null } = {
         status: nextStatus,
       };
-      if (nextStatus === "running") payload.current_step = "Actively progressing from Today quick launch.";
-      if (nextStatus === "completed") payload.output = "Completed and confirmed from Today quick launch.";
-      if (nextStatus === "failed") payload.output = "Blocked and flagged from Today quick launch; follow-up decision needed.";
+      if (nextStatus === "running") payload.current_step = "Actively moving from the Today page.";
+      if (nextStatus === "completed") payload.output = "Marked done from the Today page.";
+      if (nextStatus === "failed") payload.output = "Marked stuck from the Today page; a follow-up choice is needed.";
 
       const response = await fetch(`/api/agent/tasks/${encodeURIComponent(createdTaskId)}`, {
         method: "PATCH",
@@ -374,7 +387,7 @@ export default function TodayTopIdeaQuickLaunch({
 
       await refreshCreatedTask(createdTaskId);
       setUpdateState("saved");
-      setUpdateMessage(`Task marked ${humanizeStatus(nextStatus)}.`);
+      setUpdateMessage(`Work card marked ${humanizeStatus(nextStatus)}.`);
     } catch (error) {
       setUpdateState("error");
       setUpdateMessage(String(error));
@@ -419,7 +432,9 @@ export default function TodayTopIdeaQuickLaunch({
       await refreshCreatedTask(createdTask.id);
       setNoteDraft("");
       setNoteState("saved");
-      setNoteMessage(createdTask.status === "needs_decision" ? "Decision sent and task resumed." : "Note saved to this task.");
+      setNoteMessage(
+        createdTask.status === "needs_decision" ? "Answer saved and work can continue." : "Note saved to this work card.",
+      );
     } catch (error) {
       setNoteState("error");
       setNoteMessage(String(error));
@@ -469,13 +484,13 @@ export default function TodayTopIdeaQuickLaunch({
 
       const payload = (await response.json()) as { id?: string };
       const taskId = String(payload.id || "").trim();
-      if (!taskId) throw new Error("Follow-up task was created but response did not include task id.");
+      if (!taskId) throw new Error("The next step was created but the response did not include its id.");
 
       persistLatestTaskId(taskId);
       setFollowUpTaskId(taskId);
       await refreshCreatedTask(taskId);
       setFollowUpState("saved");
-      setFollowUpMessage(`Follow-up ${humanizeWords(nextType)} task created and made current.`);
+      setFollowUpMessage(`The next ${workCardTypeLabel(nextType)} is ready and is now the current work card.`);
       setLaunchState("created");
       setNoteDraft("");
       setNoteState("idle");
@@ -524,7 +539,7 @@ export default function TodayTopIdeaQuickLaunch({
 
       const createPayload = (await createResponse.json()) as { id?: string };
       const taskId = String(createPayload.id || "").trim();
-      if (!taskId) throw new Error("Task was created but response did not include task id.");
+      if (!taskId) throw new Error("The work card was created but the response did not include its id.");
       persistLatestTaskId(taskId);
       setCreatedTaskId(taskId);
       await refreshCreatedTask(taskId);
@@ -538,7 +553,7 @@ export default function TodayTopIdeaQuickLaunch({
         const executeError = await readErrorMessage(executeResponse);
         setLaunchState("created");
         setErrorMessage(
-          `Task created, but auto-start was blocked: ${executeError}. You can start it from Remote Ops with an execute token.`,
+          `The work card was created, but it could not start automatically: ${executeError}. You can still open it now or continue from Remote Ops if you use manual controls.`,
         );
         await refreshCreatedTask(taskId);
         return;
@@ -579,12 +594,13 @@ export default function TodayTopIdeaQuickLaunch({
 
   return (
     <section className="rounded-xl border p-4 space-y-2">
-      <h2 className="text-lg font-semibold">Launch Top Idea Now</h2>
+      <h2 className="text-lg font-semibold">Start Moving This Idea</h2>
       <p className="text-sm text-muted-foreground">
-        One click will create a task for <span className="font-medium text-foreground">{ideaName}</span> and try to start execution immediately.
+        This creates a work card for <span className="font-medium text-foreground">{ideaName}</span> and, when possible,
+        starts it right away.
       </p>
       <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">Task type</span>
+        <span className="text-muted-foreground">What kind of help do you want?</span>
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm"
           value={taskType}
@@ -601,9 +617,9 @@ export default function TodayTopIdeaQuickLaunch({
             setNoteMessage("");
           }}
         >
-          <option value="impl">Build next outcome</option>
-          <option value="review">Quality review</option>
-          <option value="spec">Plan next step</option>
+          <option value="impl">Build something</option>
+          <option value="review">Check progress</option>
+          <option value="spec">Write a plan</option>
         </select>
       </label>
       <div className="flex flex-wrap items-center gap-3">
@@ -612,22 +628,26 @@ export default function TodayTopIdeaQuickLaunch({
           onClick={launchTopIdeaTask}
           disabled={launchState === "creating" || launchState === "starting"}
         >
-          {launchState === "creating" ? "Creating task..." : launchState === "starting" ? "Starting execution..." : "Create + Start"}
+          {launchState === "creating"
+            ? "Creating work card..."
+            : launchState === "starting"
+              ? "Starting work..."
+              : "Start this work"}
         </Button>
         <Link
           href={`/ideas/${encodeURIComponent(ideaId)}`}
           className="text-sm underline text-muted-foreground hover:text-foreground"
           title={`Idea ID: ${ideaId}`}
         >
-          Review idea
+          Read idea
         </Link>
       </div>
 
       {launchState === "running" && createdTaskId ? (
         <p className="text-sm text-green-700">
-          Task is running.{" "}
+          Work is running.{" "}
           <Link href={`/tasks?task_id=${encodeURIComponent(createdTaskId)}`} className="underline">
-            Open task
+            Open work card
           </Link>
           .
         </p>
@@ -635,28 +655,28 @@ export default function TodayTopIdeaQuickLaunch({
 
       {launchState === "created" && createdTaskId ? (
         <p className="text-sm text-amber-700">
-          Task created.{" "}
+          Work card ready.{" "}
           <Link href={`/tasks?task_id=${encodeURIComponent(createdTaskId)}`} className="underline">
-            Open task
+            Open work card
           </Link>{" "}
           or{" "}
           <Link href="/remote-ops" className="underline">
-            start from Remote Ops
+            continue from Remote Ops
           </Link>
           .
         </p>
       ) : null}
 
       {errorMessage ? (
-        <p className="text-sm text-destructive">Launch failed: {errorMessage}</p>
+        <p className="text-sm text-destructive">Could not start this work: {errorMessage}</p>
       ) : null}
 
       {createdTask ? (
         <section className="rounded-lg border border-border/70 bg-background/35 p-3 space-y-2">
-          <p className="text-sm font-medium">Latest launched task</p>
+          <p className="text-sm font-medium">Current work card</p>
           {nextAction ? (
             <div className="rounded-md border border-border/60 bg-background/60 px-3 py-2 space-y-1">
-              <p className="text-sm font-medium">What should I do next?</p>
+              <p className="text-sm font-medium">What should happen next?</p>
               <p className="text-sm text-muted-foreground">{nextAction.title}</p>
               <p className="text-sm text-muted-foreground">{nextAction.detail}</p>
               <Link href={nextAction.href} className="text-sm underline">
@@ -665,23 +685,23 @@ export default function TodayTopIdeaQuickLaunch({
             </div>
           ) : null}
           <p className="text-sm text-muted-foreground">
-            {humanizeStatus(createdTask.status)} {createdTask.task_type} task
+            {humanizeStatus(createdTask.status)} {workCardTypeLabel(createdTask.task_type)}
             {" · "}
             <Link href={`/tasks?task_id=${encodeURIComponent(createdTask.id)}`} className="underline">
-              Open task
+              Open work card
             </Link>
           </p>
           <p className="text-sm text-muted-foreground">{createdTask.direction}</p>
           {createdTask.current_step ? (
-            <p className="text-sm text-muted-foreground">Current step: {createdTask.current_step}</p>
+            <p className="text-sm text-muted-foreground">Current focus: {createdTask.current_step}</p>
           ) : null}
           {createdTask.output ? (
-            <p className="text-sm text-muted-foreground">Latest outcome: {createdTask.output}</p>
+            <p className="text-sm text-muted-foreground">Latest result: {createdTask.output}</p>
           ) : null}
           <div className="rounded-md border border-border/60 bg-background/60 px-3 py-3 space-y-2">
-            <p className="text-sm font-medium">Keep momentum</p>
+            <p className="text-sm font-medium">Create the next step</p>
             <p className="text-sm text-muted-foreground">
-              Turn the current result into the next task without retyping the context.
+              Turn what you already know into the next work card without retyping everything.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" onClick={() => void createFollowUpTask()} disabled={isMutating}>
@@ -691,26 +711,26 @@ export default function TodayTopIdeaQuickLaunch({
                 href={`/ideas/${encodeURIComponent(ideaId)}`}
                 className="text-sm underline text-muted-foreground hover:text-foreground"
               >
-                Turn idea into specs
+                Turn idea into plans
               </Link>
             </div>
-            {followUpState === "saving" ? <p className="text-sm text-muted-foreground">Creating follow-up task…</p> : null}
+            {followUpState === "saving" ? <p className="text-sm text-muted-foreground">Creating the next step…</p> : null}
             {followUpState === "saved" && followUpMessage ? (
               <p className="text-sm text-green-700">
                 {followUpMessage}{" "}
                 {followUpTaskId ? (
                   <Link href={`/tasks?task_id=${encodeURIComponent(followUpTaskId)}`} className="underline">
-                    Open follow-up
+                    Open it
                   </Link>
                 ) : null}
               </p>
             ) : null}
             {followUpState === "error" && followUpMessage ? (
-              <p className="text-sm text-destructive">Follow-up failed: {followUpMessage}</p>
+              <p className="text-sm text-destructive">Could not create the next step: {followUpMessage}</p>
             ) : null}
           </div>
           <div className="rounded-md border border-border/60 bg-background/60 px-3 py-3 space-y-2">
-            <p className="text-sm font-medium">Leave an update here</p>
+            <p className="text-sm font-medium">Add a short note</p>
             <p className="text-sm text-muted-foreground">{taskNoteHelper(createdTask)}</p>
             <textarea
               className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -731,24 +751,24 @@ export default function TodayTopIdeaQuickLaunch({
               </Button>
               {latestTaskNote ? (
                 <p className="text-sm text-muted-foreground">
-                  Latest {latestTaskNote.kind}: {latestTaskNote.savedAt}
+                  Latest {noteKindLabel(latestTaskNote.kind)} saved: {latestTaskNote.savedAt}
                 </p>
               ) : null}
             </div>
             {noteState === "saving" ? <p className="text-sm text-muted-foreground">Saving note…</p> : null}
             {noteState === "saved" && noteMessage ? <p className="text-sm text-green-700">{noteMessage}</p> : null}
-            {noteState === "error" && noteMessage ? <p className="text-sm text-destructive">Save failed: {noteMessage}</p> : null}
+            {noteState === "error" && noteMessage ? <p className="text-sm text-destructive">Could not save the note: {noteMessage}</p> : null}
             {latestTaskNote ? <p className="text-sm text-muted-foreground">{latestTaskNote.text}</p> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("running")} disabled={isMutating}>
-              Mark running
+              Working on it
             </Button>
             <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("completed")} disabled={isMutating}>
-              Mark completed
+              Done
             </Button>
             <Button type="button" variant="outline" onClick={() => void quickUpdateCreatedTask("failed")} disabled={isMutating}>
-              Mark failed
+              Stuck
             </Button>
             <Button
               type="button"
@@ -783,16 +803,16 @@ export default function TodayTopIdeaQuickLaunch({
               }}
               disabled={isMutating}
             >
-              Clear
+              Forget this card
             </Button>
           </div>
           {updateState === "saving" ? <p className="text-sm text-muted-foreground">Saving update…</p> : null}
           {updateState === "saved" && updateMessage ? <p className="text-sm text-green-700">{updateMessage}</p> : null}
-          {updateState === "error" && updateMessage ? <p className="text-sm text-destructive">Update failed: {updateMessage}</p> : null}
+          {updateState === "error" && updateMessage ? <p className="text-sm text-destructive">Could not save the update: {updateMessage}</p> : null}
           <div className="space-y-2 pt-1">
-            <p className="text-sm font-medium">Recent activity</p>
+            <p className="text-sm font-medium">Recent changes</p>
             {activityRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No task activity recorded yet.</p>
+              <p className="text-sm text-muted-foreground">No recent changes yet.</p>
             ) : (
               <ul className="space-y-2">
                 {activityRows.map((row) => (
