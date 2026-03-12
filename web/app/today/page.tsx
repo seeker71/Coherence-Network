@@ -4,7 +4,15 @@ import Link from "next/link";
 import TodayTopIdeaQuickLaunch from "@/components/today/TodayTopIdeaQuickLaunch";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
-import { formatConfidence, formatCount, formatUsd, humanizeStatus } from "@/lib/humanize";
+import {
+  explainIdeaPriority,
+  formatConfidence,
+  formatCount,
+  formatUsd,
+  humanizeIdeaPriority,
+  humanizeManifestationStatus,
+  humanizeStatus,
+} from "@/lib/humanize";
 
 type Idea = {
   id: string;
@@ -71,10 +79,7 @@ function workTypeLabel(taskType: string): string {
 }
 
 function proofLabel(status: string): string {
-  if (status === "none") return "Not proven yet";
-  if (status === "partial") return "Partly proven";
-  if (status === "validated") return "Proven in real use";
-  return humanizeStatus(status);
+  return humanizeManifestationStatus(status);
 }
 
 function deriveTaskIdea(task: Task, ideasById: Map<string, Idea>): { ideaId: string; ideaName: string } {
@@ -231,8 +236,10 @@ export default async function TodayPrioritiesPage() {
                     </Link>
                     <p className="text-muted-foreground">{shortText(idea.description, 140)}</p>
                     <p className="text-muted-foreground">
-                      {proofLabel(idea.manifestation_status)} | Confidence {formatConfidence(idea.confidence)} | Value still available {formatUsd(idea.value_gap)}
+                      {humanizeIdeaPriority(idea.free_energy_score)} | {proofLabel(idea.manifestation_status)} | Confidence {formatConfidence(idea.confidence)}
                     </p>
+                    <p className="text-muted-foreground">{explainIdeaPriority(idea.free_energy_score)}</p>
+                    <p className="text-muted-foreground">Value still available {formatUsd(idea.value_gap)}</p>
                     <div className="flex flex-wrap gap-2">
                       <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground" title={`Idea ID: ${idea.id}`}>
                         Open idea
