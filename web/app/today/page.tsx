@@ -46,7 +46,7 @@ type TaskRow = Task & {
 
 export const metadata: Metadata = {
   title: "Today",
-  description: "One-screen priority view for ideas, tasks, and immediate next actions.",
+  description: "One-page view for the best next work, what needs attention, and how to keep progress moving.",
 };
 
 function extractTasks(payload: TaskListPayload | null): Task[] {
@@ -63,6 +63,20 @@ function shortText(value: string, maxLen = 140): string {
   return `${normalized.slice(0, maxLen - 1)}...`;
 }
 
+function workTypeLabel(taskType: string): string {
+  if (taskType === "impl") return "Build step";
+  if (taskType === "review") return "Check-in";
+  if (taskType === "spec") return "Plan";
+  return "Work card";
+}
+
+function proofLabel(status: string): string {
+  if (status === "none") return "Not proven yet";
+  if (status === "partial") return "Partly proven";
+  if (status === "validated") return "Proven in real use";
+  return humanizeStatus(status);
+}
+
 function deriveTaskIdea(task: Task, ideasById: Map<string, Idea>): { ideaId: string; ideaName: string } {
   const context = task.context && typeof task.context === "object" && !Array.isArray(task.context) ? task.context : null;
   const contextIdeaId = context ? String(context.idea_id || "").trim() : "";
@@ -72,7 +86,7 @@ function deriveTaskIdea(task: Task, ideasById: Map<string, Idea>): { ideaId: str
     const lookupName = ideasById.get(contextIdeaId)?.name || "";
     return { ideaId: contextIdeaId, ideaName: contextIdeaName || lookupName || "Linked idea" };
   }
-  return { ideaId: "", ideaName: "Unlinked task" };
+  return { ideaId: "", ideaName: "No linked idea yet" };
 }
 
 export default async function TodayPrioritiesPage() {
@@ -116,21 +130,21 @@ export default async function TodayPrioritiesPage() {
   const topIdea = topIdeas[0] || null;
   const mainNextAction = blockedTasks[0]
     ? {
-        title: "Resolve the top blocked task",
+        title: "Unblock the most stuck work",
         detail: shortText(blockedTasks[0].direction, 180),
         href: `/tasks?task_id=${encodeURIComponent(blockedTasks[0].id)}`,
-        cta: "Open blocked task",
+        cta: "Open stuck work",
       }
     : activeTasks[0]
       ? {
-          title: "Update progress on an active task",
+          title: "Check the work that is already moving",
           detail: shortText(activeTasks[0].direction, 180),
           href: `/tasks?task_id=${encodeURIComponent(activeTasks[0].id)}`,
-          cta: "Update task now",
+          cta: "Open current work",
         }
       : topIdea
         ? {
-            title: "Create the next task from your top idea",
+            title: "Turn the best idea into the next piece of work",
             detail: shortText(topIdea.description, 180),
             href: `/ideas/${encodeURIComponent(topIdea.id)}`,
             cta: "Open top idea",
@@ -146,20 +160,20 @@ export default async function TodayPrioritiesPage() {
     <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-7 space-y-3">
-          <p className="text-sm text-muted-foreground">Daily execution view</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Today's Priorities</h1>
+          <p className="text-sm text-muted-foreground">Your one-page work view</p>
+          <h1 className="text-3xl font-semibold tracking-tight">What To Focus On Today</h1>
           <p className="max-w-3xl text-muted-foreground">
-            One screen for what to do next: key idea opportunities, task pressure, and direct links to act.
+            One screen for the best next work, what is blocked, and where to go to keep momentum.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/ideas" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
               Ideas
             </Link>
             <Link href="/tasks" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Tasks In Motion
+              Work
             </Link>
             <Link href="/flow" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Flow
+              Progress
             </Link>
             <Link href="/demo" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
               Demo Path
@@ -169,25 +183,25 @@ export default async function TodayPrioritiesPage() {
 
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Ideas in focus</p>
+            <p className="text-muted-foreground">Ideas to consider</p>
             <p className="text-xl font-semibold">{formatCount(topIdeas.length)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Active tasks</p>
+            <p className="text-muted-foreground">Work in progress</p>
             <p className="text-xl font-semibold">{formatCount(activeTasks.length)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Blocked tasks</p>
+            <p className="text-muted-foreground">Needs attention</p>
             <p className="text-xl font-semibold">{formatCount(blockedTasks.length)}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Top idea upside</p>
+            <p className="text-muted-foreground">Best upside today</p>
             <p className="text-xl font-semibold">{formatUsd(topIdea?.value_gap || 0)}</p>
           </div>
         </section>
 
         <section className="rounded-xl border p-4 space-y-2">
-          <h2 className="text-lg font-semibold">Start Here</h2>
+          <h2 className="text-lg font-semibold">Best Next Move</h2>
           <p className="font-medium">{mainNextAction.title}</p>
           <p className="text-sm text-muted-foreground">{mainNextAction.detail}</p>
           <Link href={mainNextAction.href} className="inline-block rounded border px-3 py-1.5 text-sm hover:bg-accent">
@@ -201,7 +215,7 @@ export default async function TodayPrioritiesPage() {
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <article className="rounded-xl border p-4 space-y-3">
-            <h2 className="text-lg font-semibold">Top Ideas To Move Today</h2>
+            <h2 className="text-lg font-semibold">Best Places To Make Progress</h2>
             {topIdeas.length === 0 ? (
               <p className="text-sm text-muted-foreground">No ideas available yet.</p>
             ) : (
@@ -217,14 +231,14 @@ export default async function TodayPrioritiesPage() {
                     </Link>
                     <p className="text-muted-foreground">{shortText(idea.description, 140)}</p>
                     <p className="text-muted-foreground">
-                      {humanizeStatus(idea.manifestation_status)} | Confidence {formatConfidence(idea.confidence)} | Remaining upside {formatUsd(idea.value_gap)}
+                      {proofLabel(idea.manifestation_status)} | Confidence {formatConfidence(idea.confidence)} | Value still available {formatUsd(idea.value_gap)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground" title={`Idea ID: ${idea.id}`}>
                         Open idea
                       </Link>
                       <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground" title={`Idea ID: ${idea.id}`}>
-                        Open flow
+                        Open progress
                       </Link>
                     </div>
                   </li>
@@ -234,7 +248,7 @@ export default async function TodayPrioritiesPage() {
           </article>
 
           <article className="rounded-xl border p-4 space-y-3">
-            <h2 className="text-lg font-semibold">Tasks Requiring Attention</h2>
+            <h2 className="text-lg font-semibold">Work That Needs Attention</h2>
             {tasksToReview.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tasks available yet.</p>
             ) : (
@@ -246,11 +260,11 @@ export default async function TodayPrioritiesPage() {
                       className="font-medium underline hover:text-foreground"
                       title={`Task ID: ${task.id}`}
                     >
-                      {humanizeStatus(task.status)} {task.task_type} task
+                      {humanizeStatus(task.status)} {workTypeLabel(task.task_type)}
                     </Link>
                     <p className="text-muted-foreground">{shortText(task.direction, 140)}</p>
                     <p className="text-muted-foreground">
-                      Idea {task.ideaName}
+                      Idea: {task.ideaName}
                       {task.ideaId ? (
                         <>
                           {" "}|{" "}
@@ -270,10 +284,6 @@ export default async function TodayPrioritiesPage() {
             )}
           </article>
         </section>
-
-        <p className="text-xs text-muted-foreground">
-          API target for this page: <span className="font-mono">{apiBase}</span>
-        </p>
       </div>
     </main>
   );
