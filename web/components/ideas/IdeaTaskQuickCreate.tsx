@@ -16,12 +16,12 @@ type CreateState = "idle" | "saving" | "saved" | "error";
 
 function baseDirectionForType(taskType: TaskType, ideaName: string): string {
   if (taskType === "impl") {
-    return `Deliver the next highest-value milestone for ${ideaName}. Include what changed for users and what should happen next.`;
+    return `Move ${ideaName} forward in a way a first-time user can see. Say what changed and what should happen next.`;
   }
   if (taskType === "review") {
-    return `Review current progress for ${ideaName}. Report confidence, risks, and one clear next action.`;
+    return `Check the current progress for ${ideaName}. Say what is clear, what is risky, and the one next step that matters most.`;
   }
-  return `Define the next one-week plan for ${ideaName} with clear success criteria and evidence to collect.`;
+  return `Turn ${ideaName} into a short plan for the next week with a clear outcome and a simple way to tell if it worked.`;
 }
 
 export default function IdeaTaskQuickCreate({
@@ -43,7 +43,7 @@ export default function IdeaTaskQuickCreate({
     const cleanedDirection = direction.trim();
     if (!cleanedDirection) {
       setCreateState("error");
-      setErrorMsg("Add one clear instruction before creating a task.");
+      setErrorMsg("Add one clear next step before creating a work card.");
       return;
     }
 
@@ -73,7 +73,7 @@ export default function IdeaTaskQuickCreate({
 
       const payload = (await response.json()) as { id?: string };
       const taskId = String(payload.id || "").trim();
-      if (!taskId) throw new Error("Task was created but response did not include task id.");
+      if (!taskId) throw new Error("The work card was created but the response did not include its id.");
 
       setCreatedTaskId(taskId);
       setCreateState("saved");
@@ -102,26 +102,26 @@ export default function IdeaTaskQuickCreate({
 
   return (
     <section className="rounded border p-4 space-y-3">
-      <h2 className="font-semibold">Create Next Task</h2>
+      <h2 className="font-semibold">Start A Piece Of Work</h2>
       <p className="text-sm text-muted-foreground">
-        Add the next work item directly from this idea so execution starts without switching pages.
+        Create a work card from this idea without leaving the page. This is a good place to capture the next small step.
       </p>
 
       <label className="space-y-1 text-sm">
-        <span className="text-muted-foreground">Work kind</span>
+        <span className="text-muted-foreground">What kind of help do you want?</span>
         <select
           className="h-10 rounded-md border border-input bg-background px-3 text-sm"
           value={taskType}
           onChange={(event) => applyTaskType(event.target.value as TaskType)}
         >
-          <option value="impl">Build next outcome</option>
-          <option value="review">Quality review</option>
-          <option value="spec">Plan next step</option>
+          <option value="impl">Build something</option>
+          <option value="review">Check progress</option>
+          <option value="spec">Write a plan</option>
         </select>
       </label>
 
       <label className="space-y-1 text-sm block">
-        <span className="text-muted-foreground">Task instruction</span>
+        <span className="text-muted-foreground">What should happen next?</span>
         <textarea
           className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           value={direction}
@@ -131,13 +131,13 @@ export default function IdeaTaskQuickCreate({
             setErrorMsg("");
             setCreatedTaskId("");
           }}
-          placeholder="Describe one clear outcome for the next task"
+          placeholder="Describe the next clear step in plain language"
         />
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={createTask} disabled={createState === "saving"}>
-          {createState === "saving" ? "Creating..." : "Create Task"}
+          {createState === "saving" ? "Creating..." : "Create Work Card"}
         </Button>
         {topQuestion ? (
           <button
@@ -145,18 +145,18 @@ export default function IdeaTaskQuickCreate({
             className="text-sm underline text-muted-foreground hover:text-foreground"
             onClick={useTopQuestion}
           >
-            Use top open question
+            Use the top unanswered question
           </button>
         ) : null}
       </div>
 
       {createState === "saved" && createdTaskId ? (
         <p className="text-sm text-green-700">
-          Task created. <Link href={`/tasks?task_id=${encodeURIComponent(createdTaskId)}`} className="underline">Open it in Tasks In Motion</Link>.
+          Work card created. <Link href={`/tasks?task_id=${encodeURIComponent(createdTaskId)}`} className="underline">Open it</Link>.
         </p>
       ) : null}
       {createState === "error" ? (
-        <p className="text-sm text-destructive">Create failed: {errorMsg}</p>
+        <p className="text-sm text-destructive">Could not create the work card: {errorMsg}</p>
       ) : null}
     </section>
   );

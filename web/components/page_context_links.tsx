@@ -21,14 +21,11 @@ const SHARED_RELATED: LinkItem[] = [
   { href: "/demo", label: "Demo" },
   { href: "/search", label: "Search" },
   { href: "/ideas", label: "Ideas" },
-  { href: "/flow", label: "Flow" },
+  { href: "/flow", label: "Progress" },
   { href: "/contribute", label: "Contribute" },
-  { href: "/tasks", label: "Tasks" },
+  { href: "/tasks", label: "Work" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/specs", label: "Specs" },
-  { href: "/usage", label: "Usage" },
-  { href: "/automation", label: "Automation" },
-  { href: "/gates", label: "Gates" },
+  { href: "/specs", label: "Plans" },
 ];
 
 const CONTEXTS: Record<string, ContextDef> = {
@@ -332,15 +329,15 @@ export default function PageContextLinks() {
       <div className="mx-auto max-w-6xl px-4 md:px-8 py-1.5">
         <div className="flex items-center gap-2 text-xs">
           <p className="truncate text-muted-foreground">
-            <span className="hidden sm:inline">You are here </span>
+            <span className="hidden sm:inline">Page </span>
             <span className="font-medium text-foreground">{toBreadcrumb(pathname)}</span>
           </p>
-          <span className="hidden lg:inline text-muted-foreground/90">Focus {focusLabel}</span>
+          <span className="hidden lg:inline text-muted-foreground/90">Current focus {focusLabel}</span>
           <div className="flex-1" />
           <details className="relative">
             <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
               <span className="sm:hidden">Quick links</span>
-              <span className="hidden sm:inline">Navigate</span>
+              <span className="hidden sm:inline">Related pages</span>
             </summary>
             <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
               {related.map((item, idx) => (
@@ -359,7 +356,7 @@ export default function PageContextLinks() {
           </details>
           <details className="relative hidden sm:block">
             <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
-              Data links
+              Behind the scenes
             </summary>
             <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
               {machineLinks.map((item) => (
