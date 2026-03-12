@@ -77,6 +77,34 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "community-project-funder-match",
+        "name": "Match community projects with small funders",
+        "description": (
+            "Help local projects explain their goal, budget, and early proof "
+            "so the right backer can understand the opportunity quickly."
+        ),
+        "potential_value": 76.0,
+        "actual_value": 9.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 0.0,
+        "resistance_risk": 3.0,
+        "confidence": 0.68,
+        "manifestation_status": "partial",
+        "interfaces": ["human:web", "human:operators", "external:partners"],
+        "open_questions": [
+            {
+                "question": "What is the smallest proof a funder needs before taking a first meeting?",
+                "value_to_whole": 22.0,
+                "estimated_cost": 2.0,
+            },
+            {
+                "question": "Which first three projects are ready to share a clear ask this month?",
+                "value_to_whole": 19.0,
+                "estimated_cost": 2.0,
+            },
+        ],
+    },
+    {
         "id": "coherence-signal-depth",
         "name": "Increase coherence signal depth with real data",
         "description": "Replace placeholder signals with real evidence so the system reflects what is actually happening.",
@@ -133,7 +161,10 @@ STANDING_QUESTION_TEXT = (
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
-REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = ("federated-instance-aggregation",)
+REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = (
+    "federated-instance-aggregation",
+    "community-project-funder-match",
+)
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
 _IDEAS_CACHE_TTL_SECONDS = 180.0
 

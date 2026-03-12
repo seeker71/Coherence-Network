@@ -67,7 +67,8 @@ const CONTEXTS: Record<string, ContextDef> = {
     ],
   },
   "/demo": {
-    ideaId: "portfolio-governance",
+    ideaId: "community-project-funder-match",
+    focusLabel: "sample project walkthrough",
     related: SHARED_RELATED,
     machinePaths: [
       { href: "/api/ideas", label: "Ideas API" },
