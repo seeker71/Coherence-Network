@@ -1,5 +1,5 @@
 {
-  "version": "2026-02-16",
+  "version": "2026-03-18",
   "ideas": [
     {
       "idea_id": "portfolio-governance",
@@ -32,6 +32,45 @@
     {
       "idea_id": "deployment-gate-reliability",
       "origin_idea_id": "portfolio-governance"
+    },
+
+    {
+      "idea_id": "agent-prompt-ab-roi",
+      "origin_idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": ["112"],
+      "description": "Measure which prompt variants produce higher ROI (value/cost) using Thompson Sampling",
+      "status": "implemented",
+      "related_ideas": ["agent-grounded-measurement"]
+    },
+    {
+      "idea_id": "agent-failed-task-diagnostics",
+      "origin_idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": ["113"],
+      "description": "Classify failed task errors into actionable categories with completeness tracking",
+      "status": "implemented",
+      "related_ideas": ["agent-auto-heal"]
+    },
+    {
+      "idea_id": "agent-auto-heal",
+      "origin_idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": ["114"],
+      "description": "Automatically create heal tasks from diagnosed failures with strategy mapping",
+      "status": "implemented",
+      "depends_on": ["agent-failed-task-diagnostics"],
+      "related_ideas": ["agent-grounded-measurement"]
+    },
+    {
+      "idea_id": "agent-grounded-measurement",
+      "origin_idea_id": "coherence-network-agent-pipeline",
+      "spec_ids": ["115"],
+      "description": "Replace invented value/cost with real signals: provider billing, usage adoption, friction cost avoidance",
+      "status": "implemented",
+      "depends_on": ["agent-prompt-ab-roi"],
+      "cross_idea_dependencies": [
+        "coherence-network-value-attribution",
+        "coherence-signal-depth"
+      ],
+      "related_ideas": ["agent-prompt-ab-roi"]
     }
   ]
 }

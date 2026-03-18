@@ -1,4 +1,9 @@
-# Spec: Auto-Heal from Diagnostics
+# Spec 114: Auto-Heal from Diagnostics
+
+**Idea**: `agent-auto-heal` (sub-idea of `coherence-network-agent-pipeline`)
+**Depends on**: Spec 113 (classify_error)
+**Depended on by**: Spec 115 (heal_attempt/heal_succeeded as value signals)
+**Cross-idea contribution**: `coherence-network-agent-pipeline` (closes failure→recovery loop)
 
 ## Purpose
 

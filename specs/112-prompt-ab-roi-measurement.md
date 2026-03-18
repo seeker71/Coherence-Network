@@ -1,4 +1,9 @@
-# Spec: Prompt A/B ROI Measurement
+# Spec 112: Prompt A/B ROI Measurement
+
+**Idea**: `agent-prompt-ab-roi` (sub-idea of `coherence-network-agent-pipeline`)
+**Depends on**: Spec 026 Phase 2 (orchestrator_policy.json)
+**Depended on by**: Spec 115 (grounded measurement)
+**Cross-idea contribution**: `coherence-signal-depth` (replaces placeholder prompt selection with measured ROI)
 
 ## Purpose
 

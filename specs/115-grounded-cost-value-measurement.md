@@ -1,5 +1,13 @@
 # Spec 115: Grounded Cost & Value Measurement for Prompt A/B ROI
 
+**Idea**: `agent-grounded-measurement` (sub-idea of `coherence-network-agent-pipeline`)
+**Depends on**: Spec 112 (prompt_ab_roi_service)
+**Integrates with**:
+- `coherence-network-value-attribution` (reads value_lineage_service for measured revenue)
+- `coherence-signal-depth` (replaces invented numbers with real provider billing and usage signals)
+- Spec 049 (runtime telemetry for usage adoption counts)
+- Spec 050 (friction events for cost_of_delay)
+
 ## Status: Implemented
 
 ## Problem

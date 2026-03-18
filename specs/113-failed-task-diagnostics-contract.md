@@ -1,4 +1,9 @@
-# Spec: Failed-Task Diagnostics Completeness Contract
+# Spec 113: Failed-Task Diagnostics Completeness Contract
+
+**Idea**: `agent-failed-task-diagnostics` (sub-idea of `coherence-network-agent-pipeline`)
+**Depends on**: Spec 007 meta-pipeline backlog (item 14)
+**Depended on by**: Spec 114 (auto-heal uses classify_error)
+**Cross-idea contribution**: `coherence-signal-depth` (replaces null error fields with classified diagnostics)
 
 ## Purpose
 
