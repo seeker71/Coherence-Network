@@ -33,6 +33,7 @@ from app.routers import (
     runtime,
     value_lineage,
 )
+from app.routers import agent_grounded_metrics_routes
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
@@ -320,6 +321,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 app.include_router(contributors.router, prefix="/v1", include_in_schema=False)

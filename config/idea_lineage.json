@@ -21,8 +21,30 @@
       "spec_ids": [],
       "description": "Replace placeholder signals with real evidence",
       "status": "active",
-      "cross_idea_contributions_from": ["agent-grounded-measurement"],
-      "notes": "Spec 115 directly advances this idea by replacing invented cost/value with observable signals"
+      "cross_idea_contributions_from": ["agent-grounded-measurement", "agent-grounded-idea-metrics"],
+      "sub_ideas": ["agent-grounded-idea-metrics"],
+      "notes": "Spec 115 replaces invented cost/value with observable signals. Spec 116 grounds idea portfolio numbers from real data."
+    },
+    {
+      "idea_id": "agent-grounded-idea-metrics",
+      "origin_idea_id": "coherence-signal-depth",
+      "spec_ids": ["116"],
+      "description": "Compute idea actual_cost, actual_value, confidence from real data sources instead of hand-typed numbers",
+      "status": "implemented",
+      "actual_cost_estimate": 20.0,
+      "implementation_files": [
+        "api/app/services/grounded_idea_metrics_service.py",
+        "api/app/routers/agent_grounded_metrics_routes.py",
+        "api/tests/test_grounded_idea_metrics.py"
+      ],
+      "depends_on": ["agent-grounded-measurement"],
+      "data_sources": {
+        "spec_registry": "actual_cost, actual_value, estimated_cost per spec",
+        "runtime_service": "event_count, runtime_cost_estimate per idea",
+        "value_lineage": "measured_value_total from usage events",
+        "commit_evidence": "commit-level cost from files/lines",
+        "friction_events": "cost_of_delay per idea"
+      }
     },
     {
       "idea_id": "coherence-network-agent-pipeline",
