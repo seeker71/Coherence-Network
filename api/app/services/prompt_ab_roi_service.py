@@ -27,8 +27,14 @@ def record_prompt_outcome(
     resource_cost: float,
     *,
     store_path: Path | None = None,
+    task_id: str | None = None,
+    raw_signals: dict | None = None,
 ) -> dict:
-    """Record a single prompt outcome measurement."""
+    """Record a single prompt outcome measurement.
+
+    When called from grounded_measurement_service, task_id and raw_signals
+    provide the observable data that produced value_score and resource_cost.
+    """
     if not (0.0 <= value_score <= 1.0):
         raise ValueError(f"value_score must be in [0.0, 1.0], got {value_score}")
     if resource_cost <= 0:
@@ -37,13 +43,17 @@ def record_prompt_outcome(
     store = store_path or _default_store_path()
     store.parent.mkdir(parents=True, exist_ok=True)
 
-    measurement = {
+    measurement: dict = {
         "variant_id": variant_id,
         "task_type": task_type,
         "value_score": value_score,
         "resource_cost": resource_cost,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if task_id is not None:
+        measurement["task_id"] = task_id
+    if raw_signals is not None:
+        measurement["raw_signals"] = raw_signals
 
     with open(store, "a+" if store.exists() else "w+") as f:
         fcntl.flock(f, fcntl.LOCK_EX)

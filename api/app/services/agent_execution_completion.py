@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.services import agent_execution_service as execution_service
+from app.services import grounded_measurement_service
+
+_log = logging.getLogger(__name__)
 
 
 def complete_success(
@@ -66,6 +70,21 @@ def complete_success(
             ),
         )
     )
+    # Record grounded A/B measurement if this task is part of a variant test
+    try:
+        runtime_cost_est = execution_service.runtime_service.estimate_runtime_cost(float(elapsed_ms))
+        grounded_measurement_service.record_grounded_measurement(
+            task_id=task_id,
+            task=task,
+            status="completed",
+            elapsed_ms=elapsed_ms,
+            actual_cost_usd=actual_cost_usd,
+            runtime_cost_estimate=runtime_cost_est,
+            output_metrics=output_metrics,
+        )
+    except Exception:
+        _log.debug("grounded measurement recording skipped", exc_info=True)
+
     return {"ok": True, "status": "completed", "elapsed_ms": elapsed_ms, "model": model}
 
 
@@ -114,4 +133,18 @@ def complete_failure(
             ),
         )
     )
+    # Record grounded A/B measurement if this task is part of a variant test
+    try:
+        runtime_cost_est = execution_service.runtime_service.estimate_runtime_cost(float(elapsed_ms))
+        grounded_measurement_service.record_grounded_measurement(
+            task_id=task_id,
+            task=task,
+            status="failed",
+            elapsed_ms=elapsed_ms,
+            actual_cost_usd=actual_cost_usd,
+            runtime_cost_estimate=runtime_cost_est,
+        )
+    except Exception:
+        _log.debug("grounded measurement recording skipped", exc_info=True)
+
     return {"ok": False, "status": "failed", "elapsed_ms": elapsed_ms, "model": model}
