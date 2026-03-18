@@ -1,6 +1,6 @@
 # Spec 115: Grounded Cost & Value Measurement for Prompt A/B ROI
 
-## Status: Draft
+## Status: Implemented
 
 ## Problem
 
@@ -55,10 +55,40 @@ Where:
 - `confidence_weight`: `confidence` from task output JSON, clamped [0.1, 1.0],
   default 1.0 if not present
 
-This produces a 0.0-1.0 score where:
-- 0.0 = task failed (no value produced)
-- 1.0 = task completed on first attempt with high confidence
-- 0.4-0.7 = task completed but required retries (degraded value)
+This produces a 0.0-1.0 execution quality score.
+
+### Economic value layer (Layer 2)
+
+Execution quality alone only answers "did the task run well?" — not "did it
+produce something someone would pay for?" Real value requires observable
+economic signals from the idea the task serves.
+
+When a task has an `idea_id` in its context, the system collects:
+
+| Signal | Source | What it measures |
+|--------|--------|-----------------|
+| **Usage adoption** | `RuntimeEvent` count per `idea_id` | How many API calls this feature gets |
+| **Usage revenue** | `event_count × $0.001/request` | Direct revenue (from ECONOMIC_MODEL.md) |
+| **Value realization** | `Idea.actual_value / potential_value` | How much predicted value has materialized |
+| **Lineage measured value** | `LineageValuation.measured_value_total` | Cumulative measured value from usage events |
+| **Friction cost avoidance** | `FrictionEvent.cost_of_delay` | Economic impact of blockages this idea resolves |
+
+The strongest signal drives the economic weight (max, not average):
+
+```
+final_value = execution_quality × (0.4 + 0.6 × strongest_economic_signal)
+```
+
+This means:
+- Perfect execution + zero economic signal = 0.4 (base credit for work done)
+- Perfect execution + strong economic signal = 1.0 (full value)
+- Failed execution = always 0.0 (failure gates everything)
+- No idea link = execution quality alone (honest: no inflation)
+
+Normalization scales:
+- **Adoption**: log scale — 1 call = 0.1, 10 calls = 0.5, 100+ calls = 0.9+
+- **Revenue**: log scale — $0.01 = 0.2, $0.10 = 0.5, $1.00 = 0.8, $10+ = 1.0
+- **Friction avoidance**: log scale — $1 = 0.2, $10 = 0.5, $100+ = 0.9
 
 ### Raw signal storage
 
@@ -82,7 +112,23 @@ formula can be improved later without re-collecting data:
     "heal_attempt": false,
     "outcome_signal": 1.0,
     "quality_multiplier": 0.7,
-    "confidence_weight": 1.0
+    "confidence_weight": 1.0,
+    "execution_quality": 0.7,
+    "idea_id": "idea-xyz",
+    "idea_signals": {
+      "usage_event_count": 42,
+      "usage_revenue_usd": 0.042,
+      "actual_value_usd": 15.0,
+      "potential_value_usd": 50.0,
+      "value_realization_pct": 0.3,
+      "sources": ["idea_model", "runtime_events"]
+    },
+    "economic_breakdown": {
+      "execution_quality": 0.7,
+      "economic_weight": 0.749,
+      "economic_signal_source": "adoption",
+      "has_idea_signals": true
+    }
   },
   "timestamp": "2026-03-18T..."
 }
@@ -156,3 +202,7 @@ attribute to).
       varies by model. Track per-model cost drift.
 - [ ] Value formula tuning: the quality_multiplier weights (1.0/0.7/0.4) are
       initial estimates. Should be calibrated from actual review acceptance data.
+- [ ] Economic signal normalization scales are initial estimates (log-based).
+      Should be tuned from real usage distribution data.
+- [ ] External value signals: GitHub stars/forks, customer support ticket
+      reduction, user retention metrics — not yet wired.
