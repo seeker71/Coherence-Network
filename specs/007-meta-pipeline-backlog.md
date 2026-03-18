@@ -34,3 +34,12 @@ Work that improves the pipeline itself. Runs through the same spec→impl→test
 18. **Provider readiness signal hardening:** Distinguish billing/usage-permission failures from true provider outage in readiness checks. Baseline: readiness is blocked by `openai: status=degraded` while other required execution providers are healthy. Target: `all_required_ready` reflects execution-critical health only.
 
 Evidence snapshot and hypothesis tests: [docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json](../docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json)
+
+### Flow & A/B Optimization Queue (2026-03-18 Orchestration Cycles)
+
+19. **Auto-heal from diagnostics:** When `classify_error` returns a known category, auto-generate a heal task with a targeted fix prompt. Wire into existing heal task system. Baseline: 0% of failures auto-healed. Target: >40% of failures auto-healed without human intervention. → spec [114-auto-heal-from-diagnostics.md](114-auto-heal-from-diagnostics.md)
+20. **Pre-review spec scan:** Before impl, have reviewer read spec+tests and flag likely pitfalls (ambiguous requirements, missing edge cases). Measure: `pitfalls_found_pre_impl / total_review_issues`. Target: catch >50% of review issues before impl starts.
+21. **Prompt cost budgeting:** Set token budget per phase (spec: 2K, test: 3K, impl: 5K, review: 3K). Track actual vs budget. Penalize over-budget variants in Thompson Sampling. Measure: `actual_tokens / budget_tokens` ratio. Target: <1.2x for all phases.
+22. **Cycle time compression:** Track wall-clock time from idea selection to PASS review. A/B test prompt sequencing. Baseline: ~15 min (cycle 2). Target: <10 min for straightforward specs.
+23. **Spec reuse detection:** Before writing a new spec, check if existing specs cover >50% of requirements. Measure: `specs_with_reuse_detected / total_new_specs`. Target: detect overlap in >30% of cases.
+24. **Error pattern library:** When `classify_error` sees a new pattern 3+ times, auto-add to pattern library and create root-cause spec. Measure: `unique_categories_resolved / total_unique`. Target: 80% of recurring errors have remediation within 1 week.
