@@ -1,5 +1,5 @@
 export const DEV_API_URL = "http://localhost:8000";
-const LEGACY_BLOCKED_API_HOSTS = ["api.coherencycoin.com"];
+const LEGACY_BLOCKED_API_HOSTS: string[] = [];
 
 function _stripTrailingSlash(url: string): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
