@@ -6,15 +6,20 @@ No mocks, no self-reported scores — all values derive from observable signals.
 The economic value layer (compute_economic_value_score) is tested as a pure
 function with explicit signal dicts — no service mocks needed because the
 function takes already-collected signals as input.
+
+Service API contract tests verify that the methods called by
+collect_idea_value_signals() actually exist with correct signatures.
 """
 
 from __future__ import annotations
 
+import inspect
 import json
 import math
 from pathlib import Path
 
 from app.services.grounded_measurement_service import (
+    collect_idea_value_signals,
     compute_economic_value_score,
     compute_grounded_cost,
     compute_grounded_value,
@@ -447,3 +452,66 @@ class TestRecordGroundedMeasurement:
         thorough = stats["variants"]["thorough_prompt"]
         assert thorough["roi"] == 125.0  # 1.0 / 0.008
         assert fast["roi"] > thorough["roi"]
+
+
+# ---------------------------------------------------------------------------
+# Service API contract tests: verify the methods we call actually exist
+# ---------------------------------------------------------------------------
+
+
+class TestServiceAPIContracts:
+    """Verify that collect_idea_value_signals calls real service methods.
+
+    These are NOT mock tests. They import the real service modules and check
+    that the methods exist with the expected signatures. If a service method
+    is renamed or removed, these tests fail — preventing silent degradation.
+    """
+
+    def test_idea_service_get_idea_exists(self) -> None:
+        from app.services import idea_service
+        assert hasattr(idea_service, "get_idea"), "idea_service.get_idea() must exist"
+        sig = inspect.signature(idea_service.get_idea)
+        params = list(sig.parameters.keys())
+        assert "idea_id" in params, f"get_idea must accept idea_id, got params: {params}"
+
+    def test_runtime_service_summarize_by_idea_exists(self) -> None:
+        from app.services import runtime_service
+        assert hasattr(runtime_service, "summarize_by_idea"), (
+            "runtime_service.summarize_by_idea() must exist"
+        )
+        sig = inspect.signature(runtime_service.summarize_by_idea)
+        params = list(sig.parameters.keys())
+        assert "seconds" in params, f"summarize_by_idea must accept seconds, got: {params}"
+
+    def test_value_lineage_service_list_links_exists(self) -> None:
+        from app.services import value_lineage_service
+        assert hasattr(value_lineage_service, "list_links"), (
+            "value_lineage_service.list_links() must exist"
+        )
+        assert hasattr(value_lineage_service, "valuation"), (
+            "value_lineage_service.valuation() must exist"
+        )
+        sig_links = inspect.signature(value_lineage_service.list_links)
+        assert "limit" in list(sig_links.parameters.keys())
+        sig_val = inspect.signature(value_lineage_service.valuation)
+        assert "lineage_id" in list(sig_val.parameters.keys())
+
+    def test_telemetry_persistence_list_friction_events_exists(self) -> None:
+        from app.services import telemetry_persistence_service
+        assert hasattr(telemetry_persistence_service, "list_friction_events"), (
+            "telemetry_persistence_service.list_friction_events() must exist"
+        )
+        sig = inspect.signature(telemetry_persistence_service.list_friction_events)
+        params = list(sig.parameters.keys())
+        assert "limit" in params, f"list_friction_events must accept limit, got: {params}"
+
+    def test_collect_signals_returns_empty_for_none_idea(self) -> None:
+        """No idea_id → empty signals, no service calls."""
+        signals = collect_idea_value_signals(None)
+        assert signals["idea_id"] is None
+        assert signals["sources"] == []
+        assert signals["usage_event_count"] == 0
+
+    def test_collect_signals_returns_empty_for_empty_idea(self) -> None:
+        signals = collect_idea_value_signals("")
+        assert signals["sources"] == []

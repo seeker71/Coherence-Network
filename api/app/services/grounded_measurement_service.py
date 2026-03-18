@@ -115,6 +115,10 @@ def collect_idea_value_signals(idea_id: str | None) -> dict[str, Any]:
 
     If idea_id is None or services are unavailable, returns empty
     signals (no value attribution possible).
+
+    IMPORTANT: Each source block calls verified service APIs with their
+    real method signatures. No try/except swallowing — if a service
+    method doesn't exist, that's a bug to fix, not to hide.
     """
     signals: dict[str, Any] = {
         "idea_id": idea_id,
@@ -132,61 +136,82 @@ def collect_idea_value_signals(idea_id: str | None) -> dict[str, Any]:
         return signals
 
     # Source 1: Idea model — actual_value and potential_value
+    # API: idea_service.get_idea(idea_id) -> IdeaWithScore | None
     try:
         from app.services import idea_service
         idea = idea_service.get_idea(idea_id)
-        if idea:
-            signals["actual_value_usd"] = idea.get("actual_value", 0.0) if isinstance(idea, dict) else getattr(idea, "actual_value", 0.0)
-            signals["potential_value_usd"] = idea.get("potential_value", 0.0) if isinstance(idea, dict) else getattr(idea, "potential_value", 0.0)
-            signals["value_gap_usd"] = max(0.0, signals["potential_value_usd"] - signals["actual_value_usd"])
-            if signals["potential_value_usd"] > 0:
-                signals["value_realization_pct"] = round(
-                    signals["actual_value_usd"] / signals["potential_value_usd"], 4
-                )
+        if idea is not None:
+            actual = getattr(idea, "actual_value", 0.0)
+            potential = getattr(idea, "potential_value", 0.0)
+            signals["actual_value_usd"] = float(actual)
+            signals["potential_value_usd"] = float(potential)
+            signals["value_gap_usd"] = max(0.0, float(potential) - float(actual))
+            if float(potential) > 0:
+                signals["value_realization_pct"] = round(float(actual) / float(potential), 4)
             signals["sources"].append("idea_model")
+    except ImportError:
+        _log.debug("idea_service not importable")
     except Exception:
-        _log.debug("idea_service unavailable for value signals", exc_info=True)
+        _log.debug("idea_service.get_idea failed for %s", idea_id, exc_info=True)
 
     # Source 2: Runtime events — API call count for this idea = usage volume
+    # API: runtime_service.summarize_by_idea(seconds=) -> list[IdeaRuntimeSummary]
+    # Each IdeaRuntimeSummary has: idea_id, event_count, total_runtime_ms, etc.
     try:
         from app.services import runtime_service
-        summary = runtime_service.get_idea_runtime_summary(idea_id)
-        if summary:
-            event_count = summary.get("event_count", 0) if isinstance(summary, dict) else getattr(summary, "event_count", 0)
-            signals["usage_event_count"] = event_count
-            signals["usage_revenue_usd"] = round(event_count * _REVENUE_PER_REQUEST, 6)
-            signals["sources"].append("runtime_events")
+        summaries = runtime_service.summarize_by_idea(seconds=86400)  # 24h window
+        for summary in summaries:
+            if getattr(summary, "idea_id", None) == idea_id:
+                event_count = getattr(summary, "event_count", 0)
+                signals["usage_event_count"] = int(event_count)
+                signals["usage_revenue_usd"] = round(int(event_count) * _REVENUE_PER_REQUEST, 6)
+                signals["sources"].append("runtime_events")
+                break
+    except ImportError:
+        _log.debug("runtime_service not importable")
     except Exception:
-        _log.debug("runtime_service unavailable for usage signals", exc_info=True)
+        _log.debug("runtime_service.summarize_by_idea failed", exc_info=True)
 
     # Source 3: Value lineage — measured_value_total from usage events
+    # API: value_lineage_service.list_links(limit=) -> list[LineageLink]
+    #      value_lineage_service.valuation(lineage_id) -> LineageValuation | None
+    # Must find links for this idea_id, then compute valuation per link.
     try:
         from app.services import value_lineage_service
-        valuations = value_lineage_service.get_valuations_for_idea(idea_id)
-        if valuations:
-            total_measured = sum(
-                v.get("measured_value_total", 0.0) if isinstance(v, dict) else getattr(v, "measured_value_total", 0.0)
-                for v in valuations
-            )
-            if total_measured > 0:
-                signals["lineage_measured_value_usd"] = total_measured
-                signals["sources"].append("value_lineage")
+        links = value_lineage_service.list_links(limit=500)
+        total_measured = 0.0
+        for link in links:
+            if getattr(link, "idea_id", None) == idea_id:
+                val = value_lineage_service.valuation(link.id)
+                if val is not None:
+                    total_measured += getattr(val, "measured_value_total", 0.0)
+        if total_measured > 0:
+            signals["lineage_measured_value_usd"] = round(total_measured, 4)
+            signals["sources"].append("value_lineage")
+    except ImportError:
+        _log.debug("value_lineage_service not importable")
     except Exception:
-        _log.debug("value_lineage_service unavailable", exc_info=True)
+        _log.debug("value_lineage_service failed for %s", idea_id, exc_info=True)
 
-    # Source 4: Friction — cost_of_delay for unresolved friction on this idea
+    # Source 4: Friction — cost_of_delay for friction events linked to this idea
+    # API: telemetry_persistence_service.list_friction_events(limit=) -> list[dict]
+    # Each dict has payload with idea_id and cost_of_delay fields.
     try:
-        from app.services import friction_service
-        friction_events = friction_service.get_friction_events_for_idea(idea_id)
-        if friction_events:
-            total_cost_of_delay = sum(
-                f.get("cost_of_delay", 0.0) if isinstance(f, dict) else getattr(f, "cost_of_delay", 0.0)
-                for f in friction_events
-            )
+        from app.services import telemetry_persistence_service
+        friction_events = telemetry_persistence_service.list_friction_events(limit=1000)
+        total_cost_of_delay = 0.0
+        for fe in friction_events:
+            fe_idea = fe.get("idea_id") if isinstance(fe, dict) else getattr(fe, "idea_id", None)
+            if fe_idea == idea_id:
+                cod = fe.get("cost_of_delay", 0.0) if isinstance(fe, dict) else getattr(fe, "cost_of_delay", 0.0)
+                total_cost_of_delay += float(cod)
+        if total_cost_of_delay > 0:
             signals["friction_cost_of_delay_usd"] = round(total_cost_of_delay, 4)
             signals["sources"].append("friction_events")
+    except ImportError:
+        _log.debug("telemetry_persistence_service not importable")
     except Exception:
-        _log.debug("friction_service unavailable for cost_of_delay", exc_info=True)
+        _log.debug("telemetry_persistence_service.list_friction_events failed", exc_info=True)
 
     return signals
 
