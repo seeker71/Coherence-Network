@@ -67,3 +67,7 @@ Return per-idea runtime aggregates for recent events.
 - `web/components/runtime-beacon.tsx`
 - `web/app/layout.tsx`
 
+## Downstream Consumers
+
+- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Calls `runtime_service.summarize_by_idea(seconds=86400)` to collect usage adoption counts (API call count per idea) as an economic signal. Usage event count is normalized on a log scale (1 call = 0.1, 10 = 0.5, 100+ = 0.9+) and feeds into the grounded value formula as one of the strongest economic signals driving task-level ROI.
+

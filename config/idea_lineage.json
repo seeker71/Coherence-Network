@@ -3,35 +3,71 @@
   "ideas": [
     {
       "idea_id": "portfolio-governance",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": [],
+      "description": "Root governance idea — portfolio-level coordination of all sub-ideas",
+      "status": "active"
     },
     {
       "idea_id": "oss-interface-alignment",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": [],
+      "description": "Keep the site and the API telling the same story",
+      "status": "active"
     },
     {
       "idea_id": "coherence-signal-depth",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": [],
+      "description": "Replace placeholder signals with real evidence",
+      "status": "active",
+      "cross_idea_contributions_from": ["agent-grounded-measurement"],
+      "notes": "Spec 115 directly advances this idea by replacing invented cost/value with observable signals"
     },
     {
       "idea_id": "coherence-network-agent-pipeline",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": ["026"],
+      "description": "Keep the background work loop moving, visible, and easy to recover",
+      "status": "active",
+      "sub_ideas": [
+        "agent-prompt-ab-roi",
+        "agent-failed-task-diagnostics",
+        "agent-auto-heal",
+        "agent-grounded-measurement"
+      ]
     },
     {
       "idea_id": "coherence-network-api-runtime",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": ["049"],
+      "description": "Keep the public site, the API, and the live system telling the same story",
+      "status": "active",
+      "cross_idea_contributions_to": ["agent-grounded-measurement"],
+      "notes": "Runtime telemetry (spec 049) feeds usage adoption into grounded value (spec 115)"
     },
     {
       "idea_id": "coherence-network-value-attribution",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": ["048"],
+      "description": "Show how value moves from an idea to the people who helped make it real",
+      "status": "active",
+      "cross_idea_contributions_to": ["agent-grounded-measurement"],
+      "notes": "Lineage valuation (spec 048) feeds measured_value_total into grounded value (spec 115)"
     },
     {
       "idea_id": "coherence-network-web-interface",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": [],
+      "description": "Keep the site easy to understand while staying aligned with the live data",
+      "status": "active"
     },
     {
       "idea_id": "deployment-gate-reliability",
-      "origin_idea_id": "portfolio-governance"
+      "origin_idea_id": "portfolio-governance",
+      "spec_ids": [],
+      "description": "Catch broken releases early and make recovery fast and predictable",
+      "status": "active"
     },
 
     {
@@ -40,7 +76,14 @@
       "spec_ids": ["112"],
       "description": "Measure which prompt variants produce higher ROI (value/cost) using Thompson Sampling",
       "status": "implemented",
-      "related_ideas": ["agent-grounded-measurement"]
+      "actual_cost_estimate": 15.0,
+      "implementation_files": [
+        "api/app/services/prompt_ab_roi_service.py",
+        "api/app/routers/agent_prompt_ab_routes.py",
+        "api/tests/test_prompt_ab_roi.py"
+      ],
+      "related_ideas": ["agent-grounded-measurement"],
+      "depended_on_by": ["agent-grounded-measurement"]
     },
     {
       "idea_id": "agent-failed-task-diagnostics",
@@ -48,7 +91,14 @@
       "spec_ids": ["113"],
       "description": "Classify failed task errors into actionable categories with completeness tracking",
       "status": "implemented",
-      "related_ideas": ["agent-auto-heal"]
+      "actual_cost_estimate": 12.0,
+      "implementation_files": [
+        "api/app/services/failed_task_diagnostics_service.py",
+        "api/app/routers/agent_diagnostics_routes.py",
+        "api/tests/test_failed_task_diagnostics.py"
+      ],
+      "related_ideas": ["agent-auto-heal"],
+      "depended_on_by": ["agent-auto-heal"]
     },
     {
       "idea_id": "agent-auto-heal",
@@ -56,21 +106,51 @@
       "spec_ids": ["114"],
       "description": "Automatically create heal tasks from diagnosed failures with strategy mapping",
       "status": "implemented",
+      "actual_cost_estimate": 18.0,
+      "implementation_files": [
+        "api/app/services/auto_heal_service.py",
+        "api/app/routers/agent_auto_heal_routes.py",
+        "api/tests/test_auto_heal_service.py"
+      ],
       "depends_on": ["agent-failed-task-diagnostics"],
-      "related_ideas": ["agent-grounded-measurement"]
+      "related_ideas": ["agent-grounded-measurement"],
+      "upstream_specs_consumed": ["047"]
     },
     {
       "idea_id": "agent-grounded-measurement",
       "origin_idea_id": "coherence-network-agent-pipeline",
       "spec_ids": ["115"],
-      "description": "Replace invented value/cost with real signals: provider billing, usage adoption, friction cost avoidance",
+      "description": "Replace invented value/cost with real signals: provider billing, usage adoption, friction cost avoidance, value realization",
       "status": "implemented",
+      "actual_cost_estimate": 30.0,
+      "implementation_files": [
+        "api/app/services/grounded_measurement_service.py",
+        "api/tests/test_grounded_measurement.py"
+      ],
       "depends_on": ["agent-prompt-ab-roi"],
       "cross_idea_dependencies": [
         "coherence-network-value-attribution",
-        "coherence-signal-depth"
+        "coherence-signal-depth",
+        "coherence-network-api-runtime"
       ],
-      "related_ideas": ["agent-prompt-ab-roi"]
+      "related_ideas": ["agent-prompt-ab-roi"],
+      "data_sources": {
+        "usage_adoption": {"from_spec": "049", "service": "runtime_service.summarize_by_idea()"},
+        "measured_value": {"from_spec": "048", "service": "value_lineage_service.valuation()"},
+        "friction_cost_avoidance": {"from_spec": "050", "service": "telemetry_persistence_service.list_friction_events()"},
+        "value_realization": {"from_spec": "053", "service": "idea_service.get_idea()"},
+        "provider_billing": {"from": "task execution", "field": "actual_cost_usd"},
+        "runtime_cost": {"from": "task execution", "field": "elapsed_ms × rate"}
+      }
     }
+  ],
+  "data_flow_graph": [
+    {"from": "049", "to": "115", "signal": "usage_event_count", "type": "adoption"},
+    {"from": "048", "to": "115", "signal": "measured_value_total", "type": "revenue"},
+    {"from": "050", "to": "115", "signal": "cost_of_delay", "type": "friction_avoidance"},
+    {"from": "053", "to": "115", "signal": "actual_value/potential_value", "type": "value_realization"},
+    {"from": "113", "to": "114", "signal": "error_category", "type": "classification"},
+    {"from": "115", "to": "112", "signal": "grounded_value + grounded_cost", "type": "measurement"},
+    {"from": "112", "to": "026", "signal": "variant_roi", "type": "selection_policy"}
   ]
 }
