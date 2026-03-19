@@ -61,6 +61,21 @@ class IdeaWithScore(Idea):
     free_energy_score: float = Field(ge=0.0)
     value_gap: float = Field(ge=0.0)
     marginal_cc_score: float = Field(default=0.0, ge=0.0)
+    selection_weight: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Probability weight for stochastic selection (sums to 1.0 across portfolio).",
+    )
+
+
+class IdeaSelectionResult(BaseModel):
+    """Result of a weighted stochastic idea pick."""
+    selected: IdeaWithScore
+    method: str = Field(description="Selection method used: free_energy | marginal_cc")
+    temperature: float = Field(description="Temperature used (0=deterministic, higher=more random)")
+    selection_weight: float = Field(description="Probability this idea had of being picked")
+    runner_up: Optional[IdeaWithScore] = None
+    pool_size: int = Field(description="Number of ideas in the selection pool")
 
 
 class IdeaSummary(BaseModel):
