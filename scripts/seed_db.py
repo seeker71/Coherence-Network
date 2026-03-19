@@ -160,6 +160,39 @@ def seed_ideas() -> int:
     return len(result.ideas) if result else 0
 
 
+def link_specs_to_ideas() -> int:
+    """Link specs to ideas using contributing_specs from seed data."""
+    seed_path = ROOT / "data" / "seed_ideas.json"
+    if not seed_path.exists():
+        print("  No data/seed_ideas.json found")
+        return 0
+
+    with open(seed_path) as f:
+        data = json.load(f)
+
+    # Build spec_id -> idea_id mapping from all ideas
+    spec_to_idea: dict[str, str] = {}
+    for idea in data.get("default_ideas", []):
+        idea_id = idea.get("id")
+        for spec_id in idea.get("contributing_specs", []):
+            spec_to_idea[spec_id] = idea_id
+    for idea_id, meta in data.get("derived_metadata", {}).items():
+        for spec_id in meta.get("contributing_specs", []):
+            spec_to_idea[spec_id] = idea_id
+
+    from app.models.spec_registry import SpecRegistryUpdate
+
+    count = 0
+    for spec_id, idea_id in spec_to_idea.items():
+        existing = spec_registry_service.get_spec(spec_id)
+        if existing is not None and not getattr(existing, "idea_id", None):
+            spec_registry_service.update_spec(
+                spec_id, SpecRegistryUpdate(idea_id=idea_id)
+            )
+            count += 1
+    return count
+
+
 def checkpoint_wal() -> None:
     """Fold WAL into the main DB file for a clean git commit."""
     eng = unified_db.engine()
@@ -193,6 +226,10 @@ def main() -> None:
     print("Seeding ideas...")
     idea_count = seed_ideas()
     print(f"  {idea_count} ideas loaded")
+
+    print("Linking specs to ideas...")
+    link_count = link_specs_to_ideas()
+    print(f"  {link_count} specs linked to ideas")
 
     print("Checkpointing WAL...")
     checkpoint_wal()

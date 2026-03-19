@@ -20,6 +20,7 @@ from sqlalchemy.pool import NullPool
 
 from app.models.idea import (
     Idea,
+    IdeaType,
     PaginationInfo,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
@@ -424,23 +425,49 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     interfaces = metadata.get("interfaces")
     if not isinstance(interfaces, list) or not all(isinstance(x, str) for x in interfaces):
         interfaces = ["machine:api", "human:web", "machine:commit-evidence"]
+
+    # Copy all numeric and enum fields from seed, with safe defaults
     potential_value = float(metadata.get("potential_value", 70.0))
+    actual_value = float(metadata.get("actual_value", 0.0))
     estimated_cost = float(metadata.get("estimated_cost", 12.0))
+    actual_cost = float(metadata.get("actual_cost", 0.0))
     confidence = float(metadata.get("confidence", 0.55))
+    resistance_risk = float(metadata.get("resistance_risk", 3.0))
+
+    # Hierarchy fields
+    idea_type_str = metadata.get("idea_type", "standalone")
+    try:
+        idea_type = IdeaType(idea_type_str)
+    except ValueError:
+        idea_type = IdeaType.STANDALONE
+    parent_idea_id = metadata.get("parent_idea_id")
+    child_idea_ids = metadata.get("child_idea_ids", [])
+    if not isinstance(child_idea_ids, list):
+        child_idea_ids = []
+
+    # Status
+    status_str = metadata.get("manifestation_status", "none")
+    try:
+        status = ManifestationStatus(status_str)
+    except ValueError:
+        status = ManifestationStatus.NONE
 
     return Idea(
         id=idea_id,
         name=name,
         description=description,
         potential_value=potential_value,
-        actual_value=0.0,
+        actual_value=actual_value,
         estimated_cost=estimated_cost,
-        actual_cost=0.0,
-        resistance_risk=3.0,
+        actual_cost=actual_cost,
+        resistance_risk=resistance_risk,
         confidence=max(0.0, min(confidence, 1.0)),
-        manifestation_status=ManifestationStatus.NONE,
+        manifestation_status=status,
         interfaces=interfaces,
         open_questions=[],
+        idea_type=idea_type,
+        parent_idea_id=parent_idea_id,
+        child_idea_ids=child_idea_ids,
     )
 
 
