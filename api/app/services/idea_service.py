@@ -9,7 +9,9 @@ and writes back only genuinely new discoveries.
 from __future__ import annotations
 
 import json
+import math
 import os
+import random
 import re
 import time
 from pathlib import Path
@@ -20,6 +22,7 @@ from sqlalchemy.pool import NullPool
 
 from app.models.idea import (
     Idea,
+    IdeaSelectionResult,
     IdeaType,
     PaginationInfo,
     IdeaPortfolioResponse,
@@ -579,6 +582,134 @@ def _with_score(idea: Idea) -> IdeaWithScore:
     )
 
 
+def _softmax_weights(scores: list[float], temperature: float) -> list[float]:
+    """Convert raw scores to probability weights via softmax.
+
+    temperature controls exploration:
+      0.0  → deterministic (all weight on top score)
+      1.0  → proportional to scores
+      >1.0 → flatter distribution, more exploration
+    """
+    if not scores:
+        return []
+    if temperature <= 0.0:
+        # Deterministic: all weight on the max
+        max_s = max(scores)
+        return [1.0 if s == max_s else 0.0 for s in scores]
+
+    # Shift scores by max for numerical stability, scale by temperature
+    max_s = max(scores)
+    exps = [math.exp((s - max_s) / temperature) for s in scores]
+    total = sum(exps)
+    if total == 0:
+        # Uniform fallback
+        return [1.0 / len(scores)] * len(scores)
+    return [e / total for e in exps]
+
+
+def select_idea(
+    method: str = "marginal_cc",
+    temperature: float = 1.0,
+    exclude_ids: list[str] | None = None,
+    only_actionable: bool = True,
+    seed: int | None = None,
+) -> IdeaSelectionResult:
+    """Weighted stochastic idea selection.
+
+    Picks one idea from the portfolio using softmax-weighted random sampling.
+    The distribution matches ranking on average but allows exploration:
+
+    - temperature=0: always picks the top-ranked idea (pure exploit)
+    - temperature=1: probability proportional to score (balanced)
+    - temperature=2+: flatter distribution (more exploration)
+
+    method: "free_energy" or "marginal_cc" — which score to use as the basis.
+    exclude_ids: ideas to skip (e.g., recently worked on).
+    only_actionable: if True, skip super-ideas (not directly workable).
+    seed: optional RNG seed for reproducibility.
+    """
+    ideas = _read_ideas(persist_ensures=False)
+
+    if only_actionable:
+        ideas = [i for i in ideas if i.idea_type != IdeaType.SUPER]
+    if exclude_ids:
+        excl = set(exclude_ids)
+        ideas = [i for i in ideas if i.id not in excl]
+
+    if not ideas:
+        raise ValueError("No ideas available for selection after filtering")
+
+    scored = [_with_score(i) for i in ideas]
+
+    # Get the raw scores for the chosen method
+    if method == "marginal_cc":
+        raw_scores = [s.marginal_cc_score for s in scored]
+    else:
+        raw_scores = [s.free_energy_score for s in scored]
+
+    # Compute softmax weights
+    weights = _softmax_weights(raw_scores, temperature)
+
+    # Attach weights to scored ideas
+    for s, w in zip(scored, weights):
+        s.selection_weight = round(w, 6)
+
+    # Stochastic pick
+    rng = random.Random(seed)
+    cumulative = 0.0
+    roll = rng.random()
+    picked_idx = len(scored) - 1  # fallback to last
+    for i, w in enumerate(weights):
+        cumulative += w
+        if roll <= cumulative:
+            picked_idx = i
+            break
+
+    selected = scored[picked_idx]
+
+    # Find runner-up (highest weight that isn't the picked one)
+    runner_up = None
+    sorted_by_weight = sorted(
+        [(i, s) for i, s in enumerate(scored) if i != picked_idx],
+        key=lambda x: x[1].selection_weight,
+        reverse=True,
+    )
+    if sorted_by_weight:
+        runner_up = sorted_by_weight[0][1]
+
+    # Record for A/B tracking
+    from app.services import idea_selection_ab_service
+    top_picks = sorted(scored, key=lambda s: s.selection_weight, reverse=True)[:5]
+    total_gap = sum(s.value_gap for s in scored)
+    total_remaining = sum(
+        max(s.estimated_cost - s.actual_cost, 0.0) for s in scored
+    )
+    idea_selection_ab_service.record_selection(
+        method=method,
+        top_picks=[
+            {
+                "idea_id": s.id,
+                "score": s.marginal_cc_score if method == "marginal_cc" else s.free_energy_score,
+                "value_gap": s.value_gap,
+                "remaining_cost": max(s.estimated_cost - s.actual_cost, 0.0),
+            }
+            for s in top_picks
+        ],
+        total_remaining_cost_cc=total_remaining,
+        total_value_gap_cc=total_gap,
+        expected_roi=total_gap / total_remaining if total_remaining > 0 else 0,
+    )
+
+    return IdeaSelectionResult(
+        selected=selected,
+        method=method,
+        temperature=temperature,
+        selection_weight=selected.selection_weight,
+        runner_up=runner_up,
+        pool_size=len(scored),
+    )
+
+
 def list_ideas(
     only_unvalidated: bool = False,
     limit: int | None = None,
@@ -600,8 +731,17 @@ def list_ideas(
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
         sort_key = lambda i: i.marginal_cc_score
+        raw_scores = [s.marginal_cc_score for s in scored]
     else:
         sort_key = lambda i: i.free_energy_score
+        raw_scores = [s.free_energy_score for s in scored]
+
+    # Compute selection weights (temperature=1.0) so list consumers can see
+    # the probability each idea would have in a stochastic pick
+    weights = _softmax_weights(raw_scores, temperature=1.0)
+    for s, w in zip(scored, weights):
+        s.selection_weight = round(w, 6)
+
     ranked = sorted(scored, key=sort_key, reverse=True)
     total_ranked = len(ranked)
     safe_offset = max(0, int(offset))

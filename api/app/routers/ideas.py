@@ -9,6 +9,7 @@ from app.models.idea import (
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestionAnswerUpdate,
+    IdeaSelectionResult,
     IdeaStorageInfo,
     IdeaUpdate,
     IdeaWithScore,
@@ -96,6 +97,32 @@ async def list_idea_card_changes(
 @router.get("/ideas/selection-ab/stats")
 async def get_selection_ab_stats() -> dict:
     return idea_selection_ab_service.get_comparison()
+
+
+@router.post("/ideas/select", response_model=IdeaSelectionResult)
+async def select_idea(
+    method: str = Query("marginal_cc", description="Score method: free_energy | marginal_cc"),
+    temperature: float = Query(1.0, ge=0.0, le=5.0, description="0=deterministic, 1=proportional, 2+=explore"),
+    exclude: str = Query("", description="Comma-separated idea IDs to exclude"),
+    seed: int | None = Query(None, description="RNG seed for reproducibility"),
+) -> IdeaSelectionResult:
+    """Weighted stochastic idea selection.
+
+    Picks one idea from the portfolio. Probability distribution is softmax
+    over scores with the given temperature. Higher temperature = more exploration.
+    On average the distribution matches the ranking, but any single call may
+    pick a lower-ranked idea — this is by design for A/B exploration.
+    """
+    exclude_ids = [e.strip() for e in exclude.split(",") if e.strip()] if exclude else None
+    try:
+        return idea_service.select_idea(
+            method=method,
+            temperature=temperature,
+            exclude_ids=exclude_ids,
+            seed=seed,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
