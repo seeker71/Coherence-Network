@@ -36,16 +36,14 @@ def _cache_key(*parts: object) -> str:
 
 
 def _inventory_environment_cache_key() -> str:
+    from app.services import unified_db as _udb
     return "|".join(
         [
+            f"db={_udb.database_url()}",
             f"idea_portfolio={os.getenv('IDEA_PORTFOLIO_PATH', '')}",
             f"value_lineage={os.getenv('VALUE_LINEAGE_PATH', '')}",
             f"runtime_events={os.getenv('RUNTIME_EVENTS_PATH', '')}",
             f"runtime_idea_map={os.getenv('RUNTIME_IDEA_MAP_PATH', '')}",
-            f"idea_registry_db={os.getenv('IDEA_REGISTRY_DATABASE_URL', '')}|{os.getenv('IDEA_REGISTRY_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
-            f"commit_evidence_db={os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '')}|{os.getenv('DATABASE_URL', '')}",
-            f"commit_evidence_dir={os.getenv('IDEA_COMMIT_EVIDENCE_DIR', '')}",
-            f"spec_registry_db={os.getenv('GOVERNANCE_DATABASE_URL', '')}|{os.getenv('GOVERNANCE_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
         ]
     )
 

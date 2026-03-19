@@ -25,10 +25,7 @@ from app.models.governance import (
 from app.models.idea import IdeaCreate, IdeaQuestionAnswerUpdate, IdeaQuestionCreate, IdeaUpdate
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import idea_service, spec_registry_service
-
-
-class Base(DeclarativeBase):
-    pass
+from app.services.unified_db import Base
 
 
 class ChangeRequestRecord(Base):
@@ -62,56 +59,29 @@ class ChangeRequestVoteRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
 
-_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+from app.services import unified_db as _udb
 
 
 def _database_url() -> str:
-    return spec_registry_service._database_url()  # noqa: SLF001
-
-
-def _create_engine(url: str):
-    kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        kwargs["poolclass"] = NullPool
-    return create_engine(url, **kwargs)
+    return _udb.database_url()
 
 
 def _engine():
-    url = _database_url()
-    if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
-        return _ENGINE_CACHE["engine"]
-    engine = _create_engine(url)
-    SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
-    _ENGINE_CACHE["url"] = url
-    _ENGINE_CACHE["engine"] = engine
-    _ENGINE_CACHE["sessionmaker"] = SessionLocal
-    return engine
+    return _udb.engine()
 
 
 def _sessionmaker():
-    _engine()
-    return _ENGINE_CACHE["sessionmaker"]
+    return _udb.get_sessionmaker()
 
 
 @contextmanager
 def _session() -> Session:
-    SessionLocal = _sessionmaker()
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _udb.session() as s:
+        yield s
 
 
 def ensure_schema() -> None:
-    spec_registry_service.ensure_schema()
-    engine = _engine()
-    Base.metadata.create_all(bind=engine)
+    _udb.ensure_schema()
 
 
 def _default_required_approvals() -> int:

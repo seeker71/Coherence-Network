@@ -486,15 +486,9 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
 
 
 def _should_include_default_tracked_ideas() -> bool:
-    # When callers isolate ideas into a custom portfolio path (common in tests),
-    # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
-    if (
-        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
-        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
-    ):
-        return True
-    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+    # With unified_db (spec 118), all services share one DB, so tracked
+    # ideas from commit evidence are always in the same store as ideas.
+    return True
 
 
 def _invalidate_ideas_cache() -> None:
@@ -510,13 +504,10 @@ def _cache_ideas(ideas: list[Idea]) -> None:
 
 
 def _ideas_cache_key() -> str:
+    from app.services import unified_db as _udb
     return (
+        f"{_udb.database_url()}|"
         f"{_portfolio_path()}|"
-        f"{os.getenv('IDEA_REGISTRY_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
-        f"{os.getenv('DATABASE_URL','')}|"
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
         f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
@@ -540,12 +531,9 @@ def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
     now = time.time()
+    from app.services import unified_db as _udb
     cache_key = (
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
-        f"|{os.getenv('DATABASE_URL','')}"
-        f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
-        f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
-        f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
+        f"{_udb.database_url()}"
         f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
     )
     if (

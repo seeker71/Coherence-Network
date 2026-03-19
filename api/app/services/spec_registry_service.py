@@ -15,10 +15,7 @@ from sqlalchemy.pool import NullPool
 
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
 from app.services.spec_cards_service import build_spec_cards_feed_payload
-
-
-class Base(DeclarativeBase):
-    pass
+from app.services.unified_db import Base
 
 
 class SpecRegistryRecord(Base):
@@ -41,7 +38,8 @@ class SpecRegistryRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
 
-_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+from app.services import unified_db as _udb
+
 _SCHEMA_INITIALIZED = False
 _SCHEMA_INITIALIZED_URL = ""
 _LIST_SPECS_CACHE: dict[str, Any] = {
@@ -51,98 +49,46 @@ _LIST_SPECS_CACHE: dict[str, Any] = {
 _LIST_SPECS_CACHE_TTL_SECONDS = 60.0
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
-def _default_sqlite_path() -> Path:
-    configured_portfolio = os.getenv("IDEA_PORTFOLIO_PATH")
-    if configured_portfolio:
-        base = Path(configured_portfolio)
-        if base.suffix.lower() == ".json":
-            return base.with_suffix(".governance.db")
-        return Path(f"{base}.governance.db")
-    return _repo_root() / "api" / "logs" / "governance_registry.db"
-
-
 def _database_url() -> str:
-    configured = (
-        os.getenv("GOVERNANCE_DATABASE_URL")
-        or os.getenv("GOVERNANCE_DB_URL")
-        or os.getenv("DATABASE_URL")
-    )
-    if configured:
-        return configured
-    sqlite_path = _default_sqlite_path()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite+pysqlite:///{sqlite_path}"
-
-
-def _create_engine(url: str):
-    kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        kwargs["poolclass"] = NullPool
-    return create_engine(url, **kwargs)
+    return _udb.database_url()
 
 
 def _engine():
-    url = _database_url()
-    if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
-        return _ENGINE_CACHE["engine"]
-    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
-    _SCHEMA_INITIALIZED = False
-    _SCHEMA_INITIALIZED_URL = ""
-    _invalidate_spec_cache()
-    engine = _create_engine(url)
-    SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
-    _ENGINE_CACHE["url"] = url
-    _ENGINE_CACHE["engine"] = engine
-    _ENGINE_CACHE["sessionmaker"] = SessionLocal
-    return engine
+    return _udb.engine()
 
 
-def _table_exists(engine: Any, table_name: str) -> bool:
+def _table_exists(engine_obj: Any, table_name: str) -> bool:
     try:
-        return table_name in inspect(engine).get_table_names()
+        return table_name in inspect(engine_obj).get_table_names()
     except Exception:
         return False
 
 
 def _sessionmaker():
-    _engine()
-    return _ENGINE_CACHE["sessionmaker"]
+    return _udb.get_sessionmaker()
 
 
 @contextmanager
 def _session() -> Session:
-    SessionLocal = _sessionmaker()
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _udb.session() as s:
+        yield s
 
 
 def ensure_schema() -> None:
     global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
     url = _database_url()
     if _SCHEMA_INITIALIZED and _SCHEMA_INITIALIZED_URL == url:
-        engine = _engine()
-        if engine is not None and _table_exists(engine, "spec_registry_entries"):
+        eng = _engine()
+        if eng is not None and _table_exists(eng, "spec_registry_entries"):
             return
         _SCHEMA_INITIALIZED = False
         _SCHEMA_INITIALIZED_URL = ""
     if not url:
         return
-    engine = _engine()
-    if not _table_exists(engine, "spec_registry_entries"):
-        Base.metadata.create_all(bind=engine)
-    _ensure_runtime_columns(engine)
+    eng = _engine()
+    if not _table_exists(eng, "spec_registry_entries"):
+        _udb.ensure_schema()
+    _ensure_runtime_columns(eng)
     _SCHEMA_INITIALIZED = True
     _SCHEMA_INITIALIZED_URL = url
 
