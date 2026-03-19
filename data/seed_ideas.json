@@ -3,11 +3,11 @@
     {
       "id": "oss-interface-alignment",
       "name": "Web and API tell the same story",
-      "description": "Every number a user sees on the site must match the API response. If health says ok but the page looks broken, trust is gone. Verified by automated parity checks between GET /api/ideas and the /ideas page.",
+      "description": "Every number a user sees on the site must match the API response. If health says ok but the page looks broken, trust is gone. 26 Next.js pages exist, API is functional, but no automated parity checking between them yet.",
       "potential_value": 90.0,
-      "actual_value": 25.0,
+      "actual_value": 35.0,
       "estimated_cost": 18.0,
-      "actual_cost": 6.0,
+      "actual_cost": 8.0,
       "resistance_risk": 4.0,
       "confidence": 0.72,
       "manifestation_status": "partial",
@@ -41,13 +41,13 @@
     {
       "id": "portfolio-governance",
       "name": "One place to see what every idea costs, delivers, and should do next",
-      "description": "A single DB (data/coherence.db) stores all ideas, specs, evidence, and metrics with content hashes linking to source files. No duplicate sources, no conflicting numbers. Verified by scripts/verify_hashes.py.",
+      "description": "A single DB (data/coherence.db) stores all ideas, specs, evidence, and metrics with content hashes linking to source files. No duplicate sources, no conflicting numbers. Verified by scripts/verify_hashes.py. 79 evidence records demonstrate ongoing governance activity.",
       "potential_value": 82.0,
-      "actual_value": 40.0,
+      "actual_value": 55.0,
       "estimated_cost": 10.0,
-      "actual_cost": 7.0,
+      "actual_cost": 8.0,
       "resistance_risk": 2.0,
-      "confidence": 0.82,
+      "confidence": 0.85,
       "manifestation_status": "partial",
       "idea_type": "super",
       "child_idea_ids": [
@@ -73,7 +73,7 @@
     {
       "id": "community-project-funder-match",
       "name": "Help local projects show funders they are real",
-      "description": "A funder should verify a project in under 60 seconds: does it run, does it deliver value, who built it. Three API calls assemble this proof automatically. No pitch deck needed — the data speaks.",
+      "description": "A funder should verify a project in under 60 seconds: does it run, does it deliver value, who built it. Three API calls assemble this proof automatically. Demo page exists at web/app/demo/page.tsx but doesn't yet pull grounded-metrics.",
       "potential_value": 76.0,
       "actual_value": 15.0,
       "estimated_cost": 9.0,
@@ -110,13 +110,13 @@
     {
       "id": "coherence-signal-depth",
       "name": "Replace placeholder numbers with real measurements",
-      "description": "Every metric in the system should come from observable data: provider billing for cost, usage events for value, commit evidence for progress. Spec 115 and 116 implement the grounded metrics pipeline. Verified by 37 tests in test_grounded_idea_metrics.py.",
+      "description": "Every metric in the system should come from observable data: provider billing for cost, usage events for value, commit evidence for progress. Spec 115 and 116 implement the grounded metrics pipeline. Verified by 37 tests in test_grounded_idea_metrics.py. Three data feeds operational since 2026-03-18.",
       "potential_value": 78.0,
-      "actual_value": 45.0,
+      "actual_value": 50.0,
       "estimated_cost": 24.0,
-      "actual_cost": 16.0,
-      "resistance_risk": 8.0,
-      "confidence": 0.80,
+      "actual_cost": 18.0,
+      "resistance_risk": 6.0,
+      "confidence": 0.82,
       "manifestation_status": "partial",
       "idea_type": "child",
       "parent_idea_id": "portfolio-governance",
@@ -138,13 +138,13 @@
     {
       "id": "federated-instance-aggregation",
       "name": "Let partners run their own copy and safely share results",
-      "description": "A partner runs a local Coherence instance, does real work, and sends LineageLinks + UsageEvents to the network. The receiving instance re-computes valuations locally — no trust required, just verifiable math. Governance voting prevents unilateral ranking changes.",
+      "description": "A partner runs a local Coherence instance, does real work, and sends LineageLinks + UsageEvents to the network. The receiving instance re-computes valuations locally — no trust required, just verifiable math. Governance voting prevents unilateral ranking changes. No implementation yet — pure design with answered questions.",
       "potential_value": 128.0,
       "actual_value": 0.0,
       "estimated_cost": 26.0,
       "actual_cost": 0.0,
       "resistance_risk": 5.0,
-      "confidence": 0.72,
+      "confidence": 0.55,
       "manifestation_status": "none",
       "interfaces": [
         "machine:api",
@@ -173,17 +173,17 @@
   "derived_metadata": {
     "coherence-network-agent-pipeline": {
       "name": "Agent pipeline: visible, recoverable, and self-healing",
-      "description": "The background work loop picks tasks, executes them, records results, and heals when stuck. Observable via telemetry dashboard, recoverable via auto-heal, measurable via grounded metrics.",
+      "description": "The background work loop picks tasks, executes them, records results, and heals when stuck. 134 evidence records, specs 112-115 implemented, 20 test files reference it. Most-evidenced idea in the system.",
       "interfaces": [
         "machine:api",
         "machine:automation",
         "human:operators"
       ],
       "potential_value": 88.0,
-      "actual_value": 42.0,
+      "actual_value": 50.0,
       "estimated_cost": 16.0,
-      "actual_cost": 13.0,
-      "confidence": 0.78,
+      "actual_cost": 14.0,
+      "confidence": 0.82,
       "manifestation_status": "partial",
       "idea_type": "super",
       "child_idea_ids": [
@@ -201,28 +201,31 @@
     },
     "coherence-network-api-runtime": {
       "name": "API and live system stay in sync",
-      "description": "Every endpoint returns data that matches what the system actually computes at runtime. No stale caches, no diverged state between API responses and internal models.",
+      "description": "Every endpoint returns data that matches what the system actually computes at runtime. 12 evidence records. API is functional and deployed, but no automated drift detection between computed and served values.",
       "interfaces": [
         "machine:api",
         "human:web",
         "external:railway"
       ],
       "potential_value": 80.0,
+      "actual_value": 35.0,
       "estimated_cost": 14.0,
-      "confidence": 0.62
+      "actual_cost": 6.0,
+      "confidence": 0.68,
+      "manifestation_status": "partial"
     },
     "coherence-network-value-attribution": {
       "name": "Show exactly how value flows from idea to contributor",
-      "description": "Lineage links connect ideas → specs → implementations → usage events → valuations → payouts. Every step is auditable. Spec 048 and 115 implement the pipeline, 37 tests verify it.",
+      "description": "Lineage links connect ideas → specs → implementations → usage events → valuations → payouts. Every step is auditable. 31 lineage functions/classes implemented, specs 048+115, 10 evidence records.",
       "interfaces": [
         "machine:api",
         "human:web",
         "human:contributors"
       ],
       "potential_value": 92.0,
-      "actual_value": 28.0,
+      "actual_value": 35.0,
       "estimated_cost": 18.0,
-      "actual_cost": 10.0,
+      "actual_cost": 12.0,
       "confidence": 0.74,
       "manifestation_status": "partial",
       "contributing_specs": [
@@ -232,81 +235,97 @@
     },
     "coherence-network-web-interface": {
       "name": "Web interface shows live data, not stale snapshots",
-      "description": "The Next.js frontend reads from the same API endpoints that agents and scripts use. No separate data path, no hand-maintained dashboards.",
+      "description": "26 Next.js pages exist reading from API endpoints. But some pages may render stale or placeholder data. No automated test verifies frontend-API parity. 17 evidence records.",
       "interfaces": [
         "human:web",
         "machine:api",
         "human:contributors"
       ],
       "potential_value": 84.0,
+      "actual_value": 30.0,
       "estimated_cost": 13.0,
-      "confidence": 0.64
+      "actual_cost": 5.0,
+      "confidence": 0.60,
+      "manifestation_status": "partial"
     },
     "deployment-gate-reliability": {
       "name": "Catch broken releases before users see them",
-      "description": "CI runs 833+ tests, health checks verify on deploy, and the agent pipeline detects drift between expected and actual behavior. Recovery is documented and scripted.",
+      "description": "14 CI workflow files, 833+ tests in suite, health check on deploy. 24 evidence records tracking deployment-related work. CI is functional, but recovery runbooks and monitoring alerts are not automated.",
       "interfaces": [
         "external:github",
         "external:railway"
       ],
       "potential_value": 86.0,
+      "actual_value": 45.0,
       "estimated_cost": 15.0,
-      "confidence": 0.63
+      "actual_cost": 8.0,
+      "confidence": 0.72,
+      "manifestation_status": "partial"
     },
     "interface-trust-surface": {
       "name": "3 critical web-API pairs that must always match",
-      "description": "health→landing, ideas-list→/ideas, idea-detail→/portfolio. If any pair disagrees, a first-time user sees a broken product. Parity is verifiable by comparing API JSON to rendered page data.",
+      "description": "health→landing, ideas-list→/ideas, idea-detail→/portfolio. Pages exist but no automated parity test compares API JSON to rendered page data. Trust surface is defined but not verified.",
       "interfaces": [
         "machine:api",
         "human:web"
       ],
       "potential_value": 40.0,
+      "actual_value": 10.0,
       "estimated_cost": 6.0,
-      "confidence": 0.70,
+      "actual_cost": 2.0,
+      "confidence": 0.55,
       "idea_type": "child",
-      "parent_idea_id": "oss-interface-alignment"
+      "parent_idea_id": "oss-interface-alignment",
+      "manifestation_status": "partial"
     },
     "minimum-e2e-path": {
       "name": "The 4-step proof that value flows end-to-end",
-      "description": "create-lineage-link → record-usage-event → compute-valuation → payout-preview. If this path breaks, nothing downstream works. Tested in test_value_lineage.py::test_minimum_e2e_flow_endpoint (spec 051).",
+      "description": "create-lineage-link → record-usage-event → compute-valuation → payout-preview. Fully implemented in value_lineage_service.py with router, models, and tests. Spec 051 is done.",
       "interfaces": [
         "machine:api"
       ],
       "potential_value": 35.0,
+      "actual_value": 30.0,
       "estimated_cost": 4.0,
-      "confidence": 0.75,
+      "actual_cost": 3.5,
+      "confidence": 0.90,
       "idea_type": "child",
       "parent_idea_id": "oss-interface-alignment",
+      "manifestation_status": "validated",
       "contributing_specs": [
         "051"
       ]
     },
     "funder-proof-page": {
       "name": "60-second funder verification from 3 API calls",
-      "description": "A single page assembles: (1) project status + actual_value from /ideas/{id}, (2) adoption signals from /ideas/{id}/grounded-metrics, (3) team attribution from /value-lineage/{id}/payout-preview. No pitch deck — the data is the proof.",
+      "description": "A single page assembles project status, adoption signals, and team attribution. Demo page exists at web/app/demo/page.tsx but doesn't yet pull from grounded-metrics or payout-preview APIs. Backend is ready, frontend needs wiring.",
       "interfaces": [
         "human:web",
         "external:partners"
       ],
       "potential_value": 45.0,
+      "actual_value": 8.0,
       "estimated_cost": 8.0,
-      "confidence": 0.60,
+      "actual_cost": 2.0,
+      "confidence": 0.55,
       "idea_type": "child",
       "parent_idea_id": "community-project-funder-match",
+      "manifestation_status": "partial",
       "contributing_specs": [
         "116"
       ]
     },
     "idea-hierarchy-model": {
       "name": "Super-ideas vs. child-ideas: strategic goals vs. actionable work",
-      "description": "idea_type (super/child/standalone) and parent_idea_id added to the Idea model. Super-ideas set direction but never appear in task pickup. Child-ideas are what agents actually execute. Spec 117, 24 tests.",
+      "description": "idea_type (super/child/standalone) and parent_idea_id added to the Idea model. Super-ideas set direction but never appear in task pickup. Child-ideas are what agents actually execute. Spec 117, 24 tests, fully operational.",
       "interfaces": [
         "machine:api"
       ],
       "potential_value": 30.0,
+      "actual_value": 28.0,
       "estimated_cost": 5.0,
-      "actual_cost": 4.0,
-      "confidence": 0.85,
+      "actual_cost": 4.5,
+      "confidence": 0.92,
       "manifestation_status": "validated",
       "idea_type": "child",
       "parent_idea_id": "portfolio-governance",
@@ -316,15 +335,16 @@
     },
     "unified-sqlite-store": {
       "name": "Single DB committed to git as source of truth",
-      "description": "data/coherence.db stores all ideas, specs, evidence, and metrics. Content stays in files (markdown, JSON) linked by SHA-256 hashes. No runtime bootstrap, no duplicate sources. scripts/verify_hashes.py catches drift. Spec 118.",
+      "description": "data/coherence.db stores all ideas, specs, evidence, and metrics. Content stays in files linked by SHA-256 hashes. No runtime bootstrap, no duplicate sources. scripts/verify_hashes.py catches drift. Spec 118. 399 hashes verified, 833 tests pass.",
       "interfaces": [
         "machine:api",
         "human:operators"
       ],
       "potential_value": 35.0,
+      "actual_value": 33.0,
       "estimated_cost": 6.0,
-      "actual_cost": 5.0,
-      "confidence": 0.88,
+      "actual_cost": 5.5,
+      "confidence": 0.93,
       "manifestation_status": "validated",
       "idea_type": "child",
       "parent_idea_id": "portfolio-governance",
