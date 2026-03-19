@@ -17,30 +17,29 @@ def test_idea_service_derives_missing_ideas_from_commit_evidence(
     monkeypatch, tmp_path: Path
 ) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
     commit_evidence_service.upsert_record(
         {"idea_ids": ["derived-runtime-observability"], "thread_branch": "codex/test"},
         "memory:test",
     )
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
 
     listed = idea_service.list_ideas()
     idea_ids = [item.id for item in listed.ideas]
 
     assert "derived-runtime-observability" in idea_ids
-    assert portfolio_path.exists()
+    # DB is now the sole source of truth; the JSON file is no longer written.
+    # Verify the derived idea is persisted by checking it appears in tracked IDs.
     assert "derived-runtime-observability" in idea_service.list_tracked_idea_ids()
 
 
 def test_idea_service_includes_store_tracked_ids_when_db_is_configured(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     commit_evidence_service.upsert_record(
         {"idea_ids": ["unexpected-local"], "thread_branch": "codex/test"},
         "memory:test",
     )
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
 
     assert idea_service.list_tracked_idea_ids() == ["unexpected-local"]
@@ -49,13 +48,11 @@ def test_idea_service_includes_store_tracked_ids_when_db_is_configured(
 def test_idea_service_includes_store_tracked_ids_when_database_url_is_configured(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     commit_evidence_service.upsert_record(
         {"idea_ids": ["database-url-tracked"], "thread_branch": "codex/test"},
         "memory:test",
     )
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
 
     assert idea_service.list_tracked_idea_ids() == ["database-url-tracked"]
@@ -64,10 +61,9 @@ def test_idea_service_includes_store_tracked_ids_when_database_url_is_configured
 def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     commit_evidence_service.upsert_record({"idea_ids": ["tracked-main"]}, "memory:first")
     commit_evidence_service.upsert_record({"idea_ids": ["tracked-alt"]}, "memory:second")
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(tmp_path / "system_audit"))
     tracked = idea_service.list_tracked_idea_ids()
     assert tracked == ["tracked-alt", "tracked-main"]
@@ -76,8 +72,6 @@ def test_idea_service_reads_tracked_ids_from_commit_evidence_store(
 def test_idea_service_derives_missing_ideas_from_other_registry_domains(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
@@ -111,8 +105,6 @@ def test_idea_service_derives_missing_ideas_from_other_registry_domains(
 def test_idea_service_domain_discovery_default_on_outside_pytest(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.delenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", raising=False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
@@ -143,8 +135,6 @@ def test_idea_service_domain_discovery_default_on_outside_pytest(
 def test_idea_service_derives_missing_ideas_from_contribution_metadata_domain(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'shared.db'}")
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
@@ -223,7 +213,7 @@ def test_inventory_does_not_emit_fake_spec_rows_when_all_sources_missing(
 def test_inventory_reads_commit_evidence_from_store(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     commit_evidence_service.upsert_record(
         {
             "idea_ids": ["portfolio-governance"],
@@ -244,8 +234,7 @@ def test_inventory_reads_commit_evidence_from_store(
 def test_inventory_reads_commit_evidence_from_store_when_database_url_configured(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     commit_evidence_service.upsert_record(
         {
             "idea_ids": ["database-url-evidence"],
@@ -262,32 +251,37 @@ def test_inventory_reads_commit_evidence_from_store_when_database_url_configured
     assert str(records[0]["_evidence_file"]) == "memory:database-url"
 
 
-def test_inventory_commit_evidence_returns_empty_when_store_has_no_rows(
+def test_inventory_commit_evidence_returns_empty_when_store_and_files_empty(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+    """With unified DB, empty DB + no local files → empty results."""
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
+    # Point evidence dir to an empty directory so file fallback also returns nothing
+    monkeypatch.setattr(inventory_service, "_commit_evidence_dir", lambda: tmp_path / "empty_evidence")
+    monkeypatch.setattr(inventory_service, "_read_commit_evidence_records_from_github", lambda limit=400: [])
 
     records = inventory_service._read_commit_evidence_records(limit=1000)
 
     assert records == []
 
 
-def test_inventory_commit_evidence_database_source_does_not_fallback_to_files(
+def test_inventory_commit_evidence_bootstraps_from_files_when_db_empty(
     monkeypatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("COMMIT_EVIDENCE_DATABASE_URL", raising=False)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence-empty.db'}")
+    """With unified DB, empty DB + local files → bootstraps from files."""
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
     evidence_dir = tmp_path / "system_audit"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / "commit_evidence_2026-03-03_fake.json").write_text(
-        '{"idea_ids": ["legacy-file-only"], "spec_ids": ["999"]}',
+        '{"idea_ids": ["bootstrap-from-file"], "spec_ids": ["999"]}',
         encoding="utf-8",
     )
-    monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+    monkeypatch.setattr(inventory_service, "_commit_evidence_dir", lambda: evidence_dir)
 
     records = inventory_service._read_commit_evidence_records(limit=1000)
 
-    assert records == []
+    assert len(records) == 1
+    assert records[0]["idea_ids"] == ["bootstrap-from-file"]
 
 
 def test_source_aliases_normalize_deployed_double_app_prefix() -> None:

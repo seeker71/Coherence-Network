@@ -99,6 +99,10 @@ cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/
 - Risk: event-source files or DB snapshots can be unavailable; mitigation is tolerant parsing with explicit ignored/error counters.
 - Assumption: monitor issue and metrics schemas remain backward compatible for friction aggregation.
 
+## Downstream Consumers
+
+- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Reads `telemetry_persistence_service.list_friction_events()` filtered by idea_id and extracts `cost_of_delay` as a friction cost avoidance signal. This is normalized on a log scale ($1 = 0.2, $10 = 0.5, $100+ = 0.9) and feeds into the grounded value formula as an economic signal for task-level ROI.
+
 ## Known Gaps and Follow-up Tasks
 
 - Follow-up task: `friction-metric-cost-normalization` to calibrate cost-of-delay models against measured provider billing data.

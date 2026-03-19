@@ -109,42 +109,37 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
-    commit_evidence_db_url = str(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "")).strip()
-    shared_database_url = str(os.getenv("DATABASE_URL", "")).strip()
-    db_url_configured = bool(commit_evidence_db_url or shared_database_url)
-    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
-    use_db = use_db_raw in {"1", "true", "yes", "on"}
-    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
-        if db_url_configured:
-            use_db = True
-        else:
-            required_raw = str(
-                os.getenv("GLOBAL_PERSISTENCE_REQUIRED") or os.getenv("PERSISTENCE_CONTRACT_REQUIRED") or ""
-            ).strip().lower()
-            required = required_raw in {"1", "true", "yes", "on"}
-            backend_url = os.getenv("DATABASE_URL", "").strip().lower()
-            use_db = required and ("postgresql" in backend_url)
-    if use_db:
-        source_key = f"db:{commit_evidence_db_url}|{shared_database_url}"
-        now = time.time()
-        cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
-        if (
-            cached_source == source_key
-            and _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
-            and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
-        ):
-            requested_limit = max(1, min(int(limit), 5000))
-            return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
-        try:
-            requested_limit = max(1, min(int(limit), 5000))
-            rows = commit_evidence_service.list_records(limit=requested_limit)
-            _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
-            _DB_EVIDENCE_CACHE["items"] = rows
-            _DB_EVIDENCE_CACHE["source_key"] = source_key
-            return rows
-        except Exception:
-            return []
+    """Read commit evidence from the unified DB (single source of truth).
 
+    Falls back to file/github discovery only if the DB has no records,
+    to bootstrap initial data.
+    """
+    from app.services import unified_db as _udb
+
+    db_url = _udb.database_url()
+    source_key = f"db:{db_url}"
+    now = time.time()
+    cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
+    if (
+        cached_source == source_key
+        and _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
+        and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
+    ):
+        requested_limit = max(1, min(int(limit), 5000))
+        return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
+
+    try:
+        requested_limit = max(1, min(int(limit), 5000))
+        rows = commit_evidence_service.list_records(limit=requested_limit)
+        _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
+        _DB_EVIDENCE_CACHE["items"] = rows
+        _DB_EVIDENCE_CACHE["source_key"] = source_key
+        if rows:
+            return rows
+    except Exception:
+        pass
+
+    # Bootstrap: no DB records yet — try files then github
     evidence_dir = _commit_evidence_dir()
     out = _read_commit_evidence_records_from_files(evidence_dir, limit)
     if out:

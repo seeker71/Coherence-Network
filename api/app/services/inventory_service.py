@@ -214,16 +214,14 @@ def _cache_key(*parts: object) -> str:
 
 
 def _inventory_environment_cache_key() -> str:
+    from app.services import unified_db as _udb
     return "|".join(
         [
+            f"db={_udb.database_url()}",
             f"idea_portfolio={os.getenv('IDEA_PORTFOLIO_PATH', '')}",
             f"value_lineage={os.getenv('VALUE_LINEAGE_PATH', '')}",
             f"runtime_events={os.getenv('RUNTIME_EVENTS_PATH', '')}",
             f"runtime_idea_map={os.getenv('RUNTIME_IDEA_MAP_PATH', '')}",
-            f"idea_registry_db={os.getenv('IDEA_REGISTRY_DATABASE_URL', '')}|{os.getenv('IDEA_REGISTRY_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
-            f"commit_evidence_db={os.getenv('COMMIT_EVIDENCE_DATABASE_URL', '')}|{os.getenv('DATABASE_URL', '')}",
-            f"commit_evidence_dir={os.getenv('IDEA_COMMIT_EVIDENCE_DIR', '')}",
-            f"spec_registry_db={os.getenv('GOVERNANCE_DATABASE_URL', '')}|{os.getenv('GOVERNANCE_DB_URL', '')}|{os.getenv('DATABASE_URL', '')}",
         ]
     )
 
@@ -976,6 +974,7 @@ def _build_lineage_question_rows(ideas_response: Any) -> tuple[list[dict[str, An
                 "idea_id": idea.id,
                 "idea_api_path": _idea_api_path(idea.id),
                 "idea_name": idea.name,
+                "idea_type": getattr(getattr(idea, "idea_type", None), "value", "standalone"),
                 "question": q.question,
                 "value_to_whole": q.value_to_whole,
                 "estimated_cost": q.estimated_cost,
@@ -1145,8 +1144,19 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
             "implementation_request_sync": sync_report,
         }
 
+    # Exclude super-ideas from task pickup — they are strategic goals, not actionable.
+    actionable = [
+        row for row in answered
+        if isinstance(row, dict) and str(row.get("idea_type", "standalone")) != "super"
+    ]
+    if not actionable:
+        return {
+            "result": "no_actionable_answered_questions",
+            "detail": "All answered questions belong to super-ideas (strategic goals). Create child-ideas for actionable work.",
+            "implementation_request_sync": sync_report,
+        }
     ranked = sorted(
-        [row for row in answered if isinstance(row, dict)],
+        actionable,
         key=lambda row: (
             -float(row.get("answer_roi") or 0.0),
             -float(row.get("question_roi") or 0.0),
@@ -2247,47 +2257,37 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
 
 
 def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
-    commit_evidence_db_url = str(os.getenv("COMMIT_EVIDENCE_DATABASE_URL", "")).strip()
-    shared_database_url = str(os.getenv("DATABASE_URL", "")).strip()
-    db_url_configured = bool(commit_evidence_db_url or shared_database_url)
-    use_db_raw = str(os.getenv("COMMIT_EVIDENCE_USE_DB", "auto")).strip().lower()
-    use_db = use_db_raw in {"1", "true", "yes", "on"}
-    if use_db_raw not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
-        if db_url_configured:
-            use_db = True
-        else:
-            required_raw = str(
-                os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
-                or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
-                or ""
-            ).strip().lower()
-            required = required_raw in {"1", "true", "yes", "on"}
-            backend_url = os.getenv("DATABASE_URL", "").strip().lower()
-            use_db = required and ("postgresql" in backend_url)
-    if use_db:
-        source_key = f"db:{commit_evidence_db_url}|{shared_database_url}"
-        now = time.time()
-        cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
-        if (
-            cached_source == source_key
-            and _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
-            and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
-        ):
-            requested_limit = max(1, min(int(limit), 5000))
-            return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
+    """Read commit evidence from the unified DB (single source of truth).
 
-        try:
-            # When explicitly configured, treat the evidence store as source of truth
-            # (including "no rows" -> []) and do not fall back to scanning local files.
-            requested_limit = max(1, min(int(limit), 5000))
-            rows = commit_evidence_service.list_records(limit=requested_limit)
-            _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
-            _DB_EVIDENCE_CACHE["items"] = rows
-            _DB_EVIDENCE_CACHE["source_key"] = source_key
+    Falls back to file/github discovery only if the DB has no records,
+    to bootstrap initial data.
+    """
+    from app.services import unified_db as _udb
+
+    db_url = _udb.database_url()
+    source_key = f"db:{db_url}"
+    now = time.time()
+    cached_source = str(_DB_EVIDENCE_CACHE.get("source_key", ""))
+    if (
+        cached_source == source_key
+        and _DB_EVIDENCE_CACHE.get("expires_at", 0.0) > now
+        and isinstance(_DB_EVIDENCE_CACHE.get("items"), list)
+    ):
+        requested_limit = max(1, min(int(limit), 5000))
+        return [row for row in _DB_EVIDENCE_CACHE["items"][:requested_limit]]
+
+    try:
+        requested_limit = max(1, min(int(limit), 5000))
+        rows = commit_evidence_service.list_records(limit=requested_limit)
+        _DB_EVIDENCE_CACHE["expires_at"] = now + _DB_EVIDENCE_CACHE_TTL_SECONDS
+        _DB_EVIDENCE_CACHE["items"] = rows
+        _DB_EVIDENCE_CACHE["source_key"] = source_key
+        if rows:
             return rows
-        except Exception:
-            return []
+    except Exception:
+        pass
 
+    # Bootstrap: no DB records yet — try files then github
     evidence_dir = _commit_evidence_dir()
     out = _read_commit_evidence_records_from_files(evidence_dir, limit)
     if out:

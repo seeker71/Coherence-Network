@@ -14,9 +14,7 @@ from sqlalchemy import DateTime, Integer, String, Text, create_engine, func, ins
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
-
-class Base(DeclarativeBase):
-    pass
+from app.services.unified_db import Base
 
 
 class CommitEvidenceRecord(Base):
@@ -28,9 +26,11 @@ class CommitEvidenceRecord(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
-_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
+from app.services import unified_db as _udb
+
 _SCHEMA_INITIALIZED = False
 _SCHEMA_INITIALIZED_URL = ""
 _LIST_RECORDS_CACHE: dict[str, Any] = {
@@ -41,89 +41,50 @@ _LIST_RECORDS_CACHE: dict[str, Any] = {
 _LIST_RECORDS_CACHE_TTL_SECONDS = 30.0
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
-def _default_sqlite_path() -> Path:
-    return _repo_root() / "api" / "logs" / "commit_evidence_store.db"
-
-
 def database_url() -> str:
-    configured = os.getenv("COMMIT_EVIDENCE_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if configured:
-        return str(configured).strip()
-    sqlite_path = _default_sqlite_path()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite+pysqlite:///{sqlite_path}"
-
-
-def _create_engine(url: str):
-    kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        kwargs["poolclass"] = NullPool
-    return create_engine(url, **kwargs)
+    return _udb.database_url()
 
 
 def _engine():
-    url = database_url()
-    if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
-        return _ENGINE_CACHE["engine"]
-    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
-    _SCHEMA_INITIALIZED = False
-    _SCHEMA_INITIALIZED_URL = ""
-    _invalidate_record_cache()
-    engine = _create_engine(url)
-    SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
-    _ENGINE_CACHE["url"] = url
-    _ENGINE_CACHE["engine"] = engine
-    _ENGINE_CACHE["sessionmaker"] = SessionLocal
-    return engine
+    return _udb.engine()
 
 
 def _sessionmaker():
-    _engine()
-    return _ENGINE_CACHE["sessionmaker"]
+    return _udb.get_sessionmaker()
 
 
-def _table_exists(engine: Any, table_name: str) -> bool:
+def _table_exists(engine_obj: Any, table_name: str) -> bool:
     try:
-        return table_name in inspect(engine).get_table_names()
+        return table_name in inspect(engine_obj).get_table_names()
     except Exception:
         return False
 
 
 @contextmanager
 def _session() -> Session:
-    SessionLocal = _sessionmaker()
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _udb.session() as s:
+        yield s
 
 
 def ensure_schema() -> None:
-    global _SCHEMA_INITIALIZED, _SCHEMA_INITIALIZED_URL
-    url = database_url()
-    if _SCHEMA_INITIALIZED and _SCHEMA_INITIALIZED_URL == url:
-        engine = _engine()
-        if engine is not None and _table_exists(engine, "commit_evidence_records"):
+    _udb.ensure_schema()
+    _ensure_runtime_columns()
+
+
+def _ensure_runtime_columns() -> None:
+    eng = _udb.engine()
+    try:
+        from sqlalchemy import inspect as sa_inspect
+        inspector = sa_inspect(eng)
+        if "commit_evidence_records" not in inspector.get_table_names():
             return
-        _SCHEMA_INITIALIZED = False
-        _SCHEMA_INITIALIZED_URL = ""
-    if not url:
-        return
-    engine = _engine()
-    if not _table_exists(engine, "commit_evidence_records"):
-        Base.metadata.create_all(bind=engine)
-    _SCHEMA_INITIALIZED = True
-    _SCHEMA_INITIALIZED_URL = url
+        existing = {str(col.get("name")) for col in inspector.get_columns("commit_evidence_records")}
+        if "content_hash" not in existing:
+            from sqlalchemy import text
+            with eng.begin() as conn:
+                conn.execute(text("ALTER TABLE commit_evidence_records ADD COLUMN content_hash VARCHAR(64) NULL"))
+    except Exception:
+        pass
 
 
 def _invalidate_record_cache() -> None:

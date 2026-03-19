@@ -22,11 +22,6 @@ if str(ROOT) not in sys.path:
 _DB_ENV_VARS = (
     "DATABASE_URL",
     "AGENT_TASKS_DATABASE_URL",
-    "IDEA_REGISTRY_DATABASE_URL",
-    "IDEA_REGISTRY_DB_URL",
-    "GOVERNANCE_DATABASE_URL",
-    "GOVERNANCE_DB_URL",
-    "COMMIT_EVIDENCE_DATABASE_URL",
     "IDEA_COMMIT_EVIDENCE_DIR",
 )
 
@@ -88,41 +83,18 @@ else:
 
 @pytest.fixture(autouse=True)
 def _reset_service_caches_between_tests(tmp_path: Path) -> None:
-    # Ensure env-driven storage paths are honored per-test and avoid cross-test
-    # leakage through module-level engine/cache state.
+    """Reset unified DB engine and service caches between tests.
+
+    Each test gets a clean engine so env-var changes take effect.
+    """
     from app.services import (
         agent_service,
-        governance_service,
-        commit_evidence_service,
-        idea_registry_service,
         idea_service,
-        spec_registry_service,
+        unified_db,
     )
 
-    for service in (idea_registry_service, spec_registry_service, governance_service):
-        cache = getattr(service, "_ENGINE_CACHE", None)
-        if isinstance(cache, dict):
-            engine = cache.get("engine")
-            if engine is not None:
-                try:
-                    engine.dispose()
-                except Exception:
-                    pass
-            cache["url"] = ""
-            cache["engine"] = None
-            cache["sessionmaker"] = None
-
-    evidence_cache = getattr(commit_evidence_service, "_ENGINE_CACHE", None)
-    if isinstance(evidence_cache, dict):
-        engine = evidence_cache.get("engine")
-        if engine is not None:
-            try:
-                engine.dispose()
-            except Exception:
-                pass
-        evidence_cache["url"] = ""
-        evidence_cache["engine"] = None
-        evidence_cache["sessionmaker"] = None
+    # Reset the unified engine — all services delegate to this
+    unified_db.reset_engine()
 
     agent_service._store.clear()
     agent_service._store_loaded = False
@@ -133,15 +105,6 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
     idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
 
-    for key in (
-        "DATABASE_URL",
-        "IDEA_REGISTRY_DATABASE_URL",
-        "IDEA_REGISTRY_DB_URL",
-        "GOVERNANCE_DATABASE_URL",
-        "GOVERNANCE_DB_URL",
-        "COMMIT_EVIDENCE_DATABASE_URL",
-        "IDEA_COMMIT_EVIDENCE_DIR",
-    ):
+    # Clear DB env vars so each test starts from default (local sqlite)
+    for key in ("DATABASE_URL", "IDEA_COMMIT_EVIDENCE_DIR"):
         os.environ.pop(key, None)
-
-    os.environ["COMMIT_EVIDENCE_DATABASE_URL"] = f"sqlite+pysqlite:///{tmp_path / 'commit_evidence_test.db'}"

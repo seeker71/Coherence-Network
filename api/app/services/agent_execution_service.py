@@ -327,6 +327,32 @@ def _run_openrouter(
         completion_tokens = int(usage_dict.get("completion_tokens") or usage_dict.get("output_tokens") or 0)
         total_tokens = int(usage_dict.get("total_tokens") or (prompt_tokens + completion_tokens))
         usage_json = json.dumps(usage_dict, sort_keys=True)[:2000]
+        # Grounded cost: prefer provider-reported cost (most accurate), then
+        # token-based cost (real token counts × configured rates), then
+        # time-based estimate (elapsed_ms × rate) as last resort.
+        # OpenRouter may include native_tokens_cost or cost in the usage dict.
+        provider_native_cost = None
+        for cost_key in ("cost", "native_tokens_cost", "total_cost"):
+            raw_cost = usage_dict.get(cost_key)
+            if raw_cost is not None:
+                try:
+                    provider_native_cost = float(raw_cost)
+                    break
+                except (TypeError, ValueError):
+                    pass
+        token_based_cost = _external_provider_cost_usd(
+            is_paid_provider=route_is_paid,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+        time_based_cost = _runtime_cost_usd(elapsed_ms)
+        # Priority: provider-reported > token-based > time-based
+        if provider_native_cost is not None and provider_native_cost > 0:
+            grounded_cost = provider_native_cost
+        elif (prompt_tokens + completion_tokens) > 0:
+            grounded_cost = token_based_cost
+        else:
+            grounded_cost = time_based_cost
         _record_openrouter_tool_event(
             task_id=task_id,
             model=model,
@@ -339,7 +365,7 @@ def _run_openrouter(
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
             usage_json=usage_json,
-            actual_cost_usd=_runtime_cost_usd(elapsed_ms),
+            actual_cost_usd=grounded_cost,
         )
         return {
             "ok": True,
@@ -347,7 +373,7 @@ def _run_openrouter(
             "content": content,
             "usage_json": usage_json,
             "provider_request_id": str(meta.get("provider_request_id") or ""),
-            "actual_cost_usd": _runtime_cost_usd(elapsed_ms),
+            "actual_cost_usd": grounded_cost,
             "max_cost_usd": cost_budget.get("max_cost_usd"),
             "cost_slack_ratio": cost_budget.get("cost_slack_ratio"),
         }

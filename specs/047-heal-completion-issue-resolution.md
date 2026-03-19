@@ -67,6 +67,11 @@ See `api/tests/test_agent.py` (and any new tests for monitor resolution / option
 
 - Adding a new env var (e.g. MONITOR_PERSIST_RESOLVED) is a config change; document in RUNBOOK or PIPELINE-MONITORING-AUTOMATED. If the project requires human approval for new env vars, escalate per CLAUDE.md.
 
+## Upstream Dependencies
+
+- **Spec 114** ([114-auto-heal-from-diagnostics.md](114-auto-heal-from-diagnostics.md)) — Auto-generates heal tasks from failed task error classifications using `classify_error()` from Spec 113. The `heal_task_id` tracked in this spec's resolution records originates from Spec 114's `maybe_create_heal_task()`. Together they close the failure→heal→resolution loop.
+- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Uses `heal_attempt` and `heal_succeeded` as value signals in the quality multiplier (0.0 if heal failed, degraded otherwise). Resolution tracking from this spec feeds back into Spec 115's grounded value computation.
+
 ## See also
 
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Item 2 (this spec); Item 5 (heal task effectiveness tracking / heal_resolved_count).

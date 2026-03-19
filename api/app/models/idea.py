@@ -7,11 +7,19 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.models.coherence_credit import CostVector, ValueVector
+
 
 class ManifestationStatus(str, Enum):
     NONE = "none"
     PARTIAL = "partial"
     VALIDATED = "validated"
+
+
+class IdeaType(str, Enum):
+    SUPER = "super"           # Strategic goal; never picked up for direct work
+    CHILD = "child"           # Actionable sub-idea; can be picked up
+    STANDALONE = "standalone"  # No parent; backward compatible default
 
 
 class IdeaQuestion(BaseModel):
@@ -41,6 +49,12 @@ class Idea(BaseModel):
     manifestation_status: ManifestationStatus = ManifestationStatus.NONE
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestion] = Field(default_factory=list)
+    idea_type: IdeaType = IdeaType.STANDALONE
+    parent_idea_id: Optional[str] = None
+    child_idea_ids: list[str] = Field(default_factory=list)
+    value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
+    cost_vector: Optional[CostVector] = None
+    value_vector: Optional[ValueVector] = None
 
 
 class IdeaWithScore(Idea):

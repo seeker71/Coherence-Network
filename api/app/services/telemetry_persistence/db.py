@@ -1,87 +1,35 @@
-"""Database engine, session, and schema for telemetry persistence."""
+"""Database engine, session, and schema for telemetry persistence.
+
+Delegates to unified_db for engine/session management (spec 118).
+"""
 
 from __future__ import annotations
 
-import os
-import threading
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import Session
 
-from .models import Base
-
-
-_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
-_SCHEMA_CACHE: dict[str, Any] = {"url": "", "initialized": False}
-_SCHEMA_LOCK = threading.Lock()
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
-def _default_sqlite_path() -> Path:
-    return _repo_root() / "api" / "logs" / "telemetry_store.db"
+from app.services import unified_db as _udb
 
 
 def database_url() -> str:
-    configured = os.getenv("TELEMETRY_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if configured:
-        return str(configured).strip()
-    sqlite_path = _default_sqlite_path()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite+pysqlite:///{sqlite_path}"
-
-
-def _create_engine(url: str):
-    kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        kwargs["poolclass"] = NullPool
-    return create_engine(url, **kwargs)
+    return _udb.database_url()
 
 
 def _engine():
-    url = database_url()
-    if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
-        return _ENGINE_CACHE["engine"]
-    engine = _create_engine(url)
-    SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
-    _ENGINE_CACHE["url"] = url
-    _ENGINE_CACHE["engine"] = engine
-    _ENGINE_CACHE["sessionmaker"] = SessionLocal
-    return engine
+    return _udb.engine()
 
 
 def _sessionmaker():
-    _engine()
-    return _ENGINE_CACHE["sessionmaker"]
+    return _udb.get_sessionmaker()
 
 
 @contextmanager
 def _session() -> Session:
-    SessionLocal = _sessionmaker()
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _udb.session() as s:
+        yield s
 
 
 def ensure_schema() -> None:
-    engine = _engine()
-    url = database_url()
-    with _SCHEMA_LOCK:
-        if bool(_SCHEMA_CACHE.get("initialized")) and _SCHEMA_CACHE.get("url") == url:
-            return
-        Base.metadata.create_all(bind=engine, checkfirst=True)
-        _SCHEMA_CACHE["url"] = url
-        _SCHEMA_CACHE["initialized"] = True
+    _udb.ensure_schema()

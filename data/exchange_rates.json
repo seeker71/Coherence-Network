@@ -1,0 +1,41 @@
+{
+  "description": "Coherence Credit (CC) exchange rates. 1 CC = cost of processing 1K tokens on the reference model. Rates are epoch-locked: once published, immutable. Add new epoch entries for rate changes.",
+  "current_epoch": "2026-Q1",
+  "rates": [
+    {
+      "epoch": "2026-Q1",
+      "cc_per_usd": 333.33,
+      "reference_model": "claude-sonnet-4-20250514",
+      "reference_rate_usd": 0.003,
+      "human_hour_cc": 500.0,
+      "locked_at": "2026-03-19T00:00:00Z",
+      "notes": "Initial epoch. Anchored to Claude Sonnet 4 at $0.003/1K tokens. 1 human hour = 500 CC (~$1.50)."
+    }
+  ],
+  "providers": [
+    {
+      "provider_id": "openrouter-sonnet",
+      "display_name": "OpenRouter Claude Sonnet",
+      "cc_per_1k_input": 1.0,
+      "cc_per_1k_output": 4.0,
+      "cc_per_second": 0.667,
+      "quality_score": 0.85
+    },
+    {
+      "provider_id": "openrouter-gpt4",
+      "display_name": "OpenRouter GPT-4",
+      "cc_per_1k_input": 10.0,
+      "cc_per_1k_output": 30.0,
+      "cc_per_second": 0.0,
+      "quality_score": 0.82
+    },
+    {
+      "provider_id": "local-llama",
+      "display_name": "Local Llama",
+      "cc_per_1k_input": 0.2,
+      "cc_per_1k_output": 0.2,
+      "cc_per_second": 0.1,
+      "quality_score": 0.55
+    }
+  ]
+}
