@@ -556,9 +556,27 @@ def _score(idea: Idea) -> float:
     return (idea.potential_value * idea.confidence) / denom
 
 
+def _marginal_cc_return(idea: Idea) -> float:
+    """Method B: marginal CC return -- prioritizes uncaptured value per remaining CC."""
+    pv = getattr(idea, 'potential_value', 0.0) or 0.0
+    av = getattr(idea, 'actual_value', 0.0) or 0.0
+    conf = getattr(idea, 'confidence', 0.5) or 0.5
+    ec = getattr(idea, 'estimated_cost', 1.0) or 1.0
+    ac = getattr(idea, 'actual_cost', 0.0) or 0.0
+    rr = getattr(idea, 'resistance_risk', 1.0) or 1.0
+    value_gap = max(pv - av, 0.0)
+    remaining_cost = max(ec - ac, 0.1)
+    return (value_gap * conf * conf) / (remaining_cost + rr * 0.5)
+
+
 def _with_score(idea: Idea) -> IdeaWithScore:
     value_gap = max(idea.potential_value - idea.actual_value, 0.0)
-    return IdeaWithScore(**idea.model_dump(), free_energy_score=round(_score(idea), 4), value_gap=round(value_gap, 4))
+    return IdeaWithScore(
+        **idea.model_dump(),
+        free_energy_score=round(_score(idea), 4),
+        value_gap=round(value_gap, 4),
+        marginal_cc_score=round(_marginal_cc_return(idea), 4),
+    )
 
 
 def list_ideas(
@@ -567,15 +585,24 @@ def list_ideas(
     offset: int = 0,
     include_internal: bool = True,
     read_only_guard: bool = False,
+    sort_method: str = "free_energy",
 ) -> IdeaPortfolioResponse:
-    """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs)."""
+    """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
+
+    sort_method: "free_energy" (default, Method A) or "marginal_cc" (Method B).
+    """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
 
-    ranked = sorted((_with_score(i) for i in ideas), key=lambda i: i.free_energy_score, reverse=True)
+    scored = [_with_score(i) for i in ideas]
+    if sort_method == "marginal_cc":
+        sort_key = lambda i: i.marginal_cc_score
+    else:
+        sort_key = lambda i: i.free_energy_score
+    ranked = sorted(scored, key=sort_key, reverse=True)
     total_ranked = len(ranked)
     safe_offset = max(0, int(offset))
     safe_limit = None if limit is None else max(1, min(int(limit), 500))
