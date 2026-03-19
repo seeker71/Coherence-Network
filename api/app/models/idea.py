@@ -66,6 +66,9 @@ class IdeaWithScore(Idea):
         ge=0.0,
         description="Probability weight for stochastic selection (sums to 1.0 across portfolio).",
     )
+    remaining_cost_cc: float = Field(default=0.0, ge=0.0, description="Remaining CC to invest")
+    value_gap_cc: float = Field(default=0.0, ge=0.0, description="Uncaptured CC value")
+    roi_cc: float = Field(default=0.0, ge=0.0, description="Expected CC return per CC invested")
 
 
 class IdeaSelectionResult(BaseModel):

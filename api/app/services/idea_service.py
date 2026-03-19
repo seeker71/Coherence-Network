@@ -20,6 +20,7 @@ from typing import Any
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
+from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
     Idea,
     IdeaSelectionResult,
@@ -572,13 +573,49 @@ def _marginal_cc_return(idea: Idea) -> float:
     return (value_gap * conf * conf) / (remaining_cost + rr * 0.5)
 
 
+def _build_cost_vector(idea: Idea) -> CostVector:
+    """Decompose estimated_cost into CC resource types."""
+    ec = idea.estimated_cost or 0.0
+    return CostVector(
+        compute_cc=round(ec * 0.60, 4),
+        infrastructure_cc=round(ec * 0.15, 4),
+        human_attention_cc=round(ec * 0.25, 4),
+        opportunity_cc=0.0,
+        external_cc=0.0,
+        total_cc=round(ec, 4),
+    )
+
+
+def _build_value_vector(idea: Idea) -> ValueVector:
+    """Decompose potential_value into CC value types."""
+    pv = idea.potential_value or 0.0
+    return ValueVector(
+        adoption_cc=round(pv * 0.50, 4),
+        lineage_cc=round(pv * 0.30, 4),
+        friction_avoided_cc=round(pv * 0.20, 4),
+        revenue_cc=0.0,
+        total_cc=round(pv, 4),
+    )
+
+
 def _with_score(idea: Idea) -> IdeaWithScore:
     value_gap = max(idea.potential_value - idea.actual_value, 0.0)
+    remaining_cost_cc = round(max((idea.estimated_cost or 0.0) - (idea.actual_cost or 0.0), 0.0), 4)
+    value_gap_cc = round(value_gap, 4)
+    roi_cc = round(value_gap_cc / remaining_cost_cc, 4) if remaining_cost_cc > 0 else 0.0
+    cost_vector = idea.cost_vector or _build_cost_vector(idea)
+    value_vector = idea.value_vector or _build_value_vector(idea)
+    data = idea.model_dump()
+    data["cost_vector"] = cost_vector.model_dump()
+    data["value_vector"] = value_vector.model_dump()
     return IdeaWithScore(
-        **idea.model_dump(),
+        **data,
         free_energy_score=round(_score(idea), 4),
         value_gap=round(value_gap, 4),
         marginal_cc_score=round(_marginal_cc_return(idea), 4),
+        remaining_cost_cc=remaining_cost_cc,
+        value_gap_cc=value_gap_cc,
+        roi_cc=roi_cc,
     )
 
 
