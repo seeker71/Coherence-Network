@@ -556,7 +556,9 @@ def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], b
 
 
 def _score(idea: Idea) -> float:
-    denom = max(idea.estimated_cost + idea.resistance_risk, 0.0001)
+    # Floor of 0.5 CC prevents astronomically inflated scores if both
+    # estimated_cost and resistance_risk are near-zero.
+    denom = max(idea.estimated_cost + idea.resistance_risk, 0.5)
     return (idea.potential_value * idea.confidence) / denom
 
 
@@ -839,8 +841,8 @@ def create_idea(
         potential_value=potential_value,
         actual_value=0.0,
         estimated_cost=estimated_cost,
-        actual_cost=0.0,
-        resistance_risk=1.0,
+        actual_cost=0.5,   # Design/description cost floor (0.5 CC)
+        resistance_risk=2.5,  # Unknown ideas assume moderate risk
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=ManifestationStatus.NONE,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
