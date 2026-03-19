@@ -39,6 +39,13 @@ async def test_system_lineage_inventory_includes_core_sections(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed an idea so the portfolio is non-empty (DB is source of truth, no auto-seeding)
+        await client.post("/api/ideas", json={
+            "id": "portfolio-governance", "name": "Portfolio governance",
+            "description": "Unified idea portfolio governance",
+            "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
+        })
+
         unique_email = f"urs.muff.{uuid4().hex[:8]}@proton.me"
         contributor = await client.post(
             "/api/contributors",
@@ -324,6 +331,18 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed an idea (DB is sole source of truth, no auto-seeding at runtime)
+        seed = await client.post("/api/ideas", json={
+            "id": "roi-task-idea", "name": "ROI task idea",
+            "description": "Idea for ROI task generation test",
+            "potential_value": 50.0, "estimated_cost": 10.0, "confidence": 0.7,
+            "interfaces": ["machine:api"],
+            "open_questions": [
+                {"question": "What next step improves value?", "value_to_whole": 10.0, "estimated_cost": 1.0}
+            ],
+        })
+        assert seed.status_code == 201
+
         ideas = await client.get("/api/ideas")
         first = ideas.json()["ideas"][0]
         question = first["open_questions"][0]["question"]
@@ -730,39 +749,23 @@ async def test_sync_implementation_request_questions_creates_tasks_without_dupli
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    portfolio = {
-        "ideas": [
-            {
-                "id": "automation-idea",
-                "name": "Automation idea",
-                "description": "Track and automate implementation requests.",
-                "potential_value": 90.0,
-                "actual_value": 0.0,
-                "estimated_cost": 10.0,
-                "actual_cost": 0.0,
-                "resistance_risk": 1.0,
-                "confidence": 0.8,
-                "manifestation_status": "partial",
-                "interfaces": ["machine:api"],
-                "open_questions": [
-                    {
-                        "question": "Can we implement public contributor registration flow?",
-                        "value_to_whole": 22.0,
-                        "estimated_cost": 2.0,
-                    },
-                    {
-                        "question": "Which indicator should we monitor next?",
-                        "value_to_whole": 10.0,
-                        "estimated_cost": 2.0,
-                    },
-                ],
-            }
-        ]
-    }
-    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
-
     agent_service._store.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed idea via API (DB is sole source of truth, no auto-seeding at runtime)
+        seed = await client.post("/api/ideas", json={
+            "id": "automation-idea", "name": "Automation idea",
+            "description": "Track and automate implementation requests.",
+            "potential_value": 90.0, "actual_value": 0.0,
+            "estimated_cost": 10.0, "actual_cost": 0.0,
+            "resistance_risk": 1.0, "confidence": 0.8,
+            "manifestation_status": "partial",
+            "interfaces": ["machine:api"],
+            "open_questions": [
+                {"question": "Can we implement public contributor registration flow?", "value_to_whole": 22.0, "estimated_cost": 2.0},
+                {"question": "Which indicator should we monitor next?", "value_to_whole": 10.0, "estimated_cost": 2.0},
+            ],
+        })
+        assert seed.status_code == 201
         created = await client.post("/api/inventory/questions/sync-implementation-tasks")
         assert created.status_code == 200
         first = created.json()
@@ -788,36 +791,27 @@ async def test_sync_implementation_request_questions_sanitizes_api_key_language(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    portfolio = {
-        "ideas": [
-            {
-                "id": "oauth-only-idea",
-                "name": "OAuth-only idea",
-                "description": "Ensure task directions avoid API key guidance.",
-                "potential_value": 50.0,
-                "actual_value": 0.0,
-                "estimated_cost": 5.0,
-                "actual_cost": 0.0,
-                "resistance_risk": 1.0,
-                "confidence": 0.9,
-                "manifestation_status": "none",
-                "interfaces": ["machine:api"],
-                "open_questions": [
-                    {
-                        "question": "Should we implement auth hardening with runner_codex_auth_mode=api_key?",
-                        "value_to_whole": 25.0,
-                        "estimated_cost": 2.0,
-                        "answer": "Use OPENAI_API_KEY fallback when api_key auth is selected.",
-                        "measured_delta": 3.0,
-                    }
-                ],
-            }
-        ]
-    }
-    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
-
     agent_service._store.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed idea via API (DB is sole source of truth, no auto-seeding at runtime)
+        seed = await client.post("/api/ideas", json={
+            "id": "oauth-only-idea", "name": "OAuth-only idea",
+            "description": "Ensure task directions avoid API key guidance.",
+            "potential_value": 50.0, "actual_value": 0.0,
+            "estimated_cost": 5.0, "actual_cost": 0.0,
+            "resistance_risk": 1.0, "confidence": 0.9,
+            "manifestation_status": "none",
+            "interfaces": ["machine:api"],
+            "open_questions": [
+                {
+                    "question": "Should we implement auth hardening with runner_codex_auth_mode=api_key?",
+                    "value_to_whole": 25.0, "estimated_cost": 2.0,
+                    "answer": "Use OPENAI_API_KEY fallback when api_key auth is selected.",
+                    "measured_delta": 3.0,
+                }
+            ],
+        })
+        assert seed.status_code == 201
         created = await client.post("/api/inventory/questions/sync-implementation-tasks")
         assert created.status_code == 200
         payload = created.json()
@@ -981,6 +975,18 @@ async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
 
     agent_service._store.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed an idea (DB is sole source of truth, no auto-seeding at runtime)
+        seed = await client.post("/api/ideas", json={
+            "id": "dup-task-idea", "name": "Dup task idea",
+            "description": "Idea for duplicate task skip test",
+            "potential_value": 50.0, "estimated_cost": 10.0, "confidence": 0.7,
+            "interfaces": ["machine:api"],
+            "open_questions": [
+                {"question": "What endpoint should we track next?", "value_to_whole": 10.0, "estimated_cost": 1.0}
+            ],
+        })
+        assert seed.status_code == 201
+
         ideas = await client.get("/api/ideas")
         first = ideas.json()["ideas"][0]
         question = first["open_questions"][0]["question"]
@@ -988,7 +994,7 @@ async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
             f"/api/ideas/{first['id']}/questions/answer",
             json={
                 "question": question,
-                "answer": "Implement this through a new tracked endpoint and rollout task.",
+                "answer": "Track this through a new monitored endpoint and rollout plan.",
                 "measured_delta": 2.0,
             },
         )
@@ -1028,47 +1034,32 @@ async def test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    portfolio = {
-        "ideas": [
-            {
-                "id": "idea-high-unblock",
-                "name": "High unblock value",
-                "description": "Missing spec should block the rest.",
-                "potential_value": 120.0,
-                "actual_value": 20.0,
-                "estimated_cost": 12.0,
-                "actual_cost": 0.0,
-                "resistance_risk": 2.0,
-                "confidence": 0.9,
-                "manifestation_status": "none",
-                "interfaces": ["machine:api"],
-                "open_questions": [
-                    {
-                        "question": "How do we unblock the chain first?",
-                        "value_to_whole": 20.0,
-                        "estimated_cost": 2.0,
-                    }
-                ],
-            },
-            {
-                "id": "idea-lower-unblock",
-                "name": "Lower unblock value",
-                "description": "Also missing spec but lower weighted upside.",
-                "potential_value": 60.0,
-                "actual_value": 30.0,
-                "estimated_cost": 10.0,
-                "actual_cost": 0.0,
-                "resistance_risk": 2.0,
-                "confidence": 0.6,
-                "manifestation_status": "none",
-                "interfaces": ["machine:api"],
-                "open_questions": [],
-            },
-        ]
-    }
-    (tmp_path / "ideas.json").write_text(json.dumps(portfolio), encoding="utf-8")
-
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed ideas via API (DB is sole source of truth, no auto-seeding at runtime)
+        seed1 = await client.post("/api/ideas", json={
+            "id": "idea-high-unblock", "name": "High unblock value",
+            "description": "Missing spec should block the rest.",
+            "potential_value": 120.0, "actual_value": 20.0,
+            "estimated_cost": 12.0, "actual_cost": 0.0,
+            "resistance_risk": 2.0, "confidence": 0.9,
+            "manifestation_status": "none",
+            "interfaces": ["machine:api"],
+            "open_questions": [
+                {"question": "How do we unblock the chain first?", "value_to_whole": 20.0, "estimated_cost": 2.0}
+            ],
+        })
+        assert seed1.status_code == 201
+        seed2 = await client.post("/api/ideas", json={
+            "id": "idea-lower-unblock", "name": "Lower unblock value",
+            "description": "Also missing spec but lower weighted upside.",
+            "potential_value": 60.0, "actual_value": 30.0,
+            "estimated_cost": 10.0, "actual_cost": 0.0,
+            "resistance_risk": 2.0, "confidence": 0.6,
+            "manifestation_status": "none",
+            "interfaces": ["machine:api"],
+            "open_questions": [],
+        })
+        assert seed2.status_code == 201
         resp = await client.get("/api/inventory/flow")
         assert resp.status_code == 200
         payload = resp.json()
@@ -1105,32 +1096,20 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    (tmp_path / "ideas.json").write_text(
-        json.dumps(
-            {
-                "ideas": [
-                    {
-                        "id": "unblock-task-idea",
-                        "name": "Unblock task idea",
-                        "description": "Flow should propose a spec-first unblock task.",
-                        "potential_value": 90.0,
-                        "actual_value": 10.0,
-                        "estimated_cost": 10.0,
-                        "actual_cost": 0.0,
-                        "resistance_risk": 1.0,
-                        "confidence": 0.8,
-                        "manifestation_status": "none",
-                        "interfaces": ["machine:api"],
-                        "open_questions": [],
-                    }
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-
     agent_service._store.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed idea via API (DB is sole source of truth, no auto-seeding at runtime)
+        seed = await client.post("/api/ideas", json={
+            "id": "unblock-task-idea", "name": "Unblock task idea",
+            "description": "Flow should propose a spec-first unblock task.",
+            "potential_value": 90.0, "actual_value": 10.0,
+            "estimated_cost": 10.0, "actual_cost": 0.0,
+            "resistance_risk": 1.0, "confidence": 0.8,
+            "manifestation_status": "none",
+            "interfaces": ["machine:api"],
+            "open_questions": [],
+        })
+        assert seed.status_code == 201
         suggest = await client.post("/api/inventory/flow/next-unblock-task")
         assert suggest.status_code == 200
         suggested = suggest.json()
@@ -1162,46 +1141,31 @@ async def test_next_unblock_task_defaults_to_actionable_ideas_only(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    (tmp_path / "ideas.json").write_text(
-        json.dumps(
-            {
-                "ideas": [
-                    {
-                        "id": "internal-derived-1234abcd",
-                        "name": "Internal derived idea",
-                        "description": "Should not be first unblock target in actionable mode.",
-                        "potential_value": 120.0,
-                        "actual_value": 0.0,
-                        "estimated_cost": 8.0,
-                        "actual_cost": 0.0,
-                        "resistance_risk": 1.0,
-                        "confidence": 0.9,
-                        "manifestation_status": "none",
-                        "interfaces": ["machine:commit-evidence"],
-                        "open_questions": [],
-                    },
-                    {
-                        "id": "human-actionable-idea",
-                        "name": "Human actionable idea",
-                        "description": "Should be selected by default.",
-                        "potential_value": 40.0,
-                        "actual_value": 0.0,
-                        "estimated_cost": 10.0,
-                        "actual_cost": 0.0,
-                        "resistance_risk": 1.0,
-                        "confidence": 0.7,
-                        "manifestation_status": "none",
-                        "interfaces": ["human:web", "machine:api"],
-                        "open_questions": [],
-                    },
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-
     agent_service._store.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed ideas via API (DB is sole source of truth, no auto-seeding at runtime)
+        seed1 = await client.post("/api/ideas", json={
+            "id": "internal-derived-1234abcd", "name": "Internal derived idea",
+            "description": "Should not be first unblock target in actionable mode.",
+            "potential_value": 120.0, "actual_value": 0.0,
+            "estimated_cost": 8.0, "actual_cost": 0.0,
+            "resistance_risk": 1.0, "confidence": 0.9,
+            "manifestation_status": "none",
+            "interfaces": ["machine:commit-evidence"],
+            "open_questions": [],
+        })
+        assert seed1.status_code == 201
+        seed2 = await client.post("/api/ideas", json={
+            "id": "human-actionable-idea", "name": "Human actionable idea",
+            "description": "Should be selected by default.",
+            "potential_value": 40.0, "actual_value": 0.0,
+            "estimated_cost": 10.0, "actual_cost": 0.0,
+            "resistance_risk": 1.0, "confidence": 0.7,
+            "manifestation_status": "none",
+            "interfaces": ["human:web", "machine:api"],
+            "open_questions": [],
+        })
+        assert seed2.status_code == 201
         default_resp = await client.post("/api/inventory/flow/next-unblock-task")
         assert default_resp.status_code == 200
         default_payload = default_resp.json()
@@ -1445,6 +1409,21 @@ async def test_proactive_questions_endpoint_derives_questions_from_recent_eviden
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
 
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed ideas BEFORE evidence so they are not auto-derived as internal
+        await client.post("/api/ideas", json={
+            "id": "portfolio-governance", "name": "Portfolio governance",
+            "description": "Unified idea portfolio governance",
+            "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
+            "interfaces": ["machine:api"],
+        })
+        await client.post("/api/ideas", json={
+            "id": "oss-interface-alignment", "name": "OSS interface alignment",
+            "description": "Align OSS interfaces with public validation",
+            "potential_value": 60.0, "estimated_cost": 8.0, "confidence": 0.7,
+            "interfaces": ["human:web", "machine:api"],
+        })
+
     proactive_a = {
         "date": "2026-02-16",
         "commit_scope": "fix missing idea/spec links in flow page",
@@ -1486,6 +1465,15 @@ async def test_sync_proactive_questions_adds_missing_questions_without_duplicate
     evidence_dir = tmp_path / "system_audit"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("IDEA_COMMIT_EVIDENCE_DIR", str(evidence_dir))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed idea BEFORE evidence so it is not auto-derived as internal
+        await client.post("/api/ideas", json={
+            "id": "portfolio-governance", "name": "Portfolio governance",
+            "description": "Unified idea portfolio governance",
+            "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
+            "interfaces": ["machine:api"],
+        })
 
     process_gap_payload = {
         "date": "2026-02-16",

@@ -1,4 +1,10 @@
-"""Idea portfolio service: persistence, scoring, and prioritization."""
+"""Idea portfolio service: pure DB reader with runtime discovery.
+
+The DB (data/coherence.db) is the single source of truth for ideas.
+Seed data is loaded via `scripts/seed_db.py`, not at runtime.
+This module reads from DB, discovers new ideas from runtime evidence,
+and writes back only genuinely new discoveries.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +20,6 @@ from sqlalchemy.pool import NullPool
 
 from app.models.idea import (
     Idea,
-    IdeaType,
     PaginationInfo,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
@@ -31,20 +36,22 @@ from app.services import spec_registry_service
 from app.services import value_lineage_service
 
 
-def _load_seed_ideas() -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
-    """Load seed ideas from data/seed_ideas.json (single source of truth)."""
+def _load_derived_metadata() -> dict[str, dict[str, Any]]:
+    """Load derived idea metadata from data/seed_ideas.json.
+
+    Used only for classifying discovered IDs as internal and for
+    creating placeholder ideas when new IDs appear at runtime.
+    """
     seed_path = Path(__file__).resolve().parents[3] / "data" / "seed_ideas.json"
     try:
         with open(seed_path, encoding="utf-8") as f:
             data = json.load(f)
-        return data.get("default_ideas", []), data.get("derived_metadata", {})
+        return data.get("derived_metadata", {})
     except (OSError, json.JSONDecodeError):
-        return [], {}
+        return {}
 
 
-DEFAULT_IDEAS: list[dict[str, Any]]
-DERIVED_IDEA_METADATA: dict[str, dict[str, Any]]
-DEFAULT_IDEAS, DERIVED_IDEA_METADATA = _load_seed_ideas()
+DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = _load_derived_metadata()
 
 STANDING_QUESTION_TEXT = (
     "How can we improve this idea, show whether it is working yet, "
@@ -53,10 +60,6 @@ STANDING_QUESTION_TEXT = (
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
-REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = (
-    "federated-instance-aggregation",
-    "community-project-funder-match",
-)
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
 _IDEAS_CACHE_TTL_SECONDS = 180.0
 
@@ -76,15 +79,6 @@ DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^spec-origin-"), "portfolio-governance"),
     (re.compile(r"^endpoint-lineage-"), "oss-interface-alignment"),
 )
-
-
-def _default_portfolio_path() -> str:
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-    return os.path.join(logs_dir, "idea_portfolio.json")
-
-
-def _portfolio_path() -> str:
-    return os.getenv("IDEA_PORTFOLIO_PATH", _default_portfolio_path())
 
 
 def _configured_internal_idea_prefixes() -> set[str]:
@@ -203,7 +197,6 @@ def _ideas_cache_key() -> str:
     from app.services import unified_db as _udb
     return (
         f"{_udb.database_url()}|"
-        f"{_portfolio_path()}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
         f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
@@ -228,10 +221,7 @@ def _tracked_idea_ids() -> list[str]:
         return []
     now = time.time()
     from app.services import unified_db as _udb
-    cache_key = (
-        f"{_udb.database_url()}"
-        f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
-    )
+    cache_key = _udb.database_url()
     if (
         _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
         and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
@@ -454,35 +444,6 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     )
 
 
-def _default_idea_map() -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    for item in DEFAULT_IDEAS:
-        raw_id = item.get("id")
-        if isinstance(raw_id, str) and raw_id.strip():
-            out[raw_id] = item
-    return out
-
-
-def _ensure_required_system_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    changed = False
-    existing = {idea.id for idea in ideas}
-    defaults_by_id = _default_idea_map()
-
-    for required_id in REQUIRED_SYSTEM_IDEA_IDS:
-        if required_id in existing:
-            continue
-        payload = defaults_by_id.get(required_id)
-        if not isinstance(payload, dict):
-            continue
-        try:
-            ideas.append(Idea(**payload))
-        except Exception:
-            continue
-        existing.add(required_id)
-        changed = True
-    return ideas, changed
-
-
 def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     tracked_ids = _tracked_idea_ids()
     if not tracked_ids:
@@ -498,109 +459,33 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     return ideas, changed
 
 
-def _write_snapshot_file(ideas: list[Idea]) -> None:
-    storage = idea_registry_service.storage_info()
-    if storage.get("backend") == "postgresql":
-        purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
-        if purge_raw not in {"0", "false", "no", "off"}:
-            try:
-                Path(_portfolio_path()).unlink(missing_ok=True)
-            except OSError:
-                pass
-        return
-
-    path = _portfolio_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
-
-
-def _read_legacy_file_ideas() -> tuple[list[Idea], str]:
-    path = _portfolio_path()
-    if not os.path.isfile(path):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-    try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-
-    raw_ideas = data.get("ideas") if isinstance(data, dict) else None
-    if not isinstance(raw_ideas, list):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-
-    ideas: list[Idea] = []
-    for item in raw_ideas:
-        try:
-            ideas.append(Idea(**item))
-        except Exception:
-            continue
-    if not ideas:
-        ideas = [Idea(**item) for item in DEFAULT_IDEAS]
-        return ideas, "defaults"
-    return ideas, "legacy_json"
-
-
 def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
-    """Load ideas, run ensure logic, optionally persist. When persist_ensures=False (e.g. guard/invariant runs), no writes are made."""
+    """Load ideas from DB, discover new ones from runtime, cache.
+
+    When persist_ensures=False (e.g. guard/invariant runs), no writes are made.
+    """
     cached = _read_ideas_cache()
     if cached is not None:
         return cached
 
     ideas = idea_registry_service.load_ideas()
-    if not ideas:
-        ideas, source = _read_legacy_file_ideas()
-        ideas, required_changed = _ensure_required_system_ideas(ideas)
-        ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
-        ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
-        ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
-        ideas, pruned_changed = _prune_internal_standing_questions(ideas)
-        ideas, standing_changed = _ensure_standing_questions(ideas)
-        ideas, hierarchy_changed = _ensure_idea_hierarchy(ideas)
-        if persist_ensures:
-            bootstrap_source = source
-            if required_changed:
-                bootstrap_source = f"{bootstrap_source}+required_system_ideas"
-            if tracked_changed or source == "defaults":
-                bootstrap_source = f"{bootstrap_source}+derived"
-            if domain_discovered_changed:
-                bootstrap_source = f"{bootstrap_source}+domain_discovery"
-            if standing_changed or pruned_changed or transient_pruned_changed or hierarchy_changed:
-                bootstrap_source = f"{bootstrap_source}+standing_question"
-            idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
-            _write_snapshot_file(ideas)
-        _cache_ideas(ideas)
-        return ideas
 
-    ideas, required_changed = _ensure_required_system_ideas(ideas)
+    # Runtime discovery: find idea IDs referenced in evidence/specs/lineage
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
-    ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
-    ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
-    ideas, pruned_changed = _prune_internal_standing_questions(ideas)
+    ideas, domain_changed = _ensure_registry_domain_idea_entries(ideas)
+    ideas, transient_pruned = _prune_transient_internal_ideas(ideas)
+    ideas, pruned_standing = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    ideas, hierarchy_changed = _ensure_idea_hierarchy(ideas)
-    if persist_ensures:
-        if (
-            required_changed
-            or tracked_changed
-            or domain_discovered_changed
-            or standing_changed
-            or pruned_changed
-            or transient_pruned_changed
-            or hierarchy_changed
-        ):
-            _write_ideas(ideas)
-        else:
-            path = _portfolio_path()
-            if not os.path.isfile(path):
-                _write_snapshot_file(ideas)
+
+    if persist_ensures and (tracked_changed or domain_changed or transient_pruned or pruned_standing or standing_changed):
+        _write_ideas(ideas)
+
     _cache_ideas(ideas)
     return ideas
 
 
 def _write_ideas(ideas: list[Idea]) -> None:
     idea_registry_service.save_ideas(ideas)
-    _write_snapshot_file(ideas)
     _cache_ideas(ideas)
 
 
@@ -636,55 +521,6 @@ def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], b
         idea.open_questions = [q for q in idea.open_questions if q.question != STANDING_QUESTION_TEXT]
         if len(idea.open_questions) != before:
             changed = True
-    return ideas, changed
-
-
-def _ensure_idea_hierarchy(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    """Sync idea_type, parent_idea_id, child_idea_ids, and default answers from source to persisted ideas."""
-    changed = False
-    defaults = _default_idea_map()
-    for idea in ideas:
-        source = defaults.get(idea.id) or DERIVED_IDEA_METADATA.get(idea.id)
-        if not source:
-            continue
-        # Sync idea_type
-        new_type_str = source.get("idea_type")
-        if new_type_str:
-            try:
-                new_type = IdeaType(new_type_str)
-            except ValueError:
-                new_type = None
-            if new_type and idea.idea_type != new_type:
-                idea.idea_type = new_type
-                changed = True
-        # Sync parent_idea_id
-        new_parent = source.get("parent_idea_id")
-        if new_parent and idea.parent_idea_id != new_parent:
-            idea.parent_idea_id = new_parent
-            changed = True
-        # Sync child_idea_ids
-        new_children = source.get("child_idea_ids")
-        if isinstance(new_children, list) and sorted(idea.child_idea_ids) != sorted(new_children):
-            idea.child_idea_ids = list(new_children)
-            changed = True
-        # Sync default answers: only if the persisted question has no answer yet
-        source_questions = source.get("open_questions", [])
-        if isinstance(source_questions, list):
-            source_answers = {
-                q["question"]: q
-                for q in source_questions
-                if isinstance(q, dict) and q.get("answer")
-            }
-            if source_answers:
-                for q in idea.open_questions:
-                    if q.answer:
-                        continue
-                    source_q = source_answers.get(q.question)
-                    if source_q and source_q.get("answer"):
-                        q.answer = source_q["answer"]
-                        if source_q.get("measured_delta") is not None:
-                            q.measured_delta = source_q["measured_delta"]
-                        changed = True
     return ideas, changed
 
 

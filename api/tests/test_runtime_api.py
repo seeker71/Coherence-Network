@@ -1543,6 +1543,14 @@ async def test_runtime_endpoint_attention_includes_idea_value_gap(
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed idea (DB is sole source of truth, no auto-seeding at runtime)
+        await client.post("/api/ideas", json={
+            "id": "portfolio-governance", "name": "Portfolio governance",
+            "description": "Unified idea portfolio governance",
+            "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
+            "interfaces": ["machine:api"],
+        })
+
         created = await client.post(
             "/api/runtime/events",
             json={

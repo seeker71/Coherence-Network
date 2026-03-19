@@ -27,7 +27,8 @@ def test_idea_service_derives_missing_ideas_from_commit_evidence(
     idea_ids = [item.id for item in listed.ideas]
 
     assert "derived-runtime-observability" in idea_ids
-    assert portfolio_path.exists()
+    # DB is now the sole source of truth; the JSON file is no longer written.
+    # Verify the derived idea is persisted by checking it appears in tracked IDs.
     assert "derived-runtime-observability" in idea_service.list_tracked_idea_ids()
 
 
