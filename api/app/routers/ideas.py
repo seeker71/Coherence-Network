@@ -13,7 +13,7 @@ from app.models.idea import (
     IdeaUpdate,
     IdeaWithScore,
 )
-from app.services import idea_service, inventory_service
+from app.services import idea_service, idea_selection_ab_service, inventory_service
 
 router = APIRouter()
 
@@ -25,6 +25,7 @@ async def list_ideas(
     limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
     read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
+    sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
 ) -> IdeaPortfolioResponse:
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
@@ -32,6 +33,7 @@ async def list_ideas(
         limit=limit,
         offset=offset,
         read_only_guard=read_only_guard,
+        sort_method=sort,
     )
 
 
@@ -89,6 +91,11 @@ async def list_idea_card_changes(
         include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
     )
+
+
+@router.get("/ideas/selection-ab/stats")
+async def get_selection_ab_stats() -> dict:
+    return idea_selection_ab_service.get_comparison()
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
