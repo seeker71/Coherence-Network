@@ -96,6 +96,11 @@ TaskMetric:
 - **A/B assignment** — Random vs deterministic (e.g. hash of task_id)
 - **Auto-scheduling** — Human-in-loop vs fully autonomous task creation
 
+## Downstream Implementations
+
+- **Spec 112** ([112-prompt-ab-roi-measurement.md](112-prompt-ab-roi-measurement.md)) — Implements Phase 2 prompt variant A/B testing with Thompson Sampling selection, ROI measurement per variant, and exploration/exploitation policy. Closes the `context.prompt_variant` gap identified in Phase 2.
+- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Provides grounded cost (provider billing, runtime estimates) and value (observable outcomes) to replace placeholder `value_score`/`resource_cost` in the ROI service. Feeds real numbers into the A/B measurement layer.
+
 ## See Also
 
 - [026-phase-1-task-metrics.md](026-phase-1-task-metrics.md) — Expanded Phase 1 spec: persist task metrics; GET /api/agent/metrics

@@ -56,3 +56,7 @@ git_trace.txt
 out.txt
 
 .deployment_config
+
+# SQLite WAL sidecar files (DB itself is tracked in data/)
+*.db-wal
+*.db-shm

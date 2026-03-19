@@ -115,6 +115,8 @@ class AgentTaskUpdate(BaseModel):
     decision_prompt: Optional[str] = None
     decision: Optional[str] = None  # user reply; when present and status is needs_decision, set status→running
     context: Optional[Dict[str, Any]] = None
+    error_summary: Optional[str] = Field(default=None, max_length=500)
+    error_category: Optional[str] = None
     worker_id: Optional[str] = Field(default=None, min_length=1, max_length=200)
     target_state: Optional[str] = Field(default=None, min_length=1, max_length=600)
     success_evidence: Optional[List[str]] = None
@@ -169,6 +171,8 @@ class AgentTask(BaseModel):
     command: str
     output: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+    error_summary: Optional[str] = None
+    error_category: Optional[str] = None
     progress_pct: Optional[int] = None
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None
@@ -191,6 +195,8 @@ class AgentTaskListItem(BaseModel):
     task_type: TaskType
     status: TaskStatus
     model: str
+    error_summary: Optional[str] = None
+    error_category: Optional[str] = None
     progress_pct: Optional[int] = None
     current_step: Optional[str] = None
     decision_prompt: Optional[str] = None

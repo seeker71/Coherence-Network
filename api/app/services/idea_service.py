@@ -1,4 +1,10 @@
-"""Idea portfolio service: persistence, scoring, and prioritization."""
+"""Idea portfolio service: pure DB reader with runtime discovery.
+
+The DB (data/coherence.db) is the single source of truth for ideas.
+Seed data is loaded via `scripts/seed_db.py`, not at runtime.
+This module reads from DB, discovers new ideas from runtime evidence,
+and writes back only genuinely new discoveries.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +20,7 @@ from sqlalchemy.pool import NullPool
 
 from app.models.idea import (
     Idea,
+    IdeaType,
     PaginationInfo,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
@@ -30,129 +37,22 @@ from app.services import spec_registry_service
 from app.services import value_lineage_service
 
 
-DEFAULT_IDEAS: list[dict[str, Any]] = [
-    {
-        "id": "oss-interface-alignment",
-        "name": "Align OSS intelligence interfaces with runtime",
-        "description": "Keep the site and the API telling the same story, so people can trust what they see and do.",
-        "potential_value": 90.0,
-        "actual_value": 10.0,
-        "estimated_cost": 18.0,
-        "actual_cost": 0.0,
-        "resistance_risk": 4.0,
-        "confidence": 0.7,
-        "manifestation_status": "partial",
-        "interfaces": ["machine:api", "human:web", "ai:automation"],
-        "open_questions": [
-            {
-                "question": "Which pages and endpoints most need to match for a first-time user to trust the product?",
-                "value_to_whole": 30.0,
-                "estimated_cost": 1.0,
-            },
-            {
-                "question": "What is the smallest start-to-finish path we should keep working every time?",
-                "value_to_whole": 25.0,
-                "estimated_cost": 2.0,
-            },
-        ],
-    },
-    {
-        "id": "portfolio-governance",
-        "name": "Unified idea portfolio governance",
-        "description": "Give one clear place to see what each idea could deliver, what it has delivered already, what it costs, and what should happen next.",
-        "potential_value": 82.0,
-        "actual_value": 12.0,
-        "estimated_cost": 10.0,
-        "actual_cost": 0.0,
-        "resistance_risk": 2.0,
-        "confidence": 0.75,
-        "manifestation_status": "partial",
-        "interfaces": ["machine:api", "human:docs", "human:operators"],
-        "open_questions": [
-            {
-                "question": "What are the clearest signs that an idea is moving from promise to real results?",
-                "value_to_whole": 28.0,
-                "estimated_cost": 2.0,
-            }
-        ],
-    },
-    {
-        "id": "community-project-funder-match",
-        "name": "Match community projects with small funders",
-        "description": (
-            "Help local projects explain their goal, budget, and early proof "
-            "so the right backer can understand the opportunity quickly."
-        ),
-        "potential_value": 76.0,
-        "actual_value": 9.0,
-        "estimated_cost": 9.0,
-        "actual_cost": 0.0,
-        "resistance_risk": 3.0,
-        "confidence": 0.68,
-        "manifestation_status": "partial",
-        "interfaces": ["human:web", "human:operators", "external:partners"],
-        "open_questions": [
-            {
-                "question": "What is the smallest proof a funder needs before taking a first meeting?",
-                "value_to_whole": 22.0,
-                "estimated_cost": 2.0,
-            },
-            {
-                "question": "Which first three projects are ready to share a clear ask this month?",
-                "value_to_whole": 19.0,
-                "estimated_cost": 2.0,
-            },
-        ],
-    },
-    {
-        "id": "coherence-signal-depth",
-        "name": "Increase coherence signal depth with real data",
-        "description": "Replace placeholder signals with real evidence so the system reflects what is actually happening.",
-        "potential_value": 78.0,
-        "actual_value": 8.0,
-        "estimated_cost": 24.0,
-        "actual_cost": 0.0,
-        "resistance_risk": 8.0,
-        "confidence": 0.55,
-        "manifestation_status": "none",
-        "interfaces": ["machine:api", "human:web", "external:github"],
-        "open_questions": [
-            {
-                "question": "What is the smallest real data feed that would make these signals feel trustworthy?",
-                "value_to_whole": 20.0,
-                "estimated_cost": 4.0,
-            }
-        ],
-    },
-    {
-        "id": "federated-instance-aggregation",
-        "name": "Federated instance aggregation for contributor-owned deployments",
-        "description": (
-            "Let partners run their own copy of the system and safely share useful results back. "
-            "This removes pressure on one central setup while keeping the shared picture useful."
-        ),
-        "potential_value": 128.0,
-        "actual_value": 0.0,
-        "estimated_cost": 26.0,
-        "actual_cost": 0.0,
-        "resistance_risk": 5.0,
-        "confidence": 0.72,
-        "manifestation_status": "none",
-        "interfaces": ["machine:api", "machine:federation", "human:web", "external:forks"],
-        "open_questions": [
-            {
-                "question": "What is the smallest federation contract, or shared agreement, two separate copies need so they can safely share useful results?",
-                "value_to_whole": 34.0,
-                "estimated_cost": 6.0,
-            },
-            {
-                "question": "What proof should we require before shared results change rankings or decisions?",
-                "value_to_whole": 31.0,
-                "estimated_cost": 5.0,
-            },
-        ],
-    },
-]
+def _load_derived_metadata() -> dict[str, dict[str, Any]]:
+    """Load derived idea metadata from data/seed_ideas.json.
+
+    Used only for classifying discovered IDs as internal and for
+    creating placeholder ideas when new IDs appear at runtime.
+    """
+    seed_path = Path(__file__).resolve().parents[3] / "data" / "seed_ideas.json"
+    try:
+        with open(seed_path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("derived_metadata", {})
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = _load_derived_metadata()
 
 STANDING_QUESTION_TEXT = (
     "How can we improve this idea, show whether it is working yet, "
@@ -161,55 +61,8 @@ STANDING_QUESTION_TEXT = (
 
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
-REQUIRED_SYSTEM_IDEA_IDS: tuple[str, ...] = (
-    "federated-instance-aggregation",
-    "community-project-funder-match",
-)
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
 _IDEAS_CACHE_TTL_SECONDS = 180.0
-
-DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
-    "coherence-network-agent-pipeline": {
-        "name": "Coherence network agent pipeline",
-        "description": "Keep the background work loop moving, visible, and easy to recover when something gets stuck.",
-        "interfaces": ["machine:api", "machine:automation", "human:operators"],
-        "potential_value": 88.0,
-        "estimated_cost": 16.0,
-        "confidence": 0.65,
-    },
-    "coherence-network-api-runtime": {
-        "name": "Coherence network API runtime parity",
-        "description": "Keep the public site, the API, and the live system telling the same story.",
-        "interfaces": ["machine:api", "human:web", "external:railway"],
-        "potential_value": 80.0,
-        "estimated_cost": 14.0,
-        "confidence": 0.62,
-    },
-    "coherence-network-value-attribution": {
-        "name": "Coherence network value attribution",
-        "description": "Show how value moves from an idea to the people who helped make it real.",
-        "interfaces": ["machine:api", "human:web", "human:contributors"],
-        "potential_value": 92.0,
-        "estimated_cost": 18.0,
-        "confidence": 0.68,
-    },
-    "coherence-network-web-interface": {
-        "name": "Coherence network web interface parity",
-        "description": "Keep the site easy to understand while staying aligned with the live data underneath.",
-        "interfaces": ["human:web", "machine:api", "human:contributors"],
-        "potential_value": 84.0,
-        "estimated_cost": 13.0,
-        "confidence": 0.64,
-    },
-    "deployment-gate-reliability": {
-        "name": "Deployment gate reliability",
-        "description": "Catch broken releases early and make recovery fast and predictable.",
-        "interfaces": ["external:github", "external:railway"],
-        "potential_value": 86.0,
-        "estimated_cost": 15.0,
-        "confidence": 0.63,
-    },
-}
 
 DEFAULT_INTERNAL_IDEA_PREFIXES = (
     "spec-origin-",
@@ -227,15 +80,6 @@ DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^spec-origin-"), "portfolio-governance"),
     (re.compile(r"^endpoint-lineage-"), "oss-interface-alignment"),
 )
-
-
-def _default_portfolio_path() -> str:
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-    return os.path.join(logs_dir, "idea_portfolio.json")
-
-
-def _portfolio_path() -> str:
-    return os.getenv("IDEA_PORTFOLIO_PATH", _default_portfolio_path())
 
 
 def _configured_internal_idea_prefixes() -> set[str]:
@@ -333,15 +177,9 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
 
 
 def _should_include_default_tracked_ideas() -> bool:
-    # When callers isolate ideas into a custom portfolio path (common in tests),
-    # avoid implicitly pulling repo-global tracked ids unless explicitly requested.
-    if (
-        os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
-        or os.getenv("COMMIT_EVIDENCE_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
-    ):
-        return True
-    return os.getenv("IDEA_PORTFOLIO_PATH") in {None, ""}
+    # With unified_db (spec 118), all services share one DB, so tracked
+    # ideas from commit evidence are always in the same store as ideas.
+    return True
 
 
 def _invalidate_ideas_cache() -> None:
@@ -357,13 +195,9 @@ def _cache_ideas(ideas: list[Idea]) -> None:
 
 
 def _ideas_cache_key() -> str:
+    from app.services import unified_db as _udb
     return (
-        f"{_portfolio_path()}|"
-        f"{os.getenv('IDEA_REGISTRY_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_REGISTRY_DB_URL','')}|"
-        f"{os.getenv('DATABASE_URL','')}|"
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}|"
-        f"{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}|"
+        f"{_udb.database_url()}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
         f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
         f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
@@ -387,14 +221,8 @@ def _tracked_idea_ids() -> list[str]:
     if not _should_include_default_tracked_ideas():
         return []
     now = time.time()
-    cache_key = (
-        f"{os.getenv('COMMIT_EVIDENCE_DATABASE_URL','')}"
-        f"|{os.getenv('DATABASE_URL','')}"
-        f"|{os.getenv('COMMIT_EVIDENCE_USE_DB','')}"
-        f"|{os.getenv('GLOBAL_PERSISTENCE_REQUIRED','')}"
-        f"|{os.getenv('IDEA_COMMIT_EVIDENCE_DIR','')}"
-        f"|{os.getenv('IDEA_PORTFOLIO_PATH','')}"
-    )
+    from app.services import unified_db as _udb
+    cache_key = _udb.database_url()
     if (
         _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
         and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
@@ -597,53 +425,50 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     interfaces = metadata.get("interfaces")
     if not isinstance(interfaces, list) or not all(isinstance(x, str) for x in interfaces):
         interfaces = ["machine:api", "human:web", "machine:commit-evidence"]
+
+    # Copy all numeric and enum fields from seed, with safe defaults
     potential_value = float(metadata.get("potential_value", 70.0))
+    actual_value = float(metadata.get("actual_value", 0.0))
     estimated_cost = float(metadata.get("estimated_cost", 12.0))
+    actual_cost = float(metadata.get("actual_cost", 0.0))
     confidence = float(metadata.get("confidence", 0.55))
+    resistance_risk = float(metadata.get("resistance_risk", 3.0))
+
+    # Hierarchy fields
+    idea_type_str = metadata.get("idea_type", "standalone")
+    try:
+        idea_type = IdeaType(idea_type_str)
+    except ValueError:
+        idea_type = IdeaType.STANDALONE
+    parent_idea_id = metadata.get("parent_idea_id")
+    child_idea_ids = metadata.get("child_idea_ids", [])
+    if not isinstance(child_idea_ids, list):
+        child_idea_ids = []
+
+    # Status
+    status_str = metadata.get("manifestation_status", "none")
+    try:
+        status = ManifestationStatus(status_str)
+    except ValueError:
+        status = ManifestationStatus.NONE
 
     return Idea(
         id=idea_id,
         name=name,
         description=description,
         potential_value=potential_value,
-        actual_value=0.0,
+        actual_value=actual_value,
         estimated_cost=estimated_cost,
-        actual_cost=0.0,
-        resistance_risk=3.0,
+        actual_cost=actual_cost,
+        resistance_risk=resistance_risk,
         confidence=max(0.0, min(confidence, 1.0)),
-        manifestation_status=ManifestationStatus.NONE,
+        manifestation_status=status,
         interfaces=interfaces,
         open_questions=[],
+        idea_type=idea_type,
+        parent_idea_id=parent_idea_id,
+        child_idea_ids=child_idea_ids,
     )
-
-
-def _default_idea_map() -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    for item in DEFAULT_IDEAS:
-        raw_id = item.get("id")
-        if isinstance(raw_id, str) and raw_id.strip():
-            out[raw_id] = item
-    return out
-
-
-def _ensure_required_system_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    changed = False
-    existing = {idea.id for idea in ideas}
-    defaults_by_id = _default_idea_map()
-
-    for required_id in REQUIRED_SYSTEM_IDEA_IDS:
-        if required_id in existing:
-            continue
-        payload = defaults_by_id.get(required_id)
-        if not isinstance(payload, dict):
-            continue
-        try:
-            ideas.append(Idea(**payload))
-        except Exception:
-            continue
-        existing.add(required_id)
-        changed = True
-    return ideas, changed
 
 
 def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
@@ -661,106 +486,33 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     return ideas, changed
 
 
-def _write_snapshot_file(ideas: list[Idea]) -> None:
-    storage = idea_registry_service.storage_info()
-    if storage.get("backend") == "postgresql":
-        purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
-        if purge_raw not in {"0", "false", "no", "off"}:
-            try:
-                Path(_portfolio_path()).unlink(missing_ok=True)
-            except OSError:
-                pass
-        return
-
-    path = _portfolio_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"ideas": [idea.model_dump(mode="json") for idea in ideas]}, f, indent=2)
-
-
-def _read_legacy_file_ideas() -> tuple[list[Idea], str]:
-    path = _portfolio_path()
-    if not os.path.isfile(path):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-    try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-
-    raw_ideas = data.get("ideas") if isinstance(data, dict) else None
-    if not isinstance(raw_ideas, list):
-        return [Idea(**item) for item in DEFAULT_IDEAS], "defaults"
-
-    ideas: list[Idea] = []
-    for item in raw_ideas:
-        try:
-            ideas.append(Idea(**item))
-        except Exception:
-            continue
-    if not ideas:
-        ideas = [Idea(**item) for item in DEFAULT_IDEAS]
-        return ideas, "defaults"
-    return ideas, "legacy_json"
-
-
 def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
-    """Load ideas, run ensure logic, optionally persist. When persist_ensures=False (e.g. guard/invariant runs), no writes are made."""
+    """Load ideas from DB, discover new ones from runtime, cache.
+
+    When persist_ensures=False (e.g. guard/invariant runs), no writes are made.
+    """
     cached = _read_ideas_cache()
     if cached is not None:
         return cached
 
     ideas = idea_registry_service.load_ideas()
-    if not ideas:
-        ideas, source = _read_legacy_file_ideas()
-        ideas, required_changed = _ensure_required_system_ideas(ideas)
-        ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
-        ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
-        ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
-        ideas, pruned_changed = _prune_internal_standing_questions(ideas)
-        ideas, standing_changed = _ensure_standing_questions(ideas)
-        if persist_ensures:
-            bootstrap_source = source
-            if required_changed:
-                bootstrap_source = f"{bootstrap_source}+required_system_ideas"
-            if tracked_changed or source == "defaults":
-                bootstrap_source = f"{bootstrap_source}+derived"
-            if domain_discovered_changed:
-                bootstrap_source = f"{bootstrap_source}+domain_discovery"
-            if standing_changed or pruned_changed or transient_pruned_changed:
-                bootstrap_source = f"{bootstrap_source}+standing_question"
-            idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
-            _write_snapshot_file(ideas)
-        _cache_ideas(ideas)
-        return ideas
 
-    ideas, required_changed = _ensure_required_system_ideas(ideas)
+    # Runtime discovery: find idea IDs referenced in evidence/specs/lineage
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
-    ideas, domain_discovered_changed = _ensure_registry_domain_idea_entries(ideas)
-    ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
-    ideas, pruned_changed = _prune_internal_standing_questions(ideas)
+    ideas, domain_changed = _ensure_registry_domain_idea_entries(ideas)
+    ideas, transient_pruned = _prune_transient_internal_ideas(ideas)
+    ideas, pruned_standing = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
-    if persist_ensures:
-        if (
-            required_changed
-            or tracked_changed
-            or domain_discovered_changed
-            or standing_changed
-            or pruned_changed
-            or transient_pruned_changed
-        ):
-            _write_ideas(ideas)
-        else:
-            path = _portfolio_path()
-            if not os.path.isfile(path):
-                _write_snapshot_file(ideas)
+
+    if persist_ensures and (tracked_changed or domain_changed or transient_pruned or pruned_standing or standing_changed):
+        _write_ideas(ideas)
+
     _cache_ideas(ideas)
     return ideas
 
 
 def _write_ideas(ideas: list[Idea]) -> None:
     idea_registry_service.save_ideas(ideas)
-    _write_snapshot_file(ideas)
     _cache_ideas(ideas)
 
 
