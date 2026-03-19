@@ -48,11 +48,30 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
                 "question": "Which pages and endpoints most need to match for a first-time user to trust the product?",
                 "value_to_whole": 30.0,
                 "estimated_cost": 1.0,
+                "answer": (
+                    "Three pairs: (1) GET /api/health → web landing page status indicator — "
+                    "if the health check says ok but the site looks broken, trust is gone instantly. "
+                    "(2) GET /api/ideas → /ideas page — the portfolio ranking must match the API ordering "
+                    "(free_energy_score descending). (3) GET /api/ideas/{id} → /portfolio detail — "
+                    "actual_value, potential_value, and value_gap must render the same numbers the API returns. "
+                    "These three are the minimum trust surface; spec cards and lineage views are secondary."
+                ),
+                "measured_delta": 5.0,
             },
             {
                 "question": "What is the smallest start-to-finish path we should keep working every time?",
                 "value_to_whole": 25.0,
                 "estimated_cost": 2.0,
+                "answer": (
+                    "The minimum e2e flow already exists (spec 051): "
+                    "POST /api/value-lineage/links (create a lineage link) → "
+                    "POST /api/value-lineage/{id}/usage-events (record a usage event) → "
+                    "GET /api/value-lineage/{id}/valuation (compute measured_value and ROI) → "
+                    "POST /api/value-lineage/{id}/payout-preview (attribute value to contributors). "
+                    "This path proves idea → spec → implementation → value → payout works end-to-end. "
+                    "Tested in test_value_lineage.py::test_minimum_e2e_flow_endpoint."
+                ),
+                "measured_delta": 6.0,
             },
         ],
     },
@@ -73,6 +92,16 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
                 "question": "What are the clearest signs that an idea is moving from promise to real results?",
                 "value_to_whole": 28.0,
                 "estimated_cost": 2.0,
+                "answer": (
+                    "Five observable signals from spec 116 grounded metrics: "
+                    "(1) value_realization_pct rising (actual_value / potential_value), "
+                    "(2) computed_confidence increasing as more data sources report real numbers, "
+                    "(3) manifestation_status transitioning from none → partial → validated, "
+                    "(4) lineage_measured_value > 0 (usage events recorded against specs), "
+                    "(5) runtime_event_count growing (real API adoption). "
+                    "All five are computed from observable data in grounded_idea_metrics_service.py, not hand-typed."
+                ),
+                "measured_delta": 8.0,
             }
         ],
     },
@@ -96,6 +125,17 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
                 "question": "What is the smallest proof a funder needs before taking a first meeting?",
                 "value_to_whole": 22.0,
                 "estimated_cost": 2.0,
+                "answer": (
+                    "A single-page proof built from real API data: "
+                    "(1) GET /api/ideas/{project_id} showing manifestation_status='partial' or 'validated' "
+                    "with actual_value > 0 — proves the project has delivered something real. "
+                    "(2) GET /api/ideas/{id}/grounded-metrics showing grounding_sources with "
+                    "lineage_measured_value > 0 and runtime_event_count > 0 — proves it runs and is used. "
+                    "(3) GET /api/value-lineage/{id}/payout-preview showing contributor attribution — "
+                    "proves the team is real and value flows to people. "
+                    "A funder can verify all three in under 60 seconds via the API."
+                ),
+                "measured_delta": 4.0,
             },
             {
                 "question": "Which first three projects are ready to share a clear ask this month?",
@@ -109,11 +149,11 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "name": "Increase coherence signal depth with real data",
         "description": "Replace placeholder signals with real evidence so the system reflects what is actually happening.",
         "potential_value": 78.0,
-        "actual_value": 28.0,
+        "actual_value": 35.0,
         "estimated_cost": 24.0,
-        "actual_cost": 10.0,
+        "actual_cost": 14.0,
         "resistance_risk": 8.0,
-        "confidence": 0.72,
+        "confidence": 0.75,
         "manifestation_status": "partial",
         "interfaces": ["machine:api", "human:web", "external:github"],
         "open_questions": [
@@ -146,11 +186,35 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
                 "question": "What is the smallest federation contract, or shared agreement, two separate copies need so they can safely share useful results?",
                 "value_to_whole": 34.0,
                 "estimated_cost": 6.0,
+                "answer": (
+                    "Three JSON models already in the codebase form the minimum contract: "
+                    "(1) LineageLink (idea_id, spec_id, implementation_refs, contributors by role, "
+                    "estimated_cost) — the unit of attributed work. "
+                    "(2) UsageEvent (lineage_id, source, metric, value, captured_at) — the unit of "
+                    "measured value. (3) LineageValuation (measured_value_total, estimated_cost, roi_ratio, "
+                    "event_count) — the computed outcome. A remote instance sends LineageLinks + UsageEvents; "
+                    "the receiving instance re-computes LineageValuation locally to verify. "
+                    "Distribution uses coherence-weighted payouts (distribution_engine.py: "
+                    "weighted_cost = cost_amount * (0.5 + coherence_score)), which is deterministic "
+                    "and verifiable across instances."
+                ),
+                "measured_delta": 6.0,
             },
             {
                 "question": "What proof should we require before shared results change rankings or decisions?",
                 "value_to_whole": 31.0,
                 "estimated_cost": 5.0,
+                "answer": (
+                    "The governance framework already handles this: governance_service.py implements "
+                    "change request voting where (1) any rejection vetoes the change immediately, "
+                    "(2) approvals >= CHANGE_REQUEST_MIN_APPROVALS (configurable 1-10, default 1) "
+                    "triggers approval, (3) auto_apply_on_approval applies the change atomically. "
+                    "For federation: remote results should arrive as a governance ChangeRequest "
+                    "(type=IDEA_UPDATE or SPEC_UPDATE) requiring local approval before they affect "
+                    "rankings. The free_energy_score recomputes only after approval+apply. "
+                    "This ensures no remote instance can unilaterally change local prioritization."
+                ),
+                "measured_delta": 5.0,
             },
         ],
     },
