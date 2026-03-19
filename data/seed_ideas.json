@@ -1,0 +1,315 @@
+{
+  "default_ideas": [
+    {
+      "id": "oss-interface-alignment",
+      "name": "Align OSS intelligence interfaces with runtime",
+      "description": "Keep the site and the API telling the same story, so people can trust what they see and do.",
+      "potential_value": 90.0,
+      "actual_value": 10.0,
+      "estimated_cost": 18.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 4.0,
+      "confidence": 0.7,
+      "manifestation_status": "partial",
+      "idea_type": "super",
+      "child_idea_ids": [
+        "interface-trust-surface",
+        "minimum-e2e-path"
+      ],
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "ai:automation"
+      ],
+      "open_questions": [
+        {
+          "question": "Which pages and endpoints most need to match for a first-time user to trust the product?",
+          "value_to_whole": 30.0,
+          "estimated_cost": 1.0,
+          "answer": "Three pairs: (1) GET /api/health → web landing page status indicator — if the health check says ok but the site looks broken, trust is gone instantly. (2) GET /api/ideas → /ideas page — the portfolio ranking must match the API ordering (free_energy_score descending). (3) GET /api/ideas/{id} → /portfolio detail — actual_value, potential_value, and value_gap must render the same numbers the API returns. These three are the minimum trust surface; spec cards and lineage views are secondary.",
+          "measured_delta": 5.0
+        },
+        {
+          "question": "What is the smallest start-to-finish path we should keep working every time?",
+          "value_to_whole": 25.0,
+          "estimated_cost": 2.0,
+          "answer": "The minimum e2e flow already exists (spec 051): POST /api/value-lineage/links (create a lineage link) → POST /api/value-lineage/{id}/usage-events (record a usage event) → GET /api/value-lineage/{id}/valuation (compute measured_value and ROI) → POST /api/value-lineage/{id}/payout-preview (attribute value to contributors). This path proves idea → spec → implementation → value → payout works end-to-end. Tested in test_value_lineage.py::test_minimum_e2e_flow_endpoint.",
+          "measured_delta": 6.0
+        }
+      ]
+    },
+    {
+      "id": "portfolio-governance",
+      "name": "Unified idea portfolio governance",
+      "description": "Give one clear place to see what each idea could deliver, what it has delivered already, what it costs, and what should happen next.",
+      "potential_value": 82.0,
+      "actual_value": 12.0,
+      "estimated_cost": 10.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 2.0,
+      "confidence": 0.75,
+      "manifestation_status": "partial",
+      "idea_type": "super",
+      "child_idea_ids": [
+        "coherence-signal-depth",
+        "idea-hierarchy-model"
+      ],
+      "interfaces": [
+        "machine:api",
+        "human:docs",
+        "human:operators"
+      ],
+      "open_questions": [
+        {
+          "question": "What are the clearest signs that an idea is moving from promise to real results?",
+          "value_to_whole": 28.0,
+          "estimated_cost": 2.0,
+          "answer": "Five observable signals from spec 116 grounded metrics: (1) value_realization_pct rising (actual_value / potential_value), (2) computed_confidence increasing as more data sources report real numbers, (3) manifestation_status transitioning from none → partial → validated, (4) lineage_measured_value > 0 (usage events recorded against specs), (5) runtime_event_count growing (real API adoption). All five are computed from observable data in grounded_idea_metrics_service.py, not hand-typed.",
+          "measured_delta": 8.0
+        }
+      ]
+    },
+    {
+      "id": "community-project-funder-match",
+      "name": "Match community projects with small funders",
+      "description": "Help local projects explain their goal, budget, and early proof so the right backer can understand the opportunity quickly.",
+      "potential_value": 76.0,
+      "actual_value": 9.0,
+      "estimated_cost": 9.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 3.0,
+      "confidence": 0.68,
+      "manifestation_status": "partial",
+      "idea_type": "super",
+      "child_idea_ids": [
+        "funder-proof-page"
+      ],
+      "interfaces": [
+        "human:web",
+        "human:operators",
+        "external:partners"
+      ],
+      "open_questions": [
+        {
+          "question": "What is the smallest proof a funder needs before taking a first meeting?",
+          "value_to_whole": 22.0,
+          "estimated_cost": 2.0,
+          "answer": "A single-page proof built from real API data: (1) GET /api/ideas/{project_id} showing manifestation_status='partial' or 'validated' with actual_value > 0 — proves the project has delivered something real. (2) GET /api/ideas/{id}/grounded-metrics showing grounding_sources with lineage_measured_value > 0 and runtime_event_count > 0 — proves it runs and is used. (3) GET /api/value-lineage/{id}/payout-preview showing contributor attribution — proves the team is real and value flows to people. A funder can verify all three in under 60 seconds via the API.",
+          "measured_delta": 4.0
+        },
+        {
+          "question": "Which first three projects are ready to share a clear ask this month?",
+          "value_to_whole": 19.0,
+          "estimated_cost": 2.0
+        }
+      ]
+    },
+    {
+      "id": "coherence-signal-depth",
+      "name": "Increase coherence signal depth with real data",
+      "description": "Replace placeholder signals with real evidence so the system reflects what is actually happening.",
+      "potential_value": 78.0,
+      "actual_value": 35.0,
+      "estimated_cost": 24.0,
+      "actual_cost": 14.0,
+      "resistance_risk": 8.0,
+      "confidence": 0.75,
+      "manifestation_status": "partial",
+      "idea_type": "child",
+      "parent_idea_id": "portfolio-governance",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "external:github"
+      ],
+      "open_questions": [
+        {
+          "question": "What is the smallest real data feed that would make these signals feel trustworthy?",
+          "value_to_whole": 20.0,
+          "estimated_cost": 4.0,
+          "answer": "Spec 115: grounded cost from provider billing + value from usage adoption, friction cost avoidance, and value realization. Implemented 2026-03-18.",
+          "measured_delta": 10.0
+        }
+      ]
+    },
+    {
+      "id": "federated-instance-aggregation",
+      "name": "Federated instance aggregation for contributor-owned deployments",
+      "description": "Let partners run their own copy of the system and safely share useful results back. This removes pressure on one central setup while keeping the shared picture useful.",
+      "potential_value": 128.0,
+      "actual_value": 0.0,
+      "estimated_cost": 26.0,
+      "actual_cost": 0.0,
+      "resistance_risk": 5.0,
+      "confidence": 0.72,
+      "manifestation_status": "none",
+      "interfaces": [
+        "machine:api",
+        "machine:federation",
+        "human:web",
+        "external:forks"
+      ],
+      "open_questions": [
+        {
+          "question": "What is the smallest federation contract, or shared agreement, two separate copies need so they can safely share useful results?",
+          "value_to_whole": 34.0,
+          "estimated_cost": 6.0,
+          "answer": "Three JSON models already in the codebase form the minimum contract: (1) LineageLink (idea_id, spec_id, implementation_refs, contributors by role, estimated_cost) — the unit of attributed work. (2) UsageEvent (lineage_id, source, metric, value, captured_at) — the unit of measured value. (3) LineageValuation (measured_value_total, estimated_cost, roi_ratio, event_count) — the computed outcome. A remote instance sends LineageLinks + UsageEvents; the receiving instance re-computes LineageValuation locally to verify. Distribution uses coherence-weighted payouts (distribution_engine.py: weighted_cost = cost_amount * (0.5 + coherence_score)), which is deterministic and verifiable across instances.",
+          "measured_delta": 6.0
+        },
+        {
+          "question": "What proof should we require before shared results change rankings or decisions?",
+          "value_to_whole": 31.0,
+          "estimated_cost": 5.0,
+          "answer": "The governance framework already handles this: governance_service.py implements change request voting where (1) any rejection vetoes the change immediately, (2) approvals >= CHANGE_REQUEST_MIN_APPROVALS (configurable 1-10, default 1) triggers approval, (3) auto_apply_on_approval applies the change atomically. For federation: remote results should arrive as a governance ChangeRequest (type=IDEA_UPDATE or SPEC_UPDATE) requiring local approval before they affect rankings. The free_energy_score recomputes only after approval+apply. This ensures no remote instance can unilaterally change local prioritization.",
+          "measured_delta": 5.0
+        }
+      ]
+    }
+  ],
+  "derived_metadata": {
+    "coherence-network-agent-pipeline": {
+      "name": "Coherence network agent pipeline",
+      "description": "Keep the background work loop moving, visible, and easy to recover when something gets stuck.",
+      "interfaces": [
+        "machine:api",
+        "machine:automation",
+        "human:operators"
+      ],
+      "potential_value": 88.0,
+      "actual_value": 35.0,
+      "estimated_cost": 16.0,
+      "actual_cost": 12.0,
+      "confidence": 0.75,
+      "manifestation_status": "partial",
+      "idea_type": "super",
+      "child_idea_ids": [
+        "agent-prompt-ab-roi",
+        "agent-failed-task-diagnostics",
+        "agent-auto-heal",
+        "agent-grounded-measurement"
+      ],
+      "contributing_specs": [
+        "112",
+        "113",
+        "114",
+        "115"
+      ]
+    },
+    "coherence-network-api-runtime": {
+      "name": "Coherence network API runtime parity",
+      "description": "Keep the public site, the API, and the live system telling the same story.",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "external:railway"
+      ],
+      "potential_value": 80.0,
+      "estimated_cost": 14.0,
+      "confidence": 0.62
+    },
+    "coherence-network-value-attribution": {
+      "name": "Coherence network value attribution",
+      "description": "Show how value moves from an idea to the people who helped make it real.",
+      "interfaces": [
+        "machine:api",
+        "human:web",
+        "human:contributors"
+      ],
+      "potential_value": 92.0,
+      "actual_value": 22.0,
+      "estimated_cost": 18.0,
+      "actual_cost": 8.0,
+      "confidence": 0.72,
+      "manifestation_status": "partial",
+      "contributing_specs": [
+        "048",
+        "115"
+      ]
+    },
+    "coherence-network-web-interface": {
+      "name": "Coherence network web interface parity",
+      "description": "Keep the site easy to understand while staying aligned with the live data underneath.",
+      "interfaces": [
+        "human:web",
+        "machine:api",
+        "human:contributors"
+      ],
+      "potential_value": 84.0,
+      "estimated_cost": 13.0,
+      "confidence": 0.64
+    },
+    "deployment-gate-reliability": {
+      "name": "Deployment gate reliability",
+      "description": "Catch broken releases early and make recovery fast and predictable.",
+      "interfaces": [
+        "external:github",
+        "external:railway"
+      ],
+      "potential_value": 86.0,
+      "estimated_cost": 15.0,
+      "confidence": 0.63
+    },
+    "interface-trust-surface": {
+      "name": "Interface trust surface: 3 critical web-API pairs",
+      "description": "Ensure health→landing, ideas-list→/ideas page, and idea-detail→/portfolio always show matching data. These three pairs are the minimum trust surface a first-time user checks.",
+      "interfaces": [
+        "machine:api",
+        "human:web"
+      ],
+      "potential_value": 40.0,
+      "estimated_cost": 6.0,
+      "confidence": 0.7,
+      "idea_type": "child",
+      "parent_idea_id": "oss-interface-alignment"
+    },
+    "minimum-e2e-path": {
+      "name": "Keep minimum e2e value flow always working",
+      "description": "The path from create-lineage-link → record-usage-event → compute-valuation → payout-preview must never break. This is the smallest proof that the system works end-to-end (spec 051).",
+      "interfaces": [
+        "machine:api"
+      ],
+      "potential_value": 35.0,
+      "estimated_cost": 4.0,
+      "confidence": 0.75,
+      "idea_type": "child",
+      "parent_idea_id": "oss-interface-alignment",
+      "contributing_specs": [
+        "051"
+      ]
+    },
+    "funder-proof-page": {
+      "name": "Single-page funder proof from 3 API calls",
+      "description": "A funder verifies in <60s via: (1) GET /ideas/{id} showing manifestation_status partial/validated + actual_value>0, (2) GET /ideas/{id}/grounded-metrics showing real adoption signals, (3) GET /value-lineage/{id}/payout-preview showing team attribution. Build the page or export that assembles this proof automatically.",
+      "interfaces": [
+        "human:web",
+        "external:partners"
+      ],
+      "potential_value": 45.0,
+      "estimated_cost": 8.0,
+      "confidence": 0.6,
+      "idea_type": "child",
+      "parent_idea_id": "community-project-funder-match",
+      "contributing_specs": [
+        "116"
+      ]
+    },
+    "idea-hierarchy-model": {
+      "name": "Idea hierarchy: super-ideas and child-ideas",
+      "description": "Add idea_type (super/child/standalone) and parent_idea_id to the Idea model. Super-ideas are strategic goals excluded from task pickup. Child-ideas are actionable work items that agents can execute.",
+      "interfaces": [
+        "machine:api"
+      ],
+      "potential_value": 30.0,
+      "estimated_cost": 5.0,
+      "actual_cost": 3.0,
+      "confidence": 0.8,
+      "manifestation_status": "partial",
+      "idea_type": "child",
+      "parent_idea_id": "portfolio-governance",
+      "contributing_specs": [
+        "117"
+      ]
+    }
+  }
+}

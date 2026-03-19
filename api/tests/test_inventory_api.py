@@ -270,7 +270,7 @@ async def test_route_evidence_inventory_does_not_pass_empty_real_data_probes(
 async def test_commit_evidence_inventory_uses_persistent_store_after_backfill(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COMMIT_EVIDENCE_DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'commit_evidence.db'}")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
     commit_evidence_service.upsert_record(
         {
             "date": "2026-02-17",

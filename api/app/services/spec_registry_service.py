@@ -36,6 +36,8 @@ class SpecRegistryRecord(Base):
     updated_by_contributor_id: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    content_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 from app.services import unified_db as _udb
@@ -109,6 +111,8 @@ def _ensure_runtime_columns(engine: Any) -> None:
         "actual_value": "FLOAT NOT NULL DEFAULT 0.0",
         "estimated_cost": "FLOAT NOT NULL DEFAULT 0.0",
         "actual_cost": "FLOAT NOT NULL DEFAULT 0.0",
+        "content_path": "VARCHAR NULL",
+        "content_hash": "VARCHAR(64) NULL",
     }
     missing = {name: ddl for name, ddl in required.items() if name not in existing}
     if not missing:
@@ -151,6 +155,8 @@ def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
         updated_by_contributor_id=row.updated_by_contributor_id,
         created_at=row.created_at,
         updated_at=row.updated_at,
+        content_path=getattr(row, "content_path", None),
+        content_hash=getattr(row, "content_hash", None),
     )
 
 
@@ -222,6 +228,8 @@ def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
             updated_by_contributor_id=data.created_by_contributor_id,
             created_at=now,
             updated_at=now,
+            content_path=getattr(data, "content_path", None),
+            content_hash=getattr(data, "content_hash", None),
         )
         session.add(row)
         session.flush()
@@ -258,6 +266,10 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
             row.implementation_summary = data.implementation_summary
         if data.updated_by_contributor_id is not None:
             row.updated_by_contributor_id = data.updated_by_contributor_id
+        if data.content_path is not None:
+            row.content_path = data.content_path
+        if data.content_hash is not None:
+            row.content_hash = data.content_hash
         row.updated_at = datetime.utcnow()
         session.add(row)
         session.flush()

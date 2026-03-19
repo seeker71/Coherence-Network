@@ -28,6 +28,8 @@ class SpecRegistryEntry(BaseModel):
     updated_by_contributor_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    content_path: Optional[str] = None
+    content_hash: Optional[str] = None
 
 
 class SpecRegistryCreate(BaseModel):
@@ -43,6 +45,8 @@ class SpecRegistryCreate(BaseModel):
     pseudocode_summary: Optional[str] = None
     implementation_summary: Optional[str] = None
     created_by_contributor_id: Optional[str] = None
+    content_path: Optional[str] = None
+    content_hash: Optional[str] = None
 
 
 class SpecRegistryUpdate(BaseModel):
@@ -57,3 +61,5 @@ class SpecRegistryUpdate(BaseModel):
     pseudocode_summary: Optional[str] = None
     implementation_summary: Optional[str] = None
     updated_by_contributor_id: Optional[str] = None
+    content_path: Optional[str] = None
+    content_hash: Optional[str] = None

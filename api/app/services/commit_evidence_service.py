@@ -26,6 +26,7 @@ class CommitEvidenceRecord(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 from app.services import unified_db as _udb
@@ -67,6 +68,23 @@ def _session() -> Session:
 
 def ensure_schema() -> None:
     _udb.ensure_schema()
+    _ensure_runtime_columns()
+
+
+def _ensure_runtime_columns() -> None:
+    eng = _udb.engine()
+    try:
+        from sqlalchemy import inspect as sa_inspect
+        inspector = sa_inspect(eng)
+        if "commit_evidence_records" not in inspector.get_table_names():
+            return
+        existing = {str(col.get("name")) for col in inspector.get_columns("commit_evidence_records")}
+        if "content_hash" not in existing:
+            from sqlalchemy import text
+            with eng.begin() as conn:
+                conn.execute(text("ALTER TABLE commit_evidence_records ADD COLUMN content_hash VARCHAR(64) NULL"))
+    except Exception:
+        pass
 
 
 def _invalidate_record_cache() -> None:

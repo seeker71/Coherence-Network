@@ -5,7 +5,7 @@ All services import from here instead of managing their own connections.
 
 Configuration:
   - DATABASE_URL env var overrides for production (e.g. PostgreSQL).
-  - Otherwise defaults to sqlite:///api/logs/coherence.db (works out of the box).
+  - Otherwise defaults to sqlite:///data/coherence.db (works out of the box).
   - IDEA_PORTFOLIO_PATH is honored for test isolation (derives .db path from it).
 """
 
@@ -41,7 +41,7 @@ def _repo_root() -> Path:
 
 
 def _default_sqlite_path() -> Path:
-    return _repo_root() / "api" / "logs" / "coherence.db"
+    return _repo_root() / "data" / "coherence.db"
 
 
 def database_url() -> str:
@@ -50,7 +50,7 @@ def database_url() -> str:
     Priority:
       1. DATABASE_URL (production override, e.g. PostgreSQL)
       2. IDEA_PORTFOLIO_PATH → derived .db path (test isolation)
-      3. sqlite:///api/logs/coherence.db (default, works out of the box)
+      3. sqlite:///data/coherence.db (default, works out of the box)
     """
     configured = os.getenv("DATABASE_URL")
     if configured:
