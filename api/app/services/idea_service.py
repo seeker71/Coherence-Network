@@ -872,6 +872,7 @@ def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
         ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
         ideas, pruned_changed = _prune_internal_standing_questions(ideas)
         ideas, standing_changed = _ensure_standing_questions(ideas)
+        ideas, hierarchy_changed = _ensure_idea_hierarchy(ideas)
         if persist_ensures:
             bootstrap_source = source
             if required_changed:
@@ -880,7 +881,7 @@ def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
                 bootstrap_source = f"{bootstrap_source}+derived"
             if domain_discovered_changed:
                 bootstrap_source = f"{bootstrap_source}+domain_discovery"
-            if standing_changed or pruned_changed or transient_pruned_changed:
+            if standing_changed or pruned_changed or transient_pruned_changed or hierarchy_changed:
                 bootstrap_source = f"{bootstrap_source}+standing_question"
             idea_registry_service.save_ideas(ideas, bootstrap_source=bootstrap_source)
             _write_snapshot_file(ideas)
@@ -893,6 +894,7 @@ def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
     ideas, transient_pruned_changed = _prune_transient_internal_ideas(ideas)
     ideas, pruned_changed = _prune_internal_standing_questions(ideas)
     ideas, standing_changed = _ensure_standing_questions(ideas)
+    ideas, hierarchy_changed = _ensure_idea_hierarchy(ideas)
     if persist_ensures:
         if (
             required_changed
@@ -901,6 +903,7 @@ def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
             or standing_changed
             or pruned_changed
             or transient_pruned_changed
+            or hierarchy_changed
         ):
             _write_ideas(ideas)
         else:
@@ -949,6 +952,55 @@ def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], b
         idea.open_questions = [q for q in idea.open_questions if q.question != STANDING_QUESTION_TEXT]
         if len(idea.open_questions) != before:
             changed = True
+    return ideas, changed
+
+
+def _ensure_idea_hierarchy(ideas: list[Idea]) -> tuple[list[Idea], bool]:
+    """Sync idea_type, parent_idea_id, child_idea_ids, and default answers from source to persisted ideas."""
+    changed = False
+    defaults = _default_idea_map()
+    for idea in ideas:
+        source = defaults.get(idea.id) or DERIVED_IDEA_METADATA.get(idea.id)
+        if not source:
+            continue
+        # Sync idea_type
+        new_type_str = source.get("idea_type")
+        if new_type_str:
+            try:
+                new_type = IdeaType(new_type_str)
+            except ValueError:
+                new_type = None
+            if new_type and idea.idea_type != new_type:
+                idea.idea_type = new_type
+                changed = True
+        # Sync parent_idea_id
+        new_parent = source.get("parent_idea_id")
+        if new_parent and idea.parent_idea_id != new_parent:
+            idea.parent_idea_id = new_parent
+            changed = True
+        # Sync child_idea_ids
+        new_children = source.get("child_idea_ids")
+        if isinstance(new_children, list) and sorted(idea.child_idea_ids) != sorted(new_children):
+            idea.child_idea_ids = list(new_children)
+            changed = True
+        # Sync default answers: only if the persisted question has no answer yet
+        source_questions = source.get("open_questions", [])
+        if isinstance(source_questions, list):
+            source_answers = {
+                q["question"]: q
+                for q in source_questions
+                if isinstance(q, dict) and q.get("answer")
+            }
+            if source_answers:
+                for q in idea.open_questions:
+                    if q.answer:
+                        continue
+                    source_q = source_answers.get(q.question)
+                    if source_q and source_q.get("answer"):
+                        q.answer = source_q["answer"]
+                        if source_q.get("measured_delta") is not None:
+                            q.measured_delta = source_q["measured_delta"]
+                        changed = True
     return ideas, changed
 
 
