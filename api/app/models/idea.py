@@ -14,6 +14,12 @@ class ManifestationStatus(str, Enum):
     VALIDATED = "validated"
 
 
+class IdeaType(str, Enum):
+    SUPER = "super"           # Strategic goal; never picked up for direct work
+    CHILD = "child"           # Actionable sub-idea; can be picked up
+    STANDALONE = "standalone"  # No parent; backward compatible default
+
+
 class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
@@ -41,6 +47,9 @@ class Idea(BaseModel):
     manifestation_status: ManifestationStatus = ManifestationStatus.NONE
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestion] = Field(default_factory=list)
+    idea_type: IdeaType = IdeaType.STANDALONE
+    parent_idea_id: Optional[str] = None
+    child_idea_ids: list[str] = Field(default_factory=list)
 
 
 class IdeaWithScore(Idea):

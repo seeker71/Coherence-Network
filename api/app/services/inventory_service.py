@@ -976,6 +976,7 @@ def _build_lineage_question_rows(ideas_response: Any) -> tuple[list[dict[str, An
                 "idea_id": idea.id,
                 "idea_api_path": _idea_api_path(idea.id),
                 "idea_name": idea.name,
+                "idea_type": getattr(getattr(idea, "idea_type", None), "value", "standalone"),
                 "question": q.question,
                 "value_to_whole": q.value_to_whole,
                 "estimated_cost": q.estimated_cost,
@@ -1145,8 +1146,19 @@ def next_highest_roi_task_from_answered_questions(create_task: bool = False) -> 
             "implementation_request_sync": sync_report,
         }
 
+    # Exclude super-ideas from task pickup — they are strategic goals, not actionable.
+    actionable = [
+        row for row in answered
+        if isinstance(row, dict) and str(row.get("idea_type", "standalone")) != "super"
+    ]
+    if not actionable:
+        return {
+            "result": "no_actionable_answered_questions",
+            "detail": "All answered questions belong to super-ideas (strategic goals). Create child-ideas for actionable work.",
+            "implementation_request_sync": sync_report,
+        }
     ranked = sorted(
-        [row for row in answered if isinstance(row, dict)],
+        actionable,
         key=lambda row: (
             -float(row.get("answer_roi") or 0.0),
             -float(row.get("question_roi") or 0.0),

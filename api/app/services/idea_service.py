@@ -14,6 +14,7 @@ from sqlalchemy.pool import NullPool
 
 from app.models.idea import (
     Idea,
+    IdeaType,
     PaginationInfo,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
@@ -42,6 +43,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "resistance_risk": 4.0,
         "confidence": 0.7,
         "manifestation_status": "partial",
+        "idea_type": "super",
+        "child_idea_ids": ["interface-trust-surface", "minimum-e2e-path"],
         "interfaces": ["machine:api", "human:web", "ai:automation"],
         "open_questions": [
             {
@@ -86,6 +89,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "resistance_risk": 2.0,
         "confidence": 0.75,
         "manifestation_status": "partial",
+        "idea_type": "super",
+        "child_idea_ids": ["coherence-signal-depth", "idea-hierarchy-model"],
         "interfaces": ["machine:api", "human:docs", "human:operators"],
         "open_questions": [
             {
@@ -119,6 +124,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "resistance_risk": 3.0,
         "confidence": 0.68,
         "manifestation_status": "partial",
+        "idea_type": "super",
+        "child_idea_ids": ["funder-proof-page"],
         "interfaces": ["human:web", "human:operators", "external:partners"],
         "open_questions": [
             {
@@ -155,6 +162,8 @@ DEFAULT_IDEAS: list[dict[str, Any]] = [
         "resistance_risk": 8.0,
         "confidence": 0.75,
         "manifestation_status": "partial",
+        "idea_type": "child",
+        "parent_idea_id": "portfolio-governance",
         "interfaces": ["machine:api", "human:web", "external:github"],
         "open_questions": [
             {
@@ -245,7 +254,8 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
         "actual_cost": 12.0,
         "confidence": 0.75,
         "manifestation_status": "partial",
-        "sub_ideas": [
+        "idea_type": "super",
+        "child_idea_ids": [
             "agent-prompt-ab-roi",
             "agent-failed-task-diagnostics",
             "agent-auto-heal",
@@ -288,6 +298,69 @@ DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = {
         "potential_value": 86.0,
         "estimated_cost": 15.0,
         "confidence": 0.63,
+    },
+    # --- Child ideas (actionable work items) ---
+    "interface-trust-surface": {
+        "name": "Interface trust surface: 3 critical web-API pairs",
+        "description": (
+            "Ensure health→landing, ideas-list→/ideas page, and idea-detail→/portfolio "
+            "always show matching data. These three pairs are the minimum trust surface "
+            "a first-time user checks."
+        ),
+        "interfaces": ["machine:api", "human:web"],
+        "potential_value": 40.0,
+        "estimated_cost": 6.0,
+        "confidence": 0.70,
+        "idea_type": "child",
+        "parent_idea_id": "oss-interface-alignment",
+    },
+    "minimum-e2e-path": {
+        "name": "Keep minimum e2e value flow always working",
+        "description": (
+            "The path from create-lineage-link → record-usage-event → compute-valuation "
+            "→ payout-preview must never break. This is the smallest proof that the system "
+            "works end-to-end (spec 051)."
+        ),
+        "interfaces": ["machine:api"],
+        "potential_value": 35.0,
+        "estimated_cost": 4.0,
+        "confidence": 0.75,
+        "idea_type": "child",
+        "parent_idea_id": "oss-interface-alignment",
+        "contributing_specs": ["051"],
+    },
+    "funder-proof-page": {
+        "name": "Single-page funder proof from 3 API calls",
+        "description": (
+            "A funder verifies in <60s via: (1) GET /ideas/{id} showing manifestation_status "
+            "partial/validated + actual_value>0, (2) GET /ideas/{id}/grounded-metrics showing "
+            "real adoption signals, (3) GET /value-lineage/{id}/payout-preview showing team "
+            "attribution. Build the page or export that assembles this proof automatically."
+        ),
+        "interfaces": ["human:web", "external:partners"],
+        "potential_value": 45.0,
+        "estimated_cost": 8.0,
+        "confidence": 0.60,
+        "idea_type": "child",
+        "parent_idea_id": "community-project-funder-match",
+        "contributing_specs": ["116"],
+    },
+    "idea-hierarchy-model": {
+        "name": "Idea hierarchy: super-ideas and child-ideas",
+        "description": (
+            "Add idea_type (super/child/standalone) and parent_idea_id to the Idea model. "
+            "Super-ideas are strategic goals excluded from task pickup. Child-ideas are "
+            "actionable work items that agents can execute."
+        ),
+        "interfaces": ["machine:api"],
+        "potential_value": 30.0,
+        "estimated_cost": 5.0,
+        "actual_cost": 3.0,
+        "confidence": 0.80,
+        "manifestation_status": "partial",
+        "idea_type": "child",
+        "parent_idea_id": "portfolio-governance",
+        "contributing_specs": ["117"],
     },
 }
 
