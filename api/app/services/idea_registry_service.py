@@ -20,7 +20,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.models.idea import Idea, IdeaQuestion, ManifestationStatus
+from app.models.idea import Idea, IdeaQuestion, IdeaType, ManifestationStatus
 from app.services.unified_db import Base
 
 
@@ -39,6 +39,10 @@ class IdeaRecord(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     manifestation_status: Mapped[str] = mapped_column(String, nullable=False, default=ManifestationStatus.NONE.value)
     interfaces_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    idea_type: Mapped[str] = mapped_column(String, nullable=False, default="standalone")
+    parent_idea_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    child_idea_ids_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    value_basis_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     questions: Mapped[list["IdeaQuestionRecord"]] = relationship(
         "IdeaQuestionRecord",
@@ -138,6 +142,31 @@ def load_ideas() -> list[Idea]:
         out: list[Idea] = []
         for row in rows:
             questions = sorted(row.questions, key=lambda q: (q.position, q.id))
+            # Parse idea_type safely
+            try:
+                idea_type = IdeaType(row.idea_type) if row.idea_type else IdeaType.STANDALONE
+            except (ValueError, AttributeError):
+                idea_type = IdeaType.STANDALONE
+
+            # Parse child_idea_ids from JSON
+            child_idea_ids: list[str] = []
+            try:
+                raw_children = json.loads(row.child_idea_ids_json or "[]")
+                if isinstance(raw_children, list):
+                    child_idea_ids = [x for x in raw_children if isinstance(x, str)]
+            except (json.JSONDecodeError, AttributeError):
+                pass
+
+            # Parse value_basis from JSON
+            value_basis: dict[str, str] | None = None
+            try:
+                if row.value_basis_json:
+                    raw_vb = json.loads(row.value_basis_json)
+                    if isinstance(raw_vb, dict):
+                        value_basis = raw_vb
+            except (json.JSONDecodeError, AttributeError):
+                pass
+
             out.append(
                 Idea(
                     id=row.id,
@@ -151,6 +180,10 @@ def load_ideas() -> list[Idea]:
                     confidence=float(row.confidence),
                     manifestation_status=ManifestationStatus(row.manifestation_status),
                     interfaces=_load_interfaces(row.interfaces_json),
+                    idea_type=idea_type,
+                    parent_idea_id=getattr(row, "parent_idea_id", None),
+                    child_idea_ids=child_idea_ids,
+                    value_basis=value_basis,
                     open_questions=[
                         IdeaQuestion(
                             question=q.question,
@@ -186,6 +219,10 @@ def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
                 confidence=float(idea.confidence),
                 manifestation_status=idea.manifestation_status.value,
                 interfaces_json=json.dumps(idea.interfaces),
+                idea_type=idea.idea_type.value if idea.idea_type else "standalone",
+                parent_idea_id=idea.parent_idea_id,
+                child_idea_ids_json=json.dumps(idea.child_idea_ids or []),
+                value_basis_json=json.dumps(idea.value_basis) if idea.value_basis else None,
             )
             session.add(idea_row)
 

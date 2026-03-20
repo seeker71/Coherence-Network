@@ -67,6 +67,18 @@ async def test_get_idea_returns_known_derived_runtime_idea(
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Seed the idea into the test DB first (DB is the sole source of truth)
+        created = await client.post("/api/ideas", json={
+            "id": "coherence-network-agent-pipeline",
+            "name": "Agent pipeline: visible, recoverable, and self-healing",
+            "description": "The background work loop picks tasks, executes them, records results, and heals when stuck.",
+            "potential_value": 88.0,
+            "estimated_cost": 16.0,
+            "confidence": 0.95,
+            "interfaces": ["machine:api", "machine:automation", "human:operators"],
+        })
+        assert created.status_code == 201
+
         derived = await client.get("/api/ideas/coherence-network-agent-pipeline")
 
     assert derived.status_code == 200

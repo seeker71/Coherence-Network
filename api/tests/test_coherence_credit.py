@@ -313,39 +313,35 @@ class TestIdeaValueBasis:
 
 class TestSeedData:
     def test_every_idea_has_value_basis(self):
-        """Every idea in seed_ideas.json must have a value_basis entry."""
-        seed_path = Path(__file__).resolve().parent.parent.parent / "data" / "seed_ideas.json"
-        with open(seed_path) as f:
-            data = json.load(f)
+        """Every idea in SEED_IDEAS must have a value_basis entry."""
+        import sys
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(root / "scripts"))
+        from seed_db import SEED_IDEAS
 
         missing = []
-
-        for idea in data["default_ideas"]:
+        for idea in SEED_IDEAS:
             if "value_basis" not in idea or not idea["value_basis"]:
-                missing.append(f"default:{idea['id']}")
-
-        for idea_id, meta in data["derived_metadata"].items():
-            if "value_basis" not in meta or not meta["value_basis"]:
-                missing.append(f"derived:{idea_id}")
+                missing.append(idea["id"])
 
         assert missing == [], f"Ideas missing value_basis: {missing}"
 
     def test_value_basis_has_required_keys(self):
         """Each value_basis should have entries for the standard numeric fields."""
-        seed_path = Path(__file__).resolve().parent.parent.parent / "data" / "seed_ideas.json"
-        with open(seed_path) as f:
-            data = json.load(f)
+        import sys
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(root / "scripts"))
+        from seed_db import SEED_IDEAS
 
         required_keys = {"potential_value", "actual_value", "estimated_cost", "actual_cost", "confidence", "resistance_risk"}
 
         problems = []
-        all_ideas = [(i["id"], i) for i in data["default_ideas"]]
-        all_ideas += [(iid, meta) for iid, meta in data["derived_metadata"].items()]
-
-        for idea_id, idea_data in all_ideas:
-            vb = idea_data.get("value_basis", {})
+        for idea in SEED_IDEAS:
+            vb = idea.get("value_basis", {})
             missing_keys = required_keys - set(vb.keys())
             if missing_keys:
-                problems.append(f"{idea_id} missing: {missing_keys}")
+                problems.append(f"{idea['id']} missing: {missing_keys}")
 
         assert problems == [], f"Value basis key problems: {problems}"

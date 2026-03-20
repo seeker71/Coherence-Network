@@ -196,47 +196,47 @@ class TestSuperIdeaExclusion:
 # ===========================================================================
 
 class TestSeedIdeasHierarchy:
-    """Verify data/seed_ideas.json has correct hierarchy (single source of truth)."""
+    """Verify inline SEED_IDEAS has correct hierarchy (single source of truth)."""
 
     @pytest.fixture(autouse=True)
     def _load_seed(self):
-        import json
+        import sys
         from pathlib import Path
-        seed_path = Path(__file__).resolve().parents[2] / "data" / "seed_ideas.json"
-        with open(seed_path) as f:
-            data = json.load(f)
-        self.default_ideas = data["default_ideas"]
-        self.derived = data["derived_metadata"]
+        root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(root / "scripts"))
+        from seed_db import SEED_IDEAS
+        self.seed_ideas = SEED_IDEAS
+        self._by_id = {s["id"]: s for s in SEED_IDEAS}
 
     def test_portfolio_governance_is_super(self):
-        pg = next(i for i in self.default_ideas if i["id"] == "portfolio-governance")
+        pg = self._by_id["portfolio-governance"]
         assert pg["idea_type"] == "super"
         assert "coherence-signal-depth" in pg["child_idea_ids"]
 
     def test_coherence_signal_depth_is_child(self):
-        csd = next(i for i in self.default_ideas if i["id"] == "coherence-signal-depth")
+        csd = self._by_id["coherence-signal-depth"]
         assert csd["idea_type"] == "child"
         assert csd["parent_idea_id"] == "portfolio-governance"
 
     def test_oss_interface_alignment_is_super(self):
-        oss = next(i for i in self.default_ideas if i["id"] == "oss-interface-alignment")
+        oss = self._by_id["oss-interface-alignment"]
         assert oss["idea_type"] == "super"
         assert "interface-trust-surface" in oss["child_idea_ids"]
         assert "minimum-e2e-path" in oss["child_idea_ids"]
 
     def test_federated_is_standalone(self):
-        """Federation idea has no children yet — stays standalone."""
-        fed = next(i for i in self.default_ideas if i["id"] == "federated-instance-aggregation")
+        """Federation idea has no children yet -- stays standalone."""
+        fed = self._by_id["federated-instance-aggregation"]
         assert fed.get("idea_type", "standalone") == "standalone"
 
     def test_derived_agent_pipeline_is_super(self):
-        pipeline = self.derived["coherence-network-agent-pipeline"]
+        pipeline = self._by_id["coherence-network-agent-pipeline"]
         assert pipeline["idea_type"] == "super"
         assert "agent-prompt-ab-roi" in pipeline["child_idea_ids"]
 
     def test_derived_child_ideas_have_parents(self):
         for child_id in ["interface-trust-surface", "minimum-e2e-path", "funder-proof-page", "idea-hierarchy-model"]:
-            meta = self.derived[child_id]
+            meta = self._by_id[child_id]
             assert meta["idea_type"] == "child", f"{child_id} should be child"
             assert meta.get("parent_idea_id"), f"{child_id} should have parent_idea_id"
 

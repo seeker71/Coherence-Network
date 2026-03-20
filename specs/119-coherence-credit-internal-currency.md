@@ -28,13 +28,13 @@ files_allowed:
   - api/app/services/coherence_credit_service.py
   - api/app/models/idea.py
   - data/exchange_rates.json
-  - data/seed_ideas.json
+  - scripts/seed_db.py
   - api/tests/test_coherence_credit.py
   - specs/119-coherence-credit-internal-currency.md
 done_when:
   - 26 tests pass in test_coherence_credit.py
   - cc_from_usd and usd_from_cc are verified inverses
-  - Every idea in seed_ideas.json has value_basis with 6 required keys
+  - Every idea in SEED_IDEAS (scripts/seed_db.py) has value_basis with 6 required keys
   - Existing tests (test_ideas.py, test_idea_hierarchy.py) pass without regression
 commands:
   - python3 -m pytest api/tests/test_coherence_credit.py -x -v
@@ -100,7 +100,7 @@ Idea (modified):
 - `api/app/services/coherence_credit_service.py` - config loading, conversion functions, vector builders
 - `api/app/models/idea.py` - add value_basis, cost_vector, value_vector fields
 - `data/exchange_rates.json` - default exchange rate config with providers
-- `data/seed_ideas.json` - add value_basis to all ideas
+- `scripts/seed_db.py` - SEED_IDEAS inline constant with value_basis on all ideas
 - `api/tests/test_coherence_credit.py` - 26 tests covering all requirements
 
 ## Acceptance Tests
