@@ -45,3 +45,9 @@ Prefer adding to `api/tests/test_project_manager.py` to mirror `test_load_backlo
 ## Decision Gates (if any)
 
 None.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_project_manager.py -x -v
+```

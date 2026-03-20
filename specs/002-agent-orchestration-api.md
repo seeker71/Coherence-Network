@@ -408,3 +408,9 @@ None for MVP.
 - [003-agent-telegram-decision-loop.md](003-agent-telegram-decision-loop.md) — Telegram webhook integration
 - [docs/MODEL-ROUTING.md](../docs/MODEL-ROUTING.md) — routing table and fallbacks
 - [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — monitor-issues usage
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_integration_api.py -x -v
+```

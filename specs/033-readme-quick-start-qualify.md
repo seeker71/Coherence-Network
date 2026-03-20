@@ -37,3 +37,9 @@ N/A.
 ## Decision Gates (if any)
 
 - None. Doc-only change per spec-driven scope.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_readme_contract.py -x -v
+```

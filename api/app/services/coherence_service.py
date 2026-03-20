@@ -5,7 +5,7 @@ Computes what we can from GraphStore. Components without data use 0.5 (neutral).
 
 from typing import Optional, Protocol
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.adapters.graph_store import Contributor, Organization
 from app.models.project import Project
@@ -70,7 +70,7 @@ def compute_coherence(store: GraphStoreWithDependents, project: Project) -> dict
 
         # activity_cadence: fraction of contributors active in last 90 days
         active = 0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for contrib in contributors:
             if contrib.last_contribution_date:
                 try:

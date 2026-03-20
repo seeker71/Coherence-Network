@@ -7,6 +7,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.mark.asyncio
 async def test_spec_registry_create_list_update(
@@ -28,6 +30,7 @@ async def test_spec_registry_create_list_update(
                 "actual_cost": 4.0,
                 "created_by_contributor_id": "user-1",
             },
+            headers=AUTH_HEADERS,
         )
         assert created.status_code == 201
         created_payload = created.json()
@@ -48,6 +51,7 @@ async def test_spec_registry_create_list_update(
                 "title": "Duplicate",
                 "summary": "Duplicate summary",
             },
+            headers=AUTH_HEADERS,
         )
         assert conflict.status_code == 409
 
@@ -63,6 +67,7 @@ async def test_spec_registry_create_list_update(
                 "actual_cost": 7.5,
                 "updated_by_contributor_id": "user-2",
             },
+            headers=AUTH_HEADERS,
         )
         assert updated.status_code == 200
         payload = updated.json()
@@ -92,6 +97,7 @@ async def test_spec_registry_uses_database_url_fallback(
                 "title": "DB fallback",
                 "summary": "Spec persists through DATABASE_URL.",
             },
+            headers=AUTH_HEADERS,
         )
         assert created.status_code == 201
         listed = await client.get("/api/spec-registry")
@@ -139,7 +145,7 @@ async def test_spec_registry_cards_endpoint_supports_filters_and_sort(
                 "actual_cost": 5.0,
             },
         ):
-            created = await client.post("/api/spec-registry", json=payload)
+            created = await client.post("/api/spec-registry", json=payload, headers=AUTH_HEADERS)
             assert created.status_code == 201
 
         linked = await client.get("/api/spec-registry/cards", params={"linked": "linked", "sort": "roi_desc", "limit": 10})
@@ -187,6 +193,7 @@ async def test_spec_registry_cards_endpoint_uses_cursor_pagination(
                     "actual_value": 0.0,
                     "actual_cost": 0.0,
                 },
+                headers=AUTH_HEADERS,
             )
             assert created.status_code == 201
 

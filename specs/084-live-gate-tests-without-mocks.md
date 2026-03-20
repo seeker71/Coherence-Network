@@ -24,3 +24,9 @@ cd api && pytest -q tests/test_gates.py tests/test_release_gate_service.py
 ## Out of Scope
 - Rewriting every unit test that uses local monkeypatch for pure-function behavior.
 - Refactoring release gate implementation logic.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_gates.py -x -v
+```

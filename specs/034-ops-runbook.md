@@ -49,3 +49,9 @@ N/A.
 ## Decision Gates (if any)
 
 None. Doc-only change.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_runbook.py -x -v
+```

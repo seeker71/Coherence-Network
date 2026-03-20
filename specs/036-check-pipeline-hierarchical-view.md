@@ -49,3 +49,9 @@ N/A. Script aggregates existing API responses and prints (or emits JSON) in hier
 - [PIPELINE-EFFICIENCY-PLAN.md](../docs/PIPELINE-EFFICIENCY-PLAN.md) — §4.3 Hierarchical view, §7 Phase 3.
 - [032-attention-heuristics-pipeline-status.md](032-attention-heuristics-pipeline-status.md) — attention flags.
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — goal status and dashboard.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v
+```

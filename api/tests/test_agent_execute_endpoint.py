@@ -12,6 +12,8 @@ from app.main import app
 from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.fixture(autouse=True)
 def _allow_legacy_unauthenticated_execute_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1219,7 +1221,7 @@ async def test_execution_updates_cost_value_targets(
             "actual_cost": 0.0,
             "idea_id": idea_id,
         }
-        created_spec = await client.post("/api/spec-registry", json=spec_payload)
+        created_spec = await client.post("/api/spec-registry", json=spec_payload, headers=AUTH_HEADERS)
         assert created_spec.status_code == 201
         spec_id = created_spec.json()["spec_id"]
 

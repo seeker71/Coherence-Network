@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.middleware.auth import require_api_key
 from app.services import grounded_idea_metrics_service
 from app.services import idea_service
 
@@ -29,7 +30,7 @@ async def get_idea_grounded_metrics(idea_id: str) -> dict:
 
 
 @router.post("/ideas/{idea_id}/grounded-metrics/sync")
-async def sync_grounded_metrics(idea_id: str) -> dict:
+async def sync_grounded_metrics(idea_id: str, _key: str = Depends(require_api_key)) -> dict:
     """Compute grounded metrics and write them back to the idea."""
     data = grounded_idea_metrics_service.collect_all_data()
     metrics = grounded_idea_metrics_service.compute_idea_metrics(idea_id, **data)
@@ -66,7 +67,7 @@ async def sync_grounded_metrics(idea_id: str) -> dict:
 
 
 @router.post("/ideas/grounded-metrics/sync")
-async def sync_all_grounded_metrics() -> dict:
+async def sync_all_grounded_metrics(_key: str = Depends(require_api_key)) -> dict:
     """Compute and write back grounded metrics for all ideas."""
     data = grounded_idea_metrics_service.collect_all_data()
     idea_ids = idea_service.list_tracked_idea_ids()

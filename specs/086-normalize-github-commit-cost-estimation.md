@@ -29,3 +29,9 @@ cd web && npm ci --cache .npm-cache && npm run build
 ## Out of Scope
 - Backfilling historical contribution records already persisted with inflated cost values.
 - Redesigning payout/distribution weighting formulas.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_contribution_cost_service.py -x -v
+```

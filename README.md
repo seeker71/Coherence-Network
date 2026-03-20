@@ -20,13 +20,52 @@ The repository is currently focused on:
 - **Relational**: PostgreSQL
 - **Data Sources**: deps.dev, Libraries.io, GitHub API
 
-## Quick Start
+## Getting Started
+
+Get from clone to running tests in under 5 minutes.
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 18+
+- PostgreSQL (optional; in-memory store used by default in dev)
+
+### Clone and setup
 
 ```bash
-# API
-cd api && uvicorn app.main:app --reload --port 8000
+git clone https://github.com/seeker71/Coherence-Network.git
+cd Coherence-Network
+pip install -r api/requirements.txt
+```
 
-# Pipeline run (watchdog + restart support)
+### Seed the database
+
+```bash
+python3 scripts/seed_db.py
+python3 scripts/verify_hashes.py
+```
+
+### Run the API
+
+```bash
+cd api && uvicorn app.main:app --reload --port 8000
+```
+
+### Run tests
+
+```bash
+python3 -m pytest api/tests/ -x -q
+```
+
+### Run the web frontend
+
+```bash
+cd web && npm install && npm run dev
+```
+
+### Pipeline run (watchdog + restart support)
+
+```bash
 cd api && ./scripts/run_overnight_pipeline.sh
 ```
 
@@ -54,6 +93,10 @@ Spec → Test → Implement → CI → Review → Merge
 - [Deploy](docs/DEPLOY.md)
 - [Model Routing](docs/MODEL-ROUTING.md)
 - [Glossary](docs/GLOSSARY.md)
+
+## Engineering Workbook
+
+`docs/WORKBOOK.md` tracks all architecture decisions, improvement backlog, and session history.
 
 ## License
 

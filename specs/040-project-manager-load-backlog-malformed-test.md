@@ -46,3 +46,9 @@ N/A. Backlog format: lines matching `^\d+\.\s+(.+)$` are included; other lines a
 ## Decision Gates (if any)
 
 None.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_project_manager.py -x -v
+```

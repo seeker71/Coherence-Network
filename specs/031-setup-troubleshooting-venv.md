@@ -41,3 +41,9 @@ None.
 
 - `specs/006-overnight-backlog.md` — backlog item "Expand docs/SETUP.md: add Troubleshooting section, venv path note for scripts"
 - `specs/TEMPLATE.md` — spec format
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_setup_docs.py -x -v
+```

@@ -64,3 +64,9 @@ Organization:
 
 - Schema change (new node types) — human approve
 - GITHUB_TOKEN in CI — use Actions token; no secrets in code
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_github_client.py -x -v
+```

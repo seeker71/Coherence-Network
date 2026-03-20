@@ -45,3 +45,9 @@ Close the loop on autonomous operation: auto-commit progress so work persists to
 
 - `PIPELINE_AUTO_COMMIT` default off in .env.example; enable in autonomous runs via run_autonomous.
 - `PIPELINE_AUTO_PUSH` default off; human enables only when confident in pipeline quality.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_project_manager.py -x -v
+```
