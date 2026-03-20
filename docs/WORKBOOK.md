@@ -262,6 +262,22 @@ All five specs were updated/created with coherence-first principles:
 | Legal compliance | Get a license first | CC as unit of account (not transmitted currency), deposits as contributions, audit trail IS compliance | 122 |
 | Exit/returns | Governance-gated withdrawal | Deposit returns are a right (cooldown only), governance for pool payouts only | 122, 124 |
 
+### 2026-03-20 — Session 4
+
+**Website redesign — warm, human-first landing page:**
+
+Changes:
+- **Color palette**: Orange primary → amber-gold `hsl(36 72% 58%)`, softened background/foreground, warmed borders
+- **Landing page rewrite** (`web/app/page.tsx`): 6 sections — The Invitation (hero), Three Paths, The Pulse, The Journey, Top Opportunities, First Steps
+- **Ambient glow effects**: Radial gradient light blooms behind hero, `body::before` screen-blend overlays
+- **Animations**: `fadeInUp` with staggered delays, `warmPulse` for living elements, `hover-lift` on cards
+- **Graceful empty states**: "The network is warming up" instead of showing zeros when API is down
+- **Mobile polish**: `font-normal` at small sizes (was `font-light`), stacked header layout for opportunities section
+- **Footer tagline**: "Built on coherence, not control"
+- **Design spec**: `docs/DESIGN.md` — 8 dimensions (emotional principles, color, typography, layout, components, nav, values, micro-interactions)
+
+Commit: `08e2399` — pushed to PR #474
+
 ---
 
 ## 6. What's Next
@@ -286,6 +302,8 @@ All five specs were updated/created with coherence-first principles:
 | N7 | **E2E integration test** — full pipeline: idea → spec → test → implement → validate | M | [ ] |
 | N8 | **Production deployment checklist** — secrets, CORS, monitoring, PostgreSQL migration | M | [ ] |
 | N9 | **Wire specs 121-123 into seed_db.py** — idea mappings, evidence links | S | [ ] |
+| N10 | **Website pass 2** — nav simplification, inner page tone, component warmth, micro-interactions | M | [ ] |
+| N11 | **Website pass 3** — mobile optimization, accessibility audit, image/illustration assets | M | [ ] |
 
 ### Architecture decisions needed
 
