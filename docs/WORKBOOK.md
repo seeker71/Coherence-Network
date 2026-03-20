@@ -280,6 +280,7 @@ Commits pushed to PR #474:
 - `08e2399` — Pass 1: landing page redesign + color palette + design spec
 - `2befb23` — Pass 2: simplified nav (17 → 4 primary items), warmed Ideas page, smoother transitions, button/component polish
 - `c7ca959` — Pass 3: Today + Demo pages redesigned with consistent gradient cards, confidence bars, friendly empty states
+- `a82a469` — Pass 4: All remaining inner pages (tasks, specs, flow, portfolio, contributors) — warm gradient cards, removed breadcrumb navs, friendly copy
 
 ---
 
@@ -307,7 +308,24 @@ Commits pushed to PR #474:
 | N9 | **Wire specs 121-123 into seed_db.py** — idea mappings, evidence links | S | [ ] |
 | N10 | **Website pass 2** — nav simplification, inner page tone, component warmth, micro-interactions | M | [x] |
 | N11 | **Website pass 3** — Today + Demo page warmth, consistent gradient cards, friendly empty states | M | [x] |
-| N12 | **Website pass 4** — remaining inner pages (specs, tasks, contribute, flow), mobile a11y audit | M | [ ] |
+| N12 | **Website pass 4** — remaining inner pages (specs, tasks, contribute, flow, portfolio, contributors) | M | [x] |
+
+### Inspiring ideas (captured for future exploration)
+
+These emerged during the website redesign and represent ways to deepen the coherence-first experience:
+
+| # | Idea | Why it matters |
+|---|---|---|
+| I1 | **Contribution Story Page** — when you click a contributor, show their full journey: ideas sparked, specs reviewed, code shipped, impact measured. Not a profile — a *story*. | Makes contribution feel personal and meaningful, not transactional |
+| I2 | **Ambient Coherence Indicator** — a subtle, living element in the header that pulses with the network's real-time coherence score (treasury coherence, idea coherence, federation coherence). Like a heartbeat. | Makes the abstract concept of "coherence" tangible and ever-present |
+| I3 | **Idea Resonance Visualization** — when viewing an idea, show its "resonance field": who forked it, where it spread, what implementations it inspired. A living graph that grows as the idea spreads. | Makes the value of sharing ideas visually obvious |
+| I4 | **First-Timer Guided Flow** — detect when someone is visiting for the first time and offer a gentle 3-step onboarding: browse one idea, read one review, see one implementation. No signup, no friction. | Reduces barrier to entry from "figure it out" to "follow along" |
+| I5 | **Gratitude Stream** — a lightweight feed showing recent value attribution events: "Alice's idea sparked Bob's implementation which helped 12 users this week". Public, positive, human. | Reinforces the cycle of giving and receiving credit |
+| I6 | **Seasonal Color Themes** — the warm amber-gold palette shifts subtly with seasons: spring green undertones, summer gold, autumn amber (current), winter blue-grey. Keeps the site feeling alive. | Small delight that signals the network is living and evolving |
+| I7 | **Sound Design for Key Moments** — optional, subtle audio cues: a gentle chime when an idea reaches "validated", a warm tone when your contribution gets its first attribution. | Multi-sensory coherence — the network *feels* alive |
+| I8 | **OpenClaw "Idea of the Day"** — surface one high-coherence idea per day in the OpenClaw sidebar. Not a notification — an invitation. If it resonates, one click to explore. | Zero-friction discovery that grows the network organically |
+| I9 | **Trust Thermometer** — on the landing page, show a real-time "transparency score": how many decisions are on-ledger, what % of treasury is verifiable, time since last audit gap. | Makes "trust the math, not us" tangible for investors and contributors |
+| I10 | **Idea Genealogy** — trace the ancestry of any implementation back through its spec, review, and original idea. Show the full lineage as an interactive timeline. Who touched it, when, and what changed. | Makes the value chain visible and beautiful |
 
 ### Architecture decisions needed
 
