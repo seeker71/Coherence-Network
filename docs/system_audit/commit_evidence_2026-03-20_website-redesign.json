@@ -1,0 +1,15 @@
+{
+  "session": "2026-03-20-session-4",
+  "branch": "claude/jolly-curran",
+  "pr": 474,
+  "description": "Warm landing page redesign: amber-gold palette, human-first empty states, mobile polish",
+  "changes": [
+    "web/app/globals.css — new color palette (amber-gold primary), ambient glow backgrounds, animations",
+    "web/app/page.tsx — 6-section landing page with graceful empty states and mobile layout fixes",
+    "docs/DESIGN.md — 8-dimension design specification",
+    "docs/WORKBOOK.md — session 4 log and N10/N11 follow-up tasks",
+    ".claude/launch.json — preview server config"
+  ],
+  "test_impact": "No API test changes; web-only visual redesign",
+  "generated_at": "2026-03-20T19:37:00Z"
+}
