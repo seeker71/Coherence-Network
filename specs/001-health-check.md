@@ -94,3 +94,9 @@ None.
 - [014-deploy-readiness.md](014-deploy-readiness.md) — health probes for deploy
 - [007-sprint-0-landing.md](007-sprint-0-landing.md) — root includes health URL
 - [009-api-error-handling.md](009-api-error-handling.md) — 500 and error shapes
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_health.py -x -v
+```

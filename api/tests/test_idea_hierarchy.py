@@ -205,6 +205,7 @@ class TestSeedIdeasHierarchy:
         root = Path(__file__).resolve().parents[2]
         sys.path.insert(0, str(root / "scripts"))
         from seed_db import SEED_IDEAS
+
         self.seed_ideas = SEED_IDEAS
         self._by_id = {s["id"]: s for s in SEED_IDEAS}
 

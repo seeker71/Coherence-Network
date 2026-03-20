@@ -21,3 +21,9 @@ cd web && npm run build
 ## Out of Scope
 - Rewriting historical stored contribution records.
 - Changing API contribution schemas in this follow-up slice.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_contribution_cost_service.py -x -v
+```

@@ -51,3 +51,8 @@ Current endpoints expose parts of the system independently (`ideas`, `specs`, `v
 1. `cd api && pytest -q tests/test_inventory_api.py`
 2. `cd web && npm run build`
 
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_spec_quality_gate.py -x -v
+```

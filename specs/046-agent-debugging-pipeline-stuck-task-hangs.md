@@ -49,3 +49,9 @@ N/A.
 ## Decision Gates (if any)
 
 None.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_run_state_api.py -x -v
+```

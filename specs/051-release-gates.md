@@ -92,3 +92,9 @@ Automated checks for deployment readiness. Validates that PRs meet quality gates
 - [x] `test_gate_main_head_502_when_unavailable`
 
 All tests passing.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_gates_api.py -x -v
+```

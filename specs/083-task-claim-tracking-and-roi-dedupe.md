@@ -25,3 +25,9 @@ Prevent parallel contributors/agents from working the same ROI-ranked task at th
 ```bash
 cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py tests/test_contributions.py
 ```
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_task_claims.py -x -v
+```

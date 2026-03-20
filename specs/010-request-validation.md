@@ -150,3 +150,9 @@ None.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — agent API and edge-case table
 - [009-api-error-handling.md](009-api-error-handling.md) — error response format
 - [011-pagination.md](011-pagination.md) — limit/offset validation
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_api_error_handling.py -x -v
+```

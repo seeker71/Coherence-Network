@@ -8,12 +8,12 @@ import tempfile
 import pytest
 from fastapi.testclient import TestClient
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.fixture(autouse=True)
 def _isolate_stores(tmp_path, monkeypatch):
-    """Isolate JSON and DB stores for each test."""
-    monkeypatch.setenv("FEDERATION_STORE_PATH", str(tmp_path / "federation.json"))
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    """Isolate DB stores for each test via unified_db."""
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
     # Reset the unified_db engine so it picks up the new path
     from app.services import unified_db
@@ -31,7 +31,7 @@ def _register_instance(client, instance_id="remote-1"):
         "instance_id": instance_id,
         "name": f"Remote Instance {instance_id}",
         "endpoint_url": f"https://{instance_id}.example.com",
-    })
+    }, headers=AUTH_HEADERS)
 
 
 # ---- Instance CRUD ----
@@ -80,7 +80,7 @@ def test_payload_lineage_link_creates_governance_request(client):
             }
         ],
     }
-    resp = client.post("/api/federation/sync", json=payload)
+    resp = client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
     assert resp.status_code == 200
     result = resp.json()
     assert result["links_received"] == 1
@@ -112,7 +112,7 @@ def test_payload_usage_event_creates_governance_request(client):
             }
         ],
     }
-    resp = client.post("/api/federation/sync", json=payload)
+    resp = client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
     assert resp.status_code == 200
     result = resp.json()
     assert result["events_received"] == 1
@@ -133,7 +133,7 @@ def test_unregistered_instance_rejected(client):
         "timestamp": "2026-03-20T00:00:00Z",
         "lineage_links": [{"idea_id": "x", "spec_id": "y", "contributors": {}, "investments": [], "estimated_cost": 1.0}],
     }
-    resp = client.post("/api/federation/sync", json=payload)
+    resp = client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
     assert resp.status_code == 200
     result = resp.json()
     assert len(result["errors"]) > 0
@@ -149,7 +149,7 @@ def test_empty_payload_no_errors(client):
         "source_instance_id": "remote-1",
         "timestamp": "2026-03-20T00:00:00Z",
     }
-    resp = client.post("/api/federation/sync", json=payload)
+    resp = client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
     assert resp.status_code == 200
     result = resp.json()
     assert result["links_received"] == 0
@@ -177,20 +177,27 @@ def test_approve_federation_link_integrates(client):
             }
         ],
     }
-    client.post("/api/federation/sync", json=payload)
+    client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
 
     # Find the governance request
     gov_resp = client.get("/api/governance/change-requests")
     requests = gov_resp.json()
     fed_request = [r for r in requests if r["request_type"] == "federation_import"][0]
 
-    # Approve it
+    # Approve it (federation imports require 2 approvals)
     vote_resp = client.post(
         f"/api/governance/change-requests/{fed_request['id']}/votes",
         json={"voter_id": "admin", "decision": "yes"},
+        headers=AUTH_HEADERS,
     )
     assert vote_resp.status_code == 200
-    updated = vote_resp.json()
+    vote_resp2 = client.post(
+        f"/api/governance/change-requests/{fed_request['id']}/votes",
+        json={"voter_id": "admin2", "decision": "yes"},
+        headers=AUTH_HEADERS,
+    )
+    assert vote_resp2.status_code == 200
+    updated = vote_resp2.json()
     assert updated["status"] in ("approved", "applied")
 
     # Verify the lineage link was created
@@ -234,7 +241,7 @@ def test_sync_history_records_operation(client):
             }
         ],
     }
-    client.post("/api/federation/sync", json=payload)
+    client.post("/api/federation/sync", json=payload, headers=AUTH_HEADERS)
 
     resp = client.get("/api/federation/sync/history")
     assert resp.status_code == 200
@@ -264,11 +271,11 @@ def test_full_round_trip(client):
                 "estimated_cost": 8.0,
             }
         ],
-    })
+    }, headers=AUTH_HEADERS)
     assert sync_resp.status_code == 200
     assert sync_resp.json()["governance_requests_created"] == 1
 
-    # 3. Approve
+    # 3. Approve (federation imports require 2 approvals)
     gov_resp = client.get("/api/governance/change-requests")
     fed_reqs = [r for r in gov_resp.json() if r["request_type"] == "federation_import"]
     assert len(fed_reqs) >= 1
@@ -276,8 +283,15 @@ def test_full_round_trip(client):
     vote_resp = client.post(
         f"/api/governance/change-requests/{fed_reqs[0]['id']}/votes",
         json={"voter_id": "admin", "decision": "yes"},
+        headers=AUTH_HEADERS,
     )
     assert vote_resp.status_code == 200
+    vote_resp2 = client.post(
+        f"/api/governance/change-requests/{fed_reqs[0]['id']}/votes",
+        json={"voter_id": "admin2", "decision": "yes"},
+        headers=AUTH_HEADERS,
+    )
+    assert vote_resp2.status_code == 200
 
     # 4. Verify integrated
     links_resp = client.get("/api/value-lineage/links")

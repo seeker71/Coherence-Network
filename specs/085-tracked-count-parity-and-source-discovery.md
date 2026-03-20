@@ -28,3 +28,9 @@ cd web && npm run build
 ## Out of Scope
 - Backfilling historical usage events that were never recorded.
 - Replacing all runtime storage backends in this change.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_inventory_discovery_sources.py -x -v
+```

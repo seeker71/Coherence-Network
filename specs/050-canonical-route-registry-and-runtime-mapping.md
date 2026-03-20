@@ -30,3 +30,8 @@ Returns canonical API/web routes with milestone metadata and idea linkage.
 - `api/tests/test_inventory_api.py`
 - `api/tests/test_runtime_api.py`
 
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_runtime_api.py -x -v
+```

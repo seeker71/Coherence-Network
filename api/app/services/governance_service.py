@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -299,6 +299,8 @@ def get_change_request(change_request_id: str) -> ChangeRequest | None:
 def create_change_request(data: ChangeRequestCreate) -> ChangeRequest:
     ensure_schema()
     required_approvals = data.required_approvals or _default_required_approvals()
+    if data.request_type == ChangeRequestType.FEDERATION_IMPORT and required_approvals < 2:
+        required_approvals = 2
     request = ChangeRequest(
         request_type=data.request_type,
         title=data.title,
@@ -340,7 +342,7 @@ def _upsert_vote(session: Session, change_request_id: str, data: ChangeRequestVo
         )
         .one_or_none()
     )
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if existing_vote is None:
         session.add(
             ChangeRequestVoteRecord(
@@ -399,7 +401,7 @@ def _apply_approved_change_request(change_request_id: str, request: ChangeReques
             row.applied_result_json = json.dumps(result)
         else:
             row.applied_result_json = json.dumps({"error": error})
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         session.add(row)
         session.flush()
         session.refresh(row)
@@ -418,13 +420,16 @@ def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate) -> ChangeRe
         if row is None:
             return None
 
+        if data.voter_id == row.proposer_id:
+            raise ValueError("Proposer cannot vote on their own change request")
+
         _upsert_vote(session, change_request_id, data)
         session.flush()
         votes, approvals, rejections = _collect_vote_counts(session, change_request_id)
         row.approvals = approvals
         row.rejections = rejections
         row.status = _next_status(row.required_approvals, approvals, rejections).value
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         session.add(row)
         session.flush()
         session.refresh(row)

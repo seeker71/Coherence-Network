@@ -48,6 +48,17 @@ from app.services.telemetry_persistence.models import (  # noqa: F401
 )
 
 # ---------------------------------------------------------------------------
-# Value Lineage and Prompt A/B models will be added here when
-# JSON→DB migration is implemented (Phase 2).
+# Value Lineage models
 # ---------------------------------------------------------------------------
+from app.services.value_lineage_service import (  # noqa: F401
+    LineageLinkRecord,
+    UsageEventRecord,
+)
+
+# ---------------------------------------------------------------------------
+# Federation models
+# ---------------------------------------------------------------------------
+from app.services.federation_service import (  # noqa: F401
+    FederatedInstanceRecord,
+    FederationSyncHistoryRecord,
+)

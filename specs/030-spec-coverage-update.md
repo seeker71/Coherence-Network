@@ -39,3 +39,9 @@ Keep the spec→implementation→test mapping accurate and complete. This spec d
 ## Decision Gates
 
 - None. Documentation-only change.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_spec_coverage_validation.py -x -v
+```

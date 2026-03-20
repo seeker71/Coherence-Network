@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.middleware.auth import require_api_key
 
 from app.models.governance import ChangeRequest, ChangeRequestCreate, ChangeRequestVoteCreate
 from app.services import governance_service
@@ -24,13 +26,16 @@ async def get_change_request(change_request_id: str) -> ChangeRequest:
 
 
 @router.post("/governance/change-requests", response_model=ChangeRequest, status_code=201)
-async def create_change_request(data: ChangeRequestCreate) -> ChangeRequest:
+async def create_change_request(data: ChangeRequestCreate, _key: str = Depends(require_api_key)) -> ChangeRequest:
     return governance_service.create_change_request(data)
 
 
 @router.post("/governance/change-requests/{change_request_id}/votes", response_model=ChangeRequest)
-async def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate) -> ChangeRequest:
-    updated = governance_service.cast_vote(change_request_id, data)
+async def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate, _key: str = Depends(require_api_key)) -> ChangeRequest:
+    try:
+        updated = governance_service.cast_vote(change_request_id, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if updated is None:
         raise HTTPException(status_code=404, detail="Change request not found")
     return updated

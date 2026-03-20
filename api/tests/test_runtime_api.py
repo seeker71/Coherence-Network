@@ -14,6 +14,8 @@ from app.main import app
 from app.models.runtime import IdeaRuntimeSummary, RuntimeEvent, WebViewPerformanceReport, WebViewPerformanceRow
 from app.services import mvp_baseline_service, runtime_service
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = dict(base)
@@ -1549,7 +1551,7 @@ async def test_runtime_endpoint_attention_includes_idea_value_gap(
             "description": "Unified idea portfolio governance",
             "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
             "interfaces": ["machine:api"],
-        })
+        }, headers=AUTH_HEADERS)
 
         created = await client.post(
             "/api/runtime/events",

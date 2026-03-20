@@ -45,3 +45,9 @@ Prefer adding to `api/tests/test_project_manager.py` to mirror other CLI-flag te
 ## Decision Gates (if any)
 
 None.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_project_manager.py -x -v
+```

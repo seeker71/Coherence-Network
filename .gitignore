@@ -57,6 +57,7 @@ out.txt
 
 .deployment_config
 
-# SQLite WAL sidecar files (DB itself is tracked in data/)
+# SQLite databases and WAL sidecar files (regenerate via: python3 scripts/seed_db.py)
+data/*.db
 *.db-wal
 *.db-shm

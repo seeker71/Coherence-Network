@@ -44,3 +44,9 @@ Run at least one task in each phase (spec, impl, test, review) simultaneously, w
 - `api/scripts/monitor_pipeline.py` — add low_phase_coverage rule; reduce interval to 60s
 - `api/app/services/agent_service.py` — optional: add `running_by_phase` to pipeline-status
 - `specs/028-parallel-by-phase-pipeline.md` — this spec
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_parallel_state_writes.py -x -v
+```

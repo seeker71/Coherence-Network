@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Header, Request
@@ -35,14 +36,101 @@ from app.routers import (
     value_lineage,
 )
 from app.routers import agent_grounded_metrics_routes
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
+
+_startup_logger = logging.getLogger("coherence.api.slow")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # -- L1: CORS production warning --
+    _ao = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+    _db = os.getenv("DATABASE_URL", "")
+    if _ao == "http://localhost:3000" and "postgres" in _db:
+        _startup_logger.warning(
+            "CORS_DEFAULT_IN_PRODUCTION ALLOWED_ORIGINS is still 'http://localhost:3000' "
+            "but DATABASE_URL contains 'postgres', indicating a production database. "
+            "Set ALLOWED_ORIGINS to your production domain(s)."
+        )
+
+    # -- Prime hot caches (migrated from @app.on_event('startup')) --
+    try:
+        startup_begin = time.perf_counter()
+        from app.services import (
+            commit_evidence_service,
+            inventory_service,
+            idea_service,
+            spec_registry_service,
+            runtime_service as runtime_cache_service,
+        )
+
+        idea_rows = idea_service.list_ideas().ideas
+        spec_rows = spec_registry_service.list_specs(limit=1000)
+        evidence_rows = commit_evidence_service.list_records(limit=2000)
+        runtime_rows = runtime_cache_service.list_events(
+            limit=2000,
+            since=datetime.now(timezone.utc) - timedelta(hours=24),
+        )
+        store = getattr(app.state, "graph_store", None)
+        contributor_rows = 0
+        contribution_rows = 0
+        asset_rows = 0
+        contributor_payload_rows: list[dict] = []
+        contribution_payload_rows: list[dict] = []
+        asset_payload_rows: list[dict] = []
+        if store is not None:
+            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
+            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
+            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
+            contributor_rows = len(contributor_payload_rows)
+            contribution_rows = len(contribution_payload_rows)
+            asset_rows = len(asset_payload_rows)
+        try:
+            flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
+                runtime_window_seconds=86400,
+                contributor_rows=contributor_payload_rows,
+                contribution_rows=contribution_payload_rows,
+                asset_rows=asset_payload_rows,
+                spec_registry_limit=200,
+                lineage_link_limit=300,
+                usage_event_limit=1200,
+                commit_evidence_limit=500,
+                runtime_event_limit=2000,
+            )
+            if not isinstance(flow_payload, dict):
+                flow_payload = {}
+            flow_items = len(flow_payload.get("items", []))
+        except Exception:
+            _startup_logger.debug("api_startup_flow_cache_failed", exc_info=True)
+            flow_items = 0
+        startup_ms = (time.perf_counter() - startup_begin) * 1000.0
+        _startup_logger.info(
+            "api_startup_cache_warm elapsed_ms=%.2f idea_count=%s spec_count=%s evidence_count=%s runtime_events=%s contributors=%s contributions=%s assets=%s flow_items=%s",
+            startup_ms,
+            len(idea_rows),
+            len(spec_rows),
+            len(evidence_rows),
+            len(runtime_rows),
+            contributor_rows,
+            contribution_rows,
+            asset_rows,
+            flow_items,
+        )
+    except Exception:
+        _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
+
+    yield
+    # shutdown: nothing needed currently
+
 
 app = FastAPI(
     title="Coherence Contribution Network API",
     version="1.0.0",
     description="Spec-driven OSS intelligence platform for contribution tracking, coherence scoring, and fair attribution.",
     contact={"name": "Coherence Network", "url": "https://github.com/coherence-network"},
+    lifespan=lifespan,
     openapi_tags=[
         {"name": "health", "description": "Liveness and readiness probes"},
         {"name": "contributors", "description": "Contributor registry CRUD"},
@@ -219,7 +307,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-Idea-ID"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-API-Key", "X-Idea-ID"],
     expose_headers=["X-Request-ID", "X-Coherence-Runtime-Ms", "X-Coherence-Runtime-Cost-Estimate"],
 )
 
@@ -258,6 +346,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
 # Initialize graph store based on environment
 database_url = os.getenv("DATABASE_URL")
@@ -306,6 +395,26 @@ async def reset_database(x_admin_key: str = Header(None)):
         ]
     }
 
+# ---------------------------------------------------------------------------
+# API Versioning Strategy
+# ---------------------------------------------------------------------------
+# Current state:
+#   - All canonical routes are mounted at the /api/ prefix.
+#   - Legacy /v1/ aliases exist for contributors, assets, contributions, and
+#     distributions (see "Backward compatibility" block below). These aliases
+#     are hidden from the OpenAPI schema (include_in_schema=False).
+#
+# Future versioning:
+#   - Breaking changes will be introduced under a /v2/ prefix. The /v1/ and
+#     /api/ routes will remain unchanged until the deprecation window closes.
+#
+# Deprecation policy:
+#   - Old API versions are supported for a minimum of 6 months after the
+#     successor version reaches general availability.
+#   - Deprecation will be communicated via Deprecation / Sunset response
+#     headers on affected endpoints before removal.
+# ---------------------------------------------------------------------------
+
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
@@ -326,80 +435,12 @@ app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
+# These /v1/ aliases map to the same routers as /api/ and will be maintained
+# for at least 6 months after any future /v2/ release (see versioning strategy above).
 app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
 app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
 app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
-
-
-@app.on_event("startup")
-async def _prime_hot_caches() -> None:
-    try:
-        # Prevent first-user-request spikes from service bootstrap + first-load cache hydration.
-        startup_begin = time.perf_counter()
-        from app.services import (
-            commit_evidence_service,
-            inventory_service,
-            idea_service,
-            spec_registry_service,
-            runtime_service as runtime_cache_service,
-        )
-
-        idea_rows = idea_service.list_ideas().ideas
-        spec_rows = spec_registry_service.list_specs(limit=1000)
-        evidence_rows = commit_evidence_service.list_records(limit=2000)
-        runtime_rows = runtime_cache_service.list_events(
-            limit=2000,
-            since=datetime.now(timezone.utc) - timedelta(hours=24),
-        )
-        store = getattr(app.state, "graph_store", None)
-        contributor_rows = 0
-        contribution_rows = 0
-        asset_rows = 0
-        contributor_payload_rows: list[dict] = []
-        contribution_payload_rows: list[dict] = []
-        asset_payload_rows: list[dict] = []
-        if store is not None:
-            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
-            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
-            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
-            contributor_rows = len(contributor_payload_rows)
-            contribution_rows = len(contribution_payload_rows)
-            asset_rows = len(asset_payload_rows)
-        try:
-            # Warm the expensive flow cache used by web to avoid first-user cold path.
-            flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
-                runtime_window_seconds=86400,
-                contributor_rows=contributor_payload_rows,
-                contribution_rows=contribution_payload_rows,
-                asset_rows=asset_payload_rows,
-                spec_registry_limit=200,
-                lineage_link_limit=300,
-                usage_event_limit=1200,
-                commit_evidence_limit=500,
-                runtime_event_limit=2000,
-            )
-            if not isinstance(flow_payload, dict):
-                flow_payload = {}
-            flow_items = len(flow_payload.get("items", []))
-        except Exception:
-            logger.debug("api_startup_flow_cache_failed", exc_info=True)
-            flow_items = 0
-        startup_ms = (time.perf_counter() - startup_begin) * 1000.0
-        logger.info(
-            "api_startup_cache_warm elapsed_ms=%.2f idea_count=%s spec_count=%s evidence_count=%s runtime_events=%s contributors=%s contributions=%s assets=%s flow_items=%s",
-            startup_ms,
-            len(idea_rows),
-            len(spec_rows),
-            len(evidence_rows),
-            len(runtime_rows),
-            contributor_rows,
-            contribution_rows,
-            asset_rows,
-            flow_items,
-        )
-    except Exception:
-        logger.warning("api_startup_cache_warm_failed", exc_info=True)
 
 
 @app.middleware("http")

@@ -17,3 +17,9 @@ Add a recurring maintainability review that scans architecture quality from top-
 - `api/tests/test_maintainability_audit_service.py`
 - `python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression`
 - Workflow: `.github/workflows/maintainability-architecture-audit.yml`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_maintainability_audit_service.py -x -v
+```

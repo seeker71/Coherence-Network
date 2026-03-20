@@ -6,7 +6,7 @@ import json
 import os
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +156,7 @@ def upsert_record(payload: dict[str, Any], source_file: str = "") -> None:
     body = dict(payload)
     body["_evidence_file"] = normalized_source
     serialized = json.dumps(body, default=str, sort_keys=True)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     with _session() as session:
         row = (
             session.query(CommitEvidenceRecord)

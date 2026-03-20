@@ -12,6 +12,8 @@ from app.main import app
 from app.models.idea import Idea, IdeaWithScore, ManifestationStatus
 from app.services.idea_service import _score, _marginal_cc_return, _with_score
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 # ---------------------------------------------------------------------------
 # Unit tests: scoring functions
@@ -160,11 +162,11 @@ async def test_sort_query_parameter_free_energy(monkeypatch: pytest.MonkeyPatch,
         await client.post("/api/ideas", json={
             "id": "fe-a", "name": "A", "description": "d",
             "potential_value": 50.0, "estimated_cost": 5.0, "confidence": 0.9,
-        })
+        }, headers=AUTH_HEADERS)
         await client.post("/api/ideas", json={
             "id": "fe-b", "name": "B", "description": "d",
             "potential_value": 10.0, "estimated_cost": 20.0, "confidence": 0.3,
-        })
+        }, headers=AUTH_HEADERS)
 
         resp = await client.get("/api/ideas?sort=free_energy")
 
@@ -185,11 +187,11 @@ async def test_sort_query_parameter_marginal_cc(monkeypatch: pytest.MonkeyPatch,
         await client.post("/api/ideas", json={
             "id": "mc-a", "name": "A", "description": "d",
             "potential_value": 100.0, "estimated_cost": 10.0, "confidence": 0.8,
-        })
+        }, headers=AUTH_HEADERS)
         await client.post("/api/ideas", json={
             "id": "mc-b", "name": "B", "description": "d",
             "potential_value": 5.0, "estimated_cost": 20.0, "confidence": 0.3,
-        })
+        }, headers=AUTH_HEADERS)
 
         resp = await client.get("/api/ideas?sort=marginal_cc")
 
@@ -210,7 +212,7 @@ async def test_default_sort_is_free_energy(monkeypatch: pytest.MonkeyPatch, tmp_
         await client.post("/api/ideas", json={
             "id": "def-a", "name": "A", "description": "d",
             "potential_value": 50.0, "estimated_cost": 5.0, "confidence": 0.9,
-        })
+        }, headers=AUTH_HEADERS)
 
         resp_default = await client.get("/api/ideas")
         resp_explicit = await client.get("/api/ideas?sort=free_energy")

@@ -8,6 +8,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.mark.asyncio
 async def test_change_request_vote_applies_idea_create(
@@ -20,6 +22,7 @@ async def test_change_request_vote_applies_idea_create(
         contributor = await client.post(
             "/api/contributors",
             json={"type": "HUMAN", "name": "Alice Smith", "email": "alice@proton.me"},
+            headers=AUTH_HEADERS,
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
@@ -41,18 +44,42 @@ async def test_change_request_vote_applies_idea_create(
                 "proposer_type": "human",
                 "auto_apply_on_approval": True,
             },
+            headers=AUTH_HEADERS,
         )
         assert created.status_code == 201
         request_id = created.json()["id"]
 
-        voted = await client.post(
+        # Proposer cannot vote on their own change request
+        self_vote = await client.post(
             f"/api/governance/change-requests/{request_id}/votes",
             json={
                 "voter_id": contributor_id,
                 "voter_type": "human",
                 "decision": "yes",
+                "rationale": "Self-approve attempt",
+            },
+            headers=AUTH_HEADERS,
+        )
+        assert self_vote.status_code == 400
+
+        # A different reviewer votes to approve
+        reviewer = await client.post(
+            "/api/contributors",
+            json={"type": "HUMAN", "name": "Carol Reviewer", "email": "carol@proton.me"},
+            headers=AUTH_HEADERS,
+        )
+        assert reviewer.status_code == 201
+        reviewer_id = reviewer.json()["id"]
+
+        voted = await client.post(
+            f"/api/governance/change-requests/{request_id}/votes",
+            json={
+                "voter_id": reviewer_id,
+                "voter_type": "human",
+                "decision": "yes",
                 "rationale": "Looks good",
             },
+            headers=AUTH_HEADERS,
         )
         assert voted.status_code == 200
         voted_payload = voted.json()
@@ -76,6 +103,7 @@ async def test_change_request_vote_rejects_spec_update(
         contributor = await client.post(
             "/api/contributors",
             json={"type": "HUMAN", "name": "Bob Builder", "email": "bob@proton.me"},
+            headers=AUTH_HEADERS,
         )
         assert contributor.status_code == 201
         contributor_id = contributor.json()["id"]
@@ -88,6 +116,7 @@ async def test_change_request_vote_rejects_spec_update(
                 "summary": "Seed summary",
                 "created_by_contributor_id": contributor_id,
             },
+            headers=AUTH_HEADERS,
         )
         assert seeded_spec.status_code == 201
 
@@ -104,6 +133,7 @@ async def test_change_request_vote_rejects_spec_update(
                 "proposer_id": contributor_id,
                 "proposer_type": "human",
             },
+            headers=AUTH_HEADERS,
         )
         assert created.status_code == 201
         request_id = created.json()["id"]
@@ -116,6 +146,7 @@ async def test_change_request_vote_rejects_spec_update(
                 "decision": "no",
                 "rationale": "Insufficient evidence",
             },
+            headers=AUTH_HEADERS,
         )
         assert voted.status_code == 200
         payload = voted.json()

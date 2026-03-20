@@ -111,3 +111,9 @@ See `api/tests/test_inventory_api.py`:
 - Auto-fixing missing endpoint mappings
 - Enforcing merge blocks based on traceability thresholds
 - Full web UX for endpoint-level editing
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_spec_coverage_validation.py -x -v
+```

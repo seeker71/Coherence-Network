@@ -13,11 +13,11 @@ import math
 import os
 import random
 import re
+import threading
 import time
 from typing import Any
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
 from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
@@ -66,6 +66,7 @@ STANDING_QUESTION_TEXT = (
     "and make that proof clearer over time?"
 )
 
+_CACHE_LOCK = threading.Lock()
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
@@ -190,15 +191,17 @@ def _should_include_default_tracked_ideas() -> bool:
 
 
 def _invalidate_ideas_cache() -> None:
-    _IDEAS_CACHE["expires_at"] = 0.0
-    _IDEAS_CACHE["items"] = []
-    _IDEAS_CACHE["cache_key"] = ""
+    with _CACHE_LOCK:
+        _IDEAS_CACHE["expires_at"] = 0.0
+        _IDEAS_CACHE["items"] = []
+        _IDEAS_CACHE["cache_key"] = ""
 
 
 def _cache_ideas(ideas: list[Idea]) -> None:
-    _IDEAS_CACHE["items"] = [idea.model_copy(deep=True) for idea in ideas]
-    _IDEAS_CACHE["expires_at"] = time.time() + _IDEAS_CACHE_TTL_SECONDS
-    _IDEAS_CACHE["cache_key"] = _ideas_cache_key()
+    with _CACHE_LOCK:
+        _IDEAS_CACHE["items"] = [idea.model_copy(deep=True) for idea in ideas]
+        _IDEAS_CACHE["expires_at"] = time.time() + _IDEAS_CACHE_TTL_SECONDS
+        _IDEAS_CACHE["cache_key"] = _ideas_cache_key()
 
 
 def _ideas_cache_key() -> str:
@@ -212,16 +215,17 @@ def _ideas_cache_key() -> str:
 
 
 def _read_ideas_cache() -> list[Idea] | None:
-    cache_key = _ideas_cache_key()
-    if (
-        _IDEAS_CACHE.get("cache_key") != cache_key
-        or _IDEAS_CACHE.get("expires_at", 0.0) <= time.time()
-    ):
-        return None
-    cached = _IDEAS_CACHE.get("items")
-    if not isinstance(cached, list):
-        return None
-    return [idea.model_copy(deep=True) for idea in cached]
+    with _CACHE_LOCK:
+        cache_key = _ideas_cache_key()
+        if (
+            _IDEAS_CACHE.get("cache_key") != cache_key
+            or _IDEAS_CACHE.get("expires_at", 0.0) <= time.time()
+        ):
+            return None
+        cached = _IDEAS_CACHE.get("items")
+        if not isinstance(cached, list):
+            return None
+        return [idea.model_copy(deep=True) for idea in cached]
 
 
 def _tracked_idea_ids() -> list[str]:
@@ -230,16 +234,18 @@ def _tracked_idea_ids() -> list[str]:
     now = time.time()
     from app.services import unified_db as _udb
     cache_key = _udb.database_url()
-    if (
-        _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
-        and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
-    ):
-        return list(_TRACKED_IDEA_CACHE.get("idea_ids", []))
+    with _CACHE_LOCK:
+        if (
+            _TRACKED_IDEA_CACHE.get("cache_key") == cache_key
+            and _TRACKED_IDEA_CACHE.get("expires_at", 0.0) > now
+        ):
+            return list(_TRACKED_IDEA_CACHE.get("idea_ids", []))
     idea_ids = _tracked_idea_ids_from_store()
 
-    _TRACKED_IDEA_CACHE["cache_key"] = cache_key
-    _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
-    _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
+    with _CACHE_LOCK:
+        _TRACKED_IDEA_CACHE["cache_key"] = cache_key
+        _TRACKED_IDEA_CACHE["idea_ids"] = idea_ids
+        _TRACKED_IDEA_CACHE["expires_at"] = now + _TRACKED_IDEA_CACHE_TTL_SECONDS
     return idea_ids
 
 
@@ -322,9 +328,7 @@ def _discover_registry_domain_idea_ids() -> list[str]:
 
 
 def _contribution_metadata_idea_ids() -> list[str]:
-    database_url = str(os.getenv("DATABASE_URL", "")).strip()
-    if not database_url:
-        return []
+    from app.services import unified_db as _udb
 
     try:
         contribution_limit_raw = int(str(os.getenv("IDEA_SYNC_CONTRIBUTION_LIMIT", "3000")).strip() or "3000")
@@ -332,28 +336,17 @@ def _contribution_metadata_idea_ids() -> list[str]:
         contribution_limit_raw = 3000
     contribution_limit = max(1, min(contribution_limit_raw, 20000))
 
-    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
-    if database_url.startswith("sqlite"):
-        engine_kwargs["connect_args"] = {"check_same_thread": False}
-        engine_kwargs["poolclass"] = NullPool
-
     rows: list[Any] = []
     try:
-        engine = create_engine(database_url, **engine_kwargs)
-        with engine.connect() as conn:
+        with _udb.session() as session:
             rows = list(
-                conn.execute(
+                session.execute(
                     text("SELECT meta FROM contributions ORDER BY timestamp DESC LIMIT :limit"),
                     {"limit": contribution_limit},
                 )
             )
     except Exception:
         return []
-    finally:
-        try:
-            engine.dispose()
-        except Exception:
-            pass
 
     discovered: set[str] = set()
     for row in rows:
@@ -544,6 +537,12 @@ def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
 def _write_ideas(ideas: list[Idea]) -> None:
     idea_registry_service.save_ideas(ideas)
     _cache_ideas(ideas)
+
+
+def _write_single_idea(idea: Idea, position: int) -> None:
+    """Persist a single idea via upsert instead of rewriting the full list."""
+    idea_registry_service.save_single_idea(idea, position=position)
+    _invalidate_ideas_cache()
 
 
 def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
@@ -909,6 +908,7 @@ def add_question(
 ) -> tuple[IdeaWithScore | None, bool]:
     ideas = _read_ideas()
     updated: Idea | None = None
+    updated_idx: int = -1
     added = False
     normalized = question.strip().lower()
 
@@ -927,6 +927,7 @@ def add_question(
             added = True
         ideas[idx] = idea
         updated = idea
+        updated_idx = idx
         break
 
     if updated is None:
@@ -934,7 +935,7 @@ def add_question(
     if not added:
         return _with_score(updated), False
 
-    _write_ideas(ideas)
+    _write_single_idea(updated, position=updated_idx)
     return _with_score(updated), True
 
 
@@ -955,6 +956,7 @@ def update_idea(
     """
     ideas = _read_ideas()
     updated: Idea | None = None
+    updated_idx: int = -1
 
     for idx, idea in enumerate(ideas):
         if idea.id != idea_id:
@@ -973,12 +975,13 @@ def update_idea(
             idea.estimated_cost = max(0.0, float(estimated_cost))
         ideas[idx] = idea
         updated = idea
+        updated_idx = idx
         break
 
     if updated is None:
         return None
 
-    _write_ideas(ideas)
+    _write_single_idea(updated, position=updated_idx)
     return _with_score(updated)
 
 
@@ -990,6 +993,7 @@ def answer_question(
 ) -> tuple[IdeaWithScore | None, bool]:
     ideas = _read_ideas()
     updated: Idea | None = None
+    updated_idx: int = -1
     question_found = False
 
     for idx, idea in enumerate(ideas):
@@ -1004,6 +1008,7 @@ def answer_question(
                 break
         ideas[idx] = idea
         updated = idea
+        updated_idx = idx
         break
 
     if updated is None:
@@ -1011,7 +1016,7 @@ def answer_question(
     if not question_found:
         return _with_score(updated), False
 
-    _write_ideas(ideas)
+    _write_single_idea(updated, position=updated_idx)
     return _with_score(updated), True
 
 

@@ -4,6 +4,11 @@
 Populates the unified DB with content hashes so the DB and files stay in sync.
 Idempotent — safe to run multiple times.
 
+NOTE: The database file (data/coherence.db) is NOT committed to git.
+After cloning the repository, run this script to create it:
+
+    python3 scripts/seed_db.py
+
 Usage:
     python3 scripts/seed_db.py
 """
@@ -287,7 +292,7 @@ SEED_IDEAS: list[dict] = [
     {
         "id": "coherence-network-api-runtime",
         "name": "API and live system stay in sync",
-        "description": "Every endpoint returns data that matches what the system actually computes at runtime. 12 evidence records. API is functional and deployed, but no automated drift detection between computed and served values.",
+        "description": "Every endpoint returns data that matches what the system actually computes at runtime. Parent idea for focused sub-areas: api-foundation, pipeline-automation, web-ui-ux, deployment-ci-ops, data-storage-migration, agent-orchestration, traceability-provenance, spec-process-governance.",
         "potential_value": 80.0,
         "actual_value": 80.0,
         "estimated_cost": 14.0,
@@ -295,9 +300,18 @@ SEED_IDEAS: list[dict] = [
         "resistance_risk": 0.1,
         "confidence": 0.95,
         "manifestation_status": "validated",
-        "idea_type": "standalone",
+        "idea_type": "super",
         "parent_idea_id": None,
-        "child_idea_ids": [],
+        "child_idea_ids": [
+            "api-foundation",
+            "pipeline-automation",
+            "web-ui-ux",
+            "deployment-ci-ops",
+            "data-storage-migration",
+            "agent-orchestration",
+            "traceability-provenance",
+            "spec-process-governance"
+        ],
         "interfaces": [
             "machine:api",
             "human:web",
@@ -306,11 +320,219 @@ SEED_IDEAS: list[dict] = [
         "open_questions": [],
         "value_basis": {
             "potential_value": "80 = every endpoint returns data that matches what the system actually computes. Eliminates API-runtime drift.",
-            "actual_value": "35 = API is functional and deployed. 12 evidence records. No automated drift detection between computed and served values yet.",
-            "estimated_cost": "14 = 5 CC for drift detection framework + 5 CC for runtime reconciliation + 4 CC for monitoring alerts.",
-            "actual_cost": "6 = estimated from 12 evidence records. API is serving correct data but drift detection is manual.",
-            "confidence": "0.68 = API functional, no automated drift detection. Evidence is limited (12 records vs 134 for agent pipeline).",
-            "resistance_risk": "4.0 = drift detection complexity (2 CC) + runtime reconciliation (1.5 CC) + monitoring infrastructure (0.5 CC)."
+            "actual_value": "80 = Closed: decomposed into 8 focused child ideas covering all 100 formerly-catchall specs.",
+            "estimated_cost": "14 = distributed across 8 child ideas.",
+            "actual_cost": "14 = fully invested across child ideas.",
+            "confidence": "0.95 = validated. All child ideas have specs linked.",
+            "resistance_risk": "0.1 = minimal residual. Decomposition complete."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "api-foundation",
+        "name": "Core API mechanics: health, validation, error handling, pagination",
+        "description": "Foundation API specs covering health checks, error handling, request validation, pagination, algorithm specs, indexing, and core API endpoints. The building blocks every other feature depends on.",
+        "potential_value": 40.0,
+        "actual_value": 40.0,
+        "estimated_cost": 8.0,
+        "actual_cost": 8.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "40 = core API mechanics that every other feature depends on.",
+            "actual_value": "40 = all foundation specs implemented and tested.",
+            "estimated_cost": "8 = across 17 specs for core API building blocks.",
+            "actual_cost": "8 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "pipeline-automation",
+        "name": "Pipeline orchestration, project manager, and task automation",
+        "description": "Specs covering the pipeline lifecycle: project manager backlog, overnight runs, pipeline observability, auto-update, parallel execution, task metrics, effectiveness tracking, and monitoring workflows.",
+        "potential_value": 50.0,
+        "actual_value": 50.0,
+        "estimated_cost": 10.0,
+        "actual_cost": 10.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api", "machine:automation"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "50 = fully automated pipeline with observability and self-updating.",
+            "actual_value": "50 = all pipeline specs implemented.",
+            "estimated_cost": "10 = across 22 pipeline-related specs.",
+            "actual_cost": "10 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "web-ui-ux",
+        "name": "Web pages, UI alignment, and user experience",
+        "description": "Specs covering web skeleton, sprint landing pages, search UI, import stack UI, portfolio cockpit, web-API parity pages, UI overhaul, landing page onboarding, and web build in CI.",
+        "potential_value": 45.0,
+        "actual_value": 45.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 9.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["human:web", "machine:api"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "45 = comprehensive web UI covering all user-facing pages.",
+            "actual_value": "45 = all web specs implemented, 26 Next.js pages.",
+            "estimated_cost": "9 = across 14 web/UI specs.",
+            "actual_cost": "9 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "deployment-ci-ops",
+        "name": "CI pipelines, deploy readiness, ops runbooks, and release gates",
+        "description": "Specs covering CI pipeline setup, deploy readiness, holdout tests, troubleshooting docs, ops runbook, glossary, live gate tests, maintainability, e2e flow gates, provider readiness, Vercel config, and external tools audit.",
+        "potential_value": 42.0,
+        "actual_value": 42.0,
+        "estimated_cost": 8.0,
+        "actual_cost": 8.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["external:github", "external:railway", "machine:api"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "42 = catch broken releases, automate deploy gates, maintain ops knowledge.",
+            "actual_value": "42 = all CI/ops specs implemented.",
+            "estimated_cost": "8 = across 13 CI/ops specs.",
+            "actual_cost": "8 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "data-storage-migration",
+        "name": "Graph store, PostgreSQL migration, and telemetry DB",
+        "description": "Specs covering graph store abstraction, PostgreSQL migration for in-memory stores, persistent store test guards, and runtime telemetry DB precedence.",
+        "potential_value": 30.0,
+        "actual_value": 30.0,
+        "estimated_cost": 6.0,
+        "actual_cost": 6.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "30 = reliable data storage layer with proper abstractions and migration paths.",
+            "actual_value": "30 = all storage specs implemented.",
+            "estimated_cost": "6 = across 4 storage specs.",
+            "actual_cost": "6 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "agent-orchestration",
+        "name": "Agent CLI, interoperability, and execution frameworks",
+        "description": "Specs covering agent orchestration API, Telegram decision loop, unified agent CLI flow, n8n security hardening, Open Responses interoperability, LangGraph state schema, agent lifecycle hooks, and greenfield autonomous intelligence.",
+        "potential_value": 48.0,
+        "actual_value": 48.0,
+        "estimated_cost": 10.0,
+        "actual_cost": 10.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api", "machine:automation", "external:partners"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "48 = agent CLI and interop layer enabling multiple execution frameworks.",
+            "actual_value": "48 = all agent orchestration specs implemented.",
+            "estimated_cost": "10 = across 8 agent orchestration specs.",
+            "actual_cost": "10 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "traceability-provenance",
+        "name": "Lineage tracking, commit provenance, and traceability reports",
+        "description": "Specs covering logging/audit, system lineage inventory, commit provenance gates, runtime intent contracts, traceability reports, tool failure awareness, task claim tracking, count parity, commit cost normalization, and endpoint traceability.",
+        "potential_value": 44.0,
+        "actual_value": 44.0,
+        "estimated_cost": 9.0,
+        "actual_cost": 9.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api", "external:github"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "44 = full traceability from commit to endpoint to value.",
+            "actual_value": "44 = all traceability specs implemented.",
+            "estimated_cost": "9 = across 11 traceability specs.",
+            "actual_cost": "9 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
+        },
+        "contributing_specs": []
+    },
+    {
+        "id": "spec-process-governance",
+        "name": "Spec process visibility, governed change flow, and task sync",
+        "description": "Specs covering the spec-to-implementation validation flow, contributor onboarding with governed change flow, and implementation request to task synchronization.",
+        "potential_value": 25.0,
+        "actual_value": 25.0,
+        "estimated_cost": 5.0,
+        "actual_cost": 5.0,
+        "resistance_risk": 0.1,
+        "confidence": 0.95,
+        "manifestation_status": "validated",
+        "idea_type": "child",
+        "parent_idea_id": "coherence-network-api-runtime",
+        "child_idea_ids": [],
+        "interfaces": ["machine:api", "human:contributors"],
+        "open_questions": [],
+        "value_basis": {
+            "potential_value": "25 = clear spec process with governed change flow.",
+            "actual_value": "25 = all governance specs implemented.",
+            "estimated_cost": "5 = across 3 governance specs.",
+            "actual_cost": "5 = fully invested.",
+            "confidence": "0.95 = validated.",
+            "resistance_risk": "0.1 = minimal."
         },
         "contributing_specs": []
     },
@@ -342,7 +564,7 @@ SEED_IDEAS: list[dict] = [
             "confidence": "0.95 = validated. All specs implemented, tests passing, evidence confirms operational status.",
             "resistance_risk": "0.1 = minimal residual. Implementation complete. Only maintenance risk remains."
         },
-        "contributing_specs": ["048", "115"]
+        "contributing_specs": ["048", "049", "115"]
     },
     {
         "id": "coherence-network-web-interface",
@@ -855,43 +1077,224 @@ def seed_ideas() -> int:
     return len(ideas)
 
 
+
+# ---------------------------------------------------------------------------
+# EXPLICIT_SPEC_IDEA_MAP: deterministic spec_id -> idea_id assignments.
+# Every spec must appear here exactly once.  No keyword guessing.
+# ---------------------------------------------------------------------------
+EXPLICIT_SPEC_IDEA_MAP: dict[str, str] = {
+    # --- api-foundation (17 specs) ---
+    "001-health-check": "api-foundation",
+    "009-api-error-handling": "api-foundation",
+    "010-request-validation": "api-foundation",
+    "011-pagination": "api-foundation",
+    "015-placeholder": "api-foundation",
+    "018-coherence-algorithm-spec": "api-foundation",
+    "020-sprint-2-coherence-api": "api-foundation",
+    "024-pypi-indexing": "api-foundation",
+    "025-requirements-txt-import": "api-foundation",
+    "037-post-tasks-invalid-task-type-422": "api-foundation",
+    "038-post-tasks-empty-direction-422": "api-foundation",
+    "050-canonical-route-registry-and-runtime-mapping": "api-foundation",
+    "050-friction-analysis": "api-foundation",
+    "052-assets-api": "api-foundation",
+    "053-ideas-prioritization": "api-foundation",
+    "053-standing-questions-roi-and-next-task-generation": "api-foundation",
+    "sprint0-graph-foundation-indexer-api": "api-foundation",
+
+    # --- pipeline-automation (22 specs) ---
+    "005-backlog": "pipeline-automation",
+    "005-project-manager-orchestrator": "pipeline-automation",
+    "005-project-manager-pipeline": "pipeline-automation",
+    "006-overnight-backlog": "pipeline-automation",
+    "007-meta-pipeline-backlog": "pipeline-automation",
+    "026-phase-1-task-metrics": "pipeline-automation",
+    "026-pipeline-observability-and-auto-review": "pipeline-automation",
+    "027-auto-update-framework": "pipeline-automation",
+    "027-fully-automated-pipeline": "pipeline-automation",
+    "028-parallel-by-phase-pipeline": "pipeline-automation",
+    "029-github-api-integration": "pipeline-automation",
+    "030-pipeline-full-automation": "pipeline-automation",
+    "030-spec-coverage-update": "pipeline-automation",
+    "032-attention-heuristics-pipeline-status": "pipeline-automation",
+    "036-check-pipeline-hierarchical-view": "pipeline-automation",
+    "039-pipeline-status-empty-state-200": "pipeline-automation",
+    "040-project-manager-load-backlog-malformed-test": "pipeline-automation",
+    "041-project-manager-state-file-flag-test": "pipeline-automation",
+    "042-project-manager-reset-clears-state-test": "pipeline-automation",
+    "043-agent-service-spec-task-type-local-model-test": "pipeline-automation",
+    "044-agent-service-test-task-type-local-model-test": "pipeline-automation",
+    "045-effectiveness-plan-progress-phase-6-7": "pipeline-automation",
+    "046-agent-debugging-pipeline-stuck-task-hangs": "pipeline-automation",
+    "047-heal-completion-issue-resolution": "pipeline-automation",
+    "100-automation-provider-usage-readiness-api": "pipeline-automation",
+    "104-nonblocking-monitoring-workflows": "pipeline-automation",
+    "test-backlog-cursor": "pipeline-automation",
+
+    # --- web-ui-ux (14 specs) ---
+    "007-sprint-0-landing": "web-ui-ux",
+    "008-sprint-1-graph-foundation": "web-ui-ux",
+    "012-web-skeleton": "web-ui-ux",
+    "017-web-ci": "web-ui-ux",
+    "021-web-project-search-ui": "web-ui-ux",
+    "023-web-import-stack-ui": "web-ui-ux",
+    "052-portfolio-cockpit-ui": "web-ui-ux",
+    "072-public-walkable-flow-parity": "interface-trust-surface",
+    "073-walkable-flow-runtime-mismatch-fixes": "interface-trust-surface",
+    "075-web-ideas-specs-usage-pages": "web-ui-ux",
+    "076-ui-alignment-overhaul": "web-ui-ux",
+    "082-landing-page-contributor-onboarding": "web-ui-ux",
+    "091-web-live-refresh-and-link-parity": "web-ui-ux",
+    "092-web-refresh-reliability-and-route-completeness": "web-ui-ux",
+
+    # --- deployment-ci-ops (8 specs) ---
+    "004-ci-pipeline": "deployment-ci-ops",
+    "016-holdout-tests": "deployment-ci-ops",
+    "031-setup-troubleshooting-venv": "deployment-ci-ops",
+    "033-readme-quick-start-qualify": "deployment-ci-ops",
+    "034-ops-runbook": "deployment-ci-ops",
+    "035-glossary": "deployment-ci-ops",
+    "105-disable-vercel-pr-deployments": "deployment-ci-ops",
+    "106-external-tools-audit-stability": "deployment-ci-ops",
+
+    # --- deployment-gate-reliability (5 specs) ---
+    "014-deploy-readiness": "deployment-gate-reliability",
+    "084-live-gate-tests-without-mocks": "deployment-gate-reliability",
+    "090-maintainability-architecture-and-placeholder-gate": "deployment-gate-reliability",
+    "095-public-e2e-flow-gate-automation": "deployment-gate-reliability",
+    "096-provider-readiness-contract-automation": "deployment-gate-reliability",
+
+    # --- data-storage-migration (4 specs) ---
+    "019-graph-store-abstraction": "data-storage-migration",
+    "054-postgresql-migration": "data-storage-migration",
+    "080-persistent-store-test-contributor-guard": "data-storage-migration",
+    "107-runtime-telemetry-db-precedence": "data-storage-migration",
+
+    # --- agent-orchestration (8 specs) ---
+    "002-agent-orchestration-api": "agent-orchestration",
+    "003-agent-telegram-decision-loop": "agent-orchestration",
+    "108-unified-agent-cli-flow-patch-on-fail": "agent-orchestration",
+    "108-n8n-security-and-hitl-hardening": "agent-orchestration",
+    "109-open-responses-interoperability-layer": "agent-orchestration",
+    "110-langgraph-stateschema-adoption": "agent-orchestration",
+    "111-agent-execution-lifecycle-hooks": "agent-orchestration",
+    "111-greenfield-autonomous-intelligence-system": "agent-orchestration",
+
+    # --- traceability-provenance (11 specs) ---
+    "013-logging-audit": "traceability-provenance",
+    "049-system-lineage-inventory-and-runtime-telemetry": "traceability-provenance",
+    "054-commit-provenance-contract-gate": "traceability-provenance",
+    "055-runtime-intent-and-public-e2e-contract-gate": "interface-trust-surface",
+    "056-commit-derived-traceability-report": "traceability-provenance",
+    "074-tool-failure-awareness": "traceability-provenance",
+    "083-task-claim-tracking-and-roi-dedupe": "traceability-provenance",
+    "085-tracked-count-parity-and-source-discovery": "traceability-provenance",
+    "086-normalize-github-commit-cost-estimation": "traceability-provenance",
+    "087-legacy-commit-cost-ui-normalization": "traceability-provenance",
+    "089-endpoint-traceability-coverage": "traceability-provenance",
+
+    # --- spec-process-governance (3 specs) ---
+    "081-implementation-request-question-task-sync": "spec-process-governance",
+    "088-spec-process-implementation-validation-flow": "spec-process-governance",
+    "094-contributor-onboarding-and-governed-change-flow": "spec-process-governance",
+
+    # --- coherence-network-value-attribution (3 specs) ---
+    "048-contributions-api": "coherence-network-value-attribution",
+    "048-value-lineage-and-payout-attribution": "coherence-network-value-attribution",
+    "049-distribution-engine": "coherence-network-value-attribution",
+
+    # --- minimum-e2e-path (2 specs) ---
+    "051-question-answering-and-minimum-e2e-flow": "minimum-e2e-path",
+    "051-release-gates": "minimum-e2e-path",
+
+    # --- coherence-network-web-interface (1 spec) ---
+    "093-web-theme-auto-detection": "coherence-network-web-interface",
+
+    # --- deployment-gate-reliability (1 spec: interface-trust-surface gets its own) ---
+    # (specs assigned via deployment-ci-ops child above)
+
+    # --- agent-prompt-ab-roi (2 specs) ---
+    "112-orchestration-guidance-awareness": "agent-prompt-ab-roi",
+    "112-prompt-ab-roi-measurement": "agent-prompt-ab-roi",
+
+    # --- agent-failed-task-diagnostics (4 specs) ---
+    "113-ai-agent-biweekly-intelligence-feedback-loop": "agent-failed-task-diagnostics",
+    "113-failed-task-diagnostics-contract": "agent-failed-task-diagnostics",
+    "113-provider-usage-coalescing-timeout-resilience": "agent-failed-task-diagnostics",
+    "113-public-validation-gates-api": "agent-failed-task-diagnostics",
+
+    # --- agent-auto-heal (3 specs) ---
+    "114-auto-heal-from-diagnostics": "agent-auto-heal",
+    "114-collective-coherence-resonance-flow-friction-health": "agent-auto-heal",
+    "114-mvp-cost-and-acceptance-proof": "agent-auto-heal",
+
+    # --- agent-grounded-measurement (2 specs) ---
+    "115-grounded-cost-value-measurement": "agent-grounded-measurement",
+    "115-start-gate-continuation-and-hosted-worker-proof": "agent-grounded-measurement",
+
+    # --- funder-proof-page (1 spec) ---
+    "116-grounded-idea-portfolio-metrics": "funder-proof-page",
+
+    # --- idea-hierarchy-model (1 spec) ---
+    "117-idea-hierarchy-super-child": "idea-hierarchy-model",
+
+    # --- unified-sqlite-store (1 spec) ---
+    "118-unified-sqlite-store": "unified-sqlite-store",
+
+    # --- coherence-signal-depth (1 spec) ---
+    "119-coherence-credit-internal-currency": "coherence-signal-depth",
+
+    # --- federated-instance-aggregation (1 spec) ---
+    "120-minimum-federation-layer": "federated-instance-aggregation",
+}
+
+
 def _keyword_match_idea(title: str, content: str) -> str | None:
-    """Return the best-matching idea_id based on keyword rules, or None."""
+    """Fallback keyword matcher for evidence linking only.  Specs use EXPLICIT_SPEC_IDEA_MAP."""
     text = (title + " " + content).lower()
-    # Priority-ordered keyword rules
     rules: list[tuple[list[str], str]] = [
-        (["health", "api", "runtime", "endpoint", "route", "request", "validation", "error"],
-         "coherence-network-api-runtime"),
+        (["pipeline", "backlog", "overnight", "parallel", "auto-update", "observability"],
+         "pipeline-automation"),
         (["web", "ui", "page", "landing", "theme", "refresh", "link parity"],
-         "coherence-network-web-interface"),
-        (["pipeline", "agent", "orchestr", "task", "automation"],
-         "coherence-network-agent-pipeline"),
+         "web-ui-ux"),
+        (["deploy", "ci", "cd", "release", "vercel", "runbook", "holdout"],
+         "deployment-ci-ops"),
+        (["graph store", "postgresql", "migration", "persistent store", "telemetry db"],
+         "data-storage-migration"),
+        (["agent cli", "orchestr", "telegram", "n8n", "interop", "langgraph", "lifecycle hook"],
+         "agent-orchestration"),
+        (["lineage", "provenance", "traceability", "commit cost", "commit-derived"],
+         "traceability-provenance"),
+        (["spec process", "governed change", "task sync"],
+         "spec-process-governance"),
+        (["health check", "validation", "pagination", "error handling", "algorithm"],
+         "api-foundation"),
         (["lineage", "payout", "attribution", "value", "contribution"],
          "coherence-network-value-attribution"),
-        (["deploy", "gate", "ci", "cd", "release", "monitor"],
-         "deployment-gate-reliability"),
-        (["idea", "portfolio", "priorit", "hierarchy", "question"],
-         "idea-hierarchy-model"),
-        (["sqlite", "store", "db", "database", "migration"],
-         "unified-sqlite-store"),
-        (["coherence", "signal", "score", "algorithm"],
-         "coherence-signal-depth"),
-        (["federation", "instance", "remote"],
-         "federated-instance-aggregation"),
-        (["trust", "parity", "interface", "contract"],
-         "interface-trust-surface"),
-        (["cost", "measurement", "grounded", "metric"],
-         "agent-grounded-measurement"),
         (["prompt", "a/b", "roi"],
          "agent-prompt-ab-roi"),
-        (["diagnostic", "fail", "error"],
+        (["diagnostic", "fail"],
          "agent-failed-task-diagnostics"),
         (["heal", "auto-heal", "recover"],
          "agent-auto-heal"),
-        (["fund", "proof", "onboard", "contributor"],
+        (["fund", "proof", "funder"],
          "funder-proof-page"),
         (["e2e", "flow", "minimum"],
          "minimum-e2e-path"),
+        (["federation", "instance", "remote"],
+         "federated-instance-aggregation"),
+        (["coherence", "signal", "score", "grounded"],
+         "coherence-signal-depth"),
+        (["sqlite", "store", "database"],
+         "unified-sqlite-store"),
+        (["hierarchy", "super-idea", "child-idea"],
+         "idea-hierarchy-model"),
+        (["cost", "measurement", "grounded", "metric"],
+         "agent-grounded-measurement"),
+        (["trust", "parity", "interface"],
+         "interface-trust-surface"),
+        (["web", "theme", "refresh"],
+         "coherence-network-web-interface"),
     ]
     for keywords, idea_id in rules:
         for kw in keywords:
@@ -901,67 +1304,33 @@ def _keyword_match_idea(title: str, content: str) -> str | None:
 
 
 def link_specs_to_ideas() -> int:
-    """Link specs to ideas using contributing_specs + keyword matching."""
-    # Phase 1: Build spec_number -> idea_id mapping from contributing_specs
-    number_to_idea: dict[str, str] = {}
-    for seed in SEED_IDEAS:
-        idea_id = seed["id"]
-        for spec_num in seed.get("contributing_specs", []):
-            number_to_idea[spec_num] = idea_id
-
+    """Link specs to ideas using the explicit spec-to-idea map."""
     from app.models.spec_registry import SpecRegistryUpdate
 
-    # Get all specs
     all_specs = spec_registry_service.list_specs(limit=500)
 
-    linked_by_contributing = 0
-    linked_by_keyword = 0
+    linked = 0
     still_unlinked = 0
 
     for spec in all_specs:
         spec_id = spec.spec_id
-        if getattr(spec, "idea_id", None):
-            # Already linked (from a previous run or explicit link)
-            continue
 
-        # Phase 1: Check contributing_specs by matching the numeric prefix
-        prefix_match = re.match(r"^(\d+)", spec_id)
-        matched_idea = None
-        if prefix_match:
-            num = prefix_match.group(1)
-            if num in number_to_idea:
-                matched_idea = number_to_idea[num]
-                linked_by_contributing += 1
-
-        # Phase 2: Keyword matching for unlinked specs
-        if not matched_idea:
-            # Read the spec file content for keyword matching
-            content_path = getattr(spec, "content_path", None)
-            spec_content = ""
-            if content_path:
-                full_path = ROOT / content_path
-                if full_path.exists():
-                    try:
-                        spec_content = full_path.read_text(encoding="utf-8")
-                    except OSError:
-                        pass
-            spec_title = getattr(spec, "title", "") or ""
-            matched_idea = _keyword_match_idea(spec_title, spec_content)
-            if matched_idea:
-                linked_by_keyword += 1
-            else:
-                still_unlinked += 1
+        # Look up in explicit map
+        matched_idea = EXPLICIT_SPEC_IDEA_MAP.get(spec_id)
 
         if matched_idea:
             spec_registry_service.update_spec(
                 spec_id, SpecRegistryUpdate(idea_id=matched_idea)
             )
+            linked += 1
+        else:
+            print(f"    WARNING: no mapping for spec '{spec_id}'")
+            still_unlinked += 1
 
-    print(f"    Linked by contributing_specs: {linked_by_contributing}")
-    print(f"    Linked by keyword matching:   {linked_by_keyword}")
-    print(f"    Still unlinked:               {still_unlinked}")
+    print(f"    Linked by explicit map: {linked}")
+    print(f"    Still unlinked:         {still_unlinked}")
 
-    return linked_by_contributing + linked_by_keyword
+    return linked
 
 
 def link_evidence_to_ideas() -> int:

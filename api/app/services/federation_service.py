@@ -9,10 +9,12 @@ local prioritization.
 from __future__ import annotations
 
 import json
-import os
+from contextlib import contextmanager
 from datetime import datetime
-from pathlib import Path
 from uuid import uuid4
+
+from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.models.federation import (
     FederatedInstance,
@@ -25,53 +27,65 @@ from app.models.governance import (
     ChangeRequestType,
 )
 from app.services import governance_service
+from app.services import unified_db as _udb
+from app.services.unified_db import Base
 
 
 # ---------------------------------------------------------------------------
-# JSON file store (same pattern as value_lineage_service)
+# ORM models
 # ---------------------------------------------------------------------------
 
-def _default_path() -> Path:
-    logs_dir = Path(__file__).resolve().parents[2] / "logs"
-    return logs_dir / "federation.json"
+class FederatedInstanceRecord(Base):
+    __tablename__ = "federation_instances"
+
+    instance_id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    endpoint_url: Mapped[str] = mapped_column(String, nullable=False)
+    public_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    registered_at: Mapped[str] = mapped_column(String, nullable=False)
+    last_sync_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    trust_level: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
 
 
-def _path() -> Path:
-    configured = os.getenv("FEDERATION_STORE_PATH")
-    return Path(configured) if configured else _default_path()
+class FederationSyncHistoryRecord(Base):
+    __tablename__ = "federation_sync_history"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    source_instance_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    timestamp: Mapped[str] = mapped_column(String, nullable=False)
+    links_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    events_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    governance_requests_created: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    accepted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rejected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    received_at: Mapped[str] = mapped_column(String, nullable=False)
 
 
-def _ensure_store() -> None:
-    path = _path()
-    if path.exists():
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"instances": [], "sync_history": []}, indent=2),
-        encoding="utf-8",
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
+
+def _ensure_schema() -> None:
+    _udb.ensure_schema()
+
+
+@contextmanager
+def _session() -> Session:
+    with _udb.session() as s:
+        yield s
+
+
+def _record_to_instance(rec: FederatedInstanceRecord) -> FederatedInstance:
+    return FederatedInstance(
+        instance_id=rec.instance_id,
+        name=rec.name,
+        endpoint_url=rec.endpoint_url,
+        public_key=rec.public_key,
+        registered_at=rec.registered_at,
+        last_sync_at=rec.last_sync_at,
+        trust_level=rec.trust_level,
     )
-
-
-def _read_store() -> dict:
-    _ensure_store()
-    path = _path()
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return {"instances": [], "sync_history": []}
-    if not isinstance(data, dict):
-        return {"instances": [], "sync_history": []}
-    instances = data.get("instances") if isinstance(data.get("instances"), list) else []
-    sync_history = data.get("sync_history") if isinstance(data.get("sync_history"), list) else []
-    return {"instances": instances, "sync_history": sync_history}
-
-
-def _write_store(data: dict) -> None:
-    path = _path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -80,39 +94,46 @@ def _write_store(data: dict) -> None:
 
 def register_instance(instance: FederatedInstance) -> FederatedInstance:
     """Register a remote instance. Overwrites if instance_id already exists."""
-    data = _read_store()
-    # Remove existing entry with same id
-    data["instances"] = [
-        i for i in data["instances"] if i.get("instance_id") != instance.instance_id
-    ]
-    data["instances"].append(instance.model_dump(mode="json"))
-    _write_store(data)
+    _ensure_schema()
+    with _session() as s:
+        existing = s.query(FederatedInstanceRecord).filter_by(instance_id=instance.instance_id).first()
+        if existing:
+            existing.name = instance.name
+            existing.endpoint_url = instance.endpoint_url
+            existing.public_key = instance.public_key
+            existing.registered_at = instance.registered_at
+            existing.last_sync_at = instance.last_sync_at
+            existing.trust_level = instance.trust_level
+        else:
+            rec = FederatedInstanceRecord(
+                instance_id=instance.instance_id,
+                name=instance.name,
+                endpoint_url=instance.endpoint_url,
+                public_key=instance.public_key,
+                registered_at=instance.registered_at,
+                last_sync_at=instance.last_sync_at,
+                trust_level=instance.trust_level,
+            )
+            s.add(rec)
     return instance
 
 
 def list_instances() -> list[FederatedInstance]:
     """List all registered remote instances."""
-    data = _read_store()
-    out: list[FederatedInstance] = []
-    for raw in data["instances"]:
-        try:
-            out.append(FederatedInstance(**raw))
-        except Exception:
-            continue
-    return out
+    _ensure_schema()
+    with _session() as s:
+        recs = s.query(FederatedInstanceRecord).all()
+        return [_record_to_instance(r) for r in recs]
 
 
 def get_instance(instance_id: str) -> FederatedInstance | None:
     """Get a single registered instance by ID."""
-    data = _read_store()
-    for raw in data["instances"]:
-        try:
-            inst = FederatedInstance(**raw)
-        except Exception:
-            continue
-        if inst.instance_id == instance_id:
-            return inst
-    return None
+    _ensure_schema()
+    with _session() as s:
+        rec = s.query(FederatedInstanceRecord).filter_by(instance_id=instance_id).first()
+        if rec is None:
+            return None
+        return _record_to_instance(rec)
 
 
 # ---------------------------------------------------------------------------
@@ -194,20 +215,21 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
     register_instance(instance)
 
     # 5. Store payload for audit
-    data = _read_store()
-    data["sync_history"].append({
-        "id": f"sync_{uuid4().hex[:12]}",
-        "source_instance_id": payload.source_instance_id,
-        "timestamp": payload.timestamp,
-        "links_received": result.links_received,
-        "events_received": result.events_received,
-        "governance_requests_created": result.governance_requests_created,
-        "accepted": result.accepted,
-        "rejected": result.rejected,
-        "errors": result.errors,
-        "received_at": datetime.now().isoformat(),
-    })
-    _write_store(data)
+    now_iso = datetime.now().isoformat()
+    with _session() as s:
+        rec = FederationSyncHistoryRecord(
+            id=f"sync_{uuid4().hex[:12]}",
+            source_instance_id=payload.source_instance_id,
+            timestamp=payload.timestamp,
+            links_received=result.links_received,
+            events_received=result.events_received,
+            governance_requests_created=result.governance_requests_created,
+            accepted=result.accepted,
+            rejected=result.rejected,
+            errors_json=json.dumps(result.errors),
+            received_at=now_iso,
+        )
+        s.add(rec)
 
     return result
 
@@ -218,10 +240,30 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
 
 def list_sync_history(limit: int = 200) -> list[dict]:
     """Return past sync operations."""
-    data = _read_store()
-    history = data.get("sync_history", [])
-    history.sort(key=lambda x: x.get("received_at", ""), reverse=True)
-    return history[:max(1, min(limit, 1000))]
+    _ensure_schema()
+    effective_limit = max(1, min(limit, 1000))
+    with _session() as s:
+        recs = (
+            s.query(FederationSyncHistoryRecord)
+            .order_by(FederationSyncHistoryRecord.received_at.desc())
+            .limit(effective_limit)
+            .all()
+        )
+        return [
+            {
+                "id": r.id,
+                "source_instance_id": r.source_instance_id,
+                "timestamp": r.timestamp,
+                "links_received": r.links_received,
+                "events_received": r.events_received,
+                "governance_requests_created": r.governance_requests_created,
+                "accepted": r.accepted,
+                "rejected": r.rejected,
+                "errors": json.loads(r.errors_json),
+                "received_at": r.received_at,
+            }
+            for r in recs
+        ]
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services import persistence_contract_service
+from app.services import unified_db
 
 router = APIRouter()
 
@@ -51,44 +52,34 @@ def _deployed_sha() -> tuple[str | None, str | None]:
     return None, None
 
 
-class HealthResponse(BaseModel):
+class _BaseHealthResponse(BaseModel):
+    """Shared fields for health and readiness responses."""
+
+    model_config = ConfigDict(extra="forbid")
+    status: Annotated[str, Field(description="Service status")]
+    version: Annotated[str, Field(description="Semver MAJOR.MINOR.PATCH")]
+    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
+    started_at: Annotated[str, Field(description="ISO8601 UTC when service process started")]
+    uptime_seconds: Annotated[int, Field(description="Seconds service has been up")]
+    uptime_human: Annotated[str, Field(description="Human readable uptime")]
+    deployed_sha: Annotated[
+        str | None,
+        Field(description="Deployed commit SHA when available from runtime environment"),
+    ] = None
+    deployed_sha_source: Annotated[
+        str | None,
+        Field(description="Environment variable source for deployed_sha"),
+    ] = None
+
+
+class HealthResponse(_BaseHealthResponse):
     """GET /api/health response."""
-
-    model_config = ConfigDict(extra="forbid")
-    status: Annotated[str, Field(description="Always 'ok'")]
-    version: Annotated[str, Field(description="Semver MAJOR.MINOR.PATCH")]
-    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
-    started_at: Annotated[str, Field(description="ISO8601 UTC when service process started")]
-    uptime_seconds: Annotated[int, Field(description="Seconds service has been up")]
-    uptime_human: Annotated[str, Field(description="Human readable uptime")]
-    deployed_sha: Annotated[
-        str | None,
-        Field(description="Deployed commit SHA when available from runtime environment"),
-    ] = None
-    deployed_sha_source: Annotated[
-        str | None,
-        Field(description="Environment variable source for deployed_sha"),
-    ] = None
+    pass
 
 
-class ReadyResponse(BaseModel):
+class ReadyResponse(_BaseHealthResponse):
     """GET /api/ready response."""
-
-    model_config = ConfigDict(extra="forbid")
-    status: Annotated[str, Field(description="Always 'ready'")]
-    version: Annotated[str, Field(description="Semver MAJOR.MINOR.PATCH")]
-    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
-    started_at: Annotated[str, Field(description="ISO8601 UTC when service process started")]
-    uptime_seconds: Annotated[int, Field(description="Seconds service has been up")]
-    uptime_human: Annotated[str, Field(description="Human readable uptime")]
-    deployed_sha: Annotated[
-        str | None,
-        Field(description="Deployed commit SHA when available from runtime environment"),
-    ] = None
-    deployed_sha_source: Annotated[
-        str | None,
-        Field(description="Environment variable source for deployed_sha"),
-    ] = None
+    db_connected: Annotated[bool, Field(description="Whether the database is reachable")] = False
 
 
 @router.get("/version")
@@ -116,6 +107,14 @@ async def ready(request: Request):
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
     deployed_sha, deployed_sha_source = _deployed_sha()
+    db_connected = False
+    try:
+        from sqlalchemy import text as _text
+        with unified_db.session() as sess:
+            sess.execute(_text("SELECT 1"))
+        db_connected = True
+    except Exception:
+        pass
     return ReadyResponse(
         status="ready",
         version=HEALTH_VERSION,
@@ -125,6 +124,7 @@ async def ready(request: Request):
         uptime_human=_uptime_human(up),
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
+        db_connected=db_connected,
     )
 
 

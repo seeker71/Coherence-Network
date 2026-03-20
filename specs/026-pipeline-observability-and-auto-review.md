@@ -107,3 +107,9 @@ TaskMetric:
 - [docs/AGENT-DEBUGGING.md](../docs/AGENT-DEBUGGING.md) — Pipeline troubleshooting
 - [docs/SPEC-COVERAGE.md](../docs/SPEC-COVERAGE.md) — Spec→impl mapping
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — Pipeline phases
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v
+```

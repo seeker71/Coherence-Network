@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.middleware.auth import require_api_key
 
 from app.models.idea import (
     IdeaCreate,
@@ -105,6 +107,7 @@ async def select_idea(
     temperature: float = Query(1.0, ge=0.0, le=5.0, description="0=deterministic, 1=proportional, 2+=explore"),
     exclude: str = Query("", description="Comma-separated idea IDs to exclude"),
     seed: int | None = Query(None, description="RNG seed for reproducibility"),
+    _key: str = Depends(require_api_key),
 ) -> IdeaSelectionResult:
     """Weighted stochastic idea selection.
 
@@ -134,7 +137,7 @@ async def get_idea(idea_id: str) -> IdeaWithScore:
 
 
 @router.post("/ideas", response_model=IdeaWithScore, status_code=201)
-async def create_idea(data: IdeaCreate) -> IdeaWithScore:
+async def create_idea(data: IdeaCreate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     created = idea_service.create_idea(
         idea_id=data.id,
         name=data.name,
@@ -159,7 +162,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
 
 
 @router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)
-async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
+async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     if all(
         field is None
         for field in (
@@ -184,7 +187,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate) -> IdeaWithScore:
 
 
 @router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
-async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithScore:
+async def add_idea_question(idea_id: str, data: IdeaQuestionCreate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     updated, added = idea_service.add_question(
         idea_id=idea_id,
         question=data.question,
@@ -199,7 +202,7 @@ async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithS
 
 
 @router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore)
-async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate) -> IdeaWithScore:
+async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     updated, question_found = idea_service.answer_question(
         idea_id=idea_id,
         question=data.question,

@@ -84,3 +84,9 @@ TaskMetricRecord:
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — Parent spec; Phases 2–6.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — Agent API; GET /api/agent/metrics listed there.
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Backlog item: Implement spec 026 Phase 1.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
+```

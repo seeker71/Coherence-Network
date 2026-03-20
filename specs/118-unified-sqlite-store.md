@@ -97,3 +97,9 @@ Each phase is independently deployable and backward compatible.
 - [ ] Postgres sync mechanism (export SQLite → import Postgres)
 - [ ] Schema migration tooling (alembic or manual versioning)
 - [ ] Drop legacy env vars after transition period
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_schema_init_fastpath.py -x -v
+```

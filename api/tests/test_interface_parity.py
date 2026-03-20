@@ -19,6 +19,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 # ── helpers ──────────────────────────────────────────────────────────
 
@@ -39,7 +41,7 @@ async def _seed_idea(client: AsyncClient, idea_id: str = "parity-test-1") -> dic
                 "estimated_cost": 2.0,
             }
         ],
-    })
+    }, headers=AUTH_HEADERS)
     assert resp.status_code == 201, f"Seed failed: {resp.status_code} {resp.text}"
     return resp.json()
 

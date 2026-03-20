@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -34,8 +34,8 @@ class SpecRegistryRecord(Base):
     implementation_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_contributor_id: Mapped[str | None] = mapped_column(String, nullable=True)
     updated_by_contributor_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     content_path: Mapped[str | None] = mapped_column(String, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
@@ -117,8 +117,15 @@ def _ensure_runtime_columns(engine: Any) -> None:
     missing = {name: ddl for name, ddl in required.items() if name not in existing}
     if not missing:
         return
+    _ALLOWED_DDL_TYPES = {
+        "FLOAT NOT NULL DEFAULT 0.0",
+        "VARCHAR NULL",
+        "VARCHAR(64) NULL",
+    }
     with engine.begin() as conn:
         for name, ddl in missing.items():
+            assert name.isidentifier(), f"Invalid column name: {name}"
+            assert ddl in _ALLOWED_DDL_TYPES, f"Invalid DDL type: {ddl}"
             conn.execute(text(f"ALTER TABLE spec_registry_entries ADD COLUMN {name} {ddl}"))
 
 
@@ -207,7 +214,7 @@ def get_spec(spec_id: str) -> SpecRegistryEntry | None:
 
 def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
     ensure_schema()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     with _session() as session:
         existing = session.get(SpecRegistryRecord, data.spec_id)
         if existing is not None:
@@ -270,7 +277,7 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
             row.content_path = data.content_path
         if data.content_hash is not None:
             row.content_hash = data.content_hash
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         session.add(row)
         session.flush()
         session.refresh(row)

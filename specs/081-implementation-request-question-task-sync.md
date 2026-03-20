@@ -19,3 +19,9 @@ Ensure implementation-request questions are never dropped by converting them int
 ```bash
 cd api && pytest -q tests/test_inventory_api.py
 ```
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
+```

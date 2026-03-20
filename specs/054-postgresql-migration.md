@@ -350,3 +350,9 @@ class AgentTask(BaseModel):
 - [PostgreSQL best practices](https://wiki.postgresql.org/wiki/Don%27t_Do_This)
 - [FastAPI with databases](https://fastapi.tiangolo.com/advanced/async-sql-databases/)
 - See detailed implementation plan: `docs/POSTGRESQL-MIGRATION.md`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_metrics_db_migration.py -x -v
+```

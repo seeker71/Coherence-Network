@@ -20,3 +20,9 @@ Allow the system to derive idea/spec/implementation traceability from a commit S
 
 ## Validation
 - `cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_release_gate_service.py tests/test_gates.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_commit_evidence_registry_service.py -x -v
+```

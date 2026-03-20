@@ -23,3 +23,9 @@ Prevent test contributors from polluting persistent contributor data.
 ```bash
 cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py
 ```
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_contributor_hygiene.py -x -v
+```

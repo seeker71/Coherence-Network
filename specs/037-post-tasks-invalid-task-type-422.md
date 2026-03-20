@@ -66,3 +66,9 @@ None. Adding or expanding this test does not require new dependencies or API con
 - [009-api-error-handling.md](009-api-error-handling.md) — 422 format, acceptance tests for 422 on invalid task_type
 - [010-request-validation.md](010-request-validation.md) — task_type enum, validation rules, test names
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — POST /api/agent/tasks contract and test list
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
+```

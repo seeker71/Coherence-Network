@@ -5,10 +5,19 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
+
+def _isolate_db(tmp_path, monkeypatch):
+    """Point unified_db at a temp SQLite database for test isolation."""
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "test_ideas.json"))
+    from app.services import unified_db
+    unified_db.reset_engine()
+
 
 @pytest.mark.asyncio
 async def test_create_and_get_lineage_link(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     payload = {
         "idea_id": "oss-interface-alignment",
@@ -24,7 +33,7 @@ async def test_create_and_get_lineage_link(tmp_path, monkeypatch: pytest.MonkeyP
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/value-lineage/links", json=payload)
+        created = await client.post("/api/value-lineage/links", json=payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         link = created.json()
         assert link["idea_id"] == payload["idea_id"]
@@ -38,7 +47,7 @@ async def test_create_and_get_lineage_link(tmp_path, monkeypatch: pytest.MonkeyP
 
 @pytest.mark.asyncio
 async def test_usage_events_roll_up_to_valuation(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     payload = {
         "idea_id": "portfolio-governance",
@@ -49,18 +58,20 @@ async def test_usage_events_roll_up_to_valuation(tmp_path, monkeypatch: pytest.M
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/value-lineage/links", json=payload)
+        created = await client.post("/api/value-lineage/links", json=payload, headers=AUTH_HEADERS)
         lineage_id = created.json()["id"]
 
         ev1 = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "api", "metric": "adoption_events", "value": 40.0},
+            headers=AUTH_HEADERS,
         )
         assert ev1.status_code == 201
 
         ev2 = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "web", "metric": "validated_flows", "value": 10.0},
+            headers=AUTH_HEADERS,
         )
         assert ev2.status_code == 201
 
@@ -75,7 +86,7 @@ async def test_usage_events_roll_up_to_valuation(tmp_path, monkeypatch: pytest.M
 
 @pytest.mark.asyncio
 async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     payload = {
         "idea_id": "coherence-signal-depth",
@@ -91,18 +102,20 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/value-lineage/links", json=payload)
+        created = await client.post("/api/value-lineage/links", json=payload, headers=AUTH_HEADERS)
         lineage_id = created.json()["id"]
 
         ev = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "api", "metric": "adoption_events", "value": 100.0},
+            headers=AUTH_HEADERS,
         )
         assert ev.status_code == 201
 
         payout = await client.post(
             f"/api/value-lineage/links/{lineage_id}/payout-preview",
             json={"payout_pool": 1000.0},
+            headers=AUTH_HEADERS,
         )
         assert payout.status_code == 200
         data = payout.json()
@@ -138,7 +151,7 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
 
 @pytest.mark.asyncio
 async def test_payout_preview_supports_stage_investments(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     payload = {
         "idea_id": "coherence-energy-balance",
@@ -183,19 +196,21 @@ async def test_payout_preview_supports_stage_investments(tmp_path, monkeypatch: 
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/value-lineage/links", json=payload)
+        created = await client.post("/api/value-lineage/links", json=payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         lineage_id = created.json()["id"]
 
         usage = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "api", "metric": "adoption_events", "value": 120.0},
+            headers=AUTH_HEADERS,
         )
         assert usage.status_code == 201
 
         payout = await client.post(
             f"/api/value-lineage/links/{lineage_id}/payout-preview",
             json={"payout_pool": 1000.0},
+            headers=AUTH_HEADERS,
         )
         assert payout.status_code == 200
         data = payout.json()
@@ -216,7 +231,7 @@ async def test_payout_preview_supports_stage_investments(tmp_path, monkeypatch: 
 
 @pytest.mark.asyncio
 async def test_lineage_404_contract(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         missing = await client.get("/api/value-lineage/links/does-not-exist")
@@ -226,6 +241,7 @@ async def test_lineage_404_contract(tmp_path, monkeypatch: pytest.MonkeyPatch) -
         missing_usage = await client.post(
             "/api/value-lineage/links/does-not-exist/usage-events",
             json={"source": "api", "metric": "x", "value": 1.0},
+            headers=AUTH_HEADERS,
         )
         assert missing_usage.status_code == 404
         assert missing_usage.json()["detail"] == "Lineage link not found"
@@ -233,10 +249,10 @@ async def test_lineage_404_contract(tmp_path, monkeypatch: pytest.MonkeyPatch) -
 
 @pytest.mark.asyncio
 async def test_minimum_e2e_flow_endpoint(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        run = await client.post("/api/value-lineage/minimum-e2e-flow")
+        run = await client.post("/api/value-lineage/minimum-e2e-flow", headers=AUTH_HEADERS)
         assert run.status_code == 200
         data = run.json()
         assert data["lineage_id"].startswith("lnk_")
@@ -251,7 +267,7 @@ async def test_minimum_e2e_flow_endpoint(tmp_path, monkeypatch: pytest.MonkeyPat
 async def test_list_links_endpoint_returns_links_newest_first(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
+    _isolate_db(tmp_path, monkeypatch)
 
     payload_a = {
         "idea_id": "portfolio-governance",
@@ -269,9 +285,9 @@ async def test_list_links_endpoint_returns_links_newest_first(
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created_a = await client.post("/api/value-lineage/links", json=payload_a)
+        created_a = await client.post("/api/value-lineage/links", json=payload_a, headers=AUTH_HEADERS)
         assert created_a.status_code == 201
-        created_b = await client.post("/api/value-lineage/links", json=payload_b)
+        created_b = await client.post("/api/value-lineage/links", json=payload_b, headers=AUTH_HEADERS)
         assert created_b.status_code == 201
 
         listed = await client.get("/api/value-lineage/links")
