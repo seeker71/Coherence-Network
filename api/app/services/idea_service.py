@@ -20,6 +20,7 @@ from typing import Any
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
+from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
     Idea,
     IdeaSelectionResult,
@@ -555,7 +556,9 @@ def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], b
 
 
 def _score(idea: Idea) -> float:
-    denom = max(idea.estimated_cost + idea.resistance_risk, 0.0001)
+    # Floor of 0.5 CC prevents astronomically inflated scores if both
+    # estimated_cost and resistance_risk are near-zero.
+    denom = max(idea.estimated_cost + idea.resistance_risk, 0.5)
     return (idea.potential_value * idea.confidence) / denom
 
 
@@ -572,13 +575,49 @@ def _marginal_cc_return(idea: Idea) -> float:
     return (value_gap * conf * conf) / (remaining_cost + rr * 0.5)
 
 
+def _build_cost_vector(idea: Idea) -> CostVector:
+    """Decompose estimated_cost into CC resource types."""
+    ec = idea.estimated_cost or 0.0
+    return CostVector(
+        compute_cc=round(ec * 0.60, 4),
+        infrastructure_cc=round(ec * 0.15, 4),
+        human_attention_cc=round(ec * 0.25, 4),
+        opportunity_cc=0.0,
+        external_cc=0.0,
+        total_cc=round(ec, 4),
+    )
+
+
+def _build_value_vector(idea: Idea) -> ValueVector:
+    """Decompose potential_value into CC value types."""
+    pv = idea.potential_value or 0.0
+    return ValueVector(
+        adoption_cc=round(pv * 0.50, 4),
+        lineage_cc=round(pv * 0.30, 4),
+        friction_avoided_cc=round(pv * 0.20, 4),
+        revenue_cc=0.0,
+        total_cc=round(pv, 4),
+    )
+
+
 def _with_score(idea: Idea) -> IdeaWithScore:
     value_gap = max(idea.potential_value - idea.actual_value, 0.0)
+    remaining_cost_cc = round(max((idea.estimated_cost or 0.0) - (idea.actual_cost or 0.0), 0.0), 4)
+    value_gap_cc = round(value_gap, 4)
+    roi_cc = round(value_gap_cc / remaining_cost_cc, 4) if remaining_cost_cc > 0 else 0.0
+    cost_vector = idea.cost_vector or _build_cost_vector(idea)
+    value_vector = idea.value_vector or _build_value_vector(idea)
+    data = idea.model_dump()
+    data["cost_vector"] = cost_vector.model_dump()
+    data["value_vector"] = value_vector.model_dump()
     return IdeaWithScore(
-        **idea.model_dump(),
+        **data,
         free_energy_score=round(_score(idea), 4),
         value_gap=round(value_gap, 4),
         marginal_cc_score=round(_marginal_cc_return(idea), 4),
+        remaining_cost_cc=remaining_cost_cc,
+        value_gap_cc=value_gap_cc,
+        roi_cc=roi_cc,
     )
 
 
@@ -790,6 +829,15 @@ def create_idea(
     confidence: float = 0.5,
     interfaces: list[str] | None = None,
     open_questions: list[IdeaQuestionCreate] | None = None,
+    *,
+    actual_value: float | None = None,
+    actual_cost: float | None = None,
+    resistance_risk: float | None = None,
+    idea_type: IdeaType | None = None,
+    parent_idea_id: str | None = None,
+    child_idea_ids: list[str] | None = None,
+    manifestation_status: ManifestationStatus | None = None,
+    value_basis: dict[str, str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas()
     if any(existing.id == idea_id for existing in ideas):
@@ -800,12 +848,16 @@ def create_idea(
         name=name,
         description=description,
         potential_value=potential_value,
-        actual_value=0.0,
+        actual_value=actual_value if actual_value is not None else 0.0,
         estimated_cost=estimated_cost,
-        actual_cost=0.0,
-        resistance_risk=1.0,
+        actual_cost=actual_cost if actual_cost is not None else 0.5,   # Design/description cost floor (0.5 CC)
+        resistance_risk=resistance_risk if resistance_risk is not None else 2.5,  # Unknown ideas assume moderate risk
         confidence=max(0.0, min(confidence, 1.0)),
-        manifestation_status=ManifestationStatus.NONE,
+        manifestation_status=manifestation_status or ManifestationStatus.NONE,
+        idea_type=idea_type or IdeaType.STANDALONE,
+        parent_idea_id=parent_idea_id,
+        child_idea_ids=child_idea_ids or [],
+        value_basis=value_basis,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(

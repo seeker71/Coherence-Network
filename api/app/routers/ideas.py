@@ -144,6 +144,14 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         confidence=data.confidence,
         interfaces=data.interfaces,
         open_questions=data.open_questions,
+        actual_value=data.actual_value,
+        actual_cost=data.actual_cost,
+        resistance_risk=data.resistance_risk,
+        idea_type=data.idea_type,
+        parent_idea_id=data.parent_idea_id,
+        child_idea_ids=data.child_idea_ids,
+        manifestation_status=data.manifestation_status,
+        value_basis=data.value_basis,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")

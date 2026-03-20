@@ -37,12 +37,25 @@ async def sync_grounded_metrics(idea_id: str) -> dict:
     if not metrics:
         raise HTTPException(status_code=404, detail=f"No data found for idea {idea_id}")
 
-    updated = idea_service.update_idea(
-        idea_id,
-        actual_value=metrics["computed_actual_value"],
-        actual_cost=metrics["computed_actual_cost"],
-        confidence=metrics["computed_confidence"],
-    )
+    # Regression guard: never overwrite a positive curated value with zero.
+    # Grounded metrics may return 0 when data sources are empty, but the
+    # idea may already have a hand-entered or previously-computed value.
+    current = idea_service.get_idea(idea_id)
+    sync_values: dict = {}
+    computed_av = metrics["computed_actual_value"]
+    computed_ac = metrics["computed_actual_cost"]
+    computed_conf = metrics["computed_confidence"]
+
+    if current:
+        sync_values["actual_value"] = max(computed_av, current.actual_value)
+        sync_values["actual_cost"] = max(computed_ac, current.actual_cost)
+        sync_values["confidence"] = max(computed_conf, current.confidence)
+    else:
+        sync_values["actual_value"] = computed_av
+        sync_values["actual_cost"] = computed_ac
+        sync_values["confidence"] = computed_conf
+
+    updated = idea_service.update_idea(idea_id, **sync_values)
 
     return {
         "idea_id": idea_id,
@@ -64,11 +77,23 @@ async def sync_all_grounded_metrics() -> dict:
         metrics = grounded_idea_metrics_service.compute_idea_metrics(idea_id, **data)
         if not metrics:
             continue
+        # Regression guard: never overwrite positive curated values with zero
+        current = idea_service.get_idea(idea_id)
+        computed_av = metrics["computed_actual_value"]
+        computed_ac = metrics["computed_actual_cost"]
+        computed_conf = metrics["computed_confidence"]
+        if current:
+            sync_av = max(computed_av, current.actual_value)
+            sync_ac = max(computed_ac, current.actual_cost)
+            sync_conf = max(computed_conf, current.confidence)
+        else:
+            sync_av, sync_ac, sync_conf = computed_av, computed_ac, computed_conf
+
         updated = idea_service.update_idea(
             idea_id,
-            actual_value=metrics["computed_actual_value"],
-            actual_cost=metrics["computed_actual_cost"],
-            confidence=metrics["computed_confidence"],
+            actual_value=sync_av,
+            actual_cost=sync_ac,
+            confidence=sync_conf,
         )
         results.append({
             "idea_id": idea_id,
