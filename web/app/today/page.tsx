@@ -162,136 +162,146 @@ export default async function TodayPrioritiesPage() {
           };
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-6xl space-y-6">
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-7 space-y-3">
-          <p className="text-sm text-muted-foreground">Your one-page work view</p>
-          <h1 className="text-3xl font-semibold tracking-tight">What To Focus On Today</h1>
-          <p className="max-w-3xl text-muted-foreground">
-            One screen for the best next work, what is blocked, and where to go to keep momentum.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/ideas" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Ideas
-            </Link>
-            <Link href="/tasks" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Work
-            </Link>
-            <Link href="/flow" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Progress
-            </Link>
-            <Link href="/demo" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
-              Demo Path
-            </Link>
-          </div>
-        </section>
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-6xl mx-auto space-y-8">
+      {/* Hero */}
+      <section className="space-y-3">
+        <p className="text-sm text-muted-foreground">Your one-page work view</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">
+          What To Focus On Today
+        </h1>
+        <p className="max-w-3xl text-muted-foreground leading-relaxed">
+          One screen for the best next work, what is blocked, and where to go to keep momentum.
+        </p>
+      </section>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-          <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Ideas to consider</p>
-            <p className="text-xl font-semibold">{formatCount(topIdeas.length)}</p>
-          </div>
-          <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Work in progress</p>
-            <p className="text-xl font-semibold">{formatCount(activeTasks.length)}</p>
-          </div>
-          <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Needs attention</p>
-            <p className="text-xl font-semibold">{formatCount(blockedTasks.length)}</p>
-          </div>
-          <div className="rounded-xl border p-3">
-            <p className="text-muted-foreground">Best upside today</p>
-            <p className="text-xl font-semibold">{formatUsd(topIdea?.value_gap || 0)}</p>
-          </div>
-        </section>
+      {/* Stats */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+          <p className="text-sm text-muted-foreground">Ideas to consider</p>
+          <p className="text-2xl font-light text-primary">{formatCount(topIdeas.length)}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+          <p className="text-sm text-muted-foreground">Work in progress</p>
+          <p className="text-2xl font-light text-primary">{formatCount(activeTasks.length)}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+          <p className="text-sm text-muted-foreground">Needs attention</p>
+          <p className="text-2xl font-light text-primary">{formatCount(blockedTasks.length)}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+          <p className="text-sm text-muted-foreground">Best upside today</p>
+          <p className="text-2xl font-light text-primary">{formatUsd(topIdea?.value_gap || 0)}</p>
+        </div>
+      </section>
 
-        <section className="rounded-xl border p-4 space-y-2">
-          <h2 className="text-lg font-semibold">Best Next Move</h2>
-          <p className="font-medium">{mainNextAction.title}</p>
-          <p className="text-sm text-muted-foreground">{mainNextAction.detail}</p>
-          <Link href={mainNextAction.href} className="inline-block rounded border px-3 py-1.5 text-sm hover:bg-accent">
-            {mainNextAction.cta}
-          </Link>
-        </section>
+      {/* Best Next Move */}
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 md:p-8 space-y-3">
+        <h2 className="text-xl font-medium">Best Next Move</h2>
+        <p className="font-medium text-foreground/90">{mainNextAction.title}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{mainNextAction.detail}</p>
+        <Link
+          href={mainNextAction.href}
+          className="inline-block text-sm text-primary hover:text-foreground transition-colors duration-300"
+        >
+          {mainNextAction.cta} &rarr;
+        </Link>
+      </section>
 
-        {topIdea ? (
-          <TodayTopIdeaQuickLaunch ideaId={topIdea.id} ideaName={topIdea.name} />
-        ) : null}
+      {topIdea ? (
+        <TodayTopIdeaQuickLaunch ideaId={topIdea.id} ideaName={topIdea.name} />
+      ) : null}
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <article className="rounded-xl border p-4 space-y-3">
-            <h2 className="text-lg font-semibold">Best Places To Make Progress</h2>
-            {topIdeas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No ideas available yet.</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {topIdeas.map((idea) => (
-                  <li key={idea.id} className="rounded border p-3 space-y-1">
+      {/* Two-column: Ideas + Tasks */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4">
+          <h2 className="text-xl font-medium">Best Places To Make Progress</h2>
+          {topIdeas.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No ideas available yet. Once the API is running, top ideas will appear here.</p>
+          ) : (
+            <div className="space-y-3">
+              {topIdeas.map((idea) => (
+                <div key={idea.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
+                  <Link
+                    href={`/ideas/${encodeURIComponent(idea.id)}`}
+                    className="font-medium hover:text-primary transition-colors duration-300"
+                    title={`Idea ID: ${idea.id}`}
+                  >
+                    {idea.name}
+                  </Link>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{shortText(idea.description, 140)}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary/60"
+                        style={{ width: `${Math.min(idea.confidence * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatConfidence(idea.confidence)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground/80">
+                    {humanizeIdeaPriority(idea.free_energy_score)} &middot; {proofLabel(idea.manifestation_status)} &middot; {formatUsd(idea.value_gap)} available
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm">
                     <Link
                       href={`/ideas/${encodeURIComponent(idea.id)}`}
-                      className="font-medium underline hover:text-foreground"
+                      className="text-primary hover:text-foreground transition-colors duration-300"
                       title={`Idea ID: ${idea.id}`}
                     >
-                      {idea.name}
+                      Open idea &rarr;
                     </Link>
-                    <p className="text-muted-foreground">{shortText(idea.description, 140)}</p>
-                    <p className="text-muted-foreground">
-                      {humanizeIdeaPriority(idea.free_energy_score)} | {proofLabel(idea.manifestation_status)} | Confidence {formatConfidence(idea.confidence)}
-                    </p>
-                    <p className="text-muted-foreground">{explainIdeaPriority(idea.free_energy_score)}</p>
-                    <p className="text-muted-foreground">Value still available {formatUsd(idea.value_gap)}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground" title={`Idea ID: ${idea.id}`}>
-                        Open idea
-                      </Link>
-                      <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="underline hover:text-foreground" title={`Idea ID: ${idea.id}`}>
-                        Open progress
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-
-          <article className="rounded-xl border p-4 space-y-3">
-            <h2 className="text-lg font-semibold">Work That Needs Attention</h2>
-            {tasksToReview.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tasks available yet.</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {tasksToReview.map((task) => (
-                  <li key={task.id} className="rounded border p-3 space-y-1">
                     <Link
-                      href={`/tasks?task_id=${encodeURIComponent(task.id)}`}
-                      className="font-medium underline hover:text-foreground"
-                      title={`Task ID: ${task.id}`}
+                      href={`/flow?idea_id=${encodeURIComponent(idea.id)}`}
+                      className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+                      title={`Idea ID: ${idea.id}`}
                     >
-                      {humanizeStatus(task.status)} {workTypeLabel(task.task_type)}
+                      View progress
                     </Link>
-                    <p className="text-muted-foreground">{shortText(task.direction, 140)}</p>
-                    <p className="text-muted-foreground">
-                      Idea: {task.ideaName}
-                      {task.ideaId ? (
-                        <>
-                          {" "}|{" "}
-                          <Link
-                            href={`/ideas/${encodeURIComponent(task.ideaId)}`}
-                            className="underline hover:text-foreground"
-                            title={`Idea ID: ${task.ideaId}`}
-                          >
-                            Open idea
-                          </Link>
-                        </>
-                      ) : null}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        </section>
-      </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4">
+          <h2 className="text-xl font-medium">Work That Needs Attention</h2>
+          {tasksToReview.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No tasks available yet. Work cards appear here when tasks are created.</p>
+          ) : (
+            <div className="space-y-3">
+              {tasksToReview.map((task) => (
+                <div key={task.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
+                  <Link
+                    href={`/tasks?task_id=${encodeURIComponent(task.id)}`}
+                    className="font-medium hover:text-primary transition-colors duration-300"
+                    title={`Task ID: ${task.id}`}
+                  >
+                    {humanizeStatus(task.status)} {workTypeLabel(task.task_type)}
+                  </Link>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{shortText(task.direction, 140)}</p>
+                  <p className="text-xs text-muted-foreground/80">
+                    Idea: {task.ideaName}
+                    {task.ideaId ? (
+                      <>
+                        {" "}&middot;{" "}
+                        <Link
+                          href={`/ideas/${encodeURIComponent(task.ideaId)}`}
+                          className="text-primary hover:text-foreground transition-colors duration-300"
+                          title={`Idea ID: ${task.ideaId}`}
+                        >
+                          Open idea
+                        </Link>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
     </main>
   );
 }
