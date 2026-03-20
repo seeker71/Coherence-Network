@@ -10,7 +10,7 @@
 | Metric | Value |
 |---|---|
 | Ideas | 19/19 validated (1,170/1,172 CC) |
-| Specs on disk | 124 (was 121, +spec 121 marketplace + 122 treasury + 123 audit) |
+| Specs on disk | 126 (was 121, +121 marketplace, 122 treasury, 123 audit, 124 CC economics, 125 incident response) |
 | Specs in DB | 119/119 linked to ideas (100%) |
 | Evidence records | 306 (302 linked to ideas, 99%) |
 | Standing questions | 8/8 answered (100%) |
@@ -241,6 +241,26 @@ Fixes applied:
 | 121 | **OpenClaw Idea Marketplace** — cross-instance publish/browse/fork, CC reputation attribution, quality gates, federation protocol |
 | 122 | **Crypto Treasury Bridge** — BTC/ETH deposits → CC minting, governance-approved withdrawals, 100% reserve, multisig, exchange rate oracle |
 | 123 | **Transparent Audit Ledger** — append-only hash-chained ledger, public query API, signed snapshots, tamper detection, zero hidden state |
+
+**Coherence-first design philosophy applied to specs 121-125:**
+
+All five specs were updated/created with coherence-first principles:
+- **Resonance mechanics** (121): Ideas flow through natural selection — forks are the signal, no algorithmic boost, dead ideas fade naturally
+- **Coherence-first design principles** (122): Transparency as compliance, deposit capital always returnable, friction proportional to risk
+- **Coherence verification** (123): Continuous treasury/idea/federation coherence scoring, no quarterly audits
+- **CC economics** (124): Value appreciation through proven impact, staking into real outcomes, no lock-ups, no artificial scarcity
+- **Incident response** (125): Graduated coherence degradation, key compromise protocol, oracle circuit breaker, self-healing audit, no silent failures
+
+**Investor readiness gaps addressed:**
+
+| Gap | Traditional Approach | Coherence-First Approach | Spec |
+|---|---|---|---|
+| Proof of reserves | Quarterly audit by trusted third party | Continuous coherence score, public treasury addresses, anyone can verify | 122, 123 |
+| Revenue model | Artificial demand, tokenomics games | 1% transparent spread, real demand from publishing/staking/compute | 124 |
+| Key compromise | Hope it doesn't happen | Emergency freeze (single-signer), lockdown, rotate, audit, unfreeze | 125 |
+| Oracle manipulation | Trust the feed | 20% circuit breaker, frozen rate, 3 clean reads to resume | 125 |
+| Legal compliance | Get a license first | CC as unit of account (not transmitted currency), deposits as contributions, audit trail IS compliance | 122 |
+| Exit/returns | Governance-gated withdrawal | Deposit returns are a right (cooldown only), governance for pool payouts only | 122, 124 |
 
 ---
 

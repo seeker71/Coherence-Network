@@ -7,6 +7,20 @@
 
 The Coherence Network currently operates as a single-instance knowledge system. OpenClaw is a multi-user collaborative platform whose users generate, refine, and implement ideas. This spec turns the Coherence Network into a shared knowledge layer for OpenClaw by enabling any OpenClaw user to publish ideas into a cross-instance marketplace, browse and fork ideas from other users, and receive CC-denominated reputation credit when their ideas are adopted downstream. The marketplace uses the existing federation protocol (spec 120) for cross-instance sync and the value lineage service (spec 048) to trace adoption evidence back to original authors. Without this, ideas stay siloed inside individual instances and contributors receive no measurable credit for the spread of their work.
 
+## Resonance Mechanics
+
+Ideas flow through the marketplace based on resonance — natural selection by the network, not curation by a committee.
+
+1. **Publishing is permissionless with quality gates** — Any idea with confidence ≥ 0.3 and at least one evidence-backed value basis can be published. No approval committee. The quality gate ensures minimum coherence, not editorial judgment.
+
+2. **Forking is the signal** — When someone forks your idea, builds on it, and generates evidence of value, that's resonance. The attribution flows back automatically through the value lineage (spec 048). Popular ideas naturally accumulate more CC attribution.
+
+3. **No promotion, no featuring, no algorithmic boost** — The browse endpoint returns ideas sorted by actual evidence-backed metrics (fork count, total downstream value, coherence score). There's no "featured" section, no paid placement, no engagement optimization. The sorting IS the curation.
+
+4. **Dead ideas fade naturally** — Ideas with no forks, no evidence, and declining confidence lose visibility in browse results over time. They're never deleted (transparency), but they naturally sink. No manual archiving needed.
+
+5. **Cross-instance resonance** — When an idea published on instance A is forked on instance B and generates value on instance C, the attribution chain is fully traceable across all three instances via the federation protocol. The network's coherence spans instances.
+
 ## Requirements
 
 - [ ] **R1: Idea publishing** -- An authenticated OpenClaw user can publish an existing Idea to the marketplace via `POST /api/marketplace/publish`. The published listing includes the idea's id, name, description, author identity (instance + user), potential_value, estimated_cost, confidence, tags, and a content hash for integrity verification.

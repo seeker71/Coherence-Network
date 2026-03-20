@@ -26,6 +26,28 @@ The Coherence Network handles CC-denominated value flows, governance decisions, 
 - [ ] **R11: Write-only service interface** -- The audit ledger exposes an internal `append_entry()` function used by other services (treasury, marketplace, governance, idea service). This function is write-only: no service can read-then-modify. Each call returns the new entry's hash for caller confirmation.
 - [ ] **R12: Tamper detection alert** -- If `GET /api/audit/verify` detects a broken hash chain, the system logs a CRITICAL alert, pauses all CC-affecting operations, and sets a system-wide `integrity_compromised` flag queryable via `GET /api/health`.
 
+## Coherence Verification
+
+The audit ledger enables continuous coherence verification — the system's ability to prove its own consistency at any time.
+
+### Treasury Coherence Score
+- Computed on every CC mint/burn: `score = treasury_value_usd / (total_cc_supply × cc_usd_rate)`
+- Published at `GET /api/audit/coherence-score`
+- Score must be ≥ 1.0 at all times (100% reserve)
+- If score drops below 1.0: all CC operations pause, health endpoint reports `integrity: degraded`, alert emitted
+- Historical scores stored in audit ledger for trend analysis
+
+### Idea Value Coherence
+- Each idea's `actual_value` must be backed by evidence (usage events, contribution records)
+- Coherence check: `sum(evidence_value) >= claimed_actual_value` for every idea with status=validated
+- Published at `GET /api/audit/idea-coherence`
+- Ideas that fail coherence check are flagged but not hidden — transparency over aesthetics
+
+### Cross-Instance Coherence (Federation)
+- When a federated instance reports CC attribution, the local audit ledger must have a matching entry
+- Orphaned attributions (remote claims with no local evidence) are flagged at `GET /api/audit/federation-coherence`
+- Resolution: either produce evidence or zero out the attribution. No silent mismatches.
+
 ## Research Inputs (Required)
 
 - `2026-03-18` - Spec 119 Coherence Credit -- CC transaction types that must be audited
