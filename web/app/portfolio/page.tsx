@@ -135,39 +135,37 @@ export default function PortfolioPage() {
   }
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div>
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Coherence Network
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Portfolio Cockpit</h1>
-      <p className="text-muted-foreground">
-        Human interface for ROI-first idea governance: unanswered questions, runtime cost, and value gap.
-      </p>
-      <div className="flex flex-wrap gap-2 text-sm">
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground underline">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground underline">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground underline">
-          Assets
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground underline">
-          Tasks
-        </Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground underline">
-          Ideas
-        </Link>
-        <Link href="/specs" className="text-muted-foreground hover:text-foreground underline">
-          Specs
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground underline">
-          Usage
-        </Link>
-      </div>
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
+        <p className="text-sm text-muted-foreground">Portfolio</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Portfolio Overview</h1>
+        <p className="max-w-3xl text-muted-foreground">
+          Track idea governance at a glance: unanswered questions, runtime cost, and value gaps across the portfolio.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/contributors" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Contributors
+          </Link>
+          <Link href="/contributions" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Contributions
+          </Link>
+          <Link href="/assets" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Assets
+          </Link>
+          <Link href="/tasks" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Tasks
+          </Link>
+          <Link href="/ideas" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Ideas
+          </Link>
+          <Link href="/specs" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Specs
+          </Link>
+          <Link href="/usage" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Usage
+          </Link>
+        </div>
+      </section>
 
       {status === "loading" && <p className="text-muted-foreground">Loading portfolio data…</p>}
       {status === "error" && error && <p className="text-destructive">Error: {error}</p>}
@@ -175,29 +173,29 @@ export default function PortfolioPage() {
       {status === "ok" && inventory && (
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div className="rounded border p-3">
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
               <p className="text-muted-foreground">Ideas in portfolio</p>
-              <p className="text-lg font-semibold">{inventory.ideas.summary.total_ideas}</p>
+              <p className="text-2xl font-light text-primary">{inventory.ideas.summary.total_ideas}</p>
             </div>
-            <div className="rounded border p-3">
-              <p className="text-muted-foreground">Tracked idea ids</p>
-              <p className="text-lg font-semibold">{inventory.tracking.tracked_idea_ids_count}</p>
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+              <p className="text-muted-foreground">Tracked ideas</p>
+              <p className="text-2xl font-light text-primary">{inventory.tracking.tracked_idea_ids_count}</p>
             </div>
-            <div className="rounded border p-3">
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
               <p className="text-muted-foreground">Specs discovered</p>
-              <p className="text-lg font-semibold">{inventory.specs.count}</p>
+              <p className="text-2xl font-light text-primary">{inventory.specs.count}</p>
             </div>
-            <div className="rounded border p-3">
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
               <p className="text-muted-foreground">Usage events</p>
-              <p className="text-lg font-semibold">{inventory.implementation_usage.usage_events_count}</p>
+              <p className="text-2xl font-light text-primary">{inventory.implementation_usage.usage_events_count}</p>
             </div>
           </section>
 
           {storage && (
-            <section className="rounded border p-3 text-sm">
-              <p className="font-semibold">Structured tracking backend</p>
+            <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 text-sm space-y-1">
+              <p className="text-xl font-medium">Tracking Backend</p>
               <p className="text-muted-foreground">
-                backend {storage.backend} | ideas {storage.idea_count} | questions {storage.question_count} | bootstrap{" "}
+                {storage.backend} | {storage.idea_count} ideas | {storage.question_count} questions | bootstrap{" "}
                 {storage.bootstrap_source}
               </p>
               <p className="text-xs text-muted-foreground break-all">source {storage.database_url}</p>
@@ -205,21 +203,21 @@ export default function PortfolioPage() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            spec source {inventory.specs.source} | runtime_events {inventory.tracking.runtime_events_count} | unanswered_questions{" "}
-            {inventory.questions.unanswered_count} | value_gap {inventory.ideas.summary.total_value_gap}
+            Spec source: {inventory.specs.source} | Runtime events: {inventory.tracking.runtime_events_count} | Unanswered questions:{" "}
+            {inventory.questions.unanswered_count} | Value gap: {inventory.ideas.summary.total_value_gap}
           </p>
 
-          <section className="rounded border p-4 space-y-3">
-            <h2 className="font-semibold">Top Unanswered Questions (ROI-ordered)</h2>
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+            <h2 className="text-xl font-medium">Top Unanswered Questions</h2>
             {inventory.questions.unanswered.length === 0 && (
-              <p className="text-sm text-muted-foreground">No open questions. Add new high-value questions.</p>
+              <p className="text-sm text-muted-foreground">No open questions yet. Add new high-value questions to get started.</p>
             )}
             <ul className="space-y-3">
               {inventory.questions.unanswered.map((q) => {
                 const key = `${q.idea_id}::${q.question}`;
                 const roi = q.estimated_cost > 0 ? q.value_to_whole / q.estimated_cost : 0;
                 return (
-                  <li key={key} className="rounded border p-3 space-y-2">
+                  <li key={key} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
                     <p className="font-medium">{q.question}</p>
                     <p className="text-sm text-muted-foreground">
                       idea:{" "}
@@ -253,11 +251,11 @@ export default function PortfolioPage() {
             </ul>
           </section>
 
-          <section className="rounded border p-4 space-y-2">
-            <h2 className="font-semibold">Runtime Cost by Idea (24h)</h2>
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
+            <h2 className="text-xl font-medium">Runtime Cost by Idea (24h)</h2>
             <ul className="space-y-2 text-sm">
               {topRuntime.map((row) => (
-                <li key={row.idea_id} className="flex justify-between rounded border p-2">
+                <li key={row.idea_id} className="flex justify-between rounded-xl border border-border/20 bg-background/40 p-4">
                   <span>{row.idea_id}</span>
                   <span className="text-muted-foreground">
                     events {row.event_count} | runtime {row.total_runtime_ms.toFixed(2)}ms | cost $

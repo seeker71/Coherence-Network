@@ -81,6 +81,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         usage = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "api", "metric": "validated_flow", "value": 3.0},
+            headers=AUTH_HEADERS,
         )
         assert usage.status_code == 201
 
@@ -355,6 +356,7 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
                 "answer": "Apply this answer to generate next measurable task.",
                 "measured_delta": 4.0,
             },
+            headers=AUTH_HEADERS,
         )
         assert answered.status_code == 200
 
@@ -486,6 +488,7 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
         usage = await client.post(
             f"/api/value-lineage/links/{lineage_id}/usage-events",
             json={"source": "api", "metric": "flow_visible", "value": 5.0},
+            headers=AUTH_HEADERS,
         )
         assert usage.status_code == 201
 
@@ -999,6 +1002,7 @@ async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
                 "answer": "Track this through a new monitored endpoint and rollout plan.",
                 "measured_delta": 2.0,
             },
+            headers=AUTH_HEADERS,
         )
         assert answered.status_code == 200
 
@@ -1259,6 +1263,7 @@ async def test_flow_inventory_counts_spec_registry_specs_for_idea(
                 "pseudocode_summary": "profile -> journeys -> execute -> persist -> gate",
                 "implementation_summary": "Extend gate service and API responses.",
             },
+            headers=AUTH_HEADERS,
         )
         assert create_spec.status_code == 201
 
@@ -1528,6 +1533,7 @@ async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_a
                 "summary": "This spec intentionally has no idea_id to verify automatic linking.",
                 "created_by_contributor_id": "user-1",
             },
+            headers=AUTH_HEADERS,
         )
         assert seeded.status_code == 201
         assert seeded.json()["idea_id"] is None
@@ -1647,6 +1653,7 @@ async def test_process_completeness_auto_sync_runs_traceability_sync(
                 "summary": "Seed spec for process completeness auto-sync.",
                 "created_by_contributor_id": "user-2",
             },
+            headers=AUTH_HEADERS,
         )
         assert seeded.status_code == 201
         assert seeded.json()["idea_id"] is None

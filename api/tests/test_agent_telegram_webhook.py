@@ -28,6 +28,7 @@ def _telegram_update(text: str) -> dict:
 
 @pytest.mark.asyncio
 async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
 
     sent: dict[str, str] = {}
@@ -74,6 +75,7 @@ async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch) 
 async def test_telegram_railway_verify_command_creates_and_ticks_job(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -127,6 +129,7 @@ async def test_telegram_railway_verify_command_creates_and_ticks_job(
 async def test_telegram_railway_jobs_command_lists_recent_jobs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -164,6 +167,7 @@ async def test_telegram_railway_jobs_command_lists_recent_jobs(
 
 @pytest.mark.asyncio
 async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -189,6 +193,7 @@ async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyP
 
 @pytest.mark.asyncio
 async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -221,6 +226,7 @@ async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch) ->
 
 @pytest.mark.asyncio
 async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -276,6 +282,7 @@ async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch
 async def test_telegram_railway_schedule_command_creates_job_without_tick(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
     tick_called = {"value": False}
@@ -330,6 +337,7 @@ async def test_telegram_railway_schedule_command_creates_job_without_tick(
 async def test_telegram_status_command_reports_checked_and_attention(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -370,6 +378,7 @@ async def test_telegram_status_command_reports_checked_and_attention(
 async def test_telegram_status_includes_public_links_and_stale_running(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -435,6 +444,7 @@ async def test_telegram_status_includes_public_links_and_stale_running(
 async def test_telegram_attention_includes_monitor_summary_and_public_links(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
@@ -544,6 +554,7 @@ def test_telegram_card_helpers_summarize_runtime_and_action() -> None:
 async def test_telegram_tasks_command_renders_status_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 

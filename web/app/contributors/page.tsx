@@ -109,59 +109,42 @@ function ContributorsPageContent() {
   }, [flowRows]);
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
-          Contribute
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Contributors</h1>
-      <p className="text-muted-foreground">
-        Human interface for `GET /api/contributors`.
-        {selectedContributorId ? (
-          <>
-            {" "}
-            Filtered by contributor <code>{selectedContributorId}</code>.
-          </>
-        ) : null}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        To register a new contributor and submit idea/spec/question changes, use the{" "}
-        <Link href="/contribute" className="underline hover:text-foreground">Contribution Console</Link>.
-      </p>
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
+        <p className="text-sm text-muted-foreground">Contributors</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Contributors</h1>
+        <p className="max-w-3xl text-muted-foreground">
+          People and agents contributing to the network.
+          {selectedContributorId ? (
+            <>
+              {" "}
+              Showing results for one contributor.
+            </>
+          ) : null}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          To register a new contributor and submit changes, use the{" "}
+          <Link href="/contribute" className="underline hover:text-foreground transition-colors duration-300">Contribution Console</Link>.
+        </p>
+      </section>
 
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
       {status === "ok" && (
-        <section className="rounded border p-4 space-y-3">
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Total: {filteredRows.length}
+            {filteredRows.length} contributors
             {selectedContributorId ? (
               <>
                 {" "}
-                | <Link href="/contributors" className="underline hover:text-foreground">Clear filter</Link>
+                | <Link href="/contributors" className="underline hover:text-foreground transition-colors duration-300">Clear filter</Link>
               </>
             ) : null}
           </p>
           <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((c) => (
-              <li key={c.id} className="rounded border p-2 flex justify-between gap-3">
+              <li key={c.id} className="rounded-xl border border-border/20 bg-background/40 p-4 flex justify-between gap-3">
                 <span className="font-medium">
                   <Link href={`/contributors?contributor_id=${encodeURIComponent(c.id)}`} className="hover:underline">
                     {c.name}
@@ -184,7 +167,7 @@ function ContributorsPageContent() {
             {filteredRows.slice(0, 100).map((c) => {
               const rel = relationsByContributor.get(c.id);
               return (
-                <li key={`${c.id}-relations`} className="rounded border p-2 text-muted-foreground">
+                <li key={`${c.id}-relations`} className="rounded-xl border border-border/20 bg-background/40 p-4 text-muted-foreground">
                   idea{" "}
                   {rel && rel.ideaIds.length > 0
                     ? rel.ideaIds.slice(0, 6).map((ideaId, idx) => (
@@ -257,7 +240,7 @@ function ContributorsPageContent() {
 
 export default function ContributorsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen p-8 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributors…</p></main>}>
+    <Suspense fallback={<main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributors…</p></main>}>
       <ContributorsPageContent />
     </Suspense>
   );

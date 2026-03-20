@@ -6312,7 +6312,13 @@ def _build_provider_validation_report(
         usage_snapshot = usage_by_provider.get(provider) or (
             usage_by_provider.get(family) if provider != "codex" else None
         )
-        runtime_row = runtime_rows.get(provider, {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []})
+        _default_runtime_row: dict[str, Any] = {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []}
+        _rt_raw = runtime_rows.get(provider, _default_runtime_row)
+        if not int(_rt_raw.get("usage_events") or 0):
+            _rt_normalized = runtime_rows.get(_normalize_provider_name(provider)) or runtime_rows.get(family)
+            if _rt_normalized and int(_rt_normalized.get("usage_events") or 0):
+                _rt_raw = _rt_normalized
+        runtime_row = _rt_raw
         configured = bool(readiness_row.configured) if readiness_row is not None else False
         readiness_status = readiness_row.status if readiness_row is not None else "unavailable"
         usage_events = int(runtime_row.get("usage_events") or 0)

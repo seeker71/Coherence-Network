@@ -24,12 +24,12 @@ export const metadata: Metadata = {
     default: "Coherence Network",
     template: "%s | Coherence Network",
   },
-  description: "Open-source contribution intelligence — track, score, and attribute contributions fairly.",
+  description: "Ideas deserve to become real. Share what you see, build what matters, and trace every contribution from thought to impact.",
   openGraph: {
     type: "website",
     siteName: "Coherence Network",
     title: "Coherence Network",
-    description: "Open-source contribution intelligence — track, score, and attribute contributions fairly.",
+    description: "Ideas deserve to become real. Share what you see, build what matters, and trace every contribution from thought to impact.",
   },
 };
 
