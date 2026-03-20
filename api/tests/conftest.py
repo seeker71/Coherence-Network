@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Mark environment as test BEFORE any app module imports — this disables
+# rate limiting middleware and relaxes auth requirements for testing.
+os.environ.setdefault("COHERENCE_ENV", "test")
+
 _DB_ENV_VARS = (
     "DATABASE_URL",
     "AGENT_TASKS_DATABASE_URL",
