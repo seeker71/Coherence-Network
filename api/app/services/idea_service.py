@@ -14,7 +14,6 @@ import os
 import random
 import re
 import time
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -41,22 +40,26 @@ from app.services import spec_registry_service
 from app.services import value_lineage_service
 
 
-def _load_derived_metadata() -> dict[str, dict[str, Any]]:
-    """Load derived idea metadata from data/seed_ideas.json.
-
-    Used only for classifying discovered IDs as internal and for
-    creating placeholder ideas when new IDs appear at runtime.
-    """
-    seed_path = Path(__file__).resolve().parents[3] / "data" / "seed_ideas.json"
-    try:
-        with open(seed_path, encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get("derived_metadata", {})
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-DERIVED_IDEA_METADATA: dict[str, dict[str, Any]] = _load_derived_metadata()
+# Known internal idea IDs — these were previously loaded from derived_metadata
+# in seed_ideas.json and are used for internal-idea classification only.
+# The DB is the sole source of truth for idea data; this set is only for
+# the is_internal_idea_id() classification heuristic.
+_KNOWN_INTERNAL_IDEA_IDS: set[str] = {
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime",
+    "coherence-network-value-attribution",
+    "coherence-network-web-interface",
+    "deployment-gate-reliability",
+    "interface-trust-surface",
+    "minimum-e2e-path",
+    "funder-proof-page",
+    "idea-hierarchy-model",
+    "unified-sqlite-store",
+    "agent-prompt-ab-roi",
+    "agent-failed-task-diagnostics",
+    "agent-auto-heal",
+    "agent-grounded-measurement",
+}
 
 STANDING_QUESTION_TEXT = (
     "How can we improve this idea, show whether it is working yet, "
@@ -95,7 +98,7 @@ def _configured_internal_idea_prefixes() -> set[str]:
 
 
 def _configured_internal_idea_exact_ids() -> set[str]:
-    out = {idea_id.strip().lower() for idea_id in DERIVED_IDEA_METADATA if idea_id.strip()}
+    out = set(_KNOWN_INTERNAL_IDEA_IDS)
     raw = str(os.getenv("INTERNAL_IDEA_ID_EXACT", "")).strip()
     if raw:
         out.update(item.strip().lower() for item in raw.split(",") if item.strip())
@@ -420,7 +423,30 @@ def _humanize_idea_id(idea_id: str) -> str:
 
 
 def _derived_idea_for_id(idea_id: str) -> Idea:
-    metadata = DERIVED_IDEA_METADATA.get(idea_id, {})
+    # Try to find metadata from DB for discovered ideas
+    metadata: dict[str, Any] = {}
+    try:
+        db_ideas = idea_registry_service.load_ideas()
+        for idea in db_ideas:
+            if idea.id == idea_id:
+                metadata = {
+                    "name": idea.name,
+                    "description": idea.description,
+                    "interfaces": idea.interfaces,
+                    "potential_value": idea.potential_value,
+                    "actual_value": idea.actual_value,
+                    "estimated_cost": idea.estimated_cost,
+                    "actual_cost": idea.actual_cost,
+                    "confidence": idea.confidence,
+                    "resistance_risk": idea.resistance_risk,
+                    "idea_type": idea.idea_type.value if idea.idea_type else "standalone",
+                    "parent_idea_id": idea.parent_idea_id,
+                    "child_idea_ids": idea.child_idea_ids or [],
+                    "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
+                }
+                break
+    except Exception:
+        pass
     name = str(metadata.get("name") or _humanize_idea_id(idea_id))
     description = str(
         metadata.get("description")
@@ -815,7 +841,7 @@ def get_idea(idea_id: str) -> IdeaWithScore | None:
             return _with_score(idea)
     # Some runtime/inventory idea ids are derived and may not be persisted in the
     # portfolio store yet. Expose them so UI links remain walkable.
-    if idea_id in DERIVED_IDEA_METADATA:
+    if idea_id in _KNOWN_INTERNAL_IDEA_IDS:
         return _with_score(_derived_idea_for_id(idea_id))
     return None
 
