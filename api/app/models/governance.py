@@ -27,6 +27,7 @@ class ChangeRequestType(str, Enum):
     IDEA_ANSWER_QUESTION = "idea_answer_question"
     SPEC_CREATE = "spec_create"
     SPEC_UPDATE = "spec_update"
+    FEDERATION_IMPORT = "federation_import"
 
 
 class ChangeRequestStatus(str, Enum):
