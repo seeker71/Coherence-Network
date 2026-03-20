@@ -1,54 +1,97 @@
-"""Load direction templates and role-wrapper lines from config. No prompt data in code."""
+"""Load direction templates and role-wrapper lines from config. No prompt data in code.
+
+Supports A/B prompt variants:
+  - variant "a" = prompt_templates.json (original)
+  - variant "b" = prompt_templates_b.json (prompt-master optimized)
+  - Selection via Thompson Sampling (prompt_ab_roi_service)
+  - Override: PROMPT_VARIANT=a|b environment variable
+"""
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 from app.models.agent import TaskType
 
-_CACHE: dict[str, Any] | None = None
+logger = logging.getLogger(__name__)
+
+_CACHE: dict[str, dict[str, Any]] = {}  # keyed by variant_id
 
 _DIRECTION_SNIPPET_MAX = 2000
 
+_VARIANT_IDS = ["a", "b"]
 
-def _config_path() -> Path:
+
+def _config_path(variant: str = "a") -> Path:
     env_value = os.environ.get("PROMPT_TEMPLATES_CONFIG_PATH", "").strip()
-    if env_value:
+    if env_value and variant == "a":
         return Path(env_value)
-    for base in [
-        Path(__file__).resolve().parents[3] / "config" / "prompt_templates.json",
-        Path(__file__).resolve().parents[2] / "config" / "prompt_templates.json",
+
+    suffix = "" if variant == "a" else f"_{variant}"
+    filename = f"prompt_templates{suffix}.json"
+
+    for base_dir in [
+        Path(__file__).resolve().parents[3] / "config",
+        Path(__file__).resolve().parents[2] / "config",
     ]:
-        if base.exists():
-            return base
-    return Path(__file__).resolve().parents[2] / "config" / "prompt_templates.json"
+        candidate = base_dir / filename
+        if candidate.exists():
+            return candidate
+    return Path(__file__).resolve().parents[2] / "config" / filename
 
 
-def _load() -> dict[str, Any]:
-    global _CACHE
-    if _CACHE is not None:
-        return _CACHE
-    path = _config_path()
+def _active_variant() -> str:
+    """Determine which prompt variant to use. Order: env override → A/B selection → default 'a'."""
+    env_variant = os.environ.get("PROMPT_VARIANT", "").strip().lower()
+    if env_variant in _VARIANT_IDS:
+        return env_variant
+
+    # A/B selection via Thompson Sampling (lazy import to avoid circular deps)
+    try:
+        from app.services.prompt_ab_roi_service import select_variant
+        available = [v for v in _VARIANT_IDS if _config_path(v).exists()]
+        if len(available) > 1:
+            selected = select_variant("direction_template", available)
+            if selected:
+                return selected
+    except Exception:
+        pass
+
+    return "a"
+
+
+def _load(variant: str | None = None) -> dict[str, Any]:
+    vid = variant or _active_variant()
+    if vid in _CACHE:
+        return _CACHE[vid]
+
+    path = _config_path(vid)
     if not path.exists():
-        _CACHE = _empty_cache()
-        return _CACHE
+        # Fall back to variant a
+        if vid != "a":
+            logger.warning("Prompt variant '%s' not found at %s, falling back to 'a'", vid, path)
+            return _load("a")
+        _CACHE[vid] = _empty_cache()
+        return _CACHE[vid]
     try:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        _CACHE = _empty_cache()
-        return _CACHE
+        _CACHE[vid] = _empty_cache()
+        return _CACHE[vid]
     if not isinstance(data, dict):
-        _CACHE = _empty_cache()
-        return _CACHE
+        _CACHE[vid] = _empty_cache()
+        return _CACHE[vid]
     templates = data.get("direction_templates") if isinstance(data.get("direction_templates"), dict) else {}
     role_wrapper = data.get("role_wrapper") if isinstance(data.get("role_wrapper"), dict) else {}
     unblock = data.get("unblock_direction") if isinstance(data.get("unblock_direction"), dict) else {}
     cli_flow = data.get("cli_flow_directions") if isinstance(data.get("cli_flow_directions"), dict) else {}
-    _CACHE = {
+    _CACHE[vid] = {
+        "variant_id": vid,
         "direction_templates": templates,
         "role_wrapper": role_wrapper,
         "unblock_direction": unblock,
@@ -57,7 +100,7 @@ def _load() -> dict[str, Any]:
         "spec_progress_direction": (data.get("spec_progress_direction") or "").strip(),
         "cli_flow_directions": cli_flow,
     }
-    return _CACHE
+    return _CACHE[vid]
 
 
 def _empty_cache() -> dict[str, Any]:
@@ -74,7 +117,13 @@ def _empty_cache() -> dict[str, Any]:
 
 def reset_prompt_templates_cache() -> None:
     global _CACHE
-    _CACHE = None
+    _CACHE = {}
+
+
+def get_active_variant_id() -> str:
+    """Return the variant ID currently in use (for A/B measurement recording)."""
+    data = _load()
+    return data.get("variant_id", "a")
 
 
 def get_direction_template(phase: str, *, iteration: int = 1) -> str:
