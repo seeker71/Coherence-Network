@@ -41,8 +41,41 @@
         "122-crypto-treasury-bridge",
         "123-transparent-audit-ledger"
     ],
-    "task_ids": [],
-    "evidence_type": "test_fix_and_spec_authoring",
-    "confidence": 0.95,
-    "reasoning": "All 959 tests pass with 0 failures and 0 skips. Three new specs drafted for OpenClaw integration, crypto treasury, and transparent audit ledger."
+    "task_ids": [
+        "task-2026-03-20-test-fixes-openclaw-specs"
+    ],
+    "contributors": [
+        {
+            "contributor_id": "claude-code",
+            "contributor_type": "machine",
+            "roles": ["implementation", "test_fix", "spec_authoring"]
+        }
+    ],
+    "agent": {
+        "name": "claude-code",
+        "version": "claude-opus-4-20250514"
+    },
+    "evidence_refs": [
+        "cd api && .venv/bin/pytest tests/ --ignore=tests/holdout -q",
+        "python3 scripts/validate_spec_quality.py"
+    ],
+    "change_intent": "runtime_fix",
+    "local_validation": {
+        "status": "pass",
+        "commands": [
+            "cd api && .venv/bin/pytest tests/ --ignore=tests/holdout -q"
+        ]
+    },
+    "ci_validation": {
+        "status": "pending",
+        "run_url": ""
+    },
+    "deploy_validation": {
+        "status": "pending",
+        "environment": "local-only"
+    },
+    "phase_gate": {
+        "can_move_next_phase": true,
+        "blocked_reason": ""
+    }
 }

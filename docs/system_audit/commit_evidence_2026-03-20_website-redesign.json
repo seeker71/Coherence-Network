@@ -1,28 +1,106 @@
 {
-  "session": "2026-03-20-session-4",
-  "branch": "claude/jolly-curran",
-  "pr": 474,
-  "description": "Full website redesign: 6 passes transforming dashboard UI into warm, human-first experience",
-  "changes": [
-    "web/app/globals.css — amber-gold palette, ambient glow backgrounds, fadeInUp/warmPulse/hover-lift animations",
-    "web/app/page.tsx — 6-section landing page with graceful empty states",
-    "web/app/ideas/page.tsx — warm gradient cards, confidence bars, hover-lift",
-    "web/app/today/page.tsx — warm stat cards, friendly empty states",
-    "web/app/demo/page.tsx — consistent gradient styling and softer borders",
-    "web/app/tasks/page.tsx — warm hero card, gradient stat cards, pill nav links",
-    "web/app/specs/page.tsx — warm hero, removed breadcrumbs, gradient sections",
-    "web/app/flow/page.tsx — warm hero, pill badges, friendly empty states",
-    "web/app/portfolio/page.tsx — warm hero card, friendly copy, gradient stats",
-    "web/app/contributors/page.tsx — warm hero card, user-friendly descriptions",
-    "web/app/error.tsx — contextual error messaging, fetch-aware help text",
-    "web/app/not-found.tsx — warm 404 with personality",
-    "web/app/layout.tsx — updated meta description",
-    "web/components/site_header.tsx — simplified nav (17→4), ambient heartbeat dot",
-    "web/components/page_context_links.tsx — subtler context bar, cleaner breadcrumbs",
-    "web/components/ui/button.tsx — rounded-xl, smoother transitions",
-    "docs/DESIGN.md — 8-dimension design specification",
-    "docs/WORKBOOK.md — session log, 10 inspiring future ideas (I1-I10)"
-  ],
-  "test_impact": "No API test changes; web-only visual redesign across all 12 page files",
-  "generated_at": "2026-03-20T20:30:00Z"
+    "date": "2026-03-20",
+    "thread_branch": "claude/jolly-curran",
+    "commit_scope": "Full website redesign: 6 passes transforming dashboard UI into warm, human-first experience across all 12 page files",
+    "files_owned": [
+        "web/app/globals.css",
+        "web/app/page.tsx",
+        "web/app/ideas/page.tsx",
+        "web/app/today/page.tsx",
+        "web/app/demo/page.tsx",
+        "web/app/tasks/page.tsx",
+        "web/app/specs/page.tsx",
+        "web/app/flow/page.tsx",
+        "web/app/portfolio/page.tsx",
+        "web/app/contributors/page.tsx",
+        "web/app/error.tsx",
+        "web/app/not-found.tsx",
+        "web/app/layout.tsx",
+        "web/components/site_header.tsx",
+        "web/components/page_context_links.tsx",
+        "web/components/ui/button.tsx",
+        "web/next.config.ts",
+        "docs/DESIGN.md",
+        "docs/WORKBOOK.md",
+        "deploy/hostinger/deploy.sh",
+        "deploy/hostinger/setup-vps.sh",
+        "deploy/hostinger/setup-ssl.sh",
+        "deploy/hostinger/nginx.conf",
+        "deploy/hostinger/ecosystem.config.js",
+        "deploy/hostinger/HOSTINGER-DEPLOY.md"
+    ],
+    "change_files": [
+        "web/app/globals.css",
+        "web/app/page.tsx",
+        "web/app/ideas/page.tsx",
+        "web/app/today/page.tsx",
+        "web/app/demo/page.tsx",
+        "web/app/tasks/page.tsx",
+        "web/app/specs/page.tsx",
+        "web/app/flow/page.tsx",
+        "web/app/portfolio/page.tsx",
+        "web/app/contributors/page.tsx",
+        "web/app/error.tsx",
+        "web/app/not-found.tsx",
+        "web/app/layout.tsx",
+        "web/components/site_header.tsx",
+        "web/components/page_context_links.tsx",
+        "web/components/ui/button.tsx",
+        "web/next.config.ts",
+        "docs/DESIGN.md",
+        "docs/WORKBOOK.md",
+        "deploy/hostinger/deploy.sh",
+        "deploy/hostinger/setup-vps.sh",
+        "deploy/hostinger/setup-ssl.sh",
+        "deploy/hostinger/nginx.conf",
+        "deploy/hostinger/ecosystem.config.js",
+        "deploy/hostinger/HOSTINGER-DEPLOY.md"
+    ],
+    "idea_ids": [
+        "coherence-network-website",
+        "portfolio-governance"
+    ],
+    "spec_ids": [
+        "076-ui-alignment-overhaul"
+    ],
+    "task_ids": [
+        "task-2026-03-20-website-redesign"
+    ],
+    "contributors": [
+        {
+            "contributor_id": "claude-code",
+            "contributor_type": "machine",
+            "roles": ["implementation", "ux_design", "deployment"]
+        }
+    ],
+    "agent": {
+        "name": "claude-code",
+        "version": "claude-opus-4-20250514"
+    },
+    "evidence_refs": [
+        "cd web && npm run build",
+        "https://coherencycoin.com",
+        "https://api.coherencycoin.com/api/health",
+        "https://github.com/seeker71/Coherence-Network/pull/474"
+    ],
+    "change_intent": "runtime_feature",
+    "local_validation": {
+        "status": "pass",
+        "commands": [
+            "cd web && npm run build",
+            "cd web && npm run dev"
+        ]
+    },
+    "ci_validation": {
+        "status": "pending",
+        "run_url": "https://github.com/seeker71/Coherence-Network/pull/474"
+    },
+    "deploy_validation": {
+        "status": "pending",
+        "environment": "coherencycoin.com via Vercel + Hostinger"
+    },
+    "phase_gate": {
+        "can_move_next_phase": true,
+        "blocked_reason": ""
+    }
 }
