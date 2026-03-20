@@ -276,7 +276,10 @@ Changes:
 - **Footer tagline**: "Built on coherence, not control"
 - **Design spec**: `docs/DESIGN.md` — 8 dimensions (emotional principles, color, typography, layout, components, nav, values, micro-interactions)
 
-Commit: `08e2399` — pushed to PR #474
+Commits pushed to PR #474:
+- `08e2399` — Pass 1: landing page redesign + color palette + design spec
+- `2befb23` — Pass 2: simplified nav (17 → 4 primary items), warmed Ideas page, smoother transitions, button/component polish
+- `c7ca959` — Pass 3: Today + Demo pages redesigned with consistent gradient cards, confidence bars, friendly empty states
 
 ---
 
@@ -302,8 +305,9 @@ Commit: `08e2399` — pushed to PR #474
 | N7 | **E2E integration test** — full pipeline: idea → spec → test → implement → validate | M | [ ] |
 | N8 | **Production deployment checklist** — secrets, CORS, monitoring, PostgreSQL migration | M | [ ] |
 | N9 | **Wire specs 121-123 into seed_db.py** — idea mappings, evidence links | S | [ ] |
-| N10 | **Website pass 2** — nav simplification, inner page tone, component warmth, micro-interactions | M | [ ] |
-| N11 | **Website pass 3** — mobile optimization, accessibility audit, image/illustration assets | M | [ ] |
+| N10 | **Website pass 2** — nav simplification, inner page tone, component warmth, micro-interactions | M | [x] |
+| N11 | **Website pass 3** — Today + Demo page warmth, consistent gradient cards, friendly empty states | M | [x] |
+| N12 | **Website pass 4** — remaining inner pages (specs, tasks, contribute, flow), mobile a11y audit | M | [ ] |
 
 ### Architecture decisions needed
 
