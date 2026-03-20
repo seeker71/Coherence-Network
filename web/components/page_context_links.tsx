@@ -302,7 +302,6 @@ export default function PageContextLinks() {
       (item) => item.href !== pathname
     )
   );
-  const relatedMobile = related.slice(0, 6);
 
   const machine = [...base.machinePaths];
   if (key === "/ideas/[idea_id]" && dynamicIdeaId) {
@@ -325,50 +324,44 @@ export default function PageContextLinks() {
   }
 
   const machineLinks = dedupe(machine);
-  const focusLabel = base.focusLabel || ideaId.replace(/[-_]/g, " ");
 
   return (
-    <section className="border-b border-border/70 bg-background/55">
+    <section className="border-b border-border/30 bg-background/40 backdrop-blur-sm">
       <div className="mx-auto max-w-6xl px-4 md:px-8 py-1.5">
         <div className="flex items-center gap-2 text-xs">
-          <p className="truncate text-muted-foreground">
-            <span className="hidden sm:inline">Page </span>
-            <span className="font-medium text-foreground">{toBreadcrumb(pathname)}</span>
+          <p className="truncate text-muted-foreground/80">
+            <span className="font-medium text-foreground/90">{toBreadcrumb(pathname)}</span>
           </p>
-          <span className="hidden lg:inline text-muted-foreground/90">Current focus {focusLabel}</span>
           <div className="flex-1" />
           <details className="relative">
-            <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
-              <span className="sm:hidden">Quick links</span>
+            <summary className="list-none cursor-pointer rounded-full border border-border/40 px-2.5 py-1 text-[11px] text-muted-foreground/70 hover:text-muted-foreground hover:border-border/60 transition-all duration-200">
+              <span className="sm:hidden">Navigate</span>
               <span className="hidden sm:inline">Related pages</span>
             </summary>
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
-              {related.map((item, idx) => (
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/50 bg-popover/95 p-2 shadow-xl backdrop-blur-md z-50">
+              {related.map((item) => (
                 <Link
                   key={`rel-${item.href}`}
                   href={item.href}
-                  className={`block rounded px-2 py-1.5 text-sm hover:bg-accent ${idx < relatedMobile.length ? "" : "hidden sm:block"}`}
+                  className="block rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200"
                 >
                   {item.label}
                 </Link>
               ))}
-              <p className="mt-1 px-2 text-[11px] text-muted-foreground sm:hidden">
-                Open the full menu in the header for all pages.
-              </p>
             </div>
           </details>
           <details className="relative hidden sm:block">
-            <summary className="list-none cursor-pointer rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
-              Behind the scenes
+            <summary className="list-none cursor-pointer rounded-full border border-border/40 px-2.5 py-1 text-[11px] text-muted-foreground/70 hover:text-muted-foreground hover:border-border/60 transition-all duration-200">
+              API
             </summary>
-            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border/80 bg-popover/95 p-2 shadow-lg backdrop-blur">
+            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border/50 bg-popover/95 p-2 shadow-xl backdrop-blur-md z-50">
               {machineLinks.map((item) => (
                 <a
                   key={`api-${item.href}`}
                   href={`${apiBase}${item.href}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className="block rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200"
                 >
                   {item.label}
                 </a>

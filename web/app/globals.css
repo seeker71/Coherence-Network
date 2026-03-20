@@ -130,9 +130,33 @@ body::before {
 
 /* Gentle hover lift */
 .hover-lift {
-  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
 }
 .hover-lift:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px hsl(36 72% 58% / 0.08);
+  border-color: hsl(36 72% 58% / 0.2);
+}
+
+/* Smooth link underline animation */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: hsl(var(--primary));
+  transition: width 0.3s ease-out;
+}
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* Smooth page transitions for inner content */
+main {
+  animation: fadeInUp 0.4s ease-out;
 }

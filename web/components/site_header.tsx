@@ -1,25 +1,26 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
 
+/** Primary nav — the 4 things most visitors want. */
 const PRIMARY_NAV = [
-  { href: "/today", label: "Today" },
-  { href: "/demo", label: "Demo" },
   { href: "/ideas", label: "Ideas" },
+  { href: "/contribute", label: "Contribute" },
   { href: "/tasks", label: "Work" },
   { href: "/flow", label: "Progress" },
 ];
 
-const EXPLORE_NAV = [
+/** Discover section — broader exploration. */
+const DISCOVER_NAV = [
+  { href: "/today", label: "Today" },
+  { href: "/demo", label: "Demo" },
   { href: "/search", label: "Search" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/specs", label: "Plans" },
-  { href: "/contribute", label: "Contribute" },
+  { href: "/specs", label: "Specs" },
   { href: "/contributors", label: "People" },
 ];
 
+/** Tools — for power users and operators. */
 const TOOL_NAV = [
   { href: "/usage", label: "Usage" },
   { href: "/automation", label: "Automation" },
@@ -37,19 +38,23 @@ export default function SiteHeader() {
   const apiBase = getApiBase();
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur" role="banner">
+    <header className="sticky top-0 z-50 border-b border-border/40 bg-background/85 backdrop-blur-md" role="banner">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
-        <div className="flex h-14 items-center gap-3">
-          <Link href="/" className="font-semibold tracking-tight" aria-label="Coherence Network home">
+        <div className="flex h-14 items-center gap-4">
+          <Link
+            href="/"
+            className="font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300"
+            aria-label="Coherence Network home"
+          >
             Coherence Network
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 text-sm text-muted-foreground" aria-label="Primary navigation">
+          <nav className="hidden md:flex items-center gap-1 text-sm" aria-label="Primary navigation">
             {PRIMARY_NAV.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
-                className="rounded px-2 py-1 hover:text-foreground hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                className="rounded-lg px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
               >
                 {n.label}
               </Link>
@@ -58,38 +63,40 @@ export default function SiteHeader() {
 
           <div className="flex-1" />
 
-          <details className="relative hidden md:block">
+          {/* Desktop "More" dropdown — discover + tools */}
+          <details className="relative hidden md:block group">
             <summary
-              className="list-none cursor-pointer rounded border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+              className="list-none cursor-pointer rounded-lg border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
               aria-label="Open more navigation options"
               role="button"
             >
               More
             </summary>
-            <div className="absolute right-0 mt-2 w-72 rounded-lg border bg-background p-3 shadow-lg">
-              <div className="space-y-3">
+            <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md p-4 shadow-xl">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Explore</p>
-                  <div className="flex flex-wrap gap-2">
-                    {EXPLORE_NAV.map((n) => (
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Discover</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DISCOVER_NAV.map((n) => (
                       <Link
                         key={n.href}
                         href={n.href}
-                        className="rounded border px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {n.label}
                       </Link>
                     ))}
                   </div>
                 </div>
+                <div className="border-t border-border/30" />
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tools</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Tools</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {TOOL_NAV.map((n) => (
                       <Link
                         key={n.href}
                         href={n.href}
-                        className="rounded border px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {n.label}
                       </Link>
@@ -98,7 +105,7 @@ export default function SiteHeader() {
                       href={`${apiBase}/docs`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded border px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       API Docs
                     </a>
@@ -108,58 +115,47 @@ export default function SiteHeader() {
             </div>
           </details>
 
-          <form action="/search" method="GET" className="hidden lg:flex items-center gap-2" role="search" aria-label="Search the network">
-            <label htmlFor="header-search" className="sr-only">Search the network</label>
-            <Input
-              id="header-search"
-              name="q"
-              placeholder="Search ideas, projects, or people"
-              className="w-72 bg-background/60"
-              autoComplete="off"
-            />
-            <Button type="submit" variant="secondary">
-              Go
-            </Button>
-          </form>
-
+          {/* Mobile menu */}
           <details className="md:hidden relative">
             <summary
-              className="list-none cursor-pointer rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+              className="list-none cursor-pointer rounded-lg border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
               aria-label="Toggle navigation menu"
               role="button"
             >
               Menu
             </summary>
             <nav
-              className="absolute right-0 mt-2 w-48 rounded border bg-background shadow"
+              className="absolute right-0 mt-2 w-56 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md shadow-xl"
               aria-label="Mobile navigation"
             >
-              <div className="p-2 grid gap-1">
+              <div className="p-3 space-y-1">
                 {PRIMARY_NAV.map((n) => (
                   <Link
                     key={n.href}
                     href={n.href}
-                    className="rounded px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {n.label}
                   </Link>
                 ))}
-                <p className="px-2 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Explore</p>
-                {EXPLORE_NAV.map((n) => (
+                <div className="border-t border-border/30 my-2" />
+                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Discover</p>
+                {DISCOVER_NAV.map((n) => (
                   <Link
                     key={n.href}
                     href={n.href}
-                    className="rounded px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {n.label}
                   </Link>
                 ))}
-                <p className="px-2 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Tools</p>
+                <div className="border-t border-border/30 my-2" />
+                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Tools</p>
                 {TOOL_NAV.map((n) => (
                   <Link
                     key={n.href}
                     href={n.href}
-                    className="rounded px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {n.label}
                   </Link>
@@ -168,7 +164,7 @@ export default function SiteHeader() {
                   href={`${apiBase}/docs`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded px-2 py-1 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   API Docs
                 </a>
