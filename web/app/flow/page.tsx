@@ -48,35 +48,17 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
     .slice(0, 8);
 
   return (
-    <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/today" className="text-muted-foreground hover:text-foreground">
-          Today
-        </Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
-          Ideas
-        </Link>
-        <Link href="/demo" className="text-muted-foreground hover:text-foreground">
-          Demo
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Work
-        </Link>
-      </div>
-
-      <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-7 space-y-3">
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-6xl mx-auto space-y-6">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
         <p className="text-sm text-muted-foreground">Progress view</p>
-        <h1 className="text-3xl font-semibold tracking-tight">How Ideas Are Moving</h1>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">How Ideas Are Moving</h1>
         <p className="max-w-3xl text-muted-foreground">
           See what is planned, what work is moving, what proof is visible, and where progress is getting stuck.
         </p>
         <div className="flex flex-wrap gap-2 text-sm">
-          <span className="rounded border px-3 py-1.5">Plan</span>
-          <span className="rounded border px-3 py-1.5">Work</span>
-          <span className="rounded border px-3 py-1.5">Proof</span>
+          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Plan</span>
+          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Work</span>
+          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Proof</span>
         </div>
       </section>
 
@@ -104,8 +86,8 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
           <FlowItemCard key={item.idea_id} item={item} />
         ))}
         {filteredItems.length === 0 ? (
-          <article className="rounded border p-4 text-sm text-muted-foreground">
-            No progress stories match the current filters.
+          <article className="rounded-xl border border-border/20 bg-background/40 p-4 text-sm text-muted-foreground">
+            No data available yet. Once the API is running, results will appear here.
           </article>
         ) : null}
       </section>
