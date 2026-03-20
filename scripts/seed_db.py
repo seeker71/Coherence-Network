@@ -678,10 +678,11 @@ def sha256_of(content: bytes) -> str:
 def _parse_spec_file(path: Path) -> dict | None:
     """Extract spec_id, title, and summary from a spec markdown file."""
     name = path.stem  # e.g. "001-health-check"
-    match = re.match(r"^(\d+)-(.+)$", name)
-    if not match:
+    # Skip TEMPLATE.md
+    if name.upper() == "TEMPLATE":
         return None
-    spec_id = match.group(1)
+    # Use the full filename stem as spec_id to avoid collisions on duplicate numbers
+    spec_id = name
     content = path.read_text(encoding="utf-8")
     content_bytes = path.read_bytes()
 
@@ -854,26 +855,205 @@ def seed_ideas() -> int:
     return len(ideas)
 
 
+def _keyword_match_idea(title: str, content: str) -> str | None:
+    """Return the best-matching idea_id based on keyword rules, or None."""
+    text = (title + " " + content).lower()
+    # Priority-ordered keyword rules
+    rules: list[tuple[list[str], str]] = [
+        (["health", "api", "runtime", "endpoint", "route", "request", "validation", "error"],
+         "coherence-network-api-runtime"),
+        (["web", "ui", "page", "landing", "theme", "refresh", "link parity"],
+         "coherence-network-web-interface"),
+        (["pipeline", "agent", "orchestr", "task", "automation"],
+         "coherence-network-agent-pipeline"),
+        (["lineage", "payout", "attribution", "value", "contribution"],
+         "coherence-network-value-attribution"),
+        (["deploy", "gate", "ci", "cd", "release", "monitor"],
+         "deployment-gate-reliability"),
+        (["idea", "portfolio", "priorit", "hierarchy", "question"],
+         "idea-hierarchy-model"),
+        (["sqlite", "store", "db", "database", "migration"],
+         "unified-sqlite-store"),
+        (["coherence", "signal", "score", "algorithm"],
+         "coherence-signal-depth"),
+        (["federation", "instance", "remote"],
+         "federated-instance-aggregation"),
+        (["trust", "parity", "interface", "contract"],
+         "interface-trust-surface"),
+        (["cost", "measurement", "grounded", "metric"],
+         "agent-grounded-measurement"),
+        (["prompt", "a/b", "roi"],
+         "agent-prompt-ab-roi"),
+        (["diagnostic", "fail", "error"],
+         "agent-failed-task-diagnostics"),
+        (["heal", "auto-heal", "recover"],
+         "agent-auto-heal"),
+        (["fund", "proof", "onboard", "contributor"],
+         "funder-proof-page"),
+        (["e2e", "flow", "minimum"],
+         "minimum-e2e-path"),
+    ]
+    for keywords, idea_id in rules:
+        for kw in keywords:
+            if kw in text:
+                return idea_id
+    return None
+
+
 def link_specs_to_ideas() -> int:
-    """Link specs to ideas using contributing_specs from inline SEED_IDEAS."""
-    # Build spec_id -> idea_id mapping from SEED_IDEAS
-    spec_to_idea: dict[str, str] = {}
+    """Link specs to ideas using contributing_specs + keyword matching."""
+    # Phase 1: Build spec_number -> idea_id mapping from contributing_specs
+    number_to_idea: dict[str, str] = {}
     for seed in SEED_IDEAS:
         idea_id = seed["id"]
-        for spec_id in seed.get("contributing_specs", []):
-            spec_to_idea[spec_id] = idea_id
+        for spec_num in seed.get("contributing_specs", []):
+            number_to_idea[spec_num] = idea_id
 
     from app.models.spec_registry import SpecRegistryUpdate
 
-    count = 0
-    for spec_id, idea_id in spec_to_idea.items():
-        existing = spec_registry_service.get_spec(spec_id)
-        if existing is not None and not getattr(existing, "idea_id", None):
+    # Get all specs
+    all_specs = spec_registry_service.list_specs(limit=500)
+
+    linked_by_contributing = 0
+    linked_by_keyword = 0
+    still_unlinked = 0
+
+    for spec in all_specs:
+        spec_id = spec.spec_id
+        if getattr(spec, "idea_id", None):
+            # Already linked (from a previous run or explicit link)
+            continue
+
+        # Phase 1: Check contributing_specs by matching the numeric prefix
+        prefix_match = re.match(r"^(\d+)", spec_id)
+        matched_idea = None
+        if prefix_match:
+            num = prefix_match.group(1)
+            if num in number_to_idea:
+                matched_idea = number_to_idea[num]
+                linked_by_contributing += 1
+
+        # Phase 2: Keyword matching for unlinked specs
+        if not matched_idea:
+            # Read the spec file content for keyword matching
+            content_path = getattr(spec, "content_path", None)
+            spec_content = ""
+            if content_path:
+                full_path = ROOT / content_path
+                if full_path.exists():
+                    try:
+                        spec_content = full_path.read_text(encoding="utf-8")
+                    except OSError:
+                        pass
+            spec_title = getattr(spec, "title", "") or ""
+            matched_idea = _keyword_match_idea(spec_title, spec_content)
+            if matched_idea:
+                linked_by_keyword += 1
+            else:
+                still_unlinked += 1
+
+        if matched_idea:
             spec_registry_service.update_spec(
-                spec_id, SpecRegistryUpdate(idea_id=idea_id)
+                spec_id, SpecRegistryUpdate(idea_id=matched_idea)
             )
-            count += 1
-    return count
+
+    print(f"    Linked by contributing_specs: {linked_by_contributing}")
+    print(f"    Linked by keyword matching:   {linked_by_keyword}")
+    print(f"    Still unlinked:               {still_unlinked}")
+
+    return linked_by_contributing + linked_by_keyword
+
+
+def link_evidence_to_ideas() -> int:
+    """Link commit evidence records to ideas via spec references or keyword matching."""
+    from app.services.unified_db import session as db_session
+    from app.services.commit_evidence_service import CommitEvidenceRecord
+    from sqlalchemy import text
+
+    # Ensure idea_id column exists on commit_evidence_records
+    eng = unified_db.engine()
+    try:
+        from sqlalchemy import inspect as sa_inspect
+        inspector = sa_inspect(eng)
+        if "commit_evidence_records" in inspector.get_table_names():
+            existing_cols = {str(col.get("name")) for col in inspector.get_columns("commit_evidence_records")}
+            if "idea_id" not in existing_cols:
+                with eng.begin() as conn:
+                    conn.execute(text("ALTER TABLE commit_evidence_records ADD COLUMN idea_id VARCHAR NULL"))
+    except Exception as e:
+        print(f"  Warning adding idea_id column: {e}")
+
+    # Build spec_id -> idea_id lookup from DB
+    all_specs = spec_registry_service.list_specs(limit=500)
+    spec_idea_map: dict[str, str] = {}
+    for spec in all_specs:
+        idea_id = getattr(spec, "idea_id", None)
+        if idea_id:
+            spec_idea_map[spec.spec_id] = idea_id
+            # Also index by numeric prefix for "spec 051" style references
+            prefix_match = re.match(r"^(\d+)", spec.spec_id)
+            if prefix_match:
+                spec_idea_map[prefix_match.group(1)] = idea_id
+
+    linked_by_spec = 0
+    linked_by_keyword = 0
+    still_unlinked = 0
+
+    with db_session() as s:
+        rows = s.query(CommitEvidenceRecord).all()
+        for row in rows:
+            try:
+                payload = json.loads(row.payload_json)
+            except (json.JSONDecodeError, TypeError):
+                payload = {}
+
+            matched_idea = None
+
+            # Strategy 1: Check spec_ids in payload
+            spec_ids = payload.get("spec_ids") or []
+            if isinstance(spec_ids, list):
+                for sid in spec_ids:
+                    sid_str = str(sid).strip()
+                    if sid_str in spec_idea_map:
+                        matched_idea = spec_idea_map[sid_str]
+                        break
+
+            # Strategy 2: Check change_summary or commit_scope for "spec NNN" references
+            if not matched_idea:
+                change_summary = str(payload.get("change_summary", "") or "")
+                commit_scope = str(payload.get("commit_scope", "") or "")
+                combined = change_summary + " " + commit_scope
+                spec_refs = re.findall(r"spec\s+(\d{2,3})", combined, re.IGNORECASE)
+                for ref in spec_refs:
+                    if ref in spec_idea_map:
+                        matched_idea = spec_idea_map[ref]
+                        break
+
+            # Strategy 3: Keyword matching on change_summary
+            if not matched_idea:
+                change_summary = str(payload.get("change_summary", "") or "")
+                commit_scope = str(payload.get("commit_scope", "") or "")
+                combined_text = change_summary + " " + commit_scope
+                if combined_text.strip():
+                    matched_idea = _keyword_match_idea("", combined_text)
+
+            if matched_idea:
+                s.execute(
+                    text("UPDATE commit_evidence_records SET idea_id = :idea_id WHERE id = :id"),
+                    {"idea_id": matched_idea, "id": row.id},
+                )
+                if spec_ids:
+                    linked_by_spec += 1
+                else:
+                    linked_by_keyword += 1
+            else:
+                still_unlinked += 1
+
+    print(f"    Linked by spec reference:   {linked_by_spec}")
+    print(f"    Linked by keyword matching: {linked_by_keyword}")
+    print(f"    Still unlinked:             {still_unlinked}")
+
+    return linked_by_spec + linked_by_keyword
 
 
 def checkpoint_wal() -> None:
@@ -914,9 +1094,19 @@ def main() -> None:
     link_count = link_specs_to_ideas()
     print(f"  {link_count} specs linked to ideas")
 
+    print("Linking evidence to ideas...")
+    evidence_link_count = link_evidence_to_ideas()
+    print(f"  {evidence_link_count} evidence records linked to ideas")
+
     print("Checkpointing WAL...")
     checkpoint_wal()
 
+    print("\n=== Summary ===")
+    print(f"  Ideas:     {idea_count}")
+    print(f"  Specs:     {spec_count}")
+    print(f"  Evidence:  {evidence_count}")
+    print(f"  Spec->Idea links:     {link_count}")
+    print(f"  Evidence->Idea links: {evidence_link_count}")
     print("Done.")
 
 
